@@ -5,7 +5,7 @@
 use {
     crate::model::collector::DataCollector,
     crate::model::model::DataModel,
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     log::{error, info},
     serde::{Deserialize, Serialize},
     std::collections::{HashMap, HashSet},
@@ -22,13 +22,12 @@ pub enum SchedulerError {
     UnmetDependencies,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Deserialize, Serialize)]
 pub enum CollectorState {
     Scheduled,
     Running,
     Idle,
     Terminated,
-    Failed(String),
 }
 
 impl fmt::Display for CollectorState {
@@ -38,7 +37,6 @@ impl fmt::Display for CollectorState {
             CollectorState::Running => write!(f, "Running"),
             CollectorState::Idle => write!(f, "Idle"),
             CollectorState::Terminated => write!(f, "Terminated"),
-            CollectorState::Failed(err) => write!(f, "Failed: {:?}", err),
         }
     }
 }
@@ -83,13 +81,11 @@ impl CollectorInstance {
                         cvar.notify_one();
                     }
 
-                    if let Err(err) = data_collector.collect(Arc::clone(&model)) {
-                        let (state_lock, cvar) = &*collector_state;
-                        let mut state = state_lock.lock().unwrap();
-                        error!("Collector failed with error {:?}", err);
-                        *state = CollectorState::Failed(format!("{:?}", err));
-                        cvar.notify_one();
-                    } else {
+                    if let Err(e) = data_collector.collect(Arc::clone(&model)) {
+                        error!("Collector failed with error {:#}", e);
+                    }
+
+                    {
                         let (state_lock, cvar) = &*collector_state;
                         let mut state = state_lock.lock().unwrap();
                         *state = CollectorState::Idle;
@@ -113,12 +109,9 @@ impl CollectorInstance {
     pub fn run(&self, model: Arc<DataModel>) {
         let (state_lock, cvar) = &*self.state;
         let mut state = state_lock.lock().unwrap();
-        match *state {
-            CollectorState::Terminated => {}
-            _ => {
-                *state = CollectorState::Scheduled;
-                cvar.notify_one();
-            }
+        if *state != CollectorState::Terminated {
+            *state = CollectorState::Scheduled;
+            cvar.notify_one();
         }
         self.sender.send(CollectorMessage::Collect(model)).unwrap();
     }
@@ -260,16 +253,8 @@ impl CollectorScheduler {
                 let collector = collectors.get(handle).unwrap();
                 let (state_lock, cvar) = &*collector.state;
                 let mut state = state_lock.lock().unwrap();
-                loop {
-                    // If a collector fails we abort execution as the model
-                    // cannot be completed.
-                    if let CollectorState::Failed(err_msg) = state.clone() {
-                        return Err(anyhow!(err_msg.clone()));
-                    }
+                while *state != CollectorState::Idle {
                     state = cvar.wait(state).unwrap();
-                    if let CollectorState::Idle = *state {
-                        break;
-                    }
                 }
             }
             info!("Collector Scheduler: Batched Tasks Finished");
@@ -288,13 +273,13 @@ impl CollectorScheduler {
     /// thread safe.
     pub fn all_idle(&self) -> bool {
         let collectors = self.collectors.lock().unwrap();
-        collectors.iter().all(|(_, instance)| {
+        for (_, instance) in collectors.iter() {
             let (state_lock, _cvar) = &*instance.state;
-            match *state_lock.lock().unwrap() {
-                CollectorState::Running => false,
-                _ => true,
+            if *state_lock.lock().unwrap() == CollectorState::Running {
+                return false;
             }
-        })
+        }
+        return true;
     }
 
     /// Retrieve the collector state of a particular collector.
@@ -303,7 +288,7 @@ impl CollectorScheduler {
         if let Some(collector) = collectors.get(handle) {
             let (state_lock, _cvar) = &*collector.state;
             let state = state_lock.lock().unwrap();
-            Some(state.clone())
+            Some(*state)
         } else {
             None
         }
@@ -350,10 +335,7 @@ mod tests {
         let instance_id = Uuid::new_v4();
         let handle = scheduler.add(instance_id.clone(), "foo", HashSet::new(), collector.clone());
         let state = scheduler.state(&handle).unwrap();
-        match state {
-            CollectorState::Idle => {}
-            _ => panic!("Collector should be idle"),
-        };
+        assert_eq!(state, CollectorState::Idle);
     }
 
     #[test]

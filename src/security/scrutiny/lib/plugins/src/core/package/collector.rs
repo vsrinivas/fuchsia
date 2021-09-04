@@ -637,12 +637,6 @@ impl DataCollector for PackageDataCollector {
     /// connect the nodes.
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let repository_path = model.config().repository_path();
-        if !repository_path.exists() {
-            return Err(anyhow!(
-                "Failed to find local package repository at expected path: {:?}.",
-                repository_path
-            ));
-        }
         let package_reader: Box<dyn PackageReader> =
             Box::new(PackageServerReader::new(Box::new(ArtifactGetter::new(&repository_path))));
         let artifact_reader: Box<dyn PackageGetter> =
