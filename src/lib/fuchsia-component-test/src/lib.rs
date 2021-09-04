@@ -6,10 +6,14 @@ use {
     crate::error::*,
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
+    component_events::{
+        events::{Event, EventMode, EventSource, EventSubscription, Started},
+        matcher::EventMatcher,
+    },
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -741,6 +745,46 @@ impl ScopedInstance {
         url: String,
     ) -> Result<Self, anyhow::Error> {
         ScopedInstanceFactory::new(collection).new_named_instance(child_name, url).await
+    }
+
+    /// Connect to exposed fuchsia.component.Binder protocol of instance, thus
+    /// triggering it to start.
+    /// Note: This will only work if the component exposes this protocol in its
+    /// manifest.
+    pub fn connect_to_binder(&self) -> Result<fcomponent::BinderProxy, anyhow::Error> {
+        let binder: fcomponent::BinderProxy = self
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .context("failed to connect to fuchsia.component.Binder")?;
+
+        Ok(binder)
+    }
+
+    /// Same as `connect_to_binder` except that it will block until the
+    /// component has started.
+    /// Note: This function expects that the instance has not been started yet.
+    /// If the instance has been started before this method is invoked, then
+    /// this method will block forever waiting for the Started event.
+    /// REQUIRED: The manifest of the component executing this code must use
+    /// the `fuchsia.sys2.EventSource` protocol from the framework and the
+    /// "started" event.
+    pub async fn start_with_binder_sync(&self) -> Result<(), anyhow::Error> {
+        let event_source = EventSource::new().context("failed to create EventSource")?;
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+            .await
+            .context("failed to subscribe to EventSource")?;
+
+        let _ = self
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .context("failed to connect to fuchsia.component.Binder")?;
+
+        let _ = EventMatcher::ok()
+            .moniker(self.child_name.to_owned())
+            .wait::<Started>(&mut event_stream)
+            .await
+            .context("failed to observe Started event")?;
+
+        Ok(())
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,

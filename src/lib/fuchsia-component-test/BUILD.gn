@@ -42,6 +42,7 @@ rustc_library("fuchsia-component-test-lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
