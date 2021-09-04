@@ -723,7 +723,15 @@ void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
   if (migrate_fn_) {
     migrate_list_.erase(*this);
   }
+
   migrate_fn_ = ktl::move(migrate_fn);
+
+  // Clear stale state when (un) setting the migrate fn.
+  // TODO(fxbug.dev/84078): Cleanup the migrate fn feature and associated state
+  // and clearly define and check invariants.
+  scheduler_state().next_cpu_ = INVALID_CPU;
+  migrate_pending_ = false;
+
   // If |migrate_fn_| is valid, add |this| to |migrate_list_|.
   if (migrate_fn_) {
     migrate_list_.push_front(this);

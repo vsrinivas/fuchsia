@@ -11,7 +11,9 @@
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
 #include <pow2.h>
+#include <stdlib.h>
 #include <zircon/errors.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <fbl/array.h>
@@ -27,8 +29,6 @@
 #include <ktl/atomic.h>
 #include <ktl/bit.h>
 #include <ktl/unique_ptr.h>
-
-#include "zircon/time.h"
 
 namespace {
 
@@ -711,6 +711,85 @@ bool migrate_stress_test() {
   END_TEST;
 }
 
+bool set_migrate_fn_stress_test() {
+  BEGIN_TEST;
+
+  // Get number of CPUs in the system.
+  int active_cpus = ktl::popcount(mp_get_active_mask());
+  printf("Found %d active CPU(s)\n", active_cpus);
+  if (active_cpus <= 1) {
+    printf("Test can only proceed with multiple active CPUs.\n");
+    return true;
+  }
+
+  struct Worker {
+    Thread* thread;
+    ktl::atomic<bool> should_stop = false;
+
+    static void Migrate(Thread* thread, Thread::MigrateStage stage) {}
+
+    static int Body(void* arg) {
+      Worker* state = static_cast<Worker*>(arg);
+
+      while (!state->should_stop.load(ktl::memory_order_relaxed)) {
+        // Spin or sleep for 100us.
+        const zx_duration_t delay = ZX_USEC(100);
+        if (rand() & 1) {
+          const zx_time_t spin_end = zx_time_add_duration(current_time(), delay);
+          while (current_time() < spin_end) {
+          }
+        } else {
+          Thread::Current::SleepRelative(delay);
+        }
+      }
+
+      return 0;
+    }
+  };
+
+  // Create threads.
+  const int num_threads = active_cpus * 2;
+  fbl::AllocChecker ac;
+  fbl::Array<Worker> threads(new (&ac) Worker[num_threads], num_threads);
+  ZX_ASSERT(ac.check());
+
+  for (int i = 0; i < num_threads; i++) {
+    threads[i].thread = Thread::Create("set_migrate_fn_stress_test worker", Worker::Body,
+                                       &threads[i], DEFAULT_PRIORITY);
+    ASSERT_NONNULL(threads[i].thread, "Thread::Create failed.");
+    threads[i].thread->Resume();
+  }
+
+  // Periodically set/unset the migrate fn of the first thread.
+  for (int i = 0; i < 10000; i++) {
+    Thread::Current::SleepRelative(ZX_USEC(100));
+    threads[0].thread->SetMigrateFn(i & 1 ? nullptr : Worker::Migrate);
+  }
+
+  // Join threads.
+  for (auto& thread : threads) {
+    // Inform the thread to stop.
+    thread.should_stop.store(true);
+
+    // Wait for it to finish.
+    int ret;
+    zx_status_t result = thread.thread->Join(&ret, Deadline::after(ZX_SEC(5)).when());
+    if (result != ZX_OK) {
+      // If the thread has not completed in 5 seconds, it is likely that the
+      // thread has hung for an unknown reason.
+      //
+      // TODO(fxbug.dev/78695): We are currently seeing some flakes in CI/CQ
+      // that cannot be reproduced locally. Once resolved, this additional
+      // logging can be removed.
+      dump_thread(thread.thread, /*full=*/true);
+      thread.thread->PrintBacktrace();
+      ZX_ASSERT_MSG(result == ZX_OK, "Failed to join worker thread: %d\n", result);
+    }
+  }
+
+  END_TEST;
+}
+
 bool backtrace_test() {
   BEGIN_TEST;
 
@@ -786,6 +865,7 @@ UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 UNITTEST("migrate_stress_test", migrate_stress_test)
+UNITTEST("set_migrate_fn_stress_test", set_migrate_fn_stress_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
 UNITTEST("get_backtrace_test", get_backtrace_test)
