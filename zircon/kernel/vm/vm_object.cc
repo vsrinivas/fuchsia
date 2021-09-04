@@ -366,10 +366,14 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<Mutex> guard{&lock_};
-
-  const size_t end_offset = static_cast<size_t>(start_offset + len);
+  size_t end_offset;
   size_t op_start_offset = static_cast<size_t>(start_offset);
+
+  if (add_overflow(op_start_offset, static_cast<size_t>(len), &end_offset)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  Guard<Mutex> guard{&lock_};
 
   while (op_start_offset != end_offset) {
     // Offset at the end of the current page.
