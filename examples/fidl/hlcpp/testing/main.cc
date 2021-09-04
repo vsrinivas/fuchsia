@@ -69,8 +69,14 @@ class EchoTestFixture : public gtest::TestLoopFixture {
 // [START test]
 TEST_F(EchoTestFixture, EchoString) {
   fuchsia::examples::EchoPtr proxy = GetProxy();
-  proxy->EchoString("hello there",
-                    [&](std::string response) { ASSERT_EQ(response, "hello there"); });
+  bool received_response = false;
+  proxy->EchoString("hello there", [&](std::string response) {
+    ASSERT_EQ(response, "hello there");
+    received_response = true;
+  });
+  proxy.set_error_handler(
+      [](zx_status_t status) { ASSERT_TRUE(false && "should not throw any errors"); });
   RunLoopUntilIdle();
+  EXPECT_TRUE(received_response);
 }
 // [END test]
