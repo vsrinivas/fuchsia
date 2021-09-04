@@ -1355,16 +1355,33 @@ mod tests {
             },
         );
 
-        // Without binding to the child by connecting to its exposed protocol, we should be able to
-        // see its inspect data since it has been started eagerly.
-        let () = expect_single_inspect_node(&realm, COUNTER_COMPONENT_NAME, |data| {
-            diagnostics_reader::assert_data_tree!(data, root: {
-                counter: {
-                    count: 0u64,
-                }
+        // Connect to fuchsia.component.Binder to start the test realm.
+        let binder_proxy = realm.connect_to_protocol::<fidl_fuchsia_component::BinderMarker>();
+        // Take event stream of channel in order to observe channel closures.
+        // If the channel is closed early, component_manager will write an
+        // epitaph.
+        let mut binder_evt_stream = binder_proxy.take_event_stream();
+
+        // Hold Future object of main assertion of the test so that we can join!
+        // with the binder channel event stream below.
+        let assert_fut =
+            // Without binding to the child by connecting to its exposed protocol, we should be able to
+            // see its inspect data since it has been started eagerly.
+            expect_single_inspect_node(&realm, COUNTER_COMPONENT_NAME, |data| {
+                diagnostics_reader::assert_data_tree!(data, root: {
+                    counter: {
+                        count: 0u64,
+                    }
+                });
             });
-        })
-        .await;
+
+        // TODO(https://fxbug.dev/83945): component_manager does not scope the channel
+        // of a framework capability to the lifetime of the component. Therefore,
+        // the channel is closed relatively quickly. join! is used here to ensure
+        // that the assertion above is made AND the channel closes without an
+        // epitaph.
+        let (event, ()) = futures::join!(binder_evt_stream.next(), assert_fut);
+        matches::assert_matches!(event, None);
     }
 
     #[fixture(with_sandbox)]
