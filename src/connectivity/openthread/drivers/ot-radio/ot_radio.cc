@@ -590,12 +590,12 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
          reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
   std::string cur_fw_version;
   cur_fw_version.assign(reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
+  zxlogf(INFO, "ot-radio: cur_fw_version: %s", cur_fw_version.c_str());
 
   // We want to update firmware if the versions don't match
   *update_fw = (cur_fw_version.compare(new_fw_version) != 0);
   if (*update_fw) {
-    zxlogf(INFO, "ot-radio: cur_fw_version: %s, new_fw_version: %s", cur_fw_version.c_str(),
-           new_fw_version.c_str());
+    zxlogf(INFO, "ot-radio: fw update required, new_fw_version: %s", new_fw_version.c_str());
   }
   return ZX_OK;
 }
