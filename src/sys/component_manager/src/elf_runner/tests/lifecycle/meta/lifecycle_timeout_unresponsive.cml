@@ -25,6 +25,7 @@
         {
             event: [
                 "purged",
+                "started",
                 "stopped",
             ],
             from: "framework",

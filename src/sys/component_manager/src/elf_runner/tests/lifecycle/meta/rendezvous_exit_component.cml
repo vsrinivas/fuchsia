@@ -9,4 +9,10 @@
             protocol: [ "fidl.test.components.Trigger" ],
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }

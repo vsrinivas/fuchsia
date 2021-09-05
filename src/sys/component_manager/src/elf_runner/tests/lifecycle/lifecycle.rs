@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Stopped},
+        events::{Event, EventMode, EventSource, EventSubscription, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::EventSequence,
     },
@@ -14,15 +14,18 @@ use {
 #[fuchsia::test]
 async fn test_normal_behavior() {
     let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Stopped::NAME],
+            EventMode::Async,
+        )])
         .await
         .unwrap();
     event_source.start_component_tree().await;
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
-    let (child_name, destroy_waiter) = {
+    let (moniker, destroy_waiter) = {
         let mut instance = ScopedInstance::new(
             collection_name.clone(),
             String::from("fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle.cm"),
@@ -30,14 +33,23 @@ async fn test_normal_behavior() {
         .await
         .unwrap();
 
-        (instance.child_name().to_string(), instance.take_destroy_waiter())
+        let _ = instance.connect_to_binder().unwrap();
+
+        let moniker_stem = format!("./{}:{}:", collection_name, instance.child_name());
+        let moniker = format!("^{}\\d+$", moniker_stem);
+
+        let _ = EventMatcher::ok()
+            .moniker(moniker.clone())
+            .wait::<Started>(&mut event_stream)
+            .await
+            .expect("failed to observe events");
+
+        (moniker, instance.take_destroy_waiter())
     };
     let () = destroy_waiter.await.expect("failed to destroy child");
 
-    let moniker_stem = format!("./{}:{}:", collection_name, child_name);
-    let descriptor_moniker = format!("^{}\\d+$", moniker_stem);
     EventSequence::new()
-        .then(EventMatcher::ok().moniker(&descriptor_moniker).stop(Some(ExitStatusMatcher::Clean)))
+        .then(EventMatcher::ok().moniker(&moniker).stop(Some(ExitStatusMatcher::Clean)))
         .expect(event_stream)
         .await
         .unwrap();

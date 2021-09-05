@@ -31,6 +31,12 @@
             ],
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
     environments: [
         {
             name: "custom-timeout",

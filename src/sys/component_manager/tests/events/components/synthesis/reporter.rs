@@ -28,9 +28,11 @@ async fn main() {
             .to_string();
     let scoped_instance =
         ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await.unwrap();
+    let _ = scoped_instance.connect_to_binder().unwrap();
     instances.push(scoped_instance);
     for _ in 0..3 {
         let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await.unwrap();
+        let _ = scoped_instance.connect_to_binder().unwrap();
         instances.push(scoped_instance);
     }
 

@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Purged, Stopped},
+        events::{Event, EventMode, EventSource, EventSubscription, Purged, Started, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -16,9 +16,9 @@ use {
 #[fuchsia::test]
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
+    let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, Purged::NAME],
+            vec![Started::NAME, Stopped::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
@@ -27,8 +27,8 @@ async fn test_stop_timeouts() {
     let collection_name = String::from("test-collection");
     // What is going on here? A scoped dynamic instance is created and then
     // dropped. When a the instance is dropped it stops the instance.
-    let child_name = {
-        ScopedInstance::new(
+    let target_monikers = {
+        let instance = ScopedInstance::new(
             collection_name.clone(),
             String::from(concat!(
                 "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test",
@@ -36,22 +36,32 @@ async fn test_stop_timeouts() {
             )),
         )
         .await
-        .unwrap()
-        .child_name()
-        .to_string()
+        .unwrap();
+
+        let _ = instance.connect_to_binder().unwrap();
+
+        // Why do we have three duplicate events sets here? We expect three things
+        // to stop, the root component and its two children. The problem is that
+        // there isn't a great way to express the path of the children because
+        // it looks something like "./{collection}:{root-name}:{X}/{child-name}".
+        // We don't know what "X" is for sure, it will tend to be "1", but there
+        // is no contract around this and the validation logic does not accept
+        // generic regexes.
+        let moniker_stem = format!("./{}:{}:", collection_name, instance.child_name().to_string());
+        let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
+        let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
+        let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
+        for _ in 0..target_monikers.len() {
+            let _ = EventMatcher::ok()
+                .monikers(&target_monikers)
+                .wait::<Started>(&mut event_stream)
+                .await
+                .expect("failed to observe events");
+        }
+
+        target_monikers
     };
 
-    // Why do we have three duplicate events sets here? We expect three things
-    // to stop, the root component and its two children. The problem is that
-    // there isn't a great way to express the path of the children because
-    // it looks something like "./{collection}:{root-name}:{X}/{child-name}".
-    // We don't know what "X" is for sure, it will tend to be "1", but there
-    // is no contract around this and the validation logic does not accept
-    // generic regexes.
-    let moniker_stem = format!("./{}:{}:", collection_name, child_name);
-    let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
-    let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
-    let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
     EventSequence::new()
         .all_of(
             vec![

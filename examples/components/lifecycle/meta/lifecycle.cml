@@ -20,6 +20,16 @@
         // Subscribe to component lifecycle events
         lifecycle: { stop_event: "notify" },
     },
+
+    // Capabilities exposed from this component to parent.
+    expose: [
+        {
+            // Expose this protocol so that parent component can start it
+            // by binding to this capability.
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }
 
 // [END example_snippet]

@@ -39,6 +39,8 @@ async fn test_exit_detection() {
     .await
     .unwrap();
 
+    let _ = instance.connect_to_binder().unwrap();
+
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
 
     EventSequence::new()
@@ -53,8 +55,11 @@ async fn test_exit_after_rendezvous() {
     // Get the event source, install our service injector, and then start the
     // component tree.
     let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![events::Started::NAME, events::Stopped::NAME],
+            EventMode::Async,
+        )])
         .await
         .unwrap();
 
@@ -76,8 +81,18 @@ async fn test_exit_after_rendezvous() {
     .await
     .unwrap();
 
-    // Wait to get confirmation that the component under test exited.
+    let _ = instance.connect_to_binder().unwrap();
+
     let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
+
+    // First, ensure that component has started.
+    let _ = EventMatcher::ok()
+        .moniker(&target_moniker)
+        .wait::<events::Started>(&mut event_stream)
+        .await
+        .expect("failed to observe events");
+
+    // Then, wait to get confirmation that the component under test exited.
     EventSequence::new()
         .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(&target_moniker))
         .expect(event_stream)

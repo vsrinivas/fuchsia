@@ -20,7 +20,10 @@
             from: "framework",
         },
         {
-            event: [ "stopped" ],
+            event: [
+                "started",
+                "stopped",
+            ],
             from: "framework",
             modes: [ "async" ],
         },
