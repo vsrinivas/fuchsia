@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{constants::*, logs::utils::Listener, test_topology};
+use component_events::{
+    events::{Event, EventMode, EventSource, EventSubscription, Started},
+    matcher::EventMatcher,
+};
 use diagnostics_hierarchy::assert_data_tree;
 use diagnostics_message::fx_log_packet_t;
 use diagnostics_reader::{ArchiveReader, Logs, Severity};
@@ -57,10 +61,23 @@ async fn log_unattributed_stream() {
         .await
         .expect("create base topology");
 
+    // Hook to up to event source before starting realm. This is done to avoid
+    // a race condition in which the instance is started before the proper
+    // event matcher is ready.
+    let event_source = EventSource::new().unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+
     let instance = builder.build().create().await.expect("create instance");
 
     // Bind to Log to start archivist.
     let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();
+
+    // Ensure that Archivist has started before continuing with tests.
+    let _ =
+        EventMatcher::ok().moniker("archivist").wait::<Started>(&mut event_stream).await.unwrap();
 
     let path = format!(
          "/hub/children/fuchsia_component_test_collection:{}/children/test/children/archivist/exec/expose/fuchsia.logger.LogSink",
