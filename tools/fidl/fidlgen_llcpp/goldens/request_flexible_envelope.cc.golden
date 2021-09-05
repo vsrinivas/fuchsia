@@ -271,8 +271,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexible(
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
         ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::
@@ -302,11 +302,12 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestStrictResponseFlexible>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexible(
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
         ::fit::callback<void(
@@ -342,11 +343,12 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestStrictResponseFlexible>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestStrictResponseFlexible(
         ::fidl::BufferSpan _request_buffer,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
@@ -356,7 +358,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestStrictResponseFlexible>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -439,8 +442,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
         ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::
@@ -470,11 +473,12 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestFlexibleResponseStrict>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
         ::fit::callback<void(
@@ -510,11 +514,12 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestFlexibleResponseStrict>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
+void fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>::
     RequestFlexibleResponseStrict(
         ::fidl::BufferSpan _request_buffer,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
@@ -524,7 +529,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
   ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
                           RequestFlexibleResponseStrict>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

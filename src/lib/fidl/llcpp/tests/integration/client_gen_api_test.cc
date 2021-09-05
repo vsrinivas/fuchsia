@@ -54,14 +54,13 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  auto result = client->TwoWay(fidl::StringView(data),
-                               [&done](fidl::WireUnownedResult<Example::TwoWay>&& response) {
-                                 ASSERT_OK(response.status());
-                                 ASSERT_EQ(strlen(data), response->out.size());
-                                 EXPECT_EQ(0, strncmp(response->out.data(), data, strlen(data)));
-                                 sync_completion_signal(&done);
-                               });
-  ASSERT_TRUE(result.ok());
+  client->TwoWay(fidl::StringView(data),
+                 [&done](fidl::WireUnownedResult<Example::TwoWay>&& result) {
+                   ASSERT_OK(result.status());
+                   ASSERT_EQ(strlen(data), result->out.size());
+                   EXPECT_EQ(0, strncmp(result->out.data(), data, strlen(data)));
+                   sync_completion_signal(&done);
+                 });
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
@@ -73,9 +72,9 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
 
-    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& message) override {
-      ASSERT_TRUE(message.ok());
-      auto& out = message->out;
+    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
+      ASSERT_OK(result.status());
+      auto& out = result->out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       sync_completion_signal(done_);
@@ -102,8 +101,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   sync_completion_t done;
   fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
   ResponseContext context(&done, data, strlen(data));
-  auto result = client->TwoWay(buffer.view(), fidl::StringView(data), &context);
-  ASSERT_TRUE(result.ok());
+  client->TwoWay(buffer.view(), fidl::StringView(data), &context);
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
@@ -416,8 +414,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
                                      fidl::Reason::kTransportError);
 
   fidl::Buffer<fidl::WireRequest<Example::TwoWay>> buffer;
-  fidl::Result result = client->TwoWay(buffer.view(), "foo", &context);
-  ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
+  client->TwoWay(buffer.view(), "foo", &context);
   ASSERT_OK(error.Wait());
 }
 
@@ -516,11 +513,10 @@ TEST(GenAPITestCase, SkipCallingInFlightResponseCallbacksDuringCancellation) {
     bool destroyed = false;
     auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
-    fidl::Result result =
-        client->TwoWay("foo", [observer = std::move(callback_destruction_observer)](
-                                  fidl::WireResponse<Example::TwoWay>* response) {
-          ADD_FATAL_FAILURE("Should not be invoked");
-        });
+    client->TwoWay("foo", [observer = std::move(callback_destruction_observer)](
+                              fidl::WireResponse<Example::TwoWay>* response) {
+      ADD_FATAL_FAILURE("Should not be invoked");
+    });
     // Immediately start cancellation.
     client = {};
     loop.RunUntilIdle();

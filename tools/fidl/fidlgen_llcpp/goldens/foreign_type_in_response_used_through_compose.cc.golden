@@ -144,7 +144,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fidl::WireClientCallback<
            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
@@ -173,10 +173,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fit::callback<
            void(::fidl::WireResponse<
@@ -212,10 +213,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fidl::WireResponseContext<
            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
@@ -224,7 +226,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

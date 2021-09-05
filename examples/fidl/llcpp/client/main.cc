@@ -50,13 +50,12 @@ int main(int argc, const char** argv) {
   fidl::WireClient client(std::move(*client_end), dispatcher, &handler);
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
-  auto result_async = client->EchoString(
-      "hello", [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
-        std::string reply(response->response.data(), response->response.size());
-        std::cout << "Got response: " << reply << std::endl;
-        loop.Quit();
-      });
-  ZX_ASSERT(result_async.ok());
+  client->EchoString("hello",
+                     [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
+                       std::string reply(response->response.data(), response->response.size());
+                       std::cout << "Got response: " << reply << std::endl;
+                       loop.Quit();
+                     });
   loop.Run();
   loop.ResetQuit();
 

@@ -119,7 +119,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fidl::WireClientCallback<
@@ -150,10 +150,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fit::callback<
@@ -190,10 +191,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
         ::fidl::WireResponseContext<
@@ -203,7 +205,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

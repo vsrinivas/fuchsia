@@ -79,12 +79,12 @@ TEST(V2Integration, AsyncCallResponseDecode) {
   fidl::WireSharedClient<TestProtocol> client(std::move(client_end), loop.dispatcher());
 
   sync_completion_t done;
-  auto result = client->MethodWithResponse(
-      [&done](fidl::WireResponse<TestProtocol::MethodWithResponse>* response) {
-        ASSERT_EQ(123u, response->u.v());
+  client->MethodWithResponse(
+      [&done](fidl::WireUnownedResult<TestProtocol::MethodWithResponse>&& result) {
+        ASSERT_EQ(ZX_OK, result.status());
+        ASSERT_EQ(123u, result->u.v());
         sync_completion_signal(&done);
       });
-  ASSERT_TRUE(result.ok());
 
   ASSERT_EQ(ZX_OK, sync_completion_wait(&done, ZX_TIME_INFINITE));
   server_thread.join();

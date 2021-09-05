@@ -17,7 +17,7 @@ The request and callback are allocated on the heap.
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 {{- IfdefFuchsia -}}
 
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
   {{ RenderParams .RequestArgs
                   (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }}) {
   using Callback = decltype(_cb);
@@ -40,10 +40,10 @@ The request and callback are allocated on the heap.
   {{ .WireRequest }}::OwnedEncodedMessage _request(
     {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
   );
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
 }
 
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
   {{ RenderParams .RequestArgs
     (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
   using Callback = decltype(_cb);
@@ -69,11 +69,10 @@ The request and callback are allocated on the heap.
   {{ .WireRequest }}::OwnedEncodedMessage _request(
     {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
   );
-  return _request.GetOutgoingMessage().Write(this, _context);
-
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
 }
 
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
         {{- if .RequestArgs }}
           {{ RenderParams "::fidl::BufferSpan _request_buffer"
                           .RequestArgs
@@ -92,7 +91,7 @@ The request and callback are allocated on the heap.
     {{ .WireRequest }}::OwnedEncodedMessage _request(
       {{ RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
   {{- end }}
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
 }
 {{- EndifFuchsia -}}
 {{- end }}

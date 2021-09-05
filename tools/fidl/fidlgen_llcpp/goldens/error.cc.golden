@@ -129,7 +129,7 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::fidl_test_error::Example::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -152,10 +152,11 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::fidl_test_error::Example::Foo>* response)>
@@ -184,15 +185,17 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>* _context) {
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

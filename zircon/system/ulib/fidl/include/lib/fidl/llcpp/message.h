@@ -27,11 +27,6 @@ namespace fidl {
 
 namespace internal {
 
-#ifdef __Fuchsia__
-class ClientBase;
-class ResponseContext;
-#endif  // __Fuchsia__
-
 // This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
 // the kernel.
 constexpr uint32_t IovecBufferSize = 16;
@@ -179,10 +174,6 @@ class OutgoingMessage : public ::fidl::Result {
             uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
     CallImpl(FidlType::Type, client_end.handle(), result_bytes, result_capacity, deadline);
   }
-
-  // TODO(fxbug.dev/75324): Remove this in favor of |ClientBase::TwoWay|.
-  ::fidl::Result Write(::fidl::internal::ClientBase* client,
-                       ::fidl::internal::ResponseContext* context);
 #endif
 
   bool is_transactional() const { return is_transactional_; }

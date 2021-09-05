@@ -122,8 +122,7 @@ fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>::OnRawResult(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::fidl_test_inheritance::Super::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -147,11 +146,11 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::StringView s,
     ::fit::callback<void(
         ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)>
@@ -181,18 +180,19 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>*
         _context) {
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -406,8 +406,7 @@ fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>::OnRawResult(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::fidl_test_inheritance::Sub::Foo> _cb) {
   using Callback = decltype(_cb);
@@ -430,11 +429,11 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
     ::fit::callback<
         void(::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
@@ -463,16 +462,17 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>* _context) {
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, s);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

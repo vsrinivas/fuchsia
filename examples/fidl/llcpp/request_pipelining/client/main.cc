@@ -26,25 +26,24 @@ int main(int argc, const char** argv) {
   fidl::WireClient launcher(std::move(*launcher_client_end), dispatcher);
 
   // Make a non-pipelined request to get an instance of Echo
-  auto result = launcher->GetEcho(
-      "non pipelined: ",
-      [&](fidl::WireResponse<fuchsia_examples::EchoLauncher::GetEcho>* response) {
-        // Take the channel to Echo in the response, bind it to the dispatcher, and
-        // make an EchoString request on it.
-        fidl::WireSharedClient echo(std::move(response->response), dispatcher);
-        echo->EchoString("hello!",
-                         // Clone |echo| into the callback so that the client
-                         // is only destroyed after we receive the response.
-                         [&, echo = echo.Clone()](
-                             fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
-                           std::string reply(response->response.data(), response->response.size());
-                           std::cout << "Got echo response " << reply << std::endl;
-                           if (++num_responses == 2) {
-                             loop.Quit();
-                           }
-                         });
-      });
-  ZX_ASSERT(result.ok());
+  launcher->GetEcho("non pipelined: ",
+                    [&](fidl::WireResponse<fuchsia_examples::EchoLauncher::GetEcho>* response) {
+                      // Take the channel to Echo in the response, bind it to the dispatcher, and
+                      // make an EchoString request on it.
+                      fidl::WireSharedClient echo(std::move(response->response), dispatcher);
+                      echo->EchoString(
+                          "hello!",
+                          // Clone |echo| into the callback so that the client
+                          // is only destroyed after we receive the response.
+                          [&, echo = echo.Clone()](
+                              fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
+                            std::string reply(response->response.data(), response->response.size());
+                            std::cout << "Got echo response " << reply << std::endl;
+                            if (++num_responses == 2) {
+                              loop.Quit();
+                            }
+                          });
+                    });
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_examples::Echo>();
   ZX_ASSERT(endpoints.status_value() == ZX_OK);

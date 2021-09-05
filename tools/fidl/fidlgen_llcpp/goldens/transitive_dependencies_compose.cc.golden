@@ -136,7 +136,7 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fidl::WireClientCallback<
             ::fidl_test_transitivedependenciescompose::Top::GetFoo>
@@ -163,10 +163,11 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fit::callback<void(
             ::fidl::WireResponse<::fidl_test_transitivedependenciescompose::
@@ -199,17 +200,19 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fidl::WireResponseContext<
             ::fidl_test_transitivedependenciescompose::Top::GetFoo>* _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

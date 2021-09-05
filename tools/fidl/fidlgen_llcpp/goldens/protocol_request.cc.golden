@@ -274,10 +274,10 @@ fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
-    ::fidl::WireClientCallback<::fidl_test_protocolrequest::Parent::GetChild>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChild(::fidl::WireClientCallback<
+             ::fidl_test_protocolrequest::Parent::GetChild>
+                 _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -300,15 +300,15 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
-    ::fit::callback<void(
-        ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>*
-            response)>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChild(::fit::callback<
+             void(::fidl::WireResponse<
+                  ::fidl_test_protocolrequest::Parent::GetChild>* response)>
+                 _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -335,17 +335,18 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChild(
-    ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>*
-        _context) {
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChild(::fidl::WireResponseContext<
+             ::fidl_test_protocolrequest::Parent::GetChild>* _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -413,11 +414,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChildRequest(
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocolrequest::Parent::GetChildRequest>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChildRequest(::fidl::WireClientCallback<
+                    ::fidl_test_protocolrequest::Parent::GetChildRequest>
+                        _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -440,15 +440,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChildRequest(
-        ::fit::callback<
-            void(::fidl::WireResponse<::fidl_test_protocolrequest::Parent::
-                                          GetChildRequest>* response)>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChildRequest(::fit::callback<
+                    void(::fidl::WireResponse<
+                         ::fidl_test_protocolrequest::Parent::GetChildRequest>*
+                             response)>
+                        _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -476,17 +477,19 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocolrequest::Parent>::GetChildRequest(
+void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChildRequest(
         ::fidl::WireResponseContext<
             ::fidl_test_protocolrequest::Parent::GetChildRequest>* _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

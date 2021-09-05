@@ -254,9 +254,7 @@ class ClientBase {
   // a new transaction ID. |message| will be updated with that transaction ID.
   //
   // Errors are notified via |context|.
-  //
-  // TODO(fxbug.dev/75324): Return void when synchronous errors are removed.
-  fidl::Result SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context);
+  void SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context);
 
   // Sends a one way message.
   //

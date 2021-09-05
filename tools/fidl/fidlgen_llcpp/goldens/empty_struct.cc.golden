@@ -219,12 +219,11 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
-        const ::fidl_test_emptystruct::wire::Empty& e,
-        ::fidl::WireClientCallback<
-            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive(const ::fidl_test_emptystruct::wire::Empty& e,
+                   ::fidl::WireClientCallback<
+                       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+                       _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -247,11 +246,12 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, e);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
+void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive(
         const ::fidl_test_emptystruct::wire::Empty& e,
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
@@ -284,11 +284,12 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, e);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
+void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive(
         ::fidl::BufferSpan _request_buffer,
         const ::fidl_test_emptystruct::wire::Empty& e,
         ::fidl::WireResponseContext<
@@ -296,7 +297,8 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, e);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 

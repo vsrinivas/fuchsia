@@ -101,7 +101,7 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
   }
 }
 
-fidl::Result ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
+void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* context) {
   if (auto channel = GetChannel()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
@@ -110,10 +110,9 @@ fidl::Result ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseCo
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
     }
-    return fidl::Result(message);
+    return;
   }
   TryAsyncDeliverError(fidl::Result::Unbound(), context);
-  return fidl::Result::Unbound();
 }
 
 fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {

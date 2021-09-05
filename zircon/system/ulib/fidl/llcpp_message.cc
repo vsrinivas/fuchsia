@@ -159,11 +159,6 @@ void OutgoingMessage::WriteImpl(zx_handle_t channel) {
   }
 }
 
-fidl::Result OutgoingMessage::Write(::fidl::internal::ClientBase* client,
-                                    ::fidl::internal::ResponseContext* context) {
-  return client->SendTwoWay(*this, context);
-}
-
 void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t channel,
                                uint8_t* result_bytes, uint32_t result_capacity,
                                zx_time_t deadline) {

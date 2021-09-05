@@ -21,11 +21,11 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
     {{- end }}
   // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{ template "AsyncClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}(
+  void {{ .Name }}(
     {{ RenderParams .RequestArgs
                     (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
 
-  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs
+  void {{ .Name }}({{ RenderParams .RequestArgs
     (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
 {{ "" }}
@@ -39,15 +39,15 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result {{ .Name }}(
-        {{- if .RequestArgs }}
-          {{ RenderParams "::fidl::BufferSpan _request_buffer"
-                          .RequestArgs
-                          (printf "%s* _context" .WireResponseContext) }}
-        {{- else }}
-          {{ .WireResponseContext }}* _context
-        {{- end -}}
-    );
+  void {{ .Name }}(
+    {{- if .RequestArgs }}
+      {{ RenderParams "::fidl::BufferSpan _request_buffer"
+                      .RequestArgs
+                      (printf "%s* _context" .WireResponseContext) }}
+    {{- else }}
+      {{ .WireResponseContext }}* _context
+    {{- end -}}
+  );
 {{ "" }}
 
     {{- /* Sync managed flavor */}}

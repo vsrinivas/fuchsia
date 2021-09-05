@@ -257,7 +257,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
         ::zx::socket&& h,
         ::fidl::WireClientCallback<
@@ -287,10 +287,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
         ::zx::socket&& h,
         ::fit::callback<void(
@@ -326,10 +327,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
         ::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
         ::fidl::WireResponseContext<
@@ -339,7 +341,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -1081,7 +1084,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse(
         ::fidl::WireClientCallback<
@@ -1112,10 +1115,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestEmptyResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse(
         ::fit::callback<
@@ -1152,10 +1156,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestEmptyResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse(
         ::fidl::WireResponseContext<
@@ -1165,7 +1170,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestEmptyResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -1244,7 +1250,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse(::fidl::WireClientCallback<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1274,10 +1280,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestWithResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse(
         ::fit::callback<
@@ -1314,10 +1321,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestWithResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse(::fidl::WireResponseContext<
                           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -1326,7 +1334,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           NoRequestWithResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -1438,7 +1447,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse(
         ::fidl::StringView arg,
@@ -1470,10 +1479,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestEmptyResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse(
         ::fidl::StringView arg,
@@ -1511,10 +1521,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestEmptyResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse(
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
@@ -1524,7 +1535,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestEmptyResponse>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -1607,7 +1619,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
         ::fidl::StringView arg,
@@ -1639,10 +1651,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestWithResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
         ::fidl::StringView arg,
@@ -1680,10 +1693,11 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestWithResponse>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::WireClientImpl<
+void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse(
         ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
@@ -1693,7 +1707,8 @@ fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
                           WithRequestWithResponse>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, arg);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -2367,11 +2382,11 @@ fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
-    int64_t x,
-    ::fidl::WireClientCallback<::fidl_test_protocols::Transitional::Request>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
+    Request(
+        int64_t x,
+        ::fidl::WireClientCallback<::fidl_test_protocols::Transitional::Request>
+            _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -2394,16 +2409,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, x);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
-    int64_t x,
-    ::fit::callback<
-        void(::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
-                 response)>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
+    Request(int64_t x,
+            ::fit::callback<
+                void(::fidl::WireResponse<
+                     ::fidl_test_protocols::Transitional::Request>* response)>
+                _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -2430,18 +2445,19 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, x);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::Request(
-    ::fidl::BufferSpan _request_buffer, int64_t x,
-    ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>*
-        _context) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
+    Request(::fidl::BufferSpan _request_buffer, int64_t x,
+            ::fidl::WireResponseContext<
+                ::fidl_test_protocols::Transitional::Request>* _context) {
   ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, x);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -3143,8 +3159,8 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ClientEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ClientEnds(
         ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::WireClientCallback<
             ::fidl_test_protocols::WithProtocolEnds::ClientEnds>
@@ -3172,11 +3188,12 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ClientEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ClientEnds(
         ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fit::callback<void(
             ::fidl::WireResponse<
@@ -3210,11 +3227,12 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ClientEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ClientEnds(
         ::fidl::BufferSpan _request_buffer,
         ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::WireResponseContext<
@@ -3222,7 +3240,8 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -3295,8 +3314,8 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ServerEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ServerEnds(
         ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::WireClientCallback<
             ::fidl_test_protocols::WithProtocolEnds::ServerEnds>
@@ -3324,11 +3343,12 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ServerEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ServerEnds(
         ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fit::callback<void(
             ::fidl::WireResponse<
@@ -3362,11 +3382,12 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::ServerEnds(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+    ServerEnds(
         ::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::WireResponseContext<
@@ -3374,7 +3395,8 @@ fidl::WireResponseContext<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
   ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -3449,8 +3471,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     StructContainingEnds(
         ::fidl_test_protocols::wire::ProtocolEnds&& in,
         ::fidl::WireClientCallback<
@@ -3481,11 +3502,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     StructContainingEnds(
         ::fidl_test_protocols::wire::ProtocolEnds&& in,
         ::fit::callback<
@@ -3522,11 +3543,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     StructContainingEnds(
         ::fidl::BufferSpan _request_buffer,
         ::fidl_test_protocols::wire::ProtocolEnds&& in,
@@ -3537,7 +3558,8 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(in));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -4294,11 +4316,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct(
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ResponseAsStruct(::fidl::WireClientCallback<
+                     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+                         _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -4322,11 +4343,12 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ResponseAsStruct(
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                           ResponseAsStruct>* response)>
@@ -4359,19 +4381,20 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct(
-        ::fidl::WireResponseContext<
-            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
-            _context) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ResponseAsStruct(::fidl::WireResponseContext<
+                     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
+                         _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -4440,11 +4463,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive(
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsPrimitive(::fidl::WireClientCallback<
+                     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+                         _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -4468,11 +4490,12 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsPrimitive(
         ::fit::callback<
             void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                           ErrorAsPrimitive>* response)>
@@ -4505,19 +4528,20 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive(
-        ::fidl::WireResponseContext<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
-            _context) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsPrimitive(::fidl::WireResponseContext<
+                     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
+                         _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -4584,11 +4608,10 @@ fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum(
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsEnum(::fidl::WireClientCallback<
+                ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+                    _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -4611,11 +4634,12 @@ fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsEnum(
         ::fit::callback<void(
             ::fidl::WireResponse<
                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* response)>
@@ -4647,17 +4671,19 @@ fidl::WireResponseContext<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    ErrorAsEnum(
         ::fidl::WireResponseContext<
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -4726,11 +4752,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::HandleInResult(
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    HandleInResult(::fidl::WireClientCallback<
+                   ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
+                       _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -4753,15 +4778,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::HandleInResult(
-        ::fit::callback<
-            void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
-                                          HandleInResult>* response)>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    HandleInResult(::fit::callback<
+                   void(::fidl::WireResponse<
+                        ::fidl_test_protocols::WithErrorSyntax::HandleInResult>*
+                            response)>
+                       _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -4789,17 +4815,19 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::HandleInResult(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
+    HandleInResult(
         ::fidl::WireResponseContext<
             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>* _context) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::HandleInResult>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -5661,11 +5689,11 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::MethodB>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
-    int64_t a, int64_t b,
-    ::fidl::WireClientCallback<::fidl_test_protocols::ChannelProtocol::MethodB>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MethodB(int64_t a, int64_t b,
+            ::fidl::WireClientCallback<
+                ::fidl_test_protocols::ChannelProtocol::MethodB>
+                _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -5689,16 +5717,16 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, a,
                                    b);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
-    int64_t a, int64_t b,
-    ::fit::callback<void(
-        ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
-            response)>
-        _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MethodB(int64_t a, int64_t b,
+            ::fit::callback<void(
+                ::fidl::WireResponse<
+                    ::fidl_test_protocols::ChannelProtocol::MethodB>* response)>
+                _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -5726,18 +5754,19 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, a,
                                    b);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result
-fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MethodB(
-    ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-    ::fidl::WireResponseContext<
-        ::fidl_test_protocols::ChannelProtocol::MethodB>* _context) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MethodB(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+            ::fidl::WireResponseContext<
+                ::fidl_test_protocols::ChannelProtocol::MethodB>* _context) {
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, a, b);
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -5806,12 +5835,11 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::TakeHandle(
-        ::zx::handle&& h,
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::ChannelProtocol::TakeHandle>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    TakeHandle(::zx::handle&& h,
+               ::fidl::WireClientCallback<
+                   ::fidl_test_protocols::ChannelProtocol::TakeHandle>
+                   _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -5835,11 +5863,12 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::TakeHandle(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    TakeHandle(
         ::zx::handle&& h,
         ::fit::callback<
             void(::fidl::WireResponse<
@@ -5873,18 +5902,20 @@ fidl::WireResponseContext<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::TakeHandle(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    TakeHandle(
         ::fidl::BufferSpan _request_buffer, ::zx::handle&& h,
         ::fidl::WireResponseContext<
             ::fidl_test_protocols::ChannelProtocol::TakeHandle>* _context) {
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(h));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
@@ -5955,12 +5986,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MutateSocket(
-        ::zx::socket&& a,
-        ::fidl::WireClientCallback<
-            ::fidl_test_protocols::ChannelProtocol::MutateSocket>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MutateSocket(::zx::socket&& a,
+                 ::fidl::WireClientCallback<
+                     ::fidl_test_protocols::ChannelProtocol::MutateSocket>
+                     _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -5984,16 +6014,17 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(a));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MutateSocket(
-        ::zx::socket&& a,
-        ::fit::callback<
-            void(::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::
-                                          MutateSocket>* response)>
-            _cb) {
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MutateSocket(::zx::socket&& a,
+                 ::fit::callback<
+                     void(::fidl::WireResponse<
+                          ::fidl_test_protocols::ChannelProtocol::MutateSocket>*
+                              response)>
+                     _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
       : public ::fidl::WireResponseContext<
@@ -6022,18 +6053,20 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    std::move(a));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 
-::fidl::Result fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::MutateSocket(
+void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
+    MutateSocket(
         ::fidl::BufferSpan _request_buffer, ::zx::socket&& a,
         ::fidl::WireResponseContext<
             ::fidl_test_protocols::ChannelProtocol::MutateSocket>* _context) {
   ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, std::move(a));
-  return _request.GetOutgoingMessage().Write(this, _context);
+  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                                  _context);
 }
 #endif  // __Fuchsia__
 
