@@ -341,7 +341,8 @@ mod tests {
                 ],
             })
             .expect("Failed adding LogSink route to test components");
-        let _test_topo = builder.build().create().await.unwrap();
+        let test_topo = builder.build().create().await.unwrap();
+        let _ = test_topo.root.connect_to_binder().unwrap();
 
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
@@ -447,7 +448,8 @@ mod tests {
                 ],
             })
             .expect("Failed adding LogSink route to test components");
-        let _test_topo = builder.build().create().await.unwrap();
+        let test_topo = builder.build().create().await.unwrap();
+        let _ = test_topo.root.connect_to_binder().unwrap();
 
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
         receiver.next().await.expect("Unexpected error waiting for response").expect("error sent");
