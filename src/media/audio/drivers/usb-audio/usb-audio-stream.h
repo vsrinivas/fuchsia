@@ -264,6 +264,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   uint32_t fractional_bpp_acc_ __TA_GUARDED(req_lock_);
   uint32_t ring_buffer_offset_ __TA_GUARDED(req_lock_);
   uint64_t usb_frame_num_ __TA_GUARDED(req_lock_);
+  bool rb_vmo_fetched_ __TA_GUARDED(lock_) = false;
 
   uint32_t bytes_per_notification_ = 0;
   uint32_t notification_acc_ __TA_GUARDED(req_lock_);

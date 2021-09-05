@@ -12,6 +12,7 @@ executable("usb-audio-test-bin") {
   deps = [
     "../:shared",
     "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
     "//zircon/public/lib/zxtest",
   ]
 

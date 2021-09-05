@@ -267,6 +267,7 @@ void UsbAudioStream::DdkUnbind(ddk::UnbindTxn txn) {
   {
     fbl::AutoLock lock(&lock_);
     shutting_down_ = true;
+    rb_vmo_fetched_ = false;
   }
   // We stop the loop so we can safely deactivate channels via RAII via DdkRelease.
   loop_.Shutdown();
@@ -758,17 +759,30 @@ void UsbAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
   uint32_t num_ring_buffer_frames = ring_buffer_size_ / frame_size_;
 
   cleanup.cancel();
+  {
+    fbl::AutoLock lock(&lock_);
+    rb_vmo_fetched_ = true;
+  }
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
 void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
 
+  {
+    fbl::AutoLock lock(&lock_);
+    if (!rb_vmo_fetched_) {
+      zxlogf(ERROR, "Did not start, VMO not fetched");
+      completer.Close(ZX_ERR_BAD_STATE);
+      return;
+    }
+  }
+
   if (ring_buffer_state_ != RingBufferState::STOPPED) {
     // The ring buffer is running, do not linger in the lock while we send
     // the error code back to the user.
     LOG(ERROR, "Attempt to start an already started ring buffer");
-    completer.Reply(zx::clock::get_monotonic().get());
+    completer.Close(ZX_ERR_BAD_STATE);
     return;
   }
 
@@ -812,11 +826,20 @@ void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& compl
   while (!list_is_empty(&free_req_))
     QueueRequestLocked();
 
-  *start_completer_ = completer.ToAsync();
+  start_completer_.emplace(completer.ToAsync());
 }
 
 void UsbAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
+
+  {
+    fbl::AutoLock lock(&lock_);
+    if (!rb_vmo_fetched_) {
+      zxlogf(ERROR, "Did not stop, VMO not fetched");
+      completer.Close(ZX_ERR_BAD_STATE);
+      return;
+    }
+  }
 
   // TODO(johngro): Fix this to use the cancel transaction capabilities added
   // to the USB bus driver.
@@ -824,12 +847,13 @@ void UsbAudioStream::Stop(StopRequestView request, StopCompleter::Sync& complete
   // Also, investigate whether or not the cancel interface is synchronous or
   // whether we will need to maintain an intermediate stopping state.
   if (ring_buffer_state_ != RingBufferState::STARTED) {
-    LOG(ERROR, "Attempt to stop a not started ring buffer");
+    LOG(INFO, "Attempt to stop a not started ring buffer");
     completer.Reply();
+    return;
   }
 
   ring_buffer_state_ = RingBufferState::STOPPING;
-  *stop_completer_ = completer.ToAsync();
+  stop_completer_.emplace(completer.ToAsync());
 }
 
 void UsbAudioStream::RequestComplete(usb_request_t* req) {
@@ -1107,6 +1131,7 @@ void UsbAudioStream::DeactivateRingBufferChannelLocked(const Channel* channel) {
     if (ring_buffer_state_ != RingBufferState::STOPPED) {
       ring_buffer_state_ = RingBufferState::STOPPING;
     }
+    rb_vmo_fetched_ = false;
   }
 
   rb_channel_.reset();
