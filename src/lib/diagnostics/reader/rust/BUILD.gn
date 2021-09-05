@@ -40,7 +40,12 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//src/lib/fuchsia-component-test" ]
+  test_deps = [
+    "//src/lib/fuchsia-component-test",
+
+    # TODO(https://fxbug.dev/81400): Remove this during post-migration cleanup.
+    "//src/sys/lib/component-events",
+  ]
 
   sources = [ "src/lib.rs" ]
 }

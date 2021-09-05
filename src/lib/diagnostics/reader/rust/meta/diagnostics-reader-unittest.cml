@@ -9,6 +9,18 @@
         binary: "bin/diagnostics_reader_lib_test",
     },
     use: [
-        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.sys2.EventSource",
+            ],
+        },
+
+        // TODO(fxb/83907): Remove this once `cmc` supports deep de-dupe and
+        // the clause can be added to shard.
+        {
+            event: [ "started" ],
+            from: "framework",
+        },
     ],
 }
