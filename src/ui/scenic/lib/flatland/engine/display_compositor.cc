@@ -43,6 +43,43 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
   return fuchsia::sysmem::PixelFormatType::INVALID;
 }
 
+// Returns a zircon format for buffer with this pixel format.
+// TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
+zx_pixel_format_t BufferCollectionPixelFormatToZirconFormat(
+    fuchsia::sysmem::PixelFormat& pixel_format) {
+  switch (pixel_format.type) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      return ZX_PIXEL_FORMAT_ARGB_8888;
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
+      return ZX_PIXEL_FORMAT_ABGR_8888;
+    case fuchsia::sysmem::PixelFormatType::NV12:
+      return ZX_PIXEL_FORMAT_NV12;
+    default:
+      break;
+  }
+  FX_CHECK(false) << "Unsupported pixel format: " << static_cast<uint32_t>(pixel_format.type);
+  return ZX_PIXEL_FORMAT_NONE;
+}
+
+// Returns an image type that describes the tiling format used for buffer with
+// this pixel format. The values are display driver specific and not documented
+// in display-controller.fidl.
+// TODO(fxbug.dev/33334): Remove this when image type is removed from the display
+// controller API.
+uint32_t BufferCollectionPixelFormatToImageType(fuchsia::sysmem::PixelFormat& pixel_format) {
+  if (pixel_format.has_format_modifier) {
+    switch (pixel_format.format_modifier.value) {
+      case fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED:
+        return 1;  // IMAGE_TYPE_X_TILED
+      case fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+        return 2;  // IMAGE_TYPE_Y_LEGACY_TILED
+      case fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+        return 3;  // IMAGE_TYPE_YF_TILED
+    }
+  }
+  return fuchsia::hardware::display::TYPE_SIMPLE;
+}
+
 }  // anonymous namespace
 
 DisplayCompositor::DisplayCompositor(
@@ -201,9 +238,17 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     zx_status_t allocation_status = ZX_OK;
     auto status =
         display_tokens_[metadata.collection_id]->CheckBuffersAllocated(&allocation_status);
-    buffer_collection_supports_display_[metadata.collection_id] =
-        status == ZX_OK && allocation_status == ZX_OK;
-
+    auto supports_display = status == ZX_OK && allocation_status == ZX_OK;
+    buffer_collection_supports_display_[metadata.collection_id] = supports_display;
+    if (supports_display) {
+      fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+      status = display_tokens_[metadata.collection_id]->WaitForBuffersAllocated(
+          &allocation_status, &buffer_collection_info);
+      FX_DCHECK(status == ZX_OK) << "status: " << status;
+      FX_DCHECK(allocation_status == ZX_OK) << "allocation_status: " << allocation_status;
+      buffer_collection_pixel_format_[metadata.collection_id] =
+          buffer_collection_info.settings.image_format_constraints.pixel_format;
+    }
     status = display_tokens_[metadata.collection_id]->Close();
     display_tokens_.erase(metadata.collection_id);
   }
@@ -218,11 +263,14 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     }
   }
 
-  // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want
-  // to have to rely on this kDefaultImageFormat.
   uint64_t display_image_id;
+  FX_DCHECK(buffer_collection_pixel_format_.count(metadata.collection_id));
+  auto pixel_format = buffer_collection_pixel_format_[metadata.collection_id];
   fuchsia::hardware::display::ImageConfig image_config = {
-      .width = metadata.width, .height = metadata.height, .pixel_format = kDefaultImageFormat};
+      .width = metadata.width,
+      .height = metadata.height,
+      .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
+      .type = BufferCollectionPixelFormatToImageType(pixel_format)};
   zx_status_t import_image_status = ZX_OK;
 
   // Scope the lock.
@@ -332,8 +380,13 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
   // to deal with this default image format.
+  FX_DCHECK(buffer_collection_pixel_format_.count(image.collection_id));
+  auto pixel_format = buffer_collection_pixel_format_[image.collection_id];
   fuchsia::hardware::display::ImageConfig image_config = {
-      .width = src.width, .height = src.height, .pixel_format = kDefaultImageFormat};
+      .width = src.width,
+      .height = src.height,
+      .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
+      .type = BufferCollectionPixelFormatToImageType(pixel_format)};
 
   (*display_controller_.get())->SetLayerPrimaryConfig(layer_id, image_config);
 
@@ -660,6 +713,8 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     // We know that this collection is supported by display because we collected constraints from
     // display in scenic_impl::ImportBufferCollection() and waited for successful allocation.
     buffer_collection_supports_display_[collection_id] = true;
+    buffer_collection_pixel_format_[collection_id] =
+        out_collection_info->settings.image_format_constraints.pixel_format;
     bool res = ImportBufferImage(target);
     FX_DCHECK(res);
   }

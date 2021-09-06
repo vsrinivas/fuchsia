@@ -81,6 +81,9 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
 
   void SetDisplaySupported(allocation::GlobalBufferCollectionId id, bool is_supported) {
     display_compositor_->buffer_collection_supports_display_[id] = is_supported;
+    display_compositor_->buffer_collection_pixel_format_[id] = fuchsia::sysmem::PixelFormat{
+        .type = fuchsia::sysmem::PixelFormatType::BGRA32,
+    };
   }
 
   void SetBufferCollectionImportMode(BufferCollectionImportMode import_mode) {

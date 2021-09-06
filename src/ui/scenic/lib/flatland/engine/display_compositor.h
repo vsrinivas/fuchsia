@@ -197,6 +197,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   std::unordered_map<allocation::GlobalBufferCollectionId, bool>
       buffer_collection_supports_display_;
 
+  // Maps a buffer collection ID to a collection pixel format struct.
+  std::unordered_map<allocation::GlobalBufferCollectionId, fuchsia::sysmem::PixelFormat>
+      buffer_collection_pixel_format_;
+
   ReleaseFenceManager release_fence_manager_;
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
