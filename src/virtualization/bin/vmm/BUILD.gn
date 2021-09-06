@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true

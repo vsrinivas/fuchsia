@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("virtio-device") {
   name = "virtio-device"

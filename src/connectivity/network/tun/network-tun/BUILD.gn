@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/test.gni")
-import("//build/testing/environments.gni")
 
 source_set("src") {
   sources = [

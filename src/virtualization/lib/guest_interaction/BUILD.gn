@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
-import("//build/testing/environments.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 import("//third_party/protobuf/proto_library.gni")

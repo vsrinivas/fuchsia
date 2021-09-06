@@ -217,8 +217,4 @@ executable("linux_runner_unittests") {
 
 fuchsia_unittest_package("linux_runner_tests") {
   deps = [ ":linux_runner_unittests" ]
-
-  test_specs = {
-    environments = basic_envs
-  }
 }
