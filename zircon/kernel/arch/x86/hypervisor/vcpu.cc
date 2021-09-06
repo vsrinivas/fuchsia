@@ -806,6 +806,9 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
     case Thread::MigrateStage::Before: {
       __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
       DEBUG_ASSERT(status == ZX_OK);
+      // Now that vmclear has been done last_cpu_ can be cleared to indicate this vcpu is both not
+      // presently running, and it's state is not loaded anywhere.
+      last_cpu_.store(INVALID_CPU);
       break;
     }
     // * Copy the VMCS region from one memory location to another location. This
@@ -821,6 +824,13 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       // We set |resume| to false so that |vmx_enter| will call VMLAUNCH when
       // entering the the guest, instead of VMRESUME.
       vmx_state_.resume = false;
+
+      // Before performing the vmptrld, update the |last_cpu_| for Vcpu::Interrupt() and vmcs_page_
+      // state tracking. It is assumed that the `Thread::MigrateStage::Before` stage already
+      // happened and that a vmclear has been performed on last_cpu_, hence the previous value of
+      // last_cpu_ can be safely discarded now.
+      DEBUG_ASSERT(last_cpu_.load() == INVALID_CPU);
+      last_cpu_.store(thread->LastCpuLocked());
 
       // Load the VMCS on the destination processor.
       __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
@@ -842,15 +852,10 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       // Invalidate TLB mappings for the EPT.
       zx_paddr_t pml4_address = guest_->AddressSpace()->arch_aspace()->arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer(pml4_address));
-
-      // After thread migration, update the |last_cpu_| for Vcpu::Interrupt().
-      last_cpu_.store(thread->LastCpuLocked());
       break;
     }
     case Thread::MigrateStage::Exiting: {
-      // When the thread is exiting, set |last_cpu_| to INVALID_CPU and
-      // |thread_| to nullptr.
-      last_cpu_.store(INVALID_CPU);
+      // The |thread_| is exiting and so we must clear our reference to it.
       thread_.store(nullptr);
       break;
     }

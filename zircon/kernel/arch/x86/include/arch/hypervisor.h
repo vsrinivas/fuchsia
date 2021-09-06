@@ -107,6 +107,12 @@ class Vcpu {
   // |thread_| will be set to nullptr when the thread exits.
   ktl::atomic<Thread*> thread_;
   ktl::atomic<bool> running_;
+  // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
+  // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
+  // then |last_cpu_| will point to that CPU.
+  //
+  // The VMCS state of this Vcpu must not be loaded prior to |last_cpu_| being
+  // set, nor must |last_cpu_| be modified prior to the VMCS state being cleared.
   ktl::atomic<cpu_num_t> last_cpu_;
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
