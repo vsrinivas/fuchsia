@@ -8,6 +8,7 @@ use {
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
         object_handle::{ReadObjectHandle, WriteBytes},
+        round::{round_down, round_up},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -100,14 +101,6 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
     }
 }
 
-fn round_down(value: u64, block_size: u32) -> u64 {
-    value - value % block_size as u64
-}
-
-fn round_up(value: u64, block_size: u32) -> u64 {
-    round_down(value + block_size as u64 - 1, block_size)
-}
-
 impl SimplePersistentLayer {
     /// Opens an existing layer that is accessible via |object_handle| (which provides a read
     /// interface to the object).  The layer should have been written prior using
@@ -143,7 +136,8 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
             Bound::Excluded(k) => (k, true),
         };
         let mut left_offset = 0;
-        let mut right_offset = round_up(self.size, self.block_size);
+        // TODO(csuter): Add size checks.
+        let mut right_offset = round_up(self.size, self.block_size).unwrap();
         let mut left = Iterator::new(self, left_offset);
         left.advance().await?;
         match left.get() {

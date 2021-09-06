@@ -396,7 +396,7 @@ impl TransactionHandler for FxFilesystem {
 
     async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a> {
         let lock_manager: &LockManager = self.as_ref();
-        TransactionLocks(lock_manager.txn_lock(lock_keys).await)
+        TransactionLocks(debug_assert_not_too_long!(lock_manager.txn_lock(lock_keys)))
     }
 
     async fn commit_transaction(

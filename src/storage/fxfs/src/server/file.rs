@@ -8,6 +8,7 @@ use {
         object_store::{
             filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
         },
+        round::round_up,
         server::{
             directory::FxDirectory,
             errors::map_to_status,
@@ -21,10 +22,12 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
+    once_cell::sync::Lazy,
     std::sync::{
-        atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
-        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc, Mutex,
     },
     vfs::{
         common::send_on_open_with_error,
@@ -105,15 +108,43 @@ impl FxFile {
         self.handle.data_buffer().vmo()
     }
 
-    pub fn page_in(&self, range: std::ops::Range<u64>) {
-        // TODO(csuter): For now just always respond with a filled buffer.  This obviously needs
-        // to be replaced with something that does a read.
-        let len = range.end - range.start;
-        let vmo = zx::Vmo::create(len).unwrap();
-        static COUNTER: AtomicU8 = AtomicU8::new(1);
-        let fill = vec![COUNTER.fetch_add(1, Ordering::Relaxed); len as usize];
-        vmo.write(&fill, 0).unwrap();
-        self.handle.owner().pager().supply_pages(self.vmo(), range, &vmo, 0);
+    pub fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
+        const ZERO_VMO_SIZE: u64 = 1024 * 1024;
+        static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
+
+        let vmo = self.vmo();
+        let aligned_size = round_up(self.handle.min_size(), zx::system_get_page_size()).unwrap();
+        let mut offset = std::cmp::max(range.start, aligned_size);
+        while offset < range.end {
+            let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
+            self.handle.owner().pager().supply_pages(vmo, offset..end, &ZERO_VMO, 0);
+            offset = end;
+        }
+        if aligned_size < range.end {
+            range.end = aligned_size;
+        }
+        if range.end <= range.start {
+            return;
+        }
+        let this = self.clone();
+        fasync::Task::spawn_on(self.handle.owner().executor(), async move {
+            match this.handle.read_uncached(range.clone()).await {
+                Ok(buffer) => {
+                    const AUX_VMO_SIZE: u64 = 1024 * 1024;
+                    static AUX_VMO: Lazy<Mutex<zx::Vmo>> =
+                        Lazy::new(|| Mutex::new(zx::Vmo::create(AUX_VMO_SIZE).unwrap()));
+                    let aux_vmo = AUX_VMO.lock().unwrap();
+                    aux_vmo.write(buffer.as_slice(), 0).unwrap();
+                    // TODO(csuter): Check the tail is zeroed.
+                    this.handle.owner().pager().supply_pages(this.vmo(), range, &aux_vmo, 0);
+                }
+                Err(e) => {
+                    // TODO(csuter): Handle errors properly.
+                    panic!("read_uncached error: {:?}", e);
+                }
+            }
+        })
+        .detach();
     }
 
     // Called by the pager to indicate there are no more VMO references.
@@ -303,10 +334,9 @@ impl File for FxFile {
 #[cfg(test)]
 mod tests {
     use {
-        super::FxFile,
         crate::{
             object_handle::INVALID_OBJECT_ID,
-            object_store::{filesystem::Filesystem, ObjectDescriptor},
+            object_store::filesystem::Filesystem,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         fidl_fuchsia_io::{
@@ -318,17 +348,14 @@ mod tests {
         fuchsia_zircon::Status,
         futures::join,
         io_util::{read_file_bytes, write_file_bytes},
-        std::{
-            sync::{
-                atomic::{self, AtomicBool},
-                Arc,
-            },
-            time::Duration,
+        std::sync::{
+            atomic::{self, AtomicBool},
+            Arc,
         },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_empty_file() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -356,7 +383,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_set_attrs() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -410,7 +437,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_write_read() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -454,7 +481,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_writes_persist() {
         let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
@@ -488,7 +515,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_append() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -526,7 +553,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_seek() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -583,7 +610,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_truncate_extend() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -636,7 +663,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_truncate_shrink() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -694,7 +721,7 @@ mod tests {
         fixture.close().await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run(10, test)]
     async fn test_truncate_shrink_repeated() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
@@ -815,85 +842,5 @@ mod tests {
         );
 
         Arc::try_unwrap(fixture).unwrap_or_else(|_| panic!()).close().await;
-    }
-
-    #[fasync::run(10, test)]
-    async fn test_pager() {
-        let fixture = TestFixture::new().await;
-
-        {
-            let root = fixture.root();
-            let file_proxy = open_file_checked(
-                &root,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_FILE,
-                "foo",
-            )
-            .await;
-            assert_eq!(file_proxy.truncate(100000).await.expect("truncate fidl failed"), 0);
-
-            let (status, attr) = file_proxy.get_attr().await.expect("get_attr fidl failed");
-            assert_eq!(status, 0);
-
-            let file = fixture
-                .volume()
-                .get_or_load_node(attr.id, ObjectDescriptor::File, None)
-                .await
-                .expect("get_or_load_node failed")
-                .into_any()
-                .downcast::<FxFile>()
-                .unwrap();
-
-            let vmo = file.get_pageable_vmo().expect("get_pageable_vmo failed");
-            let mut buf = [0; 100];
-            vmo.read(&mut buf, 0).expect("read failed");
-
-            assert_eq!(buf, [1; 100]);
-
-            // Now if we drop all other references, we should still be able to read from the VMO.
-            std::mem::drop(file_proxy);
-            std::mem::drop(file);
-
-            buf.fill(0);
-            vmo.read(&mut buf, 90000).expect("read failed");
-
-            assert_eq!(buf, [2; 100]);
-
-            // Reading from the first page shouldn't trigger another page in.
-            vmo.read(&mut buf, 0).expect("read failed");
-            assert_eq!(buf, [1; 100]);
-
-            // If we close the VMO now, it should cause the file to be dropped so that if we read it
-            // again, we should see another page-in.
-            std::mem::drop(vmo);
-
-            let mut pause = 100;
-            loop {
-                {
-                    let file = fixture
-                        .volume()
-                        .get_or_load_node(attr.id, ObjectDescriptor::File, None)
-                        .await
-                        .expect("get_or_load_node failed")
-                        .into_any()
-                        .downcast::<FxFile>()
-                        .unwrap();
-
-                    let vmo = file.get_pageable_vmo().expect("get_pageable_vmo failed");
-                    let mut buf = [0; 100];
-                    vmo.read(&mut buf, 0).expect("read failed");
-
-                    if buf == [3; 100] {
-                        break;
-                    }
-                }
-
-                // The NO_CHILDREN message is asynchronous, so all we can do is sleep and try again.
-                fasync::Timer::new(Duration::from_millis(pause)).await;
-                pause *= 2;
-            }
-        }
-
-        fixture.close().await;
     }
 }

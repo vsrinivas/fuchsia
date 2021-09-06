@@ -172,7 +172,7 @@ TEST_P(AppendAtomicTest, MultiThreadedTest) {
       }
 
       char buf[kWriteLength];
-      memset(buf, static_cast<int>(i), sizeof(buf));
+      memset(buf, static_cast<int>(i + 1), sizeof(buf));
 
       for (size_t j = 0; j < kNumWrites; j++) {
         if (write(fd.get(), buf, sizeof(buf)) != sizeof(buf)) {
@@ -198,7 +198,7 @@ TEST_P(AppendAtomicTest, MultiThreadedTest) {
   char buf[kWriteLength * kNumWrites * thread_count()];
   ASSERT_EQ(read(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)));
 
-  std::vector<int> counts(thread_count());
+  std::vector<int> counts(thread_count() + 1);
   for (size_t i = 0; i < sizeof(buf); i += kWriteLength) {
     size_t val = static_cast<size_t>(buf[i]);
     ASSERT_LE(val, counts.size()) << "Read unexpected value from file";
@@ -209,8 +209,8 @@ TEST_P(AppendAtomicTest, MultiThreadedTest) {
     ASSERT_EQ(memcmp(&buf[i], tmp, sizeof(tmp)), 0) << "Non-atomic Append Detected";
   }
 
-  for (size_t i = 0; i < counts.size(); i++) {
-    ASSERT_EQ(counts[i], kNumWrites) << "Unexpected number of writes from a thread";
+  for (size_t i = 1; i < counts.size(); i++) {
+    ASSERT_EQ(counts[i], kNumWrites) << "Unexpected number of writes from thread " << i;
   }
 
   ASSERT_EQ(close(fd.release()), 0);
