@@ -17,10 +17,10 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
+    "//src/media/audio/drivers/lib/audio-utils",
     "//src/media/audio/lib/wav",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/audio-utils",
     "//zircon/system/ulib/fzl",
   ]
 

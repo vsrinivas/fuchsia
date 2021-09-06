@@ -31,6 +31,8 @@ executable("aml-g12-tdm-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/simple-audio-stream",
     "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/fbl",
@@ -38,8 +40,6 @@ executable("aml-g12-tdm-test-bin") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/audio-driver-proto",
-    "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]

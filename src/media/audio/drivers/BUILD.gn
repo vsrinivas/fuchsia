@@ -14,6 +14,7 @@ group("tests") {
     "codecs:tests",
     "dai-test:tests",
     "intel-hda:tests",
+    "lib:tests",
     "test",
     "usb-audio:tests",
   ]

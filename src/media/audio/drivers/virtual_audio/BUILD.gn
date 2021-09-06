@@ -45,11 +45,11 @@ driver_module("virtual_audio_driver-driver") {
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/affine",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fzl",
   ]

@@ -67,8 +67,8 @@ source_set("src") {
     ":ihda_controller_bind",
     "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
     "//src/devices/lib/driver",
-    "//zircon/system/ulib/audio-driver-proto",
-    "//zircon/system/ulib/audio-proto-utils",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
@@ -80,12 +80,12 @@ source_set("src") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//sdk/lib/fit",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//src/media/audio/drivers/lib/intel-hda",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/intel-hda",
     "//zircon/system/ulib/refcount",
   ]
 
@@ -132,10 +132,10 @@ test("controller_test") {
   deps = [
     ":src",
     "//sdk/lib/fdio",
+    "//src/media/audio/drivers/lib/intel-hda",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/intel-hda",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }

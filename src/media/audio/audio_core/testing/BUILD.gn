@@ -36,12 +36,12 @@ source_set("testing") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/system/ulib/async-testing",
-    "//zircon/system/ulib/audio-proto-utils",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -194,6 +194,7 @@ source_set("audio_core_lib") {
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fsl",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/timeline",
@@ -201,7 +202,6 @@ source_set("audio_core_lib") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/audio-proto-utils",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

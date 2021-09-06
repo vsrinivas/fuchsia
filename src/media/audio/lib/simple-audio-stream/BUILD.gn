@@ -26,8 +26,8 @@ source_set("simple-audio-stream") {
   ]
   deps = [
     "//src/lib/ddk",
-    "//zircon/system/ulib/audio-driver-proto",
-    "//zircon/system/ulib/audio-proto-utils",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
   ]
 }
 

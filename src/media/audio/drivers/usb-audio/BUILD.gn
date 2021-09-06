@@ -59,6 +59,8 @@ source_set("shared") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/digest",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
@@ -67,8 +69,6 @@ source_set("shared") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/audio-driver-proto",
-    "//zircon/system/ulib/audio-proto-utils",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

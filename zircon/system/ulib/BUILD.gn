@@ -47,7 +47,6 @@ group("tests") {
     "image-format:tests",
     "inet6:tests",
     "inspect:tests",
-    "intel-hda:tests",
     "io-scheduler:tests",
     "ktrace:tests",
     "lazy_init:tests",
