@@ -117,8 +117,8 @@ fi
     make CC=${CC} -j "$(getconf _NPROCESSORS_ONLN)"
 )
 
-# Move output image to destination.
+# Copy output image to destination.
 if [ -n "${LINUX_OUT}" ]; then
   mkdir -p "$(dirname "${LINUX_OUT}")"
-  mv "${LINUX_IMAGE}" "${LINUX_OUT}"
+  cp "${LINUX_IMAGE}" "${LINUX_OUT}"
 fi
