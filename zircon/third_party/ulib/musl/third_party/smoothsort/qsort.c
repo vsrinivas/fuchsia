@@ -60,24 +60,26 @@ static void cycle(size_t width, unsigned char* ar[], int n) {
 
 /* shl() and shr() need n > 0 */
 static inline void shl(size_t p[2], int n) {
-  if (n >= 8 * sizeof(size_t)) {
-    n -= 8 * sizeof(size_t);
+  const int size_t_bits = 8 * (int)sizeof(size_t);
+  if (n >= size_t_bits) {
+    n -= size_t_bits;
     p[1] = p[0];
     p[0] = 0;
   }
   p[1] <<= n;
-  p[1] |= p[0] >> (sizeof(size_t) * 8 - n);
+  p[1] |= p[0] >> (size_t_bits - n);
   p[0] <<= n;
 }
 
 static inline void shr(size_t p[2], int n) {
-  if (n >= 8 * sizeof(size_t)) {
-    n -= 8 * sizeof(size_t);
+  const int size_t_bits = 8 * (int)sizeof(size_t);
+  if (n >= size_t_bits) {
+    n -= size_t_bits;
     p[0] = p[1];
     p[1] = 0;
   }
   p[0] >>= n;
-  p[0] |= p[1] << (sizeof(size_t) * 8 - n);
+  p[0] |= p[1] << (size_t_bits - n);
   p[1] >>= n;
 }
 

@@ -13,7 +13,7 @@ char* __randname(char* template) {
   __clock_gettime(CLOCK_REALTIME, &ts);
   r = ts.tv_nsec * 65537 ^ ((uintptr_t)&ts / 16 + (uintptr_t) template);
   for (i = 0; i < 6; i++, r >>= 5)
-    template[i] = 'A' + (r & 15) + (r & 16) * 2;
+    template[i] = (char)('A' + (r & 15) + (r & 16) * 2);
 
   return template;
 }
