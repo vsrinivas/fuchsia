@@ -8,9 +8,30 @@
 #include <lib/unittest/unittest.h>
 #include <zircon/types.h>
 
+#include <ktl/string_view.h>
 #include <ktl/unique_ptr.h>
 
 #include "debuglog_internal.h"
+
+namespace {
+struct DLogOutputTest final : public DLog {
+  AutounsignalEvent output;
+  // Buffer to hold last rendered log - size = dlog max data + additional buffer for log header.
+  char output_log_buffer[DLOG_MAX_DATA + 128] TA_GUARDED(output_lock);
+  ktl::string_view last_output_log TA_GUARDED(output_lock);
+  DECLARE_LOCK(DLogOutputTest, Mutex) output_lock;
+
+ protected:
+  void OutputLogMessage(ktl::string_view log) override {
+    {
+      Guard<Mutex> output_guard(&output_lock);
+      memcpy(output_log_buffer, log.data(), log.length());
+      last_output_log = {output_log_buffer, log.length()};
+    }
+    output.Signal();
+  }
+};
+}  // namespace
 
 struct DebuglogTests {
   static bool log_format() {
@@ -98,7 +119,7 @@ struct DebuglogTests {
     ASSERT_EQ(ZX_OK, log->Write(DEBUGLOG_WARNING, 0, {msg, sizeof(msg)}));
 
     DlogReader reader;
-    reader.InitializeForTest(log.get());
+    reader.Initialize(nullptr, nullptr, log.get());
     size_t got;
     dlog_record_t rec{};
     ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
@@ -127,7 +148,7 @@ struct DebuglogTests {
     ASSERT_TRUE(ac.check(), "");
 
     DlogReader reader;
-    reader.InitializeForTest(log.get());
+    reader.Initialize(nullptr, nullptr, log.get());
 
     char msg[] = "Hello World";
 
@@ -192,6 +213,79 @@ struct DebuglogTests {
     EXPECT_EQ(dropped, num_written - num_read);
 
     reader.Disconnect();
+    END_TEST;
+  }
+
+  // Verify that logs written are output correctly by the DumperThread.
+  static bool log_dumper_test() {
+    BEGIN_TEST;
+
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<DLogOutputTest> log = ktl::make_unique<DLogOutputTest>(&ac);
+    ASSERT_TRUE(ac.check());
+
+    // Start the dumper thread.
+    log->StartThreads();
+
+    // This is the size of the header.
+    const size_t min_output_size = []() {
+      dlog_header_t empty_hdr;
+      memset(&empty_hdr, 0, sizeof(empty_hdr));
+      return DLog::FormatHeader({}, empty_hdr);
+    }();
+
+    // A small helper which will count the number of occurrences of |msg| in
+    // |str|.
+    auto CountOccurences = [min_output_size](const ktl::string_view& str,
+                                             const ktl::string_view& msg) -> size_t {
+      size_t count = 0;
+      size_t offset = min_output_size;
+      while ((offset = str.find(msg, offset)) != str.npos) {
+        ++count;
+        ++offset;
+      }
+      return count;
+    };
+
+    // Helper function to verify that a message is output correctly.
+    auto write_log_and_check_output = [&log, &all_ok, min_output_size,
+                                       &CountOccurences](char* msg) -> bool {
+      auto len = strlen(msg);
+      ASSERT_OK(log->Write(DEBUGLOG_INFO, 0, {msg, len}));
+      // Wait for the log to get output by the DumperThread.
+      ASSERT_OK(log->output.Wait());
+
+      Guard<Mutex> output_guard(&log->output_lock);
+      // Length of output log is at least header length + message length.
+      EXPECT_GE(log->last_output_log.length(), min_output_size + len);
+      ASSERT_GT(log->last_output_log.length(), 0lu);
+      // Check that the log ends with a newline.
+      EXPECT_EQ('\n', log->last_output_log[log->last_output_log.length() - 1]);
+      // Check that the log contains the message (if not empty) after the header.
+      if (len) {
+        ASSERT_EQ(1u, CountOccurences(log->last_output_log, msg));
+      }
+      return all_ok;
+    };
+
+    // Check that a simple message appears in the log dump.
+    char msg0[] = "Hello World!\n";
+    EXPECT_TRUE(write_log_and_check_output(msg0));
+
+    // Check that a message without newline appears in the log dump and contains newline.
+    char msg1[] = "Hello!";
+    EXPECT_TRUE(write_log_and_check_output(msg1));
+
+    // Check that a message containing only newline in the log dump.
+    char msg2[] = "\n";
+    EXPECT_TRUE(write_log_and_check_output(msg2));
+
+    // Check that an empty log still gets rendered and contains newline.
+    char msg3[] = "";
+    EXPECT_TRUE(write_log_and_check_output(msg3));
+
+    log->Shutdown(ZX_TIME_INFINITE);
+
     END_TEST;
   }
 
@@ -316,7 +410,7 @@ struct DebuglogTests {
 
     // See that there is only one message in the DLog.
     DlogReader reader;
-    reader.InitializeForTest(log.get());
+    reader.Initialize(nullptr, nullptr, log.get());
     size_t got;
     dlog_record_t rec{};
     ASSERT_EQ(ZX_OK, reader.Read(0, &rec, &got));
@@ -335,6 +429,7 @@ DEBUGLOG_UNITTEST(DebuglogTests::log_format)
 DEBUGLOG_UNITTEST(DebuglogTests::log_wrap)
 DEBUGLOG_UNITTEST(DebuglogTests::log_reader_read)
 DEBUGLOG_UNITTEST(DebuglogTests::log_reader_dataloss)
+DEBUGLOG_UNITTEST(DebuglogTests::log_dumper_test)
 DEBUGLOG_UNITTEST(DebuglogTests::render_to_crashlog)
 DEBUGLOG_UNITTEST(DebuglogTests::shutdown)
 UNITTEST_END_TESTCASE(debuglog_tests, "debuglog_tests", "Debuglog test")

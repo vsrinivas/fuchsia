@@ -36,6 +36,8 @@ class DLog {
  public:
   explicit constexpr DLog() {}
 
+  virtual ~DLog() = default;
+
   void StartThreads();
 
   // Mark this DLog as being shutdown, then shutdown all threads.  Once called,
@@ -48,6 +50,10 @@ class DLog {
   size_t RenderToCrashlog(ktl::span<char> target) const;
 
   zx_status_t Write(uint32_t severity, uint32_t flags, ktl::string_view str);
+
+ protected:
+  // Methods that can be overridden for tests.
+  virtual void OutputLogMessage(ktl::string_view log);
 
  private:
   friend struct DebuglogTests;

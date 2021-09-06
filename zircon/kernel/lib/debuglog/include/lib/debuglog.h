@@ -16,9 +16,9 @@
 
 #include <kernel/event.h>
 #include <kernel/mutex.h>
+#include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <ktl/type_traits.h>
-#include <ktl/span.h>
 
 class DLog;
 typedef struct dlog_header dlog_header_t;
@@ -36,9 +36,12 @@ class DlogReader : public fbl::DoublyLinkedListable<DlogReader*> {
   // Since DlogReaders typically capture containing objects via |cookie_|, they
   // use 2-phase initialization to avoid races in the contruction of the
   // DlogReader and the containing object.
-  void Initialize(NotifyCallback* notify, void* cookie);
-
-  void InitializeForTest(DLog* log);
+  // The optional parameter `log` is used mainly for testing purpose. It should be left as default
+  // for all other uses, in which case the static global DLOG will be used. If `log` takes the
+  // default value i.e static global DLOG, it will outlive the DLogReader and hence there will be no
+  // lifetime issues. If `log` is specified, as it would be in case of tests, the test has to
+  // ensure that the `log` object outlives any DLogReaders associated to it.
+  void Initialize(NotifyCallback* notify, void* cookie, DLog* log = nullptr);
 
   // Read one record out of the log and store it in |record|.
   //

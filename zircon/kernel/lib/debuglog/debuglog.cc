@@ -359,6 +359,11 @@ size_t DLog::RenderToCrashlogLocked(ktl::span<char> target_span) const {
   return target.used_region().size();
 }
 
+void DLog::OutputLogMessage(ktl::string_view log) {
+  console_write(log);
+  dlog_serial_write(log);
+}
+
 // The debuglog notifier thread observes when the debuglog is
 // written and calls the notify callback on any readers that
 // have one so they can process new log messages.
@@ -387,7 +392,7 @@ int DLog::DumperThread() {
   dlog_record_t rec;
   DlogReader reader;
   reader.Initialize([](void* cookie) { static_cast<Event*>(cookie)->Signal(); },
-                    &dumper_state_.event);
+                    &dumper_state_.event, this);
 
   auto disconnect = fit::defer([&reader]() { reader.Disconnect(); });
 
@@ -412,29 +417,18 @@ int DLog::DumperThread() {
         fprintf(&tmp_file, "debuglog: dropped %zu messages\n", gap);
 
         const ktl::string_view sv = tmp_file.as_string_view();
-        console_write(sv);
-        dlog_serial_write(sv);
+        OutputLogMessage(sv);
       }
       expected_sequence = rec.hdr.sequence + 1;
 
-      // "Remove" any tailing newline character before formatting because the
-      // format string already contains a newline.
-      if (rec.hdr.datalen > 0 && (rec.data[rec.hdr.datalen - 1] == '\n')) {
-        rec.hdr.datalen--;
-      }
-
       tmp_file.Skip(FormatHeader(tmp_file.available_region(), rec.hdr));
-      if (rec.hdr.datalen > 0) {
-        tmp_file.Write({rec.data, rec.hdr.datalen});
-        // If the record didn't end with a newline, add one now.
-        if (rec.data[rec.hdr.datalen - 1] != '\n') {
-          tmp_file.Write("\n");
-        }
+      tmp_file.Write({rec.data, rec.hdr.datalen});
+      // If the record didn't end with a newline, add one now.
+      if ((rec.hdr.datalen == 0) || (rec.data[rec.hdr.datalen - 1] != '\n')) {
+        tmp_file.Write("\n");
       }
-
       const ktl::string_view sv = tmp_file.as_string_view();
-      console_write(sv);
-      dlog_serial_write(sv);
+      OutputLogMessage(sv);
     }
   }
 
@@ -515,11 +509,16 @@ DlogReader::~DlogReader() {
   DEBUG_ASSERT(!InContainer());
 }
 
-void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
+void DlogReader::Initialize(NotifyCallback* notify, void* cookie, DLog* log) {
   // A DlogReader can only be initialized once.
   DEBUG_ASSERT(log_ == nullptr);
 
-  log_ = &DLOG.Get();
+  if (log) {
+    log_ = log;
+  } else {
+    log_ = &DLOG.Get();
+  }
+
   notify_ = notify;
   cookie_ = cookie;
 
@@ -538,21 +537,6 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   // before we were initialized
   if (do_notify && notify) {
     notify(cookie);
-  }
-}
-
-void DlogReader::InitializeForTest(DLog* log) {
-  // A DlogReader can only be initialized once.
-  DEBUG_ASSERT(log_ == nullptr);
-
-  log_ = log;
-
-  Guard<Mutex> readers_guard(&log->readers_lock_);
-  log->readers.push_back(this);
-
-  {
-    Guard<SpinLock, IrqSave> guard{&log->lock_};
-    tail_ = log->tail_;
   }
 }
 
