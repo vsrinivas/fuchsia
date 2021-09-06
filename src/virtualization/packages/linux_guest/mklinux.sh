@@ -109,6 +109,9 @@ fi
     declare -rx KBUILD_BUILD_USER="machina"
     declare -rx KBUILD_BUILD_HOST="fuchsia.com"
 
+    # Avoid embedding the user's timezone in the output image.
+    declare -rx TZ=UTC
+
     # CC must be specified on the command line to override the setting in Makefile
     make CC=${CC} "${LINUX_DEFCONFIG}"
     make CC=${CC} -j "$(getconf _NPROCESSORS_ONLN)"
