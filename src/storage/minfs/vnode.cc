@@ -570,6 +570,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
       return ZX_ERR_FILE_BIG;
     }
 
+    FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::WriteInternal can't write any bytes.";
     return ZX_ERR_NO_SPACE;
   }
 
