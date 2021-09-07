@@ -35,10 +35,10 @@ namespace devmgr_launcher {
 
 // Launches an fshost process in the given job. Fshost will have devfs_client
 // installed in its namespace as /dev, and svc_client as /svc
-zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
-                         zx::job devmgr_job, zx::channel devfs_client) {
+zx_status_t LaunchFshost(const Args& args, zx::job& job, zx::channel svc_client,
+                         zx::channel fshost_outgoing_server, zx::channel devfs_client) {
   zx::job job_copy;
-  zx_status_t status = devmgr_job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy);
+  zx_status_t status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy);
   if (status != ZX_OK) {
     return status;
   }
@@ -101,9 +101,23 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
       std::move(svc_client));
 
   if (!clone_stdio) {
+    zx_handle_t stdio_clone;
+    status = fdio_fd_clone(args.stdio.get(), &stdio_clone);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    fdio_t* stdio_clone_fdio_t;
+    status = fdio_create(stdio_clone, &stdio_clone_fdio_t);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    int stdio_clone_fd = fdio_bind_to_fd(stdio_clone_fdio_t, -1, 0);
+
     actions.AddAction(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-        .fd = {.local_fd = args.stdio.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO},
+        .fd = {.local_fd = stdio_clone_fd, .target_fd = FDIO_FLAG_USE_FOR_STDIO},
     });
   }
 
@@ -114,7 +128,7 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
 
   zx::process new_process;
   std::vector<fdio_spawn_action_t> spawn_actions = actions.GetActions();
-  status = fdio_spawn_etc(devmgr_job.get(), flags, kFshostPath, argv.data(), nullptr /* environ */,
+  status = fdio_spawn_etc(job.get(), flags, kFshostPath, argv.data(), nullptr /* environ */,
                           spawn_actions.size(), spawn_actions.data(),
                           new_process.reset_and_get_address(), nullptr /* err_msg */);
   if (status != ZX_OK) {
@@ -123,46 +137,15 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
   return ZX_OK;
 }
 
-__EXPORT
-zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
-                   zx::channel component_lifecycle_server, zx::job* devmgr_job,
-                   zx::process* devmgr_process, zx::channel* devfs_root,
-                   zx::channel* outgoing_services_root) {
-  // Create containing job (and copies for devcoordinator and fshost)
-  zx::job job, devmgr_job_copy, fshost_job_copy;
-  zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
+zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devfs_server,
+                                zx::channel outgoing_services_server,
+                                zx::channel component_lifecycle_server, zx::channel svc_client,
+                                zx::process* new_process) {
+  zx::job devmgr_job_copy;
+  zx_status_t status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &devmgr_job_copy);
   if (status != ZX_OK) {
     return status;
   }
-  status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &devmgr_job_copy);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &fshost_job_copy);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Create channel to connect to devfs
-  zx::channel devfs_client, devfs_server;
-  status = zx::channel::create(0, &devfs_client, &devfs_server);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Create devfs client clone for fshost
-  zx::channel devfs_for_fshost(fdio_service_clone(devfs_client.get()));
-
-  // Create svc client clone for fshost
-  zx::channel svc_client_for_fshost(fdio_service_clone(svc_client.get()));
-
-  // Create channel to connect to outgoing services
-  zx::channel outgoing_services_client, outgoing_services_server;
-  status = zx::channel::create(0, &outgoing_services_client, &outgoing_services_server);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   const bool clone_stdio = !args.stdio.is_valid();
 
   std::vector<const char*> argv;
@@ -274,20 +257,62 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     flags |= FDIO_SPAWN_CLONE_STDIO;
   }
 
-  zx::process new_process;
   std::vector<fdio_spawn_action_t> spawn_actions = actions.GetActions();
   status = fdio_spawn_etc(job.get(), flags, kDevmgrPath, argv.data(), nullptr /* environ */,
                           spawn_actions.size(), spawn_actions.data(),
-                          new_process.reset_and_get_address(), nullptr /* err_msg */);
+                          new_process->reset_and_get_address(), nullptr /* err_msg */);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+__EXPORT
+zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
+                   zx::channel component_lifecycle_server, zx::job* devmgr_job,
+                   zx::process* devmgr_process, zx::channel* devfs_root,
+                   zx::channel* outgoing_services_root) {
+  zx::job job;
+  zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = LaunchFshost(std::move(args), std::move(svc_client_for_fshost),
-                        std::move(fshost_outgoing_server), std::move(fshost_job_copy),
-                        std::move(devfs_for_fshost));
+  // Create channel to connect to devfs
+  zx::channel devfs_client, devfs_server;
+  status = zx::channel::create(0, &devfs_client, &devfs_server);
   if (status != ZX_OK) {
     return status;
+  }
+
+  // Create channel to connect to outgoing services
+  zx::channel outgoing_services_client, outgoing_services_server;
+  status = zx::channel::create(0, &outgoing_services_client, &outgoing_services_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::process new_process;
+
+  // Launch driver manager.
+  {
+    zx::channel svc_client_for_dm(fdio_service_clone(svc_client.get()));
+    status = LaunchDriverManager(
+        args, job, std::move(devfs_server), std::move(outgoing_services_server),
+        std::move(component_lifecycle_server), std::move(svc_client_for_dm), &new_process);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Launch fshost.
+  {
+    zx::channel devfs_for_fshost(fdio_service_clone(devfs_client.get()));
+    status = LaunchFshost(args, job, std::move(svc_client), std::move(fshost_outgoing_server),
+                          std::move(devfs_for_fshost));
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   *devmgr_job = std::move(job);
