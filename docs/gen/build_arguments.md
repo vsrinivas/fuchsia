@@ -1018,7 +1018,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:67
+From //zircon/kernel/params.gni:69
 
 ### dwarf_version
 Explicitly specify DWARF version used.
@@ -1077,7 +1077,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:119
+From //zircon/kernel/params.gni:121
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1132,7 +1132,7 @@ memory usage overheads, but will not exhaust due to fragmentation.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:91
+From //zircon/kernel/params.gni:93
 
 ### ermine_app_entries
 Build arg that allows overriding the default set of application entries
@@ -1849,25 +1849,25 @@ value regardless of whether persistent tracing is enabled or not.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:108
+From //zircon/kernel/params.gni:110
 
 ### jtrace_last_entry_storage
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:109
+From //zircon/kernel/params.gni:111
 
 ### jtrace_target_buffer_size
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:110
+From //zircon/kernel/params.gni:112
 
 ### jtrace_use_large_entries
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:111
+From //zircon/kernel/params.gni:113
 
 ### kernel_base
 
@@ -1885,7 +1885,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:79
+From //zircon/kernel/params.gni:81
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -1896,7 +1896,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:86
+From //zircon/kernel/params.gni:88
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -1904,7 +1904,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:71
+From //zircon/kernel/params.gni:73
 
 ### kernel_version_git_checkout
 By default the kernel version string is generated based on the full git
@@ -3006,7 +3006,7 @@ cacheline size of the target architecture.
 
 **Current value (from the default):** `128`
 
-From //zircon/kernel/params.gni:98
+From //zircon/kernel/params.gni:100
 
 ### platform_enable_user_pci
 
@@ -4108,10 +4108,12 @@ zero add increasing details at the cost of increased trace buffer use.
 
 0 = Default kernel:* tracing.
 1 = Adds flow events for asynchronous page requests.
+2 = Adds duration events related to accessed faults and page faults.
+3 = Adds duration events for PMM allocations and frees.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:63
+From //zircon/kernel/params.gni:65
 
 ### vulkan_host_runtime_dir
 
