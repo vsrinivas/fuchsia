@@ -36,7 +36,7 @@ source:
 
 Some tools that are built on top of the diagnostics platform (such as [Triage][triage] and
 [Detect][detect]) need to differentiate between data types with their selectors. These tools extend
-the selector DSL with an additional syntax [specifying data type][reader-fidl]:
+the selector DSL with an additional syntax [specifying data type][datatype-fidl]:
 
 ```
 INSPECT|LOG|LIFECYCLE:<component_selector>:<hierarchy_path_selector>:<property_selector>
@@ -240,7 +240,7 @@ root/realm1/echo.cmx:a/b/c/d:*
 ```
 
 
-[datatype-fidl]: reference/fidl/fuchsia.diagnostics#DataType
+[datatype-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#DataType
 [detect]: /src/diagnostics/config/triage/detect
 [moniker]: /docs/concepts/components/v2/monikers.md
 [topology-example-img]: selectors-example.png
