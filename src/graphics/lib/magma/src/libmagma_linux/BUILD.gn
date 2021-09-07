@@ -36,6 +36,11 @@ static_library("libmagma_linux") {
   }
 }
 
+# This target makes it easy to build libmagma_linux.a directly with ninja
+group("libmagma_linux_x64_shared") {
+  deps = [ ":libmagma_linux(//build/toolchain:linux_x64-shared)" ]
+}
+
 action("magma_generic") {
   out_file = "$target_gen_dir/magma_generic.cc"
   script = "magma_generic_cc_gen.py"
