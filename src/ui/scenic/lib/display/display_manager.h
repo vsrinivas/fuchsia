@@ -23,7 +23,8 @@ class DisplayManager {
   // |display_available_cb| is a one-shot callback that is triggered when the first display is
   // observed, and cleared immediately afterward.
   explicit DisplayManager(fit::closure display_available_cb);
-  DisplayManager(std::optional<uint64_t> i_can_haz_display_id, fit::closure display_available_cb);
+  DisplayManager(std::optional<uint64_t> i_can_haz_display_id,
+                 std::optional<size_t> i_can_haz_display_mode, fit::closure display_available_cb);
   ~DisplayManager() = default;
 
   void BindDefaultDisplayController(
@@ -73,6 +74,10 @@ class DisplayManager {
   // When new displays are detected, ignore all displays which don't match this ID.
   // TODO(fxb/76985): Remove this when we have proper multi-display support.
   const std::optional<uint64_t> i_can_haz_display_id_;
+
+  // When a new display is picked, use display mode with this index.
+  // TODO(fxb/76985): Remove this when we have proper multi-display support.
+  const std::optional<size_t> i_can_haz_display_mode_;
 
   fit::closure display_available_cb_;
   // A boolean indicating whether or not we have ownership of the display

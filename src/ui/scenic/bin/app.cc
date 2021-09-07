@@ -70,6 +70,13 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
             values.i_can_haz_display_id = value.intval();
           },
       },
+      {
+          "i_can_haz_display_mode",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_intval()) << key << " must be an integer";
+            values.i_can_haz_display_mode = value.intval();
+          },
+      },
   };
 
   async::Loop stash_loop(&kAsyncLoopConfigNeverAttachToThread);
@@ -142,6 +149,7 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
                 << StringFromBufferCollectionImportMode(
                        values.flatland_buffer_collection_import_mode);
   FX_LOGS(INFO) << "Scenic i_can_haz_display_id: " << values.i_can_haz_display_id.value_or(0);
+  FX_LOGS(INFO) << "Scenic i_can_haz_display_mode: " << values.i_can_haz_display_mode.value_or(0);
 
   return values;
 }
@@ -248,7 +256,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   // Instantiate DisplayManager and schedule a task to inject the display controller into it, once
   // it becomes available.
   display_manager_ = std::make_unique<display::DisplayManager>(
-      config_values_.i_can_haz_display_id,
+      config_values_.i_can_haz_display_id, config_values_.i_can_haz_display_mode,
       [this, completer = std::move(display_bridge.completer)]() mutable {
         completer.complete_ok(display_manager_->default_display_shared());
       });

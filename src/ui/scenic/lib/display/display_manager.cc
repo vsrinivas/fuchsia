@@ -13,11 +13,13 @@ namespace scenic_impl {
 namespace display {
 
 DisplayManager::DisplayManager(fit::closure display_available_cb)
-    : DisplayManager(std::nullopt, std::move(display_available_cb)) {}
+    : DisplayManager(std::nullopt, std::nullopt, std::move(display_available_cb)) {}
 
 DisplayManager::DisplayManager(std::optional<uint64_t> i_can_haz_display_id,
+                               std::optional<uint64_t> i_can_haz_display_mode,
                                fit::closure display_available_cb)
     : i_can_haz_display_id_(i_can_haz_display_id),
+      i_can_haz_display_mode_(i_can_haz_display_mode),
       display_available_cb_(std::move(display_available_cb)) {}
 
 void DisplayManager::BindDefaultDisplayController(
@@ -46,8 +48,6 @@ void DisplayManager::BindDefaultDisplayController(
 void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                                        std::vector<uint64_t> removed) {
   for (auto& display : added) {
-    auto& mode = display.modes[0];
-
     // Ignore display if |i_can_haz_display_id| is set and it doesn't match ID.
     if (i_can_haz_display_id_.has_value() && display.id != *i_can_haz_display_id_) {
       FX_LOGS(INFO) << "Ignoring display with id=" << display.id
@@ -56,6 +56,20 @@ void DisplayManager::OnDisplaysChanged(std::vector<fuchsia::hardware::display::I
     }
 
     if (!default_display_) {
+      size_t mode_idx = 0;
+
+      // Set display mode if requested.
+      if (i_can_haz_display_mode_.has_value()) {
+        if (*i_can_haz_display_mode_ < display.modes.size()) {
+          mode_idx = *i_can_haz_display_mode_;
+          (*default_display_controller_)->SetDisplayMode(display.id, display.modes[mode_idx]);
+        } else {
+          FX_LOGS(ERROR) << "Requested display mode=" << *i_can_haz_display_mode_
+                         << " doesn't exist for display with id=" << display.id;
+        }
+      }
+
+      auto& mode = display.modes[mode_idx];
       default_display_ =
           std::make_unique<Display>(display.id, mode.horizontal_resolution,
                                     mode.vertical_resolution, std::move(display.pixel_format));
