@@ -19,6 +19,7 @@ source_set("top") {
     "//zircon/kernel/kernel",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/cxxabi-dynamic-init:headers",
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/io",

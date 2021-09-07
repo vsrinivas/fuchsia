@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/cpp/library_headers.gni")
+
+source_set("cxxabi-dynamic-init") {
+  sources = [ "cxxabi-dynamic-init.cc" ]
+  public_deps = [ ":headers" ]
+}
+
+library_headers("headers") {
+  headers = [ "lib/cxxabi-dynamic-init/cxxabi-dynamic-init.h" ]
+}

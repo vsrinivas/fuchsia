@@ -176,16 +176,16 @@ if (is_kernel) {
 
       # include/lib/counters.h and kernel.ld depend on -fdata-sections.
       "//build/config/zircon:data_sections",
-
-      # Don't emit extra code making static initializers thread-safe (which in turn
-      # requires additional library support for locks the kernel doesn't provide).
-      "//build/config/zircon:no_threadsafe_statics",
-
-      # TODO(maniscaclo): enable this when ready
-      # Disallow C++ static initializers in functions that require runtime
-      # initialization.
-      #"//build/config/zircon:forbid-guard-variables",
     ]
+
+    # TODO(fxbug.dev/27083): This dependency is conditional because when built
+    # with GCC the kernel uses function scoped statics requiring dynamic
+    # initialization. Once fxbug.dev/27083 is fixed, this dependency can be
+    # removed.
+    if (is_gcc) {
+      # Don't emit extra code making static initializers thread-safe.
+      configs += [ "//build/config/zircon:no_threadsafe_statics" ]
+    }
 
     # Always enable frame pointers in the kernel so there are panic
     # backtraces and such.
@@ -744,6 +744,14 @@ if (is_kernel) {
         "arch/x86/user-copy:tests",
         "lib/libc/string/arch/x86:tests",
       ]
+    }
+
+    # TODO(fxbug.dev/27083): This dependency is conditional because when built
+    # with GCC the kernel uses function scoped statics requiring dynamic
+    # initialization. Once fxbug.dev/27083 is fixed, this dependency can be made
+    # unconditional.
+    if (!is_gcc) {
+      deps += [ "lib/cxxabi-dynamic-init/tests" ]
     }
 
     # Don't let any test ZBIs roll up into the overall product image.

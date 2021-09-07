@@ -14,6 +14,7 @@
 #include <arch.h>
 #include <debug.h>
 #include <lib/counters.h>
+#include <lib/cxxabi-dynamic-init/cxxabi-dynamic-init.h>
 #include <lib/debuglog.h>
 #include <lib/heap.h>
 #include <lib/jtrace/jtrace.h>
@@ -52,6 +53,10 @@ static void call_constructors() {
 
   lk_global_constructors_called_flag = true;
 }
+
+namespace cxxabi_dynamic_init::internal {
+bool ConstructorsCalled() { return lk_global_constructors_called(); }
+}  // namespace cxxabi_dynamic_init::internal
 
 // called from arch code
 void lk_main() {

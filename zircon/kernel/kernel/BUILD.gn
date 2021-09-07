@@ -53,6 +53,14 @@ source_set("kernel") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
+
+  # TODO(fxbug.dev/27083): This dependency is conditional because when built
+  # with GCC the kernel uses function scoped statics requiring dynamic
+  # initialization. Once fxbug.dev/27083 is fixed, this dependency can be made
+  # unconditional.
+  if (!is_gcc) {
+    deps += [ "//zircon/kernel/lib/cxxabi-dynamic-init" ]
+  }
 }
 
 source_set("tests") {
