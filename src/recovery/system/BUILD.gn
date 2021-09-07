@@ -51,7 +51,6 @@ rustc_binary("bin") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -75,7 +74,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:rouille",
-    "//third_party/rust_crates:rust-crypto",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
@@ -122,7 +120,6 @@ rustc_binary("bin_fdr") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
@@ -142,7 +139,6 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:rouille",
-    "//third_party/rust_crates:rust-crypto",
     "//third_party/rust_crates:thiserror",
   ]
   sources = [
