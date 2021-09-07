@@ -406,6 +406,17 @@ TEST_P(DirectoryTest, RenameIntoUnlinkedDirectoryFails) {
   ASSERT_EQ(errno, ENOENT);
 }
 
+TEST_P(DirectoryTest, RmdirOnlyAllowsDirectories) {
+  std::string foo = GetPath("foo");
+  fbl::unique_fd foo_fd(open(foo.c_str(), O_CREAT | O_RDWR, 0644));
+  EXPECT_EQ(rmdir(foo.c_str()), -1);
+  EXPECT_EQ(errno, ENOTDIR);
+
+  std::string baz = GetPath("baz");
+  EXPECT_EQ(mkdir(baz.c_str(), 0777), 0);
+  EXPECT_EQ(rmdir(baz.c_str()), 0);
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 

@@ -145,9 +145,8 @@ int access(const char* path, int mode) { return checkfile(path, 0); }
 __EXPORT
 void sync(void) {}
 
-// at the moment our unlink works on all fs objects
 __EXPORT
-int rmdir(const char* path) { return unlink(path); }
+int rmdir(const char* path) { return unlinkat(AT_FDCWD, path, AT_REMOVEDIR); }
 
 // tty stubbing.
 __EXPORT
