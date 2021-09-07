@@ -1,12 +1,17 @@
 {
     include: [ "syslog/client.shard.cml" ],
     use: [
+        // Split into separate elements to allow CML merging to deduplicate entries. Duplicates must
+        // look exactly like these entries to be deduplicated.
+        // TODO(fxbug.dev/83907): Cleanup when possible.
         {
-            protocol: [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
-            ],
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+        },
+        {
+            protocol: [ "fuchsia.vulkan.loader.Loader" ],
         },
     ],
 }

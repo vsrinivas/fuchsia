@@ -7,6 +7,7 @@
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -34,31 +35,6 @@
             path: "/dev/class/display-controller",
         },
         {
-            directory: "dev-goldfish-address-space",
-            rights: [ "rw*" ],
-            path: "/dev/class/goldfish-address-space",
-        },
-        {
-            directory: "dev-goldfish-control",
-            rights: [ "rw*" ],
-            path: "/dev/class/goldfish-control",
-        },
-        {
-            directory: "dev-goldfish-pipe",
-            rights: [ "rw*" ],
-            path: "/dev/class/goldfish-pipe",
-        },
-        {
-            directory: "dev-goldfish-sync",
-            rights: [ "rw*" ],
-            path: "/dev/class/goldfish-sync",
-        },
-        {
-            directory: "dev-gpu",
-            rights: [ "rw*" ],
-            path: "/dev/class/gpu",
-        },
-        {
             directory: "tmp",
             rights: [ "rw*" ],
             path: "/tmp",
@@ -68,11 +44,14 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.display.Provider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.ImeService",
-                "fuchsia.vulkan.loader.Loader",
             ],
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
         },
     ],
     expose: [
