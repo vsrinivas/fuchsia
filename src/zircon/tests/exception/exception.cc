@@ -517,7 +517,7 @@ static void test_child_exit_closing_excp_handle() {
   // Test fxbug.dev/31432. Process termination closing the last handle of the exception
   // channel should not cause a panic.
   zx::channel exception_channel;
-  ASSERT_OK(zx::process::self()->create_exception_channel(0, &exception_channel));
+  ZX_ASSERT(zx::process::self()->create_exception_channel(0, &exception_channel) == ZX_OK);
   exit(0);
 
   /* NOTREACHED */
