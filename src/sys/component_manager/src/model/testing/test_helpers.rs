@@ -434,7 +434,7 @@ impl ActionsTest {
 
     pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model
-            .bind(&moniker, &BindReason::Eager)
+            .bind(&moniker.to_partial(), &BindReason::Eager)
             .await
             .expect(&format!("could not bind to {}", moniker))
     }

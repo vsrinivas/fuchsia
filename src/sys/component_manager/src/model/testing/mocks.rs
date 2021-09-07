@@ -37,7 +37,7 @@ use {
         prelude::*,
     },
     log::warn,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},
@@ -403,7 +403,7 @@ impl FakeBinder {
 impl Binder for FakeBinder {
     async fn bind<'a>(
         &'a self,
-        _abs_moniker: &'a AbsoluteMoniker,
+        _abs_moniker: &'a PartialAbsoluteMoniker,
         _reason: &'a BindReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         let resolver = ResolverRegistry::new();

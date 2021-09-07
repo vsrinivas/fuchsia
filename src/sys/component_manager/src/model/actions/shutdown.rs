@@ -773,7 +773,7 @@ mod tests {
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_sys2 as fsys,
-        moniker::{AbsoluteMoniker, PartialChildMoniker},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
@@ -1896,7 +1896,7 @@ mod tests {
         // `Execution`.
         let component = test.look_up(vec!["a:0"].into()).await;
         test.model
-            .bind(&component.abs_moniker, &BindReason::Eager)
+            .bind(&component.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component).await);
@@ -1911,7 +1911,7 @@ mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&a_info.component.abs_moniker, &BindReason::Eager)
+            .bind(&a_info.component.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect_err("successfully bound to a after shutdown");
 
@@ -1950,19 +1950,19 @@ mod tests {
         let component_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         let component_c = test.look_up(vec!["container:0", "c:0"].into()).await;
         test.model
-            .bind(&component_container.abs_moniker, &BindReason::Eager)
+            .bind(&component_container.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to container");
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to coll:a");
         test.model
-            .bind(&component_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to coll:b");
         test.model
-            .bind(&component_c.abs_moniker, &BindReason::Eager)
+            .bind(&component_c.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to coll:b");
         assert!(is_executing(&component_container).await);
@@ -2073,7 +2073,7 @@ mod tests {
         let test = ActionsTest::new("root", components, None).await;
         let component_a = test.look_up(vec!["a:0"].into()).await;
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -2135,7 +2135,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -2265,7 +2265,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -2444,7 +2444,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -2658,7 +2658,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
@@ -2796,7 +2796,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
 
@@ -2881,7 +2881,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
 
@@ -2990,7 +2990,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
 
@@ -3072,7 +3072,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
 
@@ -3137,15 +3137,15 @@ mod tests {
 
         // Bind to second `b`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&component_b.abs_moniker, &BindReason::Eager)
+            .bind(&component_b.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         test.model
-            .bind(&component_b2.abs_moniker, &BindReason::Eager)
+            .bind(&component_b2.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to b2");
         assert!(is_executing(&component_a).await);
@@ -3252,7 +3252,7 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
-            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);

@@ -206,7 +206,7 @@ mod tests {
         let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
         test.model
             .bind(
-                &component_a.abs_moniker,
+                &component_a.abs_moniker.to_partial(),
                 &BindReason::BindChild { parent: AbsoluteMoniker::root() },
             )
             .await
@@ -295,7 +295,7 @@ mod tests {
             let component_a = test.look_up(vec!["a:0"].into()).await;
             test.model
                 .bind(
-                    &component_a.abs_moniker,
+                    &component_a.abs_moniker.to_partial(),
                     &BindReason::BindChild { parent: AbsoluteMoniker::root() },
                 )
                 .await

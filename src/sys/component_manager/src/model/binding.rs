@@ -12,7 +12,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     futures::future::{join_all, BoxFuture},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::{Arc, Weak},
 };
 
@@ -23,7 +23,7 @@ use {
 pub trait Binder: Send + Sync {
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         reason: &'a BindReason,
     ) -> Result<Arc<ComponentInstance>, ModelError>;
 }
@@ -39,7 +39,7 @@ impl Binder for Arc<Model> {
     // stop the parent. To solve this, we need to track the bindings.
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         reason: &'a BindReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         bind_at_moniker(self, abs_moniker, reason).await
@@ -50,7 +50,7 @@ impl Binder for Arc<Model> {
 impl Binder for Weak<Model> {
     async fn bind<'a>(
         &'a self,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         reason: &'a BindReason,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
         if let Some(model) = self.upgrade() {
@@ -65,14 +65,14 @@ impl Binder for Weak<Model> {
 /// Returns the component that was bound to.
 pub async fn bind_at_moniker<'a>(
     model: &'a Arc<Model>,
-    abs_moniker: &'a AbsoluteMoniker,
+    abs_moniker: &'a PartialAbsoluteMoniker,
     reason: &BindReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
     let mut cur_moniker = PartialAbsoluteMoniker::root();
     let mut component = model.root().clone();
     bind_at(component.clone(), reason).await?;
     for m in abs_moniker.path().iter() {
-        cur_moniker = cur_moniker.child(m.to_partial());
+        cur_moniker = cur_moniker.child(m.clone());
         component = model.look_up(&cur_moniker).await?;
         bind_at(component.clone(), reason).await?;
     }
@@ -159,7 +159,7 @@ mod tests {
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::{join, lock::Mutex, prelude::*},
         matches::assert_matches,
-        moniker::PartialChildMoniker,
+        moniker::{AbsoluteMoniker, PartialChildMoniker},
         std::{collections::HashSet, convert::TryFrom},
     };
 
@@ -183,7 +183,7 @@ mod tests {
     async fn bind_root() {
         let (model, _builtin_environment, mock_runner) =
             new_model(vec![("root", component_decl_with_test_runner())]).await;
-        let m: AbsoluteMoniker = AbsoluteMoniker::root();
+        let m: PartialAbsoluteMoniker = PartialAbsoluteMoniker::root();
         let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
         mock_runner.wait_for_url("test:///root_resolved").await;
@@ -195,7 +195,7 @@ mod tests {
     async fn bind_root_non_existent() {
         let (model, _builtin_environment, mock_runner) =
             new_model(vec![("root", component_decl_with_test_runner())]).await;
-        let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["no-such-instance"].into();
         let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<Arc<ComponentInstance>, ModelError> =
             Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
@@ -230,7 +230,7 @@ mod tests {
         // Bind to "system", pausing before it starts.
         let model_copy = model.clone();
         let (f, bind_handle) = async move {
-            let m: AbsoluteMoniker = vec!["system:0"].into();
+            let m: PartialAbsoluteMoniker = vec!["system"].into();
             model_copy.bind(&m, &BindReason::Root).await.expect("failed to bind 1");
         }
         .remote_handle();
@@ -280,7 +280,7 @@ mod tests {
         )
         .await;
         // bind to system
-        let m: AbsoluteMoniker = vec!["system:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
@@ -300,7 +300,7 @@ mod tests {
             InstanceState::New | InstanceState::Discovered
         );
         // bind to echo
-        let m: AbsoluteMoniker = vec!["echo:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["echo"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner
             .wait_for_urls(&[
@@ -340,7 +340,7 @@ mod tests {
         .await;
 
         // Bind to logger (before ever binding to system). Ancestors are bound first.
-        let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner
             .wait_for_urls(&[
@@ -351,7 +351,7 @@ mod tests {
             .await;
 
         // Bind to netstack.
-        let m: AbsoluteMoniker = vec!["system:0", "netstack:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system", "netstack"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner
             .wait_for_urls(&[
@@ -363,7 +363,7 @@ mod tests {
             .await;
 
         // finally, bind to system. Was already bound, so no new results.
-        let m: AbsoluteMoniker = vec!["system:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner
             .wait_for_urls(&[
@@ -386,12 +386,12 @@ mod tests {
         ])
         .await;
         // bind to system
-        let m: AbsoluteMoniker = vec!["system:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
         // can't bind to logger: it does not exist
-        let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["system", "logger"].into();
         let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<(), ModelError> =
             Err(ModelError::instance_not_found(m.to_partial()));
@@ -431,7 +431,7 @@ mod tests {
 
         // Bind to the top component, and check that it and the eager components were started.
         {
-            let m = AbsoluteMoniker::new(vec!["a:0".into()]);
+            let m = PartialAbsoluteMoniker::new(vec!["a".into()]);
             let res = model.bind(&m, &BindReason::Root).await;
             assert!(res.is_ok());
             mock_runner
@@ -501,7 +501,7 @@ mod tests {
         // Bind to the top component, and check that it and the eager components were started.
         {
             let (f, bind_handle) = async move {
-                let m = AbsoluteMoniker::new(vec!["a:0".into()]);
+                let m = PartialAbsoluteMoniker::new(vec!["a".into()]);
                 model.bind(&m, &BindReason::Root).await
             }
             .remote_handle();
@@ -531,7 +531,7 @@ mod tests {
 
         // Bind to the parent component. The child should be started. However, the parent component
         // is non-executable so it is not run.
-        let m: AbsoluteMoniker = vec!["a:0"].into();
+        let m: PartialAbsoluteMoniker = vec!["a"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///b_resolved"]).await;
     }
@@ -594,7 +594,7 @@ mod tests {
 
         // Bind to child and check that it gets resolved, with a Resolve event and action.
         let bind = async {
-            model.bind(&m, &BindReason::Root).await.unwrap();
+            model.bind(&m.to_partial(), &BindReason::Root).await.unwrap();
         };
         let check_events = async {
             let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();

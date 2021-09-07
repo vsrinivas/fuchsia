@@ -371,7 +371,7 @@ impl RoutingTest {
         let component =
             self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
         self.model
-            .bind(&component.abs_moniker, &BindReason::Eager)
+            .bind(&component.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("bind instance failed");
         let partial_moniker =
@@ -570,7 +570,7 @@ impl RoutingTest {
         reason: BindReason,
         wait_for_start: bool,
     ) -> Result<String, ModelError> {
-        self.model.bind(moniker, &reason).await?;
+        self.model.bind(&moniker.to_partial(), &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -588,7 +588,7 @@ impl RoutingTest {
         reason: BindReason,
         wait_for_start: bool,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
-        let instance = self.model.bind(moniker, &reason).await?;
+        let instance = self.model.bind(&moniker.to_partial(), &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -613,7 +613,7 @@ impl RoutingTest {
             self.model.look_up(&component.to_partial()).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(&component.abs_moniker, &BindReason::Eager)
+            .bind(&component.abs_moniker.to_partial(), &BindReason::Eager)
             .await
             .expect("failed to bind to component")
             .open_outgoing(
@@ -1479,7 +1479,10 @@ pub mod capability_util {
             .look_up(&abs_moniker.to_partial())
             .await
             .expect(&format!("component not found {}", abs_moniker));
-        model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
+        model
+            .bind(&abs_moniker.to_partial(), &BindReason::Eager)
+            .await
+            .expect("failed to bind instance");
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {

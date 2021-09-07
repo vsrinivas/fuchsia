@@ -14,7 +14,7 @@ use {
     fuchsia_async::Channel,
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         hash::{Hash, Hasher},
         io,
@@ -106,7 +106,7 @@ async fn dispatch(
     let svc_path: CapabilityPath =
         format!("/svc/{}", *WORKER_CAPABILITY_NAME).parse().expect("bad path");
     binder
-        .bind(&target_moniker, &BindReason::Scheduled)
+        .bind(&target_moniker.to_partial(), &BindReason::Scheduled)
         .await
         .map_err(|err| Error::Model(err))?
         .open_outgoing(

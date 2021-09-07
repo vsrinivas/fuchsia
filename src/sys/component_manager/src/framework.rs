@@ -455,7 +455,7 @@ mod tests {
         futures::{lock::Mutex, poll, task::Poll},
         io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         matches::assert_matches,
-        moniker::AbsoluteMoniker,
+        moniker::PartialAbsoluteMoniker,
         std::collections::HashSet,
         std::convert::TryFrom,
         std::path::PathBuf,
@@ -472,7 +472,7 @@ mod tests {
     impl RealmCapabilityTest {
         async fn new(
             components: Vec<(&'static str, ComponentDecl)>,
-            component_moniker: AbsoluteMoniker,
+            component_moniker: PartialAbsoluteMoniker,
         ) -> Self {
             // Init model.
             let config = RuntimeConfig { list_children_batch_size: 2, ..Default::default() };
@@ -552,7 +552,7 @@ mod tests {
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
-            vec!["system:0"].into(),
+            vec!["system"].into(),
         )
         .await;
 
@@ -609,7 +609,7 @@ mod tests {
                         .build(),
                 ),
             ],
-            vec!["system:0"].into(),
+            vec!["system"].into(),
         )
         .await;
 
@@ -772,7 +772,7 @@ mod tests {
                 ("a", component_decl_with_test_runner()),
                 ("b", component_decl_with_test_runner()),
             ],
-            vec!["system:0"].into(),
+            vec!["system"].into(),
         )
         .await;
 
@@ -900,7 +900,7 @@ mod tests {
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
-            vec!["system:0"].into(),
+            vec!["system"].into(),
         )
         .await;
 
@@ -1071,7 +1071,7 @@ mod tests {
                 ("system", ComponentDeclBuilder::new().add_single_run_collection("coll").build()),
                 ("a", component_decl_with_test_runner()),
             ],
-            vec!["system:0"].into(),
+            vec!["system"].into(),
         )
         .await;
 

@@ -1670,6 +1670,7 @@ pub mod tests {
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
         futures::lock::Mutex,
         matches::assert_matches,
+        moniker::PartialAbsoluteMoniker,
         routing_test_helpers::component_id_index::make_index_file,
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
     };
@@ -2330,15 +2331,12 @@ pub mod tests {
             .await;
 
         let root_realm =
-            test.model.bind(&AbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
+            test.model.bind(&PartialAbsoluteMoniker::root(), &BindReason::Root).await.unwrap();
         assert_eq!(instance_id, root_realm.instance_id());
 
         let a_realm = test
             .model
-            .bind(
-                &AbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
-                &BindReason::Root,
-            )
+            .bind(&PartialAbsoluteMoniker::from(vec!["a"]), &BindReason::Root)
             .await
             .unwrap();
         assert_eq!(None, a_realm.instance_id());

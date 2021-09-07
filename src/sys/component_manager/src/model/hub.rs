@@ -690,6 +690,7 @@ mod tests {
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
+        moniker::PartialAbsoluteMoniker,
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -778,7 +779,7 @@ mod tests {
 
         model.root().hooks.install(additional_hooks).await;
 
-        let root_moniker = AbsoluteMoniker::root();
+        let root_moniker = PartialAbsoluteMoniker::root();
         let res = model.bind(&root_moniker, &BindReason::Root).await;
         assert!(res.is_ok());
 
