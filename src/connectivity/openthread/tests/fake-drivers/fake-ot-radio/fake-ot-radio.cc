@@ -136,7 +136,9 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestVi
   } else {
     // Send out the frame.
     fbl::AutoLock lock(&ot_radio_obj_.radiobound_lock_);
-    ot_radio_obj_.radiobound_queue_.push(request->data);
+    std::vector<uint8_t> radiobound_bytes;
+    radiobound_bytes.assign(request->data.data(), request->data.data() + request->data.count());
+    ot_radio_obj_.radiobound_queue_.push(std::move(radiobound_bytes));
     lock.release();
     async::PostTask(ot_radio_obj_.loop_.dispatcher(),
                     [this]() { this->ot_radio_obj_.TryHandleRadioboundFrame(); });
@@ -222,13 +224,13 @@ uint8_t FakeOtRadioDevice::ValidateSpinelHeaderAndGetTid(const uint8_t* data, ui
   return data[0] & kBitMaskLowerFourBits;
 }
 
-void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
+void FakeOtRadioDevice::FrameHandler(std::vector<uint8_t> data) {
   if (power_status_ != OT_SPINEL_DEVICE_ON) {
     zxlogf(ERROR, "fake-ot-radio: failed to handle frame due to device off");
     return;
   }
 
-  uint8_t tid = ValidateSpinelHeaderAndGetTid(data.data(), data.count());
+  uint8_t tid = ValidateSpinelHeaderAndGetTid(data.data(), data.size());
   if (tid == kSpinelHeaderInvalid) {
     return;
   }

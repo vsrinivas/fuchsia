@@ -63,7 +63,7 @@ class FakeOtRadioDevice : public DeviceType {
   uint32_t GetTimeoutMs();
   zx_status_t TrySendClientboundFrame();
   void TryHandleRadioboundFrame();
-  void FrameHandler(::fidl::VectorView<uint8_t> data);
+  void FrameHandler(std::vector<uint8_t> data);
   void PostSendClientboundFrameTask(std::vector<uint8_t> packet);
 
   static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
@@ -96,7 +96,7 @@ class FakeOtRadioDevice : public DeviceType {
   std::queue<std::vector<uint8_t>> clientbound_queue_ __TA_GUARDED(clientbound_lock_);
 
   fbl::Mutex radiobound_lock_;
-  std::queue<::fidl::VectorView<uint8_t>> radiobound_queue_ __TA_GUARDED(radiobound_lock_);
+  std::queue<std::vector<uint8_t>> radiobound_queue_ __TA_GUARDED(radiobound_lock_);
 
   uint32_t clientbound_allowance_ = 0;
   uint32_t radiobound_allowance_ = kRadioboundAllowanceInit;
