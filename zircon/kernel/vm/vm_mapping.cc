@@ -728,6 +728,7 @@ zx_status_t VmMapping::DestroyLocked() {
 }
 
 zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageRequest* page_request) {
+  VM_KTRACE_DURATION(2, "VmMapping::PageFault", va, pf_flags);
   canary_.Assert();
 
   DEBUG_ASSERT(is_in_range(va, 1));

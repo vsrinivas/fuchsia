@@ -1466,6 +1466,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
 
 zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
                                              NonTerminalAction action) {
+  VM_KTRACE_DURATION(2, "ArmArchVmAspace::HarvestAccessed", vaddr, count);
   canary_.Assert();
 
   if (!IS_PAGE_ALIGNED(vaddr) || !IsValidVaddr(vaddr)) {
@@ -1548,6 +1549,7 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
 }
 
 zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
+  VM_KTRACE_DURATION(2, "ArmArchVmAspace::MarkAccessed", vaddr, count);
   canary_.Assert();
 
   if (!IS_PAGE_ALIGNED(vaddr) || !IsValidVaddr(vaddr)) {

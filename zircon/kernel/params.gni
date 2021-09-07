@@ -60,6 +60,8 @@ declare_args() {
   #
   # 0 = Default kernel:* tracing.
   # 1 = Adds flow events for asynchronous page requests.
+  # 2 = Adds duration events related to accessed faults and page faults.
+  # 3 = Adds duration events for PMM allocations and frees.
   vm_tracing_level = 0
 
   # Disable kernel PCI driver support. A counterpart of the the build

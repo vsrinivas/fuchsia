@@ -25,6 +25,7 @@ PageQueues::~PageQueues() {
 }
 
 void PageQueues::RotatePagerBackedQueues() {
+  VM_KTRACE_DURATION(2, "RotatePagerBackedQueues");
   // We want to increment mru_gen, but first may need to make space by incrementing lru gen.
   if (mru_gen_.load(ktl::memory_order_relaxed) - lru_gen_.load(ktl::memory_order_relaxed) ==
       kNumPagerBacked - 1) {
@@ -52,6 +53,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t targ
 
   for (uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed); lru < target_gen;
        lru = lru_gen_.load(ktl::memory_order_relaxed)) {
+    VM_KTRACE_DURATION(2, "ProcessLruQueue");
     Guard<CriticalMutex> guard{&lock_};
     PageQueue queue = gen_to_queue(lru);
     uint32_t work_remain = kMaxQueueWork;

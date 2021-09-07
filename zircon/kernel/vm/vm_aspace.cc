@@ -37,8 +37,6 @@
 
 #include "vm_priv.h"
 
-using LocalTraceDuration = TraceDuration<TraceEnabled<false>, KTRACE_GRP_VM, TraceContext::Thread>;
-
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 #define GUEST_PHYSICAL_ASPACE_BASE 0UL
@@ -539,7 +537,7 @@ void VmAspace::AttachToThread(Thread* t) {
 }
 
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
-  LocalTraceDuration trace{"VmAspace::PageFault"_stringref};
+  VM_KTRACE_DURATION(2, "VmAspace::PageFault", va, flags);
   canary_.Assert();
   DEBUG_ASSERT(!aspace_destroyed_);
   LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
@@ -590,7 +588,7 @@ zx_status_t VmAspace::SoftFault(vaddr_t va, uint flags) {
 }
 
 zx_status_t VmAspace::AccessedFault(vaddr_t va) {
-  LocalTraceDuration trace{"VmAspace::AccessedFault"_stringref};
+  VM_KTRACE_DURATION(2, "VmAspace::AccessedFault", va, 0);
   // There are no permissions etc associated with accessed bits so we can skip any vmar walking and
   // just let the hardware aspace walk for the virtual address.
   // Similar to a page fault, multiple additional pages in the page table will be marked active to
@@ -715,6 +713,7 @@ bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
 }
 
 void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
+  VM_KTRACE_DURATION(2, "VmAspace::HarvestAllUserAccessedBits");
   Guard<Mutex> guard{&aspace_list_lock};
 
   for (auto& a : aspaces) {
