@@ -35,7 +35,7 @@ import("//build/toolchain/rbe.gni")
 #   sources
 #   inputs
 #   features
-#   use_rbe
+#   disable_rbe
 #     Same meaning as for rustc_staticlib.
 #
 #   cmx
