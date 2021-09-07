@@ -480,6 +480,25 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
 }
 
 #[fuchsia::test]
+async fn set_flags() {
+    for source in dirs_to_test().await {
+        set_flags_per_package_source(source).await
+    }
+}
+
+async fn set_flags_per_package_source(source: PackageSource) {
+    let root_dir = source.dir;
+    assert_set_flags_meta_file_unsupported(&root_dir, "meta").await;
+    assert_set_flags_meta_file_unsupported(&root_dir, "meta/file").await;
+}
+
+async fn assert_set_flags_meta_file_unsupported(root_dir: &DirectoryProxy, path: &str) {
+    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let status = file.set_flags(OPEN_FLAG_APPEND).await.unwrap();
+    assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
+}
+
+#[fuchsia::test]
 async fn unsupported() {
     for source in dirs_to_test().await {
         unsupported_per_package_source(source).await
