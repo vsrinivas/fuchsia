@@ -107,10 +107,6 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
   const TransformHandle root_transform_;
 
   LinkSystem::ChildLink child_link_;
-
-  // Must have a ViewRef as a reference for the UberStruct.
-  std::shared_ptr<fuchsia::ui::views::ViewRef> view_ref_;
-  std::unique_ptr<fuchsia::ui::views::ViewRefControl> control_ref_;
 };
 
 }  // namespace flatland

@@ -16,11 +16,16 @@ struct pair_hash {
   }
 };
 
-zx_koid_t GetViewRefKoid(
+std::optional<zx_koid_t> GetViewRefKoid(
     const flatland::TransformHandle& handle,
     const std::unordered_map<flatland::TransformHandle,
                              std::shared_ptr<const fuchsia::ui::views::ViewRef>>& view_ref_map) {
-  return utils::ExtractKoid(*view_ref_map.at(handle));
+  const auto kv = view_ref_map.find(handle);
+  if (kv == view_ref_map.end()) {
+    return std::nullopt;
+  }
+
+  return utils::ExtractKoid(*kv->second);
 }
 
 }  // namespace
@@ -125,8 +130,14 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     child_counts.push_back(current_entry.child_count);
     parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().first);
     live_transforms.insert(current_entry.handle);
-    view_refs.emplace(current_entry.handle,
-                      uber_structs.at(current_entry.handle.GetInstanceId())->view_ref);
+
+    // For the root of each local topology (i.e. the View), save the ViewRef if it has one.
+    // Non-View roots might not have one, e.g. the display.
+    if (current_entry == vector[0] &&
+        uber_structs.at(current_entry.handle.GetInstanceId())->view_ref != nullptr) {
+      view_refs.emplace(current_entry.handle,
+                        uber_structs.at(current_entry.handle.GetInstanceId())->view_ref);
+    }
 
     // If this entry was the last child for the previous parent, pop that off the stack.
     if (!parent_counts.empty() && parent_counts.back().second == 0) {
@@ -154,7 +165,14 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     float display_width, float display_height) const {
-  if (topology_vector.empty()) {
+  // Find the first node with a ViewRef set. This is the root of the ViewTree.
+  size_t root_index = 0;
+  while (root_index < topology_vector.size() && view_refs.count(topology_vector[root_index]) == 0) {
+    ++root_index;
+  }
+
+  // Didn't find one -> empty ViewTree.
+  if (root_index == topology_vector.size()) {
     return {};
   }
 
@@ -169,26 +187,29 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
       .max = {display_width, display_height},
   };
 
-  // Set up the root.
-  root = GetViewRefKoid(topology_vector.front(), view_refs);
-
-  // Add all remaining Views to |view_tree| + their parents.
-  for (size_t i = 0; i < topology_vector.size(); ++i) {
+  // Add all Views to |view_tree|.
+  root = GetViewRefKoid(topology_vector[root_index], view_refs).value();
+  for (size_t i = root_index; i < topology_vector.size(); ++i) {
     const auto& transform_handle = topology_vector.at(i);
-    const auto& view_ref = view_refs.at(transform_handle);
-    const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
-    if (view_tree.count(view_ref_koid) != 0) {
-      // Might have duplicates in |topology_vector|. Only initialize each ViewNode once.
-      // TODO(fxbug.dev/82892): Figure out if we need to do something differently for hit testing in
-      // these cases.
+    if (view_refs.count(transform_handle) == 0) {
+      // Transforms without ViewRefs are not Views and can be skipped.
       continue;
     }
 
-    // Find the parent. (Note: root has no parent).
-    const size_t parent_index = parent_indices[i];
-    const zx_koid_t parent_koid = view_ref_koid == root
-                                      ? ZX_KOID_INVALID
-                                      : GetViewRefKoid(topology_vector[parent_index], view_refs);
+    const auto& view_ref = view_refs.at(transform_handle);
+    const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
+
+    // Find the parent by looking upwards until a View is found. The root has no parent.
+    // TODO(fxbug.dev/84196): Disallow anonymous views from having parents?
+    zx_koid_t parent_koid = ZX_KOID_INVALID;
+    if (view_ref_koid != root) {
+      size_t parent_index = parent_indices[i];
+      while (view_refs.count(topology_vector[parent_index]) == 0) {
+        parent_index = parent_indices[parent_index];
+      }
+
+      parent_koid = GetViewRefKoid(topology_vector[parent_index], view_refs).value();
+    }
 
     // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
     view_tree.emplace(view_ref_koid, view_tree::ViewNode{.parent = parent_koid,
@@ -196,17 +217,31 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
                                                          .view_ref = view_ref});
   }
 
-  // Look at all the parents to determine the children of each node.
+  // Fill in the children by deriving it from the parents of each node.
   for (const auto& [koid, view_node] : view_tree) {
     if (view_node.parent != ZX_KOID_INVALID) {
       view_tree.at(view_node.parent).children.emplace(koid);
     }
   }
 
-  // TODO(fxbug.dev/72075): This currently directly returns the last leaf node instead of a full hit
-  // test. This is a stopgap solution until we've designed the full hit testing API for Flatland.
-  hit_tester = [leaf_node_koid = GetViewRefKoid(topology_vector.back(), view_refs)](
-                   zx_koid_t start_node, glm::vec2 local_point, bool is_semantic_hit_test) {
+  // TODO(fxbug.dev/72075): The hit tester currently directly returns the last leaf View instead of
+  // doing a full hit test. This is a stopgap solution until we've designed the full hit testing API
+  // for Flatland.
+  zx_koid_t leaf_node_koid = ZX_KOID_INVALID;
+  for (auto it = topology_vector.rbegin(); it != topology_vector.rend(); it++) {
+    const std::optional<zx_koid_t> koid = GetViewRefKoid(*it, view_refs);
+    if (koid.has_value()) {
+      leaf_node_koid = koid.value();
+      break;
+    }
+  }
+  FX_DCHECK(leaf_node_koid != ZX_KOID_INVALID);
+  // Note: The ViewTree represents a snapshot of the scene at a specific time. Because of this it's
+  // important that it contains no references to live data. This means the hit testing closure must
+  // contain only plain values or data with value semantics like shared_ptr<const>, to ensure that
+  // it's safe to call from any thread.
+  hit_tester = [leaf_node_koid](zx_koid_t start_node, glm::vec2 local_point,
+                                bool is_semantic_hit_test) {
     return view_tree::SubtreeHitTestResult{.hits = {leaf_node_koid}};
   };
 

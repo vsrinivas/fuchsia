@@ -349,6 +349,7 @@ void Flatland::CreateView2(ViewCreationToken token,
 
 void Flatland::RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundProtocols protocols,
                                           const zx_koid_t view_ref_koid) {
+  FX_DCHECK(register_view_focuser_);
   FX_DCHECK(register_view_ref_focused_);
   FX_DCHECK(register_touch_source_);
   FX_DCHECK(register_mouse_source_);

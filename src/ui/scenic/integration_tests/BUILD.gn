@@ -162,6 +162,23 @@ fuchsia_test_component("flatland_touch_integration_test") {
   deps = [ ":flatland_touch_integration_test_bin" ]
 }
 
+executable("flatland_focus_integration_test_bin") {
+  testonly = true
+  sources = [ "flatland_focus_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//src/ui/scenic/lib/utils",
+  ]
+}
+
+fuchsia_test_component("flatland_focus_integration_test") {
+  component_name = "flatland_focus_integration_test"
+  manifest = "meta/flatland_focus_integration_test.cmx"
+  deps = [ ":flatland_focus_integration_test_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   test_components = [
     ":gfx_focus_integration_test",
@@ -179,7 +196,10 @@ fuchsia_test_package("gfx_integration_tests") {
 }
 
 fuchsia_test_package("flatland_integration_tests") {
-  test_components = [ ":flatland_touch_integration_test" ]
+  test_components = [
+    ":flatland_touch_integration_test",
+    ":flatland_focus_integration_test",
+  ]
   test_specs = {
     # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but
     # Flatland display compositor currently crashes on aemu, so we skip it for now.
