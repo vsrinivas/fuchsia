@@ -645,9 +645,9 @@ void usage(void) {
       "                             hardware composition of 1 color layer and 3 primary layers.\n"
       "                             The tests include alpha blending, translation, scaling\n"
       "                             and rotation\n"
-      "                   bundle %d: Blank the screen and sleep for --num-frames.\n"
       "                   bundle %d: 4 layer hardware composition with alpha blending\n"
       "                             and image translation\n"
+      "                   bundle %d: Blank the screen and sleep for --num-frames.\n"
       "                   (default: bundle %d)\n\n"
       "--help           : Show this help message\n",
       SIMPLE, FLIP, INTEL, BUNDLE3, BLANK, INTEL);
