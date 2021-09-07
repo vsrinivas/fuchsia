@@ -22,10 +22,6 @@ fuchsia_unittest_component("identity_common_test") {
   deps = [ "identity_common:identity_common_test" ]
 }
 
-fuchsia_unittest_component("identity_key_manager_test") {
-  deps = [ "identity_key_manager:identity_key_manager_test" ]
-}
-
 fuchsia_unittest_component("storage_manager_test") {
   deps = [ "storage_manager:storage_manager_test" ]
   manifest = "meta/storage_manager_lib_test.cmx"
@@ -49,7 +45,6 @@ fuchsia_test_package("identity_lib_unittests") {
   test_components = [
     ":account_common_test",
     ":identity_common_test",
-    ":identity_key_manager_test",
     ":storage_manager_test",
     ":token_cache_test",
     ":token_manager_test",

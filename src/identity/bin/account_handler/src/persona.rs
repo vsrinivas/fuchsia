@@ -13,11 +13,9 @@ use fidl_fuchsia_identity_account::{
     AuthChangeGranularity, AuthListenerMarker, AuthState, Error as ApiError, Lifetime,
     PersonaRequest, PersonaRequestStream, Scenario,
 };
-use fidl_fuchsia_identity_keys::KeyManagerMarker;
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
-use identity_key_manager::{KeyManager, KeyManagerContext};
 use log::{error, warn};
 use std::sync::Arc;
 use token_manager::TokenManagerContext;
@@ -48,9 +46,6 @@ pub struct Persona {
     /// The token manager to be used for authentication token requests.
     token_manager: Arc<TokenManager>,
 
-    /// The key manager to be used for synchronized key requests.
-    key_manager: Arc<KeyManager>,
-
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
 
@@ -69,12 +64,11 @@ impl Persona {
         id: LocalPersonaId,
         lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
-        key_manager: Arc<KeyManager>,
         task_group: TaskGroup,
         inspect_parent: &Node,
     ) -> Persona {
         let persona_inspect = inspect::Persona::new(inspect_parent, &id);
-        Self { id, lifetime, token_manager, key_manager, task_group, inspect: persona_inspect }
+        Self { id, lifetime, token_manager, task_group, inspect: persona_inspect }
     }
 
     /// Returns the device-local identifier for this persona.
@@ -133,10 +127,6 @@ impl Persona {
                     self.get_token_manager(context, application_url, token_manager).await;
                 responder.send(&mut response)?;
             }
-            PersonaRequest::GetKeyManager { application_url, key_manager, responder } => {
-                let mut response = self.get_key_manager(application_url, key_manager).await;
-                responder.send(&mut response)?;
-            }
         }
         Ok(())
     }
@@ -189,30 +179,6 @@ impl Persona {
             .map_err(|_| ApiError::RemovalInProgress)?;
         Ok(())
     }
-
-    async fn get_key_manager<'a>(
-        &'a self,
-        application_url: String,
-        key_manager_server_end: ServerEnd<KeyManagerMarker>,
-    ) -> Result<(), ApiError> {
-        let key_manager_clone = Arc::clone(&self.key_manager);
-        let key_manager_context = KeyManagerContext::new(application_url);
-        let stream = key_manager_server_end.into_stream().map_err(|err| {
-            error!("Error opening KeyManager channel: {:?}", err);
-            ApiError::Resource
-        })?;
-        self.key_manager
-            .task_group()
-            .spawn(|cancel| async move {
-                key_manager_clone
-                    .handle_requests_from_stream(&key_manager_context, stream, cancel)
-                    .await
-                    .unwrap_or_else(|e| error!("Error handling KeyManager channel: {:?}", e))
-            })
-            .await
-            .map_err(|_| ApiError::RemovalInProgress)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -236,7 +202,6 @@ mod tests {
     struct Test {
         _location: TempLocation,
         token_manager: Arc<TokenManager>,
-        key_manager: Arc<KeyManager>,
     }
 
     impl Test {
@@ -252,8 +217,7 @@ mod tests {
                 )
                 .unwrap(),
             );
-            let key_manager = Arc::new(KeyManager::new(TaskGroup::new()));
-            Test { _location: location, token_manager, key_manager }
+            Test { _location: location, token_manager }
         }
 
         fn create_persona(&self) -> Persona {
@@ -262,7 +226,6 @@ mod tests {
                 TEST_PERSONA_ID.clone(),
                 Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
                 Arc::clone(&self.token_manager),
-                Arc::clone(&self.key_manager),
                 TaskGroup::new(),
                 inspector.root(),
             )
@@ -274,7 +237,6 @@ mod tests {
                 TEST_PERSONA_ID.clone(),
                 Arc::new(AccountLifetime::Ephemeral),
                 Arc::clone(&self.token_manager),
-                Arc::clone(&self.key_manager),
                 TaskGroup::new(),
                 inspector.root(),
             )
@@ -386,28 +348,6 @@ mod tests {
                     (fidl_fuchsia_auth::Status::Ok, vec![])
                 );
 
-                Ok(())
-            }
-        })
-        .await;
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_get_key_manager() {
-        let mut test = Test::new();
-        test.run(test.create_persona(), |proxy| {
-            async move {
-                let (key_manager_proxy, key_manager_server_end) = create_proxy().unwrap();
-                assert!(proxy
-                    .get_key_manager(&TEST_APPLICATION_URL, key_manager_server_end)
-                    .await?
-                    .is_ok());
-
-                // Channel should be usable, but key manager isn't implemented yet.
-                assert_eq!(
-                    key_manager_proxy.delete_key_set("key-set").await?,
-                    Err(fidl_fuchsia_identity_keys::Error::UnsupportedOperation)
-                );
                 Ok(())
             }
         })

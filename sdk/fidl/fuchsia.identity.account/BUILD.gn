@@ -15,7 +15,6 @@ fidl("fuchsia.identity.account") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.identity.keys",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys",
   ]

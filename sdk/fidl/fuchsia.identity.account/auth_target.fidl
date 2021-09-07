@@ -4,7 +4,6 @@
 library fuchsia.identity.account;
 
 using fuchsia.auth;
-using fuchsia.identity.keys;
 using fuchsia.sys;
 using fuchsia.io;
 
@@ -200,24 +199,5 @@ protocol Persona {
     (resource struct {
         application_url fuchsia.sys.component_url;
         token_manager server_end:fuchsia.auth.TokenManager;
-    }) -> (struct {}) error Error;
-
-    /// Connects a channel to access and manage key material that is consistent
-    /// across all devices with access to this persona.
-    ///
-    /// Persona key storage is a very limited resource. Only a small number of
-    /// core components should use KeyManager, often in order to supply more
-    /// scalable forms of synchronization to other applications (e.g. Ledger).
-    ///
-    /// `application_url` A url for the component that this channel will be
-    ///                   used by. Applications are only allowed to access
-    ///                   their own keys.
-    /// `key_manager` The server end of a `KeyManager` channel
-    GetKeyManager // TODO(fxbug.dev/560): Migrate key manager to a more appropriate form
-    // of software identity. This might be a set of whitelisted URLs or a
-    // simple enum.
-    (resource struct {
-        application_url fuchsia.sys.component_url;
-        key_manager server_end:fuchsia.identity.keys.KeyManager;
     }) -> (struct {}) error Error;
 };

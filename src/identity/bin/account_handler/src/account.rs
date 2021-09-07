@@ -21,7 +21,6 @@ use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use fuchsia_inspect::{Node, NumericProperty};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
-use identity_key_manager::KeyManager;
 use log::{error, info, warn};
 use scopeguard;
 use std::fs;
@@ -78,10 +77,6 @@ impl Account {
             .create_child()
             .await
             .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
-        let key_manager_task_group = task_group
-            .create_child()
-            .await
-            .map_err(|_| AccountManagerError::new(ApiError::RemovalInProgress))?;
         let default_persona_task_group = task_group
             .create_child()
             .await
@@ -97,7 +92,6 @@ impl Account {
                     .account_manager_error(ApiError::Unknown)?
             }
         });
-        let key_manager = Arc::new(KeyManager::new(key_manager_task_group));
         let lifetime = Arc::new(lifetime);
         let account_inspect = inspect::Account::new(inspect_parent);
         Ok(Self {
@@ -106,7 +100,6 @@ impl Account {
                 persona_id,
                 lifetime,
                 token_manager,
-                key_manager,
                 default_persona_task_group,
                 inspect_parent,
             )),
