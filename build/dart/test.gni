@@ -245,12 +245,10 @@ template("dart_test") {
       ]
     }
 
-    deps = _sdk_deps + [ ":$_snapshot_target_name" ]
-
-    # TODO(fxbug.dev/52322): test coverage is not supported for Dart.
-    if (!is_coverage) {
-      deps += [ ":$_spec_target_name" ]
-    }
+    deps = _sdk_deps + [
+             ":$_snapshot_target_name",
+             ":$_spec_target_name",
+           ]
     testonly = true
   }
 }
