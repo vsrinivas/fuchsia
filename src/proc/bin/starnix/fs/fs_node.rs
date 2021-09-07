@@ -310,9 +310,8 @@ impl FsNode {
     ///
     /// # Parameters
     /// - `socket`: The socket to store in this file node.
-    pub fn set_socket(&self, socket: SocketHandle) -> Result<(), Errno> {
+    pub fn set_socket(&self, socket: SocketHandle) {
         assert!(self.socket.set(socket).is_ok());
-        Ok(())
     }
 
     /// Returns the socket associated with this node, if such a socket exists.

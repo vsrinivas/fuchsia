@@ -191,7 +191,7 @@ impl DirEntry {
             let node = self.node.mknod(name, mode)?;
             // ... and make sure to initialize the socket before the callback returns, so the socket
             // is guaranteed to be initialized by the time it is named.
-            node.set_socket(socket_handle)?;
+            node.set_socket(socket_handle);
             Ok(node)
         })
     }

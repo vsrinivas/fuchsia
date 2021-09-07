@@ -44,18 +44,26 @@ pub struct Pipe {
     writer_count: usize,
 }
 
-impl Pipe {
-    pub fn new() -> Arc<Mutex<Pipe>> {
-        // Pipes default to a size of 16 pages.
+impl Default for Pipe {
+    fn default() -> Self {
+        // The default size of a pipe is 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
-        Arc::new(Mutex::new(Pipe {
+        Pipe {
             size: default_pipe_size,
             used: 0,
             buffers: VecDeque::new(),
             reader_count: 0,
             writer_count: 0,
-        }))
+        }
+    }
+}
+
+pub type PipeHandle = Arc<Mutex<Pipe>>;
+
+impl Pipe {
+    pub fn new() -> PipeHandle {
+        Arc::new(Mutex::new(Pipe::default()))
     }
 
     pub fn open(pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {

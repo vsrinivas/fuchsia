@@ -134,6 +134,7 @@ pub fn dispatch_syscall(
         setitimer[3],
         sigaltstack[2],
         socket[3],
+        socketpair[4],
         statfs[2],
         symlinkat[3],
         tgkill[3],
