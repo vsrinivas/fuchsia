@@ -53,9 +53,9 @@ pub(super) async fn connect_to_sound_player(
     }
 }
 
-/// Plays a sound with the given [id] and [file_name] via the [sound_player_proxy].
+/// Plays a sound with the given `id` and `file_name` via the `sound_player_proxy`.
 ///
-/// The id and file_name are expected to be unique and mapped 1:1 to each other. This allows
+/// The `id` and `file_name` are expected to be unique and mapped 1:1 to each other. This allows
 /// the sound file to be reused without having to load it again.
 pub(super) async fn play_sound<'a>(
     sound_player_proxy: &ExternalServiceProxy<PlayerProxy>,

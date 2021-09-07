@@ -46,8 +46,8 @@ pub(super) mod messenger {
     pub struct Descriptor<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
         /// The type of messenger to be created. This determines how messages
         /// can be directed to a messenger created from this Descriptor.
-        /// Please reference [`Audience`] to see how these types map to audience
-        /// targets.
+        /// Please reference [Audience](crate::message::Audience) to see how these types map to
+        /// audience targets.
         pub messenger_type: MessengerType<P, A, R>,
         /// The roles to associate with this messenger. When a messenger
         /// is associated with a given [`Role`], any message directed to that

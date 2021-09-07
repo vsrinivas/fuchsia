@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/84044) `Changed` events don't exist anymore. Update docs.
 //! The audio policy handler intercepts and modifies requests going into and out of the audio
 //! setting in order to apply audio policies that have been added through the
 //! fuchsia.settings.policy.Audio FIDL interface.
@@ -31,7 +32,7 @@
 //!
 //! # Handling SettingEvents
 //!
-//! Setting handlers send a [`Changed`] event when their state changes so that the settings service
+//! Setting handlers send a `Changed` event when their state changes so that the settings service
 //! notify any active listeners. When the policy handler intercepts one of these events, it performs
 //! the same reverse calculation as is done for a get request and passes along the changed event.
 //!
@@ -53,8 +54,6 @@
 //! is 80% and the external volume is 100% and the max volume policy is removed, the external volume
 //! has to be updated to match the internal volume of 80%. In these cases, the policy handler sends
 //! a Changed event in place of the setting handler to trigger updates to external listeners.
-//!
-//! [`Changed`]: handler::base::Event::Changed
 
 use anyhow::{format_err, Error};
 use fuchsia_syslog::fx_log_err;

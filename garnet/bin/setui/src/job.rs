@@ -9,14 +9,16 @@
 //! [Jobs] are basic units of work that interfaces in the setting service can specify. In addition
 //! to the workload, [Job] definitions also capture information about how the work should be
 //! handled. For example, a Job can specify that it would like to run in sequence within a set of
-//! similar [Jobs](Job). This behavior is captured by the [Job's](Job) [ExecutionType].
+//! similar [Jobs]. This behavior is captured by the [Job]'s execution [Type](execution::Type).
 //!
-//! Sources are streams that provide jobs from a given source. The lifetime of (Jobs)[Job] produced
+//! Sources are streams that provide jobs from a given source. The lifetime of [Jobs] produced
 //! by a source are bound to the source's lifetime. The end of a source stream will lead to any
 //! in-flight and pending jobs being cancelled.
 //!
 //! Job Manager is responsible for managing sources and the jobs they produce. The manager
 //! associates and maintains any supporting data for jobs, such as caches.
+//!
+//! [Jobs]: Job
 use crate::clock::now;
 use crate::payload_convert;
 use crate::service::message;
@@ -35,8 +37,10 @@ pub mod source;
 
 payload_convert!(Job, Payload);
 
-/// [StoreHandleMapping] represents the mapping from a [Job's](Job) [Signature] to the [data::Data]
-/// store. This store is shared by all [Jobs](Job) with the same [Signature].
+/// [StoreHandleMapping] represents the mapping from a [Job]'s [Signature] to the [data::Data]
+/// store. This store is shared by all [Jobs] with the same [Signature].
+///
+/// [Jobs]: Job
 pub(super) type StoreHandleMapping = HashMap<Signature, data::StoreHandle>;
 type PinStream<T> = Pin<Box<dyn Stream<Item = T> + Send>>;
 type SourceStreamHandle = Arc<Mutex<Option<PinStream<Result<Job, source::Error>>>>>;
@@ -44,7 +48,7 @@ type SourceStreamHandle = Arc<Mutex<Option<PinStream<Result<Job, source::Error>>
 /// The data payload that can be sent to the [Job Manager](crate::job::manager::Manager).
 #[derive(Clone)]
 pub enum Payload {
-    /// [Source] represents a new source of [Jobs](Job).
+    /// `Source` represents a new source of [Jobs](Job).
     Source(SourceStreamHandle),
 }
 
@@ -146,7 +150,7 @@ pub mod work {
     #[async_trait]
     pub trait Sequential {
         /// Called when the [Job](super::Job) processing is ready for the encapsulated
-        /// [Workload](super::Workload) be executed. The provided [StoreHandle](data::StoreHandle)
+        /// [work::Load](super::work::Load) be executed. The provided [StoreHandle](data::StoreHandle)
         /// is specific to the parent [Job](super::Job) group.
         async fn execute(
             self: Box<Self>,
@@ -158,14 +162,14 @@ pub mod work {
 
     #[async_trait]
     pub trait Independent {
-        /// Called when a [Workload](super::Workload) should run. All workload specific logic should
+        /// Called when a [work::Load](super::work::Load) should run. All workload specific logic should
         /// be encompassed in this method.
         async fn execute(self: Box<Self>, messenger: message::Messenger, nonce: TracingNonce);
     }
 }
 
 /// An identifier specified by [Jobs](Job) to group related workflows. This is useful for
-/// [Workloads](Workload) that need to be run sequentially. The [Signature] is used by the job
+/// [work::Loads](work::Load) that need to be run sequentially. The [Signature] is used by the job
 /// infrastructure to associate resources such as caches.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub struct Signature {
@@ -181,13 +185,13 @@ impl Signature {
     }
 }
 
-/// A [Job] is a simple data container that associates a [Workload] with an [execution::Type]
+/// A [Job] is a simple data container that associates a [work::Load] with an [execution::Type]
 /// along with metadata, such as the creation time.
 #[derive(Debug)]
 pub struct Job {
-    /// The [Workload] to be run.
+    /// The [work::Load] to be run.
     pub workload: work::Load,
-    /// The [execution::Type] determining how the [Workload] will be run.
+    /// The [execution::Type] determining how the [work::Load] will be run.
     pub execution_type: execution::Type,
 }
 
@@ -316,8 +320,8 @@ pub(super) mod execution {
     /// be treated in relation to other jobs from the same source.
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum Type {
-        /// Independent jobs are executed in isolation from other [Jobs](Job). Some functionality is
-        /// unavailable for Independent jobs, such as caches.
+        /// Independent jobs are executed in isolation from other [Jobs](job::Job). Some
+        /// functionality is unavailable for Independent jobs, such as caches.
         Independent,
         /// Sequential [Jobs](job::Job) wait until all pre-existing [Jobs](job::Job) of the same
         /// [Signature] are completed.

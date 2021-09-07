@@ -128,7 +128,7 @@ impl VolumeChangeHandler {
             .collect()
     }
 
-    /// Retrieve a user volume of the specified [stream_type] from the given [changed_streams].
+    /// Retrieve a user volume of the specified `stream_type` from the given `changed_streams`.
     fn get_user_volume(
         &self,
         changed_streams: Vec<AudioStream>,
@@ -190,8 +190,6 @@ impl VolumeChangeHandler {
     }
 
     /// Play the earcons sound given the changed volume streams.
-    ///
-    /// The parameters are packaged together. See [VolumeChangeParams].
     fn play_volume_sound(&self, volume: f32) {
         let common_earcons_params = self.common_earcons_params.clone();
 

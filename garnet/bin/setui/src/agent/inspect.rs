@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The inspect mod defines the [`InspectAgent`], which is responsible for logging
+//! The inspect mod defines the [InspectAgent], which is responsible for logging
 //! relevant service activity to Inspect. Since this activity might happen
 //! before agent lifecycle states are communicated (due to agent priority
-//! ordering), the [`InspectAgent`] begins listening to requests immediately
+//! ordering), the [InspectAgent] begins listening to requests immediately
 //! after creation.
+//!
+//! [InspectAgent]: inspect::InspectAgent
 
 use crate::agent::Context;
 use crate::agent::Payload;

@@ -789,7 +789,7 @@ impl SettingProxy {
         .detach();
     }
 
-    /// Transitions the controller for the [setting_type] to the Teardown phase
+    /// Transitions the controller for the `setting_type` to the Teardown phase
     /// and removes it from the active_controllers.
     async fn teardown_if_needed(&mut self) {
         if self.has_active_work() {

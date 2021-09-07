@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The [`StorageAgent`] is responsible for all reads and writes to storage for the
-//! settings service.
+//! The [StorageAgent](storage_agent::StorageAgent) is responsible for all reads and writes to
+//! storage for the settings service.
 
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};

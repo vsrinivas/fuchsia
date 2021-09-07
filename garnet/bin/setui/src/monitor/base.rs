@@ -31,9 +31,8 @@ pub mod monitor {
     /// setting service. It is expected that there will be new additions to
     /// `Context` as the variety of monitored resources expands.
     pub struct Context {
-        /// [`Receptor`] on which monitors will receive messages from watchdog.
-        ///
-        /// [`Receptor`]: monitor::message::Receptor
+        /// [`Receptor`](service::message::Receptor) on which monitors will receive messages from
+        /// watchdog.
         pub receptor: service::message::Receptor,
     }
 

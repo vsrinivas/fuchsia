@@ -15,7 +15,7 @@ use fuchsia_syslog::fx_log_warn;
 /// - FIDL setting type.
 /// - The responder type for the `HangingGetHandler`.
 /// - A type of a key for change functions if custom change functions are used.
-///     - If change functions aren't used, the [`change_func_key`] is ingnored,
+///     - If change functions aren't used, the `change_func_key` is ignored,
 ///       so can be anything.
 ///       TODO(fxb/68167): Restructure this code to avoid needing to specify
 ///       unneeded parameters.
@@ -222,8 +222,8 @@ pub(crate) fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Statu
     }
 }
 
-/// Shuts down the given fidl [`responder`] using a zircon epitaph generated from
-/// the given [`error`].
+/// Shuts down the given fidl `responder` using a zircon epitaph generated from
+/// the given `error`.
 #[macro_export]
 macro_rules! shutdown_responder_with_error {
     ($responder:expr, $error:ident) => {

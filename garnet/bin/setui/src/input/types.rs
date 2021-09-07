@@ -329,7 +329,7 @@ pub enum InputDeviceType {
 /// Instead of defining our own fmt function, an easier way
 /// is to derive the 'Display' trait for enums using `enum-display-derive` crate
 ///
-/// https://docs.rs/enum-display-derive/0.1.0/enum_display_derive/
+/// <https://docs.rs/enum-display-derive/0.1.0/enum_display_derive/>
 ///
 /// Since addition of this in third_party/rust_crates needs OSRB approval, we
 /// define our own function here.

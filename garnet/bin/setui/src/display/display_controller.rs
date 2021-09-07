@@ -51,6 +51,8 @@ lazy_static! {
 /// Returns a default display [`DisplayInfo`] that is derived from
 /// [`DEFAULT_DISPLAY_INFO`] with any fields specified in the
 /// display configuration set.
+///
+/// [`DEFAULT_DISPLAY_INFO`]: static@DEFAULT_DISPLAY_INFO
 pub(crate) fn default_display_info() -> DisplayInfo {
     let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
@@ -180,7 +182,7 @@ impl BrightnessManager for ExternalBrightnessControl {
             ));
         }
         let update_state = client.write_setting(info.into(), false, nonce).await?;
-        if (update_state == UpdateState::Unchanged && !always_send) {
+        if update_state == UpdateState::Unchanged && !always_send {
             return Ok(None);
         }
 

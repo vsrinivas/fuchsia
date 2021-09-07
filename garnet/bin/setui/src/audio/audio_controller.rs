@@ -72,7 +72,7 @@ impl VolumeController {
 
     /// Extracts the audio state from persistent storage and restores it on
     /// the local state. Also pushes the changes to the audio core if
-    /// [push_to_audio_core] is true.
+    /// `push_to_audio_core` is true.
     async fn restore_volume_state(
         &mut self,
         push_to_audio_core: bool,
@@ -140,7 +140,7 @@ impl VolumeController {
 
     /// Updates the state with the given streams' volume levels.
     ///
-    /// If [push_to_audio_core] is true, pushes the changes to the audio core.
+    /// If `push_to_audio_core` is true, pushes the changes to the audio core.
     /// If not, just sets it on the local stored state. Should be called with
     /// true on first restore and on volume changes, and false otherwise.
     /// Returns whether the change triggered a notification.
@@ -219,7 +219,7 @@ impl VolumeController {
         }
     }
 
-    /// Populates the local state with the given [streams] and binds it to the audio core service.
+    /// Populates the local state with the given `streams` and binds it to the audio core service.
     async fn check_and_bind_volume_controls(
         &mut self,
         nonce: TracingNonce,

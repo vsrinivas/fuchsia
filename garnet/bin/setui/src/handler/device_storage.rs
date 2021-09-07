@@ -185,9 +185,7 @@ where
 }
 
 /// A trait for describing which storages an item needs access to.
-/// See [`ServiceConfiguration::storage_keys`] for usage.
-///
-/// [`ServiceConfiguration::storage_keys`]: crate::ServiceConfiguration::storage_keys
+/// See [StashDeviceStorageFactory::initialize] for usage.
 pub trait DeviceStorageAccess {
     /// This field should be populated by items that implement [`DeviceStorageCompatible`].
     ///

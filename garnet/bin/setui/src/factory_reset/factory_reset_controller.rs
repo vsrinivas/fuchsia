@@ -41,7 +41,6 @@ type FactoryResetHandle = Arc<Mutex<FactoryResetManager>>;
 ///
 /// [`Request`]: crate::handler::base::Request
 /// [`State`]: crate::handler::setting_handler::State
-/// [`FactoryResetManager`]: crate::factory_reset::FactoryResetManager
 pub struct FactoryResetController {
     handle: FactoryResetHandle,
 }

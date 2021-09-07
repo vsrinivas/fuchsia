@@ -77,7 +77,7 @@ impl Builder {
         Self { monitors: vec![] }
     }
 
-    /// Appends [`monitor::Generate`] to the set of monitors to participate in
+    /// Appends [`base_monitor::Generate`] to the set of monitors to participate in
     /// this environment.
     pub(crate) fn add_monitors(mut self, mut monitors: Vec<base_monitor::Generate>) -> Self {
         self.monitors.append(&mut monitors);
