@@ -147,6 +147,10 @@ class Pool {
     return *std::prev(end());
   }
 
+  // Returns a pointer to the tracked, normalized range containing the
+  // provided address, if one exists.
+  const MemRange* GetContainingRange(uint64_t addr);
+
   // Attempts to allocate memory out of free RAM of the prescribed type, size,
   // and alignment, and with the given largest possible address. The provided
   // type must be an extended type.

@@ -19,6 +19,7 @@ if (current_toolchain != default_toolchain) {
     sources = [ "qemu-test-main.cc" ]
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     deps = [
+      "..:stdio",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/uart",

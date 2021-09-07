@@ -130,6 +130,11 @@ fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const MemRange& range) {
   return fitx::ok(static_cast<Node*>(node));
 }
 
+const MemRange* Pool::GetContainingRange(uint64_t addr) {
+  auto it = GetContainingNode(addr, 1);
+  return it == ranges_.end() ? nullptr : &*it;
+}
+
 fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
                                                     uint64_t max_addr) {
   // Try to proactively ensure two bookkeeping nodes, which might be required

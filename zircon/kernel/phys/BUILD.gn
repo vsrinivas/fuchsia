@@ -183,9 +183,16 @@ if (toolchain_environment == "kernel.phys" ||
 
     public_deps = [
       "//zircon/kernel/lib/ktl",
+
+      # "page-table.h" has #include <lib/page-table/builder-interface.h>
+      # "page-table.h" has #include <lib/page-table/types.h>
       "//zircon/kernel/phys/lib/page-table",
     ]
-    deps = [ "//zircon/kernel/phys/lib/memalloc" ]
+    deps = [
+      "//zircon/kernel/phys:stdio",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/uart",
+    ]
   }
 
   source_set("stdio") {

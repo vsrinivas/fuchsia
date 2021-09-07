@@ -229,7 +229,7 @@ class BasicIoProvider<dcfg_simple_t> {
   // a subclass constructor method to map the physical address to a virtual
   // address.
   template <typename T>
-  BasicIoProvider(const dcfg_simple_t& cfg, uint16_t pio_size, T&& map_mmio) {
+  BasicIoProvider(const dcfg_simple_t& cfg, uint16_t pio_size, T&& map_mmio) : pio_size_(pio_size) {
     auto ptr = map_mmio(cfg.mmio_phys);
     if (pio_size != 0) {
       // This is PIO via MMIO, i.e. scaled MMIO.
@@ -239,13 +239,23 @@ class BasicIoProvider<dcfg_simple_t> {
       io_.emplace<hwreg::RegisterMmio>(ptr);
     }
   }
+
   BasicIoProvider(const dcfg_simple_t& cfg, uint16_t pio_size)
       : BasicIoProvider(cfg, pio_size, DirectMapMmio) {}
 
+  BasicIoProvider& operator=(BasicIoProvider&& other) {
+    io_.swap(other.io_);
+    pio_size_ = other.pio_size_;
+    return *this;
+  }
+
   auto* io() { return &io_; }
+
+  uint16_t pio_size() const { return pio_size_; }
 
  private:
   std::variant<hwreg::RegisterMmio, hwreg::RegisterPio> io_{std::in_place_index<0>, nullptr};
+  uint16_t pio_size_;
 };
 
 // The specialization for devices using actual PIO only occurs on x86.
@@ -281,6 +291,8 @@ class BasicIoProvider<dcfg_soc_uart_t> {
   auto* io() { return &uart_mmio_; }
 
   auto* soc_io() { return &soc_mmio_; }
+
+  uint16_t pio_size() const { return 0; }
 
  private:
   hwreg::RegisterMmio soc_mmio_, uart_mmio_;

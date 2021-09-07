@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_PAGE_TABLE_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_PAGE_TABLE_H_
 
+#include <lib/page-table/builder-interface.h>
 #include <lib/page-table/types.h>
 
 #include <ktl/byte.h>
@@ -27,6 +28,10 @@ class Pool;
 // practical sense, and the associated functions may be no-ops.
 void ArchSetUpAddressSpaceEarly();
 void ArchSetUpAddressSpaceLate();
+
+// Maps in the global UART's registers, assuming that they fit within a single
+// page.
+void MapUart(page_table::AddressSpaceBuilderInterface& builder, memalloc::Pool& pool);
 
 // A page_table::MemoryManager that allocates by way of Allocator.
 class AllocationMemoryManager final : public page_table::MemoryManager {

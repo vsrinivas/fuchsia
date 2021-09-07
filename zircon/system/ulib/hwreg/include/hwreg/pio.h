@@ -31,7 +31,6 @@ class RegisterDirectPio {
  public:
   RegisterDirectPio() = default;
   RegisterDirectPio(uint16_t base) : base_(base) {}
-  RegisterDirectPio(const RegisterDirectPio& other) : base_(other.base_) {}
 
   template <typename IntType>
   void Write(IntType value, uint32_t port) const {
@@ -67,7 +66,7 @@ class RegisterDirectPio {
   }
 
  private:
-  const uint16_t base_ = 0;
+  uint16_t base_ = 0;
 
   uint16_t AdjustPort(uint32_t offset) const {
     uint16_t p = static_cast<uint16_t>(offset);

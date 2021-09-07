@@ -121,21 +121,21 @@ void CreateBootstrapPageTable() {
     ZX_PANIC("Failed to create an AddressSpaceBuilder.");
   }
 
-  // Maps in the given range, doing nothing if it is reserved.
-  auto map = [&builder](const memalloc::MemRange& range) {
-    if (range.type == memalloc::Type::kReserved) {
+  MapUart(*builder, pool);
+
+  // Maps in the given range, doing nothing if it is not free RAM.
+  auto map_if_ram = [&builder](const memalloc::MemRange& range) {
+    if (range.type != memalloc::Type::kFreeRam) {
       return;
     }
     auto result = builder->MapRegion(Vaddr(range.addr), Paddr(range.addr), range.size,
-                                     range.type == memalloc::Type::kPeripheral
-                                         ? page_table::CacheAttributes::kDevice
-                                         : page_table::CacheAttributes::kNormal);
+                                     page_table::CacheAttributes::kNormal);
     if (result != ZX_OK) {
       ZX_PANIC("Failed to map in range.");
     }
   };
 
-  // Map in all memory regions.
+  // Map in all RAM as normal memory.
   //
   // We merge ranges of kFreeRam or extended type on the fly, mapping the
   // previously constructed range when we have hit a hole or the end.
@@ -156,12 +156,12 @@ void CreateBootstrapPageTable() {
     } else if (prev->end() == range.addr && prev->type == range.type) {
       prev->size += range.size;
     } else {
-      map(*prev);
+      map_if_ram(*prev);
       prev = range;
     }
   }
   ZX_DEBUG_ASSERT(prev);
-  map(*prev);
+  map_if_ram(*prev);
 
   // Enable the MMU and switch to the new page table.
   EnablePaging(builder->root_paddr());

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HWREG_MMIO_H_
+#define HWREG_MMIO_H_
 
 #include <stdint.h>
 
@@ -23,7 +24,6 @@ template <uint32_t Scale>
 class RegisterMmioScaled {
  public:
   RegisterMmioScaled(volatile void* mmio) : mmio_(reinterpret_cast<uintptr_t>(mmio)) {}
-  RegisterMmioScaled(const RegisterMmioScaled& other) : mmio_(other.mmio_) {}
 
   // Write |val| to the |sizeof(IntType)| byte field located |offset| bytes from
   // |base()|.
@@ -46,10 +46,12 @@ class RegisterMmioScaled {
   uintptr_t base() const { return mmio_; }
 
  private:
-  const uintptr_t mmio_;
+  uintptr_t mmio_;
 };
 
 using RegisterMmio = RegisterMmioScaled<1>;
 static_assert(std::is_copy_constructible_v<RegisterMmio>);
 
 }  // namespace hwreg
+
+#endif  // HWREG_MMIO_H_

@@ -97,8 +97,7 @@ void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment
   EXPECT_TRUE(is_contained(contained));
 }
 
-[[maybe_unused]] void TestPoolFreeing(Pool& pool, uint64_t addr, uint64_t size,
-                                      bool free_error = false) {
+void TestPoolFreeing(Pool& pool, uint64_t addr, uint64_t size, bool free_error = false) {
   // Returns the tracked type of a single address, if any.
   //
   // Asserting that a range is contained within the union of a connected set
@@ -144,7 +143,7 @@ void TestPoolFreeRamSubrangeUpdating(Pool& pool, Type type, uint64_t addr, uint6
 
 // Fills up a pool with two-byte allocations of varying types until its
 // bookkeeping space is used up.
-[[maybe_unused]] void Oom(Pool& pool) {
+void Oom(Pool& pool) {
   // Start just after kPoolBookkeeping, to ensure we don't try to allocate a bad
   // type.
   uint64_t type_val = static_cast<uint64_t>(Type::kPoolBookkeeping) + 1;
@@ -626,6 +625,43 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kExpectedPrintOut));
   }
+}
+
+TEST(MemallocPoolTests, GetContainingRange) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // RAM: [0, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = 3 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  const MemRange expected[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  EXPECT_EQ(expected[0], *ctx.pool.GetContainingRange(kUsableMemoryStart));
+  EXPECT_EQ(expected[0], *ctx.pool.GetContainingRange(kUsableMemoryStart + kChunkSize - 1));
+  EXPECT_EQ(expected[1], *ctx.pool.GetContainingRange(kUsableMemoryStart + kChunkSize));
+  EXPECT_EQ(expected[1], *ctx.pool.GetContainingRange(kUsableMemoryStart + 2 * kChunkSize));
+  EXPECT_EQ(expected[1], *ctx.pool.GetContainingRange(kUsableMemoryStart + 3 * kChunkSize - 1));
+  EXPECT_FALSE(ctx.pool.GetContainingRange(kUsableMemoryStart + 3 * kChunkSize));
 }
 
 TEST(MemallocPoolTests, NoResourcesAllocation) {
