@@ -123,6 +123,17 @@ pub struct AgentConfiguration {
 }
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]
+pub struct EnabledInterfacesConfiguration {
+    pub interfaces: HashSet<fidl::InterfaceSpec>,
+}
+
+impl EnabledInterfacesConfiguration {
+    pub fn with_interfaces(interfaces: HashSet<fidl::InterfaceSpec>) -> Self {
+        Self { interfaces }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Deserialize)]
 pub struct EnabledServicesConfiguration {
     pub services: HashSet<SettingType>,
 }
@@ -160,23 +171,19 @@ pub struct ServiceConfiguration {
 impl ServiceConfiguration {
     pub fn from(
         agent_types: AgentConfiguration,
-        services: EnabledServicesConfiguration,
+        interfaces: EnabledInterfacesConfiguration,
         policies: EnabledPoliciesConfiguration,
         flags: ServiceFlags,
     ) -> Self {
         let fidl_interfaces: HashSet<fidl::Interface> =
-            services.services.iter().map(|x| x.into()).collect();
+            interfaces.interfaces.into_iter().map(|x| x.into()).collect();
 
-        let mut return_val = Self {
+        Self {
             agent_types: agent_types.agent_types,
-            fidl_interfaces: HashSet::new(),
+            fidl_interfaces,
             policies: policies.policies,
             controller_flags: flags.controller_flags,
-        };
-
-        return_val.set_fidl_interfaces(fidl_interfaces);
-
-        return_val
+        }
     }
 
     fn set_fidl_interfaces(&mut self, interfaces: HashSet<fidl::Interface>) {

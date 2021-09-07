@@ -7,9 +7,9 @@ use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
-    AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledPoliciesConfiguration,
-    EnabledServicesConfiguration, InputConfiguration, LightHardwareConfiguration,
-    LightSensorConfig, ServiceFlags,
+    AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledInterfacesConfiguration,
+    EnabledPoliciesConfiguration, EnabledServicesConfiguration, InputConfiguration,
+    LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -40,6 +40,10 @@ struct TestConfig {
     /// these configurations control the default input devices for a product.
     #[argh(option, short = 'i')]
     input_device_config: Vec<OsString>,
+
+    /// these configurations control which interfaces are enabled.
+    #[argh(option, short = 'x')]
+    interface_config: Vec<OsString>,
 
     /// these configurations control specific settings within the light sensor controller.
     #[argh(option, short = 'l')]
@@ -91,6 +95,10 @@ fn main() -> Result<(), Error> {
 
     for config in test_config.input_device_config.into_iter() {
         read_config::<InputConfiguration>(&config)?;
+    }
+
+    for config in test_config.interface_config.into_iter() {
+        read_config::<EnabledInterfacesConfiguration>(&config)?;
     }
 
     for config in test_config.light_sensor_config.into_iter() {
