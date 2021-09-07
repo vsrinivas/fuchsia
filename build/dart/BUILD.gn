@@ -116,7 +116,7 @@ python_host_test("generate_dart_toc_test") {
   sources = [ "generate_dart_toc.py" ]
   libraries = [
     "//third_party/pyyaml:yaml",
-    "//third_party/python/parameterized/parameterized",
+    "//third_party/parameterized",
   ]
 }
 

@@ -1,0 +1,7 @@
+Name: parameterized
+License: BSD
+License File: src/LICENSE.txt
+Upstream Git: https://github.com/wolever/parameterized
+Description:
+
+Parameterized testing with any Python test framework

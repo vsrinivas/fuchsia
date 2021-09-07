@@ -93,6 +93,8 @@ tables_generator_tests_*.txt
 /third_party/scudo/gwp_asan
 !/third_party/zstd/
 /third_party/zstd/src
+!/third_party/parameterized
+/third_party/parameterized/src
 /tmp/
 /topaz/
 /vendor/
