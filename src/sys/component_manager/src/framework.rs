@@ -540,10 +540,6 @@ mod tests {
         }
     }
 
-    fn empty_child_args() -> fsys::CreateChildArgs {
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY }
-    }
-
     #[fuchsia::test]
     async fn create_dynamic_child() {
         // Set up model and realm service.
@@ -565,7 +561,7 @@ mod tests {
             let mut create = fasync::Task::spawn(test.realm_proxy.create_child(
                 &mut collection_ref,
                 child_decl(name),
-                empty_child_args(),
+                fsys::CreateChildArgs::EMPTY,
             ));
             let event = event_stream
                 .wait_until(EventType::Discovered, vec!["system:0", moniker].into())
@@ -625,7 +621,7 @@ mod tests {
             };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl, empty_child_args())
+                .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -642,7 +638,7 @@ mod tests {
             };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl, empty_child_args())
+                .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -654,13 +650,13 @@ mod tests {
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let res = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+                .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
                 .await;
             let _ = res.expect("failed to create child a");
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+                .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -672,7 +668,7 @@ mod tests {
             let mut collection_ref = fsys::CollectionRef { name: "nonexistent".to_string() };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+                .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -684,7 +680,7 @@ mod tests {
             let mut collection_ref = fsys::CollectionRef { name: "pcoll".to_string() };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+                .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -701,7 +697,7 @@ mod tests {
             };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl, empty_child_args())
+                .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -754,7 +750,7 @@ mod tests {
             };
             let err = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl, empty_child_args())
+                .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
@@ -792,7 +788,7 @@ mod tests {
             let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
             let res = test
                 .realm_proxy
-                .create_child(&mut collection_ref, child_decl(name), empty_child_args())
+                .create_child(&mut collection_ref, child_decl(name), fsys::CreateChildArgs::EMPTY)
                 .await;
             let _ = res
                 .unwrap_or_else(|_| panic!("failed to create child {}", name))
@@ -882,7 +878,7 @@ mod tests {
         };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl, empty_child_args())
+            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
 
@@ -908,7 +904,7 @@ mod tests {
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
@@ -1035,7 +1031,7 @@ mod tests {
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("system"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("system"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child system").expect("failed to create child system");
 
@@ -1087,7 +1083,7 @@ mod tests {
         let create_a = fasync::Task::spawn(test.realm_proxy.create_child(
             &mut collection_ref,
             child_decl("a"),
-            empty_child_args(),
+            fsys::CreateChildArgs::EMPTY,
         ));
         let event_a = event_stream
             .wait_until(EventType::Started, vec!["system:0", "coll:a:1"].into())
@@ -1240,28 +1236,28 @@ mod tests {
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("a"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child a").expect("failed to create child a");
 
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("b"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("b"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("c"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("c"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child c").expect("failed to create child c");
 
         let mut collection_ref = fsys::CollectionRef { name: "coll2".to_string() };
         let res = test
             .realm_proxy
-            .create_child(&mut collection_ref, child_decl("d"), empty_child_args())
+            .create_child(&mut collection_ref, child_decl("d"), fsys::CreateChildArgs::EMPTY)
             .await;
         let _ = res.expect("failed to create child d").expect("failed to create child d");
 

@@ -33,9 +33,11 @@ async fn main() {
         ..fsys::ChildDecl::EMPTY
     };
 
-    let child_args =
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
-    realm.create_child(&mut collection_ref, child_decl, child_args).await.unwrap().unwrap();
+    realm
+        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+        .await
+        .unwrap()
+        .unwrap();
 
     expect_dir_listing("/hub/children", vec!["coll:simple_instance"]).await;
     expect_dir_listing(

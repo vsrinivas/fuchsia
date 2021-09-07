@@ -156,10 +156,8 @@ async fn start_child_component(realm: &fsys::RealmProxy, component: &Component) 
         ..fsys::ChildDecl::EMPTY
     };
 
-    let child_args =
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
     realm
-        .create_child(&mut collection_ref, child_decl, child_args)
+        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
         .await
         .expect("Failed to make FIDL call")
         .expect("Failed to create child");

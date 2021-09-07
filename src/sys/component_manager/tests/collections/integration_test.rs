@@ -33,10 +33,8 @@ async fn collections() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
-        let child_args =
-            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl, child_args)
+            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
             .await
             .expect(&format!("create_child {} failed", name))
             .expect(&format!("failed to create child {}", name));
@@ -97,10 +95,8 @@ async fn collections() {
             environment: None,
             ..fsys::ChildDecl::EMPTY
         };
-        let child_args =
-            fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
         realm
-            .create_child(&mut collection_ref, child_decl, child_args)
+            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
             .await
             .expect("second create_child a failed")
             .expect("failed to create second child a");

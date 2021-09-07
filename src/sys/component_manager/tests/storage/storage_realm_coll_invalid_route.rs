@@ -29,9 +29,11 @@ async fn main() {
         ..fsys::ChildDecl::EMPTY
     };
 
-    let child_args =
-        fsys::CreateChildArgs { numbered_handles: None, ..fsys::CreateChildArgs::EMPTY };
-    realm.create_child(&mut collection_ref, child_decl, child_args).await.unwrap().unwrap();
+    realm
+        .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+        .await
+        .unwrap()
+        .unwrap();
 
     // Bind to child
     let mut child_ref = fsys::ChildRef {
