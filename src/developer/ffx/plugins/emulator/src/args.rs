@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {
+    argh::FromArgs,
+    ffx_core::ffx_command,
+    serde::{Deserialize, Serialize},
+};
 
 /// entry point for ffx
 #[ffx_command()]
@@ -35,7 +39,7 @@ pub enum VDLCommand {
     Remote(RemoteCommand),
 }
 
-#[derive(FromArgs, Default, Debug, PartialEq)]
+#[derive(FromArgs, Default, Debug, PartialEq, Deserialize, Serialize)]
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
@@ -255,6 +259,11 @@ pub struct StartCommand {
     /// bool, enables extra logging for debugging
     #[argh(switch, short = 'V')]
     pub verbose: bool,
+
+    /// bool, terminates the plugin before it calls out to the next layer, and prints the command
+    /// to the screen for debugging. The temporary staging directory is also retained.
+    #[argh(switch)]
+    pub dry_run: bool,
 }
 
 fn default_window_height() -> usize {

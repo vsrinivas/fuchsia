@@ -43,4 +43,8 @@ ffx_plugin("ffx_emulator") {
     "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",
   ]
+  args_deps = [
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
 }

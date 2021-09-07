@@ -312,7 +312,7 @@ impl VDLFiles {
         }
         if command.nointeractive && command.vdl_output.is_none() {
             ffx_bail!(
-                "--vdl-ouput must be specified for --nointeractive mode.\n\
+                "--vdl-output must be specified for --nointeractive mode.\n\
                 example: fx vdl start --nointeractive --vdl-output /path/to/saved/output.log\n\
                 example: ./fvdl --sdk start --nointeractive --vdl-output /path/to/saved/output.log\n"
             )
@@ -486,12 +486,15 @@ impl VDLFiles {
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
-        if self.verbose {
+        if self.verbose || start_command.dry_run {
             println!("[fvdl] Running device_launcher cmd: {:?}", cmd);
         }
+        if start_command.dry_run {
+            return Ok(0);
+        }
+
         let shared_process = SharedChild::spawn(&mut cmd)?;
         let child_arc = Arc::new(shared_process);
-
         if start_command.emu_only || start_command.monitor {
             // When running with '--emu-only' or '--monitor' mode, the user is directly interacting
             // with the emulator console, the execution ends when either QEMU or AEMU terminates.
@@ -517,7 +520,7 @@ impl VDLFiles {
                         None,
                     )
                     .await?;
-                    ffx_bail!("emulator launcher did not terminate propertly, error: {}", e)
+                    ffx_bail!("emulator launcher did not terminate properly, error: {}", e)
                 }
             }
         }
