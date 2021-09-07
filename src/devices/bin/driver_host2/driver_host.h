@@ -21,7 +21,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
  public:
   static zx::status<std::unique_ptr<Driver>> Load(std::string url, std::string binary, zx::vmo vmo);
 
-  Driver(std::string url, std::string binary, void* library, DriverRecordV1* record);
+  Driver(std::string url, std::string binary, void* library, const DriverRecordV1* record);
   ~Driver();
 
   const std::string& url() const { return url_; }
@@ -37,7 +37,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   std::string url_;
   std::string binary_;
   void* library_;
-  DriverRecordV1* record_;
+  const DriverRecordV1* record_;
   std::optional<void*> opaque_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
 };

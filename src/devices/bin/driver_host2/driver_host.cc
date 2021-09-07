@@ -55,7 +55,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, std::string bi
   return zx::ok(std::make_unique<Driver>(std::move(url), std::move(binary), library, record));
 }
 
-Driver::Driver(std::string url, std::string binary, void* library, DriverRecordV1* record)
+Driver::Driver(std::string url, std::string binary, void* library, const DriverRecordV1* record)
     : url_(std::move(url)), binary_(std::move(binary)), library_(library), record_(record) {}
 
 Driver::~Driver() {
