@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::account_handler_context::AccountHandlerContext;
-use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
+use account_common::{AccountId, AccountManagerError, ResultExt as AccountResultExt};
 use anyhow::Context as _;
 use async_trait::async_trait;
 use core::fmt::Debug;
@@ -35,13 +35,13 @@ const ACCOUNT_HANDLER_EPHEMERAL_URL: &str =
 pub trait AccountHandlerConnection: Send + Sized + Debug {
     /// Create a new uninitialized AccountHandlerConnection.
     fn new(
-        account_id: LocalAccountId,
+        account_id: AccountId,
         lifetime: Lifetime,
         context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError>;
 
     /// Returns the lifetime of the account.
-    fn get_account_id(&self) -> &LocalAccountId;
+    fn get_account_id(&self) -> &AccountId;
 
     /// Returns the lifetime of the account.
     fn get_lifetime(&self) -> &Lifetime;
@@ -72,8 +72,8 @@ pub struct AccountHandlerConnectionImpl {
     /// read.
     _env_controller: EnvironmentControllerProxy,
 
-    /// The local account id of the account.
-    account_id: LocalAccountId,
+    /// The account id of the account.
+    account_id: AccountId,
 
     /// The lifetime of the account.
     lifetime: Lifetime,
@@ -91,7 +91,7 @@ impl fmt::Debug for AccountHandlerConnectionImpl {
 #[async_trait]
 impl AccountHandlerConnection for AccountHandlerConnectionImpl {
     fn new(
-        account_id: LocalAccountId,
+        account_id: AccountId,
         lifetime: Lifetime,
         context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
@@ -105,8 +105,8 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
 
         // Note: The combination of component URL and environment label determines the location of
         // the data directory for the launched component. It is critical that the label is unique
-        // and stable per-account, which we achieve through using the local account id as
-        // the environment name. We also pass in the account id as a flag, because the environment
+        // and stable per-account, which we achieve through using the account id as the environment
+        // name. We also pass in the account id as a flag, because the environment
         // name is not known to the launched component.
         let account_id_string = account_id.to_canonical_string();
         let mut fs_for_account_handler = ServiceFs::new();
@@ -146,7 +146,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         })
     }
 
-    fn get_account_id(&self) -> &LocalAccountId {
+    fn get_account_id(&self) -> &AccountId {
         &self.account_id
     }
 
@@ -161,7 +161,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
     async fn terminate(&self) {
         let mut event_stream = self.proxy.take_event_stream();
         if let Err(err) = self.proxy.terminate() {
-            warn!("Error gracefully terminating account handler {:?}", err);
+            warn!("Error gracefully terminating AccountHandler {:?}", err);
         } else {
             while let Ok(Some(_)) = event_stream.try_next().await {}
             info!("Gracefully terminated AccountHandler instance");

@@ -7,26 +7,26 @@
 //! This module defines the format and meaning of all the inspect information published by
 //! account_handler.
 
-use account_common::{LocalAccountId, LocalPersonaId};
+use account_common::{AccountId, PersonaId};
 use fuchsia_inspect::{Node, StringProperty, UintProperty};
 
 /// An abstraction over the properties of the account handler that we expose via fuchsia-inspect.
 pub struct AccountHandler {
     /// The underlying inspect node.
     node: Node,
-    /// The local account id
-    pub local_account_id: UintProperty,
+    /// The account id
+    pub account_id: UintProperty,
     /// Represents the state of the account handler, such as "initialized"
     pub lifecycle: StringProperty,
 }
 
 impl AccountHandler {
     /// Creates a new AccountHandler as a child of the supplied node.
-    pub fn new<'a>(parent: &'a Node, account_id: &'a LocalAccountId, lifecycle: &'a str) -> Self {
+    pub fn new<'a>(parent: &'a Node, account_id: &'a AccountId, lifecycle: &'a str) -> Self {
         let node = parent.create_child("account_handler");
-        let local_account_id = (&node).create_uint("local_account_id", account_id.clone().into());
+        let account_id = (&node).create_uint("account_id", account_id.clone().into());
         let lifecycle = (&node).create_string("lifecycle", lifecycle.to_string());
-        Self { node, local_account_id, lifecycle }
+        Self { node, account_id, lifecycle }
     }
 
     /// Get the underlying node, can be used to create children.
@@ -56,18 +56,18 @@ impl Account {
 pub struct Persona {
     /// The underlying inspect node.
     _node: Node,
-    /// The local persona id
-    pub local_persona_id: UintProperty,
+    /// The persona id
+    pub persona_id: UintProperty,
     /// The number of active clients of the Persona.
     pub open_client_channels: UintProperty,
 }
 
 impl Persona {
     /// Creates a new Persona as a child of the supplied node.
-    pub fn new(parent: &Node, persona_id: &LocalPersonaId) -> Self {
+    pub fn new(parent: &Node, persona_id: &PersonaId) -> Self {
         let node = parent.create_child("default_persona");
-        let local_persona_id = (&node).create_uint("local_persona_id", persona_id.clone().into());
+        let persona_id = (&node).create_uint("persona_id", persona_id.clone().into());
         let open_client_channels = (&node).create_uint("open_client_channels", 0);
-        Self { _node: node, local_persona_id, open_client_channels }
+        Self { _node: node, persona_id, open_client_channels }
     }
 }

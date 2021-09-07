@@ -65,7 +65,7 @@ using fuchsia.identity.external;
 ///   terminate.
 @discoverable
 protocol AccountHandlerControl {
-    /// Creates a completely new Fuchsia account, optionally protecting the
+    /// Creates a completely new system account, optionally protecting the
     /// account with a single enrollment of an authentication mechanism.
     ///
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage

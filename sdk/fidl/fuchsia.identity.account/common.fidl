@@ -12,10 +12,6 @@ const MAX_ACCOUNTS_PER_DEVICE uint32 = 128;
 /// Fuchsia account. This number may be increased in the future.
 const MAX_PERSONAE_PER_ACCOUNT uint32 = 128;
 
-/// The maximum length of the global Fuchsia account and persona identifiers,
-/// in bytes.
-const MAX_ID_SIZE uint32 = 256;
-
 /// The maximum length of the (UTF-8 encoded) human readable names, in bytes.
 const MAX_NAME_SIZE uint32 = 128;
 
@@ -40,25 +36,13 @@ type Lifetime = strict enum : uint8 {
     PERSISTENT = 2;
 };
 
-/// A globally unique identifier for a Fuchsia account that is constant across
-/// the devices that the account is provisioned on. Identifiers are not human
-/// readable.
-alias GlobalAccountId = bytes:MAX_ID_SIZE;
+/// A unique identifier for an account on the current device.
+alias AccountId = uint64;
 
-/// A unique identifier for a Fuchsia account on the current device. If the
-/// account is removed and re-added it will receive a different LocalAccountId.
-/// The same account will have different LocalAccountIds on different devices
-/// and a particular LocalAccountId value may refer to different accounts on
-/// different devices.
-alias LocalAccountId = uint64;
-
-/// A unique identifier for a Persona of a Fuchsia account on the current
-/// device. If the account is removed and re-added its personae will receive
-/// different LocalPersonaIds. A particular LocalPersonaId value may refer to
-/// different personae and/or different accounts on different devices. The
-/// LocalAccountId for an account cannot be derived from the LocalPersonaId of
-/// its personae.
-alias LocalPersonaId = uint64;
+/// A unique identifier for a persona of an account on the current device.
+/// The AccountId for an account cannot be derived from the PersonaId of its
+/// personae.
+alias PersonaId = uint64;
 
 /// Specifies the reason that a fuchsia.identity.account method failed.
 type Error = strict enum {

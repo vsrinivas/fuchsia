@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId};
+use account_common::{AccountId, AccountManagerError, FidlAccountId};
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthenticationContextProviderMarker};
@@ -146,7 +146,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         Ok(())
     }
 
-    async fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
+    async fn get_account_ids(&self) -> Vec<FidlAccountId> {
         self.account_map.lock().await.get_account_ids().iter().map(|id| id.clone().into()).collect()
     }
 
@@ -163,7 +163,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
     async fn get_account(
         &self,
-        id: LocalAccountId,
+        id: AccountId,
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
         account: ServerEnd<AccountMarker>,
     ) -> Result<(), ApiError> {
@@ -205,11 +205,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         Ok(())
     }
 
-    async fn remove_account(
-        &self,
-        account_id: LocalAccountId,
-        force: bool,
-    ) -> Result<(), ApiError> {
+    async fn remove_account(&self, account_id: AccountId, force: bool) -> Result<(), ApiError> {
         let mut account_map = self.account_map.lock().await;
         let account_handler = account_map.get_handler(&account_id).await.map_err(|err| {
             warn!("Could not get account handler for account removal {:?}", err);
@@ -265,7 +261,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         &self,
         lifetime: Lifetime,
         auth_mechanism_id: Option<String>,
-    ) -> Result<FidlLocalAccountId, ApiError> {
+    ) -> Result<FidlAccountId, ApiError> {
         let account_handler = self.create_account_internal(lifetime, auth_mechanism_id).await?;
         let account_id = account_handler.get_account_id();
 
@@ -372,10 +368,8 @@ mod tests {
         data_dir: &Path,
         inspector: &Inspector,
     ) -> TestAccountManager {
-        let stored_account_list = existing_ids
-            .iter()
-            .map(|&id| StoredAccountMetadata::new(LocalAccountId::new(id)))
-            .collect();
+        let stored_account_list =
+            existing_ids.iter().map(|&id| StoredAccountMetadata::new(AccountId::new(id))).collect();
         StoredAccountList::new(stored_account_list)
             .save(data_dir)
             .expect("Couldn't write account list");
@@ -466,14 +460,14 @@ mod tests {
         // Manually create an account manager with one account.
         let data_dir = TempDir::new().unwrap();
         let stored_account_list =
-            StoredAccountList::new(vec![StoredAccountMetadata::new(LocalAccountId::new(1))]);
+            StoredAccountList::new(vec![StoredAccountMetadata::new(AccountId::new(1))]);
         stored_account_list.save(data_dir.path()).unwrap();
         let inspector = Inspector::new();
         request_stream_test(read_accounts(data_dir.path(), &inspector), |proxy, _test_object| {
             async move {
                 // Try to delete a very different account from the one we added.
                 assert_eq!(
-                    proxy.remove_account(LocalAccountId::new(42).into(), FORCE_REMOVE_ON).await?,
+                    proxy.remove_account(AccountId::new(42).into(), FORCE_REMOVE_ON).await?,
                     Err(ApiError::NotFound)
                 );
                 assert_data_tree!(inspector, root: contains {

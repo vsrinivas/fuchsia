@@ -6,7 +6,7 @@
 //! sending events to listeners, optionally configured with filters, about changes in the accounts
 //! presence and states during their lifetime.
 
-use account_common::LocalAccountId;
+use account_common::AccountId;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_identity_account::{
     AccountListenerOptions, AccountListenerProxy, InitialAccountState,
@@ -23,10 +23,10 @@ use crate::inspect;
 /// Events emitted on account listeners
 pub enum AccountEvent {
     /// AccountAdded is emitted after an account has been added.
-    AccountAdded(LocalAccountId),
+    AccountAdded(AccountId),
 
     /// AccountRemoved is emitted after an account has been removed.
-    AccountRemoved(LocalAccountId),
+    AccountRemoved(AccountId),
 }
 
 /// The client end of an account listener.
@@ -113,7 +113,7 @@ impl AccountEventEmitter {
         &'a self,
         listener: AccountListenerProxy,
         options: AccountListenerOptions,
-        initial_account_ids: &'a Vec<LocalAccountId>,
+        initial_account_ids: &'a Vec<AccountId>,
     ) -> Result<(), fidl::Error> {
         let mut clients_lock = self.clients.lock().await;
         let future = if options.initial_state {
@@ -143,13 +143,13 @@ mod tests {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref ACCOUNT_ID_ADD: LocalAccountId = LocalAccountId::new(1);
-        static ref ACCOUNT_ID_REMOVE: LocalAccountId = LocalAccountId::new(2);
-        static ref TEST_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(3);
+        static ref ACCOUNT_ID_ADD: AccountId = AccountId::new(1);
+        static ref ACCOUNT_ID_REMOVE: AccountId = AccountId::new(2);
+        static ref TEST_ACCOUNT_ID: AccountId = AccountId::new(3);
         static ref EVENT_ADDED: AccountEvent = AccountEvent::AccountAdded(ACCOUNT_ID_ADD.clone());
         static ref EVENT_REMOVED: AccountEvent =
             AccountEvent::AccountRemoved(ACCOUNT_ID_REMOVE.clone());
-        static ref TEST_ACCOUNT_IDS: Vec<LocalAccountId> = vec![TEST_ACCOUNT_ID.clone()];
+        static ref TEST_ACCOUNT_IDS: Vec<AccountId> = vec![TEST_ACCOUNT_ID.clone()];
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -215,7 +215,7 @@ mod tests {
             if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
                 request
             {
-                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
+                assert_eq!(AccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -263,7 +263,7 @@ mod tests {
             if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
                 request
             {
-                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
+                assert_eq!(AccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -293,7 +293,7 @@ mod tests {
             if let Some(AccountListenerRequest::OnAccountRemoved { account_id, responder }) =
                 request
             {
-                assert_eq!(LocalAccountId::from(account_id), ACCOUNT_ID_REMOVE.clone());
+                assert_eq!(AccountId::from(account_id), ACCOUNT_ID_REMOVE.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");
@@ -358,7 +358,7 @@ mod tests {
             if let Some(AccountListenerRequest::OnAccountAdded { account_state, responder }) =
                 request
             {
-                assert_eq!(LocalAccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
+                assert_eq!(AccountId::from(account_state.account_id), ACCOUNT_ID_ADD.clone());
                 responder.send().unwrap();
             } else {
                 panic!("Unexpected message received");

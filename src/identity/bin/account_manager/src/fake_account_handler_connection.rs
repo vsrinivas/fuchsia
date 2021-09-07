@@ -10,7 +10,7 @@
 #![cfg(test)]
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
-use account_common::{AccountManagerError, LocalAccountId};
+use account_common::{AccountId, AccountManagerError};
 use async_trait::async_trait;
 use fidl::endpoints::create_proxy_and_stream;
 use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
@@ -24,13 +24,13 @@ use std::sync::Arc;
 
 lazy_static! {
     // Indicating en error-free, standard response.
-    pub static ref DEFAULT_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(10000);
+    pub static ref DEFAULT_ACCOUNT_ID: AccountId = AccountId::new(10000);
 
     // Triggers an ApiError::Resource while trying to create a connection.
-    pub static ref CORRUPT_HANDLER_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(20000);
+    pub static ref CORRUPT_HANDLER_ACCOUNT_ID: AccountId = AccountId::new(20000);
 
     // Triggers an ApiError::Unknown while trying initialize an account.
-    pub static ref UNKNOWN_ERROR_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(30000);
+    pub static ref UNKNOWN_ERROR_ACCOUNT_ID: AccountId = AccountId::new(30000);
 
     static ref EMPTY_ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
             Arc::new(AccountHandlerContext::new(&[], &[]));
@@ -42,7 +42,7 @@ lazy_static! {
 #[derive(Debug)]
 pub struct FakeAccountHandlerConnection {
     lifetime: Lifetime,
-    account_id: LocalAccountId,
+    account_id: AccountId,
     proxy: AccountHandlerControlProxy,
 }
 
@@ -51,7 +51,7 @@ impl FakeAccountHandlerConnection {
     /// AccountHandlerContext, for convenience.
     pub fn new_with_defaults(
         lifetime: Lifetime,
-        account_id: LocalAccountId,
+        account_id: AccountId,
     ) -> Result<Self, AccountManagerError> {
         Self::new(account_id, lifetime, Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT))
     }
@@ -60,7 +60,7 @@ impl FakeAccountHandlerConnection {
 #[async_trait]
 impl AccountHandlerConnection for FakeAccountHandlerConnection {
     fn new(
-        account_id: LocalAccountId,
+        account_id: AccountId,
         lifetime: Lifetime,
         _context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
@@ -109,7 +109,7 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
         Ok(Self { account_id, lifetime, proxy })
     }
 
-    fn get_account_id(&self) -> &LocalAccountId {
+    fn get_account_id(&self) -> &AccountId {
         &self.account_id
     }
 

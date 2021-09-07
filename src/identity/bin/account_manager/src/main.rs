@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! AccountManager manages the overall state of Fuchsia accounts and personae on
+//! AccountManager manages the overall state of system accounts and personae on
 //! a Fuchsia device, installation of the AuthProviders that are used to obtain
 //! authentication tokens for these accounts, and access to TokenManagers for
 //! these accounts.

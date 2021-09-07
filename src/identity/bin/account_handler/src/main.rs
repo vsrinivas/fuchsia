@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! AccountHandler manages the state of a single Fuchsia account and its personae on a Fuchsia
+//! AccountHandler manages the state of a single system account and its personae on a Fuchsia
 //! device, and provides access to authentication tokens for Service Provider accounts associated
-//! with the Fuchsia account.
+//! with the account.
 
 #![deny(missing_docs)]
 
@@ -27,7 +27,7 @@ mod test_util;
 
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
-use account_common::{AccountManagerError, LocalAccountId};
+use account_common::{AccountId, AccountManagerError};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
@@ -46,14 +46,14 @@ const DATA_DIR: &str = "/data";
 const EPHEMERAL_FLAG: &str = "ephemeral";
 
 /// This required command line option (prefixed with `--`), followed by a decimal string,
-/// determines the local account identifier.
+/// determines the account identifier.
 const ACCOUNT_ID_OPTION: &str = "account_id";
 
 // TODO(dnordstrom): Remove all panics.
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
-    opts.reqopt("", ACCOUNT_ID_OPTION, "set the local account id", "ID");
+    opts.reqopt("", ACCOUNT_ID_OPTION, "set the account id", "ID");
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
     let lifetime = if options.opt_present(EPHEMERAL_FLAG) {
@@ -63,7 +63,7 @@ fn main() -> Result<(), Error> {
     };
     let account_id = {
         let account_id = options.opt_str(ACCOUNT_ID_OPTION).expect("Internal getopts error");
-        LocalAccountId::from_canonical_str(&account_id).expect(&format!(
+        AccountId::from_canonical_str(&account_id).expect(&format!(
             "`{}` should be provided as an unsigned 64-bit integer (in decimal).",
             &account_id
         ))
@@ -109,7 +109,7 @@ fn main() -> Result<(), Error> {
 /// Returns a pre-auth manager given the current lifetime and account id.
 fn create_pre_auth_manager(
     lifetime: &AccountLifetime,
-    id: &LocalAccountId,
+    id: &AccountId,
 ) -> Result<Arc<dyn pre_auth::Manager>, AccountManagerError> {
     if lifetime == &AccountLifetime::Ephemeral {
         Ok(Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments)))

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{Key, StorageManager};
-use account_common::{AccountManagerError, LocalAccountId};
+use account_common::{AccountId, AccountManagerError};
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_io::DirectoryProxy;
@@ -38,7 +38,7 @@ impl StorageManager for EncryptedVolumeStorageManager {
 impl EncryptedVolumeStorageManager {
     /// Create a new `DirectoryStorageManager`, using the given account id to
     /// identify the correct volume.
-    pub fn new(_account_id: &LocalAccountId) -> Result<Self, AccountManagerError> {
+    pub fn new(_account_id: &AccountId) -> Result<Self, AccountManagerError> {
         Ok(Self {})
     }
 }
@@ -50,12 +50,12 @@ mod test {
     use lazy_static::lazy_static;
 
     lazy_static! {
-        static ref LOCAL_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(45);
+        static ref ACCOUNT_ID: AccountId = AccountId::new(45);
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_provision_unimplemented() {
-        let manager = EncryptedVolumeStorageManager::new(&LOCAL_ACCOUNT_ID).unwrap();
+        let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
             manager.provision(&Key::NoCustomKey).await.unwrap_err().api_error,
             ApiError::UnsupportedOperation
@@ -64,7 +64,7 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_unlock_unimplemented() {
-        let manager = EncryptedVolumeStorageManager::new(&LOCAL_ACCOUNT_ID).unwrap();
+        let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
             manager.unlock(&Key::NoCustomKey).await.unwrap_err().api_error,
             ApiError::UnsupportedOperation
@@ -73,19 +73,19 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_lock_unimplemented() {
-        let manager = EncryptedVolumeStorageManager::new(&LOCAL_ACCOUNT_ID).unwrap();
+        let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(manager.lock().await.unwrap_err().api_error, ApiError::UnsupportedOperation)
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_destroy_unimplemented() {
-        let manager = EncryptedVolumeStorageManager::new(&LOCAL_ACCOUNT_ID).unwrap();
+        let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(manager.destroy().await.unwrap_err().api_error, ApiError::UnsupportedOperation)
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_get_root_dir_unimplemented() {
-        let manager = EncryptedVolumeStorageManager::new(&LOCAL_ACCOUNT_ID).unwrap();
+        let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
             manager.get_root_dir().await.unwrap_err().api_error,
             ApiError::UnsupportedOperation

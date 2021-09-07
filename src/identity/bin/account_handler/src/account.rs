@@ -9,7 +9,7 @@ use crate::lock_request;
 use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use crate::TokenManager;
-use account_common::{AccountManagerError, FidlLocalPersonaId, LocalPersonaId, ResultExt};
+use account_common::{AccountManagerError, FidlPersonaId, PersonaId, ResultExt};
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthenticationContextProviderProxy;
@@ -59,14 +59,14 @@ pub struct Account {
     inspect: inspect::Account,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
-    // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID. We
+    // PersonaId to Persona struct, and changing default_persona from a struct to an ID. We
     // will also need to store Arc<TokenManager> at the account level.
 }
 
 impl Account {
     /// Manually construct an account object, shouldn't normally be called directly.
     async fn new(
-        persona_id: LocalPersonaId,
+        persona_id: PersonaId,
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
@@ -109,27 +109,26 @@ impl Account {
         })
     }
 
-    /// Creates a new Fuchsia account and, if it is persistent, stores it on disk.
+    /// Creates a new system account and, if it is persistent, stores it on disk.
     pub async fn create(
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
-        let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
+        let persona_id = PersonaId::new(rand::random::<u64>());
         if let AccountLifetime::Persistent { ref account_dir } = lifetime {
             if StoredAccount::path(account_dir).exists() {
                 info!("Attempting to create account twice");
                 return Err(AccountManagerError::new(ApiError::Internal));
             }
-            let stored_account = StoredAccount::new(local_persona_id.clone());
+            let stored_account = StoredAccount::new(persona_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(local_persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent)
-            .await
+        Self::new(persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent).await
     }
 
-    /// Loads an existing Fuchsia account from disk.
+    /// Loads an existing system account from disk.
     pub async fn load(
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
@@ -147,9 +146,8 @@ impl Account {
             }
         };
         let stored_account = StoredAccount::load(account_dir)?;
-        let local_persona_id = stored_account.get_default_persona_id().clone();
-        Self::new(local_persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent)
-            .await
+        let persona_id = stored_account.get_default_persona_id().clone();
+        Self::new(persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent).await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -282,7 +280,7 @@ impl Account {
         Err(ApiError::UnsupportedOperation)
     }
 
-    fn get_persona_ids(&self) -> Vec<FidlLocalPersonaId> {
+    fn get_persona_ids(&self) -> Vec<FidlPersonaId> {
         vec![self.default_persona.id().clone().into()]
     }
 
@@ -290,7 +288,7 @@ impl Account {
         &'a self,
         context: &'a AccountContext,
         persona_server_end: ServerEnd<PersonaMarker>,
-    ) -> Result<FidlLocalPersonaId, ApiError> {
+    ) -> Result<FidlPersonaId, ApiError> {
         let persona_clone = Arc::clone(&self.default_persona);
         let persona_context =
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
@@ -314,7 +312,7 @@ impl Account {
     async fn get_persona<'a>(
         &'a self,
         context: &'a AccountContext,
-        id: LocalPersonaId,
+        id: PersonaId,
         persona_server_end: ServerEnd<PersonaMarker>,
     ) -> Result<(), ApiError> {
         if &id == self.default_persona.id() {
@@ -586,7 +584,7 @@ mod tests {
         test.run(account, |proxy| async move {
             let response = proxy.get_persona_ids().await?;
             assert_eq!(response.len(), 1);
-            assert_eq!(&LocalPersonaId::new(response[0]), persona_id);
+            assert_eq!(&PersonaId::new(response[0]), persona_id);
             Ok(())
         })
         .await;
@@ -603,7 +601,7 @@ mod tests {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
                 let response = account_proxy.get_default_persona(persona_server_end).await?;
-                assert_eq!(&LocalPersonaId::from(response.unwrap()), persona_id);
+                assert_eq!(&PersonaId::from(response.unwrap()), persona_id);
 
                 // The persona channel should now be usable.
                 let persona_proxy = persona_client_end.into_proxy().unwrap();
@@ -645,7 +643,7 @@ mod tests {
             async move {
                 let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
                 assert!(account_proxy
-                    .get_persona(FidlLocalPersonaId::from(persona_id), persona_server_end)
+                    .get_persona(FidlPersonaId::from(persona_id), persona_server_end)
                     .await?
                     .is_ok());
 
@@ -668,7 +666,7 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         // Note: This fixed value has a 1 - 2^64 probability of not matching the randomly chosen
         // one.
-        let wrong_id = LocalPersonaId::new(13);
+        let wrong_id = PersonaId::new(13);
 
         test.run(account, |proxy| async move {
             let (_, persona_server_end) = create_endpoints().unwrap();

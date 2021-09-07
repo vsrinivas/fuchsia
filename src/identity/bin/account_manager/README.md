@@ -4,25 +4,26 @@
 
 Account Manager is the core component of the user account system for Fuchsia.
 
-The Account Manager maintains the set of Fuchsia accounts that are provisioned
+The Account Manager maintains the set of system accounts that are provisioned
 on the device, launches and configures Authentication Provider components to
 perform authentication via service providers, and launches and delegates to
 Account Handler component instances to determine the detailed state and
 authentication for each account.
 
-Each device that supports Fuchsia accounts will have a single instance of the
+Each device that supports system accounts will have a single instance of the
 Account Manager component, started on demand, that implements the discoverable
-fuchsia.identity.account.AccountManager FIDL protocols and acts as the entry point
-to the account system. Only a small number of core system components should
-depend directly on Account Manager, the remaining components should only rely on
-the least powerful protocol required to perform their role, typically
+fuchsia.identity.account.AccountManager FIDL protocols and acts as the entry
+point to the account system. Only a small number of core system components
+should depend directly on Account Manager, the remaining components should only
+rely on the least powerful protocol required to perform their role, typically
 fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
 
 
 ## Key Dependencies
 
-* */identity/bin/account_handler* - Account Manager launches a separate instance of
-  the Account Handler component to handle the request for each Fuchsia account
+* */identity/bin/account_handler* - Account Manager launches a separate instance
+  of the Account Handler component to handle the requests for each system
+  account
 * */identity/lib/account_common* - Account Manager uses error and identifier
   definitions from this crate
 * */identity/lib/token_manager* - Account Manager uses the AuthProviderConnection
@@ -30,7 +31,7 @@ fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
   the fuchsia.auth.AuthProvider FIDL protocol
 * *Auth Providers* - Account Manager launches instances of components that
   implement the fuchsia.auth.AuthProvider FIDL protocol. A single component is
-  launched for each configured AuthProvider, serving all Fuchsia accounts
+  launched for each configured AuthProvider, serving all system accounts
 
 
 ## Design

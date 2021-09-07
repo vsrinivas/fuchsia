@@ -5,7 +5,7 @@
 use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::TokenManager;
-use account_common::LocalPersonaId;
+use account_common::PersonaId;
 use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, TokenManagerMarker};
@@ -37,8 +37,8 @@ pub struct PersonaContext {
 // type so they don't need to be individually copied or Arc-wrapped. Here, `token_manager`,
 // `lifetime` and `account_id` are candidates.
 pub struct Persona {
-    /// A device-local identifier for this persona.
-    id: LocalPersonaId,
+    /// An identifier for this persona.
+    id: PersonaId,
 
     /// Lifetime for this persona's account (ephemeral or persistent with a path).
     lifetime: Arc<AccountLifetime>,
@@ -61,7 +61,7 @@ impl Persona {
 
     /// Constructs a new Persona.
     pub fn new(
-        id: LocalPersonaId,
+        id: PersonaId,
         lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
         task_group: TaskGroup,
@@ -71,8 +71,8 @@ impl Persona {
         Self { id, lifetime, token_manager, task_group, inspect: persona_inspect }
     }
 
-    /// Returns the device-local identifier for this persona.
-    pub fn id(&self) -> &LocalPersonaId {
+    /// Returns the identifier for this persona.
+    pub fn id(&self) -> &PersonaId {
         &self.id
     }
 

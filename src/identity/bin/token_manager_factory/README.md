@@ -42,7 +42,7 @@ components on first request.
 Once the current fallback cases requiring Token Manager Factory have been
 resolved to use Account Manager, Token Manager Factory will either be removed
 entirely or downscoped to remove the multi-user support and retained for devices
-that do not need the full multi-user Fuchsia account system.
+that do not need the full multi-user account system.
 
 Currently the set of Auth Providers known to Token Manager Factory must be
 passed by the caller in every request to create a Token Manager channel and

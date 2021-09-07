@@ -25,7 +25,7 @@ const AUTH_MECHANISM_ID: &str = "auth_mechanism_id";
 /// Identifier in stash for the enrollment data field.
 const ENROLLMENT_DATA: &str = "enrollment_data";
 
-/// Pre-authentication state for a Fuchsia account.
+/// Pre-authentication state for a system account.
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
     /// No authentication mechanism enrollments.

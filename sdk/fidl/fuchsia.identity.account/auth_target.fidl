@@ -30,8 +30,8 @@ protocol AuthListener {
 };
 
 /// A protocol that is extended by other protocols defining an entity
-/// (referred to as the "target") with an authentication state, such as a
-/// Fuchsia account or persona.
+/// (referred to as the "target") with an authentication state, such as an
+/// account or persona.
 ///
 /// AuthTarget defines a set of methods to monitor the current authentication
 /// state of an entity and to request changes in that authentication state.
@@ -67,16 +67,16 @@ protocol AuthTarget {
 //                 state or authentication for a particular event.
 };
 
-/// A protocol that exposes information about the personae and recovery account
-/// for a Fuchsia account and provides methods to manipulate these. It also
-/// exposes a writable data directory.
+/// A protocol that exposes information about the personae for a system account
+/// and provides methods to manipulate these. It also exposes a writable data
+/// directory.
 ///
 /// An Account provides access to sensitive long term identifiers and is only
 /// intended only for use by a small number of trusted system components.
 protocol Account {
     compose AuthTarget;
 
-    // Note: a LocalAccountID accessor method may be added if and when the
+    // Note: an AccountID accessor method may be added if and when the
     // first valid use case arrives.
 
     /// Returns the account's lifetime.
@@ -85,9 +85,9 @@ protocol Account {
     });
 
     /// Returns a vector of all the personae defined for the account.
-    /// NOTE: Currently all Fuchsia accounts have exactly one persona.
+    /// NOTE: Currently all accounts have exactly one persona.
     GetPersonaIds() -> (struct {
-        persona_ids vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT;
+        persona_ids vector<PersonaId>:MAX_PERSONAE_PER_ACCOUNT;
     });
 
     /// Connects a channel to read properties of and access tokens for
@@ -99,7 +99,7 @@ protocol Account {
     GetDefaultPersona(resource struct {
         persona server_end:Persona;
     }) -> (struct {
-        id LocalPersonaId;
+        id PersonaId;
     }) error Error;
 
     /// Connects a channel to read properties of and access tokens for
@@ -108,7 +108,7 @@ protocol Account {
     /// `id` The persona's identifier as returned by GetPersonaIds()
     /// `persona` The server end of a `Persona` channel
     GetPersona(resource struct {
-        id LocalPersonaId;
+        id PersonaId;
         persona server_end:Persona;
     }) -> (struct {}) error Error;
 
@@ -169,8 +169,8 @@ protocol Account {
     }) -> (struct {}) error Error;
 };
 
-/// A protocol that exposes basic information about a Fuchsia persona and access
-/// to the authentication tokens that are visible through it.
+/// A protocol that exposes basic information about a persona and access to the
+/// authentication tokens that are visible through it.
 ///
 /// Note a Persona purposefully does not provide access to a long term
 /// identifier for the persona. This is to support components in the system that

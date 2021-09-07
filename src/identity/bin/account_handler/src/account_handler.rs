@@ -7,7 +7,7 @@ use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::lock_request;
 use crate::pre_auth;
-use account_common::{AccountManagerError, LocalAccountId};
+use account_common::{AccountId, AccountManagerError};
 use anyhow::format_err;
 use fidl::endpoints::{create_proxy, ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
@@ -94,7 +94,7 @@ impl AccountHandler {
     /// Constructs a new AccountHandler and puts it in the Uninitialized state.
     pub fn new(
         context: AccountHandlerContextProxy,
-        account_id: LocalAccountId,
+        account_id: AccountId,
         lifetime: AccountLifetime,
         pre_auth_manager: Arc<dyn pre_auth::Manager>,
         inspector: &Inspector,
@@ -181,7 +181,7 @@ impl AccountHandler {
         Ok(auth_mechanism_proxy)
     }
 
-    /// Creates a new Fuchsia account and attaches it to this handler.  Moves
+    /// Creates a new system account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to the `Initialized` state.
     async fn create_account(&self, auth_mechanism_id: Option<String>) -> Result<(), ApiError> {
         let mut state_lock = self.state.lock().await;
@@ -274,7 +274,7 @@ impl AccountHandler {
         }
     }
 
-    /// Unlocks an existing Fuchsia account and attaches it to this handler.
+    /// Unlocks an existing system account and attaches it to this handler.
     /// If the account is enrolled with an authentication mechanism,
     /// authentication will be performed as part of this call. Moves
     /// the handler to the `Initialized` state.
@@ -375,7 +375,7 @@ impl AccountHandler {
             warn!("Could not remove pre-auth data: {:?}", err);
             err.api_error
         })?;
-        info!("Deleted Fuchsia account");
+        info!("Deleted account");
         Ok(())
     }
 
@@ -1112,7 +1112,7 @@ mod tests {
                 async move {
                     assert_data_tree!(inspector, root: {
                         account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
+                            account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "uninitialized",
                         }
                     });
@@ -1120,13 +1120,13 @@ mod tests {
                     proxy.create_account(None).await??;
                     assert_data_tree!(inspector, root: {
                         account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
+                            account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "initialized",
                             account: {
                                 open_client_channels: 0u64,
                             },
                             default_persona: {
-                                local_persona_id: AnyProperty,
+                                persona_id: AnyProperty,
                                 open_client_channels: 0u64,
                             },
                         }
@@ -1150,7 +1150,7 @@ mod tests {
 
                     assert_data_tree!(inspector, root: {
                         account_handler: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
+                            account_id: TEST_ACCOUNT_ID_UINT,
                             lifecycle: "finished",
                         }
                     });

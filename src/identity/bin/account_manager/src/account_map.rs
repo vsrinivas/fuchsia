@@ -5,7 +5,7 @@
 //! AccountMap defines the set of accounts on the current Fuchsia device.
 //! It caches AccountHandlerConnectionImpls for accounts for repeat access.
 
-use account_common::{AccountManagerError, LocalAccountId, ResultExt};
+use account_common::{AccountId, AccountManagerError, ResultExt};
 use anyhow::format_err;
 use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
 use fuchsia_inspect::{Node, Property};
@@ -22,7 +22,7 @@ use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
 // TODO(dnordstrom): Replace `Option` with something more flexible, perhaps
 // a custom type which can cache data such as account lifetime, eliminating
 // the need to open a connection.
-type InnerMap<AHC> = BTreeMap<LocalAccountId, Option<Arc<AHC>>>;
+type InnerMap<AHC> = BTreeMap<AccountId, Option<Arc<AHC>>>;
 
 /// The AccountMap maintains adding and removing accounts, as well as opening
 /// connections to their respective handlers.
@@ -85,7 +85,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// error if the account does not exist.
     pub async fn get_handler<'a>(
         &'a mut self,
-        account_id: &'a LocalAccountId,
+        account_id: &'a AccountId,
     ) -> Result<Arc<AHC>, AccountManagerError> {
         match self.accounts.get_mut(account_id) {
             None => Err(AccountManagerError::new(ApiError::NotFound)),
@@ -115,11 +115,11 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// Returns an AccountHandlerConnection for a new account. The
     /// AccountHandler is in the Uninitialized state.
     pub fn new_handler(&self, lifetime: Lifetime) -> Result<Arc<AHC>, AccountManagerError> {
-        let mut account_id = LocalAccountId::new(rand::random::<u64>());
+        let mut account_id = AccountId::new(rand::random::<u64>());
         // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
         // the same one twice but not impossible.
         while self.accounts.contains_key(&account_id) {
-            account_id = LocalAccountId::new(rand::random::<u64>());
+            account_id = AccountId::new(rand::random::<u64>());
         }
         let new_handler = AHC::new(account_id.clone(), lifetime, Arc::clone(&self.context))?;
         Ok(Arc::new(new_handler))
@@ -128,7 +128,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// Returns all account ids in the account map.
     // TODO(dnordstrom): In the future, more complex iterators or filters may
     // supercede this method.
-    pub fn get_account_ids(&self) -> Vec<LocalAccountId> {
+    pub fn get_account_ids(&self) -> Vec<AccountId> {
         self.accounts.keys().map(|id| id.clone().into()).collect()
     }
 
@@ -167,7 +167,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// `NotFound` error is returned.
     pub async fn remove_account<'a>(
         &'a mut self,
-        account_id: &'a LocalAccountId,
+        account_id: &'a AccountId,
     ) -> Result<(), AccountManagerError> {
         let is_persistent = match self.accounts.get(account_id) {
             Some(Some(handler)) => handler.get_lifetime() == &Lifetime::Persistent,
@@ -196,7 +196,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// optionally excluding the provided |exclude_account_id|.
     fn get_persistent_account_metadata<'a>(
         &'a self,
-        exclude_account_id: Option<&'a LocalAccountId>,
+        exclude_account_id: Option<&'a AccountId>,
     ) -> Vec<StoredAccountMetadata> {
         self.accounts
             .iter()
@@ -234,8 +234,8 @@ mod tests {
     type TestAccountMap = AccountMap<FakeAccountHandlerConnection>;
 
     lazy_static! {
-        static ref TEST_ACCOUNT_ID_1: LocalAccountId = LocalAccountId::new(123);
-        static ref TEST_ACCOUNT_ID_2: LocalAccountId = LocalAccountId::new(456);
+        static ref TEST_ACCOUNT_ID_1: AccountId = AccountId::new(123);
+        static ref TEST_ACCOUNT_ID_2: AccountId = AccountId::new(456);
         static ref ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
             Arc::new(AccountHandlerContext::new(&[], &[]));
     }

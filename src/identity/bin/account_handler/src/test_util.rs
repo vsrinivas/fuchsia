@@ -6,15 +6,15 @@
 //! modules within the crate.
 
 use crate::common::AccountLifetime;
-use account_common::{LocalAccountId, LocalPersonaId};
+use account_common::{AccountId, PersonaId};
 use fidl_fuchsia_auth::AppConfig;
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
 lazy_static! {
-    pub static ref TEST_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(111111);
-    pub static ref TEST_PERSONA_ID: LocalPersonaId = LocalPersonaId::new(222222);
+    pub static ref TEST_ACCOUNT_ID: AccountId = AccountId::new(111111);
+    pub static ref TEST_PERSONA_ID: PersonaId = PersonaId::new(222222);
 }
 
 pub static TEST_APPLICATION_URL: &str = "test_app_url";

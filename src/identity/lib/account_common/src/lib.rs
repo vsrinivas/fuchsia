@@ -11,6 +11,4 @@ mod error;
 mod identifiers;
 
 pub use crate::error::{AccountManagerError, ResultExt};
-pub use crate::identifiers::{
-    FidlLocalAccountId, FidlLocalPersonaId, LocalAccountId, LocalPersonaId,
-};
+pub use crate::identifiers::{AccountId, FidlAccountId, FidlPersonaId, PersonaId};

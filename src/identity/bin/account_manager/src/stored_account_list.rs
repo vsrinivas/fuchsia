@@ -7,7 +7,7 @@ use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use account_common::{AccountManagerError, LocalAccountId};
+use account_common::{AccountId, AccountManagerError};
 use fidl_fuchsia_identity_account::Error as ApiError;
 use serde::{Deserialize, Serialize};
 
@@ -19,21 +19,21 @@ const ACCOUNT_LIST_DOC_TMP: &str = "list.json.tmp";
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StoredAccountMetadata {
-    /// Local account id for this account
-    account_id: LocalAccountId,
+    /// Account id for this account
+    account_id: AccountId,
 }
 
 impl StoredAccountMetadata {
-    pub fn new(account_id: LocalAccountId) -> StoredAccountMetadata {
+    pub fn new(account_id: AccountId) -> StoredAccountMetadata {
         Self { account_id }
     }
 
-    pub fn account_id(&self) -> &LocalAccountId {
+    pub fn account_id(&self) -> &AccountId {
         &self.account_id
     }
 }
 
-/// Json-representation of the set of Fuchsia accounts on device. As this format evolves,
+/// Json-representation of the set of system accounts on device. As this format evolves,
 /// cautiousness is encouraged to ensure backwards compatibility.
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -122,8 +122,8 @@ mod tests {
     use tempfile::TempDir;
 
     lazy_static! {
-        static ref ACCOUNT_ID_1: LocalAccountId = LocalAccountId::new(13);
-        static ref ACCOUNT_ID_2: LocalAccountId = LocalAccountId::new(1);
+        static ref ACCOUNT_ID_1: AccountId = AccountId::new(13);
+        static ref ACCOUNT_ID_2: AccountId = AccountId::new(1);
         static ref ACCOUNT_META_1: StoredAccountMetadata =
             StoredAccountMetadata::new(ACCOUNT_ID_1.clone());
         static ref ACCOUNT_META_2: StoredAccountMetadata =
