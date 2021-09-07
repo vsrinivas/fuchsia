@@ -72,10 +72,10 @@ TEST(FsckTest, TestBadBackupSuperblock) {
   memset(block, 0xaf, sizeof(block));
   DeviceBlockWrite(device.get(), block, sizeof(block), kBlobfsBlockSize);
 
-  ASSERT_NE(Fsck(std::move(device), MountOptions()), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_INVALID_ARGS);
 }
 
-TEST(FsckTest, TestNoBackupSuperblockOnOldRevisionPassesFsck) {
+TEST(FsckTest, TestNoBackupSuperblockOnOldRevsiionPassesFsck) {
   auto device = std::make_unique<block_client::FakeFVMBlockDevice>(
       400, kBlobfsBlockSize, /*slice_size=*/32768, /*slice_capacity=*/500);
   ASSERT_TRUE(device);

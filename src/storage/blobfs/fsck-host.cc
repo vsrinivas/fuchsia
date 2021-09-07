@@ -7,12 +7,9 @@
 #include <memory>
 
 #include "src/storage/blobfs/blobfs-checker.h"
-#include "zircon/errors.h"
 
 namespace blobfs {
 
-zx_status_t Fsck(std::unique_ptr<Blobfs> blob) {
-  return BlobfsChecker(std::move(blob)).Check() ? ZX_OK : ZX_ERR_IO_DATA_INTEGRITY;
-}
+zx_status_t Fsck(std::unique_ptr<Blobfs> blob) { return BlobfsChecker(std::move(blob)).Check(); }
 
 }  // namespace blobfs

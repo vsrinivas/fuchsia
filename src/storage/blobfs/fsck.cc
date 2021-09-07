@@ -13,7 +13,6 @@
 #include "src/storage/blobfs/blobfs-checker.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
-#include "zircon/errors.h"
 
 namespace blobfs {
 
@@ -21,23 +20,21 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loop.StartThread();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot initialize dispatch loop: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cannot initialize dispatch loop";
     return status;
   }
 
   std::unique_ptr<Blobfs> blobfs;
   status = Blobfs::Create(loop.dispatcher(), std::move(device), options, zx::resource(), &blobfs);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot create filesystem for checking" << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Cannot create filesystem for checking";
     return status;
   }
   BlobfsChecker::Options checker_options;
   if (blobfs->writability() == Writability::ReadOnlyDisk) {
     checker_options.repair = false;
   }
-  return BlobfsChecker(std::move(blobfs), checker_options).Check()
-             ? ZX_OK
-             : ZX_ERR_IO_DATA_INTEGRITY;
+  return BlobfsChecker(std::move(blobfs), checker_options).Check();
 }
 
 }  // namespace blobfs
