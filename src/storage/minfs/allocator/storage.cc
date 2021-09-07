@@ -34,6 +34,7 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
   TRACE_DURATION("minfs", "Minfs::PersistentStorage::Extend");
   ZX_DEBUG_ASSERT(write_transaction != nullptr);
   if (!metadata_.UsingFvm()) {
+    FX_LOGS_FIRST_N(WARNING, 10) << "PersistentStorage::Extent can't extend on non-FVM devices.";
     return ZX_ERR_NO_SPACE;
   }
   uint32_t data_slices_diff = 1;
@@ -70,6 +71,8 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
   if (status != ZX_OK) {
     if (status != ZX_ERR_NO_SPACE) {
       FX_LOGS(ERROR) << "PersistentStorage::Extend failed to grow (on disk): " << status;
+    } else {
+      FX_LOGS_FIRST_N(WARNING, 10) << "The volume has no space to extend into.";
     }
     return status;
   }

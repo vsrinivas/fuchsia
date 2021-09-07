@@ -391,6 +391,7 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
   if (de->ino == 0) {
     // empty entry, do we fit?
     if (args->reclen > reclen) {
+      FX_LOGS(ERROR) << "Directory::AppendDirent: new entry can't fit in requested empty dirent.";
       return ZX_ERR_NO_SPACE;
     }
   } else {
@@ -402,6 +403,7 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
     }
     uint32_t extra = reclen - size;
     if (extra < args->reclen) {
+      FX_LOGS(ERROR) << "Directory::AppendDirent: new entry can't fit in free space.";
       return ZX_ERR_NO_SPACE;
     }
     // shrink existing entry
@@ -663,6 +665,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
       return found_or.error_value();
     }
     if (!found_or.value()) {
+      FX_LOGS(WARNING) << "Directory::Create: Can't find a dirent to put this file.";
       return ZX_ERR_NO_SPACE;
     }
   }
@@ -841,6 +844,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
       found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
+    FX_LOGS(WARNING) << "Directory::Rename: Can't find a dirent to put this file.";
     return ZX_ERR_NO_SPACE;
   }
 
@@ -942,6 +946,7 @@ zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _targe
       found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
+    FX_LOGS(WARNING) << "Directory::Link: Can't find a dirent to put this file.";
     return ZX_ERR_NO_SPACE;
   }
 

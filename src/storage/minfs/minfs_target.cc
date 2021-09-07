@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/storage/minfs/minfs_private.h"
 
 #ifndef __Fuchsia__
@@ -85,12 +87,15 @@ zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
       // Check if fvm has free slices.
       fuchsia_hardware_block_volume_VolumeInfo fvm_info;
       if (FVMQuery(&fvm_info) != ZX_OK) {
+        FX_LOGS_FIRST_N(WARNING, 10)
+            << "Minfs::AddDirtyBytes can't call FvmQuery, assuming no space.";
         return zx::error(ZX_ERR_NO_SPACE);
       }
       uint64_t free_slices = fvm_info.pslice_total_count - fvm_info.pslice_allocated_count;
       uint64_t blocks_available =
           local_blocks_available + (fvm_info.slice_size * free_slices / Info().BlockSize());
       if (blocks_needed > blocks_available) {
+        FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::AddDirtyBytes can't find any free blocks.";
         return zx::error(ZX_ERR_NO_SPACE);
       }
     }

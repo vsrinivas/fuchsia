@@ -4,6 +4,7 @@
 
 #include "src/storage/minfs/allocator/inode_manager.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
 #include <memory>
@@ -98,7 +99,8 @@ void InodeManager::Load(ino_t ino, Inode* out) const {
 zx_status_t InodeManager::Grow(size_t inodes) {
   uint32_t inoblks =
       (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-  if (inode_table_.Grow(inoblks * BlockSize()) != ZX_OK) {
+  if (zx_status_t status = inode_table_.Grow(inoblks * BlockSize()); status != ZX_OK) {
+    FX_LOGS(WARNING) << "InodeManager::Grow: failed: " << status;
     return ZX_ERR_NO_SPACE;
   }
   return ZX_OK;
