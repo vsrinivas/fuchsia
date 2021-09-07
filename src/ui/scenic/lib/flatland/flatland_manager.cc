@@ -86,28 +86,6 @@ void FlatlandManager::CreateFlatland(
   const std::string name = "Flatland ID=" + std::to_string(id);
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
-
-  // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
-  // Send the client their initial allotment of present tokens minus one since clients assume they
-  // start with one. The client also receives information about the next 8 frames.
-  //
-  // `this` is safe to capture, as the callback is guaranteed to run on the calling thread.
-  flatland_presenter_->GetFuturePresentationInfos(
-      [this, id](std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
-        Flatland::FuturePresentationInfos infos;
-        for (const auto& presentation_info : presentation_infos) {
-          auto& info = infos.emplace_back();
-          info.set_latch_point(presentation_info.latch_point.get());
-          info.set_presentation_time(presentation_info.presentation_time.get());
-        }
-        // The Flatland instance may have been destroyed since the call was made.
-        auto instance = flatland_instances_.find(id);
-        if (instance != flatland_instances_.end()) {
-          SendPresentCredits(instance->second.get(),
-                             scheduling::FrameScheduler::kMaxPresentsInFlight - 1u,
-                             std::move(infos));
-        }
-      });
 }
 
 std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
@@ -260,7 +238,15 @@ void FlatlandManager::OnCpuWorkDone() {
             presentation_infos_copy[i] = std::move(info_copy);
           }
 
-          SendPresentCredits(instance_kv->second.get(), present_credits_returned,
+          // The first time we send credits we should send the maximum amount for the client to get
+          // started.
+          uint32_t credits_returned = present_credits_returned;
+          if (!instance_kv->second->initial_credits_returned) {
+            credits_returned = scheduling::FrameScheduler::kMaxPresentsInFlight;
+            instance_kv->second->initial_credits_returned = true;
+          }
+
+          SendPresentCredits(instance_kv->second.get(), credits_returned,
                              std::move(presentation_infos_copy));
         }
 

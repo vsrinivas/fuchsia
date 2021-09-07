@@ -94,6 +94,9 @@ class FlatlandManager : public scheduling::SessionUpdater {
     // before |peer_closed_waiter| so that the Wait is destroyed, and therefore cancelled, before
     // the impl is destroyed in the default destruction order.
     std::shared_ptr<Flatland> impl;
+
+    // Tracks the first time we return credits to the client.
+    bool initial_credits_returned = false;
   };
 
   // TODO(fxbug.dev/76640): there's quite some overlap with FlatlandInstance.  Can they be unified?
