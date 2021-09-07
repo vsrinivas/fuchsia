@@ -65,8 +65,6 @@ test("tests") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/inspect",
   ]

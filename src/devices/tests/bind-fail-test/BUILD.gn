@@ -49,7 +49,6 @@ test("tests") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
   ]
   visibility = [ ":*" ]
 

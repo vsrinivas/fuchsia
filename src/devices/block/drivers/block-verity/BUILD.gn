@@ -182,8 +182,6 @@ test("block-verity-test") {
     "//src/lib/digest",
     "//src/storage/fvm:test_support",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",

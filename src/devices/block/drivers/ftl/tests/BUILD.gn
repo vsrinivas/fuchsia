@@ -92,7 +92,6 @@ test("ftl-integration") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/ramdevice-client",
@@ -118,10 +117,6 @@ packaged_shared_library("devmgr-integration-test") {
   library = "//zircon/system/ulib/devmgr-integration-test"
 }
 
-packaged_shared_library("devmgr-launcher") {
-  library = "//zircon/system/ulib/devmgr-launcher"
-}
-
 isolated_devmgr_unittest_package("ftl-integration-package") {
   package_name = "ftl-integration"
   executable_path = "test/ftl-integration-test"
@@ -131,7 +126,6 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
   }
   deps = [
     ":devmgr-integration-test",
-    ":devmgr-launcher",
     ":ftl-integration",
     "//src/devices/block/bin/blktest",
     "//src/devices/block/bin/iochk",

@@ -15,7 +15,6 @@ zx_library("driver-integration-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/inspector",
   ]
   public_deps = [
@@ -40,7 +39,6 @@ zx_library("driver-integration-test-static") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/inspector",
   ]
   public_deps = [

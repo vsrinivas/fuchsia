@@ -89,8 +89,6 @@ test("ddk-power") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/service:service-llcpp",
   ]

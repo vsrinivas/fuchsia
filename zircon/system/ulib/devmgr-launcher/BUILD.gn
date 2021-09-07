@@ -11,6 +11,13 @@ zx_library("devmgr-launcher") {
     "lib/devmgr-launcher/processargs.h",
   ]
 
+  # This is a helper library, we would like clients to use devmgr-integration-test
+  # instead.
+  visibility = [
+    "//src/devices/bin/driver_manager:lib",
+    "//zircon/system/ulib/devmgr-integration-test/*",
+  ]
+
   sources = [ "launcher.cc" ]
   public_deps = [ "//sdk/lib/fit" ]
   deps = [
