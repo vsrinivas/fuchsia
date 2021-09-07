@@ -66,3 +66,13 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   THERMAL_DDR = 0x28,
   HDMI = 0x2B,
 };
+
+extend uint fuchsia.BIND_REGISTER_ID {
+  USB_PHY_V2_RESET = 0,
+  NNA_RESET_LEVEL2 = 1,
+  MALI_RESET = 2,
+  ISP_RESET = 3,
+  SPICC0_RESET = 4,
+  SPICC1_RESET = 5,
+  USB_PHY_FACTORY = 6,
+};

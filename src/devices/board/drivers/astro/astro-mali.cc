@@ -13,6 +13,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
+#include "src/devices/board/drivers/astro/astro-mali-bind.h"
 
 namespace astro {
 
@@ -47,17 +48,6 @@ static pbus_bti_t mali_btis[] = {
         .iommu_index = 0,
         .bti_id = 0,
     },
-};
-
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t mali_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
 };
 
 zx_status_t Astro::MaliInit() {
@@ -96,8 +86,8 @@ zx_status_t Astro::MaliInit() {
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(mali_fragments),
+                                          countof(mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

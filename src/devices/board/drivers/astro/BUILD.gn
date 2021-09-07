@@ -90,6 +90,17 @@ driver_bind_rules("astro-display-bind") {
   ]
 }
 
+driver_bind_rules("astro-mali-bind") {
+  rules = "bind/astro-mali.bind"
+  header_output = "astro-mali-bind.h"
+  bind_output = "astro-mali-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
 driver_bind_rules("astro-pwm-bind") {
   rules = "bind/astro-pwm.bind"
   header_output = "astro-pwm-bind.h"
@@ -159,6 +170,26 @@ driver_bind_rules("gt92xx-touch-bind") {
   ]
 }
 
+driver_bind_rules("pd-armcore-bind") {
+  rules = "bind/pd-armcore.bind"
+  header_output = "pd-armcore-bind.h"
+  bind_output = "pd-armcore-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.power" ]
+}
+
+driver_bind_rules("pwm-ao-d-bind") {
+  rules = "bind/pwm-ao-d.bind"
+  header_output = "pwm-ao-d-bind.h"
+  bind_output = "pwm-ao-d-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -202,12 +233,15 @@ driver_module("astro-driver") {
     ":astro-buttons-bind_header",
     ":astro-cpu-bind_header",
     ":astro-display-bind_header",
+    ":astro-mali-bind_header",
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",
     ":astro-video-bind_header",
     ":ft3x27-touch-bind_header",
     ":gt92xx-touch-bind_header",
+    ":pd-armcore-bind_header",
+    ":pwm-ao-d-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",

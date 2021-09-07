@@ -15,6 +15,8 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
+#include "src/devices/board/drivers/astro/pd-armcore-bind.h"
+#include "src/devices/board/drivers/astro/pwm-ao-d-bind.h"
 
 namespace astro {
 
@@ -44,20 +46,8 @@ const pbus_metadata_t power_impl_metadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t power_impl_driver_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
-};
-
-constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(power_impl_driver_match), power_impl_driver_match},
-};
-
 zx_device_prop_t power_domain_arm_core_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
-};
-
-constexpr device_fragment_t power_domain_arm_core_fragments[] = {
-    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
 };
 
 constexpr power_domain_t domains[] = {
@@ -83,19 +73,6 @@ constexpr composite_device_desc_t power_domain_arm_core_desc = {
     .metadata_count = countof(power_domain_arm_core_metadata),
 };
 
-constexpr zx_bind_inst_t pwm_ao_d_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D2_PWM_AO_D),
-};
-
-constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(pwm_ao_d_match), pwm_ao_d_match},
-};
-
-constexpr device_fragment_t power_impl_fragments[] = {
-    {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-};
-
 }  // namespace
 
 static const pbus_dev_t power_dev = []() {
@@ -112,17 +89,16 @@ static const pbus_dev_t power_dev = []() {
 zx_status_t Astro::PowerInit() {
   zx_status_t st;
 
-  st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
-                                countof(power_impl_fragments), nullptr);
+  st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(aml_power_impl_fragments),
+                          countof(aml_power_impl_fragments), "pdev");
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
+    zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;
   }
 
   st = DdkAddComposite("composite-pd-armcore", &power_domain_arm_core_desc);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain ArmCore failed, st = %d", __FUNCTION__,
-           st);
+    zxlogf(ERROR, "%s: DdkAddComposite for power domain ArmCore failed, st = %d", __FUNCTION__, st);
     return st;
   }
 

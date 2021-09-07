@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite power_domain_arm_core;
+
+using fuchsia.power;
+
+primary node "power-impl" {
+  fuchsia.BIND_PROTOCOL == fuchsia.power.BIND_PROTOCOL.IMPL;
+}
