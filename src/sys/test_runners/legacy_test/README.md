@@ -76,7 +76,6 @@ See [passing-arguments](passing-arguments) to learn more.
 ## Limitations
 
 - Cannot run legacy tests which execute in sys realm.
-- Cannot execute tests which have max severity defined in [legacy configuration file](max-severity-legacy).
 - `use` declarations are not supported except for the following protocols: Log, LogSink, ArchiveAccessor
 
 ## Testing
@@ -96,4 +95,3 @@ all the test logic exists other source files. Integration tests are located in `
 [test-runner]: ../README.md
 [override-parallel]: /docs/concepts/testing/modern/test_component.md#running_test_cases_in_parallel
 [passing-arguments]: /docs/concepts/testing/modern/test_runner_framework.md#passing_arguments
-[max-severity-legacy]: https://cs.opensource.google/fuchsia/fuchsia/+/main:garnet/bin/run_test_component/max_severity_fuchsia.json

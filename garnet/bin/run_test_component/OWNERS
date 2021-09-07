@@ -1,8 +1,3 @@
 anmittal@google.com
 geb@google.com
 shayba@google.com
-
-# Lock down max_severity_fuchsia.json, we don't allow anymore additions to the list.
-# See https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity for more info.
-per-file max_severity_fuchsia.json=set noparent
-per-file max_severity_fuchsia.json=anmittal@google.com, shayba@google.com
