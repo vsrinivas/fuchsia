@@ -194,60 +194,6 @@ TEST(KernelCmdlineTest, GetString) {
   EXPECT_EQ(c->data(), c->GetString(nullptr));
 }
 
-TEST(KernelCmdlineTest, GetBool) {
-  auto c = std::make_unique<Cmdline>();
-  // not found, default is returned
-  EXPECT_FALSE(c->GetBool("k0", false));
-  EXPECT_TRUE(c->GetBool("k0", true));
-
-  c->Append("k1=red k2 k3=0 k4=false k5=off k6=01 k7=falseish k8=offset");
-
-  // not found, default is returned
-  EXPECT_FALSE(c->GetBool("k0", false));
-  EXPECT_TRUE(c->GetBool("k0", true));
-
-  // values that don't "look like" false are true
-  EXPECT_TRUE(c->GetBool("k1", false));
-  EXPECT_TRUE(c->GetBool("k2", false));
-
-  // values that "look like" false are false
-  EXPECT_FALSE(c->GetBool("k3", true));
-  EXPECT_FALSE(c->GetBool("k4", true));
-  EXPECT_FALSE(c->GetBool("k5", true));
-
-  // almost false, but not quite
-  EXPECT_TRUE(c->GetBool("k6", false));
-  EXPECT_TRUE(c->GetBool("k7", false));
-  EXPECT_TRUE(c->GetBool("k8", false));
-}
-
-TEST(KernelCmdlineTest, GetUInt32) {
-  auto c = std::make_unique<Cmdline>();
-  EXPECT_EQ(99u, c->GetUInt32("k1", 99u));
-
-  c->Append("k1 k2= k3=42 k4=0 k5=4294967295");
-  EXPECT_EQ(99u, c->GetUInt32("k1", 99u));
-  EXPECT_EQ(99u, c->GetUInt32("k2", 99u));
-  EXPECT_EQ(42u, c->GetUInt32("k3", 99u));
-  EXPECT_EQ(0u, c->GetUInt32("k4", 99u));
-  EXPECT_EQ(UINT32_MAX, c->GetUInt32("k5", 99u));
-}
-
-TEST(KernelCmdlineTest, GetUInt64) {
-  auto c = std::make_unique<Cmdline>();
-  EXPECT_EQ(99u, c->GetUInt64("k1", 99u));
-
-  c->Append("k1 k2= k3=42 k4=0 k5=9223372036854775807 k6=18446744073709551615");
-  EXPECT_EQ(99u, c->GetUInt64("k1", 99u));
-  EXPECT_EQ(99u, c->GetUInt64("k2", 99u));
-  EXPECT_EQ(42u, c->GetUInt64("k3", 99u));
-  EXPECT_EQ(0u, c->GetUInt64("k4", 99u));
-
-  // |GetUInt64| is limited to parsing up to INT64_MAX.  Anything higher is saturated to INT64_MAX.
-  EXPECT_EQ(static_cast<uint64_t>(INT64_MAX), c->GetUInt64("k5", 99u));
-  EXPECT_EQ(static_cast<uint64_t>(INT64_MAX), c->GetUInt64("k6", 99u));
-}
-
 TEST(KernelCmdlineTest, LaterOverride) {
   auto c = std::make_unique<Cmdline>();
   c->Append("k1 k2= k1=42");
@@ -262,12 +208,6 @@ TEST(KernelCmdlineTest, LaterOverride) {
 
   c->Append("k1");
   EXPECT_TRUE(strcmp(c->GetString("k1"), "") == 0);
-}
-
-TEST(KernelCmdlineTest, Short) {
-  auto c = std::make_unique<Cmdline>();
-  c->Append("a=1");
-  EXPECT_EQ(c->GetUInt32("a", 0), 1);
 }
 
 TEST(KernelCmdlineTest, AlmostMaximumExpansion) {

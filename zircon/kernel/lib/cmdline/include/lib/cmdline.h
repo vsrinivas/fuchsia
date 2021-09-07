@@ -51,17 +51,6 @@ class Cmdline {
   // When |key| is nullptr, the entire command line is returned.
   const char* GetString(const char* key) const;
 
-  // Return the last value for |key| or |default_value| if not found.
-  //
-  // "0", "false", and "off" are considered false.  All other values are considered true.
-  bool GetBool(const char* key, bool default_value) const;
-
-  // Return the last value for |key| or |default_value| if not found.
-  uint32_t GetUInt32(const char* key, uint32_t default_value) const;
-
-  // Return the last value for |key| or |default_value| if not found.
-  uint64_t GetUInt64(const char* key, uint64_t default_value) const;
-
   // Process and issue callbacks for the reserved RAM entries of the kernel
   // command line, fixing up the entries in response to the results of the
   // callback.

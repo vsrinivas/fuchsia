@@ -88,36 +88,6 @@ const char* Cmdline::GetString(const char* key) const {
   return nullptr;
 }
 
-bool Cmdline::GetBool(const char* key, bool default_value) const {
-  const char* value = GetString(key);
-  if (value == nullptr) {
-    return default_value;
-  }
-  if ((strcmp(value, "0") == 0) || (strcmp(value, "false") == 0) || (strcmp(value, "off") == 0)) {
-    return false;
-  }
-  return true;
-}
-
-uint64_t Cmdline::GetUInt64(const char* key, uint64_t default_value) const {
-  const char* value_str = GetString(key);
-  if (value_str == nullptr || *value_str == '\0') {
-    return default_value;
-  }
-
-  char* end;
-  static_assert(sizeof(unsigned long int) == sizeof(uint64_t));
-  uint64_t value = strtol(value_str, &end, 0);
-  if (*end != '\0') {
-    return default_value;
-  }
-  return value;
-}
-
-uint32_t Cmdline::GetUInt32(const char* key, uint32_t default_value) const {
-  return static_cast<uint32_t>(Cmdline::GetUInt64(key, default_value));
-}
-
 void Cmdline::ProcessRamReservations(const ProcessRamReservationsCbk& cbk) {
   constexpr const char kHeader[] = "kernel.ram.reserve.";
   constexpr size_t kHeaderLen = sizeof(kHeader) - 1;
