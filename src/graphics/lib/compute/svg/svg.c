@@ -259,8 +259,8 @@ svg_elem_lookup(char const * str, uint32_t len);
 
 struct svg_lookup_cmd
 {
-  char *   name;
-  uint32_t size;
+  const char * name;
+  uint32_t     size;
 };
 
 #define SVG_LOOKUP_CMD(e_, s_)                                                                     \
@@ -503,8 +503,7 @@ svg_stack_ensure(struct svg_stack * s, uint32_t entry_inc, unsigned buf_inc)
       do
         {
           s->entry_max *= 2;
-        }
-      while (new_entry_count > s->entry_max);
+      } while (new_entry_count > s->entry_max);
 
       s->entries = (struct svg_stack_entry *)realloc(s->entries,
                                                      sizeof(struct svg_stack_entry) * s->entry_max);
@@ -517,8 +516,7 @@ svg_stack_ensure(struct svg_stack * s, uint32_t entry_inc, unsigned buf_inc)
       do
         {
           s->buf_max *= 2;
-        }
-      while (new_buf_count > s->buf_max);
+      } while (new_buf_count > s->buf_max);
 
       s->buf = realloc(s->buf, s->buf_max);
     }
@@ -2232,8 +2230,7 @@ svg_parse_points(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len)
 
         val += n;
         len -= n;
-      }
-    while (len > 0);
+    } while (len > 0);
   }
 
   {
@@ -2301,8 +2298,7 @@ svg_parse_path_coord_sequence(struct svg_parser * sp,
 
       val += n;
       len -= n;
-    }
-  while (len > 0);
+  } while (len > 0);
 
   return t;
 }
@@ -2342,8 +2338,7 @@ svg_parse_arc_parameter_sequence(struct svg_parser * sp,
 
       val += n;
       len -= n;
-    }
-  while (len > 0);
+  } while (len > 0);
 
   return t;
 }
@@ -2622,8 +2617,7 @@ svg_parse_attrib_d(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t len
 
       val += n;
       len -= n;
-    }
-  while (len > 0);
+  } while (len > 0);
 
   //
   //
@@ -2983,8 +2977,7 @@ svg_parse_attrib_style(struct svg_parser * sp, yxml_t * ys, char * val, uint32_t
       len -= n;
 
       svg_attribs_dispatch(sp, ys, name, strlen(name), value, strlen(value));
-    }
-  while (len > 0);
+  } while (len > 0);
 }
 
 static void
@@ -3010,8 +3003,7 @@ svg_parse_attrib_transform(struct svg_parser * sp, yxml_t * ys, char * val, uint
       // fprintf(stderr,"%s ( %s )\n",name,vals);
 
       svg_transform_dispatch(sp, ys, name, strlen(name), vals, strlen(vals));
-    }
-  while (len > 0);
+  } while (len > 0);
 }
 
 //

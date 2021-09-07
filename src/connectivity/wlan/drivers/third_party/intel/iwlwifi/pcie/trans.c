@@ -1607,7 +1607,7 @@ enable_msi:
 
   struct {
     pci_irq_mode_t value;
-    char* name;
+    const char* name;
   } modes[] = {
       {
           PCI_IRQ_MODE_MSI,

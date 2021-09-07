@@ -3385,7 +3385,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  char* chip_name;
+  const char* chip_name;
   float version;
   switch (pci_info.device_id) {
     case QCA988X_2_0_DEVICE_ID:

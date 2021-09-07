@@ -301,7 +301,7 @@ enum wmi_10_4_service {
   WMI_10_4_SERVICE_TX_MODE_DYNAMIC,
 };
 
-static inline char* wmi_service_name(int service_id) {
+static inline const char* wmi_service_name(int service_id) {
 #define SVCSTR(x) \
   case x:         \
     return #x

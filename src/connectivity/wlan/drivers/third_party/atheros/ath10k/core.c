@@ -1074,12 +1074,10 @@ static zx_status_t ath10k_core_fetch_board_data_api_n(struct ath10k* ar, const c
         ret = ath10k_core_parse_bd_ie_board(ar, data, ie_len, boardname);
         if (ret == ZX_ERR_NOT_FOUND && ar->id.bdf_ext[0] != '\0') {
           /* try default bdf if variant was not found */
-          char *s, *v = ",variant=";
           char boardname2[100];
-
           strlcpy(boardname2, boardname, sizeof(boardname2));
 
-          s = strstr(boardname2, v);
+          char* s = strstr(boardname2, ",variant=");
           if (s) {
             *s = '\0'; /* strip ",variant=%s" */
           }

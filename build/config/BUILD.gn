@@ -525,11 +525,12 @@ config("default_warnings") {
   cflags = [
     "-Wall",
     "-Wextra",
-    "-Wnewline-eof",
     "-Wconversion",
     "-Wimplicit-fallthrough",
-    "-Wno-unused-parameter",
+    "-Wnewline-eof",
+    "-Wwrite-strings",
     "-Wno-sign-conversion",
+    "-Wno-unused-parameter",
   ]
 }
 

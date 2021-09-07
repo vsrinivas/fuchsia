@@ -385,7 +385,7 @@ int main(int argc, char** argv) {
   int sock = 1;
   size_t num_fvms = 0;
   size_t num_firmware = 0;
-  char* tmpdir = getenv("TMPDIR");
+  const char* tmpdir = getenv("TMPDIR");
   char board_info_template[] = "%s/board_info.XXXXXX";
   char board_info_file[PATH_MAX];
   const char block_device_path_template[] = "%s/block_device_path.XXXXXX";
