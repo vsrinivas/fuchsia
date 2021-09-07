@@ -613,7 +613,7 @@
   the component <code>echo_client_dart.cmx</code> published under the package <code>echo_dart</code>'s
   <code>meta</code> directory, from the <code>fuchsia.com</code> repository, its URL is
   <code>fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx</code>."
-  see_also: ["<a href=\"/docs//concepts/packages/package_url.md\">Fuchsia package URLs</a>"]
+  see_also: ["<a href=\"/docs/concepts/packages/package_url.md\">Fuchsia package URLs</a>"]
   related_guides: [""]
   area: ["Components", "System"]
 
