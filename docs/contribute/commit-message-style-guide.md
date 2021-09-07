@@ -22,7 +22,7 @@ fine-grained subjects, for example,`[docs][fidl]`.
 The following example shows required tags in the commit message subject:
 
 ```none {:.devsite-disable-click-to-copy}
-[parent][component] Update component in Fuchsia.
+[parent][component] Update component in Fuchsia
 
 Write the details of a commit message here.
 
@@ -49,7 +49,7 @@ intended to do,
 [for example](https://fuchsia-review.googlesource.com/c/fuchsia/+/569681):
 
 ```none {:.devsite-disable-click-to-copy}
-[docs]Adding Fuchsia Commit message style guide
+[docs] Adding Fuchsia Commit message style guide
 
 This change centralizes all commit message style guide into one style
 guide. It also removes duplicate content from existing pages and points
@@ -66,7 +66,7 @@ with a change, list each bug in a separate line. To link Issue Tracker issues,
 prefix your bug id with `b/`, for example:
 
 ```none {:.devsite-disable-click-to-copy}
-[parent][component] Update component in Fuchsia.
+[parent][component] Update component in Fuchsia
 
 Write the details of a commit message here.
 
