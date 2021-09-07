@@ -67,8 +67,8 @@ async fn test_drop_thread() {
     );
 }
 
-/// Ensures that the StreamVolumeControl properly fires the provided early exit
-/// closure when the underlying AudioCoreService closes unexpectedly.
+// Ensures that the StreamVolumeControl properly fires the provided early exit
+// closure when the underlying AudioCoreService closes unexpectedly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_detect_early_exit() {
     let service_registry = ServiceRegistry::create();

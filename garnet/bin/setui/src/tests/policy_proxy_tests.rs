@@ -185,7 +185,7 @@ fn create_handler_factory(
     Arc::new(Mutex::new(handler_factory))
 }
 
-/// Simple test that verifies the constructor succeeds.
+// Simple test that verifies the constructor succeeds.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_proxy_creation() {
     // Create the policy proxy.
@@ -207,8 +207,8 @@ async fn test_policy_proxy_creation() {
     assert!(policy_proxy_result.is_ok());
 }
 
-/// Verify that policy messages sent to the proxy are passed to the handler, then that the handler's
-/// response is returned via the proxy.
+// Verify that policy messages sent to the proxy are passed to the handler, then that the handler's
+// response is returned via the proxy.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_messages_passed_to_handler() {
     let policy_request = policy_base::Request::Get;
@@ -248,8 +248,8 @@ async fn test_policy_messages_passed_to_handler() {
     assert_eq!(policy_response, policy_base::Payload::Response(Ok(policy_payload)));
 }
 
-/// Verify that when the policy handler doesn't take any action on a setting request, it will
-/// continue on to its intended destination without interference.
+// Verify that when the policy handler doesn't take any action on a setting request, it will
+// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_pass_through() {
     let delegate = service::MessageHub::create_hub();
@@ -302,8 +302,8 @@ async fn test_setting_message_pass_through() {
     .await;
 }
 
-/// Verify that when the policy handler returns a result to give directly to the client, that the
-/// given result is provided back to the requestor without reaching the setting handler.
+// Verify that when the policy handler returns a result to give directly to the client, that the
+// given result is provided back to the requestor without reaching the setting handler.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_result_replacement() {
     let delegate = service::MessageHub::create_hub();
@@ -377,8 +377,8 @@ async fn test_setting_message_result_replacement() {
     .await;
 }
 
-/// Verify that when the policy handler returns a new request payload, that the payload is sent to
-/// the setting handler in place of the original message.
+// Verify that when the policy handler returns a new request payload, that the payload is sent to
+// the setting handler in place of the original message.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_payload_replacement() {
     // Original request that will be sent by the client.
@@ -438,8 +438,8 @@ async fn test_setting_message_payload_replacement() {
         .await;
 }
 
-/// Verify that when the policy handler doesn't take any action on a setting event, it will
-/// continue on to its intended destination without interference.
+// Verify that when the policy handler doesn't take any action on a setting event, it will
+// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_response_pass_through() {
     let delegate = service::MessageHub::create_hub();
@@ -521,8 +521,8 @@ async fn test_setting_response_replace() {
     .await;
 }
 
-/// Exercises the main loop in the policy proxy by sending a series of messages
-/// and ensuring they're all answered.
+// Exercises the main loop in the policy proxy by sending a series of messages
+// and ensuring they're all answered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_messages() {
     let policy_request = policy_base::Request::Get;

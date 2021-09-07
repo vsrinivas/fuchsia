@@ -301,7 +301,7 @@ mod tests {
         .await
     }
 
-    /// Verifies that inspect agent requests and writes state for each policy on start.
+    // Verifies that inspect agent requests and writes state for each policy on start.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_policy_inspect_on_start() {
         // Set the clock so that timestamps will always be 0.
@@ -365,7 +365,7 @@ mod tests {
         });
     }
 
-    /// Verifies that inspect agent intercepts policy requests and writes their values to inspect.
+    // Verifies that inspect agent intercepts policy requests and writes their values to inspect.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_changed() {
         // Set the clock so that timestamps will always be 0.

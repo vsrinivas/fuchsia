@@ -66,8 +66,8 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     )
 }
 
-/// Tests to ensure that when the bluetooth connections change, the SoundPlayer receives requests
-/// to play the sounds with the correct ids.
+// Tests to ensure that when the bluetooth connections change, the SoundPlayer receives requests
+// to play the sounds with the correct ids.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
@@ -125,8 +125,8 @@ async fn test_sounds() {
     );
 }
 
-/// Tests to ensure that only bluetooth domains play sounds, and that when others
-/// are present, they do not duplicate the sounds.
+// Tests to ensure that only bluetooth domains play sounds, and that when others
+// are present, they do not duplicate the sounds.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bluetooth_domain() {
     let (service_registry, fake_services) = create_services().await;

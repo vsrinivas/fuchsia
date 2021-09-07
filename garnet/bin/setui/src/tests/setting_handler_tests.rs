@@ -532,8 +532,8 @@ impl controller::Handle for StubController {
     }
 }
 
-/// Ensures that the correct unimplemented error is returned when the controller
-/// doesn't properly handle a given command.
+// Ensures that the correct unimplemented error is returned when the controller
+// doesn't properly handle a given command.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {

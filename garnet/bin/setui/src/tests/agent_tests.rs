@@ -141,7 +141,7 @@ impl TestAgent {
     }
 }
 
-/// Ensures creating environment properly invokes the right lifespans.
+// Ensures creating environment properly invokes the right lifespans.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_environment_startup() {
     let startup_agent_id = 1;
@@ -196,8 +196,8 @@ async fn create_authority() -> Authority {
         .unwrap()
 }
 
-/// Ensures that agents are executed in sequential order and the
-/// completion ack only is sent when all agents have completed.
+// Ensures that agents are executed in sequential order and the
+// completion ack only is sent when all agents have completed.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
@@ -237,8 +237,8 @@ async fn test_sequential() {
         .is_ok());
 }
 
-/// Ensures that in simultaneous execution agents are not blocked on each other
-/// and the completion ack waits for all to complete.
+// Ensures that in simultaneous execution agents are not blocked on each other
+// and the completion ack waits for all to complete.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
@@ -275,7 +275,7 @@ async fn test_simultaneous() {
         .is_ok());
 }
 
-/// Checks that errors returned from an agent stop execution of a lifecycle.
+// Checks that errors returned from an agent stop execution of a lifecycle.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();

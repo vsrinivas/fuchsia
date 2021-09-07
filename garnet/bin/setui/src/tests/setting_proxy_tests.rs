@@ -299,7 +299,7 @@ impl TestEnvironment {
     }
 }
 
-/// Ensures setting proxy registers with the MessageHub.
+// Ensures setting proxy registers with the MessageHub.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_hub_presence() {
     let setting_type = SettingType::Unknown;
@@ -586,8 +586,8 @@ fn test_regeneration() {
     assert_eq!(executor.run_until_stalled(&mut complete_fut), Poll::Ready(()));
 }
 
-/// Exercises the retry flow, ensuring the setting proxy goes through the
-/// defined number of tests and correctly reports back activity.
+// Exercises the retry flow, ensuring the setting proxy goes through the
+// defined number of tests and correctly reports back activity.
 #[test]
 fn test_retry() {
     let setting_type = SettingType::Unknown;
@@ -740,7 +740,7 @@ fn test_retry() {
     verify_handler_event(setting_type, state, event::handler::Event::Teardown);
 }
 
-/// Ensures early exit triggers retry flow.
+// Ensures early exit triggers retry flow.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_early_exit() {
     let exit_result = Ok(());
@@ -823,7 +823,7 @@ async fn test_early_exit() {
     );
 }
 
-/// Ensures timeouts trigger retry flow.
+// Ensures timeouts trigger retry flow.
 #[test]
 fn test_timeout() {
     let mut executor =
@@ -930,7 +930,7 @@ fn test_timeout() {
     };
 }
 
-/// Ensures that timeouts cause an error when retry is not enabled for them.
+// Ensures that timeouts cause an error when retry is not enabled for them.
 #[test]
 fn test_timeout_no_retry() {
     let mut executor =

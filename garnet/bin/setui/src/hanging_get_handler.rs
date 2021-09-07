@@ -590,7 +590,7 @@ mod tests {
         }
     }
 
-    /// Ensures errors are gracefully handed back by the hanging_get
+    // Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_resolution() {
         let delegate = service::MessageHub::create_hub();

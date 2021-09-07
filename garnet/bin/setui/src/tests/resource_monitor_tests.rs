@@ -49,8 +49,8 @@ impl TestMonitorAgent {
     }
 }
 
-/// Ensures creating environment properly passes the correct facilities to
-/// monitors and agents.
+// Ensures creating environment properly passes the correct facilities to
+// monitors and agents.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_environment_bringup() {
     // Create a channel to receive the agent's monitor actor.

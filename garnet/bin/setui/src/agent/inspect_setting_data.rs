@@ -253,8 +253,8 @@ mod tests {
         .await
     }
 
-    /// Verifies that inspect agent intercepts a restore request and writes the setting value to
-    /// inspect.
+    // Verifies that inspect agent intercepts a restore request and writes the setting value to
+    // inspect.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_service_lifespan() {
         // Set the clock so that timestamps will always be 0.
@@ -329,8 +329,8 @@ mod tests {
         });
     }
 
-    /// Verifies that inspect agent intercepts setting change events and writes the setting value
-    /// to inspect.
+    // Verifies that inspect agent intercepts setting change events and writes the setting value
+    // to inspect.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_write_inspect_on_changed() {
         // Set the clock so that timestamps will always be 0.

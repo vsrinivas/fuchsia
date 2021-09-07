@@ -125,8 +125,8 @@ mod tests {
     use crate::policy::{response, PolicyInfo};
     use std::collections::HashMap;
 
-    /// Verifies that converting a policy response containing an empty `State` into a vector of
-    /// `Property` results in an empty vector.
+    // Verifies that converting a policy response containing an empty `State` into a vector of
+    // `Property` results in an empty vector.
     #[test]
     fn test_response_to_property_vector_empty() {
         let response = response::Payload::PolicyInfo(PolicyInfo::Audio(State {
@@ -138,8 +138,8 @@ mod tests {
         assert_eq!(property_list, vec![])
     }
 
-    /// Verifies that converting a policy response with several State objects into a vector of
-    /// `Property` results in a vector with the correct representations of data.
+    // Verifies that converting a policy response with several State objects into a vector of
+    // `Property` results in a vector with the correct representations of data.
     #[test]
     fn test_response_to_property_vector() {
         let property1 = Property::new(AudioStreamType::Background, TransformFlags::TRANSFORM_MAX);

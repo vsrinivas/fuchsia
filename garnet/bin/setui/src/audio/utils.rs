@@ -15,7 +15,7 @@ pub(crate) fn round_volume_level(volume: f32) -> f32 {
 mod tests {
     use super::round_volume_level;
 
-    /// Various tests to verify rounding works as expected.
+    // Various tests to verify rounding works as expected.
     #[test]
     // We're testing rounding so we want explicit float comparisons.
     #[allow(clippy::float_cmp)]
@@ -28,7 +28,7 @@ mod tests {
         assert_eq!(round_volume_level(0.994), 0.99);
     }
 
-    /// Verifies that values below 0.0 round to 0.0.
+    // Verifies that values below 0.0 round to 0.0.
     #[test]
     // We're testing rounding so we want explicit float comparisons.
     #[allow(clippy::float_cmp)]
@@ -39,7 +39,7 @@ mod tests {
         assert_eq!(round_volume_level(std::f32::MIN), 0.0);
     }
 
-    /// Verifies that values above 1.0 round to 1.0.
+    // Verifies that values above 1.0 round to 1.0.
     #[test]
     // We're testing rounding so we want explicit float comparisons.
     #[allow(clippy::float_cmp)]

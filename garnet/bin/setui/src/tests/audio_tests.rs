@@ -364,7 +364,7 @@ async fn test_audio_input() {
     assert!(mic_mute);
 }
 
-/// Test that the audio settings are restored correctly.
+// Test that the audio settings are restored correctly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_restore() {
     let (service_registry, fake_services) = create_services().await;

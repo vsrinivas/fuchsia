@@ -394,8 +394,8 @@ mod tests {
             if (max_volume_limit - actual_volume_limit).abs() <= epsilon));
     }
 
-    /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
-    /// if the source did not have required parameters specified.
+    // Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
+    // if the source did not have required parameters specified.
     #[test]
     fn parameter_to_transform_missing_arguments() {
         let max_params = PolicyParameters::Max(Volume { volume: None, ..Volume::EMPTY });
@@ -405,8 +405,8 @@ mod tests {
         assert_matches!(Transform::try_from(min_params), Err(_));
     }
 
-    /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
-    /// if the source did not have a finite number.
+    // Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
+    // if the source did not have a finite number.
     #[test]
     fn parameter_to_transform_invalid_arguments() {
         let max_params =
@@ -417,8 +417,8 @@ mod tests {
         assert_matches!(Transform::try_from(min_params), Err(_));
     }
 
-    /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` succeeds
-    /// and that the result contains the same parameters as the source.
+    // Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` succeeds
+    // and that the result contains the same parameters as the source.
     #[test]
     fn parameter_to_transform() {
         let max_volume = 0.5;

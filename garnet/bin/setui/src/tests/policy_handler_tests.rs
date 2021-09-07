@@ -62,7 +62,7 @@ impl PolicyHandler for FakePolicyHandler {
     }
 }
 
-/// Verifies that policy handlers are able to write to storage through their client proxy.
+// Verifies that policy handlers are able to write to storage through their client proxy.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write() {
     let expected_value = UnknownInfo(true);
