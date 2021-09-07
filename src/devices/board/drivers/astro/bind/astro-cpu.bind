@@ -5,7 +5,7 @@
 composite aml_cpu;
 
 using amlogic.platform.meson;
-using amlogic.platform.s905d2;
+using fuchsia.amlogic.platform.s905d2;
 using fuchsia.clock;
 using fuchsia.google.platform;
 using fuchsia.platform;
@@ -13,7 +13,7 @@ using fuchsia.power;
 
 primary node "power-01" {
   fuchsia.BIND_PROTOCOL == fuchsia.power.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_POWER_DOMAIN == amlogic.platform.s905d2.POWER_DOMAIN.ARM_CORE;
+  fuchsia.BIND_POWER_DOMAIN == fuchsia.amlogic.platform.s905d2.POWER_DOMAIN.ARM_CORE;
 }
 
 node "pdev" {

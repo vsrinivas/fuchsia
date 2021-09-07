@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library amlogic.platform.s905d2;
+library fuchsia.amlogic.platform.s905d2;
 
 // Values taken from <soc/aml-s905d2/s905d2-gpio.h>
 

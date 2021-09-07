@@ -54,7 +54,7 @@ driver_bind_rules("astro-buttons-bind") {
   header_output = "astro-buttons-bind.h"
   bind_output = "astro-buttons-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
   ]
 }
@@ -66,7 +66,7 @@ driver_bind_rules("astro-cpu-bind") {
   deps = [
     "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/amlogic.platform.meson",
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.clock",
     "//src/devices/bind/fuchsia.google.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -82,7 +82,7 @@ driver_bind_rules("astro-display-bind") {
   bind_output = "astro-display-bind.bc"
   deps = [
     "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.dsi",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.platform",
@@ -106,7 +106,7 @@ driver_bind_rules("astro-pwm-bind") {
   header_output = "astro-pwm-bind.h"
   bind_output = "astro-pwm-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.pwm",
   ]
@@ -153,7 +153,7 @@ driver_bind_rules("ft3x27-touch-bind") {
   header_output = "ft3x27-touch-bind.h"
   bind_output = "ft3x27-touch-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
   ]
@@ -164,7 +164,7 @@ driver_bind_rules("gt92xx-touch-bind") {
   header_output = "gt92xx-touch-bind.h"
   bind_output = "gt92xx-touch-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
   ]
@@ -183,7 +183,7 @@ driver_bind_rules("pwm-ao-d-bind") {
   bind_output = "pwm-ao-d-bind.bc"
   deps = [
     "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.google.platform",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.pwm",

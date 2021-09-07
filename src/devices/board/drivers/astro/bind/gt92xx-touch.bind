@@ -4,7 +4,7 @@
 
 composite gt92xx_touch;
 
-using amlogic.platform.s905d2;
+using fuchsia.amlogic.platform.s905d2;
 using fuchsia.gpio;
 using fuchsia.i2c;
 
@@ -16,10 +16,10 @@ primary node "i2c" {
 
 node "gpio-int" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_4;  // GPIO_TOUCH_INTERRUPT
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_4;  // GPIO_TOUCH_INTERRUPT
 }
 
 node "gpio-reset" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_9;  // GPIO_TOUCH_RESET
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOZ_PIN_ID.PIN_9;  // GPIO_TOUCH_RESET
 }

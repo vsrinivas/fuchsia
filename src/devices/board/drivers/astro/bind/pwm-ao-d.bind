@@ -5,7 +5,7 @@
 composite aml_power_impl;
 
 using amlogic.platform;
-using amlogic.platform.s905d2;
+using fuchsia.amlogic.platform.s905d2;
 using fuchsia.google.platform;
 using fuchsia.platform;
 using fuchsia.pwm;
@@ -20,6 +20,6 @@ primary node "pdev" {
 
 node "pwm-ao-d" {
   fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
-  fuchsia.BIND_PWM_ID == amlogic.platform.s905d2.BIND_PWM_ID.PWM_AO_D;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.s905d2.BIND_PWM_ID.PWM_AO_D;
 }
 

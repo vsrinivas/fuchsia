@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("amlogic.platform.s905d2") {
-  source = "amlogic.platform.s905d2.bind"
+bind_library("fuchsia.amlogic.platform.s905d2") {
+  source = "fuchsia.amlogic.platform.s905d2.bind"
 }

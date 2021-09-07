@@ -4,21 +4,21 @@
 
 composite pwm_init;
 
-using amlogic.platform.s905d2;
+using fuchsia.amlogic.platform.s905d2;
 using fuchsia.gpio;
 using fuchsia.pwm;
 
 primary node "pwm" {
   fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
-  fuchsia.BIND_PWM_ID == amlogic.platform.s905d2.BIND_PWM_ID.PWM_E;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.s905d2.BIND_PWM_ID.PWM_E;
 }
 
 node "gpio-wifi" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_16; // GPIO_SOC_WIFI_LPO_32k768
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_16; // GPIO_SOC_WIFI_LPO_32k768
 }
 
 node "gpio-bt" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_17; // GPIO_SOC_BT_REG_ON
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOX_PIN_ID.PIN_17; // GPIO_SOC_BT_REG_ON
 }

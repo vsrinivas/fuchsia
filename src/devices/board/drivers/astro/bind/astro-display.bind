@@ -9,7 +9,7 @@ using fuchsia.gpio;
 using fuchsia.platform;
 using fuchsia.sysmem;
 using amlogic.platform;
-using amlogic.platform.s905d2;
+using fuchsia.amlogic.platform.s905d2;
 
 primary node "dsi" {
   fuchsia.BIND_PROTOCOL == fuchsia.dsi.BIND_PROTOCOL.IMPL;
@@ -25,7 +25,7 @@ node "pdev" {
 
 node "gpio" {
   fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_GPIO_PIN == amlogic.platform.s905d2.GPIOH_PIN_ID.PIN_6; //GPIO_LCD_RESET;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOH_PIN_ID.PIN_6; //GPIO_LCD_RESET;
 }
 
 node "sysmem" {
