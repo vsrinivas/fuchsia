@@ -4,7 +4,6 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_OSD_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_OSD_H_
-
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -95,8 +94,9 @@ constexpr uint64_t kRdmaTableReady = UINT64_MAX - 1;
 // new configs are added to end of table since RDMA requires physical contiguous entries
 constexpr uint64_t kRdmaTableUnavailable = UINT64_MAX;
 
-// Use RDMA Channel used
-constexpr uint8_t kRdmaChannel = 0;
+// RDMA Channel 1 is used to track the application of image layers from queued configs to the
+// display hardware
+constexpr uint8_t kRdmaChannel = 1;
 // RDMA Channel 7 will be dedicated to AFBC Trigger
 constexpr uint8_t kAfbcRdmaChannel = 7;
 

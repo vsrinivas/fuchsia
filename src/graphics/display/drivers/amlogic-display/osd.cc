@@ -100,8 +100,8 @@ void Osd::TryResolvePendingRdma() {
   // If RDMA for AFBC just completed, simply clear the interrupt. We keep RDMA enabled to
   // automatically get triggered on every vsync. FlipOnVsync is responsible for enabling/disabling
   // AFBC-related RDMA based on configs.
-  if (rdma_status.ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
-    RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
+  if (rdma_status.ChannelDone(kAfbcRdmaChannel, &(*vpu_mmio_))) {
+    RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel, &(*vpu_mmio_));
   }
 
   if (rdma_status.ChannelDone(kRdmaChannel)) {
@@ -524,10 +524,10 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     // Write the start and end address of the table.  End address is the last address that the
     // RDMA engine reads from.
     vpu_mmio_->Write32(static_cast<uint32_t>(afbc_rdma_chnl_container_.phys_offset),
-                       VPU_RDMA_AHB_START_ADDR(kAfbcRdmaChannel - 1));
+                       VPU_RDMA_AHB_START_ADDR(kAfbcRdmaChannel));
     vpu_mmio_->Write32(
         static_cast<uint32_t>(afbc_rdma_chnl_container_.phys_offset + kAfbcTableSize - 4),
-        VPU_RDMA_AHB_END_ADDR(kAfbcRdmaChannel - 1));
+        VPU_RDMA_AHB_END_ADDR(kAfbcRdmaChannel));
   }
 
   fbl::AutoLock lock(&rdma_lock_);

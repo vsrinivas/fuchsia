@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_
 
 #include <lib/mmio/mmio.h>
+
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 
@@ -25,8 +26,8 @@
 #define VPU_RDMA_AHB_END_ADDR_6 (0x110d << 2)
 #define VPU_RDMA_AHB_START_ADDR_7 (0x110e << 2)
 #define VPU_RDMA_AHB_END_ADDR_7 (0x110f << 2)
-#define VPU_RDMA_AHB_START_ADDR(x) (VPU_RDMA_AHB_START_ADDR_MAN + ((x + 1) << 3))
-#define VPU_RDMA_AHB_END_ADDR(x) (VPU_RDMA_AHB_END_ADDR_MAN + ((x + 1) << 3))
+#define VPU_RDMA_AHB_START_ADDR(x) (VPU_RDMA_AHB_START_ADDR_MAN + ((x) << 3))
+#define VPU_RDMA_AHB_END_ADDR(x) (VPU_RDMA_AHB_END_ADDR_MAN + ((x) << 3))
 #define VPU_RDMA_ACCESS_AUTO (0x1110 << 2)
 #define VPU_RDMA_ACCESS_AUTO2 (0x1111 << 2)
 #define VPU_RDMA_ACCESS_AUTO3 (0x1112 << 2)
@@ -37,8 +38,8 @@
 #define VPU_RDMA_STATUS3 (0x1117 << 2)
 
 // VPU_RDMA_ACCESS_AUTO Bit Definition
-#define RDMA_ACCESS_AUTO_INT_EN(channel) (1 << ((channel + 1) << 3))
-#define RDMA_ACCESS_AUTO_WRITE(channel) (1 << ((channel + 1) + 4))
+#define RDMA_ACCESS_AUTO_INT_EN(channel) (1 << ((channel) << 3))
+#define RDMA_ACCESS_AUTO_WRITE(channel) (1 << ((channel) + 4))
 
 // VPU_RDMA_CTRL Bit Definition
 #define RDMA_CTRL_INT_DONE(channel) (1 << (channel))
@@ -53,13 +54,9 @@ class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
   DEF_FIELD(7, 0, req_latch);
   static auto Get() { return hwreg::RegisterAddr<RdmaStatusReg>(VPU_RDMA_STATUS); }
 
-  bool RequestLatched(uint8_t chan) const {
-    return req_latch() & (1 << (chan + 1));
-  }
+  bool RequestLatched(uint8_t chan) const { return req_latch() & (1 << chan); }
 
-  bool ChannelDone(uint8_t chan) const {
-    return done() & (1 << (chan + 1));
-  }
+  bool ChannelDone(uint8_t chan) const { return done() & (1 << chan); }
 
   static bool ChannelDone(uint8_t chan, ddk::MmioBuffer* mmio) {
     return Get().ReadFrom(mmio).ChannelDone(chan);
@@ -85,7 +82,7 @@ class RdmaCtrlReg : public hwreg::RegisterBase<RdmaCtrlReg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<RdmaCtrlReg>(VPU_RDMA_CTRL); }
 
   static void ClearInterrupt(uint8_t chan, ddk::MmioBuffer* mmio) {
-    Get().ReadFrom(mmio).set_clear_done(1 << (chan+1)).WriteTo(mmio);
+    Get().ReadFrom(mmio).set_clear_done(1 << chan).WriteTo(mmio);
   }
 };
 
