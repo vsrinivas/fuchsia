@@ -30,7 +30,7 @@ class NameString final {
   }
 
  private:
-  char name_[kMaxNameLen];
+  char name_[kMaxNameLen + 1];
   uint32_t len_;
 };
 

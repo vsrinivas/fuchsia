@@ -167,7 +167,7 @@ struct Extent {
   uint32_t len = 0;       // lengh of the extent
 } __attribute__((packed));
 
-constexpr uint32_t kMaxNameLen = 256;
+constexpr uint32_t kMaxNameLen = NAME_MAX;
 constexpr int kAddrsPerInode = 923;   // Address Pointers in an Inode
 constexpr int kNidsPerInode = 5;      // Node IDs in an Inode
 constexpr int kAddrsPerBlock = 1018;  // Address Pointers in a Direct Block
@@ -202,6 +202,7 @@ struct Inode {
   uint32_t i_pino = 0;           // parent inode number
   uint32_t i_namelen = 0;        // file name length
   uint8_t i_name[kMaxNameLen];   // file name for SPOR
+  uint8_t i_rsvd = 0;            // reserved for compatibility
 
   Extent i_ext;  // caching a largest extent
 

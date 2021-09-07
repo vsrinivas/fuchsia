@@ -139,6 +139,8 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   VnodeF2fs *target = static_cast<VnodeF2fs *>(_target.get());
 
+  ZX_DEBUG_ASSERT(fs::IsValidName(name));
+
   if (target->IsDir())
     return ZX_ERR_NOT_FILE;
 
@@ -194,8 +196,9 @@ zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
   DirEntry *de;
   Page *page;
 
-  if (name.length() > kMaxNameLen)
-    return ZX_ERR_OUT_OF_RANGE;
+  if (!fs::IsValidName(name)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   de = FindEntry(name, &page);
   if (de) {
@@ -407,6 +410,9 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
   DirEntry *new_entry;
   timespec cur_time;
 
+  ZX_DEBUG_ASSERT(fs::IsValidName(oldname));
+  ZX_DEBUG_ASSERT(fs::IsValidName(newname));
+
   clock_gettime(CLOCK_REALTIME, &cur_time);
 
   if (new_dir->GetNlink() == 0)
@@ -596,6 +602,10 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
   Page *page = nullptr;
   zx_status_t status = ZX_OK;
 
+  if (!fs::IsValidName(name)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   if (GetNlink() == 0)
     return ZX_ERR_NOT_FOUND;
 
@@ -620,8 +630,8 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
 zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
   fbl::RefPtr<fs::Vnode> vn;
 
-  if (DoLookup(name, &vn) != ZX_OK) {
-    return ZX_ERR_NOT_FOUND;
+  if (zx_status_t status = DoLookup(name, &vn); status != ZX_OK) {
+    return status;
   }
 
   VnodeF2fs *vnode = (VnodeF2fs *)vn.get();
