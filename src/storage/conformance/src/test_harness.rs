@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::flags::build_flag_combinations, fidl::endpoints::create_proxy, fidl_fuchsia_io as io,
+    crate::flags::Rights, fidl::endpoints::create_proxy, fidl_fuchsia_io as io,
     fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
 };
 
@@ -15,8 +15,14 @@ pub struct TestHarness {
     /// Config for the filesystem.
     pub config: io_test::Io1Config,
 
-    /// All rights supported by the filesystem.
-    pub all_rights: u32,
+    /// All Directory rights supported by the filesystem.
+    pub dir_rights: Rights,
+
+    /// All File rights supported by the filesystem.
+    pub file_rights: Rights,
+
+    /// All VmoFile rights supported by the filesystem.
+    pub vmofile_rights: Rights,
 }
 
 impl TestHarness {
@@ -24,45 +30,20 @@ impl TestHarness {
     pub async fn new() -> TestHarness {
         let proxy = connect_to_harness().await;
         let config = proxy.get_config().await.expect("Could not get config from proxy");
-        let all_rights = get_supported_rights(&config);
+        let dir_rights = Rights::new(get_supported_dir_rights(&config));
+        let file_rights = Rights::new(get_supported_file_rights(&config));
+        let vmofile_rights = Rights::new(get_supported_vmofile_rights());
 
-        TestHarness { proxy, config, all_rights }
+        TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights }
     }
 
-    /// Creates and returns a directory with the given structure from the test harness.
+    /// Creates and returns a Directory with the given structure from the test harness.
     pub fn get_directory(&self, root: io_test::Directory, flags: u32) -> io::DirectoryProxy {
         let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
         self.proxy
             .get_directory(root, flags, server)
             .expect("Cannot get directory from test harness");
         client
-    }
-
-    /// Returns all combinations of supported flags.
-    pub fn all_flag_combos(&self) -> Vec<u32> {
-        build_flag_combinations(0, self.all_rights)
-    }
-
-    /// Returns all combinations of supported flags that include `OPEN_RIGHT_READABLE`.
-    pub fn readable_flag_combos(&self) -> Vec<u32> {
-        build_flag_combinations(io::OPEN_RIGHT_READABLE, self.all_rights)
-    }
-
-    /// Returns all combinations of supported flags that include `OPEN_RIGHT_WRITABLE`.
-    pub fn writable_flag_combos(&self) -> Vec<u32> {
-        build_flag_combinations(io::OPEN_RIGHT_WRITABLE, self.all_rights)
-    }
-
-    /// Returns all combinations of supported flags that do not include `OPEN_RIGHT_READABLE`.
-    pub fn non_readable_flag_combos(&self) -> Vec<u32> {
-        let non_readable_rights = self.all_rights & !io::OPEN_RIGHT_READABLE;
-        build_flag_combinations(0, non_readable_rights)
-    }
-
-    /// Returns all combinations of supported flags that do not include `OPEN_RIGHT_WRITABLE`.
-    pub fn non_writable_flag_combos(&self) -> Vec<u32> {
-        let non_writable_rights = self.all_rights & !io::OPEN_RIGHT_WRITABLE;
-        build_flag_combinations(0, non_writable_rights)
     }
 }
 
@@ -94,16 +75,31 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     .expect("Cannot connect to test harness protocol")
 }
 
-/// Returns a constant representing the aggregate of all io.fidl supported_rights that are supported by the
-/// test harness.
-fn get_supported_rights(config: &io_test::Io1Config) -> u32 {
-    let mut rights = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE;
-
-    if !config.no_exec.unwrap_or_default() {
-        rights |= io::OPEN_RIGHT_EXECUTABLE;
-    }
+/// Returns the aggregate of all rights that are supported for Directory objects.
+///
+/// Must support read, write, execute, and optionally, admin (if no_admin == false).
+fn get_supported_dir_rights(config: &io_test::Io1Config) -> u32 {
+    let mut rights = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
     if !config.no_admin.unwrap_or_default() {
         rights |= io::OPEN_RIGHT_ADMIN;
     }
     rights
+}
+
+/// Returns the aggregate of all rights that are supported for File objects.
+///
+/// Must support read, and optionally, write (if immutable_file == true).
+fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
+    let mut rights = io::OPEN_RIGHT_READABLE;
+    if !config.immutable_file.unwrap_or_default() {
+        rights |= io::OPEN_RIGHT_WRITABLE;
+    }
+    rights
+}
+
+/// Returns the aggregate of all rights that are supported for VmoFile objects.
+///
+/// Must support both read and write.
+fn get_supported_vmofile_rights() -> u32 {
+    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE
 }

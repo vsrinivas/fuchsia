@@ -209,6 +209,76 @@ fn vmo_file(name: &str, contents: &[u8]) -> io_test::DirectoryEntry {
     })
 }
 
+// Validate allowed rights for Directory objects.
+#[fasync::run_singlethreaded(test)]
+async fn validate_directory_rights() {
+    let harness = TestHarness::new().await;
+    // Create a test directory and ensure we can open it with all supported rights.
+    let root = root_directory(vec![file(TEST_FILE, vec![])]);
+    let mut all_rights =
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
+    if !harness.config.no_admin.unwrap_or_default() {
+        all_rights |= io::OPEN_RIGHT_ADMIN;
+    }
+    let _root_dir = harness.get_directory(root, all_rights);
+}
+
+// Validate allowed rights for File objects (ensures writable files cannot be opened as executable).
+#[fasync::run_singlethreaded(test)]
+async fn validate_file_rights() {
+    let harness = TestHarness::new().await;
+    // Create a test directory with a single File object, and ensure the directory has all rights.
+    let root = root_directory(vec![file(TEST_FILE, vec![])]);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
+    if harness.config.immutable_file.unwrap_or_default() {
+        // If files are immutable, check that opening with OPEN_RIGHT_WRITABLE results in
+        // access denied, and return (since all other combinations are valid in this case).
+        assert_eq!(
+            open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_WRITABLE, 0, TEST_FILE)
+                .await
+                .expect_err("open succeeded"),
+            zx::Status::ACCESS_DENIED
+        );
+        return;
+    }
+    // Opening with WRITE must succeed.
+    open_node::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_WRITABLE, 0, TEST_FILE).await;
+    // Opening with EXECUTE must fail.
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
+            .await
+            .expect_err("open succeeded"),
+        zx::Status::ACCESS_DENIED
+    );
+}
+
+// Validate allowed rights for VmoFile objects (ensures cannot be opened as executable).
+#[fasync::run_singlethreaded(test)]
+async fn validate_vmofile_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_vmofile.unwrap_or_default() {
+        return;
+    }
+    // Create a test directory with a single VmoFile object, and ensure the directory has all rights.
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
+    // Opening with READ/WRITE should succeed.
+    open_node::<io::NodeMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+        0,
+        TEST_FILE,
+    )
+    .await;
+    // Opening with EXECUTE must fail.
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
+            .await
+            .expect_err("open succeeded"),
+        zx::Status::ACCESS_DENIED
+    );
+}
+
 // Example test to start up a v2 component harness to test when opening a path that goes through a
 // remote mount point, the server forwards the request to the remote correctly.
 #[fasync::run_singlethreaded(test)]
@@ -266,9 +336,9 @@ async fn open_dir_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
     let root = root_directory(vec![]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         root_dir
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
@@ -286,7 +356,7 @@ async fn open_dir_with_insufficient_rights() {
     let root = root_directory(vec![]);
     let root_dir = harness.get_directory(root, 0);
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         root_dir
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
@@ -301,9 +371,9 @@ async fn open_dir_with_insufficient_rights() {
 async fn open_child_dir_with_same_rights() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let root = root_directory(vec![directory("child", vec![])]);
-        let root_dir = harness.get_directory(root, harness.all_rights);
+        let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let parent_dir =
             open_node::<io::DirectoryMarker>(&root_dir, dir_flags, io::MODE_TYPE_DIRECTORY, ".")
@@ -363,7 +433,7 @@ async fn open_child_dir_with_extra_rights() {
 async fn open_child_dir_with_posix_flag() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let root = root_directory(vec![directory("child", vec![])]);
         let root_dir = harness.get_directory(root, dir_flags);
         let readable = dir_flags & io::OPEN_RIGHT_READABLE;
@@ -398,9 +468,9 @@ async fn open_child_dir_with_posix_flag() {
 async fn open_dir_without_describe_flag() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         assert_eq!(dir_flags & io::OPEN_FLAG_DESCRIBE, 0);
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
 
@@ -416,10 +486,10 @@ async fn open_dir_without_describe_flag() {
 async fn open_file_without_describe_flag() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         assert_eq!(file_flags & io::OPEN_FLAG_DESCRIBE, 0);
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
 
         test_dir.open(file_flags, io::MODE_TYPE_FILE, TEST_FILE, server).expect("Cannot open file");
@@ -438,14 +508,18 @@ async fn open_file_with_extra_rights() {
     // All file flags should have more rights than those of the directory flags.
     // TODO(fxb/37534): Ensure executable case is covered as well.
     let test_right_combinations = [
-        (io::OPEN_RIGHT_READABLE, harness.writable_flag_combos()),
-        (io::OPEN_RIGHT_WRITABLE, harness.readable_flag_combos()),
+        (io::OPEN_RIGHT_READABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE)),
+        (io::OPEN_RIGHT_WRITABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE)),
     ];
 
     let root = root_directory(vec![file(TEST_FILE, vec![])]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
     for (dir_flags, file_flag_combos) in test_right_combinations.iter() {
+        if file_flag_combos.is_empty() {
+            continue;
+        }
+
         let dir_proxy =
             open_node::<io::DirectoryMarker>(&root_dir, *dir_flags, io::MODE_TYPE_DIRECTORY, ".")
                 .await;
@@ -454,7 +528,7 @@ async fn open_file_with_extra_rights() {
             // Ensure the combination is valid (e.g. that file_flags is requesting more rights
             // than those in dir_flags).
             assert!(
-                (file_flags & harness.all_rights) != (dir_flags & harness.all_rights),
+                (file_flags & harness.dir_rights.all()) != (dir_flags & harness.dir_rights.all()),
                 "Invalid test: file rights must exceed dir! (flags: dir = {}, file = {})",
                 *dir_flags,
                 *file_flags
@@ -482,7 +556,7 @@ async fn open_file_with_extra_rights() {
 async fn open_path() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![directory("dir", vec![])]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
     // Valid paths:
     for path in [".", "/", "/dir/"] {
@@ -510,7 +584,7 @@ async fn open_path() {
 async fn open_trailing_slash_with_not_directory() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
     assert_eq!(
         open_node_status::<io::NodeMarker>(
             &root_dir,
@@ -529,7 +603,7 @@ async fn open_trailing_slash_with_not_directory() {
 async fn open_flags_and_mode() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![file(TEST_FILE, vec![]), directory("dir", vec![])]);
-    let root_dir = harness.get_directory(root, harness.all_rights);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
     // mode should be ignored when opening an existing object.
     open_node::<io::NodeMarker>(
@@ -622,9 +696,9 @@ async fn create_file_with_sufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open directory with the flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
@@ -649,9 +723,9 @@ async fn create_file_with_insufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open directory with the flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
@@ -673,9 +747,9 @@ async fn create_file_with_insufficient_rights() {
 async fn file_read_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -688,9 +762,9 @@ async fn file_read_with_sufficient_rights() {
 async fn file_read_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.non_readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -703,9 +777,9 @@ async fn file_read_with_insufficient_rights() {
 async fn file_read_at_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -718,9 +792,9 @@ async fn file_read_at_with_sufficient_rights() {
 async fn file_read_at_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.non_readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -733,9 +807,9 @@ async fn file_read_at_with_insufficient_rights() {
 async fn file_write_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -748,9 +822,9 @@ async fn file_write_with_sufficient_rights() {
 async fn file_write_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.non_writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -763,9 +837,9 @@ async fn file_write_with_insufficient_rights() {
 async fn file_write_at_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -777,9 +851,9 @@ async fn file_write_at_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_write_at_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    for file_flags in harness.non_writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -792,9 +866,9 @@ async fn file_write_at_with_insufficient_rights() {
 async fn file_truncate_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -806,9 +880,9 @@ async fn file_truncate_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_truncate_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    for file_flags in harness.non_writable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
@@ -821,9 +895,9 @@ async fn file_truncate_with_insufficient_rights() {
 async fn file_read_in_subdirectory() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.readable_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         let root = root_directory(vec![directory("subdir", vec![file("testing.txt", vec![])])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
         let file = open_node::<io::FileMarker>(
             &test_dir,
@@ -844,11 +918,9 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
         return;
     }
 
-    const VMO_FLAGS: u32 = io::VMO_FLAG_READ;
-
-    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE) {
+    for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
+        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
             .await
             .expect("Failed to create file and obtain buffer");
         // Check contents of buffer.
@@ -865,7 +937,7 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
         return;
     }
 
-    for file_flags in harness.non_readable_flag_combos() {
+    for file_flags in harness.vmofile_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
             create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
@@ -884,7 +956,7 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
     }
     const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
 
-    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, io::OPEN_RIGHT_READABLE) {
+    for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
             .await
@@ -900,19 +972,17 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
     if harness.config.no_get_buffer.unwrap_or_default() {
         return;
     }
+    const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
 
-    let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-    assert_eq!(
-        create_file_and_get_buffer(
-            file,
-            &harness,
-            io::OPEN_RIGHT_READABLE,
-            io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE
-        )
-        .await
-        .expect_err("Error was expected"),
-        zx::Status::ACCESS_DENIED
-    );
+    for file_flags in harness.vmofile_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        assert_eq!(
+            create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
+                .await
+                .expect_err("Error was expected"),
+            zx::Status::ACCESS_DENIED
+        );
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -976,7 +1046,7 @@ async fn vmo_file_describe() {
 async fn get_token_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
         let test_dir = harness.get_directory(root, dir_flags);
 
@@ -990,7 +1060,7 @@ async fn get_token_with_sufficient_rights() {
 async fn get_token_with_insufficient_rights() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
         let test_dir = harness.get_directory(root, dir_flags);
 
@@ -1007,12 +1077,12 @@ async fn rename_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
         ]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
         let dest_token = get_token(&dest_dir).await;
@@ -1040,12 +1110,12 @@ async fn rename_with_insufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
         ]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
         let dest_token = get_token(&dest_dir).await;
@@ -1068,12 +1138,12 @@ async fn rename_with_slash_in_path_fails() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
         ]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
 
@@ -1101,12 +1171,12 @@ async fn link_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
         ]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
         let dest_token = get_token(&dest_dir).await;
@@ -1131,12 +1201,12 @@ async fn link_with_insufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![
             directory("src", vec![file("old.txt", contents.to_vec())]),
             directory("dest", vec![]),
         ]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
         let dest_dir = open_rw_dir(&test_dir, "dest").await;
         let dest_token = get_token(&dest_dir).await;
@@ -1161,10 +1231,10 @@ async fn unlink_file_with_sufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root =
             root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
         src_dir
@@ -1186,10 +1256,10 @@ async fn unlink_file_with_insufficient_rights() {
     }
     let contents = "abcdef".as_bytes();
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root =
             root_directory(vec![directory("src", vec![file("file.txt", contents.to_vec())])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
         assert_eq!(
@@ -1213,9 +1283,9 @@ async fn unlink_directory_with_sufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("src", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
@@ -1233,9 +1303,9 @@ async fn unlink_directory_with_insufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("src", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
@@ -1258,7 +1328,7 @@ async fn unlink_must_be_directory() {
     }
 
     let root = root_directory(vec![directory("dir", vec![]), file("file", vec![])]);
-    let test_dir = harness.get_directory(root, harness.all_rights);
+    let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
     let must_be_directory =
         UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY };
@@ -1281,9 +1351,9 @@ async fn unlink_must_be_directory() {
 async fn clone_file_with_same_or_fewer_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.all_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos() {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
 
         // Clone using every subset of flags.
@@ -1306,9 +1376,9 @@ async fn clone_file_with_same_or_fewer_rights() {
 async fn clone_file_with_same_rights_flag() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.all_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos() {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
 
         // Clone using CLONE_FLAG_SAME_RIGHTS.
@@ -1330,13 +1400,13 @@ async fn clone_file_with_same_rights_flag() {
 async fn clone_file_with_additional_rights() {
     let harness = TestHarness::new().await;
 
-    for file_flags in harness.all_flag_combos() {
+    for file_flags in harness.file_rights.valid_combos() {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
 
         // Clone using every superset of flags, should fail.
-        for clone_flags in build_flag_combinations(file_flags, harness.all_rights) {
+        for clone_flags in build_flag_combinations(file_flags, harness.dir_rights.all()) {
             if clone_flags == file_flags {
                 continue;
             }
@@ -1352,9 +1422,9 @@ async fn clone_file_with_additional_rights() {
 async fn clone_directory_with_same_or_fewer_rights() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let root = root_directory(vec![directory("dir", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         // Clone using every subset of flags.
@@ -1376,9 +1446,9 @@ async fn clone_directory_with_same_or_fewer_rights() {
 async fn clone_directory_with_same_rights_flag() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let root = root_directory(vec![directory("dir", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         // Clone using CLONE_FLAG_SAME_RIGHTS.
@@ -1400,13 +1470,13 @@ async fn clone_directory_with_same_rights_flag() {
 async fn clone_directory_with_additional_rights() {
     let harness = TestHarness::new().await;
 
-    for dir_flags in harness.all_flag_combos() {
+    for dir_flags in harness.dir_rights.valid_combos() {
         let root = root_directory(vec![directory("dir", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         // Clone using every superset of flags, should fail.
-        for clone_flags in build_flag_combinations(dir_flags, harness.all_rights) {
+        for clone_flags in build_flag_combinations(dir_flags, harness.dir_rights.all()) {
             if clone_flags == dir_flags {
                 continue;
             }
@@ -1425,9 +1495,9 @@ async fn set_attr_file_with_sufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file("file", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let file = open_file_with_flags(&test_dir, dir_flags, "file").await;
 
         let (status, old_attr) = file.get_attr().await.expect("get_attr failed");
@@ -1462,9 +1532,9 @@ async fn set_attr_file_with_insufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file("file", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let file = open_file_with_flags(&test_dir, dir_flags, "file").await;
 
         let status = file
@@ -1489,9 +1559,9 @@ async fn set_attr_directory_with_sufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("dir", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         let (status, old_attr) = dir.get_attr().await.expect("get_attr failed");
@@ -1526,9 +1596,9 @@ async fn set_attr_directory_with_insufficient_rights() {
         return;
     }
 
-    for dir_flags in harness.non_writable_flag_combos() {
+    for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![directory("dir", vec![])]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
+        let test_dir = harness.get_directory(root, harness.dir_rights.all());
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         let status = dir

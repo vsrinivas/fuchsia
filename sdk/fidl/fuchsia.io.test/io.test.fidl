@@ -42,10 +42,10 @@ type Io1Config = table {
     /// Directories are read-only.
     2: immutable_dir bool;
 
-    /// The exec right is not supported.
-    3: no_exec bool;
+    /// ExecFile objects are not supported.
+    3: no_execfile bool;
 
-    /// Vmofiles are not supported.
+    /// VmoFile objects are not supported.
     4: no_vmofile bool;
 
     /// Remote directories are not supported.
@@ -67,6 +67,8 @@ type Io1Config = table {
    10: no_set_attr bool;
 };
 
+/// Directory entries should support opening with any combination of read/write/execute rights.
+/// If `no_admin` is false, the admin right should also be supported.
 type Directory = resource table {
     /// Name not required for root directory.
     1: name string;
@@ -75,11 +77,21 @@ type Directory = resource table {
     2: entries vector<DirectoryEntry:optional>;
 };
 
+/// File object which supports read rights.  If the configuration parameter `immutable_file` is
+/// false, must also support write rights, and attempting to open as executable should fail.
+///
+/// This is because W^X is enforced at the filesystem level to complement Fuchsia's security model.
+/// TODO(fxbug.dev/37534): If executable pseudofiles are required, use ExecFile.
 type File = table {
     1: name string;
     2: contents bytes;
 };
 
+/// Vmo-backed file object which supports opening as readable + writable.
+///
+/// Since W^X is currently enforced at the filesystem level to complement Fuchsia's security model,
+/// and VmoFiles are mutable, attempting to open as executable should fail with ACCESS_DENIED.
+/// TODO(fxbug.dev/37534): If executable pseudofiles are required, use ExecFile.
 type VmoFile = resource table {
     1: name string;
     2: buffer fuchsia.mem.Range;
@@ -113,9 +125,6 @@ protocol Io1Harness {
     /// Serves a directory that holds a child `remote_directory` with name
     /// `dir_name`. The `directory_request` connection to the root directory
     /// has rights defined by `flags`.
-    /// Note: This might not actually be needed for the defined io1 tests, but
-    /// still might be useful for future testing if a fs forwards the correct
-    /// request to the remote.
     ///
     /// + `remote_directory` the client end of the child remote directory.
     /// + `name` the name of the child remote directory in the root directory.

@@ -56,7 +56,7 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_admin(false);
 
     // PseudoFile/PseudoDir do not support a variety of methods:
-    config.set_no_exec(true);
+    config.set_no_execfile(true);
     config.set_immutable_dir(true);
     config.set_no_get_buffer(true);
     config.set_no_rename(true);
@@ -138,7 +138,8 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
         entry.vmo_file().buffer().Clone(&buffer);
 
         dest.AddEntry(entry.vmo_file().name(),
-                      fbl::MakeRefCounted<fs::VmoFile>(buffer.vmo, buffer.offset, buffer.size));
+                      fbl::MakeRefCounted<fs::VmoFile>(buffer.vmo, buffer.offset, buffer.size,
+                                                       /*writable=*/true));
 
         // Stash the vmo here, because |fs::VmoFile| only borrows a reference to it.
         test_vmos_.emplace_back(std::move(buffer.vmo));

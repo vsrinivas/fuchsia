@@ -101,7 +101,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
                     no_set_attr: Some(true),
                     // Admin and exec bits aren't supported:
-                    no_exec: Some(true),
+                    no_execfile: Some(true),
                     no_admin: Some(true),
                     ..Io1Config::EMPTY
                 };
