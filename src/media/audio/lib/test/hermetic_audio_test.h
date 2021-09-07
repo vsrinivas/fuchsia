@@ -106,6 +106,9 @@ class HermeticAudioTest : public TestFixture {
   void ExpectNoRendererUnderflows();
   void ExpectNoCapturerOverflows();
 
+  template <fuchsia::media::AudioSampleFormat OutputFormat>
+  bool DeviceHasUnderflows(VirtualOutput<OutputFormat>* device);
+
   // Unbind and forget about the given object.
   void Unbind(VirtualOutputImpl* device);
   void Unbind(VirtualInputImpl* device);

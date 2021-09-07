@@ -506,6 +506,34 @@ void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& pat
   ExpectedInspectProperties::Check(props, path_string, *h);
 }
 
+template <fuchsia::media::AudioSampleFormat OutputFormat>
+bool HermeticAudioTest::DeviceHasUnderflows(VirtualOutput<OutputFormat>* device) {
+  auto root = environment()->ReadInspect(HermeticAudioEnvironment::kAudioCoreComponent);
+  for (auto kind : {"device underflows", "pipeline underflows"}) {
+    std::vector<std::string> path = {
+        "output devices",
+        fxl::StringPrintf("%03lu", device->inspect_id()),
+        kind,
+    };
+    auto path_string = fxl::JoinStrings(path, "/");
+    auto h = root.GetByPath(path);
+    if (!h) {
+      ADD_FAILURE() << "Missing inspect hierarchy for " << path_string;
+      continue;
+    }
+    auto p = h->node().template get_property<inspect::UintPropertyValue>("count");
+    if (!p) {
+      ADD_FAILURE() << "Missing property: " << path_string << "[count]";
+      continue;
+    }
+    if (p->value() > 0) {
+      FX_LOGS(WARNING) << "Found underflow at " << path_string;
+      return true;
+    }
+  }
+  return false;
+}
+
 // Explicitly instantiate all possible implementations.
 #define INSTANTIATE(T)                                                                      \
   template VirtualOutput<T>* HermeticAudioTest::CreateOutput<T>(                            \
@@ -521,7 +549,8 @@ void HermeticAudioTest::ExpectInspectMetrics(const std::vector<std::string>& pat
   template UltrasoundRendererShim<T>* HermeticAudioTest::CreateUltrasoundRenderer<T>(       \
       TypedFormat<T>, int64_t, bool);                                                       \
   template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(       \
-      TypedFormat<T>, int64_t, bool);
+      TypedFormat<T>, int64_t, bool);                                                       \
+  template bool HermeticAudioTest::DeviceHasUnderflows(VirtualOutput<T>* device);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 
