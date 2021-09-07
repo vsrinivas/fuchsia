@@ -4,6 +4,7 @@
 library fuchsia.netemul.network;
 
 using fuchsia.hardware.ethernet;
+using fuchsia.hardware.ethertap;
 using fuchsia.hardware.network;
 using fuchsia.net;
 using zx;
@@ -92,7 +93,7 @@ protocol EndpointManager {
     });
     /// Creates endpoint with given name and config.
     CreateEndpoint(struct {
-        name string:MAX;
+        name string:fuchsia.hardware.ethertap.MAX_NAME_LENGTH;
         config EndpointConfig;
     }) -> (resource struct {
         status zx.status;
@@ -100,7 +101,7 @@ protocol EndpointManager {
     });
     /// Gets a handle to an endpoint.
     GetEndpoint(struct {
-        name string:MAX;
+        name string:fuchsia.hardware.ethertap.MAX_NAME_LENGTH;
     }) -> (resource struct {
         endpoint client_end:<Endpoint, optional>;
     });

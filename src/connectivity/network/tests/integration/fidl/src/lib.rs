@@ -21,7 +21,7 @@ use netstack_testing_common::realms::{
     constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
-    get_component_moniker, wait_for_interface_up_and_address, EthertapName as _, Result,
+    get_component_moniker, wait_for_interface_up_and_address, Result,
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -591,9 +591,7 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
 async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
-            name.ethertap_compatible_name(),
-        )
+        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
         .context("failed to create netstack realm")?;
 
@@ -1487,7 +1485,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
         let iface = realm
             .join_network::<E, _>(
                 &net,
-                format!("iface{}", net_num).as_str().ethertap_compatible_name(),
+                format!("iface{}", net_num),
                 &netemul::InterfaceConfig::StaticIp(addr),
             )
             .await

@@ -11,10 +11,8 @@ pub mod constants;
 pub mod realms;
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom as _;
 use std::fmt::Debug;
 
-use fidl_fuchsia_hardware_ethertap as fethertap;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
@@ -76,20 +74,6 @@ pub async fn try_any<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> 
 pub async fn try_all<S: Stream<Item = Result<bool>>>(stream: S) -> Result<bool> {
     futures::pin_mut!(stream);
     stream.try_filter(|v| futures::future::ready(!*v)).next().await.unwrap_or(Ok(true))
-}
-
-/// A trait that provides an Ethertap compatible name.
-pub trait EthertapName {
-    /// Returns an Ethertap compatible name.
-    fn ethertap_compatible_name(&self) -> Self;
-}
-
-impl<'a> EthertapName for &'a str {
-    fn ethertap_compatible_name(&self) -> &'a str {
-        let max_len =
-            usize::try_from(fethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize");
-        &self[self.len().checked_sub(max_len).unwrap_or(0)..self.len()]
-    }
 }
 
 /// Asynchronously sleeps for specified `secs` seconds.
@@ -349,6 +333,7 @@ pub async fn send_ra_with_router_lifetime<'a>(
 /// Sets up a realm with a network with no required services.
 pub async fn setup_network<E, S>(
     sandbox: &netemul::TestSandbox,
+    // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
     name: S,
 ) -> Result<(
     netemul::TestNetwork<'_>,
@@ -359,7 +344,7 @@ pub async fn setup_network<E, S>(
 )>
 where
     E: netemul::Endpoint,
-    S: Copy + Into<String> + EthertapName,
+    S: Copy + Into<String>,
 {
     setup_network_with::<E, S, _>(sandbox, name, std::iter::empty::<fnetemul::ChildDef>()).await
 }
@@ -372,6 +357,7 @@ where
 /// packets.
 pub async fn setup_network_with<E, S, I>(
     sandbox: &netemul::TestSandbox,
+    // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
     name: S,
     children: I,
 ) -> Result<(
@@ -383,7 +369,7 @@ pub async fn setup_network_with<E, S, I>(
 )>
 where
     E: netemul::Endpoint,
-    S: Copy + Into<String> + EthertapName,
+    S: Copy + Into<String>,
     I: IntoIterator,
     I::Item: Into<fnetemul::ChildDef>,
 {
@@ -396,11 +382,7 @@ where
     let fake_ep = network.create_fake_endpoint()?;
 
     let iface = realm
-        .join_network::<E, _>(
-            &network,
-            name.ethertap_compatible_name(),
-            &netemul::InterfaceConfig::None,
-        )
+        .join_network::<E, _>(&network, name, &netemul::InterfaceConfig::None)
         .await
         .context("failed to configure networking")?;
 

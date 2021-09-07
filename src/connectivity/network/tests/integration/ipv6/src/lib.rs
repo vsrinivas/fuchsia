@@ -30,7 +30,7 @@ use netstack_testing_common::realms::{
 };
 use netstack_testing_common::{
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
-    EthertapName as _, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
@@ -156,7 +156,7 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm_with::<Netstack2, _, _>(name, &[KnownServiceProvider::SecureStash])
         .expect("failed to create realm");
     let endpoint = sandbox
-        .create_endpoint::<netemul::Ethernet, _>(name.ethertap_compatible_name())
+        .create_endpoint::<netemul::Ethernet, _>(name)
         .await
         .expect("failed to create endpoint");
 

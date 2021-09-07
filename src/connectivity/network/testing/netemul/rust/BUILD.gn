@@ -10,6 +10,7 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",

@@ -17,7 +17,7 @@ use netstack_testing_common::{
     constants::{ipv4 as ipv4_consts, ipv6 as ipv6_consts},
     get_inspect_data,
     realms::{constants, KnownServiceProvider, Netstack2, TestSandboxExt as _},
-    wait_for_component_stopped, EthertapName as _,
+    wait_for_component_stopped,
 };
 use netstack_testing_macros::variants_test;
 use packet::{Buf, InnerPacketBuilder as _, Serializer as _};
@@ -459,11 +459,7 @@ async fn test_state<E: netemul::Endpoint>(
                 let fake_ep =
                     network.create_fake_endpoint().expect("failed to create fake endpoint");
                 let interface = realm
-                    .join_network::<E, _>(
-                        &network,
-                        name.as_str().ethertap_compatible_name(),
-                        &netemul::InterfaceConfig::None,
-                    )
+                    .join_network::<E, _>(&network, name, &netemul::InterfaceConfig::None)
                     .await
                     .expect("failed to join network with netdevice endpoint");
 

@@ -20,6 +20,7 @@ fidl("network") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
+    "//sdk/fidl/fuchsia.hardware.ethertap",
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
   ]
