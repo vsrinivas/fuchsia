@@ -113,7 +113,7 @@ pub const SOCK_SEQPACKET: u32 = 5;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
 pub struct sockaddr_un {
-    pub sun_family: __kernel_sa_family_t,
+    pub sun_family: uapi::__kernel_sa_family_t,
     pub sun_path: [u8; 108],
 }
 

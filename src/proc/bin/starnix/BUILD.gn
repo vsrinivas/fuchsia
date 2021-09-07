@@ -144,6 +144,7 @@ if (target_cpu == "x64") {
       "types/device_type.rs",
       "types/errno.rs",
       "types/file_mode.rs",
+      "types/locking.rs",
       "types/mod.rs",
       "types/open_flags.rs",
       "types/time.rs",

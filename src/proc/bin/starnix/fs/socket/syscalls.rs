@@ -61,6 +61,36 @@ pub fn sys_bind(
     Ok(SUCCESS)
 }
 
+pub fn sys_connect(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_socket_address: UserAddress,
+    _address_length: u64,
+) -> Result<SyscallResult, Errno> {
+    let first_socket_file = ctx.task.files.get(fd)?;
+    if !first_socket_file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Verify address_length.
+    let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
+    let mut address = sockaddr_un::default();
+    ctx.task.mm.read_object(user_ref, &mut address)?;
+
+    let path_len =
+        address.sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
+
+    let (parent, basename) =
+        ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &address.sun_path[..path_len])?;
+    let node = parent.lookup(&mut LookupContext::default(), ctx.task, basename)?;
+    let second_socket_node = node.entry.node.clone();
+
+    Socket::connect(first_socket_file.node(), &second_socket_node)
+        .expect("socket connect failed, even after sockets were checked.");
+
+    Ok(SUCCESS)
+}
+
 pub fn sys_socketpair(
     ctx: &SyscallContext<'_>,
     domain: u32,
@@ -129,6 +159,7 @@ mod tests {
     use super::*;
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
+    use std::convert::TryInto;
     use std::sync::Arc;
 
     /// Creates a pair of connected sockets and returns the files associated with those sockets.
@@ -183,5 +214,22 @@ mod tests {
             sys_socketpair(&ctx, AF_UNIX, SOCK_STREAM, 0, UserRef::new(UserAddress::default())),
             Err(EFAULT)
         );
+    }
+
+    #[test]
+    fn test_connect_same_socket() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let fd1 = match sys_socket(&ctx, AF_UNIX, SOCK_STREAM, 0) {
+            Ok(SyscallResult::Success(fd)) => fd,
+            _ => panic!("Failed to create first socket"),
+        };
+
+        let file = ctx
+            .task
+            .files
+            .get(FdNumber::from_raw(fd1.try_into().unwrap()))
+            .expect("Failed to fetch socket file.");
+        assert!(Socket::connect(file.node(), file.node()).is_ok());
     }
 }

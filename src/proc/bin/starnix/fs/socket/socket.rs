@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
 use crate::mode;
 use crate::task::Kernel;
+use crate::types::locking::*;
 use crate::types::*;
 
 use parking_lot::Mutex;
@@ -64,18 +66,37 @@ impl Socket {
     /// After the connection has been established, the sockets in each node will read/write from
     /// each other.
     ///
-    /// Returns an error if both nodes do not contain sockets.
+    /// WARNING: It's an error to call `connect` with nodes that do not contain sockets.
+    ///
+    /// Returns an error if any of the sockets are already connected.
     pub fn connect(first_node: &FsNodeHandle, second_node: &FsNodeHandle) -> Result<(), Errno> {
-        // TODO: fix locks
-        let mut first_socket = first_node.socket().ok_or(ENOTSOCK)?.lock();
-        let mut second_socket = second_node.socket().ok_or(ENOTSOCK)?.lock();
+        // Sort the nodes to determine which order to lock them in.
+        let mut ordered_nodes: [&FsNodeHandle; 2] = [first_node, second_node];
+        sort_for_locking(&mut ordered_nodes, |node| node.socket().unwrap());
 
-        // TODO: Return a proper error when a socket is already connected.
-        assert!(first_socket.connected_node.upgrade().is_none());
-        assert!(second_socket.connected_node.upgrade().is_none());
+        let first_node = ordered_nodes[0];
+        let second_node = ordered_nodes[1];
+
+        // Lock the sockets in a consistent order.
+        let mut first_socket = first_node.socket().ok_or(ENOTSOCK)?.lock();
+        if first_socket.connected_node.upgrade().is_some() {
+            return error!(EISCONN);
+        }
+
+        // Make sure not to deadlock in the case where the two references point to the same node.
+        if std::ptr::eq(first_node, second_node) {
+            first_socket.connected_node = Arc::downgrade(first_node);
+            return Ok(());
+        }
+
+        let mut second_socket = second_node.socket().ok_or(ENOTSOCK)?.lock();
+        if second_socket.connected_node.upgrade().is_some() {
+            return error!(EISCONN);
+        }
 
         first_socket.connected_node = Arc::downgrade(second_node);
         second_socket.connected_node = Arc::downgrade(first_node);
+
         Ok(())
     }
 
