@@ -54,12 +54,6 @@ FsHostMetricsCobalt::~FsHostMetricsCobalt() {
   thread_.join();
 }
 
-void FsHostMetricsCobalt::Detach() {
-  if (thread_.joinable()) {
-    thread_.detach();
-  }
-}
-
 void FsHostMetricsCobalt::LogMinfsCorruption() {
   if (collector_) {
     counters_[fs_metrics::Event::kDataCorruption]->Increment();

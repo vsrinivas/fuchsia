@@ -11,8 +11,6 @@ class FsHostMetricsStub : public FsHostMetrics {
   void LogMinfsCorruption() override {}
 
   void Flush() override {}
-
-  void Detach() override {}
 };
 
 std::unique_ptr<FsHostMetrics> DefaultMetrics() { return std::make_unique<FsHostMetricsStub>(); }

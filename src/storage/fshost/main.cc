@@ -249,7 +249,6 @@ int Main(bool disable_block_watcher) {
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
 
   auto metrics = DefaultMetrics();
-  metrics->Detach();
   FsManager fs_manager(boot_args, std::move(metrics));
 
   if (config.netboot()) {

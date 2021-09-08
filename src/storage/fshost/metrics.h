@@ -26,9 +26,6 @@ class FsHostMetrics {
   // Retries every 10 seconds.
   // The retry is done async.
   virtual void Flush() = 0;
-
-  // Detach the underlying flush thread.
-  virtual void Detach() = 0;
 };
 
 std::unique_ptr<FsHostMetrics> DefaultMetrics();

@@ -43,9 +43,6 @@ class FsHostMetricsCobalt : public FsHostMetrics {
   // The retry is done async.
   void Flush() override;
 
-  // Detach the underlying flush thread.
-  void Detach() override;
-
  private:
   // Sleep duration between two successive attempts to flush metrics.
   static constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::seconds(10);
