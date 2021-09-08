@@ -21,6 +21,14 @@ kernel_cmdline("devmgr.log-to-debuglog--true") {
   args = [ "devmgr.log-to-debuglog=true" ]
 }
 
+kernel_cmdline("devmgr.enable-ephemeral--true") {
+  args = [ "devmgr.enable-ephemeral=true" ]
+}
+
+kernel_cmdline("devmgr.enable-ephemeral--false") {
+  args = [ "devmgr.enable-ephemeral=false" ]
+}
+
 kernel_cmdline("kernel.bypass-debuglog--true") {
   args = [ "kernel.bypass-debuglog=true" ]
 }
