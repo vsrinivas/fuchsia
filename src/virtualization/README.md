@@ -24,25 +24,10 @@ For ARM64 targets, replace `x64` with `arm64` or the appropriate board name.
 ***_Googlers: You don't need to do this, the Linux images are downloaded from
 CIPD by Jiri.***
 
-The `linux_guest` package expects the Linux kernel binaries to be in
-`prebuilt/virtualization/packages/linux_guest`. You should create them before
-running `fx build` by running the following scripts:
-```sh
-./src/virtualization/packages/linux_guest/mklinux.sh \
-  -l /tmp/linux/source \
-  -o prebuilt/virtualization/packages/linux_guest/images/${ARCH}/Image \
-  -b machina-4.18 \
-  ${ARCH}
-./src/virtualization/packages/linux_guest/mksysroot.sh \
-  -o  prebuilt/virtualization/packages/linux_guest/images/${ARCH}/disk.img \
-  -d /tmp/toybox \
-  -s /tmp/dash \
-  -u \
-  ${ARCH}
-```
-
-Note: `-b` specifies the branch of `zircon_guest` to use. You can modify this
-value if you need a different version or omit it to use a local version.
+The `debian_guest` package expects the Linux kernel binaries and userspace
+image to be in `prebuilt/virtualization/packages/debian_guest`. You should
+create them before running `fx build` by following the instructions in
+`debian_guest/README.md`.
 
 ## Running guests
 
@@ -51,9 +36,9 @@ After booting the target device, to run Zircon:
 guest launch zircon_guest
 ```
 
-Likewise, to launch a Linux guest:
+Likewise, to launch a Debian guest:
 ```sh
-guest launch linux_guest
+guest launch debian_guest
 ```
 
 ## Running on QEMU
@@ -95,7 +80,7 @@ fx set workstation.x64 --with-base //src/virtualization
 ```
 
 After booting the guest packages can be launched from the system launcher as
-`linux_guest` and `zircon_guest`.
+`debian_guest` and `zircon_guest`.
 
 ## Integration tests
 
