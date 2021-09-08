@@ -9,8 +9,6 @@
     program: {
         binary: "bin/setui_config_test",
         args: [
-            "-s",
-            "/pkg/data/service_configuration.json",
             "-d",
             "/pkg/data/display_configuration.json",
             "-p",

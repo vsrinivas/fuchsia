@@ -26,13 +26,15 @@ use crate::light::types::LightInfo;
 use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
-use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use serde::Deserialize;
+use serde::Serialize;
 use std::array;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
 /// The setting types supported by the service.
-#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize)]
 pub enum SettingType {
     /// This value is reserved for testing purposes.
     #[cfg(test)]
@@ -227,19 +229,6 @@ pub fn get_default_interfaces() -> HashSet<fidl::InterfaceSpec> {
         fidl::InterfaceSpec::Intl,
         fidl::InterfaceSpec::Privacy,
         fidl::InterfaceSpec::Setup,
-    ])
-    .collect()
-}
-
-/// Returns default setting types. These types should be product-agnostic,
-/// capable of operating with platform level support.
-pub fn get_default_setting_types() -> HashSet<SettingType> {
-    array::IntoIter::new([
-        SettingType::Accessibility,
-        SettingType::Device,
-        SettingType::Intl,
-        SettingType::Privacy,
-        SettingType::Setup,
     ])
     .collect()
 }

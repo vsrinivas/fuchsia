@@ -9,10 +9,10 @@
     program: {
         binary: "bin/setui_config_test",
         args: [
-            "-s",
-            "/pkg/data/service_configuration.json",
-            "-s",
-            "/pkg/data/service_configuration.json",
+            "-x",
+            "/pkg/data/interface_configuration.json",
+            "-x",
+            "/pkg/data/interface_configuration.json",
         ],
     },
 }

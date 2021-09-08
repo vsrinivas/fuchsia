@@ -8,8 +8,8 @@ use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
     AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledInterfacesConfiguration,
-    EnabledPoliciesConfiguration, EnabledServicesConfiguration, InputConfiguration,
-    LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
+    EnabledPoliciesConfiguration, InputConfiguration, LightHardwareConfiguration,
+    LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -18,11 +18,6 @@ use std::io::Read;
 /// setui_config_tests validates configuration files passed to the settings service.
 #[derive(FromArgs)]
 struct TestConfig {
-    /// these configurations are the ones that will determine which controllers are enabled
-    /// within the settings service.
-    #[argh(option, short = 's')]
-    service_config: Vec<OsString>,
-
     /// these configurations are the one that will determine the initial
     /// display settings.
     #[argh(option, short = 'd')]
@@ -76,10 +71,6 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     let test_config: TestConfig = argh::from_env();
-
-    for config in test_config.service_config.into_iter() {
-        read_config::<EnabledServicesConfiguration>(&config)?;
-    }
 
     for config in test_config.display_config.into_iter() {
         read_config::<DisplayConfiguration>(&config)?;

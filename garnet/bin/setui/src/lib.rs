@@ -134,17 +134,6 @@ impl EnabledInterfacesConfiguration {
 }
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]
-pub struct EnabledServicesConfiguration {
-    pub services: HashSet<SettingType>,
-}
-
-impl EnabledServicesConfiguration {
-    pub fn with_services(services: HashSet<SettingType>) -> Self {
-        Self { services }
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, Deserialize)]
 pub struct EnabledPoliciesConfiguration {
     pub policies: HashSet<PolicyType>,
 }

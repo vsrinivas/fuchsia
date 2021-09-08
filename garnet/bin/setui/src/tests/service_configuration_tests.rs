@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingType;
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::InterfaceSpec;
@@ -12,7 +11,6 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::AgentConfiguration;
 use crate::EnabledInterfacesConfiguration;
 use crate::EnabledPoliciesConfiguration;
-use crate::EnabledServicesConfiguration;
 use crate::EnvironmentBuilder;
 use crate::ServiceConfiguration;
 use crate::ServiceFlags;
@@ -23,25 +21,20 @@ use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
 
-fn get_test_settings_types() -> HashSet<SettingType> {
-    return [SettingType::Accessibility, SettingType::Privacy].iter().copied().collect();
+fn get_test_interface_specs() -> HashSet<InterfaceSpec> {
+    std::array::IntoIter::new([InterfaceSpec::Accessibility, InterfaceSpec::Privacy]).collect()
 }
 
 fn get_test_policy_types() -> HashSet<PolicyType> {
-    return [PolicyType::Unknown].iter().copied().collect();
+    std::array::IntoIter::new([PolicyType::Unknown]).collect()
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_no_configuration_provided() {
     let factory = InMemoryStorageFactory::new();
 
-    let default_configuration = EnabledInterfacesConfiguration::with_interfaces(
-        EnabledServicesConfiguration::with_services(get_test_settings_types())
-            .services
-            .into_iter()
-            .map(|setting_type| InterfaceSpec::from(setting_type))
-            .collect(),
-    );
+    let default_configuration =
+        EnabledInterfacesConfiguration::with_interfaces(get_test_interface_specs());
 
     let default_policy_configuration =
         EnabledPoliciesConfiguration::with_policies(get_test_policy_types());
@@ -69,44 +62,6 @@ async fn test_no_configuration_provided() {
         .connect_to_protocol::<VolumePolicyControllerMarker>()
         .expect("Connected to policy service");
     policy.get_properties().await.expect_err("Policy get should fail");
-}
-
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_default_services_configuration_provided() {
-    let factory = InMemoryStorageFactory::new();
-
-    // Load test configuration, which only has Accessibility, default will not be used.
-    let configuration: EnabledServicesConfiguration =
-        DefaultSetting::new(None, "/config/data/service_configuration.json")
-            .load_default_value()
-            .expect("invalid service configuration")
-            .expect("no enabled service configuration provided");
-
-    let flags = ServiceFlags::default();
-    let configuration = ServiceConfiguration::from(
-        AgentConfiguration::default(),
-        EnabledInterfacesConfiguration::with_interfaces(
-            configuration
-                .services
-                .into_iter()
-                .map(|setting_type| InterfaceSpec::from(setting_type))
-                .collect(),
-        ),
-        EnabledPoliciesConfiguration::with_policies(get_test_policy_types()),
-        flags,
-    );
-
-    let env = EnvironmentBuilder::new(Arc::new(factory))
-        .configuration(configuration)
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
-
-    env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
-
-    // Any calls to the privacy service should fail since the service isn't included in the configuration.
-    let privacy_service = env.connect_to_protocol::<PrivacyMarker>().unwrap();
-    privacy_service.watch().await.expect_err("watch completed");
 }
 
 #[fuchsia_async::run_until_stalled(test)]

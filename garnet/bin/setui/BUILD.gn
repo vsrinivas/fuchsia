@@ -298,7 +298,6 @@ config_data("tests_config") {
     "src/tests/testdata/fake_invalid_config_data.json",
     "src/tests/testdata/interface_configuration.json",
     "src/tests/testdata/policy_configuration.json",
-    "src/tests/testdata/service_configuration.json",
     "src/tests/testdata/service_flags.json",
     "src/tests/testdata/volume-changed.wav",
     "src/tests/testdata/volume-max.wav",
@@ -380,7 +379,6 @@ resource("sample-setui-config-test-resources") {
     "src/tests/testdata/light_hardware_configuration.json",
     "src/tests/testdata/light_sensor_configuration.json",
     "src/tests/testdata/policy_configuration.json",
-    "src/tests/testdata/service_configuration.json",
     "src/tests/testdata/service_flags.json",
   ]
   outputs = [ "data/{{source_file_part}}" ]

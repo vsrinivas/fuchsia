@@ -15,8 +15,6 @@ use fidl_fuchsia_settings::{
 use fuchsia_component::server::{ServiceFsDir, ServiceObj};
 use fuchsia_zircon;
 use serde::Deserialize;
-use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
 
 impl From<Error> for fuchsia_zircon::Status {
     fn from(error: Error) -> fuchsia_zircon::Status {
@@ -26,73 +24,6 @@ impl From<Error> for fuchsia_zircon::Status {
         }
     }
 }
-
-// TODO(fxbug.dev/76287): Remove this conversion. It is only in place while configurations still
-// reference SettingTypes instead of interfaces to declare services. Configurations should define
-// said interfaces as constants separate from the Interface enumeration declared in code.
-impl From<SettingType> for InterfaceSpec {
-    fn from(item: SettingType) -> Self {
-        match item {
-            SettingType::Accessibility => InterfaceSpec::Accessibility,
-            SettingType::Audio => InterfaceSpec::Audio,
-            SettingType::Device => InterfaceSpec::Device,
-            SettingType::Display => InterfaceSpec::Display(vec![display::InterfaceSpec::Base]),
-            SettingType::DoNotDisturb => InterfaceSpec::DoNotDisturb,
-            SettingType::FactoryReset => InterfaceSpec::FactoryReset,
-            SettingType::Input => InterfaceSpec::Input,
-            SettingType::Intl => InterfaceSpec::Intl,
-            SettingType::Light => InterfaceSpec::Light,
-            SettingType::LightSensor => {
-                InterfaceSpec::Display(vec![display::InterfaceSpec::LightSensor])
-            }
-            SettingType::NightMode => InterfaceSpec::NightMode,
-            SettingType::Privacy => InterfaceSpec::Privacy,
-            SettingType::Setup => InterfaceSpec::Setup,
-            // Support future expansion of FIDL.
-            #[allow(unreachable_patterns)]
-            _ => {
-                panic!("unsupported SettingType for Interface conversion: {:?}", item);
-            }
-        }
-    }
-}
-
-pub fn into_interface_specs(setting_types: HashSet<SettingType>) -> HashSet<InterfaceSpec> {
-    let set = setting_types.into_iter().fold(HashMap::new(), |mut set, setting_type| {
-        let spec = InterfaceSpec::from(setting_type);
-        let key = if let SettingType::LightSensor = setting_type {
-            SettingType::Display
-        } else {
-            setting_type
-        };
-
-        // The entries for Display need to be merged so that multiple Display interfaces are
-        // not brought up by the environment.
-        match set.entry(key) {
-            Entry::Occupied(mut o) => {
-                if let (InterfaceSpec::Display(ref mut data), InterfaceSpec::Display(other_data)) =
-                    (o.get_mut(), spec)
-                {
-                    for flag in other_data {
-                        if !data.contains(&flag) {
-                            data.push(flag);
-                        }
-                    }
-                } else {
-                    // Should not be possible to reach because all other
-                    // SettingType -> InterfaceSpec mappings are 1-to-1.
-                    unreachable!();
-                }
-            }
-            Entry::Vacant(v) => {
-                v.insert(spec);
-            }
-        }
-        set
-    });
-    set.into_values().collect()
-}
-
 /// [Interface] defines the FIDL interfaces supported by the settings service.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Interface {
@@ -336,7 +267,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use super::{display, into_interface_specs, Interface, InterfaceSpec};
+    use super::Interface;
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};
     use crate::ingress::registration::Registrant;
@@ -349,7 +280,6 @@ mod tests {
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
     use matches::assert_matches;
-    use std::collections::HashSet;
 
     const ENV_NAME: &str = "settings_service_fidl_environment";
 
@@ -400,63 +330,5 @@ mod tests {
 
         // Ensure handler receives request.
         assert_matches!(rx.next_of::<Payload>().await, Ok((Payload::Request(Request::Listen), _)));
-    }
-
-    #[test]
-    fn into_interface_specs_merges_display() {
-        let setting_types = std::array::IntoIter::new([
-            SettingType::Accessibility,
-            SettingType::Audio,
-            SettingType::Device,
-            SettingType::Display,
-            SettingType::DoNotDisturb,
-            SettingType::FactoryReset,
-            SettingType::Input,
-            SettingType::Intl,
-            SettingType::Light,
-            SettingType::LightSensor,
-            SettingType::NightMode,
-            SettingType::Privacy,
-            SettingType::Setup,
-        ])
-        .collect::<HashSet<_>>();
-
-        let interface_specs = into_interface_specs(setting_types);
-        let expected_specs = [
-            InterfaceSpec::Audio,
-            InterfaceSpec::Accessibility,
-            InterfaceSpec::Device,
-            InterfaceSpec::DoNotDisturb,
-            InterfaceSpec::FactoryReset,
-            InterfaceSpec::Input,
-            InterfaceSpec::Intl,
-            InterfaceSpec::Light,
-            InterfaceSpec::NightMode,
-            InterfaceSpec::Privacy,
-            InterfaceSpec::Setup,
-        ];
-
-        let expected_display_specs =
-            [display::InterfaceSpec::Base, display::InterfaceSpec::LightSensor];
-
-        for spec in &expected_specs {
-            assert!(interface_specs.contains(spec));
-        }
-
-        // The +1 accounts for the display specs below.
-        assert_eq!(interface_specs.len(), expected_specs.len() + 1);
-
-        let display_specs = interface_specs.iter().find_map(|spec| {
-            if let InterfaceSpec::Display(display_specs) = spec {
-                Some(display_specs)
-            } else {
-                None
-            }
-        });
-
-        for expected_display_spec in &expected_display_specs {
-            assert_eq!(display_specs.map(|ds| ds.contains(expected_display_spec)), Some(true));
-        }
-        assert_eq!(display_specs.unwrap().len(), expected_display_specs.len());
     }
 }
