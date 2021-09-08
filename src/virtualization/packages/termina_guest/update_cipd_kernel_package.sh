@@ -13,7 +13,7 @@ readonly SCRIPT_DIR
 FUCHSIA_DIR=$(git rev-parse --show-toplevel)
 readonly FUCHSIA_DIR
 declare -r CIPD="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
-declare -r LINUX_BRANCH="machina-4.18"
+declare -r LINUX_BRANCH="machina-5.4"
 
 # Ensure a valid architecture was specified.
 case "${1}" in
