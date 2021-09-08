@@ -197,7 +197,10 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
   page_table_slot_allocator_ = std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
 
-  HardwareReset();
+  bool reset = HardwareReset();
+  if (!reset) {
+    return DRETF(false, "Failed to reset hardware");
+  }
   HardwareInit();
 
   return true;
@@ -714,7 +717,7 @@ bool MsdVsiDevice::LoadInitialAddressSpace(std::shared_ptr<MsdVsiContext> contex
   if (!res) {
     return DRETF(false, "failed to submit command buffer");
   }
-  constexpr uint32_t kTimeoutMs = 100;
+  constexpr uint32_t kTimeoutMs = 1000;
   if (!WaitUntilIdle(kTimeoutMs)) {
     return DRETF(false, "failed to wait for device to be idle");
   }

@@ -37,6 +37,8 @@ TEST_F(TestExec, ResetAfterSubmit) {
         .batch_offset = 80,
         .gpu_addr = 0x10000,
     };
+    ASSERT_FALSE(default_context()->killed());
+    ASSERT_TRUE(device_->IsIdle());
     ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc));
     ASSERT_FALSE(default_context()->killed());
 
