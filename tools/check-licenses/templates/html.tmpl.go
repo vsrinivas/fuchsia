@@ -6,7 +6,13 @@ package templates
 
 const TemplateHtml = `
 <html>
+<style>
+	body {
+		background-color: #ffffff
+	}
+</style>
 <meta charset="utf-8"/>
+<body>
 
 <div style="width: 1000">
 Table of Contents:
