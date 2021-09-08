@@ -202,6 +202,8 @@ pub fn sys_process_vm_readv(
     _flags: usize,
 ) -> Result<SyscallResult, Errno> {
     let task = ctx.task.get_task(pid).ok_or(errno!(ESRCH))?;
+    // When this check is loosened to allow reading memory from other processes, the check should
+    // be like checking if the current process is allowed to debug the other process.
     if !Arc::ptr_eq(&task, ctx.task) {
         return error!(EPERM);
     }
