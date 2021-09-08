@@ -239,6 +239,8 @@ func StringInLogsChecks() []FailureModeCheck {
 				{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
 				{startString: "RUN   TestMissingCmdlineEntropyPanics", endString: "PASS: TestMissingCmdlineEntropyPanics"},
 				{startString: "RUN   TestIncompleteCmdlineEntropyPanics", endString: "PASS: TestIncompleteCmdlineEntropyPanics"},
+				{startString: "RUN   TestDisabledJitterEntropyAndRequiredDoesntBoot", endString: "PASS: TestDisabledJitterEntropyAndRequiredDoesntBoot"},
+				{startString: "RUN   TestDisabledJitterEntropyAndRequiredForReseedDoesntReachUserspace", endString: "PASS: TestDisabledJitterEntropyAndRequiredForReseedDoesntReachUserspace"},
 			}},
 			// For fxbug.dev/71784.
 			&stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt},

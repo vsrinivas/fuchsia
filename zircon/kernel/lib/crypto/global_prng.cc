@@ -42,14 +42,11 @@ namespace crypto {
 
 namespace GlobalPRNG {
 
-static PRNG* kGlobalPrng = nullptr;
+namespace {
 
-PRNG* GetInstance() {
-  ASSERT(kGlobalPrng);
-  return kGlobalPrng;
-}
+PRNG* kGlobalPrng = nullptr;
 
-static unsigned int IntegrateZbiEntropy() {
+unsigned int IntegrateZbiEntropy() {
   auto zbi_bytes = zbitl::StorageFromRawHeader(platform_get_zbi());
   zbitl::View<ktl::span<ktl::byte>> zbi(
       {const_cast<ktl::byte*>(zbi_bytes.data()), zbi_bytes.size()});
@@ -79,7 +76,7 @@ static unsigned int IntegrateZbiEntropy() {
 //
 // TODO(security): Remove this in favor of virtio-rng once it is available and
 // we decide we don't need it for getting entropy from elsewhere.
-static bool IntegrateCmdlineEntropy() {
+bool IntegrateCmdlineEntropy() {
   ktl::string_view entropy{gBootOptions->entropy_mixin};
   if (entropy.empty()) {
     return false;
@@ -108,7 +105,7 @@ static bool IntegrateCmdlineEntropy() {
 }
 
 // Returns true on success, false on failure.
-static bool SeedFrom(entropy::Collector* collector) {
+bool SeedFrom(entropy::Collector* collector) {
   uint8_t buf[PRNG::kMinEntropy] = {0};
   size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
 #if LOCAL_TRACE
@@ -137,7 +134,7 @@ static bool SeedFrom(entropy::Collector* collector) {
 }
 
 // Instantiates the global PRNG (in non-thread-safe mode) and seeds it.
-static void EarlyBootSeed(uint level) {
+void EarlyBootSeed(uint level) {
   ASSERT(kGlobalPrng == nullptr);
 
   // Before doing anything else, test our entropy collector. This is
@@ -196,43 +193,58 @@ static void EarlyBootSeed(uint level) {
 }
 
 // Migrate the global PRNG to enter thread-safe mode.
-static void BecomeThreadSafe(uint level) { GetInstance()->BecomeThreadSafe(); }
+void BecomeThreadSafe(uint level) { GetInstance()->BecomeThreadSafe(); }
 
-// PRNG reseeding loop.
-static int ReseedPRNG(void* arg) {
+// Collect entropy and add it to the cprng.
+void ReseedPRNG() {
+  unsigned int successful = 0;  // number of successful entropy sources
+  entropy::Collector* collector = nullptr;
+  // Reseed using HW RNG and jitterentropy;
+  if (!gBootOptions->cprng_disable_hw_rng &&
+      entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+    successful++;
+  } else if (gBootOptions->cprng_reseed_require_hw_rng) {
+    panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
+  }
+  if (!gBootOptions->cprng_disable_jitterentropy &&
+      entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
+    successful++;
+  } else if (gBootOptions->cprng_reseed_require_jitterentropy) {
+    panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");
+  }
+
+  if (successful == 0) {
+    kGlobalPrng->SelfReseed();
+    LTRACEF("Reseed PRNG with no new entropy source\n");
+  } else {
+    LTRACEF("Successfully reseed PRNG from %u sources.\n", successful);
+  }
+}
+
+int ReseedLoop(void* arg) {
   for (;;) {
     Thread::Current::SleepRelative(ZX_SEC(30));
-
-    unsigned int successful = 0;  // number of successful entropy sources
-    entropy::Collector* collector = nullptr;
-    // Reseed using HW RNG and jitterentropy;
-    if (!gBootOptions->cprng_disable_hw_rng &&
-        entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
-      successful++;
-    } else if (gBootOptions->cprng_reseed_require_hw_rng) {
-      panic("Failed to reseed PRNG from required entropy source: hw-rng\n");
-    }
-    if (!gBootOptions->cprng_disable_jitterentropy &&
-        entropy::JitterentropyCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
-      successful++;
-    } else if (gBootOptions->cprng_reseed_require_jitterentropy) {
-      panic("Failed to reseed PRNG from required entropy source: jitterentropy\n");
-    }
-
-    if (successful == 0) {
-      kGlobalPrng->SelfReseed();
-      LTRACEF("Reseed PRNG with no new entropy source\n");
-    } else {
-      LTRACEF("Successfully reseed PRNG from %u sources.\n", successful);
-    }
+    ReseedPRNG();
   }
   return 0;
 }
 
 // Start a thread to reseed PRNG.
-static void StartReseedThread(uint level) {
-  Thread* t = Thread::Create("prng-reseed", ReseedPRNG, nullptr, HIGHEST_PRIORITY);
+void StartReseedThread(uint level) {
+  // Force a reseed before returning from the init hook.
+  // We have no guarantees when the thread will be scheduled and run.
+  // TODO(fxbug.dev/82810): Make this synchronous reseed faster by removing
+  // JitterEntropy reseed, as we already seeded from it in EarlyBoot.
+  ReseedPRNG();
+  Thread* t = Thread::Create("prng-reseed", ReseedLoop, nullptr, HIGHEST_PRIORITY);
   t->DetachAndResume();
+}
+
+}  // namespace
+
+PRNG* GetInstance() {
+  ASSERT(kGlobalPrng);
+  return kGlobalPrng;
 }
 
 }  // namespace GlobalPRNG
@@ -246,4 +258,5 @@ LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)
 
-LK_INIT_HOOK(global_prng_reseed, crypto::GlobalPRNG::StartReseedThread, LK_INIT_LEVEL_THREADING)
+// Reseed the CPRNG right before entering userspace.
+LK_INIT_HOOK(global_prng_reseed, crypto::GlobalPRNG::StartReseedThread, LK_INIT_LEVEL_USER - 1)
