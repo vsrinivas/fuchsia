@@ -22,17 +22,17 @@ namespace {
 
 class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
  public:
-  explicit FileEventHandler(const std::string& binary_value) : binary_value_(binary_value) {}
+  explicit FileEventHandler(const std::string& binary) : binary_(binary) {}
 
   void on_fidl_error(fidl::UnbindInfo info) override {
     if (!info.ok()) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
-           binary_value_.c_str(), info.FormatDescription().c_str());
+      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary_.data(),
+           info.FormatDescription().data());
     }
   }
 
  private:
-  const std::string& binary_value_;
+  std::string binary_;
 };
 
 }  // namespace
@@ -40,16 +40,18 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
 zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, std::string binary, zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
-    LOGF(ERROR, "Failed to start driver, could not load library: %s", dlerror());
+    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not load library: %s", binary.data(),
+         dlerror());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  auto record = static_cast<DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
+  auto record = static_cast<const DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
   if (record == nullptr) {
-    LOGF(ERROR, "Failed to start driver, driver record not found");
+    LOGF(ERROR, "Failed to start driver '/pkg/%s', driver record not found", binary.data());
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   if (record->version != 1) {
-    LOGF(ERROR, "Failed to start driver, unknown driver record version: %lu", record->version);
+    LOGF(ERROR, "Failed to start driver '/pkg/%s', unknown driver record version: %lu",
+         binary.data(), record->version);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
   return zx::ok(std::make_unique<Driver>(std::move(url), std::move(binary), library, record));
@@ -62,7 +64,8 @@ Driver::~Driver() {
   if (opaque_.has_value()) {
     zx_status_t status = record_->stop(*opaque_);
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to stop driver: %s", zx_status_get_string(status));
+      LOGF(ERROR, "Failed to stop driver '/pkg/%s': %s", binary_.data(),
+           zx_status_get_string(status));
     }
   }
   dlclose(library_);
@@ -173,7 +176,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
-         message->FormatDescription().c_str());
+         message->FormatDescription().data());
     completer.Close(message->status());
     return;
   }
@@ -208,7 +211,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
 
     auto converted_message =
         std::make_unique<fidl::OutgoingToIncomingMessage>(message->GetOutgoingMessage());
-    if (converted_message->status() != ZX_OK) {
+    if (!converted_message->ok()) {
       completer.Close(converted_message->status());
       return;
     }
@@ -228,7 +231,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
         if (!info.ok() && info.reason() != fidl::Reason::kPeerClosed) {
           LOGF(WARNING, "Unexpected stop of driver '/pkg/%s': %s", driver->binary().data(),
-               info.FormatDescription().c_str());
+               info.FormatDescription().data());
         }
         // Task to stop the driver. Post this to the driver dispatcher thread.
         auto stop_task = [this, driver] {
