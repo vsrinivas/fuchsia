@@ -246,6 +246,37 @@ driver_bind_rules("xhci-bind") {
   ]
 }
 
+driver_bind_rules("astro-dai-test-in-bind") {
+  rules = "bind/astro-dai-test-in.bind"
+  header_output = "astro-dai-test-in-bind.h"
+  bind_output = "astro-dai-test-in-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.dai",
+  ]
+}
+
+driver_bind_rules("astro-dai-test-out-bind") {
+  rules = "bind/astro-dai-test-out.bind"
+  header_output = "astro-dai-test-out-bind.h"
+  bind_output = "astro-dai-test-out-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.dai",
+  ]
+}
+
+driver_bind_rules("audio-codec-tas27xx-bind") {
+  rules = "bind/audio-codec-tas27xx.bind"
+  header_output = "audio-codec-tas27xx-bind.h"
+  bind_output = "audio-codec-tas27xx-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -289,12 +320,15 @@ driver_module("astro-driver") {
     ":astro-bluetooth-bind_header",
     ":astro-buttons-bind_header",
     ":astro-cpu-bind_header",
+    ":astro-dai-test-in-bind_header",
+    ":astro-dai-test-out-bind_header",
     ":astro-display-bind_header",
     ":astro-mali-bind_header",
     ":astro-pwm-bind_header",
     ":astro-securemem-bind_header",
     ":astro-tee-bind_header",
     ":astro-video-bind_header",
+    ":audio-codec-tas27xx-bind_header",
     ":dwc2-phy-bind_header",
     ":ft3x27-touch-bind_header",
     ":gpio-light-bind_header",

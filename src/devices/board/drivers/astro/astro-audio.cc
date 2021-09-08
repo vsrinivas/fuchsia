@@ -18,6 +18,19 @@
 
 #include "astro-gpios.h"
 #include "astro.h"
+#include "src/devices/board/drivers/astro/audio-codec-tas27xx-bind.h"
+
+
+#ifdef ENABLE_BT
+#ifdef ENABLE_DAI_MODE
+#ifdef ENABLE_DAI_TEST
+#include "src/devices/board/drivers/astro/astro-dai-test-in-bind.h"
+#include "src/devices/board/drivers/astro/astro-dai-test-out-bind.h"
+#endif
+#else
+static const device_fragment_t tdm_pcm_fragments[] = {};
+#endif
+#endif
 
 // Enables BT PCM audio.
 #define ENABLE_BT
@@ -76,17 +89,6 @@ static const pbus_bti_t tdm_btis[] = {
     },
 };
 
-static const zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, I2C_AUDIO_CODEC_ADDR),
-};
-
-static const zx_bind_inst_t fault_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
-};
-
 static const zx_bind_inst_t enable_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
@@ -97,31 +99,6 @@ static const zx_bind_inst_t codec_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, kCodecVid),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, kCodecDid),
 };
-#ifdef ENABLE_BT
-#ifdef ENABLE_DAI_MODE
-#ifdef ENABLE_DAI_TEST
-static const zx_bind_inst_t dai_out_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DAI),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DAI_OUT),
-};
-static const zx_bind_inst_t dai_in_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DAI),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DAI_IN),
-};
-#endif
-#endif
-#endif
-static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
-};
-
-static const device_fragment_part_t fault_gpio_fragment[] = {
-    {countof(fault_gpio_match), fault_gpio_match},
-};
 
 static const device_fragment_part_t enable_gpio_fragment[] = {
     {countof(enable_gpio_match), enable_gpio_match},
@@ -129,33 +106,10 @@ static const device_fragment_part_t enable_gpio_fragment[] = {
 static const device_fragment_part_t codec_fragment[] = {
     {countof(codec_match), codec_match},
 };
-#ifdef ENABLE_BT
-#ifdef ENABLE_DAI_MODE
-#ifdef ENABLE_DAI_TEST
-static const device_fragment_part_t dai_out_fragment[] = {
-    {countof(dai_out_match), dai_out_match},
-};
-static const device_fragment_part_t dai_in_fragment[] = {
-    {countof(dai_in_match), dai_in_match},
-};
-static const device_fragment_t dai_test_out_fragments[] = {
-    {"dai-out", countof(dai_out_fragment), dai_out_fragment},
-};
-static const device_fragment_t dai_test_in_fragments[] = {
-    {"dai-in", countof(dai_in_fragment), dai_in_fragment},
-};
-#endif
-#else
-static const device_fragment_t tdm_pcm_fragments[] = {};
-#endif
-#endif
+
 static const device_fragment_t tdm_i2s_fragments[] = {
     {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
     {"codec-01", countof(codec_fragment), codec_fragment},
-};
-static const device_fragment_t codec_fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio", countof(fault_gpio_fragment), fault_gpio_fragment},
 };
 
 zx_status_t Astro::AudioInit() {
@@ -265,6 +219,9 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.irq_list = frddr_a_irqs;
     tdm_dev.irq_count = countof(frddr_a_irqs);
+
+    // TODO(fxb/84194): Migrate to the composite bind rules once dynamic bind rules are
+    // available.
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
                                       countof(tdm_pcm_fragments), nullptr);
 #endif
@@ -290,8 +247,8 @@ zx_status_t Astro::AudioInit() {
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.spawn_colocated = false;
-    comp_desc.fragments = dai_test_out_fragments;
-    comp_desc.fragments_count = countof(dai_test_out_fragments);
+    comp_desc.fragments = astro_dai_test_out_fragments;
+    comp_desc.fragments_count = countof(astro_dai_test_out_fragments);
     comp_desc.primary_fragment = "dai-out", comp_desc.metadata_list = test_metadata;
     comp_desc.metadata_count = countof(test_metadata);
     status = DdkAddComposite("astro-dai-test-out", &comp_desc);
@@ -333,8 +290,8 @@ zx_status_t Astro::AudioInit() {
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.spawn_colocated = false;
-    comp_desc.fragments = codec_fragments;
-    comp_desc.fragments_count = countof(codec_fragments);
+    comp_desc.fragments = audio_codec_tas27xx_fragments;
+    comp_desc.fragments_count = countof(audio_codec_tas27xx_fragments);
     comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
     comp_desc.metadata_count = countof(codec_metadata);
@@ -492,8 +449,8 @@ zx_status_t Astro::AudioInit() {
   comp_desc.props = props;
   comp_desc.props_count = countof(props);
   comp_desc.spawn_colocated = false;
-  comp_desc.fragments = dai_test_in_fragments;
-  comp_desc.fragments_count = countof(dai_test_in_fragments);
+  comp_desc.fragments = astro_dai_test_in_fragments;
+  comp_desc.fragments_count = countof(astro_dai_test_in_fragments);
   comp_desc.primary_fragment = "dai-in";
   comp_desc.metadata_list = test_metadata;
   comp_desc.metadata_count = countof(test_metadata);
