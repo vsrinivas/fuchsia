@@ -376,7 +376,7 @@ template("clang_toolchain") {
       }
 
       # Possibly enable remote building for the rustc command.
-      command = _rustc_wrapper
+      command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}}$ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
