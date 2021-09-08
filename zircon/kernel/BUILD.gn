@@ -15,14 +15,6 @@ import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/lib/version/version_string.gni")
 import("params.gni")
 
-declare_args() {
-  # **TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
-  # If true, use the new "physboot" booting path for the Zircon kernel.
-  # **Do not set this to `false` without filing a bug!**
-  # **NOTE: This option will be removed soon!**
-  use_physboot = true
-}
-
 if (current_cpu == "x64") {
   declare_args() {
     # **TODO(fxbug.dev/32255): This is a temporary switch that will be removed.**
@@ -633,53 +625,30 @@ if (is_kernel) {
     ldflags = [ "-Wl,--build-id=none" ]
   }
 
-  # Finally, extract the raw image (no ELF headers), which includes its own
+  # Next, extract the raw image (no ELF headers), which includes its own
   # embedded headers to make it a ZBI.
-  image_binary("kernel") {
+  image_binary("zbizircon") {
     visibility = [ ":*" ]
 
     deps = [ ":image" ]
 
-    output_dir = root_out_dir
     output_extension = "zbi"
-    if (!use_physboot) {
-      output_path = rebase_path("$output_dir/$target_name.$output_extension",
-                                root_build_dir)
-      metadata = {
-        # For the //:images build_api_module().
-        images = [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = "kernel"
-            tags = [ "incomplete" ]
-            type = "zbi"
-            path = output_path
-            cpu = current_cpu
-          },
-        ]
-
-        # Used by the zbi() template. This metadata makes the kernel act as a zbi_input()
-        # target so it can be a dependency of a zbi() target to get into the image.
-        zbi_input_barrier = []
-        zbi_input_args = [
-          "--type=container",
-          output_path,
-        ]
-      }
-    }
   }
 
-  zbi_input("vmzircon") {
+  # Then that gets compressed to become the ZBI_TYPE_KERNEL_STORAGE payload.
+  # (In future, the payload will include other files as well.)
+  zbi_input("zbizircon.input") {
     type = "kernel"
-    sources = get_target_outputs(":kernel")
-    deps = [ ":kernel" ]
+    sources = get_target_outputs(":zbizircon")
+    deps = [ ":zbizircon" ]
 
     # The kernel image is small enough that maximum compression is quick enough
     # at build time, so always get the smallest size available.
     args = [ "--compressed=max" ]
   }
 
-  zbi("physzircon") {
+  # The final kernel ZBI combines physboot with that kernel storage payload.
+  zbi("kernel") {
     deps = []
 
     # **TODO(fxbug.dev/32255): Remove the build argument when nobody needs it.
@@ -692,7 +661,7 @@ if (is_kernel) {
     }
 
     deps += [
-      ":vmzircon",
+      ":zbizircon.input",
       "phys:physboot",
     ]
 
@@ -716,12 +685,7 @@ if (is_kernel) {
   }
 } else {
   group("kernel") {
-    if (use_physboot) {
-      kernel = ":physzircon"
-    } else {
-      kernel = ":kernel"
-    }
-    public_deps = [ "$kernel(//zircon/kernel:kernel_$target_cpu)" ]
+    public_deps = [ ":kernel(//zircon/kernel:kernel_$target_cpu)" ]
   }
 
   group("tests") {
