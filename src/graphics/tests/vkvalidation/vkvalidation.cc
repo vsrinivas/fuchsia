@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
+
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
@@ -36,7 +38,15 @@ VkBool32 debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeve
   return VK_FALSE;
 }
 
-void test_validation_layer(const char* layer_name) {
+// If |from_file| is set, then the VkLayer_override.json in the package will be used to enable the
+// validation layers.
+void test_validation_layer(const char* layer_name, bool from_file) {
+  fit::deferred_callback unset_callback;
+  if (from_file) {
+    setenv("XDG_CONFIG_DIRS", "/pkg/data/test-xdg", false);
+    // Unset once this test is finished to avoid affecting other tests.
+    unset_callback = fit::defer_callback([] { unsetenv("XDG_CONFIG_DIRS"); });
+  }
   uint32_t instance_extension_count;
   EXPECT_EQ(VK_SUCCESS,
             vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr));
@@ -75,7 +85,11 @@ void test_validation_layer(const char* layer_name) {
                                        .pNext = nullptr,
                                        .apiVersion = VK_API_VERSION_1_1};
 
-  std::vector<const char*> layerNameArray{layer_name};
+  std::vector<const char*> layerNameArray;
+  if (!from_file) {
+    layerNameArray.push_back(layer_name);
+    EXPECT_EQ(nullptr, getenv("XDG_CONFIG_DIRS"));
+  }
   std::vector<const char*> instanceExtensionArray{VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 
   VkInstanceCreateInfo inst_info = {
@@ -165,4 +179,10 @@ void test_validation_layer(const char* layer_name) {
 
 }  // namespace
 
-TEST(ValidationLayers, KhronosValidation) { test_validation_layer("VK_LAYER_KHRONOS_validation"); }
+TEST(ValidationLayers, KhronosValidation) {
+  test_validation_layer("VK_LAYER_KHRONOS_validation", false);
+}
+
+TEST(ValidationLayers, KhronosValidationFromFile) {
+  test_validation_layer("VK_LAYER_KHRONOS_validation", true);
+}

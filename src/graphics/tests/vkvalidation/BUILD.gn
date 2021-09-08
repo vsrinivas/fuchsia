@@ -10,15 +10,21 @@ executable("vkvalidation_bin") {
   output_name = "vkvalidation"
   sources = [ "vkvalidation.cc" ]
   deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
   ]
+}
+resource("override") {
+  sources = [ "VkLayer_override.json" ]
+  outputs = [ "data/test-xdg/vulkan/implicit_layer.d/VkLayer_override.json" ]
 }
 
 fuchsia_component("vkvalidation_cmp") {
   testonly = true
   component_name = "vkvalidation"
   deps = [
+    ":override",
     ":vkvalidation_bin",
     "//src/lib/vulkan/validation_layers",
   ]
