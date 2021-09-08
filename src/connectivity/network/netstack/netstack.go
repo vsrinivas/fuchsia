@@ -17,7 +17,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
@@ -143,10 +142,6 @@ type Netstack struct {
 	}
 
 	stats stats
-
-	// TODO(https://fxbug.dev/68274): Remove this after moving all
-	// filter methods to fuchsia.net.filter.
-	filter *filter.Filter
 
 	endpoints endpointsMap
 

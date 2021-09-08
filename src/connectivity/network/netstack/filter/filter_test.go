@@ -708,22 +708,22 @@ func TestFilterEnableInterface(t *testing.T) {
 		{
 			name: "Enable",
 			actions: func(f *Filter) {
-				f.EnableInterface(nicID)
+				f.enableInterface(nicID)
 			},
 			enabled: true,
 		},
 		{
 			name: "Enable, then Disable",
 			actions: func(f *Filter) {
-				f.EnableInterface(nicID)
-				f.DisableInterface(nicID)
+				f.enableInterface(nicID)
+				f.disableInterface(nicID)
 			},
 			enabled: false,
 		},
 		{
 			name: "Enable, then RemovedNIC",
 			actions: func(f *Filter) {
-				f.EnableInterface(nicID)
+				f.enableInterface(nicID)
 				f.RemovedNIC(nicID)
 			},
 			enabled: false,
@@ -743,9 +743,9 @@ func TestFilterEnableInterface(t *testing.T) {
 			f := New(s)
 			test.actions(f)
 
-			enabled := f.IsInterfaceEnabled(nicName)
+			enabled := !f.filterDisabledNICMatcher.nicDisabled(nicName)
 			if got, want := enabled, test.enabled; got != want {
-				t.Errorf("IsInterfaceEnabled(%d): got enabled = %t, want = %t", nicID, got, want)
+				t.Errorf("got enabled = %t, want = %t", got, want)
 			}
 		})
 	}

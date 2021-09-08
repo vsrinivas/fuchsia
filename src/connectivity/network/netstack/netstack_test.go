@@ -25,7 +25,6 @@ import (
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
-	fidlfilter "fidl/fuchsia/net/filter"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -33,7 +32,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -206,17 +204,6 @@ func TestStackNICRemove(t *testing.T) {
 		t.Errorf("GetMainNICAddress(%d, header.IPv6ProtocolNumber): %s", ifs.nicid, err)
 	}
 
-	nicName := ns.stack.FindNICNameFromID(ifs.nicid)
-	if enabled := ns.filter.IsInterfaceEnabled(nicName); enabled {
-		t.Errorf("got ns.filter.IsInterfaceEnabled(%d): got enabled = true, want = false", ifs.nicid)
-	}
-	if status := ns.filter.EnableInterface(ifs.nicid); status != fidlfilter.StatusOk {
-		t.Errorf("got ns.filter.IsInterfaceEnabled(%d): status = %d", ifs.nicid, status)
-	}
-	if enabled := ns.filter.IsInterfaceEnabled(nicName); !enabled {
-		t.Errorf("got ns.filter.IsInterfaceEnabled(%s): got enabled  = false, want = true", nicName)
-	}
-
 	if t.Failed() {
 		t.FailNow()
 	}
@@ -238,11 +225,6 @@ func TestStackNICRemove(t *testing.T) {
 	}
 	if nicRemovedHandler.removedNICID != ifs.nicid {
 		t.Errorf("got nicRemovedHandler.removedNICID = %d, want = %d", nicRemovedHandler.removedNICID, ifs.nicid)
-	}
-
-	// Removing the NIC should disable the filter on its ifs.nicid.
-	if enabled := ns.filter.IsInterfaceEnabled(nicName); enabled {
-		t.Errorf("got ns.filter.IsInterfaceEnabled(%s) = true, want = false", nicName)
 	}
 
 	// Wait for the controller to stop and free up its resources.
@@ -978,7 +960,6 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 
 func TestStaticIPConfiguration(t *testing.T) {
 	ns, _ := newNetstack(t)
-	ns.filter = filter.New(ns.stack)
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := fidlnet.Subnet{Addr: addr, PrefixLen: 32}
@@ -1130,20 +1111,15 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 		},
 		Clock: clock,
 	})
-	f := filter.New(stk)
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
 		// DNS configuration.
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
-		nicRemovedHandlers: []NICRemovedHandler{h, f},
+		nicRemovedHandlers: []NICRemovedHandler{h},
 	}
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
-
-	// TODO(https://fxbug.dev/68274): Remove this after moving all
-	// filter methods to fuchsia.net.filter.
-	ns.filter = f
 
 	t.Cleanup(func() {
 		for _, nic := range ns.stack.NICInfo() {

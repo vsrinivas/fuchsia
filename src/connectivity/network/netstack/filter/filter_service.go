@@ -38,11 +38,11 @@ func AddOutgoingService(ctx *component.Context, f *Filter) {
 }
 
 func (f *filterImpl) EnableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
-	return f.filter.EnableInterface(tcpip.NICID(id)), nil
+	return f.filter.enableInterface(tcpip.NICID(id)), nil
 }
 
 func (f *filterImpl) DisableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
-	return f.filter.DisableInterface(tcpip.NICID(id)), nil
+	return f.filter.disableInterface(tcpip.NICID(id)), nil
 }
 
 func (f *filterImpl) GetRules(fidl.Context) ([]filter.Rule, uint32, filter.Status, error) {

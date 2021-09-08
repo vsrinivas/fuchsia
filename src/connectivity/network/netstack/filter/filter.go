@@ -58,7 +58,7 @@ func New(s *stack.Stack) *Filter {
 	return f
 }
 
-func (f *Filter) EnableInterface(id tcpip.NICID) filter.Status {
+func (f *Filter) enableInterface(id tcpip.NICID) filter.Status {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
 		return filter.StatusErrNotFound
@@ -69,7 +69,7 @@ func (f *Filter) EnableInterface(id tcpip.NICID) filter.Status {
 	return filter.StatusOk
 }
 
-func (f *Filter) DisableInterface(id tcpip.NICID) filter.Status {
+func (f *Filter) disableInterface(id tcpip.NICID) filter.Status {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
 		return filter.StatusErrNotFound
@@ -89,10 +89,6 @@ func (f *Filter) RemovedNIC(id tcpip.NICID) {
 			break
 		}
 	}
-}
-
-func (f *Filter) IsInterfaceEnabled(name string) bool {
-	return !f.filterDisabledNICMatcher.nicDisabled(name)
 }
 
 func (f *Filter) lastRules() ([]filter.Rule, uint32) {

@@ -335,7 +335,6 @@ func Main() {
 	ndpDisp.dynamicAddressSourceTracker.init(ns)
 	ndpDisp.start(ctx)
 
-	ns.filter = f
 	filter.AddOutgoingService(appCtx, f)
 
 	if err := ns.addLoopback(); err != nil {
