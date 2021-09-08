@@ -289,6 +289,19 @@ class TestConnection {
     magma_release_buffer(connection_, buffer);
   }
 
+  void BufferImportInvalid() {
+    ASSERT_TRUE(connection_);
+
+    constexpr uint32_t kInvalidHandle = 0xabcd1234;
+    magma_buffer_t buffer;
+#if defined(__Fuchsia__)
+    constexpr magma_status_t kExpectedStatus = MAGMA_STATUS_INVALID_ARGS;
+#elif defined(__linux__)
+    constexpr magma_status_t kExpectedStatus = MAGMA_STATUS_INTERNAL_ERROR;
+#endif
+    ASSERT_EQ(kExpectedStatus, magma_import(connection_, kInvalidHandle, &buffer));
+  }
+
   void BufferImport(uint32_t handle, uint64_t id) {
     ASSERT_TRUE(connection_);
 
@@ -416,6 +429,9 @@ class TestConnection {
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
+
+    if (semaphore_count == 0)
+      return;
 
     magma_signal_semaphore(items[0].semaphore);
 
@@ -981,6 +997,8 @@ TEST(MagmaAbi, BufferMap) {
   test.BufferMap();
 }
 
+TEST(MagmaAbi, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
+
 TEST(MagmaAbi, BufferImportExport) {
   TestConnection test1;
   TestConnection test2;
@@ -1002,11 +1020,14 @@ TEST(MagmaAbi, SemaphoreImportExport) {
 
 TEST(MagmaAbi, ImmediateCommands) { TestConnection().ImmediateCommands(); }
 
-TEST(MagmaAbi, PollWithNotificationChannel) {
-  TestConnection().PollWithNotificationChannel(1);
-  TestConnection().PollWithNotificationChannel(2);
-  TestConnection().PollWithNotificationChannel(3);
+class MagmaAbiPoll : public testing::TestWithParam<uint32_t> {};
+
+TEST_P(MagmaAbiPoll, PollWithNotificationChannel) {
+  uint32_t semaphore_count = GetParam();
+  TestConnection().PollWithNotificationChannel(semaphore_count);
 }
+
+INSTANTIATE_TEST_SUITE_P(MagmaAbiPoll, MagmaAbiPoll, ::testing::Values(0, 1, 2, 3));
 
 TEST(MagmaAbi, PollWithTestChannel) { TestConnection().PollWithTestChannel(); }
 

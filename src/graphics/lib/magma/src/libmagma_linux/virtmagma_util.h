@@ -10,8 +10,6 @@
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 
-#include <map>
-
 #include "src/graphics/lib/magma/src/magma_util/macros.h"
 #include "virtmagma.h"
 
@@ -91,7 +89,6 @@ class VirtmagmaObject {
   T Wrap() { return reinterpret_cast<T>(this); }
   T& Object() { return object_; }
   U& Parent() { return parent_; }
-  void Destroy() { delete this; }
 
  private:
   VirtmagmaObject(T object, U parent)
@@ -101,16 +98,9 @@ class VirtmagmaObject {
   int magic_;
 };
 
-typedef VirtmagmaObject<magma_connection_t, int32_t, 0x1111>
-    virtmagma_connection_t;
+typedef VirtmagmaObject<magma_connection_t, int32_t, 0x1111> virtmagma_connection_t;
 typedef VirtmagmaObject<magma_buffer_t, magma_connection_t, 0x2222> virtmagma_buffer_t;
 typedef VirtmagmaObject<magma_semaphore_t, magma_connection_t, 0x3333> virtmagma_semaphore_t;
-typedef VirtmagmaObject<magma_handle_t, int32_t, 0x4444> virtmagma_handle_t;
 typedef VirtmagmaObject<magma_device_t, OwnedFd, 0x5555> virtmagma_device_t;
-
-// TODO(fxbug.dev/13228): support an object that is a parent of magma_connection_t
-// This class is a temporary workaround to support magma APIs that do not
-// pass in generic objects capable of holding file descriptors.
-std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable();
 
 #endif  // SRC_GRAPHICS_LIB_MAGMA_SRC_LIBMAGMA_LINUX_VIRTMAGMA_UTIL_H_

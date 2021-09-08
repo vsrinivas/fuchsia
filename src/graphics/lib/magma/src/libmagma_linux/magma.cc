@@ -4,19 +4,25 @@
 
 #include "magma.h"
 
+#include <assert.h>
 #include <sys/mman.h>
 
+#include <mutex>
 #include <vector>
 
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/graphics/lib/magma/src/libmagma_linux/virtmagma_util.h"
 
-// TODO(fxbug.dev/13228): support an object that is a parent of magma_connection_t
-// This class is a temporary workaround to support magma APIs that do not
-// pass in generic objects capable of holding file descriptors.
-std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable() {
-  static std::map<uint32_t, virtmagma_handle_t*> ht;
-  return ht;
+static std::once_flag gOnceFlag;
+static int gDefaultFd;
+
+// Most magma interfaces get their file descriptor from a wrapped parameter (device, connection,
+// etc) (or initially from the file descriptor "handle" in magma_device_import), but some interfaces
+// don't have any such parameter; for those, we open the default device, and never close it.
+static int get_default_fd() {
+  std::call_once(gOnceFlag, [] { gDefaultFd = open("/dev/magma0", O_RDWR); });
+  assert(gDefaultFd >= 0);
+  return gDefaultFd;
 }
 
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
@@ -46,17 +52,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
       }
 
       case MAGMA_POLL_TYPE_HANDLE: {
-        auto iter = GlobalHandleTable().find(items[i].handle);
-        if (iter == GlobalHandleTable().end()) {
-          return MAGMA_STATUS_INVALID_ARGS;  // Not found
-        }
-
-        virtmagma_handle_t* handle = iter->second;
-        unwrapped_items[i].handle = handle->Object();
-
-        if (i == 0) {
-          file_descriptor = handle->Parent();
-        }
+        // Handles are not wrapped.
         break;
       }
     }
@@ -69,6 +65,10 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   // Send byte count so kernel knows how much memory to copy
   request.count = count * sizeof(magma_poll_item_t);
   request.timeout_ns = timeout_ns;
+
+  if (file_descriptor == -1) {
+    file_descriptor = get_default_fd();
+  }
 
   if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
                               sizeof(response)))

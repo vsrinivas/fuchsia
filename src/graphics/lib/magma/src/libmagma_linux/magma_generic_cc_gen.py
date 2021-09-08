@@ -130,15 +130,18 @@ def generate_copy_out(outputs, returns):
     return ret
 
 
-# Generate code to unwrap applicable input objects
+# Generate code to unwrap applicable input objects.
+# Wrapped objects contain the file descriptor of the device imported via magma_device_import, since
+# connections are created from devices, and buffers and semaphores are created from connections.
+# Handles are not wrapped because a handle (file descriptor) may be passed into the process.
+# Interfaces which can't extract a file descriptor from a wrapped parameter must have a manual
+# implementation that gets the fd from elsewhere.
 def generate_unwrap(export, needs_connection):
     ret = ''
     have_fd = False
     for argument in export['arguments']:
         type = argument['type']
         name = argument['name']
-        if name == 'file_descriptor':
-            have_fd = True
         if type == 'magma_connection_t':
             if needs_connection:
                 ret += '    auto _connection = ' + name + ';\n'
@@ -147,14 +150,14 @@ def generate_unwrap(export, needs_connection):
             if not have_fd:
                 ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent();\n'
                 have_fd = True
-        if argument['type'] == 'magma_buffer_t':
+        if type == 'magma_buffer_t':
             ret += '    auto _' + name + '_wrapped = virtmagma_buffer_t::Get(' + name + ');\n'
             ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
             if not have_fd:
                 ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
                 ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
                 have_fd = True
-        if argument['type'] == 'magma_semaphore_t':
+        if type == 'magma_semaphore_t':
             ret += '    auto _' + name + '_wrapped = virtmagma_semaphore_t::Get(' + name + ');\n'
             ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
             if not have_fd:
@@ -167,16 +170,8 @@ def generate_unwrap(export, needs_connection):
             if not have_fd:
                 ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent().fd();\n'
                 have_fd = True
-        sub = 'handle'
-        if name[-len(sub):] == sub:
-            ret += '    auto _' + name + '_wrapped = GlobalHandleTable().find(' + name + ');\n'
-            ret += '    if (_' + name + '_wrapped == GlobalHandleTable().end())\n'
-            ret += '        ' + error_return(export) + ';\n'
-            ret += '    ' + name + ' = _' + name + '_wrapped->second->Object();\n'
-            if not have_fd:
-                ret += '    int32_t file_descriptor = _' + name + '_wrapped->second->Parent();\n'
-                have_fd = True
         if type == 'magma_handle_t':
+            # Necessary for magma_device_import, but may be incorrect for other interfaces.
             if not have_fd:
                 ret += '    int32_t file_descriptor = ' + name + ';\n'
                 have_fd = True
@@ -204,12 +199,6 @@ def generate_wrap(export):
             needs_connection = True
         if type == 'magma_device_t*':
             ret += '    *' + name + ' = virtmagma_device_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
-        sub = 'handle_out'
-        if name[-len(sub):] == sub:
-            ret += '    GlobalHandleTable()[*' + name + '] = virtmagma_handle_t::Create(*' + name + ', file_descriptor);\n'
-
-    if export['type'] == 'magma_handle_t':
-        ret += '    GlobalHandleTable()[result_return] = virtmagma_handle_t::Create(result_return, file_descriptor);\n'
 
     return ret, needs_connection
 
