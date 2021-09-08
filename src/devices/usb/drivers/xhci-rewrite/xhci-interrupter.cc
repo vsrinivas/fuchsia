@@ -11,21 +11,41 @@
 
 namespace usb_xhci {
 
-zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
-                               ddk::MmioView mmio_view, UsbXhci* hci) {
+zx_status_t Interrupter::Init(uint32_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+                              const RuntimeRegisterOffset& offset, uint32_t erst_max,
+                              DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
+                              uint64_t* dcbaa) {
+  if (active_) {
+    // Already active;
+    return ZX_OK;
+  }
   hci_ = hci;
   interrupter_ = interrupter;
-  ERDP erdp = ERDP::Get(offset, interrupter).ReadFrom(&mmio_view);
+  return event_ring_.Init(page_size, hci_->bti(), buffer, hci->Is32BitController(), erst_max,
+                          ERSTSZ::Get(offset, interrupter_).ReadFrom(buffer),
+                          ERDP::Get(offset, interrupter_).ReadFrom(buffer),
+                          IMAN::Get(offset, interrupter_).FromValue(0), hci_->CapLength(),
+                          HCSPARAMS1::Get().ReadFrom(buffer), hci_->GetCommandRing(),
+                          doorbell_offset, hci, hcc_params_1, dcbaa);
+}
+
+zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset, ddk::MmioView mmio_view) {
+  if (active_) {
+    // Already active;
+    return ZX_OK;
+  }
+  ERDP erdp = ERDP::Get(offset, interrupter_).ReadFrom(&mmio_view);
   if (!event_ring_.erdp_phys()) {
     return ZX_ERR_BAD_STATE;
   }
   erdp.set_reg_value(event_ring_.erdp_phys());
   erdp.WriteTo(&mmio_view);
-  ERSTBA ba = ERSTBA::Get(offset, interrupter).ReadFrom(&mmio_view);
+  ERSTBA ba = ERSTBA::Get(offset, interrupter_).ReadFrom(&mmio_view);
   // This enables the interrupter
   ba.set_Pointer(event_ring_.erst()).WriteTo(&mmio_view);
-  IMAN::Get(offset, interrupter).FromValue(0).set_IE(1).WriteTo(&mmio_view);
+  IMAN::Get(offset, interrupter_).FromValue(0).set_IE(1).WriteTo(&mmio_view);
   thread_ = std::thread([this]() { IrqThread(); });
+  active_ = true;
   return ZX_OK;
 }
 
@@ -35,7 +55,7 @@ TRBPromise Interrupter::Timeout(zx::time deadline) {
       async_loop_->dispatcher(),
       [completer = std::move(bridge.completer), this]() mutable {
         completer.complete_ok(nullptr);
-        hci_->RunUntilIdle();
+        hci_->RunUntilIdle(interrupter_);
       },
       deadline);
   if (status != ZX_OK) {
@@ -74,7 +94,6 @@ zx_status_t Interrupter::IrqThread() {
       async_loop_->Quit();
       return;
     }
-    hci_->RunUntilIdle();
     irq_.ack();
   });
   irq.Begin(async_loop_->dispatcher());

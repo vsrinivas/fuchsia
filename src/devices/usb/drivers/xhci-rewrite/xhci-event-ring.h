@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
 
 #include <lib/dma-buffer/buffer.h>
 #include <lib/mmio/mmio.h>
@@ -19,8 +19,8 @@
 
 #include "registers.h"
 #include "xhci-context.h"
-#include "xhci-port-state.h"
 #include "xhci-hub.h"
+#include "xhci-port-state.h"
 
 namespace usb_xhci {
 
@@ -163,7 +163,7 @@ class EventRing {
   // Current Cycle State
   bool ccs_ = true;
   fbl::Mutex segment_mutex_;
-  size_t trbs_ __TA_GUARDED(segment_mutex_);
+  size_t trbs_ __TA_GUARDED(segment_mutex_) = 0;
   EventRingSegmentTable segments_ __TA_GUARDED(segment_mutex_);
   // BTI used for obtaining physical memory addresses.
   // This is valid for the lifetime of the UsbXhci driver,
@@ -197,4 +197,4 @@ class EventRing {
 };
 }  // namespace usb_xhci
 
-#endif // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_

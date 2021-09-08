@@ -670,9 +670,18 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   ;
 }
 
-zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
-                               ddk::MmioView interrupter_regs, UsbXhci* hci) {
+size_t EventRing::GetPressure() { return 0; }
+
+zx_status_t Interrupter::Init(uint32_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+                              const RuntimeRegisterOffset& offset, uint32_t erst_max,
+                              DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
+                              uint64_t* dcbaa) {
   hci_ = hci;
+  return ZX_OK;
+}
+
+zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
+                               ddk::MmioView interrupter_regs) {
   return ZX_OK;
 }
 

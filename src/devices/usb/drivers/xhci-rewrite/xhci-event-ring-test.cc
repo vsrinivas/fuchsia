@@ -267,7 +267,7 @@ zx_status_t UsbXhci::InitThread() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  return static_cast<EventRingHarness*>(GetTestHarness())->InitRing(&interrupters_[0].ring());
+  return static_cast<EventRingHarness*>(GetTestHarness())->InitRing(&interrupter(0).ring());
 }
 
 uint64_t UsbXhci::UsbHciGetCurrentFrame() { return 0; }
@@ -318,6 +318,8 @@ size_t UsbXhci::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_
 
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
                                  const usb_request_complete_callback_t* complete_cb) {}
+
+uint32_t UsbXhci::InterrupterMapping() { return 0; }
 
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
                                ddk::MmioBuffer* mmio, const UsbXhci& hci) {

@@ -126,10 +126,9 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   }
 
   // Allocate the transfer ring (see section 4.9)
-  // TODO (bbosak): Assign an Interrupter from the pool
   fbl::AutoLock _(&transaction_lock_);
-  status = tr_.Init(hci->GetPageSize(), hci->bti(), event_ring, hci->Is32BitController(),
-                    mmio, *hci);
+  status =
+      tr_.Init(hci->GetPageSize(), hci->bti(), event_ring, hci->Is32BitController(), mmio, *hci);
   if (status != ZX_OK) {
     return fpromise::make_result_promise(
                fpromise::result<TRB*, zx_status_t>(fpromise::error(status)))
