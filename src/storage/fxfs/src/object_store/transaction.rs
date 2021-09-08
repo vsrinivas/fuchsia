@@ -598,6 +598,7 @@ impl std::fmt::Debug for Transaction<'_> {
             .field("mutations", &self.mutations)
             .field("txn_locks", &self.txn_locks)
             .field("read_locks", &self.read_locks)
+            .field("reservation", &self.allocator_reservation)
             .finish()
     }
 }

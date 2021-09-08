@@ -315,9 +315,7 @@ impl File for FxFile {
 
     async fn close(&self) -> Result<(), Status> {
         if self.has_written.load(Ordering::Relaxed) {
-            if let Err(e) = self.handle.flush().await {
-                log::warn!("{} Flush failed: {:?}", self.object_id(), e);
-            }
+            self.handle.flush().await.map_err(map_to_status)?;
         }
         self.open_count_sub_one();
         Ok(())

@@ -188,6 +188,21 @@ impl Reservation {
         std::mem::take(&mut *self.inner.lock().unwrap()).amount
     }
 
+    /// Returns a partial amount of the reservation.  The caller is responsible for maintaining
+    /// consistency, i.e. updating counters, etc, on the bytes taken out by this.
+    /// If the reservation is smaller than |amount|, returns less than the requested amount.
+    pub fn take_some(&self, amount: u64) -> u64 {
+        let mut inner = self.inner.lock().unwrap();
+        let taken = std::cmp::min(amount, inner.amount);
+        inner.amount -= taken;
+        taken
+    }
+
+    /// Returns the entire amount of the reservation.
+    pub fn take_reservation(&self) -> Self {
+        Self::new(self.allocator.clone(), self.take())
+    }
+
     /// Returns some of the reservation back to the allocator.  Asserts that the amount with a hold
     /// is still valid afterwards.
     pub fn give_back(&self, amount: u64) {
