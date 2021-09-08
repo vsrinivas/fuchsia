@@ -22,7 +22,7 @@ common_vars = {
 
 zx_library("abr") {
   forward_variables_from(common_vars, "*")
-  sdk_publishable = true
+  sdk_publishable = "experimental"
 }
 
 # In-tree library.

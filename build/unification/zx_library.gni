@@ -184,11 +184,21 @@ template("zx_library") {
           name = invoker.sdk_name
         }
         target_type = "sdk_source_set"
-        extra_target_args = {
-          category = sdk_category
-          api = "//sdk/lib/$target_name/$target_name.api"
-          sdk_name = name
-          build_as_static = true
+        if (sdk_category == "public" || sdk_category == "partner") {
+          # API version checks are only relevant for public or partner APIs.
+          # Here, and in the similar code below.
+          extra_target_args = {
+            api = "//sdk/lib/$target_name/$target_name.api"
+            build_as_static = true
+            category = sdk_category
+            sdk_name = name
+          }
+        } else {
+          extra_target_args = {
+            category = sdk_category
+            sdk_name = name
+            build_as_static = true
+          }
         }
       } else {
         target_type = "static_library"
@@ -196,11 +206,19 @@ template("zx_library") {
     } else if (shape == "static") {
       if (sdkable) {
         target_type = "sdk_static_library"
-        extra_target_args = {
-          category = sdk_category
-          api = "//sdk/lib/$target_name/$target_name.api"
-          sdk_name = target_name
-          libcxx_linkage = "static"
+        if (sdk_category == "public" || sdk_category == "partner") {
+          extra_target_args = {
+            api = "//sdk/lib/$target_name/$target_name.api"
+            category = sdk_category
+            libcxx_linkage = "static"
+            sdk_name = target_name
+          }
+        } else {
+          extra_target_args = {
+            category = sdk_category
+            sdk_name = target_name
+            libcxx_linkage = "static"
+          }
         }
       } else {
         target_type = "static_library"
@@ -208,12 +226,20 @@ template("zx_library") {
     } else if (shape == "shared") {
       if (sdkable) {
         target_type = "sdk_shared_library"
-        extra_target_args = {
-          category = sdk_category
-          api = "//sdk/lib/$target_name/$target_name.api"
-          symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
-          sdk_name = target_name
-          libcxx_linkage = "static"
+        if (sdk_category == "public" || sdk_category == "partner") {
+          extra_target_args = {
+            api = "//sdk/lib/$target_name/$target_name.api"
+            category = sdk_category
+            libcxx_linkage = "static"
+            sdk_name = target_name
+            symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
+          }
+        } else {
+          extra_target_args = {
+            category = sdk_category
+            sdk_name = target_name
+            libcxx_linkage = "static"
+          }
         }
       } else {
         target_type = "shared_library"

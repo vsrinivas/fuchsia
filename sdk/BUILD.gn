@@ -514,8 +514,6 @@ sdk("modular_testing") {
 sdk("firmware") {
   category = "experimental"
 
-  api = "manifests/firmware.manifest"
-
   deps = [
     "//sdk/docs:firmware",
     "//src/firmware/lib/abr:abr_sdk",
