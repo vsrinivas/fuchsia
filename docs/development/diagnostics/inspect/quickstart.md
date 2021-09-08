@@ -364,7 +364,7 @@ See below for the quick start guide in your language of choice:
   {
       let node = root.create_child("name");
       {
-        node.record_uint(2); // no return
+        node.record_uint("persistent", 2); // no return
       }
       // The uint property will still be visible to readers.
   }
