@@ -7,12 +7,12 @@
     },
     "sandbox": {
         "dev": [
+            "class/gpu",
             "class/gpu-performance-counters",
             "mali/aml-gpu"
         ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry"

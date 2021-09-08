@@ -6,9 +6,11 @@
         "binary": "bin/mesa_integration_tests"
     },
     "sandbox": {
+        "dev": [
+            "class/gpu"
+        ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry"

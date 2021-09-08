@@ -7,11 +7,11 @@
     },
     "sandbox": {
         "dev": [
+            "class/gpu",
             "pci-00:02.0/intel_i915/intel-gpu-core"
         ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry"

@@ -7,10 +7,8 @@
     },
     "sandbox": {
         "dev": [
-            "aml-nna"
-        ],
-        "features": [
-            "vulkan"
+            "aml-nna",
+            "class/gpu"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry"

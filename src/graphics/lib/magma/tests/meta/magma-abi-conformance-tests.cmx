@@ -14,11 +14,11 @@
     },
     "sandbox": {
         "dev": [
+            "class/gpu",
             "class/gpu-performance-counters"
         ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sysmem.Allocator",

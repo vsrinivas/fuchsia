@@ -13,9 +13,11 @@
         "binary": "test/magma_info_test"
     },
     "sandbox": {
+        "dev": [
+            "class/gpu"
+        ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sysmem.Allocator",

@@ -13,9 +13,11 @@
         "binary": "bin/vxcopy"
     },
     "sandbox": {
+        "dev": [
+            "class/gpu"
+        ],
         "features": [
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry"

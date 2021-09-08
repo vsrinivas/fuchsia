@@ -1,14 +1,14 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/application.shard.cmx"
+        "//src/lib/vulkan/application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/virtio_magma"
     },
     "sandbox": {
-        "features": [
-            "vulkan"
+        "dev": [
+            "class/gpu"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry",
