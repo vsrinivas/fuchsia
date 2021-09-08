@@ -1,3 +1,4 @@
 {
-  "frame_scheduler_min_predicted_frame_duration_in_us" : 15000
+  "frame_scheduler_min_predicted_frame_duration_in_us" : 14000,
+  "flatland_buffer_collection_import_mode": "enforce_display_constraints"
 }
