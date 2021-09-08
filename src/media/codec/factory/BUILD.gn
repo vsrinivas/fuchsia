@@ -109,3 +109,33 @@ fuchsia_unittest_package("codec_detect_hw_decode_test") {
     ]
   }
 }
+
+fuchsia_test_component("codec_detect_hw_encode") {
+  manifest = "meta/codec_detect_hw_encode_test.cml"
+  deps = [ ":codec_detect_hw_encode_test_bin" ]
+}
+
+fuchsia_test_component("codec_detect_hw_decode") {
+  manifest = "meta/codec_detect_hw_decode_test.cml"
+  deps = [ ":codec_detect_hw_decode_test_bin" ]
+}
+
+fuchsia_test_package("codec_detect_hw_decode_test_v2") {
+  test_components = [ ":codec_detect_hw_decode" ]
+  test_specs = {
+    # test depends on hw decoder device being present
+    environments = [
+      sherlock_env,
+      astro_env,
+      vim3_env,
+    ]
+  }
+}
+
+fuchsia_test_package("codec_detect_hw_encode_test_v2") {
+  test_components = [ ":codec_detect_hw_encode" ]
+  test_specs = {
+    # test depends on hw encoder device being present
+    environments = [ sherlock_env ]
+  }
+}

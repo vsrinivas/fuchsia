@@ -41,6 +41,7 @@ group("tests") {
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",
     "//src/media/codec/factory:codec_detect_hw_decode_test",
+    "//src/media/codec/factory:codec_detect_hw_decode_test_v2",
   ]
 }
 
