@@ -29,7 +29,7 @@ mod testing;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["starnix"]).expect("failed to initialize logger");
+    diagnostics_log::init!();
     info!("main");
 
     // The root kernel object for this instance of Starnix.

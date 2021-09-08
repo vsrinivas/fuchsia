@@ -45,7 +45,7 @@ impl Scheduler {
     ///
     /// The task's `task.waiter` will be used to wake the task back up.
     pub fn add_suspended_task(&mut self, task: &Task) {
-        fuchsia_syslog::fx_log_info!("Suspending task: {}", task.id);
+        log::info!("Suspending task: {}", task.id);
         self.suspended_tasks.insert(task.id, task.waiter.clone());
     }
 

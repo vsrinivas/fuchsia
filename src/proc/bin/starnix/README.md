@@ -76,6 +76,22 @@ In the device logs you should see output like:
 [starnix, strace] INFO: -> 0x0
 ```
 
+### Viewing syscall logs
+
+There are two ways to get syscall logs:
+
+1. Edit starnix/logging.rs and change the strace log level from debug to info.
+2. Increase the log level using fx log flags. It looks like this:
+
+```sh
+$ fx log --severity TRACE --select core/*/starnix*#TRACE
+```
+
+Tests use a different runner with a bit of a different moniker:
+```
+$ fx log --severity TRACE --select core/test*/*/starnix*#TRACE
+```
+
 ## Testing
 
 ### Running the in-process unit tests

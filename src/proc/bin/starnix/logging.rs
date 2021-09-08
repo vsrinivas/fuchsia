@@ -16,7 +16,7 @@ macro_rules! not_implemented {
 #[macro_export]
 macro_rules! strace {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
-        log::info!(target: "strace", concat!("{}[{}] ", $fmt), $task.id, $task.command.read().to_string_lossy() $(, $($arg)*)?);
+        log::debug!(target: "strace", concat!("{}[{}] ", $fmt), $task.id, $task.command.read().to_string_lossy() $(, $($arg)*)?);
     )
 }
 
