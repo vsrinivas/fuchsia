@@ -86,7 +86,7 @@ class TestFixture : public ::gtest::RealLoopFixture {
 
   // Add an expected callback to the pending set.
   // Callbacks are expected to occur in the order in which they are added.
-  // Optionally, providew a custom function to invoke when the expected callback is triggered.
+  // Optionally, provide a custom function to invoke when the expected callback is triggered.
   auto AddCallback(const std::string& name);
   template <typename Callable>
   auto AddCallback(const std::string& name, Callable callback);

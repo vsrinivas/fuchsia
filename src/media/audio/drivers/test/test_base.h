@@ -18,6 +18,19 @@
 
 namespace media::audio::drivers::test {
 
+// We enable top-level methods (e.g. TestBase::RequestFormats, BasicTest::RequestStreamProperties,
+// AdminTest::RequestBuffer) to skip or produce multiple errors and then cause a test case to
+// exit-early once they return, even if no fatal errors were triggered.
+// Gtest defines NO macro for this case -- only ASSERT_NO_FATAL_FAILURE -- so we define our own.
+// Macro definition in headers is discouraged (at best), but this is used in local test code only.
+#define ASSERT_NO_FAILURE_OR_SKIP(statement, ...)          \
+  do {                                                     \
+    statement;                                             \
+    if (TestBase::HasFailure() || TestBase::IsSkipped()) { \
+      return;                                              \
+    }                                                      \
+  } while (0)
+
 enum DeviceType : uint16_t { Input = 0, Output = 1 };
 
 struct DeviceEntry {
@@ -73,7 +86,7 @@ class TestBase : public media::audio::test::TestFixture {
   // the supported formats, so this is implemented in the shared base class.
   void RequestFormats();
 
-  bool received_get_formats() const { return received_get_formats_; }
+  // TODO(fxbug.dev/83972): Consider a more functional style when validating formats
   const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& pcm_formats() const {
     return pcm_formats_;
   }
@@ -82,26 +95,31 @@ class TestBase : public media::audio::test::TestFixture {
     return stream_config_;
   }
 
-  void set_failed() { failed_ = true; }
-  bool failed() const { return failed_; }
+  const fuchsia::hardware::audio::PcmFormat& min_format() const { return min_format_; }
+  const fuchsia::hardware::audio::PcmFormat& max_format() const { return max_format_; }
+  void LogFormat(const fuchsia::hardware::audio::PcmFormat& format, std::string tag = "");
 
   void WaitForError(zx::duration wait_duration = kWaitForErrorDuration) {
-    RunLoopWithTimeoutOrUntil([this]() { return failed(); }, wait_duration);
+    RunLoopWithTimeoutOrUntil([]() { return HasFailure() || IsSkipped(); }, wait_duration);
   }
 
  private:
   static constexpr zx::duration kWaitForErrorDuration = zx::msec(100);
 
+  void ValidateGetFormats();
+  void SetMinMaxFormats();
+
   std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   fuchsia::sys::ComponentControllerPtr bt_harness_;
 
-  bool failed_ = false;
   const DeviceEntry& device_entry_;
 
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_;
 
-  bool received_get_formats_ = false;
   std::vector<fuchsia::hardware::audio::PcmSupportedFormats> pcm_formats_;
+
+  fuchsia::hardware::audio::PcmFormat min_format_;
+  fuchsia::hardware::audio::PcmFormat max_format_;
 };
 
 }  // namespace media::audio::drivers::test

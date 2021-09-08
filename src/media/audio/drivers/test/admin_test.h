@@ -7,8 +7,9 @@
 
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/device/audio.h>
+#include <zircon/errors.h>
 
-#include "src/media/audio/drivers/test/basic_test.h"
+#include "src/media/audio/drivers/test/test_base.h"
 #include "src/media/audio/lib/test/message_transceiver.h"
 
 namespace media::audio::drivers::test {
@@ -18,8 +19,6 @@ class AdminTest : public TestBase {
   explicit AdminTest(const DeviceEntry& dev_entry) : TestBase(dev_entry) {}
 
  protected:
-  void SelectFirstFormat();
-  void SelectLastFormat();
   void RequestMinFormat();
   void RequestMaxFormat();
 
@@ -28,21 +27,34 @@ class AdminTest : public TestBase {
   void RequestRingBufferChannel();
   void RequestRingBufferProperties();
   void RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifications_per_ring);
-
-  // Register a position notification to validate timestamp/position and register for the next one.
-  void SetPositionNotification();
-  // Register a position notification that FAILs if we receive one.
-  void SetFailingPositionNotification();
-  // Register a notification that DOESN'T register for the next one (breaks the chain at test-end).
-  void ClearPositionNotification();
+  void ActivateChannels(uint64_t active_channels_bitmask);
 
   void RequestStart();
+  void RequestStartAndExpectDisconnect(zx_status_t expected_error);
+
   void RequestStop();
-  void ExpectPositionNotifyCount(uint32_t count);
   void RequestStopAndExpectNoPositionNotifications();
+  void RequestStopAndExpectDisconnect(zx_status_t expected_error);
+
+  // Request a position notification that will record timestamp/position and register for another.
+  void EnablePositionNotifications();
+  // Clear flag so that any pending position notification will not request yet another.
+  void DisablePositionNotifications() { request_next_position_notification_ = false; }
+  // Set flag so position notifications (even already-enqueued ones!) cause failures.
+  void FailOnPositionNotifications() { fail_on_position_notification_ = true; }
+  // Clear flag so position notifications (even already-enqueued ones) do not cause failures.
+  void AllowPositionNotifications() { fail_on_position_notification_ = false; }
+
+  void RequestPositionNotification();
+  void PositionNotificationCallback(fuchsia::hardware::audio::RingBufferPositionInfo position_info);
+  void ExpectPositionNotifyCount(uint32_t count);
+  void ValidatePositionInfo();
+
+  fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer>& ring_buffer() { return ring_buffer_; }
+  uint32_t ring_buffer_frames() const { return ring_buffer_frames_; }
+  fuchsia::hardware::audio::PcmFormat pcm_format() const { return pcm_format_; }
 
  private:
-  bool ring_buffer_ready_ = false;
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_;
   fuchsia::hardware::audio::RingBufferProperties ring_buffer_props_;
   fuchsia::hardware::audio::RingBufferPositionInfo position_info_ = {};
@@ -53,15 +65,13 @@ class AdminTest : public TestBase {
   fzl::VmoMapper ring_buffer_mapper_;
 
   zx_time_t start_time_ = 0;
-  bool received_get_buffer_ = false;
-  bool received_start_ = false;
-  bool received_stop_ = false;
   fuchsia::hardware::audio::PcmFormat pcm_format_;
-  bool format_is_set_ = false;
   uint16_t frame_size_ = 0;
 
-  // Position notifications are hanging-gets. On receipt, should we register for the next one?
-  bool watch_for_next_position_notification_ = false;
+  // Position notifications are hanging-gets. On receipt, should we register the next one? Or fail?
+  bool request_next_position_notification_ = false;
+  bool record_position_info_ = false;
+  bool fail_on_position_notification_ = false;
   uint32_t position_notification_count_ = 0;
   uint64_t running_position_ = 0;
 };

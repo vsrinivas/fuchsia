@@ -31,11 +31,6 @@ class BasicTest : public TestBase {
   fuchsia::hardware::audio::GainState gain_state_;
   fuchsia::hardware::audio::GainState set_gain_state_;
   fuchsia::hardware::audio::PlugState plug_state_;
-
-  bool received_get_stream_properties_ = false;
-  bool received_get_gain_ = false;
-  bool received_plug_detect_ = false;
-  bool issued_set_gain_ = false;
 };
 
 }  // namespace media::audio::drivers::test

@@ -64,13 +64,13 @@ void DetectDevices() {
   }
 
   // Also add a device entry for the a2dp-source output device driver, which we always test.
-  device_entries().insert({DeviceEntry::kA2dp, "Bluetooth-A2DP", DeviceType::Output});
+  device_entries().insert({DeviceEntry::kA2dp, "audio-a2dp", DeviceType::Output});
 }
 
-// TODO(fxbug.dev/65580): Convert to value-parameterized testing and the INSTANTIATE_TEST_SUITE_P
-// macro, moving DetectDevices to a function called at static initialization time. If we cannot
-// access the cmdline flags at that time, we may need to always register admin tests, and then skip
-// them at runtime based on the cmdline flag.
+// TODO(fxbug.dev/65580): Previous implementation used value-parameterized testing. Consider
+// reverting to this, moving DetectDevices to a function called at static initialization time. If we
+// cannot access cmdline flags at that time, this would force us to always register admin tests,
+// skipping them at runtime based on the cmdline flag.
 
 extern void RegisterBasicTestsForDevice(const DeviceEntry& device_entry);
 extern void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
@@ -98,6 +98,7 @@ int main(int argc, char** argv) {
   syslog::SetTags({"audio_driver_tests"});
 
   // --admin  Validate commands that require the privileged channel, such as SetFormat.
+  // Without this, we omit AdminTest cases if a device/driver is exposed in the device tree.
   bool expect_audio_core_connected = !command_line.HasOption("admin");
 
   media::audio::drivers::test::DetectDevices();
