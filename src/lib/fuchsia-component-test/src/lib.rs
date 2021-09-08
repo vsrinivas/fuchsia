@@ -695,7 +695,7 @@ impl ScopedInstanceFactory {
         let (exposed_dir, server) = endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
             .context("Failed to create directory proxy")?;
         let () = realm
-            .bind_child(&mut child_ref, server)
+            .open_exposed_dir(&mut child_ref, server)
             .await
             .context("BindChild FIDL failed.")?
             .map_err(|e| format_err!("Failed to bind to child: {:?}", e))?;
@@ -890,6 +890,7 @@ mod tests {
     use {
         super::*,
         crate::builder::*,
+        fidl_fuchsia_component as fcomponent,
         futures::{channel::oneshot, future::pending, lock::Mutex, select},
         std::sync::Arc,
     };
@@ -957,6 +958,11 @@ mod tests {
             .expect("failed to add component_2");
 
         let realm_instance = builder.build().create().await.expect("failed to create the realm");
+
+        let _ = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .unwrap();
 
         // Wait for the component to report that they started
         component_1_start_receiver.await.expect("component_1 never started");
