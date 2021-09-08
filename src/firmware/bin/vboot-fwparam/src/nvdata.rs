@@ -445,7 +445,9 @@ impl NvdataInner {
             }
             Key::BackupNvramRequest => self.boot.set_backup_nvram(as_bool(value)?),
             Key::FwTried => return Err(NvdataError::NotWritable),
-            Key::FwResult => return Err(NvdataError::NotWritable),
+            Key::FwResult => {
+                self.boot2.set_fw_result(value.try_into().map_err(NvdataError::InvalidValue)?)
+            }
             Key::FwPrevTried => return Err(NvdataError::NotWritable),
             Key::FwPrevResult => return Err(NvdataError::NotWritable),
             Key::ReqWipeout => self.header.set_wipeout(as_bool_clear_only(value)?),

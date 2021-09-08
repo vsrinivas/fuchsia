@@ -53,7 +53,7 @@ bitfield! {
 
     /// Result of firmware this boot.
     /// fuchsia.vboot/Key.FW_RESULT.
-    pub fw_result, _ : 1, 0;
+    pub fw_result, set_fw_result : 1, 0;
     /// Firmware that was tried this boot.
     /// fuchsia.vboot/Key.FW_TRIED.
     pub fw_tried, _ : 2;

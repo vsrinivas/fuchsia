@@ -74,7 +74,13 @@ impl ParamType {
                 "altfw" => Ok(BootTarget::Altfw.into_primitive()),
                 _ => Err(anyhow!("Expected 'usb', 'disk', or 'altfw'")),
             },
-            ParamType::FirmwareResult => Err(anyhow!("Cannot set firmware result")),
+            ParamType::FirmwareResult => match value {
+                "unknown" => Ok(FirmwareResult::Unknown.into_primitive()),
+                "trying" => Ok(FirmwareResult::Trying.into_primitive()),
+                "failure" => Ok(FirmwareResult::Failure.into_primitive()),
+                "success" => Ok(FirmwareResult::Success.into_primitive()),
+                _ => Err(anyhow!("Expected {}", ParamType::FirmwareResult)),
+            },
         }
     }
 
