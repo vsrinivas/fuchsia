@@ -93,10 +93,29 @@ executable("dash") {
   #    #15   0x000080e04466b654 in start_main(const start_params*) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:139 <libc.so>+0xcc654
   #    #16   0x000080e04466bf24 in __libc_start_main(zx_handle_t, int (*)(int, char**, char**)) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:256 <libc.so>+0xccf24
   #    #17   0x000042693422b7c0 in _start(zx_handle_t) ../../zircon/system/ulib/c/Scrt1.cc:7 <<application>>+0x7e7c0
-  # SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior    #0    0x0000000000000000 is not covered by any module
+  #
+  # TODO(https://fxbug.dev/84060): Resolve this UB and remove.
+  #
+  # ../../zircon/third_party/uapp/dash/src/jobs.c:808:34:runtime error: applying zero offset to null pointer
+  #    #0.1  0x000021e48df762ad in growjobtab() ../../zircon/third_party/uapp/dash/src/jobs.c:808 <<application>>+0x5c2ad
+  #    #0    0x000021e48df762ad in makejob(node*, int) ../../zircon/third_party/uapp/dash/src/jobs.c:758 <<application>>+0x5c2ad
+  #    #1.2  0x0000211daf853e37 in ubsan_GetStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:55 <libclang_rt.asan.so>+0x3be37
+  #    #1.1  0x0000211daf853e37 in MaybePrintStackTrace() compiler-rt/lib/ubsan/ubsan_diag.cpp:53 <libclang_rt.asan.so>+0x3be37
+  #    #1    0x0000211daf853e37 in ~ScopedReport() compiler-rt/lib/ubsan/ubsan_diag.cpp:389 <libclang_rt.asan.so>+0x3be37
+  #    #2    0x0000211daf8581fb in handlePointerOverflowImpl() compiler-rt/lib/ubsan/ubsan_handlers.cpp:809 <libclang_rt.asan.so>+0x401fb
+  #    #3    0x0000211daf857d6d in compiler-rt/lib/ubsan/ubsan_handlers.cpp:815 <libclang_rt.asan.so>+0x3fd6d
+  #    #4.1  0x000021e48df762ad in growjobtab() ../../zircon/third_party/uapp/dash/src/jobs.c:808 <<application>>+0x5c2ad
+  #    #4    0x000021e48df762ad in makejob(node*, int) ../../zircon/third_party/uapp/dash/src/jobs.c:758 <<application>>+0x5c2ad
+  #    #5    0x000021e48df5a316 in evalpipe(node*, int) ../../zircon/third_party/uapp/dash/src/eval.c:572 <<application>>+0x40316
+  #    #6    0x000021e48df55a66 in evaltree(node*, int) ../../zircon/third_party/uapp/dash/src/eval.c:280 <<application>>+0x3ba66
+  #    #7    0x000021e48df77d49 in cmdloop(int) ../../zircon/third_party/uapp/dash/src/main.c:271 <<application>>+0x5dd49
+  #    #8    0x000021e48df7727e in main(int, char**) ../../zircon/third_party/uapp/dash/src/main.c:186 <<application>>+0x5d27e
+  #    #9    0x0000418883488f89 in start_main(const start_params*) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:139 <libc.so>+0xd2f89
+  #    #10   0x0000418883489991 in __libc_start_main(zx_handle_t, int (*)(int, char**, char**)) ../../zircon/third_party/ulib/musl/src/env/__libc_start_main.c:214 <libc.so>+0xd3991
+  #    #11   0x000021e48dfa3590 in _start(zx_handle_t) ../../zircon/system/ulib/c/Scrt1.cc:7 <<application>>+0x89590
   #
   # At the time of writing, our dash import dates to 2016. Perhaps this has been fixed upstream? We should try updating it.
-  configs += [ ":undefined_behavior_index_out_of_bounds" ]
+  configs += [ ":no_ubsan" ]
 
   # Suppress warnings the dash code doesn't comply with.
   configs += [ "//build/config:Wno-conversion" ]
@@ -111,8 +130,8 @@ executable("dash") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-config("undefined_behavior_index_out_of_bounds") {
-  cflags = [ "-fno-sanitize=bounds" ]
+config("no_ubsan") {
+  cflags = [ "-fno-sanitize=undefined" ]
 }
 
 source_set("output_h") {
