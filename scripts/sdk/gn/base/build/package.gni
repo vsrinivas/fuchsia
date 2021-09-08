@@ -58,6 +58,7 @@ template("fuchsia_package") {
   _metadata_target = "${target_name}__archive-metadata"
   _packaged_components_metadata_target =
       "${target_name}__packaged_components_metadata"
+  _symbol_index_target = "${target_name}__symbol_index"
 
   # output values
   _pkg_out_dir = "${target_gen_dir}/${package_name}"
@@ -69,6 +70,7 @@ template("fuchsia_package") {
   }
   _package_file = "$_pkg_out_dir/package"
   _fidl_json_refs_file = "${fidl_ref_out_dir}/${package_name}_all_fidl_refs.txt"
+  _symbol_index_file = "$_pkg_out_dir/${package_name}.symbol-index.json"
 
   _packaged_components_metadata_file =
       "${target_gen_dir}/${package_name}_packaged_components_metadata.json"
@@ -179,6 +181,24 @@ template("fuchsia_package") {
     package_name = package_name
     command = "archive"
     archive_manifest = _archive_manifest
-    public_deps = [ ":$_metadata_target" ]
+    public_deps = [
+      ":$_metadata_target",
+      ":$_symbol_index_target",
+    ]
+  }
+
+  # Create a .symbol-index.json that indexes the ids.txt above. This file will be registered
+  # automatically during the publishing of the package.
+  generated_file(_symbol_index_target) {
+    outputs = [ _symbol_index_file ]
+    output_conversion = "json"
+    contents = {
+      ids_txts = [
+        {
+          path = rebase_path(_build_ids_file, _pkg_out_dir)
+          build_dir = rebase_path(root_build_dir, _pkg_out_dir)
+        },
+      ]
+    }
   }
 }
