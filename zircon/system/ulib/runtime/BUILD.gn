@@ -24,6 +24,7 @@ zx_library("runtime") {
   if (zircon_toolchain != false) {
     # Make sure the thread_trampoline function has a frame pointer so that
     # user-visible thread backtraces are consistent across collection methods.
+    configs += [ "//build/config:default_frame_pointers" ]
     configs -= [ "//build/config:default_frame_pointers" ]
     configs += [ "//build/config:frame_pointers" ]
   }

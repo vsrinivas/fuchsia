@@ -894,6 +894,14 @@ foreach(_target_type,
 # See `known_variants` (below) for the meaning of fields in this scope.
 _asan_variant = {
   configs = [ "//build/config/sanitizers:asan" ]
+
+  # The 'asan' variants adds //build/config:frame_pointers, but this
+  # conflicts with "//build/config:default_frame_pointers", because the
+  # latter will itself add "//build/config:no_frame_pointers" in the case
+  # where 'zx_assert_level = 0' is set in args.gn. Remove it here to
+  # avoid compiler errors. See https://fxbug.dev/84138
+  remove_common_configs = [ "//build/config:default_frame_pointers" ]
+
   if (host_os != "fuchsia") {
     host_only = {
       # On most systems (not Fuchsia), the sanitizer runtimes are normally
@@ -924,6 +932,10 @@ _asan_variant = {
 _kasan_variant = {
   forward_variables_from(_asan_variant, "*")
   configs += [ "//build/config/zircon:no_safestack" ]
+
+  # NOTE: The line below is necessary because compiling kernel artifacts
+  # does not add //build/config:default_frame_pointers.
+  remove_common_configs = []
   tags -= [ "kernel-excluded" ]
   tags += [ "kernel-only" ]
 }
@@ -1116,7 +1128,7 @@ declare_args() {
     {
       forward_variables_from(_asan_variant, "*")
       configs += [ "//build/config/sanitizers:ubsan" ]
-      remove_common_configs = [ "//build/config:no_rtti" ]  # See above.
+      remove_common_configs += [ "//build/config:no_rtti" ]  # See above.
       tags += [ "ubsan" ]
     },
     {
@@ -1150,7 +1162,7 @@ declare_args() {
         "//build/config/sanitizers:rust-asan",
       ]
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
-      remove_common_configs = _fuzzer_remove_common_configs
+      remove_common_configs += _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs
       tags += [ "fuzzer" ]
     },
