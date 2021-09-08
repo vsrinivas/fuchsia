@@ -29,7 +29,7 @@ class FakeResolver : public internal::PackageResolverInterface {
   std::map<std::string, std::unique_ptr<Driver>> map;
 };
 
-class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
+class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
  public:
   void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -72,7 +72,7 @@ class DriverLoaderTest : public zxtest::Test {
   void TearDown() override {}
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
-  FakeDriverIndex driver_index_server;
+  FakeDriverLoaderIndex driver_index_server;
   FakeResolver resolver;
   fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex> driver_index;
 };

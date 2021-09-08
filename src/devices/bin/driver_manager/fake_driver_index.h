@@ -56,11 +56,24 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
     completer.Reply();
   }
 
-  // The fake driver index is used only for drivers-as-components and so it
-  // doesn't need any V1 APIs.
   void MatchDriversV1(MatchDriversV1RequestView request,
                       MatchDriversV1Completer::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    auto match = match_callback_(request->args);
+    if (match.status_value() != ZX_OK) {
+      completer.ReplyError(match.status_value());
+      return;
+    }
+    fidl::Arena allocator;
+    fuchsia_driver_framework::wire::MatchedDriver driver(allocator);
+    driver.set_driver_url(allocator, fidl::StringView::FromExternal(match->url));
+    if (match->node_index) {
+      driver.set_node_index(allocator, *match->node_index);
+    }
+    if (match->num_nodes) {
+      driver.set_num_nodes(allocator, *match->num_nodes);
+    }
+    completer.ReplySuccess(
+        fidl::VectorView<fuchsia_driver_framework::wire::MatchedDriver>::FromExternal(&driver, 1));
   }
 
  private:

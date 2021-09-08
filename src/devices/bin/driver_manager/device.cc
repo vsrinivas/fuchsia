@@ -966,3 +966,8 @@ bool Device::DriverLivesInSystemStorage() const {
   return (kSystemPrefix.compare(0, kSystemPrefix.size() - 1, libname().c_str(),
                                 kSystemPrefix.size() - 1) == 0);
 }
+
+bool Device::IsAlreadyBound() const {
+  return (flags & DEV_CTX_BOUND) && !(flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
+         !(flags & DEV_CTX_MULTI_BIND);
+}

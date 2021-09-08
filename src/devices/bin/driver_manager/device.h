@@ -587,6 +587,9 @@ class Device
 
   bool DriverLivesInSystemStorage() const;
 
+  // Returns true if this device already has a driver bound.
+  bool IsAlreadyBound() const;
+
  private:
   void HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);

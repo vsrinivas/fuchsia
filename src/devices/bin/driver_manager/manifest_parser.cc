@@ -13,6 +13,7 @@ namespace {
 
 const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
 const std::string kFuchsiaBootPrefix = "fuchsia-boot://";
+const std::string kRelativeUrlPrefix = "#";
 
 bool IsFuchsiaPkgScheme(std::string_view url) {
   return url.compare(0, kFuchsiaPkgPrefix.length(), kFuchsiaPkgPrefix) == 0;
@@ -24,6 +25,10 @@ zx::status<std::string> GetResourcePath(std::string_view url) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   return zx::ok(url.substr(seperator + 1));
+}
+
+bool IsRelativeUrl(std::string_view url) {
+  return url.compare(0, kRelativeUrlPrefix.length(), kRelativeUrlPrefix) == 0;
 }
 
 }  // namespace
@@ -50,6 +55,15 @@ zx::status<std::string> GetBasePathFromUrl(const std::string& url) {
     }
     return zx::ok("/boot");
   }
+  if (IsRelativeUrl(url)) {
+    auto resource_path = GetResourcePath(url);
+    if (resource_path.is_error()) {
+      LOGF(ERROR, "Failed to parse test url: %s", url.c_str());
+      return resource_path;
+    }
+    return zx::ok("/pkg");
+  }
+
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
@@ -71,6 +85,15 @@ zx::status<std::string> GetPathFromUrl(const std::string& url) {
     }
     return zx::ok("/boot/" + resource_path.value());
   }
+  if (IsRelativeUrl(url)) {
+    auto resource_path = GetResourcePath(url);
+    if (resource_path.is_error()) {
+      LOGF(ERROR, "Failed to parse test url: %s", url.c_str());
+      return resource_path;
+    }
+    return zx::ok("/pkg/" + resource_path.value());
+  }
+
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 

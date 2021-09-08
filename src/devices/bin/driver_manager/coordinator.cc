@@ -1195,8 +1195,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   }
 
   // cannot bind driver to already bound device
-  if ((dev->flags & DEV_CTX_BOUND) &&
-      !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
+  if (dev->IsAlreadyBound()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
@@ -1413,8 +1412,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
 
 zx_status_t Coordinator::MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
                                              bool autobind) {
-  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
-      !(dev->flags & DEV_CTX_MULTI_BIND)) {
+  if (dev->IsAlreadyBound()) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
@@ -1460,8 +1458,7 @@ void Coordinator::ScheduleBaseDriverLoading() {
 
 zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(
     const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) {
-  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
-      !(dev->flags & DEV_CTX_MULTI_BIND)) {
+  if (dev->IsAlreadyBound()) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
@@ -1535,6 +1532,10 @@ zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPt
     config.libname = drvlibname;
     auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
     for (auto driver : drivers) {
+      if (dev->IsAlreadyBound()) {
+        return zx::error(ZX_ERR_ALREADY_BOUND);
+      }
+
       matched_drivers.push_back(driver);
     }
   }
