@@ -8,12 +8,14 @@
 
 set -eo pipefail
 
-declare -r LINUX_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-declare -r FUCHSIA_DIR=$(git rev-parse --show-toplevel)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly SCRIPT_DIR
+FUCHSIA_DIR=$(git rev-parse --show-toplevel)
+readonly FUCHSIA_DIR
 declare -r CIPD="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
-declare -r SOURCE_DIR="/tmp/linux_guest"
-declare -r LINUX_VERSION="4.18"
+declare -r LINUX_BRANCH="machina-4.18"
 
+# Ensure a valid architecture was specified.
 case "${1}" in
 arm64)
   ARCH=${1};;
@@ -24,77 +26,49 @@ x64)
   exit 1;;
 esac
 
-if [[ -z "$(which cargo)" ]]; then
-  if [[ -f "$HOME/.cargo/env" ]]; then
-    source "$HOME/.cargo/env"
-  else
-    echo "you must have rust installed on your host - see https://www.rust-lang.org/tools/install"
-    exit 2
-  fi
-fi
-
-if [[ "$(${CIPD} acl-check fuchsia_internal/ -writer)" == *"doesn't"* ]]; then
+# Ensure the user has authenticated with the CIPD server.
+if [[ "$(${CIPD} acl-check fuchsia_internal -writer)" == *"doesn't"* ]]; then
   ${CIPD} auth-login
 fi
 
-# Clean the existing source checkout.
-rm -rf "${SOURCE_DIR}"
+# Create a temporary directory.
+WORKING_DIR="$(mktemp -d)"
+trap 'rm -rf -- "$WORKING_DIR"' EXIT
 
-# Clean the existing images.
-declare -r IMAGE_DIR="${FUCHSIA_DIR}/prebuilt/virtualization/packages/linux_guest/images/${ARCH}"
-rm -rf "${IMAGE_DIR}/Image"
-rm -rf "${IMAGE_DIR}/tests.img"
-rm -rf "${IMAGE_DIR}/disk.img"
+# Create the output directory.
+OUTPUT_DIR="${WORKING_DIR}/output"
+mkdir -p "${OUTPUT_DIR}"
 
-${LINUX_GUEST_DIR}/mklinux.sh \
-    -b "machina-${LINUX_VERSION}" \
+# Build the kernel.
+"${SCRIPT_DIR}/make_linux_kernel.sh" \
+    -b "${LINUX_BRANCH}" \
     -d "machina_defconfig" \
-    -l "${SOURCE_DIR}/linux" \
-    -o "${IMAGE_DIR}/Image" \
-    ${ARCH}
-LINUX_GIT_HASH="$( cd ${SOURCE_DIR}/linux && git rev-parse --verify HEAD )"
+    -l "${WORKING_DIR}/linux" \
+    -o "${OUTPUT_DIR}/vm_kernel" \
+    "${ARCH}"
+LINUX_GIT_HASH="$( cd "${WORKING_DIR}/linux" && git rev-parse --verify HEAD )"
 
-${LINUX_GUEST_DIR}/mktests.sh \
-    -d "${SOURCE_DIR}/linux-tests" \
-    -o "${IMAGE_DIR}/tests.img" \
-    -u \
-    ${ARCH}
-TESTS_GIT_HASH="$( cd ${SOURCE_DIR}/linux-tests && git rev-parse --verify HEAD )"
+# Copy to the prebuilt directory.
+cp -f "${OUTPUT_DIR}/vm_kernel" "${FUCHSIA_DIR}/prebuilt/virtualization/packages/linux_guest/images/${ARCH}/Image"
 
-${LINUX_GUEST_DIR}/mksysroot.sh \
-    -d "${SOURCE_DIR}/toybox-${ARCH}" \
-    -s "${SOURCE_DIR}/dash" \
-    -o "${IMAGE_DIR}/disk.img" \
-    -u \
-    ${ARCH}
-TOYBOX_GIT_HASH="$( cd ${SOURCE_DIR}/toybox-${ARCH} && git rev-parse --verify HEAD )"
-DASH_GIT_HASH="$( cd ${SOURCE_DIR}/dash && git rev-parse --verify HEAD )"
-
-declare -r CIPD_PATH="fuchsia_internal/linux/linux_guest-${LINUX_VERSION}-${ARCH}"
-
+# Upload to CIPD.
+declare -r CIPD_PATH="fuchsia_internal/linux/linux_kernel-${LINUX_BRANCH}-${ARCH}"
 ${CIPD} create \
-    -in "${IMAGE_DIR}" \
+    -in "${OUTPUT_DIR}" \
     -name "${CIPD_PATH}" \
     -install-mode copy \
-    -tag "kernel_git_revision:${LINUX_GIT_HASH}" \
-    -tag "tests_git_revision:${TESTS_GIT_HASH}" \
-    -tag "toybox_git_revision:${TOYBOX_GIT_HASH}" \
-    -tag "dash_git_revision:${DASH_GIT_HASH}"
+    -tag "git_revision:${LINUX_GIT_HASH}" \
+    -tag "branch:${LINUX_BRANCH}" \
 
 # Fetch the instance ID of the just-created CIPD package. If more than one
 # matches our tags, use the most recent one.
 INSTANCE_ID=$(${CIPD} search \
     "${CIPD_PATH}" \
-    -tag "kernel_git_revision:${LINUX_GIT_HASH}" \
-    -tag "tests_git_revision:${TESTS_GIT_HASH}" \
-    -tag "toybox_git_revision:${TOYBOX_GIT_HASH}" \
-    -tag "dash_git_revision:${DASH_GIT_HASH}" \
+    -tag "git_revision:${LINUX_GIT_HASH}" \
+    -tag "branch:${LINUX_BRANCH}" \
     | grep -v 'Instances:' \
     | cut -d ':' -f 2 \
     | head -1)
 
 echo "Kernel git revision: ${LINUX_GIT_HASH}"
-echo "Tests git revision: ${TESTS_GIT_HASH}"
-echo "Toybox git revision: ${TOYBOX_GIT_HASH}"
-echo "Dash git revision: ${DASH_GIT_HASH}"
 echo "Instance ID: ${INSTANCE_ID}"
