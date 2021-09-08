@@ -228,7 +228,7 @@ void TestBase::ValidateGetFormats() {
 void TestBase::SetMinMaxFormats() {
   for (size_t i = 0; i < pcm_formats_.size(); ++i) {
     SCOPED_TRACE(testing::Message() << "pcm_format[" << i << "]");
-    uint8_t min_chans, max_chans;
+    size_t min_chans, max_chans;
     uint8_t min_bytes_per_sample, max_bytes_per_sample;
     uint8_t min_valid_bits_per_sample, max_valid_bits_per_sample;
     uint32_t min_frame_rate, max_frame_rate;
@@ -286,7 +286,7 @@ void TestBase::SetMinMaxFormats() {
     if (i == 0 || bit_rate < min_format_.number_of_channels * min_format_.bytes_per_sample *
                                  min_format_.frame_rate) {
       min_format_ = {
-          .number_of_channels = min_chans,
+          .number_of_channels = static_cast<uint8_t>(min_chans),
           .channels_to_use_bitmask = 1u,
           .sample_format = sample_format,
           .bytes_per_sample = min_bytes_per_sample,
@@ -299,7 +299,7 @@ void TestBase::SetMinMaxFormats() {
     if (i == 0 || bit_rate > max_format_.number_of_channels * max_format_.bytes_per_sample *
                                  max_format_.frame_rate) {
       max_format_ = {
-          .number_of_channels = max_chans,
+          .number_of_channels = static_cast<uint8_t>(max_chans),
           .channels_to_use_bitmask = (1u << max_chans) - 1u,
           .sample_format = sample_format,
           .bytes_per_sample = max_bytes_per_sample,

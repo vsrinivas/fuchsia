@@ -5,6 +5,7 @@
 #include "src/media/audio/drivers/test/admin_test.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/media/cpp/timeline_rate.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -149,10 +150,10 @@ void AdminTest::RequestStart() {
   // Any position notifications that arrive before the Start callback should cause failures.
   FailOnPositionNotifications();
 
-  auto send_time = zx::clock::get_monotonic().get();
+  auto send_time = zx::clock::get_monotonic();
   ring_buffer_->Start(AddCallback("Start", [this](int64_t start_time) {
     AllowPositionNotifications();
-    start_time_ = start_time;
+    start_time_ = zx::time(start_time);
   }));
 
   ExpectCallbacks();
@@ -215,15 +216,16 @@ void AdminTest::PositionNotificationCallback(
 
   EXPECT_GT(notifications_per_ring_, 0u) << "notifs_per_ring is 0";
 
-  auto now = zx::clock::get_monotonic().get();
+  auto now = zx::clock::get_monotonic();
+  auto position_time = zx::time(position_info.timestamp);
   EXPECT_LT(start_time_, now);
-  EXPECT_LT(position_info.timestamp, now);
+  EXPECT_LT(position_time, now);
 
   if (position_notification_count_) {
-    EXPECT_GT(position_info.timestamp, start_time_);
-    EXPECT_GT(position_info.timestamp, position_info_.timestamp);
+    EXPECT_GT(position_time, start_time_);
+    EXPECT_GT(position_time, zx::time(saved_position_.timestamp));
   } else {
-    EXPECT_GE(position_info.timestamp, start_time_);
+    EXPECT_GE(position_time, start_time_);
   }
   EXPECT_LT(position_info.position, ring_buffer_frames_ * frame_size_);
 
@@ -238,14 +240,15 @@ void AdminTest::PositionNotificationCallback(
   }
 
   ++position_notification_count_;
-  running_position_ += position_info.position;
-  running_position_ -= position_info_.position;
 
-  if (position_info.position <= position_info_.position) {
+  running_position_ += position_info.position;
+  running_position_ -= saved_position_.position;
+  if (position_info.position <= saved_position_.position) {
     running_position_ += (ring_buffer_frames_ * frame_size_);
   }
-  position_info_.timestamp = position_info.timestamp;
-  position_info_.position = position_info.position;
+
+  saved_position_.timestamp = position_info.timestamp;
+  saved_position_.position = position_info.position;
 }
 
 // Wait for the specified number of position notifications, then stop recording timestamp data.
@@ -256,36 +259,41 @@ void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
   record_position_info_ = false;
 }
 
+// What timestamp do we expect, for the final notification received? We know how many
+// notifications we've received; we'll multiply this by the per-notification time duration.
 void AdminTest::ValidatePositionInfo() {
-  auto timestamp_duration = position_info_.timestamp - start_time_;
-  auto observed_duration = zx::clock::get_monotonic().get() - start_time_;
+  zx::duration notification_timestamp = zx::time(saved_position_.timestamp) - start_time_;
+  zx::duration observed_timestamp = zx::clock::get_monotonic() - start_time_;
 
   ASSERT_GT(position_notification_count_, 0u) << "No position notifications received";
   ASSERT_GT(notifications_per_ring_, 0u) << "notifications_per_ring_ cannot be zero";
 
-  // What timestamp do we expect, for the final notification received? We know how many
-  // notifications we've received; we'll multiply this by the per-notification time duration.
-  // However, upon enabling notifications, our first notification might arrive immediately. Thus,
-  // the average number of notification periods elapsed is (position_notification_count_ - 0.5).
   ASSERT_NE(pcm_format_.frame_rate * notifications_per_ring_, 0u);
-  auto ns_per_notification =
-      (zx::sec(1) * ring_buffer_frames_) / (pcm_format_.frame_rate * notifications_per_ring_);
-  double average_num_notif_periods_elapsed = position_notification_count_ - 0.5;
 
-  // Furthermore, notification timing requirements for drivers are somewhat loose, so we include
-  // a tolerance range of +/- 2. notification periods.
-  auto expected_time = ns_per_notification.get() * average_num_notif_periods_elapsed;
-  auto timing_tolerance = ns_per_notification.get() * 2;
-  auto min_allowed_time = expected_time - timing_tolerance;
-  auto max_allowed_time = expected_time + timing_tolerance;
+  // ns/notification = nsec/sec * sec/frames * frames/ring * ring/notification
+  auto ns_per_notification = TimelineRate::NsPerSecond / TimelineRate(pcm_format_.frame_rate) *
+                             TimelineRate(ring_buffer_frames_) /
+                             TimelineRate(notifications_per_ring_);
 
-  EXPECT_GE(timestamp_duration, min_allowed_time)
-      << "Notification rate too high. Device clock rate too fast?";
-  EXPECT_LE(timestamp_duration, max_allowed_time)
-      << "Notification rate too low. Device clock rate too slow?";
+  // Upon enabling notifications, our first notification might arrive immediately. Thus, the average
+  // number of notification periods elapsed is (position_notification_count_ - 0.5).
+  auto expected_timestamp = zx::duration(ns_per_notification.Scale(position_notification_count_) -
+                                         ns_per_notification.Scale(1) / 2);
+
+  // Delivery-time requirements for pos notifications are loose; include a tolerance of +/-2 notifs.
+  auto timestamp_tolerance = zx::duration(ns_per_notification.Scale(2));
+  auto min_allowed_timestamp = expected_timestamp - timestamp_tolerance;
+  auto max_allowed_timestamp = expected_timestamp + timestamp_tolerance;
+
+  EXPECT_GE(notification_timestamp, min_allowed_timestamp)
+      << notification_timestamp.to_nsecs() << " less than min " << min_allowed_timestamp.to_nsecs()
+      << ". Notification rate too high. Device clock rate too fast?";
+  EXPECT_LE(notification_timestamp, max_allowed_timestamp)
+      << notification_timestamp.to_nsecs() << " exceeds max " << max_allowed_timestamp.to_nsecs()
+      << ". Notification rate too low. Device clock rate too slow?";
 
   // Also validate when the notification was actually received (not just the timestamp).
-  EXPECT_GT(observed_duration, min_allowed_time);
+  EXPECT_GT(observed_timestamp, min_allowed_timestamp);
 }
 
 #define DEFINE_ADMIN_TEST_CLASS(CLASS_NAME, CODE)                               \

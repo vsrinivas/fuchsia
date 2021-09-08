@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_TEST_ADMIN_TEST_H_
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/time.h>
 #include <zircon/device/audio.h>
 #include <zircon/errors.h>
 
@@ -57,14 +58,14 @@ class AdminTest : public TestBase {
  private:
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_;
   fuchsia::hardware::audio::RingBufferProperties ring_buffer_props_;
-  fuchsia::hardware::audio::RingBufferPositionInfo position_info_ = {};
+  fuchsia::hardware::audio::RingBufferPositionInfo saved_position_ = {};
 
   uint32_t min_ring_buffer_frames_ = 0;
   uint32_t notifications_per_ring_ = 0;
   uint32_t ring_buffer_frames_ = 0;
   fzl::VmoMapper ring_buffer_mapper_;
 
-  zx_time_t start_time_ = 0;
+  zx::time start_time_;
   fuchsia::hardware::audio::PcmFormat pcm_format_;
   uint16_t frame_size_ = 0;
 

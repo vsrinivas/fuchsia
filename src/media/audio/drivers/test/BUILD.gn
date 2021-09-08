@@ -50,6 +50,7 @@ executable("audio_driver_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fsl",
@@ -59,7 +60,4 @@ executable("audio_driver_tests_bin") {
     "//src/media/audio/lib/test:test_fixture",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
