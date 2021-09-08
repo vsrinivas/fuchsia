@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using amlogic.platform;
+using fuchsia.amlogic.platform;
 using fuchsia.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
-fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.RAM_CTL;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.RAM_CTL;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
-  amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2,
-  amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
-  amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3,
+  fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2,
+  fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
+  fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3,
 }

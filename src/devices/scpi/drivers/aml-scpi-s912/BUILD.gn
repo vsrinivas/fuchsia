@@ -10,7 +10,7 @@ driver_bind_rules("aml-scpi-s912-bind") {
   rules = "aml-scpi-s912.bind"
   header_output = "aml-scpi-s912-bind.h"
   tests = "aml-scpi-s912-bind-test.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_bind_rules("aml-mailbox-s912-bind") {
@@ -18,7 +18,7 @@ driver_bind_rules("aml-mailbox-s912-bind") {
   header_output = "aml-mailbox-s912-bind.h"
   tests = "aml-mailbox-s912-bind-test.json"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

@@ -12,7 +12,7 @@ driver_bind_rules("aml-thermal-s912-bind") {
   rules = "aml-thermal-s912.bind"
   header_output = "aml-thermal-s912-bind.h"
   tests = "aml-thermal-s912-bind-test.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-thermal-s912-driver") {

@@ -11,7 +11,7 @@ driver_bind_rules("nelson_usb_phy_bind") {
   header_output = "nelson_usb_phy_bind.h"
   tests = "bind_tests.json"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

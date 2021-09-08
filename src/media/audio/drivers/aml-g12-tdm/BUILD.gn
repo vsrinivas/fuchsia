@@ -11,7 +11,7 @@ driver_bind_rules("aml-g12-tdm-bind") {
   header_output = "aml_tdm-bind.h"
   bind_output = "aml-g12-tdm.bindbc"
   tests = "tests-stream.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-g12-tdm-driver") {
@@ -60,7 +60,7 @@ driver_bind_rules("aml-g12-tdm-dai-bind") {
   bind_output = "aml-g12-tdm-dai.bindbc"
   tests = "tests-dai.json"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

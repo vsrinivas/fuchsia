@@ -4,6 +4,6 @@
 
 import("//build/bind/bind.gni")
 
-bind_library("amlogic.platform.meson") {
-  source = "amlogic.platform.meson.bind"
+bind_library("fuchsia.amlogic.platform.meson") {
+  source = "fuchsia.amlogic.platform.meson.bind"
 }

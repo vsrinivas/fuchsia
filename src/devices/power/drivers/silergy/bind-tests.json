@@ -29,7 +29,7 @@
     {
         "device": {
             "fuchsia.BIND_COMPOSITE": "1",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_VID.SILERGY"
         },
         "expected": "abort",

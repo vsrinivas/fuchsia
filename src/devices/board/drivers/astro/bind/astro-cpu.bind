@@ -4,7 +4,7 @@
 
 composite aml_cpu;
 
-using amlogic.platform.meson;
+using fuchsia.amlogic.platform.meson;
 using fuchsia.amlogic.platform.s905d2;
 using fuchsia.clock;
 using fuchsia.google.platform;
@@ -26,15 +26,15 @@ node "pdev" {
 
 node "clock-pll-div16-01" {
   fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_PLL_DIV16;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_PLL_DIV16;
 }
 
 node "clock-cpu-div16-01" {
   fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK_DIV16;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK_DIV16;
 }
 
 node "clock-cpu-scaler-01" {
   fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
-  fuchsia.BIND_CLOCK_ID == amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12A_CLK_ID.CLK_SYS_CPU_CLK;
 }

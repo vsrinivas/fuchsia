@@ -10,7 +10,7 @@ driver_bind_rules("aml_eth_bind") {
   rules = "aml_eth.bind"
   header_output = "aml_eth-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-ethernet-s912-driver") {

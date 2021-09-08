@@ -20,7 +20,7 @@ driver_bind_rules("aml_gpu_bind") {
   header_output = "aml_gpu-bind.h"
   bind_output = "aml-gpu.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 source_set("sources") {

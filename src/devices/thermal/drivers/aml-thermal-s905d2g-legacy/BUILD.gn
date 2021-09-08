@@ -13,7 +13,7 @@ driver_bind_rules("aml-thermal-s905d2g-legacy-bind") {
   header_output = "aml-thermal-bind.h"
   bind_output = "aml-thermal-s905d2g-legacy.bindbc"
   tests = "aml-thermal-s905d2g-legacy-bind-test.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-thermal-s905d2g-legacy-driver") {

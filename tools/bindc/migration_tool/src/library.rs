@@ -25,7 +25,7 @@ impl Library {
     pub fn name(&self) -> &str {
         match self {
             Library::Acpi => "fuchsia.acpi",
-            Library::Amlogic => "amlogic.platform",
+            Library::Amlogic => "fuchsia.amlogic.platform",
             Library::Bluetooth => "fuchsia.bluetooth",
             Library::I2c => "fuchsia.i2c",
             Library::Clock => "fuchsia.clock",
@@ -43,7 +43,7 @@ impl Library {
     pub fn build_target(&self) -> &str {
         match self {
             Library::Acpi => "//src/devices/bind/fuchsia.acpi",
-            Library::Amlogic => "//src/devices/bind/amlogic.platform",
+            Library::Amlogic => "//src/devices/bind/fuchsia.amlogic.platform",
             Library::Bluetooth => "//src/devices/bind/fuchsia.bluetooth",
             Library::Clock => "//src/devices/bind/fuchsia.clock",
             Library::Gpio => "//src/devices/bind/fuchsia.gpio",
@@ -173,15 +173,15 @@ pub fn rename_and_add<'a>(libraries: &mut HashSet<Library>, original: &'a str) -
         }
         "PDEV_VID_AMLOGIC" => {
             libraries.insert(Library::Amlogic);
-            "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
+            "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC"
         }
         "PDEV_PID_AMLOGIC_S905D2" => {
             libraries.insert(Library::Amlogic);
-            "amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2"
+            "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2"
         }
         "PDEV_DID_AMLOGIC_VIDEO" => {
             libraries.insert(Library::Amlogic);
-            "amlogic.platform.BIND_PLATFORM_DEV_DID.VIDEO"
+            "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.VIDEO"
         }
         "BIND_PCI_VID" => {
             libraries.insert(Library::Pci);

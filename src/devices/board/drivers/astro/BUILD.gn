@@ -43,7 +43,7 @@ driver_bind_rules("astro-bluetooth-bind") {
   bind_output = "astro-bluetooth.bindbc"
   tests = "bluetooth-bind-tests.json"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.pwm",
   ]
@@ -64,8 +64,8 @@ driver_bind_rules("astro-cpu-bind") {
   header_output = "astro-cpu-bind.h"
   bind_output = "astro-cpu-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.clock",
     "//src/devices/bind/fuchsia.google.platform",
@@ -81,7 +81,7 @@ driver_bind_rules("astro-display-bind") {
   header_output = "astro-display-bind.h"
   bind_output = "astro-display-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.dsi",
     "//src/devices/bind/fuchsia.gpio",
@@ -95,7 +95,7 @@ driver_bind_rules("astro-mali-bind") {
   header_output = "astro-mali-bind.h"
   bind_output = "astro-mali-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.registers",
   ]
@@ -117,7 +117,7 @@ driver_bind_rules("astro-securemem-bind") {
   header_output = "astro-securemem-bind.h"
   bind_output = "astro-securemem-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sysmem",
     "//src/devices/bind/fuchsia.tee",
@@ -139,8 +139,8 @@ driver_bind_rules("astro-video-bind") {
   header_output = "astro-video-bind.h"
   bind_output = "astro-video_bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
-    "//src/devices/bind/amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
     "//src/devices/bind/fuchsia.clock",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.sysmem",
@@ -175,7 +175,7 @@ driver_bind_rules("gpio-light-bind") {
   header_output = "gpio-light-bind.h"
   bind_output = "gpio-light-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.i2c",
@@ -207,7 +207,7 @@ driver_bind_rules("pwm-ao-d-bind") {
   header_output = "pwm-ao-d-bind.h"
   bind_output = "pwm-ao-d-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.google.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -220,7 +220,7 @@ driver_bind_rules("aml-usb-phy-v2-bind") {
   header_output = "aml-usb-phy-v2-bind.h"
   bind_output = "aml-usb-phy-v2-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.registers",
   ]
@@ -251,7 +251,7 @@ driver_bind_rules("astro-dai-test-in-bind") {
   header_output = "astro-dai-test-in-bind.h"
   bind_output = "astro-dai-test-in-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.dai",
   ]
 }
@@ -261,7 +261,7 @@ driver_bind_rules("astro-dai-test-out-bind") {
   header_output = "astro-dai-test-out-bind.h"
   bind_output = "astro-dai-test-out-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.dai",
   ]
 }

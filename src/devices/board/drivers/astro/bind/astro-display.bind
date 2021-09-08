@@ -8,7 +8,7 @@ using fuchsia.dsi;
 using fuchsia.gpio;
 using fuchsia.platform;
 using fuchsia.sysmem;
-using amlogic.platform;
+using fuchsia.amlogic.platform;
 using fuchsia.amlogic.platform.s905d2;
 
 primary node "dsi" {
@@ -17,9 +17,9 @@ primary node "dsi" {
 
 node "pdev" {
     fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
-    fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
-    fuchsia.BIND_PLATFORM_DEV_PID == amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2;
-    fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.DISPLAY;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.DISPLAY;
     fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
 }
 
@@ -33,5 +33,5 @@ node "sysmem" {
 }
 
 node "canvas" {
-  fuchsia.BIND_PROTOCOL == amlogic.platform.BIND_PROTOCOL.CANVAS;
+  fuchsia.BIND_PROTOCOL == fuchsia.amlogic.platform.BIND_PROTOCOL.CANVAS;
 }

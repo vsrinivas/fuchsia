@@ -13,7 +13,7 @@ driver_bind_rules("aml_uart_bind") {
   header_output = "aml_uart_bind.h"
   bind_output = "aml-uart.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-uart-driver") {

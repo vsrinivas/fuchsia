@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using amlogic.platform;
+using fuchsia.amlogic.platform;
 using fuchsia.google.platform;
 
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
@@ -12,5 +12,5 @@ accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.NELSON,
 }
-fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMISTOR;
 

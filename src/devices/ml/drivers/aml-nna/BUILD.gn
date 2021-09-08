@@ -13,7 +13,7 @@ driver_bind_rules("aml_nna_bind") {
   header_output = "aml_nna_bind.h"
   bind_output = "aml-nna.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-nna-driver") {

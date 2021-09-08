@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library amlogic.platform.meson;
+library fuchsia.amlogic.platform.meson;
 
 // Values taken from <soc/aml-meson/g12a-clk.h>
 uint G12A_CLK_ID {

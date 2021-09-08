@@ -13,7 +13,7 @@ driver_bind_rules("amlogic_display_bind") {
   header_output = "amlogic-display-bind.h"
   bind_output = "amlogic-display.bindbc"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 source_set("common_srcs") {

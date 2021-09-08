@@ -19,7 +19,7 @@ driver_bind_rules("ge2d_bind") {
   rules = "ge2d.bind"
   header_output = "bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 source_set("lib") {

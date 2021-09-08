@@ -39,7 +39,7 @@ if (target_cpu == "arm64") {
     rules = "amlogic_video.bind"
     header_output = "amlogic_video_bind.h"
     tests = "bind_tests.json"
-    deps = [ "//src/devices/bind/amlogic.platform" ]
+    deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
   }
 
   # Note: This target uses the same source as above, the only difference is the addition of
@@ -48,7 +48,7 @@ if (target_cpu == "arm64") {
     rules = "amlogic_video.bind"
     header_output = "amlogic_video_test_bind.h"
     disable_autobind = true
-    deps = [ "//src/devices/bind/amlogic.platform" ]
+    deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
   }
 
   driver_module("amlogic_video_decoder-driver") {

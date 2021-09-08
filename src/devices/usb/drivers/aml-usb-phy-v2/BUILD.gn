@@ -13,7 +13,7 @@ driver_bind_rules("aml_usb_phy_bind") {
   header_output = "aml_usb_phy_bind.h"
   bind_output = "aml-usb-phy-v2.bindbc"
   tests = "test_bind.json"
-  deps = [ "//src/devices/bind/amlogic.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
 driver_module("aml-usb-phy-v2-driver") {

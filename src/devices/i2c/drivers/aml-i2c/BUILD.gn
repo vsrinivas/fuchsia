@@ -12,7 +12,7 @@ driver_bind_rules("aml_i2c_bind") {
   bind_output = "aml-i2c.bindbc"
   tests = "bind_tests.json"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

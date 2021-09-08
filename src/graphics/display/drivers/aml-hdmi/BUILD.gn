@@ -14,7 +14,7 @@ driver_bind_rules("aml_hdmi_bind") {
   tests = "bind_tests.json"
 
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
