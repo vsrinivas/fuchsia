@@ -16,9 +16,7 @@
             from: "#codec-factory",
         },
         {
-            protocol: [
-                "fuchsia.sysmem.Allocator",
-            ],
+            protocol: [ "fuchsia.sysmem.Allocator" ],
         },
     ],
 }
