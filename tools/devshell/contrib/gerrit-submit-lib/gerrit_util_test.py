@@ -18,8 +18,9 @@ import gerrit_util
 # request and shuts down again.
 class JsonResponder:
 
-    def __init__(self, response: bytes):
+    def __init__(self, response: bytes, code: int = 200):
         self.response: bytes = response
+        self.code = code
         self.got_request: bool = False
         self.url: Optional[str] = None
 
@@ -45,7 +46,7 @@ class JsonResponder:
         class Handler(http.server.BaseHTTPRequestHandler):
 
             def do_POST(self) -> None:
-                self.send_response(200)
+                self.send_response(parent.code)
                 self.send_header('Content-type', 'javascript/json')
                 self.end_headers()
                 self.wfile.write(b")]}'\n")  # Write the JSON header.
@@ -58,14 +59,27 @@ class JsonResponder:
 @mock.patch('gerrit_util.GERRIT_PROTOCOL', 'http')
 class TestGerritUtil(unittest.TestCase):
 
+    # Test plumbing through GerritUtil to a HTTP server and back again.
     def test_post_json(self) -> None:
-        # Test plumbing through GerritUtil to a HTTP server and back again.
         responder = JsonResponder(b'{"labels": {"Commit-Queue": 2}}')
         gerrit_util.SetReview(
             'localhost:%d' % responder.port,
             '12345',
             labels={'Commit-Queue': 2},
             notify=False)
+
+    # Ensure authentication errors are returned as GerritError exceptions.
+    def test_auth_error(self) -> None:
+        responder = JsonResponder(b'Authentication error', 400)
+        with self.assertRaises(gerrit_util.GerritError) as context:
+            gerrit_util.SetReview(
+                'localhost:%d' % responder.port,
+                '12345',
+                labels={'Commit-Queue': 2},
+                notify=False)
+        self.assertTrue(
+            'Try generating a new authentication password' in
+            context.exception.message)
 
 
 if __name__ == '__main__':

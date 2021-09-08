@@ -307,8 +307,9 @@ def _SendGerritHttpRequest(
       raise GerritError(
           response.status, 'HTTP Error: %s: %s.\n\n'
           'This may indicate a bad request (likely caused by a bug) '
-          'or that authentication failed (Check your ".gitcookies" file.)' %
-          (response.msg, contents.strip()))
+          'or that authentication failed.\n\n'
+          'Try generating a new authentication password: <%s>.\n' %
+          (response.msg, contents.strip(), Authenticator.get_new_password_url(host)))
 
     # Otherwise, throw a generic error.
     raise GerritError(response.status,
