@@ -561,8 +561,9 @@ TEST_F(DeviceEnumerationTest, NucTest) {
       "pci-00:15.0/i2c-bus-9d60",
       "pci-00:15.1/i2c-bus-9d61",
       "pci-00:17.0/ahci",
-      "pci-00:1f.3/intel-hda-000",
-      "pci-00:1f.3/intel-hda-controller",
+      // TODO(fxbug.dev/84037): Temporarily removed.
+      // "pci-00:1f.3/intel-hda-000",
+      // "pci-00:1f.3/intel-hda-controller",
       "pci-00:1f.6/e1000",
   };
 
