@@ -26,6 +26,7 @@ class ChannelService extends TaskService {
   String _targetChannel = '';
   StreamSubscription? _targetSubscription;
   StreamSubscription? _checkSubscription;
+  late UpdateMonitor _monitor;
 
   @override
   Future<void> start() async {
@@ -35,6 +36,7 @@ class ChannelService extends TaskService {
 
     final name = await _control.getCurrent();
     _currentChannel = _shortNames[name] ?? name;
+    _monitor = UpdateMonitor(_manager, onChanged);
     onChanged();
   }
 
@@ -73,6 +75,17 @@ class ChannelService extends TaskService {
     }
   }
 
+  /// TODO(fxb/79588): Monitor all channel update states
+  bool get checkingForUpdates =>
+      _monitor.getState()?.checkingForUpdates != null;
+
+  bool get errorCheckingForUpdate =>
+      _monitor.getState()?.errorCheckingForUpdate != null;
+
+  bool get noUpdateAvailable => _monitor.getState()?.noUpdateAvailable != null;
+
+  bool get installingUpdate => _monitor.getState()?.installingUpdate != null;
+
   Future<void> checkForUpdates() async {
     _checkSubscription = () async {
       assert(_manager.ctrl.isBound);
@@ -82,10 +95,10 @@ class ChannelService extends TaskService {
       var checkOptions = CheckOptions(
           initiator: initiator, allowAttachingToExistingUpdateCheck: true);
       // Create new monitor for update check
-      var monitor = UpdateMonitor(_manager).getInterfaceHandle();
+      _monitor = UpdateMonitor(_manager, onChanged);
       // Check for updates
       try {
-        return _manager.checkNow(checkOptions, monitor);
+        return _manager.checkNow(checkOptions, _monitor.getInterfaceHandle());
       } on Exception catch (e) {
         log.warning('Failed to check for updates: $e ${StackTrace.current}');
       }
@@ -115,14 +128,20 @@ class ChannelService extends TaskService {
 class UpdateMonitor extends Monitor {
   final _binding = MonitorBinding();
   final ManagerProxy _manager;
+  State? _currentState;
+  final VoidCallback _onChange;
 
-  UpdateMonitor(this._manager);
+  UpdateMonitor(this._manager, this._onChange);
 
   InterfaceHandle<Monitor> getInterfaceHandle() => _binding.wrap(this);
 
+  State? getState() => _currentState;
+
   @override
   Future<void> onState(State state) async {
-    // TODO(fxb/79588): add state detection to trigger UI updates
+    _currentState = state;
+    _onChange();
+
     if (state.waitingForReboot != null) {
       try {
         await _manager.performPendingReboot();

@@ -20,6 +20,14 @@ enum WiFiStrength { off, searching, weak, good, strong, error }
 
 enum BatteryCharge { missing, charging, discharging, error }
 
+enum ChannelState {
+  idle,
+  checkingForUpdates,
+  errorCheckingForUpdate,
+  noUpdateAvailable,
+  installingUpdate
+}
+
 /// Defines the pages that have a [SettingDetails] widget.
 enum SettingsPage {
   none,
@@ -60,6 +68,7 @@ abstract class SettingsState implements TaskService {
   String get currentChannel;
   List<String> get availableChannels;
   String get targetChannel;
+  ChannelState get channelState;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(

@@ -21,9 +21,7 @@ class ChannelSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
       final channels = state.availableChannels;
-      final targetMessage = state.targetChannel == ''
-          ? Strings.selectAnUpdateChannel
-          : Strings.downloadTargetChannel(state.targetChannel);
+      bool idleState = state.channelState == ChannelState.idle;
       return Column(
         children: [
           Expanded(
@@ -31,42 +29,133 @@ class ChannelSettings extends StatelessWidget {
               title: Strings.channel,
               onBack: state.showAllSettings,
               child: ListView.builder(
+                physics:
+                    idleState ? null : const NeverScrollableScrollPhysics(),
                 itemCount: channels.length,
                 itemBuilder: (context, index) {
                   final channel = channels[index];
                   return ListTile(
-                    title: Text(channel),
-                    subtitle: index == 0 ? Text(Strings.currentChannel) : null,
-                    onTap: () => onChange(channels[index]),
+                    title: Text(
+                      channel,
+                      style: idleState
+                          ? null
+                          : TextStyle(
+                              color: Theme.of(context).disabledColor,
+                            ),
+                    ),
+                    subtitle: index == 0
+                        ? Text(
+                            Strings.currentChannel,
+                            style: idleState
+                                ? null
+                                : TextStyle(
+                                    color: Theme.of(context).disabledColor,
+                                  ),
+                          )
+                        : null,
+                    onTap: idleState ? () => onChange(channels[index]) : null,
                     trailing: ((state.targetChannel != '') &&
                             (state.targetChannel == channel))
-                        ? Icon(Icons.check_outlined)
+                        ? Icon(
+                            Icons.check_outlined,
+                            color: idleState
+                                ? null
+                                : Theme.of(context).disabledColor,
+                          )
                         : null,
                   );
                 },
               ),
             ),
           ),
-          AppBar(
-            elevation: 0,
-            title: Text(
-              targetMessage,
-              style: Theme.of(context).textTheme.bodyText2,
-            ),
-            shape: Border(
-                top: BorderSide(color: Theme.of(context).indicatorColor)),
-            actions: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
-                child: ElevatedButton(
-                  onPressed: state.targetChannel == '' ? null : updateAlert,
-                  child: Text(Strings.update.toUpperCase()),
-                ),
-              ),
-            ],
-          ),
+          _buildUpdateProgress(context),
         ],
       );
     });
+  }
+
+  Widget _buildUpdateProgress(BuildContext context) {
+    switch (state.channelState) {
+      case ChannelState.checkingForUpdates:
+        return _buildCheckingForUpdates(context);
+      case ChannelState.errorCheckingForUpdate:
+        return _buildErrorCheckingForUpdate(context);
+      case ChannelState.noUpdateAvailable:
+        return _buildNoUpdateAvailable(context);
+      case ChannelState.installingUpdate:
+        return _buildInstallingUpdate(context);
+      default:
+        return _buildIdle(context);
+    }
+  }
+
+  Widget _buildIdle(BuildContext context) {
+    final targetMessage = state.targetChannel == ''
+        ? Strings.selectAnUpdateChannel
+        : Strings.downloadTargetChannel(state.targetChannel);
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        targetMessage,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+      actions: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(8, 12, 24, 12),
+          child: ElevatedButton(
+            onPressed: state.targetChannel == '' ? null : updateAlert,
+            child: Text(Strings.update.toUpperCase()),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCheckingForUpdates(BuildContext context) {
+    // TODO(fxb/79588): Add progress indicator
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        Strings.checkingForUpdate,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildErrorCheckingForUpdate(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        Strings.errorCheckingForUpdate,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildNoUpdateAvailable(BuildContext context) {
+    // TODO(fxb/79588): Add button to return to selection state
+    return AppBar(
+      elevation: 0,
+      title: ListTile(
+        title: Text(Strings.noUpdateAvailableTitle),
+        subtitle: Text(Strings.noUpdateAvailableSubtitle),
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildInstallingUpdate(BuildContext context) {
+    // TODO(fxb/79588): Add progress indicator
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        Strings.updating,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
   }
 }

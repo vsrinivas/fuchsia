@@ -867,6 +867,31 @@ class Strings {
         name: 'this action will download the latest OTA updates',
         desc: 'The alert dialog body before attempting channel update.',
       );
+  static String get updating => Intl.message(
+        'Updating...',
+        name: 'updating...',
+        desc: 'The label for "Updating..." text field.',
+      );
+  static String get noUpdateAvailableTitle => Intl.message(
+        'No update available.',
+        name: 'no update available',
+        desc: 'The label for "No update available" text field.',
+      );
+  static String get errorCheckingForUpdate => Intl.message(
+        'Error checking for update.',
+        name: 'Error checking for update',
+        desc: 'The label for "Error checking for update" text field.',
+      );
+  static String get checkingForUpdate => Intl.message(
+        'Checking for update...',
+        name: 'Checking for update...',
+        desc: 'The label for "Checking for update..." text field.',
+      );
+  static String get noUpdateAvailableSubtitle => Intl.message(
+        'There is not an update available at this time.',
+        name: 'There is not an update available at this time',
+        desc: 'The subtitle for "No update available" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

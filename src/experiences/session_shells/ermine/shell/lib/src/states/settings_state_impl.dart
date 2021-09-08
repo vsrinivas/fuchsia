@@ -128,6 +128,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   set targetChannel(String value) => _targetChannel.value = value;
   final Observable<String> _targetChannel = Observable<String>('');
 
+  @override
+  ChannelState get channelState => _channelState.value;
+  set channelState(ChannelState value) => _channelState.value = value;
+  final _channelState = Observable<ChannelState>(ChannelState.idle);
+
   final List<String> _timezones;
 
   @override
@@ -221,6 +226,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           ..clear()
           ..addAll(channels);
         targetChannel = channelService.targetChannel;
+        // Monitor state of update
+        if (channelService.checkingForUpdates) {
+          channelState = ChannelState.checkingForUpdates;
+        } else if (channelService.errorCheckingForUpdate) {
+          channelState = ChannelState.errorCheckingForUpdate;
+        } else if (channelService.noUpdateAvailable) {
+          channelState = ChannelState.noUpdateAvailable;
+        } else if (channelService.installingUpdate) {
+          channelState = ChannelState.installingUpdate;
+        }
       });
     };
   }
