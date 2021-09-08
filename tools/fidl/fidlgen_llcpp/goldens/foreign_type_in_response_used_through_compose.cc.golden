@@ -74,44 +74,6 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
-::fidl::WireResult<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-::fidl::WireUnownedResult<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
-    GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
-            _channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
@@ -144,6 +106,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fidl::WireClientCallback<
@@ -173,8 +136,8 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::WireClientImpl<
@@ -213,10 +176,9 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo(::fidl::WireResponseContext<
@@ -226,12 +188,42 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
+            _channel->handle()));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+      ::fidl::Result::Unbound());
+}
+::fidl::WireUnownedResult<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
+            _channel->handle()),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     DispatchEvent(fidl::IncomingMessage& msg,

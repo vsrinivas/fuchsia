@@ -4,8 +4,8 @@
 
 package codegen
 
-const fragmentEventSenderTmpl = `
-{{- define "EventSenderDeclaration" }}
+const fragmentProtocolEventSenderTmpl = `
+{{- define "Protocol:EventSender:Header" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 // |EventSender| owns a server endpoint of a channel speaking
@@ -35,10 +35,9 @@ class {{ .WireEventSender }} {
     zx_status_t {{ .Name }}({{ RenderParams .ResponseArgs }}) const;
 
     {{- if .ResponseArgs }}
-{{ "" }}
-    {{- .Docs }}
-    // Caller provides the backing storage for FIDL message via response buffers.
-    zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
+      {{ .Docs }}
+      // Caller provides the backing storage for FIDL message via response buffers.
+      zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -60,15 +59,14 @@ class {{ .WireWeakEventSender }} {
     }
 
     {{- if .ResponseArgs }}
-{{ "" }}
-    {{- .Docs }}
-  // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
-    if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}({{ RenderForwardParams "std::move(_buffer)" .ResponseArgs }});
-    }
-    return ZX_ERR_CANCELED;
-  }
+      {{ .Docs }}
+      // Caller provides the backing storage for FIDL message via response buffers.
+      zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
+        if (auto _binding = binding_.lock()) {
+          return _binding->event_sender().{{ .Name }}({{ RenderForwardParams "std::move(_buffer)" .ResponseArgs }});
+        }
+        return ZX_ERR_CANCELED;
+      }
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -83,7 +81,7 @@ class {{ .WireWeakEventSender }} {
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "EventSenderDefinition" }}
+{{- define "Protocol:EventSender:Source" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
   {{- range .Events }}

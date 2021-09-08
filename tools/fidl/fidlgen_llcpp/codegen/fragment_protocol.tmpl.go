@@ -5,26 +5,34 @@
 package codegen
 
 const fragmentProtocolTmpl = `
-{{- define "ProtocolForwardDeclaration" }}
-{{ EnsureNamespace . }}
-class {{ .Name }};
+{{- define "Protocol:ForwardDeclaration:Header" }}
+  {{ EnsureNamespace . }}
+  class {{ .Name }};
 {{- end }}
 
 
-{{- define "ClientAllocationComment" -}}
-{{- if SyncCallTotalStackSizeV1 . }} Allocates {{ SyncCallTotalStackSizeV1 . }} bytes of {{ "" }}
-{{- if not .Request.ClientAllocationV1.IsStack -}} response {{- else -}}
-  {{- if not .Response.ClientAllocationV1.IsStack -}} request {{- else -}} message {{- end -}}
-{{- end }} buffer on the stack. {{- end }}
-{{- if and .Request.ClientAllocationV1.IsStack .Response.ClientAllocationV1.IsStack -}}
-{{ "" }} No heap allocation necessary.
-{{- else }}
-  {{- if not .Request.ClientAllocationV1.IsStack }} Request is heap-allocated. {{- end }}
-  {{- if not .Response.ClientAllocationV1.IsStack }} Response is heap-allocated. {{- end }}
-{{- end }}
+{{- define "Method:ClientAllocationComment:Helper" -}}
+  {{- if SyncCallTotalStackSizeV1 . -}}
+    Allocates {{ SyncCallTotalStackSizeV1 . }} bytes of {{ "" -}}
+    {{- if not .Request.ClientAllocationV1.IsStack -}}
+      response 
+    {{- else -}}
+      {{- if not .Response.ClientAllocationV1.IsStack -}}
+        request
+      {{- else -}}
+        message
+      {{- end -}}
+    {{- end }} buffer on the stack.
+  {{- end }}
+  {{- if and .Request.ClientAllocationV1.IsStack .Response.ClientAllocationV1.IsStack -}}
+    {{ "" }} No heap allocation necessary.
+  {{- else }}
+    {{- if not .Request.ClientAllocationV1.IsStack }} Request is heap-allocated. {{- end }}
+    {{- if not .Response.ClientAllocationV1.IsStack }} Response is heap-allocated. {{- end }}
+  {{- end }}
 {{- end }}
 
-{{- define "ProtocolDeclaration" }}
+{{- define "Protocol:Header" }}
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
@@ -48,33 +56,33 @@ class {{ .Name }} final {
   {{- end }}
 };
 
-{{- template "ProtocolDetailsDeclaration" . }}
-{{- template "ProtocolDispatcherDeclaration" . }}
+{{- template "Protocol:Details:Header" . }}
+{{- template "Protocol:Dispatcher:Header" . }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-    {{- template "MethodRequestDeclaration" . }}
+    {{- template "Method:Request:Header" . }}
   {{- end }}
   {{- if .HasResponse }}
-    {{- template "MethodResponseDeclaration" . }}
+    {{- template "Method:Response:Header" . }}
   {{- end }}
 {{- end }}
 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
-  {{- template "MethodResultDeclaration" . }}
-  {{- template "MethodUnownedResultDeclaration" . }}
+  {{- template "Method:Result:Header" . }}
+  {{- template "Method:UnownedResult:Header" . }}
 {{- end }}
 
-{{- template "ProtocolCallerDeclaration" . }}
-{{- template "ProtocolEventHandlerDeclaration" . }}
-{{- template "ProtocolSyncClientDeclaration" . }}
-{{- template "ProtocolInterfaceDeclaration" . }}
+{{- template "Protocol:Caller:Header" . }}
+{{- template "Protocol:EventHandler:Header" . }}
+{{- template "Protocol:SyncClient:Header" . }}
+{{- template "Protocol:Interface:Header" . }}
 {{- EndifFuchsia -}}
 
 {{- end }}
 
-{{- define "ProtocolTraits" -}}
+{{- define "Protocol:Traits:Header" -}}
 {{ $protocol := . -}}
 {{ range .Methods -}}
 {{ $method := . -}}
@@ -117,7 +125,7 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{- end }}
 {{- end }}
 
-{{- define "ProtocolDefinition" }}
+{{- define "Protocol:Source" }}
 {{ $protocol := . -}}
 
 {{- range .Methods }}
@@ -133,48 +141,39 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
 {{ "" }}
-    {{- template "MethodResultDefinition" . }}
+    {{- template "Method:Result:Source" . }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
-    {{- template "MethodUnownedResultDefinition" . }}
+    {{- template "Method:UnownedResult:Source" . }}
   {{- end }}
 {{ "" }}
 {{- end }}
 
 {{- range .ClientMethods }}
-{{ "" }}
-  {{- template "ClientSyncRequestManagedMethodDefinition" . }}
-  {{- if or .RequestArgs .ResponseArgs }}
-{{ "" }}
-    {{- template "ClientSyncRequestCallerAllocateMethodDefinition" . }}
-  {{- end }}
   {{- if .HasResponse }}
-{{ "" }}
-    {{- template "MethodResponseContextDefinition" . }}
-    {{- template "ClientAsyncRequestManagedMethodDefinition" . }}
+    {{- template "Method:ResponseContext:Source" . }}
   {{- end }}
 {{- end }}
-{{ template "ProtocolClientImplDefinition" . }}
-{{ "" }}
+{{ template "Protocol:ClientImpl:Source" . }}
 
 {{- if .Events }}
-  {{- template "EventHandlerHandleOneEventMethodDefinition" . }}
+  {{- template "Protocol:EventHandler:Source" . }}
 {{- end }}
 
 {{- /* Server implementation */}}
-{{ template "ProtocolDispatcherDefinition" . }}
+{{ template "Protocol:Dispatcher:Source" . }}
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
-    {{- template "MethodDetailsDefinition" . }}
+    {{- template "Method:CompleterBase:Source" . }}
   {{- end }}
 
   {{- range .Methods }}
 
-    {{- if .HasRequest }}{{ template "MethodRequestDefinition" . }}{{ end }}
+    {{- if .HasRequest }}{{ template "Method:Request:Source" . }}{{ end }}
     {{ "" }}
 
-    {{- if .HasResponse }}{{ template "MethodResponseDefinition" . }}{{ end }}
+    {{- if .HasResponse }}{{ template "Method:Response:Source" . }}{{ end }}
     {{ "" }}
 
   {{- end }}

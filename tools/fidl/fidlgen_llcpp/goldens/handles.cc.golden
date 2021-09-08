@@ -43,6 +43,7 @@ void ::fidl_test_handles::wire::Handles::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_handles::SomeProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,

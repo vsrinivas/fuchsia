@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolCallerTmpl contains the definition for
 // fidl::internal::WireCaller<Protocol>.
 const fragmentProtocolCallerTmpl = `
-{{- define "ProtocolCallerDeclaration" }}
+{{- define "Protocol:Caller:Header" }}
 {{- EnsureNamespace "" }}
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -20,17 +20,17 @@ class {{ .WireCaller }} final {
     client_end_(client_end) {}
 {{ "" }}
   {{- /* Client-calling functions do not apply to events. */}}
-  {{- range .ClientMethods -}}
-    {{- .Docs }}
-    //{{ template "ClientAllocationComment" . }}
+  {{- range .ClientMethods }}
+    {{ .Docs }}
+    //{{ template "Method:ClientAllocationComment:Helper" . }}
     static {{ .WireResult }} {{ .Name }}(
         {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)
                          .RequestArgs }}) {
       return {{ .WireResult }}({{ RenderForwardParams "_client_end" .RequestArgs }});
     }
 
-    {{- .Docs }}
-    //{{ template "ClientAllocationComment" . }}
+    {{ .Docs }}
+    //{{ template "Method:ClientAllocationComment:Helper" . }}
     {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) && {
       return {{ .WireResult }}({{ RenderForwardParams "client_end_" .RequestArgs }});
     }
@@ -52,9 +52,9 @@ class {{ .WireCaller }} final {
       {{- $result_args = (List $result_args .RequestArgs) }}
       {{- if .HasResponse -}}
         {{- $result_args = (List $result_args "_response_buffer.data" "_response_buffer.capacity") }}
-      {{- end -}}
+      {{- end }}
 
-      {{- .Docs }}
+      {{ .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
       static {{ .WireUnownedResult }} {{ .Name }}(
           {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)

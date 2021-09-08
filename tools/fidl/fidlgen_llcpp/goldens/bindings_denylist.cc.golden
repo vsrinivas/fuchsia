@@ -65,26 +65,6 @@ namespace fidl_test_bindingsdenylist {
 
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
-::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                       LibfuzzerNeedsNonemptyProtocol>
-fidl::internal::WireClientImpl<
-    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocol_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocol>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                LibfuzzerNeedsNonemptyProtocol>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -119,6 +99,7 @@ fidl::internal::WireClientImpl<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
@@ -150,8 +131,8 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::WireClientImpl<
@@ -191,10 +172,9 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol(
@@ -205,12 +185,27 @@ void fidl::internal::WireClientImpl<
   ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                           LibfuzzerNeedsNonemptyProtocol>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                       LibfuzzerNeedsNonemptyProtocol>
+fidl::internal::WireClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    LibfuzzerNeedsNonemptyProtocol_Sync() {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
+            _channel->handle()));
+  }
+  return ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                LibfuzzerNeedsNonemptyProtocol>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     DispatchEvent(fidl::IncomingMessage& msg,
@@ -310,6 +305,7 @@ void ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
         fidl::IncomingMessage& msg,

@@ -56,6 +56,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
+
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Parent>::First(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
@@ -67,9 +68,6 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Parent>::First(
         ::fidl::BufferSpan _request_buffer,
@@ -82,9 +80,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     DispatchEvent(fidl::IncomingMessage& msg,
@@ -271,6 +267,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
+
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::First(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
@@ -282,9 +279,6 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::First(
         ::fidl::BufferSpan _request_buffer,
@@ -297,9 +291,6 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::Second(
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
@@ -311,9 +302,6 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::Second(
         ::fidl::BufferSpan _request_buffer,
@@ -326,9 +314,7 @@ namespace fidl_test_inheritancewithrecursivedecl {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     DispatchEvent(fidl::IncomingMessage& msg,

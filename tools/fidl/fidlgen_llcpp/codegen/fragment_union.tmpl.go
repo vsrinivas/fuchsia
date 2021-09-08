@@ -5,14 +5,14 @@
 package codegen
 
 const fragmentUnionTmpl = `
-{{- define "UnionForwardDeclaration" }}
+{{- define "Union:ForwardDeclaration:Header" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "UnionDeclaration" }}
+{{- define "Union:Header" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -133,7 +133,7 @@ class {{ .Name }} {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "UnionDefinition" }}
+{{- define "Union:Source" }}
 {{- if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}
@@ -181,7 +181,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "UnionTraits" }}
+{{- define "Union:Traits:Header" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}

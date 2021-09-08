@@ -347,6 +347,7 @@ class ::fidl::internal::WireCaller<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         _client_end, std::move(request));
   }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
@@ -1058,6 +1059,7 @@ class ::fidl::internal::WireCaller<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         _client_end, std::move(request));
   }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
@@ -1109,6 +1111,7 @@ class ::fidl::internal::WireCaller<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         _client_end, std::move(request));
   }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>
@@ -1384,7 +1387,6 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
-
   WireClientImpl() = default;
 
  private:
@@ -1482,7 +1484,6 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
-
   WireClientImpl() = default;
 
  private:

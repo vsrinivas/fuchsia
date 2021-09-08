@@ -559,6 +559,7 @@ class ::fidl::internal::WireCaller<::fidl_test_inheritance::Super> final {
     return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(_client_end,
                                                                    s);
   }
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
@@ -1235,6 +1236,7 @@ class ::fidl::internal::WireCaller<::fidl_test_inheritance::Sub> final {
     return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(_client_end,
                                                                  s);
   }
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
@@ -1492,19 +1494,18 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
            ::fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>*
                _context);
 
-  // Synchronous variant of |Super.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo_Sync(
       ::fidl::StringView s);
 
-  // Synchronous variant of |Super.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
-
   WireClientImpl() = default;
 
  private:
@@ -1606,19 +1607,18 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub> final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>* _context);
 
-  // Synchronous variant of |Sub.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo_Sync(
       ::fidl::StringView s);
 
-  // Synchronous variant of |Sub.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
-
   WireClientImpl() = default;
 
  private:

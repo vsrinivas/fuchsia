@@ -5,14 +5,14 @@
 package codegen
 
 const fragmentTableTmpl = `
-{{- define "TableForwardDeclaration" }}
+{{- define "Table:ForwardDeclaration:Header" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "TableDeclaration" }}
+{{- define "Table:Header" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -265,7 +265,7 @@ public:
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "TableDefinition" }}
+{{- define "Table:Source" }}
 {{ if .IsResourceType }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
@@ -284,7 +284,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "TableTraits" }}
+{{- define "Table:Traits:Header" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}

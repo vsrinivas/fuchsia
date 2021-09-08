@@ -848,6 +848,7 @@ class ::fidl::internal::WireCaller<::fidl_test_error::Example> final {
       ::fidl::StringView s) {
     return ::fidl::WireResult<::fidl_test_error::Example::Foo>(_client_end, s);
   }
+
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
@@ -1101,19 +1102,18 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>* _context);
 
-  // Synchronous variant of |Example.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo_Sync(
       ::fidl::StringView s);
 
-  // Synchronous variant of |Example.Foo()|.
+  // Synchronous variant of |Foo.Foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo_Sync(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
-
   WireClientImpl() = default;
 
  private:

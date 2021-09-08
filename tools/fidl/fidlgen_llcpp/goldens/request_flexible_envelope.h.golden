@@ -1468,6 +1468,7 @@ class ::fidl::internal::WireCaller<
                                   RequestStrictResponseFlexible>(_client_end,
                                                                  s);
   }
+
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>
@@ -1520,6 +1521,7 @@ class ::fidl::internal::WireCaller<
                                   RequestFlexibleResponseStrict>(_client_end,
                                                                  s);
   }
+
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrict>
@@ -1965,23 +1967,24 @@ class ::fidl::internal::WireClientImpl<
                                       Protocol::RequestStrictResponseFlexible>*
           _context);
 
-  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
-  // Request is heap-allocated. Response is heap-allocated.
+  // Synchronous variant of
+  // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Request is
+  // heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>
   RequestStrictResponseFlexible_Sync(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
 
-  // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Synchronous variant of
+  // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
   ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
                                 RequestStrictResponseFlexible>
   RequestStrictResponseFlexible_Sync(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
       ::fidl::BufferSpan _response_buffer);
-
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   void RequestFlexibleResponseStrict(
@@ -2008,23 +2011,24 @@ class ::fidl::internal::WireClientImpl<
                                       Protocol::RequestFlexibleResponseStrict>*
           _context);
 
-  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
-  // Request is heap-allocated. Response is heap-allocated.
+  // Synchronous variant of
+  // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Request is
+  // heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict_Sync(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
 
-  // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
+  // Synchronous variant of
+  // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Caller
+  // provides the backing storage for FIDL message via request and response
+  // buffers.
   ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
                                 RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict_Sync(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::BufferSpan _response_buffer);
-
   WireClientImpl() = default;
 
  private:

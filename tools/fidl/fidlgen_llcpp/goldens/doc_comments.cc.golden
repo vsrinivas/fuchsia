@@ -44,6 +44,7 @@ namespace fidl_test_doccomments {
 
 }  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
+
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -53,9 +54,7 @@ fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_doccomments::Interface>::DispatchEvent(
         fidl::IncomingMessage& msg,

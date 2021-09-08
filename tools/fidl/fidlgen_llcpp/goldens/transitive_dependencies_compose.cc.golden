@@ -71,41 +71,6 @@ namespace fidl_test_transitivedependenciescompose {
 
 }  // namespace fidl_test_transitivedependenciescompose
 #ifdef __Fuchsia__
-::fidl::WireResult<::fidl_test_transitivedependenciescompose::Top::GetFoo>
-fidl::internal::WireClientImpl<
-    ::fidl_test_transitivedependenciescompose::Top>::GetFoo_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_transitivedependenciescompose::Top>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<
-      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-::fidl::WireUnownedResult<
-    ::fidl_test_transitivedependenciescompose::Top::GetFoo>
-fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
-    GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_transitivedependenciescompose::Top>(_channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<::fidl_test_transitivedependenciescompose::Top::
                                 GetFoo>::WireResponseContext()
@@ -136,6 +101,7 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fidl::WireClientCallback<
@@ -163,8 +129,8 @@ void fidl::internal::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::
@@ -200,10 +166,9 @@ void fidl::internal::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
         ::fidl::WireResponseContext<
@@ -211,12 +176,39 @@ void fidl::internal::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_transitivedependenciescompose::Top::GetFoo>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<::fidl_test_transitivedependenciescompose::Top::GetFoo>
+fidl::internal::WireClientImpl<
+    ::fidl_test_transitivedependenciescompose::Top>::GetFoo_Sync() {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<
+        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_transitivedependenciescompose::Top>(
+            _channel->handle()));
+  }
+  return ::fidl::WireResult<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+      ::fidl::Result::Unbound());
+}
+::fidl::WireUnownedResult<
+    ::fidl_test_transitivedependenciescompose::Top::GetFoo>
+fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
+    GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_transitivedependenciescompose::Top>(_channel->handle()),
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
     DispatchEvent(fidl::IncomingMessage& msg,

@@ -85,6 +85,7 @@ namespace fidl_test_placementofattributes {
 
 }  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
+
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         const ::exampleusing::wire::Empty& arg) {
@@ -95,9 +96,6 @@ namespace fidl_test_placementofattributes {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
     WireClientImpl<::fidl_test_placementofattributes::ExampleProtocol>::Method(
         ::fidl::BufferSpan _request_buffer,
@@ -108,9 +106,7 @@ namespace fidl_test_placementofattributes {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>::
     DispatchEvent(fidl::IncomingMessage& msg,

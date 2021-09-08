@@ -1420,6 +1420,7 @@ class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         _client_end);
   }
+
   /// method comment #1
   ///
   /// method comment #3
@@ -1506,7 +1507,6 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         this->client_end());
   }
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method defined in |SyncEventHandler|. The return
@@ -1663,7 +1663,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method();
-
   WireClientImpl() = default;
 
  private:

@@ -7,7 +7,7 @@ package codegen
 // fragmentMethodResponseTmpl contains the definition for
 // fidl::WireResponse<Method>.
 const fragmentMethodResponseTmpl = `
-{{- define "MethodResponseDeclaration" }}
+{{- define "Method:Response:Header" }}
 {{- EnsureNamespace "" }}
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
@@ -199,7 +199,7 @@ struct {{ .WireResponse }} final {
 
 
 
-{{- define "MethodResponseDefinition" }}
+{{- define "Method:Response:Source" }}
   {{- EnsureNamespace "" }}
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}

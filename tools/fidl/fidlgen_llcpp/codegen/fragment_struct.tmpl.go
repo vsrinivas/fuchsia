@@ -5,14 +5,14 @@
 package codegen
 
 const fragmentStructTmpl = `
-{{- define "StructForwardDeclaration" }}
+{{- define "Struct:ForwardDeclaration:Header" }}
 {{ EnsureNamespace . }}
 struct {{ .Name }};
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "StructDeclaration" }}
+{{- define "Struct:Header" }}
 {{ EnsureNamespace . }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -169,7 +169,7 @@ struct {{ .Name }} {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "StructDefinition" }}
+{{- define "Struct:Source" }}
 {{ EnsureNamespace "" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
@@ -184,7 +184,7 @@ void {{ . }}::_CloseHandles() {
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
-{{- define "StructTraits" }}
+{{- define "Struct:Traits:Header" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
 {{- end }}

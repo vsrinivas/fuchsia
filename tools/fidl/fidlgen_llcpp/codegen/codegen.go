@@ -222,12 +222,14 @@ func NewGenerator() *Generator {
 	templates := []string{
 		fileHeaderTmpl,
 		fileSourceTmpl,
+		fileTestBaseTmpl,
 		fragmentBitsTmpl,
-		fragmentClientAsyncMethodsTmpl,
-		fragmentClientSyncMethodsTmpl,
 		fragmentConstTmpl,
 		fragmentEnumTmpl,
-		fragmentEventSenderTmpl,
+		fragmentMethodClientImplAsyncTmpl,
+		fragmentMethodClientImplOnewayTmpl,
+		fragmentMethodClientImplSyncTmpl,
+		fragmentMethodClientImplTmpl,
 		fragmentMethodCompleterBaseTmpl,
 		fragmentMethodRequestTmpl,
 		fragmentMethodResponseContextTmpl,
@@ -239,16 +241,14 @@ func NewGenerator() *Generator {
 		fragmentProtocolDetailsTmpl,
 		fragmentProtocolDispatcherTmpl,
 		fragmentProtocolEventHandlerTmpl,
+		fragmentProtocolEventSenderTmpl,
 		fragmentProtocolInterfaceTmpl,
 		fragmentProtocolSyncClientTmpl,
 		fragmentProtocolTmpl,
 		fragmentServiceTmpl,
 		fragmentStructTmpl,
-		fragmentSyncEventHandlerTmpl,
-		fragmentSyncRequestCallerAllocateTmpl,
 		fragmentTableTmpl,
 		fragmentUnionTmpl,
-		testBaseTmpl,
 	}
 	for _, t := range templates {
 		template.Must(tmpls.Parse(t))
@@ -294,15 +294,15 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 }
 
 func (gen *Generator) generateHeader(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Header", tree)
+	return gen.tmpls.ExecuteTemplate(wr, "File:Header", tree)
 }
 
 func (gen *Generator) generateSource(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
+	return gen.tmpls.ExecuteTemplate(wr, "File:Source", tree)
 }
 
 func (gen *Generator) generateTestBase(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "TestBase", tree)
+	return gen.tmpls.ExecuteTemplate(wr, "File:TestBase", tree)
 }
 
 // GenerateHeader generates the LLCPP bindings header, and writes it into

@@ -716,6 +716,7 @@ class ::fidl::internal::WireCaller<
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
             LibfuzzerNeedsNonemptyProtocol>(_client_end);
   }
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -1112,12 +1113,12 @@ class ::fidl::internal::WireClientImpl<
               LibfuzzerNeedsNonemptyProtocol>* _context);
 
   // Synchronous variant of
-  // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 32 bytes
-  // of message buffer on the stack. No heap allocation necessary.
+  // |LibfuzzerNeedsNonemptyProtocol.LibfuzzerNeedsNonemptyProtocol()|.
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
   ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                          LibfuzzerNeedsNonemptyProtocol>
   LibfuzzerNeedsNonemptyProtocol_Sync();
-
   WireClientImpl() = default;
 
  private:

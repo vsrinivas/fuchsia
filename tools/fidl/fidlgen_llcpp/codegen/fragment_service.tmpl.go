@@ -5,12 +5,12 @@
 package codegen
 
 const fragmentServiceTmpl = `
-{{- define "ServiceForwardDeclaration" }}
+{{- define "Service:ForwardDeclaration:Header" }}
 {{ EnsureNamespace . }}
 class {{ .Name }};
 {{- end }}
 
-{{- define "ServiceDeclaration" }}
+{{- define "Service:Header" }}
 {{ EnsureNamespace . }}
 {{ "" }}
 {{- .Docs }}

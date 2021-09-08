@@ -125,43 +125,6 @@ namespace fidl_test_anonymous {
 
 }  // namespace fidl_test_anonymous
 #ifdef __Fuchsia__
-::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
-    SomeMethod_Sync(::fidl_test_anonymous::wire::UnionMember union_member,
-                    ::fidl_test_anonymous::wire::TableMember table_member) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-            _channel->handle()),
-        union_member, table_member);
-  }
-  return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
-    SomeMethod_Sync(::fidl::BufferSpan _request_buffer,
-                    ::fidl_test_anonymous::wire::UnionMember union_member,
-                    ::fidl_test_anonymous::wire::TableMember table_member,
-                    ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, union_member,
-        table_member, _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<
     ::fidl_test_anonymous::SomeProtocol::SomeMethod>::WireResponseContext()
@@ -191,6 +154,7 @@ fidl::WireResponseContext<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
     SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
                ::fidl_test_anonymous::wire::TableMember table_member,
@@ -220,8 +184,8 @@ void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
   ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    union_member, table_member);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
@@ -259,10 +223,9 @@ void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
   ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
                                    union_member, table_member);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
     SomeMethod(::fidl::BufferSpan _request_buffer,
                ::fidl_test_anonymous::wire::UnionMember union_member,
@@ -273,12 +236,41 @@ void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, union_member,
                                      table_member);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
+    SomeMethod_Sync(::fidl_test_anonymous::wire::UnionMember union_member,
+                    ::fidl_test_anonymous::wire::TableMember table_member) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
+            _channel->handle()),
+        union_member, table_member);
+  }
+  return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+      ::fidl::Result::Unbound());
+}
+::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
+    SomeMethod_Sync(::fidl::BufferSpan _request_buffer,
+                    ::fidl_test_anonymous::wire::UnionMember union_member,
+                    ::fidl_test_anonymous::wire::TableMember table_member,
+                    ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, union_member,
+        table_member, _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<
+      ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_anonymous::SomeProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,

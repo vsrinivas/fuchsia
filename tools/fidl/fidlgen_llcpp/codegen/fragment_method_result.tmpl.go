@@ -7,7 +7,7 @@ package codegen
 // fragmentMethodResultTmpl contains the definition for
 // fidl::WireResult<Method>.
 const fragmentMethodResultTmpl = `
-{{- define "MethodResultDeclaration" }}
+{{- define "Method:Result:Header" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireResult }} final : public ::fidl::Result {
@@ -67,7 +67,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
 
 
 
-{{- define "MethodResultDefinition" }}
+{{- define "Method:Result:Source" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(

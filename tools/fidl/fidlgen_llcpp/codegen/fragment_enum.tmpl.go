@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentEnumTmpl = `
-{{- define "EnumForwardDeclaration" }}
+{{- define "Enum:ForwardDeclaration:Header" }}
 {{ EnsureNamespace . }}
 {{ if .IsStrict }}
 {{ .Docs }}
@@ -56,7 +56,7 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
 {{ end }}
 {{ end }}
 
-{{- define "EnumTraits" }}
+{{- define "Enum:Traits:Header" }}
 
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};

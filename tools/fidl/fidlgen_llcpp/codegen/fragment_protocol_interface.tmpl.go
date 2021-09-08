@@ -6,9 +6,9 @@ package codegen
 
 // fragmentProtocolInterfaceTmpl contains the definition for fidl::WireServer<Protocol>.
 const fragmentProtocolInterfaceTmpl = `
-{{- define "ProtocolInterfaceDeclaration" }}
+{{- define "Protocol:Interface:Header" }}
 {{- range .ClientMethods }}
-  {{- template "MethodDetailsDeclaration" . }}
+  {{- template "Method:CompleterBase:Header" . }}
 {{- end }}
 
 // Pure-virtual interface to be implemented by a server.

@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolInterfaceTmpl contains the definition for
 // fidl::WireSyncClient<Protocol>.
 const fragmentProtocolSyncClientTmpl = `
-{{- define "ProtocolSyncClientDeclaration" }}
+{{- define "Protocol:SyncClient:Header" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireSyncClient }} final {
@@ -26,19 +26,19 @@ class {{ .WireSyncClient }} final {
 
    const ::zx::channel& channel() const { return client_end_.channel(); }
    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-{{ "" }}
+
    {{- /* Client-calling functions do not apply to events. */}}
-   {{- range .ClientMethods -}}
-   {{- .Docs }}
-   //{{ template "ClientAllocationComment" . }}
+   {{- range .ClientMethods }}
+   {{ .Docs }}
+   //{{ template "Method:ClientAllocationComment:Helper" . }}
    {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
      return {{ .WireResult }}({{ RenderForwardParams "this->client_end()" .RequestArgs }});
    }
-{{ "" }}
-     {{- if or .RequestArgs .ResponseArgs }}
-       {{- .Docs }}
-   // Caller provides the backing storage for FIDL message via request and response buffers.
-   {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
+
+   {{- if or .RequestArgs .ResponseArgs }}
+    {{ .Docs }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    {{ .WireUnownedResult }} {{ .Name }}({{ template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
     {{- $args := (List "this->client_end()") }}
     {{- if .RequestArgs }}
       {{- $args = (List $args "_request_buffer.data" "_request_buffer.capacity") }}
@@ -50,9 +50,9 @@ class {{ .WireSyncClient }} final {
     return {{ .WireUnownedResult }}({{ RenderForwardParams $args }});
    }
      {{- end }}
-{{ "" }}
-   {{- end }}
-   {{- if .Events }}
+
+  {{- end }}
+  {{- if .Events }}
    // Handle all possible events defined in this protocol.
    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
    // method defined in |SyncEventHandler|. The return status of the handler function is folded with

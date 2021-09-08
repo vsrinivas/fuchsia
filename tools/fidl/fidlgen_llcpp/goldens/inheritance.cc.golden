@@ -62,38 +62,6 @@ namespace fidl_test_inheritance {
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
-::fidl::WireResult<::fidl_test_inheritance::Super::Foo>
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
-    ::fidl::StringView s) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
-            _channel->handle()),
-        s);
-  }
-  return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<
     ::fidl_test_inheritance::Super::Foo>::WireResponseContext()
@@ -122,6 +90,7 @@ fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>::OnRawResult(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::fidl_test_inheritance::Super::Foo> _cb) {
@@ -146,8 +115,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
@@ -180,10 +149,9 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>*
@@ -191,12 +159,36 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::
       UnownedEncodedMessage _request(_request_buffer.data,
                                      _request_buffer.capacity, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<::fidl_test_inheritance::Super::Foo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
+    ::fidl::StringView s) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
+            _channel->handle()),
+        s);
+  }
+  return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
+      ::fidl::Result::Unbound());
+}
+::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
+    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+    ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::DispatchEvent(
     fidl::IncomingMessage& msg,
@@ -346,38 +338,6 @@ namespace fidl_test_inheritance {
 
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
-::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
-    ::fidl::StringView s) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
-            _channel->handle()),
-        s);
-  }
-  return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>
-fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-    ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-      ::fidl::Result::Unbound());
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 
 ::fidl::WireResponseContext<
     ::fidl_test_inheritance::Sub::Foo>::WireResponseContext()
@@ -406,6 +366,7 @@ fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>::OnRawResult(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
     ::fidl::WireClientCallback<::fidl_test_inheritance::Sub::Foo> _cb) {
@@ -429,8 +390,8 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
@@ -462,21 +423,44 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>* _context) {
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
       _request(_request_buffer.data, _request_buffer.capacity, s);
-  return ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
-                                                  _context);
+  ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
+                                           _context);
 }
-#endif  // __Fuchsia__
+::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
+    ::fidl::StringView s) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
+            _channel->handle()),
+        s);
+  }
+  return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
+      ::fidl::Result::Unbound());
+}
+::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
+    ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+    ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
+        ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
+      ::fidl::Result::Unbound());
+}
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::DispatchEvent(
     fidl::IncomingMessage& msg,

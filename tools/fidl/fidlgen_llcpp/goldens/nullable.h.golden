@@ -1754,6 +1754,7 @@ class ::fidl::internal::WireCaller<::fidl_test_nullable::SimpleProtocol> final {
     return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
         _client_end, a, b);
   }
+
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
@@ -2278,19 +2279,18 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
       ::fidl::WireResponseContext<::fidl_test_nullable::SimpleProtocol::Add>*
           _context);
 
-  // Synchronous variant of |SimpleProtocol.Add()|.
+  // Synchronous variant of |Add.Add()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add_Sync(
       int32_t a, int32_t b);
 
-  // Synchronous variant of |SimpleProtocol.Add()|.
+  // Synchronous variant of |Add.Add()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> Add_Sync(
       ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
       ::fidl::BufferSpan _response_buffer);
-
   WireClientImpl() = default;
 
  private:

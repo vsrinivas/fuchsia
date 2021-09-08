@@ -31,6 +31,7 @@ namespace fidl_test_service {
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
+
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_service::SecondProtocol>::MethodOnSecond() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -40,9 +41,7 @@ namespace fidl_test_service {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_service::SecondProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
@@ -137,6 +136,7 @@ namespace fidl_test_service {
 
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
+
 ::fidl::Result fidl::internal::WireClientImpl<
     ::fidl_test_service::FirstProtocol>::MethodOnFirst() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -146,9 +146,7 @@ namespace fidl_test_service {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request.GetOutgoingMessage());
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_service::FirstProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,

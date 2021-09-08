@@ -380,6 +380,7 @@ class ::fidl::internal::WireCaller<::fidl_test_service::SecondProtocol> final {
     return ::fidl::WireResult<
         ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end);
   }
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
@@ -991,6 +992,7 @@ class ::fidl::internal::WireCaller<::fidl_test_service::FirstProtocol> final {
     return ::fidl::WireResult<
         ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end);
   }
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
@@ -1174,7 +1176,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnSecond();
-
   WireClientImpl() = default;
 
  private:
@@ -1246,7 +1247,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnFirst();
-
   WireClientImpl() = default;
 
  private:

@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolDetailsTmpl contains the definition for
 // fidl::internal::ProtocolDetails<Protocol>.
 const fragmentProtocolDetailsTmpl = `
-{{- define "ProtocolDetailsDeclaration" }}
+{{- define "Protocol:Details:Header" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
