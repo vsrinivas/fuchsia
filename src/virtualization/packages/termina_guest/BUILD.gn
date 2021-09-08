@@ -9,7 +9,7 @@ declare_args() {
   #
   # Defaults to the common linux kernel image from CIPD, but can be overridden to use a
   # custom kernel for development purposes.
-  termina_kernel = "//prebuilt/virtualization/packages/linux_guest/images/${target_cpu}/Image"
+  termina_kernel = "//prebuilt/virtualization/packages/termina_guest/kernel/${target_cpu}/vm_kernel"
 
   # The termina disk image.
   #
