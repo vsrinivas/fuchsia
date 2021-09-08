@@ -6,8 +6,6 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
 if (is_host) {
-  # NOTE(fxbug.dev/83456): until this test is on in CQ you can run it locally by modifying this
-  # variable to point to your local development copy and removing the `--disable` flag below.
   prebuilt_cargo_outdated = "//prebuilt/third_party/rust_cargo_outdated/${host_platform}/cargo-outdated"
   test_output_dir = "$root_out_dir/test_data/tools/update_crates/tests"
   update_crates_path = "$host_tools_dir/update_crates"
@@ -26,9 +24,6 @@ if (is_host) {
       rebase_path(prebuilt_cargo_outdated, root_build_dir),
       "--update-crates",
       rebase_path(update_crates_path, root_build_dir),
-
-      # TODO(fxbug.dev/83456) remove this flag when cargo-outdated supports offline registries
-      "--disable",
     ]
 
     deps = [

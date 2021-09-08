@@ -48,9 +48,6 @@ struct TestArgs {
     /// path to update_crates binary to test
     #[argh(option)]
     update_crates: PathBuf,
-    /// TODO(fxbug.dev/83456) used to skip the test while we wait for cargo-outdated fixes upstream
-    #[argh(switch)]
-    disable: bool,
 }
 
 impl TestArgs {
@@ -66,13 +63,8 @@ impl TestArgs {
 }
 
 fn main() {
-    let TestArgs { test_base_dir, rust_bin_dir, cargo_outdated, update_crates, disable } =
+    let TestArgs { test_base_dir, rust_bin_dir, cargo_outdated, update_crates } =
         argh::from_env::<TestArgs>().canonicalize();
-
-    if disable {
-        eprintln!("skipping test, see https://fxbug.dev/83456 for details");
-        return;
-    }
 
     // copy everything to a temporary directory and shadow variable name so we don't modify source
     let test_base_dir = setup_test_directory(test_base_dir);
