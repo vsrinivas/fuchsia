@@ -26,7 +26,7 @@ class MediaApp {
 
   void WriteAudioIntoBuffer();
 
-  fuchsia::media::StreamPacket CreatePacket(size_t packet_num);
+  fuchsia::media::StreamPacket CreatePacket(uint32_t packet_num);
   void SendPacket(fuchsia::media::StreamPacket packet);
   void OnSendPacketComplete();
 
@@ -37,11 +37,11 @@ class MediaApp {
   fuchsia::media::AudioRendererPtr audio_renderer_;
 
   fzl::VmoMapper payload_buffer_;
-  size_t payload_size_;
-  size_t total_mapping_size_;
+  uint32_t payload_size_;
+  uint32_t total_mapping_size_;
 
-  size_t num_packets_sent_ = 0u;
-  size_t num_packets_completed_ = 0u;
+  uint32_t num_packets_sent_ = 0u;
+  uint32_t num_packets_completed_ = 0u;
 };
 
 }  // namespace examples

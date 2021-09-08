@@ -56,31 +56,31 @@ constexpr int32_t MIN_REVERB_DEPTH_MSEC = 1;
 constexpr int32_t MAX_REVERB_DEPTH_MSEC = OUTPUT_BUF_MSEC - 10;
 constexpr int32_t SMALL_REVERB_DEPTH_STEP = 1;
 constexpr int32_t LARGE_REVERB_DEPTH_STEP = 10;
-constexpr float MIN_REVERB_FEEDBACK_GAIN = -60.0f;
-constexpr float MAX_REVERB_FEEDBACK_GAIN = -3.0f;
+constexpr float MIN_REVERB_FEEDBACK_GAIN = -60;
+constexpr float MAX_REVERB_FEEDBACK_GAIN = -3;
 constexpr float SMALL_REVERB_GAIN_STEP = 0.5;
 constexpr float LARGE_REVERB_GAIN_STEP = 2.5;
 
-constexpr float MIN_FUZZ_GAIN = 1.0;
-constexpr float MAX_FUZZ_GAIN = 50.0;
-constexpr float SMALL_FUZZ_GAIN_STEP = 0.1;
-constexpr float LARGE_FUZZ_GAIN_STEP = 1.0;
-constexpr float MIN_FUZZ_MIX = 0.0;
-constexpr float MAX_FUZZ_MIX = 1.0;
-constexpr float SMALL_FUZZ_MIX_STEP = 0.01;
-constexpr float LARGE_FUZZ_MIX_STEP = 0.1;
+constexpr float MIN_FUZZ_GAIN = 1;
+constexpr float MAX_FUZZ_GAIN = 50;
+constexpr float SMALL_FUZZ_GAIN_STEP = 0.1f;
+constexpr float LARGE_FUZZ_GAIN_STEP = 1;
+constexpr float MIN_FUZZ_MIX = 0;
+constexpr float MAX_FUZZ_MIX = 1;
+constexpr float SMALL_FUZZ_MIX_STEP = 0.01f;
+constexpr float LARGE_FUZZ_MIX_STEP = 0.1f;
 
-constexpr float MIN_PREAMP_GAIN = -30.0f;
-constexpr float MAX_PREAMP_GAIN = 20.0f;
+constexpr float MIN_PREAMP_GAIN = -30;
+constexpr float MAX_PREAMP_GAIN = 20;
 constexpr float SMALL_PREAMP_GAIN_STEP = 0.1f;
-constexpr float LARGE_PREAMP_GAIN_STEP = 1.0f;
+constexpr float LARGE_PREAMP_GAIN_STEP = 1;
 constexpr uint32_t PREAMP_GAIN_FRAC_BITS = 12;
 
 constexpr int32_t DEFAULT_REVERB_DEPTH_MSEC = 200;
-constexpr float DEFAULT_REVERB_FEEDBACK_GAIN = -4.0f;
-constexpr float DEFAULT_FUZZ_GAIN = 0.0;
-constexpr float DEFAULT_FUZZ_MIX = 1.0;
-constexpr float DEFAULT_PREAMP_GAIN = -5.0f;
+constexpr float DEFAULT_REVERB_FEEDBACK_GAIN = -4;
+constexpr float DEFAULT_FUZZ_GAIN = 0;
+constexpr float DEFAULT_FUZZ_MIX = 1;
+constexpr float DEFAULT_PREAMP_GAIN = -5;
 
 using audio::utils::AudioInput;
 
@@ -192,7 +192,8 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio,
   input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
   if (!wav_writer_.Initialize("/tmp/fx.wav", fuchsia::media::AudioSampleFormat::SIGNED_16,
-                              input_->channel_cnt(), input_->frame_rate(), 16)) {
+                              static_cast<uint16_t>(input_->channel_cnt()), input_->frame_rate(),
+                              16)) {
     printf("Unable to initialize WAV file for recording.\n");
     return;
   }
@@ -484,11 +485,11 @@ void FxProcessor::ProcessInput() {
   // Save output audio to WAV file (if configured to do so).
   auto output_base = reinterpret_cast<uint8_t*>(output_buf_.start());
   if (pkt1.payload_size) {
-    wav_writer_.Write(output_base + pkt1.payload_offset, pkt1.payload_size);
+    wav_writer_.Write(output_base + pkt1.payload_offset, static_cast<uint32_t>(pkt1.payload_size));
   }
 
   if (pkt2.payload_size) {
-    wav_writer_.Write(output_base + pkt2.payload_offset, pkt2.payload_size);
+    wav_writer_.Write(output_base + pkt2.payload_offset, static_cast<uint32_t>(pkt2.payload_size));
   }
 
   // Schedule our next processing callback.

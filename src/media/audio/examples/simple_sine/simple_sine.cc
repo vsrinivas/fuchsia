@@ -16,11 +16,11 @@
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.
-constexpr float kFrameRate = 48000.0f;
+constexpr uint32_t kFrameRate = 48000.0f;
 
 // This example feeds the system 1 second of audio, in 10-millisecond payloads.
-constexpr size_t kNumPayloads = 100;
-constexpr size_t kFramesPerPayload = kFrameRate / kNumPayloads;
+constexpr uint32_t kNumPayloads = 100;
+constexpr uint32_t kFramesPerPayload = kFrameRate / kNumPayloads;
 
 // Play a 439 Hz sine wave at 1/8 of full-scale volume.
 constexpr double kFrequency = 439.0;
@@ -44,7 +44,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   }
 
   WriteAudioIntoBuffer();
-  for (size_t payload_num = 0; payload_num < kNumPayloads; ++payload_num) {
+  for (uint32_t payload_num = 0; payload_num < kNumPayloads; ++payload_num) {
     SendPacket(CreatePacket(payload_num));
   }
 
@@ -114,8 +114,10 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 void MediaApp::WriteAudioIntoBuffer() {
   auto float_buffer = reinterpret_cast<float*>(payload_buffer_.start());
 
-  for (size_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
-    float_buffer[frame] = kAmplitude * sin(frame * kFrequency * 2 * M_PI / kFrameRate);
+  for (uint32_t frame = 0; frame < kFramesPerPayload * kNumPayloads; ++frame) {
+    float_buffer[frame] = static_cast<float>(
+        kAmplitude * sin(2.0 * M_PI * (kFrequency / static_cast<double>(kFrameRate)) *
+                         static_cast<double>(frame)));
   }
 }
 
@@ -125,7 +127,7 @@ void MediaApp::WriteAudioIntoBuffer() {
 // on AudioRenderer to treat the sequence of packets as a contiguous unbroken
 // stream of audio. We just need to make sure we present packets early enough.
 // For this example we actually submit all packets before playback starts.
-fuchsia::media::StreamPacket MediaApp::CreatePacket(size_t payload_num) {
+fuchsia::media::StreamPacket MediaApp::CreatePacket(uint32_t payload_num) {
   fuchsia::media::StreamPacket packet;
 
   // leave packet.pts as the default (fuchsia::media::NO_TIMESTAMP)

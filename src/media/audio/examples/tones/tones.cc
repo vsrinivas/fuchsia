@@ -44,7 +44,7 @@ float Note(int32_t note) {
   // A4 (440Hz) is our reference frequency, and is 9 half steps above C4.
   constexpr int32_t kA4C4HalfStepDistance = 9;
   note -= kA4C4HalfStepDistance;
-  return kA4Frequency * pow(2.0f, note / 12.0f);
+  return kA4Frequency * pow(2.0f, static_cast<float>(note) / 12.0f);
 }
 
 // Translates a beat number into a time.
@@ -311,7 +311,7 @@ void Tones::FillBuffer(float* buffer) {
 
     frequencies_by_pts_.erase(frequencies_by_pts_.begin());
 
-    int64_t offset = when - pts_;
+    auto offset = static_cast<int32_t>(when - pts_);
     tone_generators_.emplace_back(kFramesPerSecond, frequency, kVolume, kDecay);
 
     // Mix the new tone generator, starting at the correct buffer offset.

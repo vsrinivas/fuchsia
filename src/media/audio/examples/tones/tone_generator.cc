@@ -12,7 +12,7 @@ ToneGenerator::ToneGenerator(uint32_t frames_per_second, float frequency, float 
     : frames_per_second_(frames_per_second),
       frequency_(frequency),
       volume_(volume),
-      decay_factor_(pow(1.0f - decay, 1.0f / frames_per_second)),
+      decay_factor_(pow(1.0f - decay, 1.0f / static_cast<float>(frames_per_second))),
       real_sample_(0.0f),
       imaginary_sample_(1.0f) {}
 
@@ -29,7 +29,8 @@ void ToneGenerator::MixSamples(float* dest, uint32_t frame_count, uint32_t chann
   // values on a unit circle centered on the origin. We start with 0,1 and
   // rotate the point slightly around the origin for each sample. We use only
   // the real values, which we scale to get the desired amplitude.
-  float constant = (2.0f * M_PI * frequency_) / frames_per_second_;
+  float constant =
+      static_cast<float>(2.0f * M_PI * frequency_) / static_cast<float>(frames_per_second_);
   float realSample = real_sample_;
   float imaginarySample = imaginary_sample_;
   float volume = volume_;
