@@ -5,7 +5,7 @@ that provided by the `linux_guest` package.
 
 ## Building
 
-These steps will walk through building a the package with the root filesystem
+These steps will walk through building a package with the root filesystem
 bundled as a package resource. The root filesystem will appear writable but
 all writes are volatile and will disappear when the guest shuts down.
 
@@ -17,7 +17,7 @@ $ fx build
 $ fx pave
 ```
 
-To boot on a VIM2, replace `x64` with `arm64`.
+To boot on an ARM64 device, replace `x64` with `arm64`.
 
 ## Running `debian_guest`
 
@@ -48,7 +48,9 @@ $ guest socat 0 3 23
 
 ## CIPD (Googlers only)
 
-All of the images constructed by `build.sh` (see above) are available on CIPD. To update and upload those images run the following. The scripts will prompt for a CIPD auth token and for sudo access.
+All of the images constructed by `build-image.sh` (see above) are available on
+CIPD. To update and upload those images run the following. The scripts will
+prompt for a CIPD auth token and for sudo access.
 
 ```
 $ cd $FUCHSIA_DIR
