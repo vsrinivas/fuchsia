@@ -54,13 +54,13 @@ Future<void> mainImpl(List<String> args) async {
 }
 
 class ParseManifestResult {
-  /// List of `meta.far` files indicating packages.
-  final List<File> packageFars;
+  /// List of `package_manifest.json` files.
+  final List<File> packageManifests;
 
   /// A mapping from Merkel roots to blob information.
   final Map<String, Blob> blobsByHash;
 
-  ParseManifestResult(this.packageFars, this.blobsByHash);
+  ParseManifestResult(this.packageManifests, this.blobsByHash);
 }
 
 class CodeSize {
@@ -101,7 +101,7 @@ class CodeSize {
   final Io io = Io.get();
 
   Future<ParseManifestResult> parseManifest(File manifestFile) async {
-    final List<File> packageFars = <File>[];
+    final List<File> packageManifests = <File>[];
     final Map<String, Blob> blobsByHash = {};
 
     final manifestDir = manifestFile.parent;
@@ -118,7 +118,7 @@ class CodeSize {
       if (entryPath.endsWith('meta.far')) {
         // Blobs ending with `meta.far` indicate there is a
         // corresponding package.
-        packageFars.add(file);
+        packageManifests.add(metaFarPathToPackageManifest(file));
       }
 
       final stat = file.statSync();
@@ -134,8 +134,7 @@ class CodeSize {
       }
       blobsByHash[hash] = await createBlob(hash, entryPath, stat);
     }
-    return ParseManifestResult(
-        packageFars.toList(growable: false), blobsByHash);
+    return ParseManifestResult(packageManifests.toList(), blobsByHash);
   }
 
   Future<Blob> createBlob(String hash, String entryPath, FileStat stat) async {
@@ -207,7 +206,7 @@ class CodeSize {
     }
   }
 
-  String metaFarPathToBlobsJson(File far) {
+  File metaFarPathToPackageManifest(File far) {
     // Assumes details of //build/package.gni, namely that it generates
     //   <build-dir>/.../<package>/meta.far
     // and puts a blobs.json file into
@@ -215,12 +214,13 @@ class CodeSize {
     if (!far.path.endsWith('/meta.far')) {
       throw Exception('Build details have changed');
     }
-    final jsonPath = "${removeSuffix(far.path, 'meta.far')}blobs.json";
+    final jsonPath =
+        "${removeSuffix(far.path, 'meta.far')}package_manifest.json";
     if (!build.openFile(jsonPath).existsSync()) {
       throw Exception('Build details have changed - '
-          'path to blobs.json $jsonPath not found for ${far.path}');
+          'path to package_manifest.json $jsonPath not found for ${far.path}');
     }
-    return jsonPath;
+    return File(jsonPath);
   }
 
   Future<void> computePackagesInParallel(
@@ -233,11 +233,11 @@ class CodeSize {
   }
 
   Future<void> computePackages(ParseManifestResult manifest) async {
-    final packageFars = manifest.packageFars.toList();
-    while (packageFars.isNotEmpty) {
-      File far = packageFars.removeLast();
+    final packageManifests = manifest.packageManifests.toList();
+    while (packageManifests.isNotEmpty) {
+      File packageManifest = packageManifests.removeLast();
 
-      var package = Package()..path = far.path;
+      var package = Package()..path = packageManifest.path;
       var parts = package.path.split('/');
       package
         ..name = maybeRemoveSuffix(
@@ -248,7 +248,7 @@ class CodeSize {
         ..blobsByPath = <String, Blob>{};
 
       var blobs = json.decode(
-          await build.openFile(metaFarPathToBlobsJson(far)).readAsString());
+          await build.openFile(packageManifest.path).readAsString())['blobs'];
 
       for (var blob in blobs) {
         var hash = blob['merkle'];
@@ -313,6 +313,7 @@ class CodeSize {
     final fuchsiaBuildDir = build.openDirectory('.build-id');
     final maybeCipdBuildIdDirs = ([
               'prebuilt/.build-id',
+              'prebuilt/stable/.build-id',
               'prebuilt/third_party/clang/linux-x64/lib/debug/.build-id',
               'prebuilt/third_party/clang/mac-x64/lib/debug/.build-id',
             ].map((e) => checkout / Directory(e)).toList() +
@@ -555,11 +556,13 @@ Future<AnalysisRequest> generateBloatyReportsFromBuild(CodeSize cs,
   final io = Io.get();
 
   final manifest = await cs.parseManifest(cs.build.blobManifestFile());
+
+  // Manually add the base package manifest, because we do not yet have a way to
+  // find it in the blob.manifest.
+  manifest.packageManifests.add(cs.build.basePackageManifestFile());
+
   final blobsByHash = manifest.blobsByHash;
-  await cs.addBlobSizes(
-      cs.build.openDirectory('obj/build/images/fuchsia/fuchsia/gen') /
-          File('blobs.json'),
-      blobsByHash);
+  await cs.addBlobSizes(cs.build.rootBlobsJsonFile(), blobsByHash);
   await cs.computePackagesInParallel(manifest, Platform.numberOfProcessors);
   cs.computeStats(blobsByHash);
 

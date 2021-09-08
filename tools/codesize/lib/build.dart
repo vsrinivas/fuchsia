@@ -53,10 +53,20 @@ class Build {
     }
   }
 
+  /// Returns the base package manifest.
+  File basePackageManifestFile() =>
+      openDirectory('obj/build/images/fuchsia/fuchsia') /
+      File('base_package_manifest.json');
+
   /// Returns the blob manifest listing.
   File blobManifestFile() =>
       openDirectory('obj/build/images/fuchsia/fuchsia/gen') /
       File('blob.manifest');
+
+  /// Returns the root blobs.json.
+  File rootBlobsJsonFile() =>
+      openDirectory('obj/build/images/fuchsia/fuchsia/gen') /
+      File('blobs.json');
 }
 
 extension SubDir on Directory {
