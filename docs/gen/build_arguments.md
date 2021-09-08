@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1428
+From //build/config/BUILDCONFIG.gn:1440
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1214,7 +1214,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1185
+From //build/config/BUILDCONFIG.gn:1197
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2030,6 +2030,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  remove_common_configs = ["//build/config:default_frame_pointers"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded"]
   toolchain_args = { }
 }, {
@@ -2037,7 +2038,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  remove_common_configs = ["//build/config:no_rtti"]
+  remove_common_configs = ["//build/config:default_frame_pointers", "//build/config:no_rtti"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "ubsan"]
   toolchain_args = { }
 }, {
@@ -2045,6 +2046,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  remove_common_configs = ["//build/config:default_frame_pointers"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "sancov"]
   toolchain_args = { }
 }, {
@@ -2053,6 +2055,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   name = "kasan"
+  remove_common_configs = []
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-only"]
   toolchain_args = { }
 }, {
@@ -2061,6 +2064,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   name = "kasan-sancov"
+  remove_common_configs = []
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-only", "sancov"]
   toolchain_args = { }
 }, {
@@ -2069,7 +2073,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   name = "asan-fuzzer"
-  remove_common_configs = ["//build/config:icf"]
+  remove_common_configs = ["//build/config:default_frame_pointers", "//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "kernel-excluded", "fuzzer"]
   toolchain_args = {
@@ -2087,7 +2091,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1025
+From //build/config/BUILDCONFIG.gn:1037
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3432,7 +3436,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1418
+From //build/config/BUILDCONFIG.gn:1430
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3441,7 +3445,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1423
+From //build/config/BUILDCONFIG.gn:1435
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3485,7 +3489,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1231
+From //build/config/BUILDCONFIG.gn:1243
 
 ### size_checker_input
 The input to the size checker.
@@ -3776,7 +3780,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1215
+From //build/config/BUILDCONFIG.gn:1227
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3933,16 +3937,6 @@ This argument will affect all vulkan_{executable/test} build targets.
 **Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
-
-### use_physboot
-**TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
-If true, use the new "physboot" booting path for the Zircon kernel.
-**Do not set this to `false` without filing a bug!**
-**NOTE: This option will be removed soon!**
-
-**Current value (from the default):** `true`
-
-From //zircon/kernel/BUILD.gn:23
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -4398,5 +4392,5 @@ be removed after everyone has had a chance to get hold of their machines.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/BUILD.gn:35
+From //zircon/kernel/BUILD.gn:27
 
