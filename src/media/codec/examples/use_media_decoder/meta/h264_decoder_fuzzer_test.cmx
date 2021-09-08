@@ -23,8 +23,6 @@
         ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"

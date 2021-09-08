@@ -273,8 +273,21 @@ fuchsia_unittest_component("h264_decoder_fuzzer_test") {
   ]
 }
 
+fuchsia_unittest_component("h264_decoder_fuzzer_test_v2") {
+  manifest = "use_media_decoder/meta/h264_decoder_fuzzer_test.cml"
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
+  ]
+}
+
 fuchsia_unittest_component("h264_decoder_malformed_stream_test") {
   manifest = "use_media_decoder/meta/h264_decoder_malformed_stream_test.cmx"
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_malformed_stream_test" ]
+}
+
+fuchsia_unittest_component("h264_decoder_malformed_stream_test_v2") {
+  manifest = "use_media_decoder/meta/h264_decoder_malformed_stream_test.cml"
   deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_malformed_stream_test" ]
 }
 
@@ -283,11 +296,19 @@ fuchsia_unittest_component("h264_multi_decoder_fuzzer_test") {
   deps = [ "//src/media/codec/examples/use_media_decoder:h264_multi_decoder_fuzzer_test" ]
 }
 
+fuchsia_unittest_component("h264_multi_decoder_fuzzer_test_v2") {
+  manifest = "use_media_decoder/meta/h264_multi_decoder_fuzzer_test.cml"
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_multi_decoder_fuzzer_test" ]
+}
+
 fuchsia_test_package("h264_decoder_fuzzer_tests") {
   test_components = [
     ":h264_decoder_fuzzer_test",
+    ":h264_decoder_fuzzer_test_v2",
     ":h264_decoder_malformed_stream_test",
+    ":h264_decoder_malformed_stream_test_v2",
     ":h264_multi_decoder_fuzzer_test",
+    ":h264_multi_decoder_fuzzer_test_v2",
   ]
 
   deps = [ ":bear_h264" ]
