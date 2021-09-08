@@ -314,10 +314,8 @@ fuchsia_test_package("h264_decoder_fuzzer_tests") {
   deps = [ ":bear_h264" ]
 
   test_specs = {
-    # Should pass when run on VIM2, sherlock.
-
-    # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
+      astro_env,
       sherlock_env,
       vim3_env,
     ]
