@@ -22,50 +22,48 @@ namespace {
 
 class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
  public:
-  explicit FileEventHandler(const std::string& binary) : binary_(binary) {}
+  explicit FileEventHandler(std::string url) : url_(std::move(url)) {}
 
   void on_fidl_error(fidl::UnbindInfo info) override {
     if (!info.ok()) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary_.data(),
+      LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url_.data(),
            info.FormatDescription().data());
     }
   }
 
  private:
-  std::string binary_;
+  std::string url_;
 };
 
 }  // namespace
 
-zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, std::string binary, zx::vmo vmo) {
+zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not load library: %s", binary.data(),
-         dlerror());
+    LOGF(ERROR, "Failed to start driver '%s', could not load library: %s", url.data(), dlerror());
     return zx::error(ZX_ERR_INTERNAL);
   }
   auto record = static_cast<const DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
   if (record == nullptr) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', driver record not found", binary.data());
+    LOGF(ERROR, "Failed to start driver '%s', driver record not found", url.data());
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   if (record->version != 1) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', unknown driver record version: %lu",
-         binary.data(), record->version);
+    LOGF(ERROR, "Failed to start driver '%s', unknown driver record version: %lu", url.data(),
+         record->version);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
-  return zx::ok(std::make_unique<Driver>(std::move(url), std::move(binary), library, record));
+  return zx::ok(std::make_unique<Driver>(std::move(url), library, record));
 }
 
-Driver::Driver(std::string url, std::string binary, void* library, const DriverRecordV1* record)
-    : url_(std::move(url)), binary_(std::move(binary)), library_(library), record_(record) {}
+Driver::Driver(std::string url, void* library, const DriverRecordV1* record)
+    : url_(std::move(url)), library_(library), record_(record) {}
 
 Driver::~Driver() {
   if (opaque_.has_value()) {
     zx_status_t status = record_->stop(*opaque_);
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to stop driver '/pkg/%s': %s", binary_.data(),
-           zx_status_get_string(status));
+      LOGF(ERROR, "Failed to stop driver '%s': %s", url_.data(), zx_status_get_string(status));
     }
   }
   dlclose(library_);
@@ -109,7 +107,6 @@ fpromise::promise<inspect::Inspector> DriverHost::Inspect() {
   for (auto& driver : drivers_) {
     auto child = root.CreateChild("driver-" + std::to_string(++i));
     child.CreateString("url", driver.url(), &inspector);
-    child.CreateString("binary", driver.binary(), &inspector);
     inspector.emplace(std::move(child));
   }
 
@@ -165,7 +162,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                                     fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                                     endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary->data(),
+    LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url.data(),
          zx_status_get_string(status));
     completer.Close(status);
     return;
@@ -175,7 +172,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   auto message =
       std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
   if (!message->ok()) {
-    LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
+    LOGF(ERROR, "Failed to start driver '%s', could not encode start args: %s", url.data(),
          message->FormatDescription().data());
     completer.Close(message->status());
     return;
@@ -185,25 +182,24 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
   fidl::WireSharedClient file(std::move(endpoints->client), loop_.dispatcher(),
-                              std::make_unique<FileEventHandler>(binary.value()));
+                              std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
-                   url = std::move(url), binary = std::move(*binary), message = std::move(message),
+                   url = std::move(url), message = std::move(message),
                    _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
     if (response->s != ZX_OK) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
+      LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
            zx_status_get_string(response->s));
       completer.Close(response->s);
       return;
     }
-    zx_status_t status =
-        response->buffer->vmo.set_property(ZX_PROP_NAME, binary.data(), binary.size());
+    zx_status_t status = response->buffer->vmo.set_property(ZX_PROP_NAME, url.data(), url.size());
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not name library VMO: %s", binary.data(),
+      LOGF(ERROR, "Failed to start driver '%s', could not name library VMO: %s", url.data(),
            zx_status_get_string(status));
       completer.Close(status);
       return;
     }
-    auto driver = Driver::Load(std::move(url), binary, std::move(response->buffer->vmo));
+    auto driver = Driver::Load(std::move(url), std::move(response->buffer->vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;
@@ -218,19 +214,19 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
 
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
-                       converted_message = std::move(converted_message), binary = std::move(binary),
+                       converted_message = std::move(converted_message),
                        driver = std::move(*driver)]() mutable {
       auto start = driver->Start(converted_message->incoming_message(), driver_dispatcher_);
       if (start.is_error()) {
-        LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
+        LOGF(ERROR, "Failed to start driver '%s': %s", driver->url().data(), start.status_string());
         completer.Close(start.error_value());
         return;
       }
-      LOGF(INFO, "Started '%s'", binary.data());
+      LOGF(INFO, "Started '%s'", driver->url().data());
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
         if (!info.ok() && info.reason() != fidl::Reason::kPeerClosed) {
-          LOGF(WARNING, "Unexpected stop of driver '/pkg/%s': %s", driver->binary().data(),
+          LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
                info.FormatDescription().data());
         }
         // Task to stop the driver. Post this to the driver dispatcher thread.

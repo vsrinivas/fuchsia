@@ -506,14 +506,12 @@ TEST_F(DriverHostTest, StartAndInspect) {
                     ChildrenMatch(UnorderedElementsAre(
                         AllOf(NodeMatches(AllOf(
                             NameMatches("driver-1"),
-                            PropertyList(UnorderedElementsAre(
-                                StringIs("url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"),
-                                StringIs("binary", "driver/library.so")))))),
+                            PropertyList(UnorderedElementsAre(StringIs(
+                                "url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm")))))),
                         AllOf(NodeMatches(AllOf(
                             NameMatches("driver-2"),
-                            PropertyList(UnorderedElementsAre(
-                                StringIs("url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"),
-                                StringIs("binary", "driver/library.so"))))))))));
+                            PropertyList(UnorderedElementsAre(StringIs(
+                                "url", "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"))))))))));
 
   driver_1.reset();
   driver_2.reset();

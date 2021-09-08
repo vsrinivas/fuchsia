@@ -19,13 +19,12 @@
 class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
                public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
  public:
-  static zx::status<std::unique_ptr<Driver>> Load(std::string url, std::string binary, zx::vmo vmo);
+  static zx::status<std::unique_ptr<Driver>> Load(std::string url, zx::vmo vmo);
 
-  Driver(std::string url, std::string binary, void* library, const DriverRecordV1* record);
+  Driver(std::string url, void* library, const DriverRecordV1* record);
   ~Driver();
 
   const std::string& url() const { return url_; }
-  const std::string& binary() const { return binary_; }
   void set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver> binding);
 
   // Starts the driver.
@@ -35,7 +34,6 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
 
  private:
   std::string url_;
-  std::string binary_;
   void* library_;
   const DriverRecordV1* record_;
   std::optional<void*> opaque_;
