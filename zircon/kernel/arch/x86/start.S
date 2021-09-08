@@ -289,7 +289,7 @@ high_entry:
 .bss
 .align 16
 DATA(_kstack)
-    .skip 4096
+    .skip 8192
 DATA(_kstack_end)
 
 // These symbols are used by image.S
