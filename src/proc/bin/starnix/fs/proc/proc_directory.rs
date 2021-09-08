@@ -37,7 +37,7 @@ impl ProcDirectory {
     pub fn new(fs: &FileSystemHandle, kernel: Weak<Kernel>) -> ProcDirectory {
         let nodes = Arc::new(hashmap! {
             b"cmdline".to_vec() => {
-                let cmdline = std::env::var("KERNEL_CMDLINE").unwrap_or("".into()).into_bytes();
+                let cmdline = kernel.upgrade().unwrap().cmdline.clone();
                 fs.create_node_with_ops(ByteVecFile::new(cmdline), mode!(IFREG, 0o444))
             },
             b"self".to_vec() => SelfSymlink::new(fs),

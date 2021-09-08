@@ -257,7 +257,6 @@ fn create_filesystem_from_spec<'a>(
 }
 
 fn start_component(
-    kernel: Arc<Kernel>,
     start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
@@ -287,8 +286,20 @@ fn start_component(
     let user_passwd = runner::get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
     let apex_hack = runner::get_program_strvec(&start_info, "apex_hack").map(|v| v.clone());
+    let cmdline = runner::get_program_string(&start_info, "kernel_cmdline").unwrap_or("");
 
     info!("start_component environment: {:?}", environ);
+
+    let kernel_name = if let Some(ref url) = start_info.resolved_url {
+        let url = fuchsia_url::pkg_url::PkgUrl::parse(&url)?;
+        let name = url.resource().unwrap_or(url.name());
+        CString::new(if let Some(i) = name.rfind('/') { &name[i + 1..] } else { name })
+    } else {
+        CString::new("kernel")
+    }?;
+    let mut kernel = Kernel::new(&kernel_name)?;
+    kernel.cmdline = cmdline.as_bytes().to_vec();
+    let kernel = Arc::new(kernel);
 
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
@@ -379,15 +390,13 @@ fn start_component(
 }
 
 pub async fn start_runner(
-    kernel: Arc<Kernel>,
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let kernel = kernel.clone();
                 fasync::Task::local(async move {
-                    if let Err(e) = start_component(kernel, start_info, controller) {
+                    if let Err(e) = start_component(start_info, controller) {
                         error!("failed to start component: {:?}", e);
                     }
                 })

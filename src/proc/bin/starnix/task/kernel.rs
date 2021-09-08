@@ -5,7 +5,8 @@
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use std::ffi::CString;
+use std::ffi::CStr;
+#[cfg(test)]
 use std::sync::Arc;
 
 use crate::fs::FileSystemHandle;
@@ -21,6 +22,9 @@ pub struct Kernel {
     /// The scheduler associated with this kernel. The scheduler stores state like suspended tasks,
     /// pending signals, etc.
     pub scheduler: RwLock<Scheduler>,
+
+    /// The kernel command line. Shows up in /proc/cmdline.
+    pub cmdline: Vec<u8>,
 
     // Owned by anon_node.rs
     pub anon_fs: OnceCell<FileSystemHandle>,
@@ -44,6 +48,7 @@ impl Kernel {
             job: zx::Job::from_handle(zx::Handle::invalid()),
             pids: RwLock::new(PidTable::new()),
             scheduler: RwLock::new(Scheduler::new()),
+            cmdline: Vec::new(),
             anon_fs: OnceCell::new(),
             pipe_fs: OnceCell::new(),
             dev_tmp_fs: OnceCell::new(),
@@ -54,11 +59,11 @@ impl Kernel {
         }
     }
 
-    pub fn new(name: &CString) -> Result<Arc<Kernel>, zx::Status> {
+    pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
         let mut kernel = Self::new_empty();
         kernel.job = fuchsia_runtime::job_default().create_child_job()?;
         kernel.job.set_name(&name)?;
-        Ok(Arc::new(kernel))
+        Ok(kernel)
     }
 
     #[cfg(test)]

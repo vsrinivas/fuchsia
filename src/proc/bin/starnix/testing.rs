@@ -45,8 +45,9 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskOwner) {
-    let kernel =
-        Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
+    let kernel = Arc::new(
+        Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel"),
+    );
 
     let task = Task::create_process(
         &kernel,

@@ -7,7 +7,6 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
 use log::info;
-use std::ffi::CString;
 
 mod auth;
 mod collections;
@@ -32,14 +31,10 @@ async fn main() -> Result<(), Error> {
     diagnostics_log::init!();
     info!("main");
 
-    // The root kernel object for this instance of Starnix.
-    let kernel = task::Kernel::new(&CString::new("kernel")?)?;
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
-        let kernel = kernel.clone();
         fasync::Task::local(async move {
-            runner::start_runner(kernel, stream).await.expect("failed to start runner.")
+            runner::start_runner(stream).await.expect("failed to start runner.")
         })
         .detach();
     });
