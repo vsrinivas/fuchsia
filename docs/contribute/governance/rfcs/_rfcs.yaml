@@ -1411,7 +1411,7 @@
   short_description: 'Implement network UDP socket data transport using zircon sockets.'
   authors: ['tamird@google.com']
   file: '0109_socket_datagram_socket.md'
-  area: ['Networking']
+  area: ['Netstack']
   issue: ['']
   gerrit_change_id: ['544642']
   status: 'Socializing'
