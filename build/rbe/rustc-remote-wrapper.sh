@@ -131,6 +131,9 @@ comma_remote_inputs=
 # Prefix command with `env` in case it starts with local environment variables.
 rustc_command=(env)
 
+# arch-vendor-os
+target_triple=
+
 # Paths to direct dependencies.
 extern_paths=()
 
@@ -202,6 +205,9 @@ EOF
 
     # -o path/to/output.rlib
     -o) prev_opt=output ;;
+
+    # Capture arch-vendor-os triple.
+    --target) prev_opt=target_triple ;;
 
     # Rewrite this token to only generate dependency information (locally),
     # and do no other compilation/linking.
@@ -360,6 +366,9 @@ function depfile_inputs_by_line() {
 # convert to paths relative to $project_root for rewrapper.
 mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
 
+# Rust standard libraries.
+rust_stdlibs="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
+
 # At this time, the linker we pass is known to be statically linked itself
 # and doesn't need to be accompanied by any shlibs.
 
@@ -396,6 +405,7 @@ rm -f "$depfile.nolink"
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #   * rust tool shared libraries [$rustc_shlibs]
+#   * rust standard libraries [$rust_stdlibs]
 #   * direct source files [$top_source]
 #   * indirect source files [$depfile.nolink]
 #   * direct dependent libraries [$depfile.nolink]
@@ -419,6 +429,7 @@ remote_inputs=(
   "$rustc_relative"
   "${rust_lld[@]}"
   "${rustc_shlibs[@]}"
+  "${rust_stdlibs[@]}"
   "$top_source"
   "${depfile_inputs[@]}"
   "${extern_paths[@]}"
@@ -441,6 +452,7 @@ dump_vars() {
   debug_var "outputs" "${outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
+  debug_var "rust stdlibs" "${rust_stdlibs[@]}"
   debug_var "rust lld" "${rust_lld[@]}"
   debug_var "source root" "$top_source"
   debug_var "linker" "${linker[@]}"
