@@ -94,7 +94,7 @@ impl Facade for WlanFacade {
                     .iter()
                     .map(|(ssid, bss_desc)| {
                         (
-                            String::from_utf8(ssid.to_vec()).unwrap(),
+                            String::from(ssid.to_string_not_redactable()),
                             bss_desc
                                 .iter()
                                 .map(|bss_desc| BssDescriptionWrapper(&**bss_desc))
