@@ -12,6 +12,7 @@
 
 // defined in cpp_specific.cpp.
 int cpp_out_of_mem(void);
+int llcpp_channel_overflow(void);
 
 typedef struct {
   const char* name;
@@ -92,6 +93,8 @@ int undefined(volatile unsigned int* unused) {
 }
 
 int oom(volatile unsigned int* unused) { return cpp_out_of_mem(); }
+
+int cpp_channel_overflow(volatile unsigned int* unused) { return llcpp_channel_overflow(); }
 
 #include <unistd.h>
 
@@ -249,6 +252,7 @@ command_t commands[] = {
     {"oom", oom, "out of memory c++ death"},
     {"mem", mem, "out of memory"},
     {"channelw", channel_overflow, "overflow a channel with messages"},
+    {"cpp_channelw", cpp_channel_overflow, "overflow a channel with FIDL messages"},
     {"portq", port_overflow, "overflow a port with packets"},
     {"use_after_free", use_after_free, "use memory after freeing it"},
     {"write0_mt", blind_write_multithreaded,
