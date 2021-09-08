@@ -70,9 +70,11 @@ relative to its grandparent `core`.
 Each segment (the sections delimited by forward slashes) of the component selector
 describes exactly one "level” of the component topology.
 
-Component selector segments may contain any characters, however if a segment needs to
-contain asterisks (`*`), forward slashes (`/`), back slashes (<code>\\</code>), or colons (`:`)
-they must be escaped with a backslash (<code>\\</code>).
+Component selectors segments can contain only characters that are accepted in a component
+moniker. Each component selector segment is an
+[instance name or a collection name with an instance name][instance_and_collection_names] which
+has a restricted set of allowed characters and length. The colon `:` in between a collection
+name and instance name must be escaped with a backslash (<code>\\</code>).
 
 
 ### Wildcarding {#wildcarding}
@@ -242,6 +244,7 @@ root/realm1/echo.cmx:a/b/c/d:*
 
 [datatype-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#DataType
 [detect]: /src/diagnostics/config/triage/detect
+[instance_and_collection_names]: /docs/concepts/components/v2/monikers.md#instance_and_collection_names
 [moniker]: /docs/concepts/components/v2/monikers.md
 [topology-example-img]: selectors-example.png
 [triage]: /src/diagnostics/config/triage
