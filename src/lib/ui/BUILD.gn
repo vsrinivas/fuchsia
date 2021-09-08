@@ -18,6 +18,7 @@ group("tests") {
   public_deps = [
     ":rust-ui-crates-tests",
     "carnelian:carnelian-tests",
+    "flatland-frame-scheduling:tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
     "input-synthesis:tests",
     "keymaps:tests",

@@ -6,7 +6,9 @@ use {
     async_utils::hanging_get::client::HangingGetStream,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_math as fmath, fidl_fuchsia_sysmem as fsysmem, fidl_fuchsia_ui_app as fapp,
-    fidl_fuchsia_ui_composition as fland, fidl_fuchsia_ui_views as fviews, fuchsia_async as fasync,
+    fidl_fuchsia_ui_composition as fland, fidl_fuchsia_ui_views as fviews,
+    flatland_frame_scheduling_lib::*,
+    fuchsia_async as fasync,
     fuchsia_component::{self as component, client::connect_to_protocol},
     fuchsia_framebuffer::{
         sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
@@ -70,40 +72,43 @@ enum MessageInternal {
         additional_present_credits: u32,
         future_presentation_infos: Vec<flatland::PresentationInfo>,
     },
+    #[allow(dead_code)]
+    OnFramePresented {
+        frame_presented_info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
+    },
     Relayout {
         width: u32,
         height: u32,
     },
 }
 
-struct AppModel {
-    flatland: fland::FlatlandProxy,
+struct AppModel<'a> {
+    flatland: &'a fland::FlatlandProxy,
     allocator: fland::AllocatorProxy,
     internal_sender: UnboundedSender<MessageInternal>,
     allocation: Option<fsysmem::BufferCollectionInfo2>,
-    num_presents_allowed: u32,
-    pending_present: bool,
-    present_count: u64,
+    sched_lib: &'a dyn SchedulingLib,
     hue: f32,
     page_size: usize,
+    last_expected_presentation_time: zx::Time,
 }
 
-impl AppModel {
+impl<'a> AppModel<'a> {
     fn new(
-        flatland: fland::FlatlandProxy,
+        flatland: &'a fland::FlatlandProxy,
         allocator: fland::AllocatorProxy,
         internal_sender: UnboundedSender<MessageInternal>,
-    ) -> AppModel {
+        sched_lib: &'a dyn SchedulingLib,
+    ) -> AppModel<'a> {
         AppModel {
             flatland,
             allocator,
             internal_sender,
+            sched_lib,
             allocation: None,
-            num_presents_allowed: 1,
-            pending_present: false,
-            present_count: 0,
             hue: 0.0,
             page_size: zx::system_get_page_size().try_into().unwrap(),
+            last_expected_presentation_time: zx::Time::from_nanos(0),
         }
     }
 
@@ -226,46 +231,26 @@ impl AppModel {
         .detach();
     }
 
-    fn on_present_processed(
-        &mut self,
-        additional_present_credits: u32,
-        _future_presentation_infos: Vec<flatland::PresentationInfo>,
-    ) {
-        trace::duration!("gfx", "FlatlandViewProvider::on_present_processed");
-        self.num_presents_allowed += additional_present_credits;
-
-        self.hue = (self.hue + 0.5) % 360.0;
+    fn draw(&mut self, expected_presentation_time: zx::Time) {
+        trace::duration!("gfx", "FlatlandViewProvider::draw");
+        let time_since_last_draw_in_seconds = ((expected_presentation_time.into_nanos()
+            - self.last_expected_presentation_time.into_nanos())
+            as f32)
+            / 1_000_000_000.0;
+        self.last_expected_presentation_time = expected_presentation_time;
+        let hue_change_time_per_second = 30 as f32;
+        self.hue =
+            (self.hue + hue_change_time_per_second * time_since_last_draw_in_seconds) % 360.0;
         self.set_image_colors();
-        self.pending_present = true;
 
-        self.maybe_present();
+        self.sched_lib.request_present();
     }
 
     fn on_relayout(&mut self, width: u32, height: u32) {
         self.flatland
             .set_image_destination_size(&mut IMAGE_ID.clone(), &mut fmath::SizeU { width, height })
             .expect("fidl error");
-        self.pending_present = true;
-        self.maybe_present();
-    }
-
-    fn maybe_present(&mut self) {
-        if self.num_presents_allowed > 0 && self.pending_present {
-            trace::duration!("gfx", "FlatlandViewProvider::Present()");
-            trace::flow_begin!("gfx", "Flatland::Present", self.present_count);
-            self.present_count += 1;
-            self.pending_present = false;
-            self.num_presents_allowed -= 1;
-            self.flatland
-                .present(fland::PresentArgs {
-                    requested_presentation_time: Some(0),
-                    acquire_fences: None,
-                    release_fences: None,
-                    unsquashable: Some(true),
-                    ..fland::PresentArgs::EMPTY
-                })
-                .expect("fidl error");
-        }
+        self.sched_lib.request_present();
     }
 
     fn set_image_colors(&mut self) {
@@ -390,15 +375,12 @@ fn setup_handle_flatland_events(
                             unreachable!()
                         }
                     }
-                    fland::FlatlandEvent::OnFramePresented { frame_presented_info: _ } => {
-                        trace::duration!("gfx", "FlatlandViewProvider::OnFramePresented");
-                        // For simplicity, we are ignoring this event and driving our endless
-                        // animation via OnNextFrameBegin.  A more advanced app might make use of
-                        // the info here to compute the animation values, based on the predicted
-                        // future presentation times.  For example, if Scenic decides to schedule
-                        // this app at 30fps instead of 60fps, the color cycling will slow down.
-                        // Note that if the app chooses to use the info in OnFramePresented, it must
-                        // still handle OnNextFrameBegin to receive additional_present_credits.
+                    fland::FlatlandEvent::OnFramePresented { frame_presented_info } => {
+                        sender
+                            .unbounded_send(MessageInternal::OnFramePresented {
+                                frame_presented_info,
+                            })
+                            .expect("failed to send MessageInternal");
                     }
                     fland::FlatlandEvent::OnError { error } => {
                         sender
@@ -423,6 +405,8 @@ async fn main() {
     let flatland =
         connect_to_protocol::<fland::FlatlandMarker>().expect("error connecting to Flatland");
 
+    let sched_lib = ThroughputScheduler::new();
+
     let allocator = connect_to_protocol::<fland::AllocatorMarker>()
         .expect("error connecting to Scenic allocator");
     info!("Established connections to Flatland and Allocator");
@@ -430,27 +414,76 @@ async fn main() {
     setup_fidl_services(internal_sender.clone());
     setup_handle_flatland_events(flatland.take_event_stream(), internal_sender.clone());
 
-    let mut app = AppModel::new(flatland, allocator, internal_sender.clone());
+    let mut app = AppModel::new(&flatland, allocator, internal_sender.clone(), &sched_lib);
     app.init_scene().await;
 
-    while let Some(message) = internal_receiver.next().await {
-        match message {
-            MessageInternal::CreateView(view_creation_token, _view_ref_control, _view_ref) => {
-                // TODO(fxbug.dev/78866): handling ViewRefs is necessary for focus management.
-                // For now, input is unsupported, and so we drop the ViewRef and ViewRefControl.
-                app.create_parent_viewport_watcher(view_creation_token);
+    let mut present_count = 0;
+    loop {
+        futures::select! {
+          message = internal_receiver.next().fuse() => {
+            if let Some(message) = message {
+              match message {
+                MessageInternal::CreateView(view_creation_token, _view_ref_control, _view_ref) => {
+                      // TODO(fxbug.dev/78866): handling ViewRefs is necessary for focus management.
+                        // For now, input is unsupported, and so we drop the ViewRef and ViewRefControl.
+                      app.create_parent_viewport_watcher(view_creation_token);
+                  }
+                  MessageInternal::Relayout { width, height } => {
+                      app.on_relayout(width, height);
+                  }
+                  MessageInternal::OnPresentError { error } => {
+                      error!("OnPresentError({:?})", error);
+                      break;
+                  }
+                  MessageInternal::OnNextFrameBegin {
+                      additional_present_credits,
+                      future_presentation_infos,
+                  } => {
+                    trace::duration!("gfx", "FlatlandViewProvider::OnNextFrameBegin");
+                    let infos = future_presentation_infos
+                    .iter()
+                    .map(
+                      |x| PresentationInfo{
+                        latch_point: zx::Time::from_nanos(x.latch_point.unwrap()),
+                        presentation_time: zx::Time::from_nanos(x.presentation_time.unwrap())
+                      })
+                    .collect();
+                    sched_lib.on_next_frame_begin(additional_present_credits, infos);
+                  }
+                  MessageInternal::OnFramePresented { frame_presented_info } => {
+                    trace::duration!("gfx", "FlatlandViewProvider::OnFramePresented");
+                    let presented_infos = frame_presented_info.presentation_infos
+                    .iter()
+                    .map(|info| PresentedInfo{
+                      present_received_time:
+                        zx::Time::from_nanos(info.present_received_time.unwrap()),
+                      actual_latch_point:
+                        zx::Time::from_nanos(info.latched_time.unwrap()),
+                    })
+                    .collect();
+
+                    sched_lib.on_frame_presented(
+                      zx::Time::from_nanos(frame_presented_info.actual_presentation_time),
+                      presented_infos);
+                  }
+                }
             }
-            MessageInternal::Relayout { width, height } => {
-                app.on_relayout(width, height);
-            }
-            MessageInternal::OnPresentError { error } => {
-                error!("OnPresentError({:?})", error);
-                break;
-            }
-            MessageInternal::OnNextFrameBegin {
-                additional_present_credits,
-                future_presentation_infos,
-            } => app.on_present_processed(additional_present_credits, future_presentation_infos),
+          }
+          present_parameters = sched_lib.wait_to_update().fuse() => {
+            trace::duration!("gfx", "FlatlandViewProvider::Present");
+            app.draw(present_parameters.expected_presentation_time);
+            trace::flow_begin!("gfx", "Flatland::Present", present_count);
+            present_count += 1;
+            flatland
+                .present(fland::PresentArgs {
+                    requested_presentation_time: Some(present_parameters.requested_presentation_time.into_nanos()),
+                    acquire_fences: None,
+                    release_fences: None,
+                    unsquashable: Some(present_parameters.unsquashable),
+                    ..fland::PresentArgs::EMPTY
+                })
+                .unwrap_or(());
+          }
         }
     }
 }

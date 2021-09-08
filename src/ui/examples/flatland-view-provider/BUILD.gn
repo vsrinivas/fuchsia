@@ -4,11 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
-
-rustc_library("lib") {
-  sources = [ "src/lib.rs" ]
-}
 
 rustc_binary("bin") {
   output_name = "flatland_view_provider"
@@ -32,6 +27,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/flatland-frame-scheduling:flatland-frame-scheduling-lib",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
