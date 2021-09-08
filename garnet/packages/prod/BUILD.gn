@@ -23,7 +23,6 @@ group("all") {
     "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_core",
     "//garnet/packages/prod:bluetooth_hci",
-    "//garnet/packages/prod:bluetooth_hid",
     "//garnet/packages/prod:bluetooth_intel",
     "//garnet/packages/prod:bluetooth_profiles",
     "//garnet/packages/prod:broadcom",
@@ -112,18 +111,12 @@ group("bluetooth_drivers") {
     "//src/connectivity/bluetooth/hci/passthrough",
     "//src/connectivity/bluetooth/hci/vendor/atheros",
     "//src/connectivity/bluetooth/hci/vendor/intel",
-    "//src/connectivity/bluetooth/profiles/bt-hog",
   ]
 }
 
 group("bluetooth_hci") {
   testonly = true
   public_deps = [ "//src/connectivity/bluetooth/hci/passthrough" ]
-}
-
-group("bluetooth_hid") {
-  testonly = true
-  public_deps = [ "//src/connectivity/bluetooth/profiles/bt-hog" ]
 }
 
 group("bluetooth_intel") {
@@ -139,7 +132,6 @@ group("bluetooth_profiles") {
   public_deps = [
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_avrcp",
-    "//garnet/packages/prod:bluetooth_hid",
   ]
 }
 

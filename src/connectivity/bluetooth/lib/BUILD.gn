@@ -12,7 +12,6 @@ group("lib") {
     "bt-fidl-mocks",
     "bt-rfcomm",
     "cpp-type",
-    "device-protocol-bt-gatt-svc",
     "device-watcher",
     "fidl",
     "fuchsia-audio-codec",

@@ -32,7 +32,6 @@ group("drivers") {
     "hci/vendor/broadcom:bt-hci-broadcom",
     "hci/vendor/intel:driver",
     "hci/vendor/mediatek:bt-hci-mediatek",
-    "profiles/bt-hog:driver",
   ]
 }
 
@@ -50,10 +49,7 @@ group("core") {
 
 # This is the part of core group which must go into the system package.
 group("core-system") {
-  deps = [
-    "core/bt-host",
-    "profiles/bt-hog",
-  ]
+  deps = [ "core/bt-host" ]
 }
 
 group("tests") {
