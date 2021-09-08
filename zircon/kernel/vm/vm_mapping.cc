@@ -612,6 +612,16 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     currently_faulting_ = false;
   });
 
+  // In the scenario where we are committing, and are setting the SW_FAULT flag, we are supposed to
+  // pass in a non-null LazyPageRequest to LookupPagesLocked. Technically we could get away with not
+  // passing in a PageRequest since:
+  //  * Only internal kernel VMOs will have the 'commit' flag passed in for their mappings
+  //  * Only pager backed VMOs need to fill out a PageRequest
+  //  * Internal kernel VMOs are never pager backed.
+  // However, should these assumptions ever get violated it's better to catch this gracefully than
+  // have LookupPagesLocked error/crash internally, and it costs nothing to create and pass in.
+  __UNINITIALIZED LazyPageRequest page_request;
+
   // iterate through the range, grabbing a page from the underlying object and
   // mapping it in
   size_t o;
@@ -623,9 +633,12 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     zx_status_t status;
     status = object_->LookupPagesLocked(
         vmo_offset, pf_flags,
-        ktl::min((offset + len - o) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr, nullptr,
-        &pages);
+        ktl::min((offset + len - o) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr,
+        &page_request, &pages);
     if (status != ZX_OK) {
+      // As per the comment above page_request definition, there should never be SW_FAULT + pager
+      // backed VMO and so we should never end up with a PageRequest needing to be waited on.
+      ASSERT(status != ZX_ERR_SHOULD_WAIT);
       // no page to map
       if (commit) {
         // fail when we can't commit every requested page
