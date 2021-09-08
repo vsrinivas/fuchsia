@@ -42,7 +42,7 @@ async fn show_impl<W: Write>(
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<PackageEntryIteratorMarker>()?;
 
-    let repo_name = if let Some(repo_name) = cmd.repository_name.clone() {
+    let repo_name = if let Some(repo_name) = cmd.repository.clone() {
         repo_name
     } else {
         if let Some(repo_name) = pkg::config::get_default_repository().await? {
@@ -55,13 +55,7 @@ async fn show_impl<W: Write>(
         }
     };
 
-    let package_name = if let Some(package_name) = cmd.package_name.clone() {
-        package_name
-    } else {
-        ffx_bail!("The -p flag must be provided.")
-    };
-
-    match repos_proxy.show_package(&repo_name, &package_name, server).await? {
+    match repos_proxy.show_package(&repo_name, &cmd.package, server).await? {
         Ok(()) => {}
         Err(err) => match RepositoryError::from(err) {
             RepositoryError::NoMatchingRepository => {
@@ -457,9 +451,9 @@ mod test {
     async fn test_show_package_truncated_hash() {
         assert_eq!(
             run_impl_for_show_command(ShowSubCommand {
-                repository_name: Some("devhost".to_string()),
-                package_name: Some("package".to_string()),
-                full_hash: false
+                repository: Some("devhost".to_string()),
+                full_hash: false,
+                package: "package".to_string(),
             })
             .await
             .trim(),
@@ -473,9 +467,9 @@ mod test {
     async fn test_show_package_full_hash() {
         assert_eq!(
             run_impl_for_show_command(ShowSubCommand {
-                repository_name: Some("devhost".to_string()),
-                package_name: Some("package".to_string()),
-                full_hash: true
+                repository: Some("devhost".to_string()),
+                full_hash: true,
+                package: "package".to_string(),
             })
             .await
             .trim(),

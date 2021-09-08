@@ -39,14 +39,14 @@ pub struct ListSubcommand {
 #[argh(subcommand, name = "show", description = "Inspect content of a package")]
 pub struct ShowSubCommand {
     #[argh(option, short = 'r')]
-    /// look from this repository.
-    pub repository_name: Option<String>,
-
-    #[argh(option, short = 'p')]
-    /// look up this package name from repository.
-    pub package_name: Option<String>,
+    /// list package contents from this repository.
+    pub repository: Option<String>,
 
     /// if true, package hashes will be displayed in full (i.e. not truncated).
     #[argh(switch)]
     pub full_hash: bool,
+
+    #[argh(positional)]
+    /// list this package's contents.
+    pub package: String,
 }
