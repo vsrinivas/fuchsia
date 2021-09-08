@@ -47,7 +47,11 @@ AudioBuffer<SampleFormat> GenerateSequentialAudio(
     typename AudioBuffer<SampleFormat>::SampleT first_val = 0) {
   typename AudioBuffer<SampleFormat>::SampleT increment = 1;
   if (SampleFormat == fuchsia::media::AudioSampleFormat::FLOAT) {
+    first_val = std::clamp<float>(first_val, -1.0f, 1.0f);
     increment = pow(2.0, -16);
+  } else if (SampleFormat == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
+    first_val = lround(static_cast<double>(first_val) / 256.0) * 256l;
+    increment *= 256;
   }
   AudioBuffer out(format, num_frames);
   for (size_t sample = 0; sample < out.samples().size(); ++sample) {
@@ -89,8 +93,10 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(TypedFormat<SampleFormat> format, 
         val = round(val) + 0x80;
         break;
       case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
         val = round(val);
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+        val = round(val / 256.0) * 256;
         break;
       case fuchsia::media::AudioSampleFormat::FLOAT:
         break;

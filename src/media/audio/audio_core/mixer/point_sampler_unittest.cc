@@ -10,8 +10,6 @@
 namespace media::audio::mixer {
 namespace {
 
-using testing::Each;
-using testing::Eq;
 using testing::FloatEq;
 using testing::Pointwise;
 

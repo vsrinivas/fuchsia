@@ -61,7 +61,7 @@ class AudioResult {
   // causes the test case to fail.
   static constexpr double kPrevLevelToleranceSource8 = 6.4082082e-04;
   static constexpr double kPrevLevelToleranceSource16 = 6.8541681e-07;
-  static constexpr double kPrevLevelToleranceSource24 = 2.3196338e-09;
+  static constexpr double kPrevLevelToleranceSource24 = 3.0346074e-09;
   static constexpr double kPrevLevelToleranceSourceFloat = 5.3282082e-10;
 
   // These variables store the specific result magnitude (in dBFS) for the input type when a 1 kHz
@@ -97,7 +97,7 @@ class AudioResult {
   // this threshold limit is considered a test failure.
   static constexpr double kPrevFloorSource8 = 49.952957;
   static constexpr double kPrevFloorSource16 = 98.104753;
-  static constexpr double kPrevFloorSource24 = 153.71927;
+  static constexpr double kPrevFloorSource24 = 146.30926;
   static constexpr double kPrevFloorSourceFloat = 153.74509;
 
   //
@@ -440,7 +440,7 @@ class AudioResult {
   // If current tolerance EXCEEDS this value, then the test case fails.
   static constexpr double kPrevLevelToleranceMix8 = 6.4082082e-04;
   static constexpr double kPrevLevelToleranceMix16 = 6.8541681e-07;
-  static constexpr double kPrevLevelToleranceMix24 = 2.3196338e-09;
+  static constexpr double kPrevLevelToleranceMix24 = 3.0346074e-09;
   static constexpr double kPrevLevelToleranceMixFloat = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Mix tests for this input type.
@@ -464,7 +464,7 @@ class AudioResult {
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevFloorMix8 = 49.952317;
   static constexpr double kPrevFloorMix16 = 98.104753;
-  static constexpr double kPrevFloorMix24 = 153.71927;
+  static constexpr double kPrevFloorMix24 = 146.30926;
   static constexpr double kPrevFloorMixFloat = 153.74509;
 
   //
@@ -485,7 +485,7 @@ class AudioResult {
   // If current tolerance EXCEEDS this value, then the test case fails.
   static constexpr double kPrevLevelToleranceOutput8 = 6.4082082e-04;
   static constexpr double kPrevLevelToleranceOutput16 = 9.9668031e-07;
-  static constexpr double kPrevLevelToleranceOutput24 = 2.5596549e-09;
+  static constexpr double kPrevLevelToleranceOutput24 = 3.0250373e-07;
   static constexpr double kPrevLevelToleranceOutputFloat = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Output tests for this type.
@@ -512,7 +512,7 @@ class AudioResult {
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevFloorOutput8 = 49.952957;
   static constexpr double kPrevFloorOutput16 = 98.104911;
-  static constexpr double kPrevFloorOutput24 = 153.72051;
+  static constexpr double kPrevFloorOutput24 = 146.22129;
   static constexpr double kPrevFloorOutputFloat = 153.74509;
 
   // class is static only - prevent attempts to instantiate it

@@ -258,7 +258,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.
-TEST(DynamicRange, Mix_8) {
+TEST(DynamicRange, MixUint8) {
   MeasureMixFloor<ASF::UNSIGNED_8>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
 
   EXPECT_NEAR(AudioResult::LevelMix8, 0.0, AudioResult::kPrevLevelToleranceMix8);
@@ -273,7 +273,7 @@ TEST(DynamicRange, Mix_8) {
 }
 
 // Test our mix level and noise floor, when accumulating 16-bit sources.
-TEST(DynamicRange, Mix_16) {
+TEST(DynamicRange, MixInt16) {
   MeasureMixFloor<ASF::SIGNED_16>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
 
   EXPECT_NEAR(AudioResult::LevelMix16, 0.0, AudioResult::kPrevLevelToleranceMix16);
@@ -287,7 +287,7 @@ TEST(DynamicRange, Mix_16) {
 }
 
 // Test our mix level and noise floor, when accumulating 24-bit sources.
-TEST(DynamicRange, Mix_24) {
+TEST(DynamicRange, MixInt24) {
   MeasureMixFloor<ASF::SIGNED_24_IN_32>(&AudioResult::LevelMix24, &AudioResult::FloorMix24);
 
   EXPECT_NEAR(AudioResult::LevelMix24, 0.0, AudioResult::kPrevLevelToleranceMix24);
@@ -301,7 +301,7 @@ TEST(DynamicRange, Mix_24) {
 }
 
 // Test our mix level and noise floor, when accumulating float sources.
-TEST(DynamicRange, Mix_Float) {
+TEST(DynamicRange, MixFloat32) {
   MeasureMixFloor<ASF::FLOAT>(&AudioResult::LevelMixFloat, &AudioResult::FloorMixFloat);
 
   EXPECT_NEAR(AudioResult::LevelMixFloat, 0.0, AudioResult::kPrevLevelToleranceMixFloat);

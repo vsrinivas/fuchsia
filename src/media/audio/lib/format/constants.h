@@ -14,11 +14,14 @@
 
 namespace media::audio {
 
-constexpr int32_t kMaxInt24In32 = std::numeric_limits<int32_t>::max() & ~0x0FF;
-constexpr int32_t kMinInt24In32 = std::numeric_limits<int32_t>::min();
+constexpr int32_t kMaxInt24 = std::numeric_limits<int32_t>::max() >> 8;
+constexpr int32_t kMinInt24 = std::numeric_limits<int32_t>::min() >> 8;
+constexpr int32_t kMaxInt24In32 = kMaxInt24 * 0x100;
+constexpr int32_t kMinInt24In32 = kMinInt24 * 0x100;
 
 constexpr int32_t kFloatToInt8 = -std::numeric_limits<int8_t>::min();
 constexpr int32_t kFloatToInt16 = -std::numeric_limits<int16_t>::min();
+constexpr int32_t kFloatToInt24 = -kMinInt24;
 constexpr int64_t kFloatToInt24In32 = -static_cast<int64_t>(kMinInt24In32);
 
 constexpr int32_t kOffsetInt8ToUint8 =

@@ -68,7 +68,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 }
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
-TEST(NoiseFloor, Source8) {
+TEST(NoiseFloor, SourceUint8) {
   AudioResult::LevelSource8 = MeasureSourceNoiseFloor<ASF::UNSIGNED_8>(&AudioResult::FloorSource8);
 
   EXPECT_NEAR(AudioResult::LevelSource8, 0.0, AudioResult::kPrevLevelToleranceSource8);
@@ -80,7 +80,7 @@ TEST(NoiseFloor, Source8) {
 }
 
 // Measure level response and noise floor for 1kHz sine from 16-bit source.
-TEST(NoiseFloor, Source16) {
+TEST(NoiseFloor, SourceInt16) {
   AudioResult::LevelSource16 = MeasureSourceNoiseFloor<ASF::SIGNED_16>(&AudioResult::FloorSource16);
 
   EXPECT_NEAR(AudioResult::LevelSource16, 0.0, AudioResult::kPrevLevelToleranceSource16);
@@ -92,7 +92,7 @@ TEST(NoiseFloor, Source16) {
 }
 
 // Measure level response and noise floor for 1kHz sine from 24-bit source.
-TEST(NoiseFloor, Source24) {
+TEST(NoiseFloor, SourceInt24) {
   AudioResult::LevelSource24 =
       MeasureSourceNoiseFloor<ASF::SIGNED_24_IN_32>(&AudioResult::FloorSource24);
 
@@ -105,7 +105,7 @@ TEST(NoiseFloor, Source24) {
 }
 
 // Measure level response and noise floor for 1kHz sine from float source.
-TEST(NoiseFloor, SourceFloat) {
+TEST(NoiseFloor, SourceFloat32) {
   AudioResult::LevelSourceFloat =
       MeasureSourceNoiseFloor<ASF::FLOAT>(&AudioResult::FloorSourceFloat);
 
@@ -147,7 +147,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
 }
 
 // Measure level response and noise floor for 1kHz sine, to an 8-bit output.
-TEST(NoiseFloor, Output8) {
+TEST(NoiseFloor, OutputUint8) {
   AudioResult::LevelOutput8 = MeasureOutputNoiseFloor<ASF::UNSIGNED_8>(&AudioResult::FloorOutput8);
 
   EXPECT_NEAR(AudioResult::LevelOutput8, 0.0, AudioResult::kPrevLevelToleranceOutput8);
@@ -159,7 +159,7 @@ TEST(NoiseFloor, Output8) {
 }
 
 // Measure level response and noise floor for 1kHz sine, to a 16-bit output.
-TEST(NoiseFloor, Output16) {
+TEST(NoiseFloor, OutputInt16) {
   AudioResult::LevelOutput16 = MeasureOutputNoiseFloor<ASF::SIGNED_16>(&AudioResult::FloorOutput16);
 
   EXPECT_NEAR(AudioResult::LevelOutput16, 0.0, AudioResult::kPrevLevelToleranceOutput16);
@@ -171,7 +171,7 @@ TEST(NoiseFloor, Output16) {
 }
 
 // Measure level response and noise floor for 1kHz sine, to a 24-bit output.
-TEST(NoiseFloor, Output24) {
+TEST(NoiseFloor, OutputInt24) {
   AudioResult::LevelOutput24 =
       MeasureOutputNoiseFloor<ASF::SIGNED_24_IN_32>(&AudioResult::FloorOutput24);
 
@@ -184,7 +184,7 @@ TEST(NoiseFloor, Output24) {
 }
 
 // Measure level response and noise floor for 1kHz sine, to a float output.
-TEST(NoiseFloor, OutputFloat) {
+TEST(NoiseFloor, OutputFloat32) {
   AudioResult::LevelOutputFloat =
       MeasureOutputNoiseFloor<ASF::FLOAT>(&AudioResult::FloorOutputFloat);
 

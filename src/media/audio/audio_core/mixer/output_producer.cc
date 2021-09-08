@@ -59,11 +59,12 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return static_cast<int32_t>(std::clamp<int64_t>(
-        static_cast<int64_t>(round(sample * kFloatToInt24In32)), kMinInt24In32, kMaxInt24In32));
+    return std::clamp(static_cast<int32_t>(lroundf(sample * kFloatToInt24)), kMinInt24, kMaxInt24) *
+           256;
   }
 };
 
+// TODO(fxbug.dev/84260): Consider a mode where we normalize NANs and subnormals.
 template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float>>> {
  public:
