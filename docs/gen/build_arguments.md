@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/b72aba1dd7db71c7f5272bb0b83698c6c6279970/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a723951c23f64bbee46bc2258247c6954b6282de/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/b72aba1dd7db71c7f5272bb0b83698c6c6279970/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a723951c23f64bbee46bc2258247c6954b6282de/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3280,7 +3280,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"fylKqWbt4h5tTZwWDee7b-FHAfhlWKuo8--PWFz2UQYC"`
+**Current value (from the default):** `"lI21GVTfJHyGu0lXrlaRRqdAghE5TJO-Wwf0uo5OqakC"`
 
 From //build/rust/config.gni:30
 
@@ -3620,7 +3620,7 @@ The termina kernel image.
 Defaults to the common linux kernel image from CIPD, but can be overridden to use a
 custom kernel for development purposes.
 
-**Current value (from the default):** `"//prebuilt/virtualization/packages/linux_guest/images/arm64/Image"`
+**Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/kernel/arm64/vm_kernel"`
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
