@@ -47,26 +47,13 @@ pub struct Filter {
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum FilterEnum {
-    Disable(FilterDisable),
-    Enable(FilterEnable),
     GetNatRules(FilterGetNatRules),
     GetRdrRules(FilterGetRdrRules),
     GetRules(FilterGetRules),
-    IsEnabled(FilterIsEnabled),
     SetNatRules(FilterSetNatRules),
     SetRdrRules(FilterSetRdrRules),
     SetRules(FilterSetRules),
 }
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "disable")]
-/// disables the packet filter
-pub struct FilterDisable {}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "enable")]
-/// enables the packet filter
-pub struct FilterEnable {}
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "get-nat-rules")]
@@ -82,11 +69,6 @@ pub struct FilterGetRdrRules {}
 #[argh(subcommand, name = "get-rules")]
 /// gets filter rules
 pub struct FilterGetRules {}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "is-enabled")]
-/// is the packet filter enabled?
-pub struct FilterIsEnabled {}
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "set-nat-rules")]

@@ -9,7 +9,6 @@ package netstack
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
@@ -181,49 +180,6 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 	})
 
-	t.Run("Enable and Disable PacketFilter", func(t *testing.T) {
-		ns, _ := newNetstack(t)
-		t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
-		ni := stackImpl{ns: ns}
-
-		{
-			result, err := ni.EnablePacketFilter(context.Background(), 1)
-			AssertNoError(t, err)
-			if result != stack.StackEnablePacketFilterResultWithResponse(stack.StackEnablePacketFilterResponse{}) {
-				t.Fatalf("got ni.EnablePacketFilter(1) = %#v, want = Response()", result)
-			}
-			enabled, err := ni.isPacketFilterEnabled(1)
-			AssertNoError(t, err)
-			if !enabled {
-				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(t)", enabled)
-			}
-		}
-		{
-			result, err := ni.DisablePacketFilter(context.Background(), 1)
-			AssertNoError(t, err)
-			if result != stack.StackDisablePacketFilterResultWithResponse(stack.StackDisablePacketFilterResponse{}) {
-				t.Fatalf("got ni.DisablePacketFilter(1) = %#v, want = Response()", result)
-			}
-			enabled, err := ni.isPacketFilterEnabled(1)
-			AssertNoError(t, err)
-			if enabled {
-				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(f)", enabled)
-			}
-		}
-		{
-			result, err := ni.EnablePacketFilter(context.Background(), 1)
-			AssertNoError(t, err)
-			if result != stack.StackEnablePacketFilterResultWithResponse(stack.StackEnablePacketFilterResponse{}) {
-				t.Fatalf("got ni.EnablePacketFilter(1) = %#v, want = Response()", result)
-			}
-			enabled, err := ni.isPacketFilterEnabled(1)
-			AssertNoError(t, err)
-			if !enabled {
-				t.Fatalf("got ni.isPacketFilterEnabled(1) = Response(%v), want = Response(t)", enabled)
-			}
-		}
-	})
-
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
 		ns, _ := newNetstack(t)
 		ifs1 := addNoopEndpoint(t, ns, "")
@@ -360,12 +316,4 @@ func TestDnsServerWatcher(t *testing.T) {
 	if err := ni.GetDnsServerWatcher(context.Background(), request); err != nil {
 		t.Fatalf("failed to get watcher: %s", err)
 	}
-}
-
-func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
-	name := ni.ns.stack.FindNICNameFromID(tcpip.NICID(id))
-	if name == "" {
-		return false, fmt.Errorf("failed to find nic %d", id)
-	}
-	return !ni.ns.filter.IsInterfaceDisabled(name), nil
 }

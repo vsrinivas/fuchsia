@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.net.filter;
 
+using fuchsia.net;
+
 /// Status codes for commands.
 type Status = strict enum {
     OK = 0;
@@ -10,24 +12,33 @@ type Status = strict enum {
     ERR_GENERATION_MISMATCH = 2;
     ERR_BAD_RULE = 3;
     ERR_NOT_SUPPORTED = 4;
+    ERR_NOT_FOUND = 5;
 };
 
 /// The maximum number of rules.
 const MAX_RULES uint32 = 128;
 
+/// A protocol for filtering TCP/IP traffic and Network Address Translation.
 @discoverable
 protocol Filter {
-    /// Enable enables the filter if true is passed.
-    /// It disables the filter if false is passed.
-    Enable(struct {
-        enabled bool;
+    /// Enable the filter on a specific interface.
+    ///
+    /// The filter is disabled by default. If the filter is already enabled,
+    /// [Status::OK] is returned.
+    EnableInterface(struct {
+        id fuchsia.net.interface_id;
     }) -> (struct {
         status Status;
     });
 
-    /// IsEnabled returns true if the filter is enabled.
-    IsEnabled() -> (struct {
-        enabled bool;
+    /// Disable the filter on a specific interface.
+    ///
+    /// The filter is disabled by default. if the filter is already disabled,
+    /// [Status::OK] is returned.
+    DisableInterface(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {
+        status Status;
     });
 
     /// GetRules gets the current rules. They do not include NAT or RDR rules.

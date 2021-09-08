@@ -450,24 +450,6 @@ func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, subnet net.Subnet) (stac
 	return ni.ns.delForwardingEntry(subnet), nil
 }
 
-// TODO(https://fxbug.dev/68274): Move this method to fuchsia.net.filter.
-func (ni *stackImpl) EnablePacketFilter(_ fidl.Context, id uint64) (stack.StackEnablePacketFilterResult, error) {
-	var result stack.StackEnablePacketFilterResult
-
-	ni.ns.filter.EnableInterface(tcpip.NICID(id))
-	result.SetResponse(stack.StackEnablePacketFilterResponse{})
-	return result, nil
-}
-
-// TODO(https://fxbug.dev/68274): Move this method to fuchsia.net.filter.
-func (ni *stackImpl) DisablePacketFilter(_ fidl.Context, id uint64) (stack.StackDisablePacketFilterResult, error) {
-	var result stack.StackDisablePacketFilterResult
-
-	ni.ns.filter.DisableInterface(tcpip.NICID(id))
-	result.SetResponse(stack.StackDisablePacketFilterResponse{})
-	return result, nil
-}
-
 func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
 	for _, protocol := range []tcpip.NetworkProtocolNumber{
 		ipv4.ProtocolNumber,

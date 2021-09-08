@@ -20,7 +20,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
@@ -128,58 +127,5 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 	if status6 != filter.StatusOk {
 		t.Errorf("status: got=%v, want=%v", status6, filter.StatusOk)
-	}
-}
-
-func TestFilterEnabled(t *testing.T) {
-	s := stack.New(stack.Options{
-		NetworkProtocols: []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
-	})
-
-	fi := &filterImpl{filter: New(s)}
-	{
-		got, err := fi.IsEnabled(context.Background())
-		if err != nil {
-			t.Errorf("IsEnabled(_): err = %s", err)
-		}
-		if want := true; got != want {
-			t.Errorf("IsEnabled(_): got = %t, want = %t", got, want)
-		}
-	}
-	{
-		got, err := fi.Enable(context.Background(), false)
-		if err != nil {
-			t.Errorf("f.setEnabled(_, false): err = %s", err)
-		}
-		if want := filter.StatusOk; got != want {
-			t.Errorf("f.setEnabled(_, false): got = %s, want = %s", got, want)
-		}
-	}
-	{
-		got, err := fi.IsEnabled(context.Background())
-		if err != nil {
-			t.Errorf("IsEnabled(_): err = %s", err)
-		}
-		if want := false; got != want {
-			t.Errorf("IsEnabled(_): got = %t, want = %t", got, want)
-		}
-	}
-	{
-		got, err := fi.Enable(context.Background(), true)
-		if err != nil {
-			t.Errorf("f.setEnabled(_, true): err = %s", err)
-		}
-		if want := filter.StatusOk; got != want {
-			t.Errorf("f.setEnabled(_, true): got = %s, want = %s", got, want)
-		}
-	}
-	{
-		got, err := fi.IsEnabled(context.Background())
-		if err != nil {
-			t.Errorf("IsEnabled(_): err = %s", err)
-		}
-		if want := true; got != want {
-			t.Errorf("IsEnabled(_): got = %t, want = %t", got, want)
-		}
 	}
 }

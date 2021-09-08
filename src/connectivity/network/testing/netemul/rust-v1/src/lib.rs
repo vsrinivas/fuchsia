@@ -716,24 +716,6 @@ impl<'a> TestInterface<'a> {
         })
     }
 
-    /// Enable filtering on the interface.
-    ///
-    /// Equivalent to `stack.enable_packet_filter(test_interface.id())`.
-    pub async fn enable_filter(&self) -> Result<()> {
-        self.stack.enable_packet_filter(self.id).await.squash_result().with_context(|| {
-            format!("stack.enable_packet_filter for endpoint {} failed", self.endpoint.name)
-        })
-    }
-
-    /// Disable filtering on the interface.
-    ///
-    /// Equivalent to `stack.disable_packet_filter(test_interface.id())`.
-    pub async fn disable_filter(&self) -> Result<()> {
-        self.stack.disable_packet_filter(self.id).await.squash_result().with_context(|| {
-            format!("stack.disable_packet_filter for endpoint {} failed", self.endpoint.name)
-        })
-    }
-
     /// Add interface address.
     ///
     /// Equivalent to `stack.add_interface_address(test_interface.id(), &mut addr)`.

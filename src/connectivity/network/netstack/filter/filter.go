@@ -33,9 +33,6 @@ type Filter struct {
 
 	mu struct {
 		sync.RWMutex
-
-		enabled bool
-
 		rules      []filter.Rule
 		v4Table    stack.Table
 		v6Table    stack.Table
@@ -55,76 +52,32 @@ func New(s *stack.Stack) *Filter {
 	}
 	f.filterDisabledNICMatcher.init()
 	f.mu.Lock()
-	f.mu.enabled = true
 	f.mu.v4Table = defaultV4Table
 	f.mu.v6Table = defaultV6Table
 	f.mu.Unlock()
 	return f
 }
 
-func (f *Filter) enabled() bool {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	return f.mu.enabled
-}
-
-func (f *Filter) setEnabled(v bool) filter.Status {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.mu.enabled == v {
-		return filter.StatusOk
-	}
-
-	iptables := f.stack.IPTables()
-
-	if v {
-		if err := iptables.ReplaceTable(stack.FilterID, f.mu.v4Table, false /* ipv6 */); err != nil {
-			_ = syslog.ErrorTf(tag, "error enabling iptables = %s", err)
-			return filter.StatusErrInternal
-		}
-		if err := iptables.ReplaceTable(stack.FilterID, f.mu.v6Table, true /* ipv6 */); err != nil {
-			_ = syslog.ErrorTf(tag, "error enabling ip6tables = %s", err)
-			return filter.StatusErrInternal
-		}
-
-		f.mu.enabled = true
-		return filter.StatusOk
-	}
-
-	if err := iptables.ReplaceTable(stack.FilterID, f.defaultV4Table, false /* ipv6 */); err != nil {
-		_ = syslog.ErrorTf(tag, "error disabling iptables = %s", err)
-		return filter.StatusErrInternal
-	}
-	if err := iptables.ReplaceTable(stack.FilterID, f.defaultV6Table, true /* ipv6 */); err != nil {
-		_ = syslog.ErrorTf(tag, "error disabling ip6tables = %s", err)
-		return filter.StatusErrInternal
-	}
-
-	f.mu.enabled = false
-	return filter.StatusOk
-}
-
-func (f *Filter) EnableInterface(id tcpip.NICID) {
+func (f *Filter) EnableInterface(id tcpip.NICID) filter.Status {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
-		return
+		return filter.StatusErrNotFound
 	}
-
 	f.filterDisabledNICMatcher.mu.Lock()
 	defer f.filterDisabledNICMatcher.mu.Unlock()
 	f.filterDisabledNICMatcher.mu.nicNames[name] = id
+	return filter.StatusOk
 }
 
-func (f *Filter) DisableInterface(id tcpip.NICID) {
+func (f *Filter) DisableInterface(id tcpip.NICID) filter.Status {
 	name := f.stack.FindNICNameFromID(id)
 	if name == "" {
-		return
+		return filter.StatusErrNotFound
 	}
-
 	f.filterDisabledNICMatcher.mu.Lock()
 	defer f.filterDisabledNICMatcher.mu.Unlock()
 	delete(f.filterDisabledNICMatcher.mu.nicNames, name)
+	return filter.StatusOk
 }
 
 func (f *Filter) RemovedNIC(id tcpip.NICID) {
@@ -138,8 +91,8 @@ func (f *Filter) RemovedNIC(id tcpip.NICID) {
 	}
 }
 
-func (f *Filter) IsInterfaceDisabled(name string) bool {
-	return f.filterDisabledNICMatcher.nicDisabled(name)
+func (f *Filter) IsInterfaceEnabled(name string) bool {
+	return !f.filterDisabledNICMatcher.nicDisabled(name)
 }
 
 func (f *Filter) lastRules() ([]filter.Rule, uint32) {

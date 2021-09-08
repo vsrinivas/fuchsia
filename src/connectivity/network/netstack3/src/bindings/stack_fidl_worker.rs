@@ -127,14 +127,6 @@ impl<C: StackContext> StackFidlWorker<C> {
                     &mut self.lock_worker().await.fidl_del_forwarding_entry(subnet)
                 );
             }
-            StackRequest::EnablePacketFilter { id: _, responder } => {
-                // TODO(https://fxbug.dev/76995): Support packet filter.
-                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-            }
-            StackRequest::DisablePacketFilter { id: _, responder } => {
-                // TODO(https://fxbug.dev/76995): Support packet filter.
-                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-            }
             StackRequest::EnableIpForwarding { responder } => {
                 // TODO(https://fxbug.dev/76987): Support enabling IP forwarding.
                 let () = responder

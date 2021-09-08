@@ -417,18 +417,6 @@ async fn do_filter<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     let filter = connect_with_context::<ffilter::FilterMarker, _>(connector).await?;
     match cmd {
-        FilterEnum::Enable(_) => {
-            let () = filter_fidl!(filter.enable(true), "error enabling filter")?;
-            info!("successfully enabled filter");
-        }
-        FilterEnum::Disable(_) => {
-            let () = filter_fidl!(filter.enable(false), "error disabling filter")?;
-            info!("successfully disabled filter");
-        }
-        FilterEnum::IsEnabled(_) => {
-            let is_enabled = filter.is_enabled().await.context("FIDL error")?;
-            println!("{:?}", is_enabled);
-        }
         FilterEnum::GetRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;

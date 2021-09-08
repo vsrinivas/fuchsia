@@ -331,8 +331,16 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     let Test { proto, client_updates, server_updates, expected_traffic } = test;
 
     // Initial sanity check (no filters set).
-    let () = client_ep.enable_filter().await.context("error enabling filter on client")?;
-    let () = server_ep.enable_filter().await.context("error enabling filter on server")?;
+    let status = client_filter
+        .enable_interface(client_ep.id())
+        .await
+        .context("error enabling filter on client")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
+    let status = server_filter
+        .enable_interface(server_ep.id())
+        .await
+        .context("error enabling filter on server")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
     let () = run_socket_test(
         proto,
         &server,
@@ -383,8 +391,16 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     .context("error running socket test after updating filters")?;
 
     // Disable the filters on the interface and expect full connectivity.
-    let () = client_ep.disable_filter().await.context("error disabling filter on client")?;
-    let () = server_ep.disable_filter().await.context("error disabling filter on server")?;
+    let status = client_filter
+        .disable_interface(client_ep.id())
+        .await
+        .context("error disabling filter on client")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
+    let status = server_filter
+        .disable_interface(server_ep.id())
+        .await
+        .context("error disabling filter on server")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
     let () = run_socket_test(
         proto,
         &server,
@@ -399,8 +415,16 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     .context("error running socket test after disabling filters")?;
 
     // Reset and enable filters and expect full connectivity.
-    let () = client_ep.enable_filter().await.context("error re-enabling filter on client")?;
-    let () = server_ep.enable_filter().await.context("error re-enabling filter on server")?;
+    let status = client_filter
+        .enable_interface(client_ep.id())
+        .await
+        .context("error re-enabling filter on client")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
+    let status = server_filter
+        .enable_interface(server_ep.id())
+        .await
+        .context("error re-enabling filter on server")?;
+    assert_eq!(status, fnetfilter::Status::Ok);
     let status = server_filter
         .update_rules(&mut Vec::new().iter_mut(), server_generation)
         .await

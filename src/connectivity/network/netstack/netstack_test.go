@@ -25,6 +25,7 @@ import (
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
+	fidlfilter "fidl/fuchsia/net/filter"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -206,12 +207,14 @@ func TestStackNICRemove(t *testing.T) {
 	}
 
 	nicName := ns.stack.FindNICNameFromID(ifs.nicid)
-	if disabled := ns.filter.IsInterfaceDisabled(nicName); !disabled {
-		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = false, want = true", nicName)
+	if enabled := ns.filter.IsInterfaceEnabled(nicName); enabled {
+		t.Errorf("got ns.filter.IsInterfaceEnabled(%d): got enabled = true, want = false", ifs.nicid)
 	}
-	ns.filter.EnableInterface(ifs.nicid)
-	if disabled := ns.filter.IsInterfaceDisabled(nicName); disabled {
-		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = true, want = false", nicName)
+	if status := ns.filter.EnableInterface(ifs.nicid); status != fidlfilter.StatusOk {
+		t.Errorf("got ns.filter.IsInterfaceEnabled(%d): status = %d", ifs.nicid, status)
+	}
+	if enabled := ns.filter.IsInterfaceEnabled(nicName); !enabled {
+		t.Errorf("got ns.filter.IsInterfaceEnabled(%s): got enabled  = false, want = true", nicName)
 	}
 
 	if t.Failed() {
@@ -237,9 +240,9 @@ func TestStackNICRemove(t *testing.T) {
 		t.Errorf("got nicRemovedHandler.removedNICID = %d, want = %d", nicRemovedHandler.removedNICID, ifs.nicid)
 	}
 
-	// Removing the NIC should disable the filter on its nicName.
-	if disabled := ns.filter.IsInterfaceDisabled(nicName); !disabled {
-		t.Errorf("got ns.filter.IsInterfaceDisabled(%s) = false, want = true", nicName)
+	// Removing the NIC should disable the filter on its ifs.nicid.
+	if enabled := ns.filter.IsInterfaceEnabled(nicName); enabled {
+		t.Errorf("got ns.filter.IsInterfaceEnabled(%s) = true, want = false", nicName)
 	}
 
 	// Wait for the controller to stop and free up its resources.

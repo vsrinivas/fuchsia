@@ -16,6 +16,8 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/net/filter"
+
+	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
 type filterImpl struct {
@@ -35,13 +37,12 @@ func AddOutgoingService(ctx *component.Context, f *Filter) {
 	)
 }
 
-func (f *filterImpl) Enable(_ fidl.Context, v bool) (filter.Status, error) {
-	f.filter.setEnabled(v)
-	return f.filter.setEnabled(v), nil
+func (f *filterImpl) EnableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
+	return f.filter.EnableInterface(tcpip.NICID(id)), nil
 }
 
-func (f *filterImpl) IsEnabled(fidl.Context) (bool, error) {
-	return f.filter.enabled(), nil
+func (f *filterImpl) DisableInterface(_ fidl.Context, id uint64) (filter.Status, error) {
+	return f.filter.DisableInterface(tcpip.NICID(id)), nil
 }
 
 func (f *filterImpl) GetRules(fidl.Context) ([]filter.Rule, uint32, filter.Status, error) {

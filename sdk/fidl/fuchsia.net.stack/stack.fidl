@@ -225,16 +225,6 @@ protocol Stack {
         subnet fuchsia.net.Subnet;
     }) -> (struct {}) error Error;
 
-    /// Enable the packet filter on a specific interface.
-    EnablePacketFilter(struct {
-        id fuchsia.net.interface_id;
-    }) -> (struct {}) error Error;
-
-    /// Disable the packet filter on a specific interface.
-    DisablePacketFilter(struct {
-        id fuchsia.net.interface_id;
-    }) -> (struct {}) error Error;
-
     /// Enable IP Forwarding for all interfaces and IP versions.
     EnableIpForwarding() -> ();
 

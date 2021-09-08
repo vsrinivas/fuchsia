@@ -39,7 +39,6 @@ use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _};
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
-use fidl_fuchsia_net_stack_ext as fnet_stack_ext;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
@@ -1210,26 +1209,38 @@ impl<'a> NetCfg<'a> {
     ) -> Result<(), errors::Error> {
         if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
             info!("enable filter for nic {}", interface_id);
-            let () = self
-                .stack
-                .enable_packet_filter(interface_id.into())
+            let status = self
+                .filter
+                .enable_interface(interface_id.into())
                 .await
-                .context("error sending enable packet filter request")
-                .map_err(errors::Error::Fatal)?
-                .map_err(fnet_stack_ext::NetstackError)
-                .context("failed to enable packet filter")
-                .map_err(errors::Error::NonFatal)?;
+                .with_context(|| {
+                    format!("error sending enable filter request on nic {}", interface_id)
+                })
+                .map_err(errors::Error::Fatal)?;
+            if status != fnet_filter::Status::Ok {
+                return Err(errors::Error::NonFatal(anyhow::anyhow!(
+                    "failed to enable filter on nic {} with status = {:?}",
+                    interface_id,
+                    status
+                )));
+            }
         } else {
             info!("disable filter for nic {}", interface_id);
-            let () = self
-                .stack
-                .disable_packet_filter(interface_id.into())
+            let status = self
+                .filter
+                .disable_interface(interface_id.into())
                 .await
-                .context("error sending disable packet filter request")
-                .map_err(errors::Error::Fatal)?
-                .map_err(fnet_stack_ext::NetstackError)
-                .context("failed to disable packet filter")
-                .map_err(errors::Error::NonFatal)?;
+                .with_context(|| {
+                    format!("error sending disable filter request on nic {}", interface_id)
+                })
+                .map_err(errors::Error::Fatal)?;
+            if status != fnet_filter::Status::Ok {
+                return Err(errors::Error::NonFatal(anyhow::anyhow!(
+                    "failed to disable filter on nic {} with status = {:?}",
+                    interface_id,
+                    status
+                )));
+            }
         };
 
         match config.ip_address_config {

@@ -694,23 +694,23 @@ func TestFilterEnableInterface(t *testing.T) {
 	)
 
 	tests := []struct {
-		name     string
-		actions  func(*Filter)
-		disabled bool
+		name    string
+		actions func(*Filter)
+		enabled bool
 	}{
 		{
 			name: "Initial state",
 			actions: func(*Filter) {
 				/* do nothing */
 			},
-			disabled: true,
+			enabled: false,
 		},
 		{
 			name: "Enable",
 			actions: func(f *Filter) {
 				f.EnableInterface(nicID)
 			},
-			disabled: false,
+			enabled: true,
 		},
 		{
 			name: "Enable, then Disable",
@@ -718,7 +718,7 @@ func TestFilterEnableInterface(t *testing.T) {
 				f.EnableInterface(nicID)
 				f.DisableInterface(nicID)
 			},
-			disabled: true,
+			enabled: false,
 		},
 		{
 			name: "Enable, then RemovedNIC",
@@ -726,7 +726,7 @@ func TestFilterEnableInterface(t *testing.T) {
 				f.EnableInterface(nicID)
 				f.RemovedNIC(nicID)
 			},
-			disabled: true,
+			enabled: false,
 		},
 	}
 
@@ -743,8 +743,9 @@ func TestFilterEnableInterface(t *testing.T) {
 			f := New(s)
 			test.actions(f)
 
-			if got, want := f.IsInterfaceDisabled(nicName), test.disabled; got != want {
-				t.Errorf("IsInterfaceDisabled(nicID): got = %t, want = %t", got, want)
+			enabled := f.IsInterfaceEnabled(nicName)
+			if got, want := enabled, test.enabled; got != want {
+				t.Errorf("IsInterfaceEnabled(%d): got enabled = %t, want = %t", nicID, got, want)
 			}
 		})
 	}

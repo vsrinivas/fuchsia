@@ -53,10 +53,8 @@ protocol/member fuchsia.net.stack/Stack.DelForwardingEntry(fuchsia.net/Subnet su
 protocol/member fuchsia.net.stack/Stack.DelInterfaceAddress(uint64 id,fuchsia.net/Subnet addr) -> (fuchsia.net.stack/Stack_DelInterfaceAddress_Result result)
 protocol/member fuchsia.net.stack/Stack.DisableInterface(uint64 id) -> (fuchsia.net.stack/Stack_DisableInterface_Result result)
 protocol/member fuchsia.net.stack/Stack.DisableIpForwarding() -> ()
-protocol/member fuchsia.net.stack/Stack.DisablePacketFilter(uint64 id) -> (fuchsia.net.stack/Stack_DisablePacketFilter_Result result)
 protocol/member fuchsia.net.stack/Stack.EnableInterface(uint64 id) -> (fuchsia.net.stack/Stack_EnableInterface_Result result)
 protocol/member fuchsia.net.stack/Stack.EnableIpForwarding() -> ()
-protocol/member fuchsia.net.stack/Stack.EnablePacketFilter(uint64 id) -> (fuchsia.net.stack/Stack_EnablePacketFilter_Result result)
 protocol/member fuchsia.net.stack/Stack.GetDnsServerWatcher(server_end:fuchsia.net.name/DnsServerWatcher watcher)
 protocol/member fuchsia.net.stack/Stack.GetForwardingTable() -> (vector<fuchsia.net.stack/ForwardingEntry> table)
 protocol/member fuchsia.net.stack/Stack.GetInterfaceInfo(uint64 id) -> (fuchsia.net.stack/Stack_GetInterfaceInfo_Result result)
@@ -98,18 +96,10 @@ struct fuchsia.net.stack/Stack_DisableInterface_Response
 union/member fuchsia.net.stack/Stack_DisableInterface_Result.err fuchsia.net.stack/Error
 union/member fuchsia.net.stack/Stack_DisableInterface_Result.response fuchsia.net.stack/Stack_DisableInterface_Response
 strict union fuchsia.net.stack/Stack_DisableInterface_Result
-struct fuchsia.net.stack/Stack_DisablePacketFilter_Response
-union/member fuchsia.net.stack/Stack_DisablePacketFilter_Result.err fuchsia.net.stack/Error
-union/member fuchsia.net.stack/Stack_DisablePacketFilter_Result.response fuchsia.net.stack/Stack_DisablePacketFilter_Response
-strict union fuchsia.net.stack/Stack_DisablePacketFilter_Result
 struct fuchsia.net.stack/Stack_EnableInterface_Response
 union/member fuchsia.net.stack/Stack_EnableInterface_Result.err fuchsia.net.stack/Error
 union/member fuchsia.net.stack/Stack_EnableInterface_Result.response fuchsia.net.stack/Stack_EnableInterface_Response
 strict union fuchsia.net.stack/Stack_EnableInterface_Result
-struct fuchsia.net.stack/Stack_EnablePacketFilter_Response
-union/member fuchsia.net.stack/Stack_EnablePacketFilter_Result.err fuchsia.net.stack/Error
-union/member fuchsia.net.stack/Stack_EnablePacketFilter_Result.response fuchsia.net.stack/Stack_EnablePacketFilter_Response
-strict union fuchsia.net.stack/Stack_EnablePacketFilter_Result
 struct/member fuchsia.net.stack/Stack_GetInterfaceInfo_Response.info fuchsia.net.stack/InterfaceInfo
 struct fuchsia.net.stack/Stack_GetInterfaceInfo_Response
 union/member fuchsia.net.stack/Stack_GetInterfaceInfo_Result.err fuchsia.net.stack/Error
