@@ -9,9 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/svc/outgoing.h>
-
-#include <gtest/gtest.h>
 
 #include "src/devices/lib/driver2/test_base.h"
 
@@ -44,9 +43,9 @@ class TestExporter : public fdfs::testing::Exporter_TestBase {
   ExportHandler export_handler_;
 };
 
-TEST(DevfsExporterTest, Create) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+class DevfsExporterTest : public gtest::TestLoopFixture {};
 
+TEST_F(DevfsExporterTest, Create) {
   // Setup namespace.
   auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, svc.status_value());
@@ -58,20 +57,20 @@ TEST(DevfsExporterTest, Create) {
   fidl::Binding<fdfs::Exporter> exporter_binding(&exporter_server);
 
   driver::testing::Directory svc_directory;
-  svc_directory.SetOpenHandler([&loop, &exporter_binding](std::string path, auto object) {
+  svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
     EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
-    exporter_binding.Bind(object.TakeChannel(), loop.dispatcher());
+    exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
+  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(loop.dispatcher());
+  svc::Outgoing outgoing(dispatcher());
   const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
   zx_status_t status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
   ASSERT_EQ(ZX_OK, status);
 
-  auto exporter = driver::DevfsExporter::Create(*ns, loop.dispatcher(), outgoing.svc_dir());
+  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export is successful.
@@ -84,7 +83,7 @@ TEST(DevfsExporterTest, Create) {
   });
 
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_ok());
@@ -92,9 +91,7 @@ TEST(DevfsExporterTest, Create) {
   EXPECT_EQ(1u, protocol_id);
 }
 
-TEST(DevfsExporterTest, Create_ServiceNotFound) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-
+TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
   // Setup namespace.
   auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, svc.status_value());
@@ -106,28 +103,26 @@ TEST(DevfsExporterTest, Create_ServiceNotFound) {
   fidl::Binding<fdfs::Exporter> exporter_binding(&exporter_server);
 
   driver::testing::Directory svc_directory;
-  svc_directory.SetOpenHandler([&loop, &exporter_binding](std::string path, auto object) {
+  svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
     EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
-    exporter_binding.Bind(object.TakeChannel(), loop.dispatcher());
+    exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
+  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(loop.dispatcher());
-  auto exporter = driver::DevfsExporter::Create(*ns, loop.dispatcher(), outgoing.svc_dir());
+  svc::Outgoing outgoing(dispatcher());
+  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export failure due to missing service.
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_error());
 }
 
-TEST(DevfsExporterTest, Create_ServiceFailure) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-
+TEST_F(DevfsExporterTest, Create_ServiceFailure) {
   // Setup namespace.
   auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, svc.status_value());
@@ -139,27 +134,27 @@ TEST(DevfsExporterTest, Create_ServiceFailure) {
   fidl::Binding<fdfs::Exporter> exporter_binding(&exporter_server);
 
   driver::testing::Directory svc_directory;
-  svc_directory.SetOpenHandler([&loop, &exporter_binding](std::string path, auto object) {
+  svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
     EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
-    exporter_binding.Bind(object.TakeChannel(), loop.dispatcher());
+    exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), loop.dispatcher());
+  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  svc::Outgoing outgoing(loop.dispatcher());
+  svc::Outgoing outgoing(dispatcher());
   const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
   zx_status_t status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
   ASSERT_EQ(ZX_OK, status);
 
-  auto exporter = driver::DevfsExporter::Create(*ns, loop.dispatcher(), outgoing.svc_dir());
+  auto exporter = driver::DevfsExporter::Create(*ns, dispatcher(), outgoing.svc_dir());
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export failure due to service failure.
   exporter_server.SetExportHandler([](std::string path, uint32_t id) { return ZX_ERR_INTERNAL; });
 
   auto exported = exporter->Export<flogger::LogSink>("sys/log", 1);
-  loop.RunUntilIdle();
+  RunLoopUntilIdle();
   driver::testing::FakeContext context;
   auto result = exported(context);
   ASSERT_TRUE(result.is_error());
