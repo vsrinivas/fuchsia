@@ -88,7 +88,6 @@ template("sdk_shared_library") {
   verify_pragma_target_name = "${target_name}_sdk_pragma"
   extract_public_symbols_target_name =
       "${target_name}_sdk_extract_public_symbols"
-  verify_public_symbols_target_name = "${target_name}_sdk_verify_public_symbols"
   sdk_target_name = "${target_name}_sdk"
 
   shared_library(main_target_name) {
@@ -272,10 +271,13 @@ template("sdk_shared_library") {
     headers = all_headers
   }
 
-  main_target_dir = get_label_info(":$main_target_name", "dir")
-  reference_symbols_file = "$main_target_dir/${output_name}.symbols.api"
-  if (defined(invoker.symbols_api)) {
-    reference_symbols_file = invoker.symbols_api
+  # Don't extract symbols for non-public APIs.
+  if (invoker.category == "partner" || invoker.category == "public") {
+    main_target_dir = get_label_info(":$main_target_name", "dir")
+    reference_symbols_file = "$main_target_dir/${output_name}.symbols.api"
+    if (defined(invoker.symbols_api)) {
+      reference_symbols_file = invoker.symbols_api
+    }
   }
   generated_symbols_file = "$target_gen_dir/${output_name}.symbols.api"
   extract_public_symbols(extract_public_symbols_target_name) {
@@ -284,11 +286,16 @@ template("sdk_shared_library") {
     symbols = generated_symbols_file
   }
 
-  verify_public_symbols(verify_public_symbols_target_name) {
-    current = generated_symbols_file
-    reference = reference_symbols_file
-    library_name = main_target_dir
-    deps = [ ":$extract_public_symbols_target_name" ]
+  # Don't verify the public symbols for non-publicized APIs.
+  if (invoker.category == "partner" || invoker.category == "public") {
+    verify_public_symbols_target_name =
+        "${target_name}_sdk_verify_public_symbols"
+    verify_public_symbols(verify_public_symbols_target_name) {
+      current = generated_symbols_file
+      reference = reference_symbols_file
+      library_name = main_target_dir
+      deps = [ ":$extract_public_symbols_target_name" ]
+    }
   }
 
   sdk_atom(manifest_target_name) {
@@ -319,9 +326,11 @@ template("sdk_shared_library") {
     non_sdk_deps = [
       ":$metadata_target_name",
       ":$verify_pragma_target_name",
-      ":$verify_public_symbols_target_name",
       shared_lib_target,
     ]
+    if (category == "partner" || category == "public") {
+      non_sdk_deps += [ ":$verify_public_symbols_target_name" ]
+    }
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.

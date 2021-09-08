@@ -4,6 +4,8 @@
 
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//sdk/cts/plasa/config.gni")
+import("//sdk/cts/plasa/plasa_artifacts.gni")
 
 # A source set that can be exported to an SDK.
 #
@@ -196,6 +198,19 @@ template("sdk_source_set") {
     deps = sdk_deps
   }
 
+  if (generate_plasa_artifacts) {
+    _plasa_artifacts_target_name = "${main_target_name}_plasa"
+    plasa_artifacts(_plasa_artifacts_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "source_dir",
+                               "testonly",
+                               "all_headers",
+                               "all_deps",
+                             ])
+    }
+  }
+
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker,
                            [
@@ -227,6 +242,9 @@ template("sdk_source_set") {
       ":$metadata_target_name",
       ":$verify_pragma_target_name",
     ]
+    if (generate_plasa_artifacts) {
+      non_sdk_deps += [ ":$_plasa_artifacts_target_name" ]
+    }
 
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.

@@ -20,7 +20,9 @@ def main():
     parser.add_argument(
         '--dep_names', help='List of dependency names', nargs='*')
     parser.add_argument('--sources', help='List of library sources', nargs='*')
-    parser.add_argument('--headers', help='List of public headers', nargs='+')
+    # Allowed to have no headers, since SDK libraries included in other SDK
+    # libraries could have no headers.
+    parser.add_argument('--headers', help='List of public headers', nargs='*')
     parser.add_argument(
         '--include-dir', help='Path to the include directory', required=True)
     args = parser.parse_args()
