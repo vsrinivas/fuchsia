@@ -69,7 +69,7 @@ readonly all_tools=(
 if [[ -z ${REGEN_GOLDENS_SKIP_CHECK+x} ]]; then
     for t in "${all_tools[@]}"; do
         dir=${t##* }
-        if ! [[ -d "$dir" ]]; then
+        if ! [[ -d "$FUCHSIA_DIR/$dir" ]]; then
             echo "WARNING: regen-goldens has invalid goldens dir '$dir'" >&2
         fi
     done
