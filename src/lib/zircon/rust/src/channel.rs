@@ -35,7 +35,7 @@ impl Peered for Channel {}
 
 impl Channel {
     /// Create a channel, resulting in a pair of `Channel` objects representing both
-    /// sides of the channel. Messages written into one maybe read from the opposite.
+    /// sides of the channel. Messages written into one may be read from the opposite.
     ///
     /// Wraps the
     /// [zx_channel_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/channel_create.md)
