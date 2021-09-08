@@ -26,8 +26,19 @@ constexpr char kRwFirmwareMethodName[] = "FWID";
 constexpr char kNvramLocationMethodName[] = "VBNV";
 constexpr char kFlashmapBaseMethodName[] = "FMAP";
 constexpr char kVbootSharedDataMethodName[] = "VDAT";
+constexpr char kBootInfoMethodName[] = "BINF";
 
 constexpr uint32_t kVbootSharedDataNvdataV2 = 0x00100000;
+
+enum BootInfoField {
+  kBootInfoBootReason = 0,
+  kBootInfoActiveApFirmware = 1,
+  kBootInfoActiveEcFirmware = 2,
+  kBootInfoActiveApFirmwareType = 3,
+  kBootInfoRecoveryReason = 4,
+  kBootInfoNumFields = 5,
+};
+
 namespace facpi = fuchsia_hardware_acpi::wire;
 
 class ChromeosAcpi;
@@ -59,6 +70,9 @@ class ChromeosAcpi : public DeviceType {
   void GetNvdataVersion(GetNvdataVersionRequestView request,
                         GetNvdataVersionCompleter::Sync& completer) override;
 
+  void GetActiveApFirmware(GetActiveApFirmwareRequestView request,
+                           GetActiveApFirmwareCompleter::Sync& completer) override;
+
   // For inspect test.
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
 
@@ -76,6 +90,7 @@ class ChromeosAcpi : public DeviceType {
   std::optional<uintptr_t> flashmap_base_;
   std::optional<NvramInfo> nvram_location_;
   std::optional<VbSharedDataHeader> shared_data_;
+  std::optional<std::array<uint64_t, kBootInfoNumFields>> binf_;
 
   std::unordered_set<std::string> ParseMlst(const facpi::Object& object);
   zx_status_t EvaluateObjectHelper(const char* name,

@@ -214,4 +214,14 @@ TEST_F(ChromeosAcpiTest, NvdataVersionTestV1) {
   ASSERT_EQ(result->result.response().version, 1);
 }
 
+TEST_F(ChromeosAcpiTest, ActiveAPFirmwareTest) {
+  std::vector<uint64_t> args{0, 1, 0, 0, 0};
+  values_.emplace("BINF", ToPackage(args));
+  ASSERT_NO_FATAL_FAILURES(CreateDevice());
+
+  auto result = fidl_client_.GetActiveApFirmware();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->result.response().slot, fuchsia_acpi_chromeos::wire::BootSlot::kA);
+}
+
 }  // namespace chromeos_acpi

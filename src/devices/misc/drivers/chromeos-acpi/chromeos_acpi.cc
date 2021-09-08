@@ -147,6 +147,27 @@ void ChromeosAcpi::DdkInit(ddk::InitTxn txn) {
     });
   }
 
+  if (available_methods_.find(kBootInfoMethodName) != available_methods_.end()) {
+    EvaluateObjectHelper(kBootInfoMethodName, [this](const facpi::Object& object) {
+      if (!object.is_package_val() || object.package_val().value.count() != kBootInfoNumFields) {
+        zxlogf(WARNING, "Invalid BINF: expect a package with 5 values");
+        return;
+      }
+
+      std::array<uint64_t, kBootInfoNumFields> data;
+      for (size_t i = 0; i < object.package_val().value.count(); i++) {
+        auto& entry = object.package_val().value[i];
+        if (!entry.is_integer_val()) {
+          zxlogf(WARNING, "Invalid BINF: expected integer values");
+          return;
+        }
+        data[i] = entry.integer_val();
+      }
+
+      binf_ = data;
+    });
+  }
+
   txn.Reply(ZX_OK);
 }
 
@@ -250,6 +271,16 @@ void ChromeosAcpi::GetNvdataVersion(GetNvdataVersionRequestView request,
                                     GetNvdataVersionCompleter::Sync& completer) {
   if (shared_data_.has_value()) {
     completer.ReplySuccess((shared_data_->flags & kVbootSharedDataNvdataV2) ? 2 : 1);
+  } else {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+  }
+}
+
+void ChromeosAcpi::GetActiveApFirmware(GetActiveApFirmwareRequestView request,
+                                       GetActiveApFirmwareCompleter::Sync& completer) {
+  if (binf_.has_value()) {
+    completer.ReplySuccess(fuchsia_acpi_chromeos::wire::BootSlot(
+        static_cast<uint32_t>(binf_.value()[kBootInfoActiveApFirmware])));
   } else {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
   }
