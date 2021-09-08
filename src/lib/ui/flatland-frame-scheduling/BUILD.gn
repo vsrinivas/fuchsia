@@ -23,6 +23,7 @@ rustc_library("flatland-frame-scheduling-lib") {
   ]
 
   sources = [
+    "src/frame_pacing_scheduler.rs",
     "src/frame_stats_collector.rs",
     "src/latency_stats_collector.rs",
     "src/lib.rs",

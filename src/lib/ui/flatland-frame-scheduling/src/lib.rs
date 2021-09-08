@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod frame_pacing_scheduler;
 mod frame_stats_collector;
 mod latency_stats_collector;
 mod low_latency_scheduler;
@@ -9,6 +10,7 @@ mod naive_scheduler;
 mod throughput_scheduler;
 mod unsquashable_scheduler;
 
+pub use frame_pacing_scheduler::FramePacingScheduler;
 pub use frame_stats_collector::FrameStatsCollector;
 pub use latency_stats_collector::LatencyStatsCollector;
 pub use low_latency_scheduler::LowLatencyScheduler;
