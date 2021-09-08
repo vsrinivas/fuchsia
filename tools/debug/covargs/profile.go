@@ -23,30 +23,39 @@ type ProfileEntry struct {
 // a sequence of entries, where each entry contains a raw profile and all
 // modules (specified by build ID) present in that profile.
 func MergeEntries(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap) ([]ProfileEntry, error) {
-	entries := []ProfileEntry{}
-
+	sinkToModules := make(map[string]map[string]struct{})
 	for _, sink := range summary[llvmProfileSinkType] {
-		var modules []string
+		moduleSet, ok := sinkToModules[sink.File]
+		if !ok {
+			moduleSet = make(map[string]struct{})
+		}
+
 		if len(sink.BuildIDs) > 0 {
-			modules = sink.BuildIDs
+			for _, buildID := range sink.BuildIDs {
+				moduleSet[buildID] = struct{}{}
+			}
 		} else {
 			dump, ok := dumps[sink.Name]
 			if !ok {
 				logger.Warningf(ctx, "%s not found in summary file; unable to determine module build IDs\n", sink.Name)
 				continue
 			}
-			moduleSet := make(map[string]struct{})
 			for _, mod := range dump.Modules {
-				if _, ok := moduleSet[mod.Build]; !ok {
-					modules = append(modules, mod.Build)
-					moduleSet[mod.Build] = struct{}{}
-				}
+				moduleSet[mod.Build] = struct{}{}
 			}
 		}
+		sinkToModules[sink.File] = moduleSet
+	}
 
+	entries := []ProfileEntry{}
+	for sink, moduleSet := range sinkToModules {
+		var modules []string
+		for module := range moduleSet {
+			modules = append(modules, module)
+		}
 		entries = append(entries, ProfileEntry{
 			Modules: modules,
-			Profile: sink.File,
+			Profile: sink,
 		})
 	}
 

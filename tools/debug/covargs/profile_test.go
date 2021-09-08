@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
@@ -60,12 +61,22 @@ var testSummary = runtests.DataSinkMap{
 	"llvm-profile": {
 		{Name: "llvm-profile.1234", File: "build/llvm-profile.4321"},
 		{Name: "llvm-profile.5678", File: "build/llvm-profile.8765"},
+		// Duplicate sinks should be deduped.
+		{Name: "llvm-profile.1234", File: "build/llvm-profile.4321"},
+		{Name: "llvm-profile.5678", File: "build/llvm-profile.8765"},
 	},
 }
 
 var testEntries = []ProfileEntry{
 	{Profile: "build/llvm-profile.4321", Modules: []string{"12ef5c50b3ed3599c07c02d4509311be", "5bf6a28a259b95b4f20ffbcea0cbb149", "4fcb712aa6387724a9f465a32cd8c14b"}},
 	{Profile: "build/llvm-profile.8765", Modules: []string{"e242ed3bffccdf271b7fbaf34ed72d08", "5bf6a28a259b95b4f20ffbcea0cbb149"}},
+}
+
+func sortEntries(entries []ProfileEntry) {
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Profile < entries[j].Profile })
+	for _, entry := range entries {
+		sort.Strings(entry.Modules)
+	}
 }
 
 func TestMergeEntries(t *testing.T) {
@@ -75,6 +86,8 @@ func TestMergeEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sortEntries(entries)
+	sortEntries(testEntries)
 
 	if !reflect.DeepEqual(entries, testEntries) {
 		t.Error("expected", testEntries, "but got", entries)
