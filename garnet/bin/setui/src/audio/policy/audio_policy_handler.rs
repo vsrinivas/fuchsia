@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/84044) `Changed` events don't exist anymore. Update docs.
 //! The audio policy handler intercepts and modifies requests going into and out of the audio
 //! setting in order to apply audio policies that have been added through the
 //! fuchsia.settings.policy.Audio FIDL interface.
@@ -17,24 +16,25 @@
 //! convert between internal and external state as needed so that both sides have a self-consistent
 //! view of the audio state.
 //!
-//! # Handling SettingRequests
+//! # Handling setting requests
 //!
-//! There are two main classes of SettingRequests to the audio setting itself, gets and sets. When a
-//! set request that seeks to modify the audio state is intercepted, the policy handler modifies the
-//! request by applying the audio policy transforms to the request. This includes actions like
-//! scaling and clamping the volume levels. The set request is then propagated to be handled by the
-//! setting handler.
+//! There are two main classes of [Requests] to the audio setting itself, gets and sets. When a
+//! [Set] request that seeks to modify the audio state is intercepted, the policy handler modifies
+//! the request by applying the audio policy transforms to the request. This includes actions like
+//! scaling and clamping the volume levels. The [Set] request is then propagated to be handled by
+//! the setting handler.
 //!
-//! When a get request is intercepted, the handler asks the underlying audio setting for the current
-//! value, then performs the reverse calculations of the policy transforms to recover the external
-//! audio state. The policy handler then directly responds to the client with the calculated audio
-//! state.
+//! When a [Get] request is intercepted, the handler asks the underlying audio setting for the
+//! current value, then performs the reverse calculations of the policy transforms to recover the
+//! external audio state. The policy handler then directly responds to the client with the
+//! calculated audio state.
 //!
-//! # Handling SettingEvents
+//! # Handling setting responses
 //!
-//! Setting handlers send a `Changed` event when their state changes so that the settings service
-//! notify any active listeners. When the policy handler intercepts one of these events, it performs
-//! the same reverse calculation as is done for a get request and passes along the changed event.
+//! Setting handlers send a [Response] payload as a reply to any request that causes their state to
+//! change, such as a [Set] request. This payload contains their up-to-date state. When the policy
+//! handler intercepts one of these responses, it performs the same reverse calculation as for a get
+//! request, then passes along the transformed response payload on its original path.
 //!
 //! # Handling policy changes
 //!
@@ -47,13 +47,21 @@
 //!
 //! If the internal audio state needs to be updated, the policy handler simply sends its own set
 //! request to the underlying setting. This will trigger updates to external listeners, which the
-//! setting handler sends as a Changed event that is intercepted and dealt with as described above.
+//! setting handler sends as a [Response] payload that is intercepted and dealt with as described
+//! above.
 //!
 //! However, in some cases, the internal state may not change but the external state changes, such
 //! as removing a max volume limit, which is transparent to the user. For example, if the max volume
 //! is 80% and the external volume is 100% and the max volume policy is removed, the external volume
 //! has to be updated to match the internal volume of 80%. In these cases, the policy handler sends
-//! a Changed event in place of the setting handler to trigger updates to external listeners.
+//! a [Rebroadcast] request to the setting handler, which updates external listeners about the new
+//! state.
+//!
+//! [Requests]: crate::handler::base::Payload::Request
+//! [Set]: crate::handler:;base::Payload::Request::SetVolume
+//! [Get]: crate::handler:;base::Payload::Request::Get
+//! [Response]: crate::handler::base::Payload::Response
+//! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
 use anyhow::{format_err, Error};
 use fuchsia_syslog::fx_log_err;
@@ -432,7 +440,10 @@ impl AudioPolicyHandler {
     /// stream.
     ///
     /// This method needs to know the external volume level before changes were made in order to
-    /// determine if a changed event should be sent to listeners of the base setting.
+    /// determine if a [Rebroadcast] should be requested to send updates to listeners of the base
+    /// setting.
+    ///
+    /// [Rebroadcast]: crate::handler::base::Request::Rebroadcast
     // TODO(fxbug.dev/67784): consider keeping copy of external audio info so previous external
     // volume doesn't need to be calculated.
     async fn apply_policy_transforms(
