@@ -20,6 +20,9 @@
 #include <usb/dwc2/metadata.h>
 
 #include "astro.h"
+#include "src/devices/board/drivers/astro/aml-usb-phy-v2-bind.h"
+#include "src/devices/board/drivers/astro/dwc2-phy-bind.h"
+#include "src/devices/board/drivers/astro/xhci-bind.h"
 
 namespace astro {
 
@@ -197,55 +200,20 @@ static const pbus_dev_t usb_phy_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t usb_phy_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
-static const zx_bind_inst_t xhci_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
-};
-static const device_fragment_part_t xhci_phy_fragment[] = {
-    {countof(xhci_phy_match), xhci_phy_match},
-};
-static const device_fragment_t xhci_fragments[] = {
-    {"xhci-phy", countof(xhci_phy_fragment), xhci_phy_fragment},
-};
-static const zx_bind_inst_t dwc2_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
-};
-static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(dwc2_phy_match), dwc2_phy_match},
-};
-static const device_fragment_t dwc2_fragments[] = {
-    {"dwc2-phy", countof(dwc2_phy_fragment), dwc2_phy_fragment},
-};
-
 zx_status_t Astro::UsbInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
-                               countof(usb_phy_fragments), nullptr);
+      pbus_.AddComposite(&usb_phy_dev, reinterpret_cast<uint64_t>(aml_usb_phy_v2_fragments),
+                         countof(aml_usb_phy_v2_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d", __func__, status);
     return status;
   }
 
   // Add XHCI and DWC2 to the same driver host as the aml-usb-phy.
-  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
+  status = pbus_.AddComposite(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
                                     countof(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite(xhci) failed %d", __func__, status);
     return status;
   }
 
@@ -270,11 +238,11 @@ zx_status_t Astro::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    countof(dwc2_fragments), "dwc2-phy");
+  status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_phy_fragments),
+                                    countof(dwc2_phy_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite(dwc2) failed %d", __func__, status);
     return status;
   }
 

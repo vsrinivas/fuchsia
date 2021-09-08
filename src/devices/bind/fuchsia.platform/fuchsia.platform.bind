@@ -20,6 +20,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   KPCI = 0x03,
+  USB_DWC2 = 0x05,
   RTC_PL031 = 0x06,
   GPIO_TEST = 0x08,
   OPTEE = 0x0E,

@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite tcs3400_light;
+
+using fuchsia.amlogic.platform.s905d2;
+using fuchsia.gpio;
+using fuchsia.i2c;
+
+primary node "i2c" {
+  fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == fuchsia.i2c.BIND_I2C_BUS_ID.ASTRO_A0_0;
+  fuchsia.BIND_I2C_ADDRESS == fuchsia.i2c.BIND_I2C_ADDRESS.AMBIENTLIGHT;
+}
+
+node "gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.s905d2.GPIOAO_PIN_ID.PIN_5;  // GPIO_LIGHT_INTERRUPT
+}
