@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 mod cr50;
+mod power_button;
 mod util;
 
-use crate::cr50::Cr50;
+use crate::{cr50::Cr50, power_button::PowerButton};
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io::DirectoryProxy;
@@ -86,7 +87,15 @@ async fn main() -> Result<(), anyhow::Error> {
             return Ok(());
         }
     };
-    let cr50 = Cr50::new(proxy);
+    let power_button = match PowerButton::new_from_namespace() {
+        Ok(btn) => btn,
+        Err(e) => {
+            fx_log_warn!("Could not connect to power button monitor: {:?}", e);
+            component::health().set_unhealthy("no power button monitor");
+            return Ok(());
+        }
+    };
+    let cr50 = Cr50::new(proxy, power_button);
     service_fs.dir("svc").add_fidl_service(IncomingRequest::Cr50);
 
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;

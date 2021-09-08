@@ -19,6 +19,7 @@
             rights: [ "rw*" ],
             path: "/dev/class/tpm",
         },
+        { protocol: "fuchsia.power.button.Monitor" },
     ],
     expose: [
         {

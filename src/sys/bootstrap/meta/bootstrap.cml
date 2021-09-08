@@ -67,8 +67,8 @@
             name: "pwrbtn-monitor",
             url: "fuchsia-boot:///#meta/pwrbtn-monitor.cm",
 
-            // pwrbtn-monitor only consumes capabilities, it doesn't provide
-            // any, so there's no other way to start it.
+            // pwrbtn-monitor should start eagerly - the only services it offers may never be called
+            // on some builds, so there's no other way to start it.
             startup: "eager",
         },
         {
@@ -704,6 +704,11 @@
             protocol: [ "fuchsia.vboot.FirmwareParam" ],
             from: "#vboot-fwparam",
             to: "#console-launcher",
+        },
+        {
+            protocol: [ "fuchsia.power.button.Monitor" ],
+            from: "#pwrbtn-monitor",
+            to: "#tpm-cr50",
         },
         {
             protocol: [ "fuchsia.fshost.BlockWatcher" ],

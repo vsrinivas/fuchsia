@@ -5,16 +5,19 @@
 mod command;
 mod status;
 
-use crate::cr50::{
-    command::{
-        ccd::{
-            CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
-            CcdRequest,
+use crate::{
+    cr50::{
+        command::{
+            ccd::{
+                CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
+                CcdRequest,
+            },
+            wp::WpInfoRequest,
+            TpmCommand,
         },
-        wp::WpInfoRequest,
-        TpmCommand,
+        status::{ExecuteError, TpmStatus},
     },
-    status::{ExecuteError, TpmStatus},
+    power_button::PowerButton,
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::RequestStream;
@@ -32,11 +35,12 @@ use std::sync::Arc;
 
 pub struct Cr50 {
     proxy: TpmDeviceProxy,
+    power_button: Arc<PowerButton>,
 }
 
 impl Cr50 {
-    pub fn new(proxy: TpmDeviceProxy) -> Arc<Self> {
-        Arc::new(Cr50 { proxy })
+    pub fn new(proxy: TpmDeviceProxy, power_button: Arc<PowerButton>) -> Arc<Self> {
+        Arc::new(Cr50 { proxy, power_button })
     }
 
     fn make_response<W>(
@@ -115,10 +119,7 @@ impl Cr50 {
             Ok(()) | Err(ExecuteError::Tpm(TpmStatus(Cr50Rc::Cr50(Cr50Status::InProgress)))) => {
                 // Need physical presence check. If no check is required (e.g. battery
                 // disconnected), handle_physical_presence will indicate that to the client.
-                match self.handle_physical_presence(poll_cmd) {
-                    Ok(client) => Ok(client),
-                    Err(e) => Err(ExecuteError::Other(Error::new(e).context("Creating endpoints"))),
-                }
+                self.handle_physical_presence(poll_cmd).await.map_err(ExecuteError::Other)
             }
             Err(e) => Err(e),
         }
@@ -127,15 +128,22 @@ impl Cr50 {
     /// Spawn a task that does polls for physical presence check updates.
     /// Returns a client which will receive events when physical presence check state
     /// changes.
-    fn handle_physical_presence(
+    async fn handle_physical_presence(
         &self,
         cmd: CcdCommand,
-    ) -> Result<fidl::endpoints::ClientEnd<PhysicalPresenceNotifierMarker>, fidl::Error> {
+    ) -> Result<fidl::endpoints::ClientEnd<PhysicalPresenceNotifierMarker>, anyhow::Error> {
         let (client, server) =
-            fidl::endpoints::create_request_stream::<PhysicalPresenceNotifierMarker>()?;
+            fidl::endpoints::create_request_stream::<PhysicalPresenceNotifierMarker>()
+                .context("Creating request stream")?;
         let proxy = self.proxy.clone();
+        let power_button = Arc::clone(&self.power_button);
+        // Inhibit the power button now so that if something goes wrong we can propagte the error
+        // back to the client.
+        let inhibitor = power_button.inhibit().await.context("Inhibiting power button")?;
 
         fasync::Task::spawn(async move {
+            // Tie the lifetime of the inhibitor to this async task.
+            let _inhibitor = inhibitor;
             let handle = server.control_handle();
             let mut last_pp = None;
             while last_pp != Some(PhysicalPresenceState::Done)
