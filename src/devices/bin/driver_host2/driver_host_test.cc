@@ -10,12 +10,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/service/llcpp/service.h>
 
-#include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -118,7 +116,7 @@ struct StartDriverResult {
   fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir;
 };
 
-class DriverHostTest : public gtest::TestLoopFixture {
+class DriverHostTest : public testing::Test {
  protected:
   async::Loop& loop() { return loop_; }
   async::Loop& second_loop() { return second_loop_; }
@@ -191,7 +189,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                                         std::move(driver_endpoints->server));
       driver_host().Start(&request, completer);
     }
-    loop_.RunUntilIdle();
+    EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
     EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
@@ -223,7 +221,7 @@ TEST_F(DriverHostTest, Start_SingleDriver) {
   // Stop the driver. As it's the last driver in the driver host, this will
   // cause the driver host to stop.
   driver.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -233,11 +231,11 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
   auto [driver_2, outgoing_dir_2] = StartDriver();
 
   driver_1.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop().GetState());
 
   driver_2.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -265,11 +263,11 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
   EventHandler event_handler;
   fidl::WireClient<ftest::Outgoing> outgoing(std::move(*client_end), loop().dispatcher(),
                                              &event_handler);
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_EQ(ZX_ERR_STOP, event_handler.status());
 
   driver.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -284,7 +282,7 @@ TEST_F(DriverHostTest, Start_IncomingServices) {
   EXPECT_TRUE(connected);
 
   driver.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -299,7 +297,7 @@ TEST_F(DriverHostTest, Start_ReturnError) {
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols), nullptr, error);
 
   driver.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   // We never started our first driver, so the driver host would not attempt to
   // quit the loop after the last driver has stopped.
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop().GetState());
@@ -319,7 +317,7 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
   EXPECT_TRUE(called);
 
   driver.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -336,12 +334,12 @@ TEST_F(DriverHostTest, Start_DifferentDispatcher) {
   symbols[0].set_name(allocator, "dispatcher");
   symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(&dispatcher));
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
-  second_loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, second_loop().RunUntilIdle());
   EXPECT_EQ(second_loop().dispatcher(), dispatcher);
 
   driver.reset();
-  loop().RunUntilIdle();
-  second_loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
+  EXPECT_EQ(ZX_OK, second_loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -494,7 +492,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
                                                       std::move(driver_endpoints->server));
     driver_host().Start(&request, completer);
   }
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
 
@@ -519,6 +517,6 @@ TEST_F(DriverHostTest, StartAndInspect) {
 
   driver_1.reset();
   driver_2.reset();
-  loop().RunUntilIdle();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
