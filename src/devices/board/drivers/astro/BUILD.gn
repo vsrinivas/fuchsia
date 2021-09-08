@@ -277,6 +277,30 @@ driver_bind_rules("audio-codec-tas27xx-bind") {
   ]
 }
 
+driver_bind_rules("aml-sdio-bind") {
+  rules = "bind/aml-sdio.bind"
+  header_output = "aml-sdio-bind.h"
+  bind_output = "aml-sdio-bind.bc"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("wifi-bind") {
+  rules = "bind/wifi.bind"
+  header_output = "wifi-bind.h"
+  bind_output = "wifi-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.sdmmc",
+  ]
+}
+
 driver_module("astro-driver") {
   output_name = "astro"
   configs += [
@@ -314,6 +338,7 @@ driver_module("astro-driver") {
     "astro.cc",
   ]
   deps = [
+    ":aml-sdio-bind_header",
     ":aml-usb-phy-v2-bind_header",
     ":astro-backlight-bind_header",
     ":astro-bind",
@@ -336,6 +361,7 @@ driver_module("astro-driver") {
     ":pd-armcore-bind_header",
     ":pwm-ao-d-bind_header",
     ":tcs3400-light-bind_header",
+    ":wifi-bind_header",
     ":xhci-bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
