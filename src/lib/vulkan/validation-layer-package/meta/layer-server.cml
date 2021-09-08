@@ -1,0 +1,23 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/layer-server",
+    },
+    capabilities: [
+        {
+            directory: "validation-pkg",
+            rights: [ "rx*" ],
+            path: "/pkg",
+        },
+    ],
+    expose: [
+        {
+            directory: "validation-pkg",
+            from: "self",
+            rights: [ "rx*" ],
+        },
+    ],
+}

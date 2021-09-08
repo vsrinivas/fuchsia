@@ -1,0 +1,101 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("../layers.gni")
+
+# To prevent confusion, restrict default visibility.
+visibility = [ ":*" ]
+
+executable("layer-server-bin") {
+  output_name = "layer-server"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+group("vulkan_validation_layers") {
+  deps = [
+    ":vklayer_khronos_validation_json",
+    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
+  ]
+}
+
+# Modify the validation layer json to reference the correct library path.
+action("processjson") {
+  deps = [ "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files" ]
+  script = "processjson.py"
+  sources = [ "${vulkan_data_dir}/VkLayer_khronos_validation.json" ]
+  outputs = [ "$target_gen_dir/VkLayer_khronos_validation.json" ]
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+    rebase_path(sources[0], root_build_dir),
+  ]
+}
+
+resource("vklayer_khronos_validation_json") {
+  target_outputs = get_target_outputs(":processjson")
+  sources = [ target_outputs[0] ]
+  outputs = [ "data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json" ]
+  deps = [ ":processjson" ]
+}
+
+fuchsia_component("layer-server-component") {
+  manifest = "meta/layer-server.cml"
+  component_name = "layer-server"
+  deps = [
+    ":layer-server-bin",
+    ":vulkan_validation_layers",
+  ]
+}
+
+fuchsia_package("validation-layer-package") {
+  visibility += [ "*" ]
+  deps = [ ":layer-server-component" ]
+}
+
+if (current_toolchain == target_toolchain) {
+  # Generate a cml that includes a specific version of the package.
+  action("cml") {
+    # This boils down to a _pm target.
+    target_outputs = get_target_outputs(":validation-layer-package")
+
+    # The meta.far.merkle file contains the current package hash.
+    merkle_file = target_outputs[2]
+    deps = [ ":validation-layer-package" ]
+    script = "makecml.py"
+    sources = [
+      merkle_file,
+      script,
+    ]
+
+    outputs = [ "$target_gen_dir/vulkan-client.cml" ]
+    args = [
+      rebase_path(outputs[0]),
+      rebase_path(merkle_file, root_build_dir),
+    ]
+  }
+}
+
+# Clients that want access to the validation layers should depend on this.
+fuchsia_component("validation-client") {
+  component_name = "validation-client"
+  visibility += [ "*" ]
+
+  cml_target = ":cml($target_toolchain)"
+
+  deps = [ cml_target ]
+
+  manifest = get_label_info(deps[0], "target_gen_dir") + "/vulkan-client.cml"
+}

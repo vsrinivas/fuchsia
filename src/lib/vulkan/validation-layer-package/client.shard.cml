@@ -1,0 +1,23 @@
+{
+    children: [
+        {
+            name: "validation-client",
+            url: "#meta/validation-client.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "validation-pkg",
+            from: "#validation-client",
+            rights: [ "rx*" ],
+            path: "/vulkan_validation_pkg",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#validation-client",
+        },
+    ],
+}

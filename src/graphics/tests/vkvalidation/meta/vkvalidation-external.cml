@@ -1,0 +1,15 @@
+{
+    include: [
+        "//src/lib/vulkan/validation-layer-package/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/vkvalidation",
+        environ: [
+            "VK_LOADER_DEBUG=all",
+            "VK_LAYER_PATH=/vulkan_validation_pkg/data/vulkan/explicit_layer.d",
+        ],
+    },
+}

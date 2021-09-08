@@ -39,7 +39,32 @@ fuchsia_test_package("vkvalidation-pkg") {
   }
 }
 
+fuchsia_component("vkvalidation_external_cmp") {
+  testonly = true
+  component_name = "vkvalidation-external"
+
+  # Package must not include validation layers
+  deps = [
+    ":override",
+    ":vkvalidation_bin",
+    "//src/lib/vulkan/validation-layer-package:validation-client",
+  ]
+  manifest = "meta/vkvalidation-external.cml"
+}
+
+fuchsia_test_package("vkvalidation-external-pkg") {
+  package_name = "vkvalidation-external"
+  test_components = [ ":vkvalidation_external_cmp" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
 group("vkvalidation") {
   testonly = true
-  deps = [ ":vkvalidation-pkg" ]
+  deps = [
+    ":vkvalidation-external-pkg",
+    ":vkvalidation-pkg",
+    "//src/lib/vulkan/validation-layer-package",
+  ]
 }
