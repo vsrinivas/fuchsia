@@ -200,10 +200,10 @@ mod tests {
             ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
-        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
         test.model
             .bind(
                 &component_a.abs_moniker.to_partial(),
@@ -292,7 +292,7 @@ mod tests {
             );
 
             let test = ActionsTest::new_with_hooks("root", components, None, vec![hooks_reg]).await;
-            let component_a = test.look_up(vec!["a:0"].into()).await;
+            let component_a = test.look_up(vec!["a"].into()).await;
             test.model
                 .bind(
                     &component_a.abs_moniker.to_partial(),

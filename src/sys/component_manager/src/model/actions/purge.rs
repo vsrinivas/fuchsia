@@ -156,7 +156,7 @@ pub mod tests {
         // Bind to the component, causing it to start. This should cause the component to have an
         // `Execution`.
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
         test.model
             .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
@@ -213,7 +213,7 @@ pub mod tests {
             ("a", component_decl_with_test_runner()),
             ("b", component_decl_with_test_runner()),
         ];
-        let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
+        let test = ActionsTest::new("root", components, Some(vec!["container"].into())).await;
 
         // Create dynamic instances in "coll".
         test.create_dynamic_child("coll", "a").await;
@@ -222,9 +222,9 @@ pub mod tests {
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
         let component_root = test.look_up(vec![].into()).await;
-        let component_container = test.look_up(vec!["container:0"].into()).await;
-        let component_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
-        let component_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
+        let component_container = test.look_up(vec!["container"].into()).await;
+        let component_a = test.look_up(vec!["container", "coll:a"].into()).await;
+        let component_b = test.look_up(vec!["container", "coll:b"].into()).await;
         test.model
             .bind(&component_container.abs_moniker.to_partial(), &BindReason::Eager)
             .await
@@ -242,7 +242,7 @@ pub mod tests {
         assert!(is_executing(&component_b).await);
 
         // Register delete child action, and wait for it. Components should be purged.
-        let component_container = test.look_up(vec!["container:0"].into()).await;
+        let component_container = test.look_up(vec!["container"].into()).await;
         ActionSet::register(component_container.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
@@ -264,8 +264,8 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
-        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
@@ -548,7 +548,7 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
         test.model
             .bind(&component_a.abs_moniker.to_partial(), &BindReason::Eager)
             .await
@@ -614,11 +614,11 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
-        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
-        let component_x = test.look_up(vec!["x:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
+        let component_x = test.look_up(vec!["x"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model
@@ -732,9 +732,9 @@ pub mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
-        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let component_b2 = test.look_up(vec!["a:0", "b:0", "b:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_b2 = test.look_up(vec!["a", "b", "b"].into()).await;
 
         // Bind to second `b`.
         test.model
@@ -867,10 +867,10 @@ pub mod tests {
         let error_hook = Arc::new(PurgeErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
-        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
-        let component_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
-        let component_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
+        let component_b = test.look_up(vec!["a", "b"].into()).await;
+        let component_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let component_d = test.look_up(vec!["a", "b", "d"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model

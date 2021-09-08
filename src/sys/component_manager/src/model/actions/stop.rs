@@ -58,11 +58,11 @@ pub mod tests {
         let test = ActionsTest::new("root", components, None).await;
 
         // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["a:0"].into()).await;
+        test.bind(vec!["a"].into()).await;
 
         // Register `stopped` action, and wait for it. Component should be stopped.
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
         ActionSet::register(component_a.clone(), StopAction::new(false, false))
             .await
             .expect("stop failed");
@@ -109,12 +109,12 @@ pub mod tests {
         let test = ActionsTest::new("root", components, None).await;
 
         // Bind to component so we can witness it getting stopped.
-        test.bind(vec!["a:0"].into()).await;
-        test.bind(vec!["a:0", "aa:0"].into()).await;
+        test.bind(vec!["a"].into()).await;
+        test.bind(vec!["a", "aa"].into()).await;
 
         // Register `stopped` action, and wait for it. Component should be stopped.
         let component_root = test.look_up(vec![].into()).await;
-        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_a = test.look_up(vec!["a"].into()).await;
         ActionSet::register(component_a.clone(), StopAction::new(false, true))
             .await
             .expect("stop failed");

@@ -33,7 +33,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
+    moniker::{PartialAbsoluteMoniker, PartialChildMoniker},
     std::collections::HashSet,
     std::default::Default,
     std::path::Path,
@@ -370,7 +370,7 @@ impl ActionsTest {
     pub async fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        moniker: Option<AbsoluteMoniker>,
+        moniker: Option<PartialAbsoluteMoniker>,
     ) -> Self {
         Self::new_with_hooks(root_component, components, moniker, vec![]).await
     }
@@ -378,7 +378,7 @@ impl ActionsTest {
     pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        moniker: Option<AbsoluteMoniker>,
+        moniker: Option<PartialAbsoluteMoniker>,
         extra_hooks: Vec<HooksRegistration>,
     ) -> Self {
         let TestModelResult { model, builtin_environment, mock_runner } =
@@ -402,10 +402,7 @@ impl ActionsTest {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             let component = WeakComponentInstance::from(
-                &model
-                    .look_up(&moniker.to_partial())
-                    .await
-                    .expect(&format!("could not look up {}", moniker)),
+                &model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker)),
             );
             fasync::Task::spawn(async move {
                 builtin_environment_inner
@@ -425,16 +422,13 @@ impl ActionsTest {
         Self { model, builtin_environment, test_hook, realm_proxy, runner: mock_runner }
     }
 
-    pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
-        self.model
-            .look_up(&moniker.to_partial())
-            .await
-            .expect(&format!("could not look up {}", moniker))
+    pub async fn look_up(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {
+        self.model.look_up(&moniker).await.expect(&format!("could not look up {}", moniker))
     }
 
-    pub async fn bind(&self, moniker: AbsoluteMoniker) -> Arc<ComponentInstance> {
+    pub async fn bind(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {
         self.model
-            .bind(&moniker.to_partial(), &BindReason::Eager)
+            .bind(&moniker, &BindReason::Eager)
             .await
             .expect(&format!("could not bind to {}", moniker))
     }
