@@ -11,7 +11,7 @@ namespace f2fs {
 namespace {
 
 using block_client::FakeBlockDevice;
-constexpr uint32_t kNumBlocks = kMinVolumeSize / kBlockSize;
+constexpr uint32_t kNumBlocks = kMinVolumeSize / kDefaultSectorSize;
 
 TEST(BCacheTest, TrimTest) {
   {
@@ -21,7 +21,8 @@ TEST(BCacheTest, TrimTest) {
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
     ASSERT_TRUE(device);
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-    ASSERT_EQ(bc->Trim(0, bc->Maxblk()), ZX_ERR_NOT_SUPPORTED);
+    block_t end_blk = static_cast<block_t>(bc->Maxblk() >> kLogSectorsPerBlock);
+    ASSERT_EQ(bc->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
   }
   {
     std::unique_ptr<f2fs::Bcache> bc;
@@ -30,7 +31,8 @@ TEST(BCacheTest, TrimTest) {
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = true});
     ASSERT_TRUE(device);
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-    ASSERT_EQ(bc->Trim(0, bc->Maxblk()), ZX_OK);
+    block_t end_blk = static_cast<block_t>(bc->Maxblk() >> kLogSectorsPerBlock);
+    ASSERT_EQ(bc->Trim(0, end_blk), ZX_OK);
   }
 }
 

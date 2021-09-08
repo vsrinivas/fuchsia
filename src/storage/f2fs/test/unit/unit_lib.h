@@ -36,7 +36,7 @@ void CheckInlineDir(VnodeF2fs *vn);
 void CheckNonInlineDir(VnodeF2fs *vn);
 
 void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs);
-void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::string> childs);
+void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string> childs);
 
 std::string GetRandomName(unsigned int len);
 

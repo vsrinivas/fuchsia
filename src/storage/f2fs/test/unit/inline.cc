@@ -202,7 +202,7 @@ TEST(InlineDirTest, InlineDentryOps) {
   unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // fill all inline dentry slots
-  unsigned int child_count = child_set.size();
+  auto child_count = child_set.size();
   for (; child_count < kNrInlineDentry - 2; ++child_count) {
     unittest_lib::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
     child_set.insert(std::to_string(child_count));

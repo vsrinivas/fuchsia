@@ -5,6 +5,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#include <safemath/checked_math.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
@@ -39,16 +41,16 @@ Dir::Dir(F2fs *fs) : VnodeF2fs(fs) {}
 
 Dir::Dir(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
-uint64_t Dir::DirBlocks() { return GetBlockCount(); }
+block_t Dir::DirBlocks() { return safemath::checked_cast<block_t>(GetBlockCount()); }
 
-unsigned int Dir::DirBuckets(unsigned int level) {
+uint32_t Dir::DirBuckets(uint32_t level) {
   if (level < kMaxDirHashDepth / 2)
     return 1 << level;
   else
     return 1 << ((kMaxDirHashDepth / 2) - 1);
 }
 
-unsigned int Dir::BucketBlocks(unsigned int level) {
+uint32_t Dir::BucketBlocks(uint32_t level) {
   if (level < kMaxDirHashDepth / 2)
     return 2;
   else
@@ -59,7 +61,7 @@ void Dir::SetDeType(DirEntry *de, VnodeF2fs *vnode) {
   de->file_type = kTypeByMode[(vnode->GetMode() & S_IFMT) >> kStatShift];
 }
 
-uint64_t Dir::DirBlockIndex(unsigned int level, unsigned int idx) {
+uint64_t Dir::DirBlockIndex(uint32_t level, uint32_t idx) {
   uint64_t i;
   uint64_t bidx = 0;
 

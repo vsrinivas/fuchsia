@@ -64,7 +64,7 @@ TEST(DirTest, DentryReuse) {
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, 0, child_set);
 
   // fill all dentry slots in first dentry page
-  unsigned int child_count = child_set.size();
+  auto child_count = child_set.size();
   for (; child_count < kNrDentryInBlock - 2; ++child_count) {
     unittest_lib::CreateChild(test_dir_ptr, S_IFDIR, std::to_string(child_count));
     child_set.insert(std::to_string(child_count));
@@ -143,7 +143,7 @@ TEST(DirTest, DentryBucket) {
     std::string name(std::to_string(child_count));
     unittest_lib::CreateChild(test_dir_ptr, S_IFDIR, name);
 
-    unsigned int bucket_id = DentryHash(name.data(), name.length()) % 2;
+    auto bucket_id = DentryHash(name.data(), static_cast<int>(name.length())) % 2;
 
     if (bucket_id == 0) {
       first_bucket_child.insert(name);
@@ -153,7 +153,7 @@ TEST(DirTest, DentryBucket) {
   }
 
   // check level 1, bucket 0
-  unsigned int bidx = Dir::DirBlockIndex(1, 0);
+  auto bidx = Dir::DirBlockIndex(1, 0);
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, first_bucket_child);
 
   // delete all children in level 1, bucket 0
@@ -188,7 +188,7 @@ TEST(DirTest, DentryBucket) {
 }
 
 TEST(DirTest, MultiSlotDentry) {
-  auto seed = time(nullptr);
+  auto seed = testing::GTEST_FLAG(random_seed);
   srand(seed);
   std::cout << "Random seed for DirTest.MultiSlotDentry: " << seed << std::endl;
 

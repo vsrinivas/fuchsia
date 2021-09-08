@@ -12,18 +12,18 @@ class NameString final {
   NameString(const NameString &) = default;
   NameString(std::string_view name) {
     ZX_ASSERT(name.length() <= kMaxNameLen);
-    len_ = name.length();
+    len_ = static_cast<uint16_t>(name.length());
     memcpy(name_, name.data(), len_);
   }
   ~NameString() = default;
 
   std::string_view GetStringView() const { return std::string_view(name_, len_); };
   char *GetData() { return name_; };
-  uint32_t GetLen() const { return len_; };
+  uint16_t GetLen() const { return len_; };
 
   NameString &operator=(std::string_view name) {
     ZX_ASSERT(name.length() <= kMaxNameLen);
-    len_ = name.length();
+    len_ = static_cast<uint16_t>(name.length());
     memcpy(name_, name.data(), len_);
     name_[len_] = 0;
     return *this;
@@ -31,7 +31,7 @@ class NameString final {
 
  private:
   char name_[kMaxNameLen + 1];
-  uint32_t len_;
+  uint16_t len_;
 };
 
 }  // namespace f2fs

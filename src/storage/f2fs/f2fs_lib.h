@@ -43,7 +43,7 @@ static inline void WaitOnPageWriteback(Page *page) {
 inline int64_t VerAfter(uint64_t a, uint64_t b) { return (static_cast<int64_t>(a - b) > 0); }
 
 // CRC
-inline unsigned int F2fsCalCrc32(unsigned int crc, void *buff, unsigned int len) {
+inline uint32_t F2fsCalCrc32(uint32_t crc, void *buff, uint32_t len) {
   int i;
   unsigned char *p = static_cast<unsigned char *>(buff);
   while (len--) {
@@ -54,71 +54,63 @@ inline unsigned int F2fsCalCrc32(unsigned int crc, void *buff, unsigned int len)
   return crc;
 }
 
-inline uint32_t F2fsCrc32(void *buff, size_t len) {
+inline uint32_t F2fsCrc32(void *buff, uint32_t len) {
   return F2fsCalCrc32(kF2fsSuperMagic, (unsigned char *)buff, len);
 }
 
-inline bool F2fsCrcValid(uint32_t blk_crc, void *buff, size_t buff_size) {
+inline bool F2fsCrcValid(uint32_t blk_crc, void *buff, uint32_t buff_size) {
   return F2fsCrc32(buff, buff_size) == blk_crc;
 }
-
-// Error code in pointer variable
-// TODO: should remove them. there is no room for errno in Fuchsia.
-inline bool IsErr(const void *ptr) { return (ptr == nullptr); }
-
-inline long PtrErr(const void *ptr) { return 0; }
-
-inline void *ErrPtr(long error) { return nullptr; }
 
 // Bitmap operations
 inline size_t DivRoundUp(size_t n, size_t d) { return (((n) + (d)-1) / (d)); }
 inline size_t BitsToLongs(size_t nr) { return DivRoundUp(nr, kBitsPerByte * sizeof(long)); }
 
-static inline void SetBit(int nr, void *addr) {
+static inline void SetBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  bitmap[iter] |= 1U << offset_in_iter;
+  bitmap[iter] |= static_cast<uint8_t>(1U << offset_in_iter);
 }
 
-static inline void ClearBit(int nr, void *addr) {
+static inline void ClearBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  bitmap[iter] &= ~(1U << offset_in_iter);
+  bitmap[iter] &= ~static_cast<uint8_t>(1U << offset_in_iter);
 }
 
-static inline int TestBit(int nr, void *addr) {
+static inline bool TestBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
+  bool ret = ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) != 0);
 
   return ret;
 }
 
-static inline int FindNextZeroBit(void *addr, uint32_t size, uint32_t offset) {
+static inline uint32_t FindNextZeroBit(void *addr, uint32_t size, uint32_t offset) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   while (offset < size) {
     uint32_t iter = offset / size_per_iter;
     uint32_t offset_in_iter = offset % size_per_iter;
 
-    uint8_t mask = (~0U << offset_in_iter);
+    uint8_t mask = static_cast<uint8_t>(~0U << offset_in_iter);
     uint8_t res = bitmap[iter] & mask;
     if (res != mask) {  // found
       for (; offset_in_iter < size_per_iter; offset_in_iter++) {
-        if ((bitmap[iter] & (1U << offset_in_iter)) == 0) {
+        if ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) == 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }
       }
@@ -130,19 +122,19 @@ static inline int FindNextZeroBit(void *addr, uint32_t size, uint32_t offset) {
   return size;
 }
 
-static inline int FindNextBit(void *addr, uint32_t size, uint32_t offset) {
+static inline uint32_t FindNextBit(void *addr, uint32_t size, uint32_t offset) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   while (offset < size) {
     uint32_t iter = offset / size_per_iter;
     uint32_t offset_in_iter = offset % size_per_iter;
 
-    uint8_t mask = (~0U << offset_in_iter);
+    uint8_t mask = static_cast<uint8_t>(~0U << offset_in_iter);
     uint8_t res = bitmap[iter] & mask;
     if (res != 0) {  // found
       for (; offset_in_iter < size_per_iter; offset_in_iter++) {
-        if ((bitmap[iter] & (1U << offset_in_iter)) != 0) {
+        if ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) != 0) {
           return std::min(iter * size_per_iter + offset_in_iter, size);
         }
       }
@@ -154,29 +146,29 @@ static inline int FindNextBit(void *addr, uint32_t size, uint32_t offset) {
   return size;
 }
 
-static inline int TestAndSetBit(int nr, void *addr) {
+static inline bool TestAndSetBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
+  bool ret = ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) != 0);
 
-  bitmap[iter] |= 1U << offset_in_iter;
+  bitmap[iter] |= static_cast<uint8_t>(1U << offset_in_iter);
 
   return ret;
 }
 
-static inline int TestAndClearBit(int nr, void *addr) {
+static inline bool TestAndClearBit(uint32_t nr, void *addr) {
   uint8_t *bitmap = static_cast<uint8_t *>(addr);
-  uint32_t size_per_iter = 8;
+  uint32_t size_per_iter = kBitsPerByte;
 
   uint32_t iter = nr / size_per_iter;
   uint32_t offset_in_iter = nr % size_per_iter;
 
-  int ret = (bitmap[iter] & (1U << offset_in_iter)) >> offset_in_iter;
+  bool ret = ((bitmap[iter] & static_cast<uint8_t>(1U << offset_in_iter)) != 0);
 
-  bitmap[iter] &= ~(1U << offset_in_iter);
+  bitmap[iter] &= ~static_cast<uint8_t>((1U << offset_in_iter));
 
   return ret;
 }

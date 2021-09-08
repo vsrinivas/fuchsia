@@ -159,7 +159,7 @@ void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) 
   ASSERT_TRUE(childs.empty());
 }
 
-void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::string> childs) {
+void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string> childs) {
   if (bidx == 0) {
     childs.insert(".");
     childs.insert("..");
@@ -175,10 +175,10 @@ void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::st
   ASSERT_EQ(vn->FindDataPage(bidx, &page), ZX_OK);
   DentryBlock *dentry_blk = reinterpret_cast<DentryBlock *>(page);
 
-  uint64_t bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
+  uint32_t bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, 0);
   while (bit_pos < kNrDentryInBlock) {
     DirEntry *de = &dentry_blk->dentry[bit_pos];
-    uint64_t slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
+    uint32_t slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
 
     auto iter = childs.begin();
     for (; iter != childs.end(); iter++) {
@@ -200,7 +200,7 @@ void CheckChildrenInBlock(Dir *vn, unsigned int bidx, std::unordered_set<std::st
 
 std::string GetRandomName(unsigned int len) {
   const char *char_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  unsigned int char_list_len = strlen(char_list);
+  auto char_list_len = strlen(char_list);
   auto generator = [&]() { return char_list[rand() % char_list_len]; };
   std::string str(len, 0);
   std::generate_n(str.begin(), len, generator);

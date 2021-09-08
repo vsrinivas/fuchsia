@@ -207,8 +207,10 @@ inline uint32_t SitBlockOffset(SitInfo *sit_i, uint32_t segno) { return segno / 
 inline uint32_t StartSegNo(SitInfo *sit_i, uint32_t segno) {
   return SitBlockOffset(sit_i, segno) * kSitEntryPerBlock;
 }
-inline uint32_t BitmapSize(uint32_t nr) { return BitsToLongs(nr) * sizeof(uint64_t); }
-inline uint32_t TotalSegs(SbInfo *sbi) { return GetSmInfo(sbi)->main_segments; }
+inline uint32_t BitmapSize(uint32_t nr) {
+  return static_cast<uint32_t>(BitsToLongs(nr) * sizeof(uint64_t));
+}
+inline block_t TotalSegs(SbInfo *sbi) { return GetSmInfo(sbi)->main_segments; }
 
 class SegMgr {
  public:

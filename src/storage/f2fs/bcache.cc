@@ -112,7 +112,7 @@ zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
 }
 
 zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
-                           uint64_t block_size, std::unique_ptr<Bcache>* out) {
+                           block_t block_size, std::unique_ptr<Bcache>* out) {
   zx_status_t status = Create(device.get(), max_blocks, block_size, out);
   if (status == ZX_OK) {
     (*out)->owned_device_ = std::move(device);
@@ -121,7 +121,7 @@ zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, ui
 }
 
 zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_blocks,
-                           uint64_t block_size, std::unique_ptr<Bcache>* out) {
+                           block_t block_size, std::unique_ptr<Bcache>* out) {
   std::unique_ptr<Bcache> bcache(new Bcache(device, max_blocks, block_size));
 
   zx_status_t status = bcache->buffer_.Initialize(bcache.get(), 1, block_size, "scratch-block");
@@ -140,7 +140,7 @@ zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_block
 
 uint64_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 
-Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, uint64_t block_size)
+Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size)
     : max_blocks_(max_blocks), block_size_(block_size), device_(device) {}
 
 zx_status_t Bcache::VerifyDeviceInfo() {

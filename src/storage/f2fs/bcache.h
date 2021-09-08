@@ -80,13 +80,13 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   // This factory allows building this object from a BlockDevice. Bcache can take ownership of the
   // device (the first Create method), or not (the second Create method).
   static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
-                            uint64_t block_size, std::unique_ptr<Bcache>* out);
+                            block_t block_size, std::unique_ptr<Bcache>* out);
 
   static zx_status_t Create(block_client::BlockDevice* device, uint64_t max_blocks,
-                            uint64_t block_size, std::unique_ptr<Bcache>* out);
+                            block_t block_size, std::unique_ptr<Bcache>* out);
 
   uint64_t Maxblk() const { return max_blocks_; }
-  uint64_t BlockSize() const { return block_size_; }
+  block_t BlockSize() const { return block_size_; }
 
   block_client::BlockDevice* device() { return device_; }
   const block_client::BlockDevice* device() const { return device_; }
@@ -101,13 +101,13 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
  private:
   friend class BlockNode;
 
-  Bcache(block_client::BlockDevice* device, uint64_t max_blocks, uint64_t block_size);
+  Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size);
 
   // Used during initialization of this object.
   zx_status_t VerifyDeviceInfo();
 
   const uint64_t max_blocks_;
-  const uint64_t block_size_;
+  const block_t block_size_;
   fuchsia_hardware_block_BlockInfo info_ = {};
   std::unique_ptr<block_client::BlockDevice> owned_device_;  // The device, if owned.
   block_client::BlockDevice* device_;  // Pointer to the device, irrespective of ownership.

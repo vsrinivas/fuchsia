@@ -49,7 +49,7 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
   Checkpoint *cp_block;
   uint64_t version[2];  // version[0]: header, version[1]: footer
   uint32_t crc;
-  size_t crc_offset;
+  uint32_t crc_offset;
 
   for (int i = 0; i < 2; i++) {
     // Read checkpoint pack header/footer
@@ -225,9 +225,6 @@ void CheckpointTestVersion(F2fs *fs, uint32_t expect_cp_position, uint32_t expec
 void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                              bool after_mkfs, uint8_t *&pre_bitmap) {
   Page *cp_page = nullptr;
-  uint8_t *version_bitmap;
-  uint32_t cur_nat_block = 0;
-  uint8_t cur_nat_bit = 0;
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
@@ -235,7 +232,7 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get NAT version bitmap
-  version_bitmap = static_cast<uint8_t *>(GetBitmapPrt(cp, MetaBitmap::kNatBitmap));
+  uint8_t *version_bitmap = static_cast<uint8_t *>(GetBitmapPrt(cp, MetaBitmap::kNatBitmap));
   ASSERT_NE(version_bitmap, nullptr);
 
   if (pre_bitmap == nullptr)
@@ -267,8 +264,8 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
       (static_cast<uint8_t *>(pre_bitmap))[0] |= kRootDirNatBit;
     }
 
-    cur_nat_block = cp->checkpoint_ver - 2;
-    cur_nat_bit = 0x80 >> (cur_nat_block % 8);
+    auto cur_nat_block = cp->checkpoint_ver - 2;
+    uint8_t cur_nat_bit = 0x80 >> (cur_nat_block % 8);
     (static_cast<uint8_t *>(pre_bitmap))[cur_nat_block / 8] |= cur_nat_bit;
 
     ASSERT_EQ((static_cast<uint8_t *>(version_bitmap))[cur_nat_block / 8],
@@ -309,7 +306,6 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
                              bool after_mkfs, uint8_t *&pre_bitmap) {
   Page *cp_page = nullptr;
   uint8_t *version_bitmap;
-  uint32_t cur_sit_block = 0;
   uint8_t cur_sit_bit = 0;
 
   // 1. Get last checkpoint
@@ -344,7 +340,7 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   }
 
   if (!after_mkfs) {
-    cur_sit_block = cp->checkpoint_ver - 2;
+    auto cur_sit_block = cp->checkpoint_ver - 2;
     cur_sit_bit = 0x80 >> (cur_sit_block % 8);
     (static_cast<uint8_t *>(pre_bitmap))[cur_sit_block / 8] |= cur_sit_bit;
 
@@ -367,8 +363,9 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
     if (after_mkfs && i < kMapPerSitEntry)
       continue;
 
-    DoWriteSit(fs, &new_blkaddr, CursegType::kCursegWarmData,
-               (cp->checkpoint_ver - 1) * kSitEntryPerBlock + i / kMapPerSitEntry);
+    DoWriteSit(
+        fs, &new_blkaddr, CursegType::kCursegWarmData,
+        static_cast<uint32_t>((cp->checkpoint_ver - 1) * kSitEntryPerBlock + i / kMapPerSitEntry));
   }
 
   F2fsPutPage(cp_page, 1);
@@ -384,9 +381,9 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
-  uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
   if (!after_mkfs) {
+    auto start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
     // 2. Get orphan inodes
     std::vector<uint32_t> cp_inos;
     std::vector<uint32_t> exp_inos(orphan_inos);
@@ -424,11 +421,11 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
 
   // 4. Add shuffled orphan inodes for next checkpoint
   std::vector<uint32_t> inos(orphan_inos);
-  start_ino = cp->checkpoint_ver * orphan_inos;
+  auto start_ino = cp->checkpoint_ver * orphan_inos;
   std::iota(inos.begin(), inos.end(), start_ino);
 
-  uint64_t seed = cp->checkpoint_ver;
-  std::shuffle(inos.begin(), inos.end(), std::default_random_engine(seed));
+  std::shuffle(inos.begin(), inos.end(),
+               std::default_random_engine(static_cast<uint32_t>(cp->checkpoint_ver)));
 
   for (auto ino : inos) {
     fs->AddOrphanInode(ino);
@@ -460,9 +457,9 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock * kOrphanInodeBlockCnt;
-  uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
   if (!after_mkfs) {
+    auto start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
     // 2. Get orphan inodes
     std::vector<uint32_t> cp_inos;
     std::vector<uint32_t> exp_inos(orphan_inos);
@@ -497,11 +494,11 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
 
   // 4. Add shuffled orphan inodes for next checkpoint
   std::vector<uint32_t> inos(orphan_inos);
-  start_ino = cp->checkpoint_ver * orphan_inos;
+  auto start_ino = cp->checkpoint_ver * orphan_inos;
   std::iota(inos.begin(), inos.end(), start_ino);
 
-  uint64_t seed = cp->checkpoint_ver;
-  std::shuffle(inos.begin(), inos.end(), std::default_random_engine(seed));
+  std::shuffle(inos.begin(), inos.end(),
+               std::default_random_engine(static_cast<uint32_t>(cp->checkpoint_ver)));
 
   if (cp->checkpoint_ver <= kCheckpointLoopCnt) {
     for (auto ino : inos) {
@@ -535,7 +532,6 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   uint32_t orphan_inos = kOrphansPerBlock;
-  uint32_t start_ino = (cp->checkpoint_ver - 1) * orphan_inos;
 
   if (!after_mkfs) {
     // 2. Check recovery orphan inodes
@@ -565,11 +561,11 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
   // 3. Add shuffled orphan inodes for next checkpoint
   std::vector<uint32_t> inos(orphan_inos);
-  start_ino = cp->checkpoint_ver * orphan_inos;
+  auto start_ino = cp->checkpoint_ver * orphan_inos;
   std::iota(inos.begin(), inos.end(), start_ino);
 
-  uint64_t seed = cp->checkpoint_ver;
-  std::shuffle(inos.begin(), inos.end(), std::default_random_engine(seed));
+  std::shuffle(inos.begin(), inos.end(),
+               std::default_random_engine(static_cast<uint32_t>(cp->checkpoint_ver)));
 
   for (auto ino : inos) {
     fbl::RefPtr<VnodeF2fs> vnode_refptr;
@@ -658,7 +654,7 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
     }
 
     // Write workload
-    for (uint32_t j = 0; j < kEntriesInSum / 2; j++) {
+    for (uint16_t j = 0; j < kEntriesInSum / 2; j++) {
       block_t new_blkaddr;
       Summary sum;
 
@@ -666,7 +662,7 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
           IsRootInode(static_cast<CursegType>(i), j))  // root inode dentry
         continue;
 
-      fs->Segmgr().SetSummary(&sum, 3, j, cp->checkpoint_ver);
+      fs->Segmgr().SetSummary(&sum, 3, j, static_cast<uint8_t>(cp->checkpoint_ver));
       fs->Segmgr().AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
       DoWriteSit(fs, &new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
@@ -736,14 +732,15 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
   // Fill current active segments for normal summaries
   for (int i = static_cast<int>(CursegType::kCursegHotData);
        i <= static_cast<int>(CursegType::kCursegColdNode); i++) {
-    for (uint32_t j = 0; j < kEntriesInSum; j++) {
+    for (uint16_t j = 0; j < kEntriesInSum; j++) {
       block_t new_blkaddr;
       Summary sum;
 
-      if (cp->checkpoint_ver == 1 && IsRootInode(static_cast<CursegType>(i), j))  // root inode
+      if (cp->checkpoint_ver == 1 && IsRootInode(static_cast<CursegType>(i), j))
         continue;
 
-      fs->Segmgr().SetSummary(&sum, cp->checkpoint_ver, j, cp->checkpoint_ver);
+      fs->Segmgr().SetSummary(&sum, static_cast<nid_t>(cp->checkpoint_ver), j,
+                              static_cast<uint8_t>(cp->checkpoint_ver));
       fs->Segmgr().AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
       DoWriteSit(fs, &new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
@@ -792,7 +789,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     if (SitsInCursum(curseg->sum_blk) >= static_cast<int>(kSitJournalEntries)) {
       SitInfo *sit_i = GetSitInfo(&sbi);
       uint64_t *bitmap = sit_i->dirty_sentries_bitmap;
-      uint64_t nsegs = TotalSegs(&sbi);
+      block_t nsegs = TotalSegs(&sbi);
       uint32_t segno = -1;
 
       // Add dummy dirty sentries
@@ -869,7 +866,8 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     // Clear NAT journal
     if (NatsInCursum(curseg->sum_blk) >= static_cast<int>(kNatJournalEntries)) {
       // Add dummy dirty NAT entries
-      DoWriteNat(fs, kNatJournalEntries, kNatJournalEntries, cp->checkpoint_ver);
+      DoWriteNat(fs, kNatJournalEntries, kNatJournalEntries,
+                 static_cast<uint8_t>(cp->checkpoint_ver));
 
       // Move journal sentries to dirty sentries
       ASSERT_TRUE(fs->Nodemgr().FlushNatsInJournal());
@@ -895,7 +893,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // Fill NAT journal
   for (uint32_t i = 0; i < kNatJournalEntries; i++) {
-    DoWriteNat(fs, i, i, cp->checkpoint_ver);
+    DoWriteNat(fs, i, i, static_cast<uint8_t>(cp->checkpoint_ver));
     nids.push_back(i);
   }
   ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);

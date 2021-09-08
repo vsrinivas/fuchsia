@@ -14,7 +14,7 @@ namespace f2fs {
 namespace {
 
 TEST(FileTest, BlkAddrLevel) {
-  srand(time(nullptr));
+  srand(testing::GTEST_FLAG(random_seed));
 
   uint64_t blockCount = static_cast<uint64_t>(8) * 1024 * 1024 * 1024 / kDefaultSectorSize;
   std::unique_ptr<Bcache> bc;
@@ -40,7 +40,7 @@ TEST(FileTest, BlkAddrLevel) {
   unsigned int level = 0;
 
   for (size_t i = 0; i < kPageSize; i++) {
-    buf[i] = rand() % 256;
+    buf[i] = static_cast<char>(rand());
   }
 
   // fill kAddrsPerInode blocks
@@ -94,7 +94,7 @@ TEST(FileTest, BlkAddrLevel) {
 }
 
 TEST(FileTest, NidAndBlkaddrAllocFree) {
-  srand(time(nullptr));
+  srand(testing::GTEST_FLAG(random_seed));
 
   uint64_t blockCount = static_cast<uint64_t>(8) * 1024 * 1024 * 1024 / kDefaultSectorSize;
   std::unique_ptr<Bcache> bc;
@@ -119,7 +119,7 @@ TEST(FileTest, NidAndBlkaddrAllocFree) {
   char buf[kPageSize];
 
   for (size_t i = 0; i < kPageSize; i++) {
-    buf[i] = rand() % 256;
+    buf[i] = static_cast<char>(rand() % 128);
   }
 
   // Fill until direct nodes are full

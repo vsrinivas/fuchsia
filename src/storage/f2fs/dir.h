@@ -72,11 +72,11 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   ino_t InodeByName(std::string_view name);
   int IsMultimediaFile(VnodeF2fs *vnode, const char *sub);
   void SetColdFile(VnodeF2fs *vnode);
-  uint64_t DirBlocks();
-  static unsigned int DirBuckets(unsigned int level);
-  static unsigned int BucketBlocks(unsigned int level);
+  block_t DirBlocks();
+  static uint32_t DirBuckets(uint32_t level);
+  static uint32_t BucketBlocks(uint32_t level);
+  static uint64_t DirBlockIndex(uint32_t level, uint32_t idx);
   void SetDeType(DirEntry *de, VnodeF2fs *vnode);
-  static uint64_t DirBlockIndex(unsigned int level, unsigned int idx);
   bool EarlyMatchName(const char *name, int namelen, f2fs_hash_t namehash, DirEntry *de);
 
 #if 0  // porting needed

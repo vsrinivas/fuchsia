@@ -2,9 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <safemath/checked_math.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
+
+int UpdateNatsInCursum(SummaryBlock *rs, int i) {
+  int n_nats = NatsInCursum(rs);
+  rs->n_nats = CpuToLe(safemath::checked_cast<uint16_t>(n_nats + i));
+  return n_nats;
+}
+
+static int UpdateSitsInCursum(SummaryBlock *rs, int i) {
+  int n_sits = SitsInCursum(rs);
+  rs->n_sits = CpuToLe(safemath::checked_cast<uint16_t>(n_sits + i));
+  return n_sits;
+}
 
 SegEntry *SegMgr::GetSegEntry(uint32_t segno) {
   SbInfo &sbi = fs_->GetSbInfo();

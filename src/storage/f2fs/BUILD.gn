@@ -92,6 +92,7 @@ static_library("f2fs") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",

@@ -17,9 +17,6 @@ group("test") {
 }
 
 test("f2fs_unit") {
-  # TODO(fxbug.dev/83674) fix the conversion warnings and remove this config.
-  configs += [ "//build/config:Wno-conversion" ]
-
   sources = [
     "unit/bcache.cc",
     "unit/checkpoint.cc",
@@ -72,9 +69,6 @@ test("f2fs_query_service") {
 
   # We need some extra system flags that the _ALL_SOURCE define exposes.
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxbug.dev/83674) fix the conversion warnings and remove this config.
-  configs += [ "//build/config:Wno-conversion" ]
 
   sources = [ "unit/query_service_test.cc" ]
   deps = [

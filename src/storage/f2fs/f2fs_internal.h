@@ -49,17 +49,7 @@ inline void SetSegnoInJournal(SummaryBlock *sum, int i, uint32_t segno) {
   sum->sit_j.entries[i].segno = segno;
 }
 
-static inline int UpdateNatsInCursum(SummaryBlock *rs, int i) {
-  int before = NatsInCursum(rs);
-  rs->n_nats = CpuToLe(static_cast<uint32_t>(before + i));
-  return before;
-}
-
-static inline int UpdateSitsInCursum(SummaryBlock *rs, int i) {
-  int before = SitsInCursum(rs);
-  rs->n_sits = CpuToLe(static_cast<uint32_t>(before + i));
-  return before;
-}
+int UpdateNatsInCursum(SummaryBlock *rs, int i);
 
 // For INODE and NODE manager
 constexpr int kXattrNodeOffset = -1;
@@ -182,10 +172,10 @@ struct SmInfo {
   block_t main_blkaddr = 0;  // start block address of main area
   block_t ssa_blkaddr = 0;   // start block address of SSA area
 
-  uint64_t segment_count = 0;      // total # of segments
-  uint64_t main_segments = 0;      // # of segments in main area
-  uint64_t reserved_segments = 0;  // # of reserved segments
-  uint64_t ovp_segments = 0;       // # of overprovision segments
+  block_t segment_count = 0;      // total # of segments
+  block_t main_segments = 0;      // # of segments in main area
+  block_t reserved_segments = 0;  // # of reserved segments
+  block_t ovp_segments = 0;       // # of overprovision segments
 };
 
 // For directory operation
@@ -271,21 +261,21 @@ struct SbInfo {
   uint64_t n_dirty_dirs = 0;   // # of dir inodes
 
   // basic file system units
-  uint64_t log_sectors_per_block = 0;    // log2 sectors per block
-  uint64_t log_blocksize = 0;            // log2 block size
-  uint64_t blocksize = 0;                // block size
-  uint64_t root_ino_num = 0;             // root inode numbe
-  uint64_t node_ino_num = 0;             // node inode numbe
-  uint64_t meta_ino_num = 0;             // meta inode numbe
-  uint64_t log_blocks_per_seg = 0;       // log2 blocks per segment
-  uint64_t blocks_per_seg = 0;           // blocks per segment
-  uint64_t segs_per_sec = 0;             // segments per section
-  uint64_t secs_per_zone = 0;            // sections per zone
-  uint64_t total_sections = 0;           // total section count
-  uint64_t total_node_count = 0;         // total node block count
-  uint64_t total_valid_node_count = 0;   // valid node block count
-  uint64_t total_valid_inode_count = 0;  // valid inode count
-  int active_logs = 0;                   // # of active logs
+  block_t log_sectors_per_block = 0;  // log2 sectors per block
+  block_t log_blocksize = 0;          // log2 block size
+  block_t blocksize = 0;              // block size
+  nid_t root_ino_num = 0;             // root inode numbe
+  nid_t node_ino_num = 0;             // node inode numbe
+  nid_t meta_ino_num = 0;             // meta inode numbe
+  block_t log_blocks_per_seg = 0;     // log2 blocks per segment
+  block_t blocks_per_seg = 0;         // blocks per segment
+  block_t segs_per_sec = 0;           // segments per section
+  block_t secs_per_zone = 0;          // sections per zone
+  block_t total_sections = 0;         // total section count
+  nid_t total_node_count = 0;         // total node block count
+  nid_t total_valid_node_count = 0;   // valid node block count
+  nid_t total_valid_inode_count = 0;  // valid inode count
+  int active_logs = 0;                // # of active logs
 
   block_t user_block_count = 0;                                  // # of user blocks
   block_t total_valid_block_count = 0;                           // # of valid blocks
