@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     bytes::Bytes,
     fidl_fuchsia_developer_bridge::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
@@ -12,6 +12,7 @@ use {
     fuchsia_pkg::MetaContents,
     futures::{
         future::{join_all, ready},
+        io::Cursor,
         stream::{once, BoxStream},
         AsyncReadExt, StreamExt as _,
     },
@@ -32,8 +33,11 @@ use {
         client::{Client, Config, DefaultTranslator},
         crypto::KeyType,
         interchange::Json,
-        metadata::{MetadataPath, MetadataVersion, RawSignedMetadata, Role},
+        metadata::{
+            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, Role, TargetsMetadata,
+        },
         repository::{EphemeralRepository, RepositoryProvider},
+        verify::Verified,
     },
 };
 
@@ -261,7 +265,7 @@ impl Repository {
         self.backend.fetch(path).await
     }
 
-    /// Return a `vec<u8>` of the resource.
+    /// Return a `Vec<u8>` of the resource.
     pub async fn fetch_bytes(&self, path: &str) -> Result<Vec<u8>, Error> {
         let mut resource = self.fetch(path).await?;
 
@@ -278,32 +282,35 @@ impl Repository {
         mirror_url: &str,
         storage_type: Option<RepositoryStorageType>,
     ) -> Result<RepositoryConfig, Error> {
-        let mut client = self.client.lock();
+        let trusted_root = {
+            let mut client = self.client.lock();
 
-        // Update the root metadata to the latest version. We don't care if the other metadata has
-        // expired.
-        //
-        // FIXME: This can be replaced with `client.update_root()` once
-        // https://github.com/heartsucker/rust-tuf/pull/318 lands.
-        match client.update().await {
-            Ok(_) => {}
-            Err(err @ tuf::Error::ExpiredMetadata(Role::Root)) => {
-                return Err(err.into());
+            // Update the root metadata to the latest version. We don't care if the other metadata has
+            // expired.
+            //
+            // FIXME: This can be replaced with `client.update_root()` once
+            // https://github.com/heartsucker/rust-tuf/pull/318 lands.
+            match client.update().await {
+                Ok(_) => {}
+                Err(err @ tuf::Error::ExpiredMetadata(Role::Root)) => {
+                    return Err(err.into());
+                }
+                Err(tuf::Error::ExpiredMetadata(_)) => {}
+                Err(err) => {
+                    return Err(err.into());
+                }
             }
-            Err(tuf::Error::ExpiredMetadata(_)) => {}
-            Err(err) => {
-                return Err(err.into());
-            }
-        }
 
-        let root_keys = client
-            .trusted_root()
+            client.trusted_root().clone()
+        };
+
+        let root_keys = trusted_root
             .root_keys()
             .filter(|k| *k.typ() == KeyType::Ed25519)
             .map(|key| RepositoryKeyConfig::Ed25519Key(key.as_bytes().to_vec()))
             .collect::<Vec<_>>();
 
-        let root_version = client.root_version();
+        let root_version = trusted_root.version();
 
         Ok(RepositoryConfig {
             repo_url: Some(self.repo_url()),
@@ -353,9 +360,12 @@ impl Repository {
 
     async fn get_components_for_package(
         &self,
+        trusted_targets: &Verified<TargetsMetadata>,
         package: &RepositoryPackage,
     ) -> Result<Option<Vec<PackageEntry>>> {
-        let package_entries = self.show_package(package.name.as_ref().unwrap().to_string()).await?;
+        let package_entries = self
+            .show_target_package(trusted_targets, package.name.as_ref().unwrap().to_string())
+            .await?;
         if package_entries.is_none() {
             return Ok(None);
         }
@@ -372,14 +382,17 @@ impl Repository {
         &self,
         include_fields: ListFields,
     ) -> Result<Vec<RepositoryPackage>, Error> {
-        let mut client = self.client.lock();
+        let trusted_targets = {
+            let mut client = self.client.lock();
 
-        // Get the latest TUF metadata.
-        client.update().await?;
+            // Get the latest TUF metadata.
+            client.update().await?;
 
-        let targets = client.trusted_targets().context("missing target information")?;
+            client.trusted_targets().context("missing target information")?.clone()
+        };
+
         let packages: Result<Vec<RepositoryPackage>, Error> =
-            join_all(targets.targets().into_iter().filter_map(|(k, v)| {
+            join_all(trusted_targets.targets().into_iter().filter_map(|(k, v)| {
                 let custom = v.custom()?;
                 let size = custom.get("size")?.as_u64()?;
                 let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
@@ -405,11 +418,12 @@ impl Repository {
             .await
             .into_iter()
             .collect();
+
         let mut packages = packages?;
 
         if include_fields.intersects(ListFields::Components) {
             for package in packages.iter_mut() {
-                match self.get_components_for_package(&package).await {
+                match self.get_components_for_package(&trusted_targets, &package).await {
                     Ok(components) => package.entries = components,
                     Err(e) => {
                         log::error!(
@@ -421,31 +435,63 @@ impl Repository {
                 };
             }
         }
+
         Ok(packages)
     }
 
     pub async fn show_package(&self, package_name: String) -> Result<Option<Vec<PackageEntry>>> {
-        let mut client = self.client.lock();
+        let trusted_targets = {
+            let mut client = self.client.lock();
 
-        // Get the latest TUF metadata.
-        client.update().await?;
+            // Get the latest TUF metadata.
+            client.update().await?;
+
+            client.trusted_targets().context("expected targets information")?.clone()
+        };
+
+        self.show_target_package(&trusted_targets, package_name).await
+    }
+
+    async fn show_target_package(
+        &self,
+        trusted_targets: &Verified<TargetsMetadata>,
+        package_name: String,
+    ) -> Result<Option<Vec<PackageEntry>>> {
         let virtual_target_path = VirtualTargetPath::new(package_name.clone())?;
 
-        let trusted_targets = client.trusted_targets();
-        if trusted_targets.is_none() {
+        let target = if let Some(target) = trusted_targets.targets().get(&virtual_target_path) {
+            target
+        } else {
             return Ok(None);
-        }
-        let target = trusted_targets.unwrap().targets().get(&virtual_target_path);
+        };
 
-        let mut entries = Vec::new();
-        if target.is_none() {
-            log::error!("failed to read package with name : '{}'", package_name);
-            return Ok(None);
-        }
-        let target_description = target.unwrap();
-        let custom = target_description.custom().unwrap();
-        let hash = custom.get("merkle").unwrap().as_str().unwrap_or("").to_string();
-        let size = custom.get("size").unwrap().as_u64().unwrap_or(0);
+        let custom = target
+            .custom()
+            .ok_or_else(|| anyhow!("package {:?} is missing custom metadata", package_name))?;
+
+        let hash = custom
+            .get("merkle")
+            .ok_or_else(|| anyhow!("package {:?} is missing the `merkle` field", package_name))?;
+
+        let hash = hash
+            .as_str()
+            .ok_or_else(|| {
+                anyhow!("package {:?} hash should be a string, not {:?}", package_name, hash)
+            })?
+            .to_string();
+
+        let size = custom
+            .get("size")
+            .ok_or_else(|| anyhow!("package {:?} is missing the `size` field", package_name))?;
+
+        let size = size
+            .as_u64()
+            .ok_or_else(|| anyhow!("package {:?} should be a u64, not {:?}", package_name, size))?;
+
+        // Read the meta.far.
+        let meta_far_bytes = self.fetch_bytes(&format!("blobs/{}", &hash)).await?;
+        let mut archive = AsyncReader::new(Adapter::new(Cursor::new(meta_far_bytes))).await?;
+
         let modified = self
             .backend
             .target_modification_time(&package_name)
@@ -454,29 +500,22 @@ impl Repository {
                 Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
             })
             .transpose()?;
-        let res = self.fetch_bytes(&format!("blobs/{}", &hash)).await?;
 
         // Add entry for meta.far
-        entries.push(PackageEntry {
+        let mut entries = vec![PackageEntry {
             path: Some("meta.far".to_string()),
             hash: Some(hash),
             size: Some(size),
             modified,
             ..PackageEntry::EMPTY
-        });
+        }];
 
-        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(res))).await?;
-
-        for item in archive.list() {
-            if is_component_manifest(item.path()) {
-                entries.push(PackageEntry {
-                    path: Some(item.path().to_string()),
-                    size: Some(item.length()),
-                    modified,
-                    ..PackageEntry::EMPTY
-                });
-            }
-        }
+        entries.extend(archive.list().map(|item| PackageEntry {
+            path: Some(item.path().to_string()),
+            size: Some(item.length()),
+            modified,
+            ..PackageEntry::EMPTY
+        }));
 
         match archive.read_file("meta/contents").await {
             Ok(c) => {
@@ -493,6 +532,7 @@ impl Repository {
                             Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
                         })
                         .transpose()?;
+
                     entries.push(PackageEntry {
                         path: Some(name.to_owned()),
                         hash: Some(hash_string),
@@ -506,6 +546,7 @@ impl Repository {
                 log::warn!("failed to read meta/contents for package {}: {}", package_name, e);
             }
         }
+
         Ok(Some(entries))
     }
 }

@@ -552,7 +552,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         };
 
         let values = repo.show_package(package_name.to_owned()).await.map_err(|err| {
-            log::error!("Unable to list package contents: {:#?}", err);
+            log::error!("Unable to list package contents {:?}: {}", package_name, err);
             bridge::RepositoryError::IoError
         })?;
         if values.is_none() {
