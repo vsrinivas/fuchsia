@@ -15,6 +15,7 @@
 #include <fbl/slab_allocator.h>
 #include <usb/request-cpp.h>
 
+#include "lib/fpromise/promise.h"
 #include "registers.h"
 #include "xhci-hub.h"
 

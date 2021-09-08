@@ -19,6 +19,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -216,7 +217,7 @@ TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
         dcbaa_[completion_event->SlotID()] = 0;
         {
           fbl::AutoLock _(&device_state_[slot_id - 1].transaction_lock());
-          device_state_[slot_id - 1].reset();
+          device_state_[slot_id - 1].Reset();
         }
         return fpromise::ok(trb);
       })
@@ -257,14 +258,13 @@ usb_speed_t UsbXhci::GetDeviceSpeed(uint8_t slot) {
       return device_state_[slot - 1].GetHubLocked()->speed;
     }
   }
-  return PORTSC::Get(cap_length_, device_state_[slot - 1].GetPort())
+  return static_cast<usb_speed_t>(PORTSC::Get(cap_length_, device_state_[slot - 1].GetPort())
       .ReadFrom(&mmio_.value())
-      .PortSpeed();
+      .PortSpeed());
 }
 
-uint8_t UsbXhci::GetPortSpeed(uint8_t port_id) const {
-  return static_cast<uint8_t>(
-      PORTSC::Get(cap_length_, port_id).ReadFrom(&mmio_.value()).PortSpeed());
+usb_speed_t UsbXhci::GetPortSpeed(uint8_t port_id) const {
+  return static_cast<usb_speed_t>(PORTSC::Get(cap_length_, port_id).ReadFrom(&mmio_.value()).PortSpeed());
 }
 
 TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id, uint8_t port_id,
@@ -312,20 +312,20 @@ zx_status_t UsbXhci::DeviceOnline(uint32_t slot, uint16_t port, usb_speed_t spee
       PostCallback([=](const ddk::UsbBusInterfaceProtocolClient& bus) {
         uint32_t hub_id;
         {
-          fbl::AutoLock _(&get_device_state()[slot - 1].transaction_lock());
-          if (!get_device_state()[slot - 1].GetHubLocked()) {
+          fbl::AutoLock _(&GetDeviceState()[slot - 1].transaction_lock());
+          if (!GetDeviceState()[slot - 1].GetHubLocked()) {
             // Race condition -- device was unplugged before we got a chance to notify the bus
             // driver.
             return ZX_OK;
           }
-          hub_id = get_device_state()[slot - 1].GetHubLocked()->hub_id;
+          hub_id = GetDeviceState()[slot - 1].GetHubLocked()->hub_id;
         }
         bus.AddDevice(slot - 1, hub_id, speed);
         return ZX_OK;
       });
       return ZX_OK;
     }
-    is_usb_3 = get_port_state()[port].is_USB3;
+    is_usb_3 = GetPortState()[port].is_USB3;
   }
   PostCallback([=](const ddk::UsbBusInterfaceProtocolClient& bus) {
     bus.AddDevice(slot - 1,
@@ -412,7 +412,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
     fbl::AutoLock _(&state->transaction_lock());
     hub.hub_id = static_cast<uint8_t>(device_id);
     hub.speed = speed;
-    hub.hub_speed = static_cast<uint8_t>(speed);
+    hub.hub_speed = speed;
     hub.multi_tt = multi_tt;
     hub.rh_port = state->GetPort();
     if (state->GetHubLocked()) {
@@ -1613,12 +1613,14 @@ zx_status_t UsbXhci::InitPci() {
 }
 
 zx_status_t UsbXhci::InitMmio() {
+  zx_status_t status;
   if (!pdev_.is_valid()) {
-    return 0;
+    return ZX_ERR_IO_INVALID;
   }
   std::optional<ddk::MmioBuffer> mmio;
-  if (pdev_.MapMmio(0, &mmio) != ZX_OK) {
-    return 0;
+  status = pdev_.MapMmio(0, &mmio);
+  if (status != ZX_OK) {
+    return status;
   }
   mmio_ = std::move(*mmio);
   uint32_t irq_count = 1;
@@ -1629,11 +1631,13 @@ zx_status_t UsbXhci::InitMmio() {
     return ZX_ERR_NO_MEMORY;
   }
   for (uint32_t i = 0; i < irq_count; i++) {
-    if (pdev_.GetInterrupt(i, &interrupters_[i].GetIrq()) != ZX_OK) {
-      return 0;
+    status = pdev_.GetInterrupt(i, &interrupters_[i].GetIrq());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "MapMmio error: %s", zx_status_get_string(status));
+      return status;
     }
   }
-  return 0;
+  return ZX_OK;
 }
 
 void UsbXhci::BiosHandoff() {
@@ -1681,13 +1685,13 @@ int UsbXhci::InitThread() {
     status = InitPci();
     if (status != ZX_OK) {
       zxlogf(ERROR, "PCI initialization failed with: %s", zx_status_get_string(status));
-      return status;
+      return thrd_error;
     }
   } else {
     status = InitMmio();
     if (status != ZX_OK) {
       zxlogf(ERROR, "MMIO initialization failed with: %s", zx_status_get_string(status));
-      return status;
+      return thrd_error;
     }
   }
   // Perform the BIOS handoff if necessary
@@ -1703,10 +1707,10 @@ int UsbXhci::InitThread() {
   thrd_t thrd;
   int thread_status = thrd_create_with_name(
       &thrd,
-      [](void* ctx) {
+      [](void* ctx) -> int {
         auto hci = static_cast<UsbXhci*>(ctx);
         hci->ddk_interaction_loop_.Run();
-        return 0;
+        return thrd_success;
       },
       this, "ddk_interaction_thread");
   if (thread_status != thrd_success) {
@@ -1717,11 +1721,11 @@ int UsbXhci::InitThread() {
   status = HciFinalize();
   if (status != ZX_OK) {
     zxlogf(ERROR, "xHCI initialization failed with %s", zx_status_get_string(status));
-    return status;
+    return thrd_error;
   }
   // If |HciFinalize| succeeded, it would have replied to |init_txn_| and made the device visible.
   call.cancel();
-  return 0;
+  return thrd_success;
 }
 
 zx_status_t UsbXhci::HciFinalize() {

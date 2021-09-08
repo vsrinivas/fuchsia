@@ -19,7 +19,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   if (status != ZX_OK) {
     return status;
   }
-  if (hci.get_is_32_bit_controller() && (buffer->phys()[0] >= UINT32_MAX)) {
+  if (hci.Is32BitController() && (buffer->phys()[0] >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;
   }
   // 6.2.5.1 -- Initialize input control context
@@ -58,7 +58,7 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
   auto endpoint_context = reinterpret_cast<EndpointContext*>(
       reinterpret_cast<unsigned char*>(control) + (slot_size * 2));
   uint16_t mps = 8;
-  uint8_t speed;
+  usb_speed_t speed;
   if (hub_info) {
     speed = static_cast<uint8_t>(hub_info->speed);
     // TODO (fxbug.dev/34355): USB 3.1 support. Section 6.2.2
@@ -98,7 +98,7 @@ zx_status_t DeviceState::InitializeOutputContextBuffer(
   if (status != ZX_OK) {
     return status;
   }
-  if (hci.get_is_32_bit_controller() && (output_context_buffer->phys()[0] >= UINT32_MAX)) {
+  if (hci.Is32BitController() && (output_context_buffer->phys()[0] >= UINT32_MAX)) {
     return ZX_ERR_NO_MEMORY;
   }
   dcbaa[slot_id] = output_context_buffer->phys()[0];
@@ -116,7 +116,7 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
                                              EventRing* event_ring, CommandRing* command_ring,
                                              ddk::MmioBuffer* mmio, bool bsr) {
   if (!hub_info.has_value()) {
-    hci->get_port_state()[port - 1].slot_id = slot;
+    hci->GetPortState()[port - 1].slot_id = slot;
   }
   std::unique_ptr<dma_buffer::PagedBuffer> slot_context_buffer;
   std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
@@ -128,7 +128,7 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   // Allocate the transfer ring (see section 4.9)
   // TODO (bbosak): Assign an Interrupter from the pool
   fbl::AutoLock _(&transaction_lock_);
-  status = tr_.Init(hci->get_page_size(), hci->bti(), event_ring, hci->get_is_32_bit_controller(),
+  status = tr_.Init(hci->GetPageSize(), hci->bti(), event_ring, hci->Is32BitController(),
                     mmio, *hci);
   if (status != ZX_OK) {
     return fpromise::make_result_promise(

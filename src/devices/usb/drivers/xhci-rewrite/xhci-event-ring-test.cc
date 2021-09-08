@@ -81,7 +81,7 @@ class EventRingHarness : public zxtest::Test {
         port_sc_.set_PR(true);
       }
     });
-    hci_.set_test_harness(this);
+    hci_.SetTestHarness(this);
 
     // Initialization
     ASSERT_OK(hci_.InitThread());
@@ -267,7 +267,7 @@ zx_status_t UsbXhci::InitThread() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  return static_cast<EventRingHarness*>(get_test_harness())->InitRing(&interrupters_[0].ring());
+  return static_cast<EventRingHarness*>(GetTestHarness())->InitRing(&interrupters_[0].ring());
 }
 
 uint64_t UsbXhci::UsbHciGetCurrentFrame() { return 0; }
@@ -293,7 +293,7 @@ zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address)
 }
 
 TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address) {
-  auto harness = static_cast<EventRingHarness*>(get_test_harness());
+  auto harness = static_cast<EventRingHarness*>(GetTestHarness());
   std::unique_ptr<Command> command = std::make_unique<Command>();
   fpromise::bridge<TRB*, zx_status_t> bridge;
   command->type = CommandType::ResetEndpoint;
@@ -330,7 +330,7 @@ void UsbXhci::Shutdown(zx_status_t status) {}
 
 zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred, TRB** first_trb,
                                             size_t short_length) {
-  static_cast<EventRingHarness*>(hci_->get_test_harness())
+  static_cast<EventRingHarness*>(hci_->GetTestHarness())
       ->HandleShortPacket(short_trb, transferred, first_trb, short_length);
   return ZX_OK;
 }
@@ -350,7 +350,7 @@ TRBPromise UsbXhci::DeviceOffline(uint32_t slot, TRB* continuation) {
 }
 
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info) {
-  auto harness = static_cast<EventRingHarness*>(hci->get_test_harness());
+  auto harness = static_cast<EventRingHarness*>(hci->GetTestHarness());
   std::unique_ptr<Command> command = std::make_unique<Command>();
   fpromise::bridge<TRB*, zx_status_t> bridge;
   command->type = CommandType::EnumerateDevice;
@@ -366,7 +366,7 @@ TRB* TransferRing::PhysToVirt(zx_paddr_t paddr) {
 }
 
 zx_status_t TransferRing::CompleteTRB(TRB* trb, std::unique_ptr<TRBContext>* context) {
-  return static_cast<EventRingHarness*>(hci_->get_test_harness())->CompleteTRB(trb, context);
+  return static_cast<EventRingHarness*>(hci_->GetTestHarness())->CompleteTRB(trb, context);
 }
 
 TEST_F(EventRingHarness, ShortTransferTest) {

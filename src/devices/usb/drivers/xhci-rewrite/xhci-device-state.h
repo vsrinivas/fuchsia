@@ -20,7 +20,7 @@ class DeviceState {
  public:
   void Disconnect() __TA_REQUIRES(transaction_lock_) { disconnecting_ = true; }
 
-  void reset() __TA_REQUIRES(transaction_lock_) {
+  void Reset() __TA_REQUIRES(transaction_lock_) {
     disconnecting_ = true;
     input_context_.reset();
     device_context_.reset();
@@ -41,7 +41,7 @@ class DeviceState {
   }
 
   // True if the device state has been initialized, false otherwise.
-  bool valid() { return slot_; }
+  bool IsValid() const { return slot_; }
 
   uint8_t GetPort() { return port_; }
 

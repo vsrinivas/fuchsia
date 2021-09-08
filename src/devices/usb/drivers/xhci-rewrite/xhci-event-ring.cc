@@ -170,7 +170,7 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     // we can be sure that it's a 2.0 port. Some controllers may skip this step though....
     if ((sc.PLS() == PORTSC::Polling)) {
       // USB 2.0 port connect
-      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+      if (!hci_->GetPortState()[port_id - 1].is_connected) {
         // USB 2.0 requires a port reset to advance to U0
         Usb2DeviceAttach(port_id);
         needs_enum = true;
@@ -178,14 +178,14 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     } else {
       // USB 3.0 port connect, since we got a connect status bit set,
       // and were not polling.
-      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+      if (!hci_->GetPortState()[port_id - 1].is_connected) {
         Usb3DeviceAttach(port_id);
         needs_enum = true;
       }
       if ((sc.PLS() == PORTSC::U0) && (sc.PED()) && (!sc.PR()) &&
-          !hci_->get_port_state()[port_id - 1].link_active) {
+          !hci_->GetPortState()[port_id - 1].link_active) {
         // Set the link active bit here to prevent us from onlining the same device twice.
-        hci_->get_port_state()[port_id - 1].link_active = true;
+        hci_->GetPortState()[port_id - 1].link_active = true;
         needs_enum = false;
         pending_enumeration = LinkUp(port_id);
       }
@@ -195,16 +195,16 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     // To prevent enumerating a device twice, we ensure that the link wasn't previously active
     // before enumerating.
     if ((sc.PLS() == PORTSC::U0) && sc.CCS() &&
-        !(hci_->get_port_state()[port_id - 1].link_active)) {
-      if (!hci_->get_port_state()[port_id - 1].is_connected) {
+        !(hci_->GetPortState()[port_id - 1].link_active)) {
+      if (!hci_->GetPortState()[port_id - 1].is_connected) {
         // Spontaneous initialization of USB 3.0 port without going through
         // CSC event. We know this is USB 3.0 since this cannot possibly happen
         // with a 2.0 port.
-        hci_->get_port_state()[port_id - 1].is_USB3 = true;
-        hci_->get_port_state()[port_id - 1].is_connected = true;
+        hci_->GetPortState()[port_id - 1].is_USB3 = true;
+        hci_->GetPortState()[port_id - 1].is_connected = true;
       }
-      hci_->get_port_state()[port_id - 1].link_active = true;
-      if (!hci_->get_port_state()[port_id - 1].is_USB3) {
+      hci_->GetPortState()[port_id - 1].link_active = true;
+      if (!hci_->GetPortState()[port_id - 1].is_USB3) {
         // USB 2.0 specification section 9.2.6.3
         // states that we must wait 10 milliseconds.
         needs_enum = false;
@@ -221,12 +221,12 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
   } else {
     // For hubs, we need to take the device offline from the bus's standpoint before tearing down
     // the hub. This means that the slot has to be kept alive until the hub driver is removed.
-    hci_->get_port_state()[port_id - 1].retry = false;
-    hci_->get_port_state()[port_id - 1].link_active = false;
-    hci_->get_port_state()[port_id - 1].is_connected = false;
-    hci_->get_port_state()[port_id - 1].is_USB3 = false;
-    if (hci_->get_port_state()[port_id - 1].slot_id) {
-      ScheduleTask(hci_->DeviceOffline(hci_->get_port_state()[port_id - 1].slot_id, nullptr).box());
+    hci_->GetPortState()[port_id - 1].retry = false;
+    hci_->GetPortState()[port_id - 1].link_active = false;
+    hci_->GetPortState()[port_id - 1].is_connected = false;
+    hci_->GetPortState()[port_id - 1].is_USB3 = false;
+    if (hci_->GetPortState()[port_id - 1].slot_id) {
+      ScheduleTask(hci_->DeviceOffline(hci_->GetPortState()[port_id - 1].slot_id, nullptr).box());
     }
   }
 
@@ -250,7 +250,7 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
   }
   if (sc.CSC()) {
     // Connect status change
-    hci_->get_port_state()[port_id - 1].retry = false;
+    hci_->GetPortState()[port_id - 1].retry = false;
     PORTSC::Get(cap_length_, port_id)
         .FromValue(0)
         .set_CCS(sc.CCS())
@@ -294,9 +294,9 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
 
 TRBPromise EventRing::WaitForPortStatusChange(uint8_t port_id) {
   fpromise::bridge<TRB*, zx_status_t> bridge;
-  auto context = hci_->get_command_ring()->AllocateContext();
+  auto context = hci_->GetCommandRing()->AllocateContext();
   context->completer = std::move(bridge.completer);
-  hci_->get_port_state()[port_id - 1].wait_for_port_status_change_ = std::move(context);
+  hci_->GetPortState()[port_id - 1].wait_for_port_status_change_ = std::move(context);
   return bridge.consumer.promise();
 }
 
@@ -341,7 +341,7 @@ void EventRing::CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state) 
 }
 
 void EventRing::HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt) {
-  auto ctx = hci_->get_command_ring()->AllocateContext();
+  auto ctx = hci_->GetCommandRing()->AllocateContext();
   ctx->port_number = port_id;
   fpromise::bridge<TRB*, zx_status_t> bridge;
   ctx->completer = std::move(bridge.completer);
@@ -431,7 +431,7 @@ zx_status_t EventRing::HandleIRQ() {
           // Section 6.4.2.3 (Port Status change TRB)
           auto change_event = static_cast<PortStatusChangeEvent*>(erdp_virt_);
           uint8_t port_id = static_cast<uint8_t>(change_event->PortID());
-          auto event = std::move(hci_->get_port_state()[port_id - 1].wait_for_port_status_change_);
+          auto event = std::move(hci_->GetPortState()[port_id - 1].wait_for_port_status_change_);
           // Resume interrupted wait
           if (event) {
             event->completer->complete_ok(nullptr);
@@ -467,7 +467,7 @@ zx_status_t EventRing::HandleIRQ() {
         } break;
         case Control::TransferEvent: {
           auto completion = static_cast<TransferEvent*>(erdp_virt_);
-          auto state = &hci_->get_device_state()[completion->SlotID() - 1];
+          auto state = &hci_->GetDeviceState()[completion->SlotID() - 1];
           fbl::AutoLock l(&state->transaction_lock());
           std::unique_ptr<TRBContext> context;
           TransferRing* ring;
@@ -618,8 +618,8 @@ TRBPromise EventRing::LinkUp(uint8_t port_id) {
 }
 
 void EventRing::Usb2DeviceAttach(uint16_t port_id) {
-  hci_->get_port_state()[port_id - 1].is_connected = true;
-  hci_->get_port_state()[port_id - 1].is_USB3 = false;
+  hci_->GetPortState()[port_id - 1].is_connected = true;
+  hci_->GetPortState()[port_id - 1].is_USB3 = false;
   auto sc = PORTSC::Get(cap_length_, port_id).ReadFrom(mmio_);
   PORTSC::Get(cap_length_, port_id)
       .FromValue(0)
@@ -633,8 +633,8 @@ void EventRing::Usb2DeviceAttach(uint16_t port_id) {
 }
 
 void EventRing::Usb3DeviceAttach(uint16_t port_id) {
-  hci_->get_port_state()[port_id - 1].is_connected = true;
-  hci_->get_port_state()[port_id - 1].is_USB3 = true;
+  hci_->GetPortState()[port_id - 1].is_connected = true;
+  hci_->GetPortState()[port_id - 1].is_USB3 = true;
 }
 
 }  // namespace usb_xhci

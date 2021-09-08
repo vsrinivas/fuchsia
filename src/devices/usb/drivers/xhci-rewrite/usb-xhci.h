@@ -149,7 +149,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   usb_speed_t GetDeviceSpeed(uint8_t slot_id);
 
-  uint8_t GetPortSpeed(uint8_t port_id) const;
+  usb_speed_t GetPortSpeed(uint8_t port_id) const;
 
   // Returns the CSZ bit from HCCPARAMS1
   bool CSZ() const { return hcc_.CSZ(); }
@@ -173,7 +173,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   zx::profile& get_profile() { return profile_; }
 
-  uint8_t get_port_count() { return static_cast<uint8_t>(params_.MaxPorts()); }
+  uint8_t GetPortCount() { return static_cast<uint8_t>(params_.MaxPorts()); }
 
   // Resets a port. Not to be confused with ResetDevice.
   void ResetPort(uint16_t port);
@@ -181,11 +181,11 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Waits for xHCI bringup to complete
   void WaitForBringup() { sync_completion_wait(&bringup_, ZX_TIME_INFINITE); }
 
-  CommandRing* get_command_ring() { return &command_ring_; }
+  CommandRing* GetCommandRing() { return &command_ring_; }
 
-  DeviceState* get_device_state() { return device_state_.get(); }
+  DeviceState* GetDeviceState() { return device_state_.get(); }
 
-  PortState* get_port_state() { return port_state_.get(); }
+  PortState* GetPortState() { return port_state_.get(); }
   // Indicates whether or not the controller supports cache coherency
   // for transfers.
   bool HasCoherentCache() const { return has_coherent_cache_; }
@@ -232,23 +232,24 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void RunUntilIdle() { interrupters_[0].ring().RunUntilIdle(); }
 
   // Initialization thread method. This is invoked from a separate detached thread
-  // when xHCI binds
-  zx_status_t InitThread();
+  // when xHCI binds.
+  // Returns thrd_success on success, or a thread error from <threads.h> on failure.
+  int InitThread();
 
   const zx::bti& bti() const { return bti_; }
 
-  size_t get_page_size() const { return page_size_; }
+  size_t GetPageSize() const { return page_size_; }
 
-  bool get_is_32_bit_controller() const { return is_32bit_; }
+  bool Is32BitController() const { return is_32bit_; }
 
   // Asynchronously submits a command to the command queue.
   TRBPromise SubmitCommand(const TRB& command, std::unique_ptr<TRBContext> trb_context);
 
   // Retrieves the current test harness
-  void* get_test_harness() const { return test_harness_; }
+  void* GetTestHarness() const { return test_harness_; }
 
   // Sets the test harness
-  void set_test_harness(void* harness) { test_harness_ = harness; }
+  void SetTestHarness(void* harness) { test_harness_ = harness; }
 
   dma_buffer::BufferFactory& buffer_factory() const { return *buffer_factory_; }
 

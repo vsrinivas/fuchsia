@@ -365,9 +365,9 @@ class XhciHarness : public zxtest::Test {
   FakeUsbDevice ConnectDevice(uint8_t port, usb_speed_t speed) {
     std::optional<HubInfo> hub;
     uint8_t slot = AllocateSlot();
-    device_->get_port_state()[port - 1].is_connected = true;
-    device_->get_port_state()[port - 1].link_active = true;
-    device_->get_port_state()[port - 1].slot_id = slot;
+    device_->GetPortState()[port - 1].is_connected = true;
+    device_->GetPortState()[port - 1].link_active = true;
+    device_->GetPortState()[port - 1].slot_id = slot;
     device_->SetDeviceInformation(slot, slot, hub);
     device_->AddressDeviceCommand(slot, port, hub, true);
     ddk_.reset();
@@ -393,7 +393,7 @@ class XhciHarness : public zxtest::Test {
 
   zx_status_t CompleteCommand(TRB* trb, CommandCompletionEvent* event) {
     std::unique_ptr<TRBContext> context;
-    zx_status_t status = device_->get_command_ring()->CompleteTRB(trb, &context);
+    zx_status_t status = device_->GetCommandRing()->CompleteTRB(trb, &context);
     if (status != ZX_OK) {
       return status;
     }
@@ -431,7 +431,7 @@ class XhciMmioHarness : public XhciHarness {
     ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
 
     auto dev = std::make_unique<UsbXhci>(fake_ddk::kFakeParent, ddk_fake::CreateBufferFactory());
-    dev->set_test_harness(this);
+    dev->SetTestHarness(this);
     dev->DdkAdd("xhci");  // This will also call DdkInit.
     ASSERT_TRUE(ddk_.added());
     ASSERT_OK(ddk_.WaitUntilInitComplete());
@@ -474,7 +474,7 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
     state->pcs = pcs_;
     state->trbs = trbs_;
   }
-  auto new_trb = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRB();
+  auto new_trb = static_cast<XhciHarness*>(hci_->GetTestHarness())->CreateTRB();
   new_trb->prev = static_cast<FakeTRB*>(trbs_)->phys();
   static_cast<FakeTRB*>(trbs_)->next = new_trb->phys();
   trbs_ = new_trb;
@@ -486,7 +486,7 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
 
 zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
   fbl::AutoLock _(&mutex_);
-  auto new_trb = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRBs(count);
+  auto new_trb = static_cast<XhciHarness*>(hci_->GetTestHarness())->CreateTRBs(count);
   new_trb->prev = static_cast<FakeTRB*>(trbs_)->phys();
   static_cast<FakeTRB*>(trbs_)->next = new_trb->phys();
   trbs_ = new_trb->contig.data();
@@ -549,7 +549,7 @@ zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* 
   token_++;
   stalled_ = false;
   hci_ = &hci;
-  trbs_ = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRB();
+  trbs_ = static_cast<XhciHarness*>(hci_->GetTestHarness())->CreateTRB();
   static_assert(sizeof(uint64_t) == sizeof(this));
   trbs_->ptr = reinterpret_cast<uint64_t>(this);
   trbs_->status = pcs_;
@@ -584,7 +584,7 @@ zx_status_t TransferRing::AddTRB(const TRB& trb, std::unique_ptr<TRBContext> con
     return ZX_ERR_INVALID_ARGS;
   }
   FakeTRB* alloc_trb;
-  alloc_trb = static_cast<XhciHarness*>(hci_->get_test_harness())->CreateTRB();
+  alloc_trb = static_cast<XhciHarness*>(hci_->GetTestHarness())->CreateTRB();
   alloc_trb->prev = static_cast<FakeTRB*>(trbs_)->phys();
   static_cast<FakeTRB*>(trbs_)->next = alloc_trb->phys();
   trbs_ = alloc_trb;
@@ -837,7 +837,7 @@ TEST_F(XhciMmioHarness, CancelAllOnDisabledEndpoint) {
   ConnectDevice(1, USB_SPEED_HIGH);
   uint64_t paddr;
   {
-    auto& state = device_->get_device_state()[0];
+    auto& state = device_->GetDeviceState()[0];
     fbl::AutoLock _(&state.transaction_lock());
     state.GetTransferRing(0).set_stall(true);
     paddr = state.GetTransferRing(0).PeekCommandRingControlRegister(0).value().reg_value();
@@ -875,7 +875,7 @@ TEST_F(XhciMmioHarness, ResetEndpointTestSuccessCase) {
   EnableEndpoint(0, 1, true);
   uint64_t paddr;
   {
-    auto& state = device_->get_device_state()[0];
+    auto& state = device_->GetDeviceState()[0];
     fbl::AutoLock l(&state.transaction_lock());
     state.GetTransferRing(0).set_stall(true);
     paddr = state.GetTransferRing(0).PeekCommandRingControlRegister(0).value().reg_value();
@@ -927,7 +927,7 @@ TEST_F(XhciMmioHarness, ResetEndpointFailsIfNotStalled) {
   ConnectDevice(1, USB_SPEED_HIGH);
   EnableEndpoint(0, 1, true);
   {
-    auto& state = device_->get_device_state()[0];
+    auto& state = device_->GetDeviceState()[0];
     fbl::AutoLock l(&state.transaction_lock());
     state.GetTransferRing(0).set_stall(false);
   }

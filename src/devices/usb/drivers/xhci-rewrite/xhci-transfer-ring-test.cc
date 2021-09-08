@@ -41,7 +41,7 @@ class TransferRingHarness : public zxtest::Test {
       reg.set_reg_value(value);
       erdp_ = reg.Pointer();
     });
-    hci_.set_test_harness(this);
+    hci_.SetTestHarness(this);
     ASSERT_OK(hci_.InitThread());
   }
 
@@ -119,7 +119,7 @@ zx_status_t UsbXhci::InitThread() {
     for (size_t c = 0; c < max_slots_; c++) {
       zx_status_t status = device_state_[i].GetTransferRing(c).Init(
           zx_system_get_page_size(), kFakeBti,
-          &static_cast<TransferRingHarness*>(get_test_harness())->event_ring(), false, nullptr,
+          &static_cast<TransferRingHarness*>(GetTestHarness())->event_ring(), false, nullptr,
           *this);
       if (status != ZX_OK) {
         return status;
@@ -127,7 +127,7 @@ zx_status_t UsbXhci::InitThread() {
     }
   }
   fbl::AutoLock l(&device_state_[0].transaction_lock());
-  static_cast<TransferRingHarness*>(get_test_harness())
+  static_cast<TransferRingHarness*>(GetTestHarness())
       ->SetRing(&device_state_[0].GetTransferRing(0));
   return ZX_OK;
 }

@@ -18,7 +18,7 @@ struct HubInfo {
   usb_speed_t speed = 0;
   uint32_t route_string = 0;
   uint8_t hub_depth = 0;
-  uint8_t hub_speed = 0;
+  usb_speed_t hub_speed = 0;
   bool multi_tt = false;
   uint8_t rh_port = 0;
   uint8_t port_to_device[256];
