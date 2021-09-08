@@ -2356,24 +2356,29 @@ TEST(Pager, EvictPages) {
     ASSERT_OK(aux.write(&data, i * zx_system_get_page_size(), sizeof(data)));
   }
 
+  // Now that the memory has been committed, query the memory level prior to supplying the pages.
+  // This ensures there can be no races where these pages get evicted after supply but before we can
+  // query the memory level.
+  zx_info_kmem_stats_t stats;
+  uint64_t a1, a2;
+  ASSERT_OK(
+      zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats), &a1, &a2));
+  uint64_t free_before = stats.free_bytes;
+
   // Transfer pages to pager vmo.
   ASSERT_OK(pager.supply_pages(vmo, 0, kNumPages * zx_system_get_page_size(), aux, 0));
 
   // Verify that the pager vmo has committed pages now.
   zx_info_vmo_t info;
-  uint64_t a1, a2;
   ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
   ASSERT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
 
-  // Get free memory before evicting.
-  zx_info_kmem_stats_t stats;
-  ASSERT_OK(
-      zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats), &a1, &a2));
-  uint64_t free_before = stats.free_bytes;
-
-  // Rotate page queues so the newly committed pages above are eligible for eviction.
+  // Rotate page queues a few times so the newly committed pages above are eligible for eviction.
   constexpr char k_command_rotate[] = "scanner rotate_queue";
-  ASSERT_OK(zx_debug_send_command(get_root_resource(), k_command_rotate, strlen(k_command_rotate)));
+  for (int i = 0; i < 3; i++) {
+    ASSERT_OK(
+        zx_debug_send_command(get_root_resource(), k_command_rotate, strlen(k_command_rotate)));
+  }
 
   // Trigger reclamation of all evictable memory, which will include the pages we committed.
   constexpr char k_command_reclaim[] = "scanner reclaim_all";
