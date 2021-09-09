@@ -263,7 +263,7 @@ fuzzers_package("archivist-fuzzers") {
 }
 
 fuchsia_unittest_component("archivist-unittests") {
-  manifest = "meta/archivist_tests.cmx"
+  manifest = "meta/archivist-unittests.cml"
   deps = [ ":lib_test" ]
 }
 
