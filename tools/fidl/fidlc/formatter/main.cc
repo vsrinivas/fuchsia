@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 
+#include <fidl/formatter.h>
 #include <fidl/lexer.h>
-#include <fidl/new_formatter.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/utils.h>
