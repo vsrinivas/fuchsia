@@ -74,6 +74,7 @@ pub fn dispatch_syscall(
         fchmodat[3],
         fchownat[5],
         fcntl[3],
+        flock[2],
         fstat[2],
         fstatfs[2],
         ftruncate[2],

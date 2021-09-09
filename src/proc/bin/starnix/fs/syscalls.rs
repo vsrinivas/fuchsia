@@ -916,6 +916,15 @@ pub fn sys_epoll_pwait(
     Err(ENOSYS)
 }
 
+pub fn sys_flock(
+    _ctx: &SyscallContext<'_>,
+    _fd: FdNumber,
+    _operation: i32,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!("flock not implemented");
+    Ok(SUCCESS)
+}
+
 #[cfg(test)]
 mod tests {
 
