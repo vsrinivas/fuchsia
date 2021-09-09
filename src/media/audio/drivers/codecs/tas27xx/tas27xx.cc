@@ -172,25 +172,28 @@ zx_status_t Tas27xx::GetVbat(float* voltage) {
   return status;
 }
 
-// Puts in active, but muted/unmuted state
+// If started, puts codec in active but muted/unmuted state.
+// If stopped, puts codec in shutdown state.
 // Sets I and V sense features to proper state
 zx_status_t Tas27xx::UpdatePowerControl() {
   if (started_) {
     return WriteReg(PWR_CTL, static_cast<uint8_t>(((!ena_isens_) << 3) | ((!ena_vsens_) << 2) |
                                                   (static_cast<uint8_t>(gain_state_.muted) << 0)));
   } else {
-    return WriteReg(PWR_CTL, static_cast<uint8_t>((1 << 3) | (1 << 2) | (0x01 << 0)));
+    constexpr uint8_t kPwrCtlModeShutdown = 0x2;
+    return WriteReg(PWR_CTL,
+                    static_cast<uint8_t>((1 << 3) | (1 << 2) | (kPwrCtlModeShutdown << 0)));
   }
 }
 
-// Puts in active, but muted state (clocks must be active or TDM error will trigger)
+// Puts in shutdown state (clocks must be active or TDM error will trigger)
 // Sets I and V sense features to proper state
 zx_status_t Tas27xx::Stop() {
   started_ = false;
   return UpdatePowerControl();
 }
 
-// Puts in active unmuted state (clocks must be active or TDM error will trigger)
+// Puts in active state (clocks must be active or TDM error will trigger)
 // Sets I and V sense features to proper state
 zx_status_t Tas27xx::Start() {
   started_ = true;
@@ -429,7 +432,9 @@ zx::status<CodecFormatInfo> Tas27xx::SetDaiFormatInternal(const DaiFormat& forma
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(CodecFormatInfo{});
+  CodecFormatInfo info = {};
+  info.set_turn_on_delay(zx::nsec(5300).get());
+  return zx::ok(std::move(info));
 }
 
 zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
