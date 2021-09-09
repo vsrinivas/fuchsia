@@ -4,12 +4,46 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
+# Generate .symbol-index.json in the build directory.
+if (current_toolchain == default_toolchain) {
+  generated_file("symbol_index_json") {
+    _symbol_index_path = "$root_build_dir/.symbol-index.json"
+    _source_root = rebase_path("//", root_build_dir)  # ends with /
+
+    outputs = [ _symbol_index_path ]
+    output_conversion = "json"
+    contents = {
+      includes = [ _source_root + "vendor/*/.symbol-index.json" ]
+      build_id_dirs = [
+        {
+          path = ".build-id"
+          build_dir = "."
+        },
+        {
+          path =
+              _source_root + "prebuilt/third_party/clang/*/lib/debug/.build-id"
+        },
+        {
+          path =
+              _source_root + "prebuilt/third_party/rust/*/lib/debug/.build-id"
+        },
+      ]
+      gcs_flat = [
+        {
+          url = "gs://fuchsia-artifacts/debug"
+        },
+      ]
+    }
+  }
+}
+
 ffx_plugin("ffx_debug_symbol_index") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
 
   deps = [
+    ":symbol_index_json($default_toolchain)",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
