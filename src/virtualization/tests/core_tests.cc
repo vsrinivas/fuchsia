@@ -93,7 +93,7 @@ TYPED_TEST(CoreGuestTest, VirtioConsole) {
 
 TYPED_TEST(CoreGuestTest, VirtioRng) {
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioRngUtil, {}, &result), ZX_OK);
+  ASSERT_EQ(this->RunUtil(kVirtioRngUtil, {}, &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
@@ -107,7 +107,7 @@ TYPED_TEST(CoreGuestTest, RealTimeClock) {
 
   // Print seconds since Unix epoch (1970-01-01), and parse the result.
   std::string result;
-  EXPECT_EQ(this->Execute({"/bin/date", "+%s"}, {}, &result), ZX_OK);
+  ASSERT_EQ(this->Execute({"/bin/date", "+%s"}, {}, &result), ZX_OK);
   int64_t guest_timestamp = std::stol(result, /*pos=*/nullptr, /*base=*/10);
   ASSERT_TRUE(guest_timestamp > 0) << "Could not parse guest time.";
 
