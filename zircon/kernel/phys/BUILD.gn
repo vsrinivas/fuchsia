@@ -150,6 +150,15 @@ if (toolchain_environment == "kernel.phys" ||
     configs += [ "//build/config:Wno-conversion" ]
   }
 
+  source_set("kernel-package") {
+    public = [ "include/phys/kernel-package.h" ]
+
+    public_configs = [ ":includes" ]
+
+    sources = []
+    deps = []
+  }
+
   # Transitive dependencies for the <phys/main.h> header.
   source_set("main") {
     public = [
@@ -342,6 +351,7 @@ zbi_executable("physboot") {
     ":allocation",
     ":boot-zbi",
     ":handoff",
+    ":kernel-package",
     ":main",
     ":stdio",
     ":symbolize",

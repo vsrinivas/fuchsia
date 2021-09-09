@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zbi/zbi_input.gni")
+
+# Defines a kernel package, a directory namespace within a STORAGE_KERNEL ZBI
+# item in the BOOTFS format, for a dependent zbi() target. This namespace -
+# given by $target_name - is comprised of the resource() targets - or those
+# that contribute resource()-like metadata - within the dependency graph.
+#
+# Parameters
+#
+#   deps
+#     Required: Dependencies to reach all `resource()` targets and
+#     and `kernel_package_entries` metadata.
+#     Type: list(label)
+#
+#   data_deps
+#     Optional: The usual GN meaning, though in this case no resource() targets
+#     in its graph will contribute to the dependent ZBI.
+#     Type: list(label)
+#
+#   testonly, visibility
+#     Optional: The usual GN meanings.
+#
+template("kernel_package") {
+  zbi_input(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    prefix = target_name
+    args = [
+      # Package entries are relatively small and should compress quickly
+      # enough.
+      "--compressed=max",
+      "--files-type=kernel",
+    ]
+  }
+}

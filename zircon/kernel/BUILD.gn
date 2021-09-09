@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/config/zircon/standard.gni")
+import("//build/dist/resource.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
@@ -13,6 +14,7 @@ import("//build/zircon/zircon_cpu.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/lib/version/version_string.gni")
+import("kernel_package.gni")
 import("params.gni")
 
 if (current_cpu == "x64") {
@@ -408,10 +410,11 @@ if (is_kernel) {
 
   # This is the kernel proper, an ELF executable with full symbols.
   # It's the file to use with a debugger, for example.
-  executable("zircon") {
+  executable("zircon.elf") {
     visibility = [ ":*" ]
 
     # //zircon/scripts/zircon.elf-gdb.py expects kernel symbols in "zircon.elf".
+    output_name = "zircon"
     output_extension = "elf"
 
     ldflags = [
@@ -447,7 +450,7 @@ if (is_kernel) {
   zircon_elf_rspfile = "$target_gen_dir/zircon.elf.rsp"
   link_output_rspfile("zircon.elf.rsp") {
     visibility = [ ":*" ]
-    deps = [ ":zircon" ]
+    deps = [ ":zircon.elf" ]
     outputs = [ zircon_elf_rspfile ]
   }
 
@@ -475,7 +478,7 @@ if (is_kernel) {
   # Extract the raw binary image (no ELF headers) of the kernel proper.
   image_binary("raw") {
     visibility = [ ":*" ]
-    deps = [ ":zircon" ]
+    deps = [ ":zircon.elf" ]
     output_name = "zircon"
     output_path =
         rebase_path("$target_out_dir/$output_name.bin", root_build_dir)
@@ -516,7 +519,7 @@ if (is_kernel) {
   toolchain_utils_action("fixups") {
     visibility = [ ":*" ]
     deps = [
-      ":zircon",
+      ":zircon.elf",
       ":zircon.elf.rsp",
     ]
     sources = [ zircon_elf_rspfile ]
@@ -542,7 +545,7 @@ if (is_kernel) {
     script = "//zircon/kernel/scripts/validate-kernel-symbols.py"
     utils = [ "nm" ]
     deps = [
-      ":zircon",
+      ":zircon.elf",
       ":zircon.elf.rsp",
     ]
     sources = [ zircon_elf_rspfile ]
@@ -563,7 +566,7 @@ if (is_kernel) {
       ":gdb_extension",
       ":kernel-image.h",
       ":raw",
-      ":zircon",
+      ":zircon.elf",
       ":zircon.elf.rsp",
       "//zircon/kernel/lib/version:headers",
     ]
@@ -635,16 +638,16 @@ if (is_kernel) {
     output_extension = "zbi"
   }
 
-  # Then that gets compressed to become the ZBI_TYPE_KERNEL_STORAGE payload.
-  # (In future, the payload will include other files as well.)
-  zbi_input("zbizircon.input") {
-    type = "kernel"
+  # Then that gets compressed to become part of the ZBI_TYPE_KERNEL_STORAGE
+  # payload.
+  resource("zbizircon.input") {
     sources = get_target_outputs(":zbizircon")
+    outputs = [ "kernel.zbi" ]
     deps = [ ":zbizircon" ]
+  }
 
-    # The kernel image is small enough that maximum compression is quick enough
-    # at build time, so always get the smallest size available.
-    args = [ "--compressed=max" ]
+  kernel_package("zircon") {
+    deps = [ ":zbizircon.input" ]
   }
 
   # The final kernel ZBI combines physboot with that kernel storage payload.
@@ -661,7 +664,7 @@ if (is_kernel) {
     }
 
     deps += [
-      ":zbizircon.input",
+      ":zircon",
       "phys:physboot",
     ]
 

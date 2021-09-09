@@ -35,6 +35,8 @@ std::string_view ToString(Type type) {
       return "kernel image"sv;
     case Type::kFixedAddressKernel:
       return "fixed-address kernel image"sv;
+    case Type::kKernelStorage:
+      return "decompressed kernel payload"sv;
     case Type::kDataZbi:
       return "data ZBI"sv;
     case Type::kLegacyBootData:

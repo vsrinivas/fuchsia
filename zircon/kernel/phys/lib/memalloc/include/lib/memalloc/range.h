@@ -57,6 +57,9 @@ enum class Type : uint64_t {
   // The kernel memory image at a fixed address of 1MiB.
   kFixedAddressKernel,
 
+  // A (decompressed) STORAGE_KERNEL ZBI payload.
+  kKernelStorage,
+
   // The data ZBI, as placed by the bootloader.
   kDataZbi,
 

@@ -10,6 +10,7 @@
 #include <lib/boot-options/word-view.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <zircon/assert.h>
@@ -19,6 +20,7 @@
 #include <phys/allocation.h>
 #include <phys/boot-zbi.h>
 #include <phys/handoff.h>
+#include <phys/kernel-package.h>
 #include <phys/main.h>
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
@@ -47,26 +49,21 @@ PhysBootTimes gBootTimes;
 constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
 
 struct LoadedZircon {
+  // Allocation owning the kernel storage image (i.e., the associated,
+  // decompressed STORAGE_KERNEL payload).
   Allocation buffer;
+
   ChainBoot boot;
 };
 
-LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item,
+LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_storage_item,
                         uint64_t reserve_memory_estimate) {
   fbl::AllocChecker ac;
-  uint32_t kernel_length = zbitl::UncompressedLength(*kernel_item->header);
-  BootZbi::Size buffer_sizes = BootZbi::SuggestedAllocation(kernel_length);
-
-  // That covers the uncompressed size of the image alone.  Preallocate enough
-  // space after it that the bss and boot_alloc reserve are likely to fit.
-  buffer_sizes.size += reserve_memory_estimate + BootZbi::kKernelBootAllocReserve;
-
-  auto buffer =
-      Allocation::New(ac, memalloc::Type::kKernel, buffer_sizes.size, buffer_sizes.alignment);
+  const uint32_t storage_size = zbitl::UncompressedLength(*kernel_storage_item->header);
+  auto buffer = Allocation::New(ac, memalloc::Type::kKernelStorage, storage_size);
   if (!ac.check()) {
-    printf(
-        "physboot: Cannot allocate %#zx bytes aligned to %#zx for decompressed kernel payload!\n",
-        buffer_sizes.size, buffer_sizes.alignment);
+    printf("physboot: Cannot allocate %#x bytes for decompressed STORAGE_KERNEL item!\n",
+           storage_size);
     abort();
   }
 
@@ -75,9 +72,9 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   // the real kernel payload (which is usually compressed).
   gBootTimes.SampleNow(PhysBootTimes::kDecompressStart);
 
-  if (auto result = zbi.CopyStorageItem(buffer.data(), kernel_item, ZbitlScratchAllocator);
+  if (auto result = zbi.CopyStorageItem(buffer.data(), kernel_storage_item, ZbitlScratchAllocator);
       result.is_error()) {
-    printf("physboot: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ", kernel_length);
+    printf("physboot: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ", storage_size);
     zbitl::PrintViewCopyError(result.error_value());
     abort();
   }
@@ -85,13 +82,36 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   // This marks just the decompression (or copying) time.
   gBootTimes.SampleNow(PhysBootTimes::kDecompressEnd);
 
-  BootZbi::InputZbi kernel_zbi(zbitl::AsBytes(buffer.data()));
-
   {
     debugf("physboot: STORAGE_KERNEL decompressed %s -> %s\n",
-           pretty::FormattedBytes(kernel_item->header->length).c_str(),
-           pretty::FormattedBytes(kernel_zbi.size_bytes()).c_str());
+           pretty::FormattedBytes(kernel_storage_item->header->length).c_str(),
+           pretty::FormattedBytes(storage_size).c_str());
   }
+
+  zbitl::BootfsView<ktl::span<ktl::byte>> storage;
+  if (auto result = zbitl::BootfsView<ktl::span<ktl::byte>>::Create(buffer.data());
+      result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    abort();
+  } else {
+    storage = std::move(result.value());
+  }
+
+  // Now we select our kernel ZBI.
+  auto it = storage.find({kDefaultKernelPackage, kKernelZbiName});
+  if (auto result = storage.take_error(); result.is_error()) {
+    printf("physboot: Error in looking for kernel ZBI within STORAGE_KERNEL item: ");
+    zbitl::PrintBootfsError(result.error_value());
+    abort();
+  }
+  if (it == storage.end()) {
+    printf("physboot: Could not find kernel ZBI (%.*s/%.*s) within STORAGE_KERNEL item\n",
+           static_cast<int>(kDefaultKernelPackage.size()), kDefaultKernelPackage.data(),
+           static_cast<int>(kKernelZbiName.size()), kKernelZbiName.data());
+    abort();
+  }
+
+  BootZbi::InputZbi kernel_zbi(it->data);
 
   ChainBoot boot;
   if (auto result = boot.Init(kernel_zbi); result.is_error()) {
