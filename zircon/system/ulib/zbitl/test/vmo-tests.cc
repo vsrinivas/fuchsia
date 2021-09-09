@@ -8,6 +8,8 @@
 
 #include <algorithm>
 
+#include <src/lib/files/file.h>
+
 #include "bootfs-tests.h"
 #include "tests.h"
 
@@ -222,6 +224,59 @@ void TestCloning() {
   }
 }
 
+template <typename TestTraits>
+void TestLargeFileDecompression() {
+  using CreationTestTraits = typename TestTraits::creation_traits;
+
+  static constexpr uint32_t kLargeZstdCompressedSize = 16397;
+  static constexpr uint32_t kLargeZstdUncompressedSize = 16384;
+
+  std::string compressed;
+  ASSERT_TRUE(files::ReadFileToString("/pkg/data/large.zst", &compressed));
+
+  // The compressed size should exceed the VMO buffered read chunk size, so
+  // that multiple iterations of streaming decompression are exercised.
+  ASSERT_EQ(kLargeZstdCompressedSize, compressed.size());
+  ASSERT_GT(kLargeZstdCompressedSize, zbitl::StorageTraits<zx::vmo>::kBufferedReadChunkSize);
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURE(
+      TestTraits::Create(2 * sizeof(zbi_header_t) + ZBI_ALIGN(kLargeZstdCompressedSize), &context));
+  zbitl::Image image(context.TakeStorage());
+
+  {
+    auto result = image.clear();
+    ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());
+  }
+  {
+    const zbi_header_t header{
+        .type = ZBI_TYPE_STORAGE_RAMDISK,
+        .extra = kLargeZstdUncompressedSize,
+        .flags = ZBI_FLAG_STORAGE_COMPRESSED,
+    };
+    auto result = image.Append(header, zbitl::AsBytes(compressed));
+    ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());
+  }
+
+  auto it = image.begin();
+  ASSERT_NE(it, image.end());
+
+  {
+    auto result = image.CopyStorageItem(it);
+    ASSERT_FALSE(result.is_error()) << zbitl::ViewCopyErrorString(result.error_value());
+    auto decompressed = std::move(result).value();
+    const zx::vmo& vmo = CreationTestTraits::GetVmo(decompressed);
+    size_t size;
+    ASSERT_EQ(ZX_OK, vmo.get_size(&size));
+    EXPECT_EQ(kLargeZstdUncompressedSize, size);
+  }
+
+  {
+    auto result = image.take_error();
+    ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());
+  }
+}
+
 TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<VmoTestTraits>());
 }
@@ -233,6 +288,10 @@ TEST_ITERATION(ZbitlViewVmoTests, VmoTestTraits)
 TEST_MUTATION(ZbitlViewVmoTests, VmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewVmoTests, VmoTestTraits)
+
+TEST(ZbitlViewVmoTests, LargeFileDecompression) {
+  ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<VmoTestTraits>());
+}
 
 TEST(ZbitlImageVmoTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<VmoTestTraits>()); }
 
@@ -253,6 +312,10 @@ TEST_ITERATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
 TEST_MUTATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
+
+TEST(ZbitlViewUnownedVmoTests, LargeFileDecompression) {
+  ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<UnownedVmoTestTraits>());
+}
 
 TEST(ZbitlImageUnownedVmoTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<UnownedVmoTestTraits>());
@@ -279,6 +342,10 @@ TEST_MUTATION(ZbitlViewMapUnownedVmoTests, MapUnownedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewMapUnownedVmoTests, MapUnownedVmoTestTraits)
 
+TEST(ZbitlViewMapUnownedVmoTests, LargeFileDecompression) {
+  ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<MapUnownedVmoTestTraits>());
+}
+
 TEST(ZbitlImageMapUnownedVmoTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<MapUnownedVmoTestTraits>());
 }
@@ -300,6 +367,10 @@ TEST_ITERATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
 TEST_MUTATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
 
 TEST_COPY_CREATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
+
+TEST(ZbitlViewMapOwnedVmoTests, LargeFileDecompression) {
+  ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<MapOwnedVmoTestTraits>());
+}
 
 TEST(ZbitlImageMapOwnedVmoTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<MapOwnedVmoTestTraits>());

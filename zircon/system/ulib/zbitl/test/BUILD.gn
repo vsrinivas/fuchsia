@@ -121,7 +121,7 @@ test("zbitl-unittests") {
 }
 
 resource("zbitl-test-resources") {
-  sources = test_data_zbis
+  sources = test_data_zbis + [ "data/large.zst" ]
   outputs = [ "data/{{source_file_part}}" ]
 }
 

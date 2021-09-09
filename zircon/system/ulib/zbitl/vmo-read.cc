@@ -12,11 +12,6 @@
 // link in the allocator code at all.
 
 namespace zbitl {
-namespace {
-
-constexpr size_t kBufferSize = 8192;
-
-}  // namespace
 
 fitx::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uint64_t offset,
                                                          uint32_t length,
@@ -29,7 +24,7 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uin
   // This always copies, when mapping might be better for large sizes.  But
   // address space is cheap, so users concerned with large sizes should just
   // map the whole ZBI in and use View<std::span> instead.
-  auto size = [&]() { return std::min(static_cast<uint32_t>(kBufferSize), length); };
+  auto size = [&]() { return std::min(static_cast<uint32_t>(kBufferedReadChunkSize), length); };
   std::unique_ptr<std::byte[]> buf{new std::byte[size()]};
 
   while (length > 0) {

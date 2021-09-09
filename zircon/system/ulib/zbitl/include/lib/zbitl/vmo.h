@@ -118,6 +118,9 @@ struct StorageTraits<zx::vmo> {
   /// Offset into the VMO where the ZBI item payload begins.
   using payload_type = uint64_t;
 
+  // Exposed for testing.
+  static constexpr size_t kBufferedReadChunkSize = 8192;
+
   static std::string_view error_string(error_type error) { return zx_status_get_string(error); }
 
   // Returns ZX_PROP_VMO_CONTENT_SIZE, if set - or else the page-rounded VMO

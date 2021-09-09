@@ -1227,10 +1227,6 @@ class View {
             }
           }
         }
-
-        if (outoffset != uncompressed_size) {
-          return ChunkError(ErrorType{.zbi_error = kZbiErrorCorruptedOrBadData});
-        }
         return fitx::ok();
       };
 
@@ -1246,6 +1242,10 @@ class View {
       auto read_chunk_result = std::move(result).value();
       if (read_chunk_result.is_error()) {
         return read_chunk_result.take_error();
+      }
+
+      if (outoffset != uncompressed_size) {
+        return fitx::error{ErrorType{.zbi_error = kZbiErrorCorruptedOrBadData}};
       }
     }
 
