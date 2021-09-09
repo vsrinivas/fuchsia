@@ -193,7 +193,7 @@ class TestHwCommandBuffer : public ::testing::Test {
     // batch end
     *batch_ptr++ = (0xA << 23);
 
-    device()->StartDeviceThread();
+    ASSERT_TRUE(device()->StartDeviceThread());
 
     cmd_buf_.reset();
     EXPECT_TRUE(helper_->ExecuteAndWait());

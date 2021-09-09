@@ -127,7 +127,7 @@ class MsdIntelDevice : public msd_device_t,
   void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
-  void StartDeviceThread();
+  bool StartDeviceThread();
 
   void Destroy();
 

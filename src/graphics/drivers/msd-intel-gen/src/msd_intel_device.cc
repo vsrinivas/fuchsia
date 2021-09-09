@@ -104,8 +104,10 @@ std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
   if (!device->Init(device_handle, true))
     return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
 
-  if (start_device_thread)
-    device->StartDeviceThread();
+  if (start_device_thread) {
+    if (!device->StartDeviceThread())
+      return DRETP(nullptr, "Failed to start device thread");
+  }
 
   return device;
 }
@@ -318,12 +320,12 @@ bool MsdIntelDevice::EngineReset(EngineCommandStreamer* engine) {
   return true;
 }
 
-void MsdIntelDevice::StartDeviceThread() {
+bool MsdIntelDevice::StartDeviceThread() {
   DASSERT(!device_thread_.joinable());
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
   // Don't start interrupt processing until the device thread is running.
-  interrupt_manager_->RegisterCallback(
+  return interrupt_manager_->RegisterCallback(
       InterruptCallback, this,
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask |
           registers::MasterInterruptControl::kVideoInterruptsPendingBitMask);

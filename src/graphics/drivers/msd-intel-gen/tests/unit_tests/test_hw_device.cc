@@ -492,7 +492,7 @@ class TestMsdIntelDevice : public testing::Test {
 
     auto semaphore = static_cast<FakeSemaphore*>(device->device_request_semaphore_.get());
 
-    device->StartDeviceThread();
+    ASSERT_TRUE(device->StartDeviceThread());
 
     // Wait for device thread to idle
     while (true) {
