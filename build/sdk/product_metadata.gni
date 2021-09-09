@@ -46,7 +46,7 @@ template("product_metadata") {
     schema_id = schema_id
     data = {
       type = "product_bundle"
-      name = core_realm_package_name
+      name = "${build_info_product}.${build_info_board}"
       description = product_description
       device_refs = invoker.devices
       metadata = [
