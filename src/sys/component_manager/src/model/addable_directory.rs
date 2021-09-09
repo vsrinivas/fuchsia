@@ -4,7 +4,7 @@
 
 use {
     crate::model::error::ModelError,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable::simple as pfs},
 };
@@ -48,7 +48,7 @@ impl AddableDirectory for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(name, entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.clone(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.to_partial(), name))
     }
 }
 
@@ -61,7 +61,7 @@ impl AddableDirectoryWithResult for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(String::from(name), entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.clone(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.to_partial(), name))
     }
 
     fn remove_node<'a>(&'a self, name: &'a str) -> Result<Arc<dyn DirectoryEntry>, ModelError> {

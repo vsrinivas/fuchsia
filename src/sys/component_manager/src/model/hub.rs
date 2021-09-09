@@ -67,7 +67,7 @@ impl CapabilityProvider for HubCapabilityProvider {
             .to_string();
         relative_path.push('/');
         let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
-            ModelError::open_directory_error(self.abs_moniker.clone(), relative_path)
+            ModelError::open_directory_error(self.abs_moniker.to_partial(), relative_path)
         })?;
         self.hub.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
         Ok(None.into())
@@ -173,7 +173,7 @@ impl Hub {
         let instances_map = self.instances.lock().await;
         if !instances_map.contains_key(&abs_moniker) {
             return Err(ModelError::open_directory_error(
-                abs_moniker.clone(),
+                abs_moniker.to_partial(),
                 relative_path.into_string(),
             ));
         }

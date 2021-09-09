@@ -91,7 +91,9 @@ pub async fn bind_at(
     {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
-        if let Some(res) = start::should_return_early(&state, &execution, &component.abs_moniker) {
+        if let Some(res) =
+            start::should_return_early(&state, &execution, &component.abs_moniker.to_partial())
+        {
             return res;
         }
     }

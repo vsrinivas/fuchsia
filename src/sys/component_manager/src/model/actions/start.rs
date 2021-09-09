@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::Arc,
 };
 
@@ -57,7 +57,9 @@ async fn do_start(
     {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
-        if let Some(res) = should_return_early(&state, &execution, &component.abs_moniker) {
+        if let Some(res) =
+            should_return_early(&state, &execution, &component.abs_moniker.to_partial())
+        {
             return res;
         }
     }
@@ -134,7 +136,9 @@ async fn do_start(
     {
         let state = component.lock_state().await;
         let mut execution = component.lock_execution().await;
-        if let Some(res) = should_return_early(&state, &execution, &component.abs_moniker) {
+        if let Some(res) =
+            should_return_early(&state, &execution, &component.abs_moniker.to_partial())
+        {
             return res;
         }
         start_context.pending_runtime.watch_for_exit(component.as_weak());
@@ -156,12 +160,12 @@ async fn do_start(
 pub fn should_return_early(
     component: &InstanceState,
     execution: &ExecutionState,
-    abs_moniker: &AbsoluteMoniker,
+    abs_moniker: &PartialAbsoluteMoniker,
 ) -> Option<Result<(), ModelError>> {
     match component {
         InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
         InstanceState::Purged => {
-            return Some(Err(ModelError::instance_not_found(abs_moniker.to_partial())));
+            return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
         }
     }
     if execution.is_shut_down() {

@@ -595,7 +595,10 @@ impl ComponentInstance {
             (None, _) => {
                 let partial_moniker =
                     PartialChildMoniker::new(child_decl.name.clone(), Some(collection_name));
-                Err(ModelError::instance_already_exists(self.abs_moniker.clone(), partial_moniker))
+                Err(ModelError::instance_already_exists(
+                    self.abs_moniker.to_partial(),
+                    partial_moniker,
+                ))
             }
         }
     }
@@ -620,7 +623,7 @@ impl ComponentInstance {
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
-                self.abs_moniker.clone(),
+                self.abs_moniker.to_partial(),
                 partial_moniker.clone(),
             ))
         }
@@ -657,7 +660,7 @@ impl ComponentInstance {
                     let ret =
                         runtime.stop_component(stop_timer, kill_timer).await.map_err(|e| {
                             ModelError::RunnerCommunicationError {
-                                moniker: self.abs_moniker.clone(),
+                                moniker: self.abs_moniker.to_partial(),
                                 operation: "stop".to_string(),
                                 err: ClonableError::from(anyhow::Error::from(e)),
                             }
