@@ -421,7 +421,7 @@ impl XdgToplevel {
                                 let time_ms =
                                     (info.presentation_time.expect("no presentation time")
                                         / 1_000_000) as u32;
-                                // TODO: Remove this check OnNextFrameBegin is only sent as a
+                                // TODO: Remove this check when OnNextFrameBegin is only sent as a
                                 // result of Present.
                                 if let Some(callbacks) =
                                     surface_ref.get_mut(client)?.next_callbacks()
@@ -431,6 +431,9 @@ impl XdgToplevel {
                                         client.delete_id(callback.id())
                                     })?;
                                 }
+                                surface_ref.get_mut(client)?.add_present_credits(
+                                    values.additional_present_credits.unwrap_or(0),
+                                );
                                 Ok(())
                             });
                         }

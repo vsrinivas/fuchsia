@@ -259,6 +259,10 @@ pub struct Surface {
     /// queue of frames.
     #[cfg(feature = "flatland")]
     callbacks: VecDeque<Vec<ObjectRef<Callback>>>,
+
+    /// Present credits that determine if we are allowed to present.
+    #[cfg(feature = "flatland")]
+    present_credits: u32,
 }
 
 impl Surface {
@@ -341,6 +345,7 @@ impl Surface {
             pending_commands: Vec::new(),
             subsurfaces: vec![(id.into(), None)],
             callbacks: VecDeque::new(),
+            present_credits: 1,
         }
     }
 
@@ -562,6 +567,14 @@ impl Surface {
         callbacks: Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::present");
+        if this.get(client)?.present_credits == 0 {
+            // Drop frame by adding callbacks to previous frame. There must be at least
+            // one set of pending callbacks when we enter this state.
+            let surface = this.get_mut(client)?;
+            surface.callbacks.back_mut().expect("no pending frame").extend(callbacks);
+            println!("dropped frame, no present credits remaining");
+            return Ok(());
+        }
         let flatland = this
             .get(client)?
             .flatland()
@@ -570,8 +583,14 @@ impl Surface {
         // so we ask Flatland to present contents immediately by specifying a presentation
         // time of 0.
         flatland.present(0);
-        this.get_mut(client)?.callbacks.push_back(callbacks);
+        let surface = this.get_mut(client)?;
+        surface.callbacks.push_back(callbacks);
+        surface.present_credits -= 1;
         Ok(())
+    }
+
+    pub fn add_present_credits(&mut self, present_credits: u32) {
+        self.present_credits += present_credits;
     }
 }
 

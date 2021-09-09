@@ -75,7 +75,8 @@ impl Flatland {
                 requested_presentation_time: Some(presentation_time),
                 acquire_fences: None,
                 release_fences,
-                unsquashable: Some(true),
+                // Allow frames to be skipped when commit rate is too high.
+                unsquashable: Some(false),
                 ..PresentArgs::EMPTY
             })
             .unwrap_or_else(|e| eprintln!("present error: {:?}", e));
