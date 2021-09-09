@@ -191,6 +191,7 @@ protocol Stack {
 
     /// Add an address to the interface. If the interface already has an address of a given type that
     /// does not allow duplicates, this method will return an error.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
     AddInterfaceAddress(struct {
         id fuchsia.net.interface_id;
         addr fuchsia.net.Subnet;
@@ -198,6 +199,7 @@ protocol Stack {
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.RemoveAddress")
     DelInterfaceAddress(struct {
         id fuchsia.net.interface_id;
         addr fuchsia.net.Subnet;

@@ -266,7 +266,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 		return result
 	}
 
-	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr); status {
+	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* addRoute */); status {
 	case zx.ErrOk:
 		result.SetResponse(stack.StackAddInterfaceAddressResponse{})
 		return result
@@ -283,27 +283,20 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 }
 
 func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackDelInterfaceAddressResult {
-	var result stack.StackDelInterfaceAddressResult
-
 	protocolAddr := toProtocolAddr(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		result.SetErr(stack.ErrorInvalidArgs)
-		return result
+		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorInvalidArgs)
 	}
 
-	found, err := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr)
-	if err != nil {
-		syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
-		result.SetErr(stack.ErrorInternal)
-		return result
+	switch status := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* removeRoute */); status {
+	case zx.ErrOk:
+		return stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{})
+	case zx.ErrNotFound:
+		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorNotFound)
+	default:
+		_ = syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, status)
+		return stack.StackDelInterfaceAddressResultWithErr(stack.ErrorInternal)
 	}
-	if !found {
-		result.SetErr(stack.ErrorNotFound)
-		return result
-	}
-
-	result.SetResponse(stack.StackDelInterfaceAddressResponse{})
-	return result
 }
 
 func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {

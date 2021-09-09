@@ -60,6 +60,7 @@ protocol Netstack {
 
     /// Sets the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.AddAddress")
     SetInterfaceAddress(struct {
         nicid uint32;
         addr fuchsia.net.IpAddress;
@@ -70,6 +71,7 @@ protocol Netstack {
 
     /// Removes the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.RemoveAddress")
     RemoveInterfaceAddress(struct {
         nicid uint32;
         addr fuchsia.net.IpAddress;

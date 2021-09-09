@@ -12,6 +12,7 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//src/connectivity/lib/net-types",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
@@ -30,6 +31,7 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
   ]
 
   sources = [
+    "src/admin.rs",
     "src/lib.rs",
     "src/reachability.rs",
   ]

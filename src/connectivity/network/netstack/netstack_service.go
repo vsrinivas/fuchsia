@@ -127,7 +127,7 @@ func (ni *netstackImpl) SetInterfaceAddress(_ fidl.Context, nicid uint32, addres
 		return netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}, nil
 	}
 
-	switch status := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr); status {
+	switch status := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr, true /* addRoute */); status {
 	case zx.ErrOk:
 		return netstack.NetErr{Status: netstack.StatusOk}, nil
 	case zx.ErrNotFound:
@@ -148,14 +148,17 @@ func (ni *netstackImpl) RemoveInterfaceAddress(_ fidl.Context, nicid uint32, add
 		return netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}, nil
 	}
 
-	found, err := ni.ns.removeInterfaceAddress(tcpip.NICID(nicid), protocolAddr)
-	if err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
-	}
-	if !found {
+	switch status := ni.ns.removeInterfaceAddress(tcpip.NICID(nicid), protocolAddr, true /* removeRoute */); status {
+	case zx.ErrOk:
+		return netstack.NetErr{Status: netstack.StatusOk}, nil
+	case zx.ErrNotFound:
+		// NB: This is inaccurate since it could be the address that was not found,
+		// but will not be fixed since this API has been deprecated in favor of
+		// `fuchsia.net.interfaces.admin/Control.RemoveAddress`.
 		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
+	default:
+		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: status.String()}, nil
 	}
-	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
 // SetInterfaceMetric changes the metric for an interface and updates all

@@ -1,0 +1,49 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.interfaces.admin;
+
+using zx;
+using fuchsia.net;
+
+// TODO(https://fxbug.dev/81579): Tie the lifetime of this protocol to the
+// interface.
+/// Provides control over an interface.
+///
+/// This protocol encodes the underlying interface's lifetime in both
+/// directions; the interface exists iff both ends of the protocol are open.
+/// That is:
+///
+/// - Closing the client end causes the interface to be removed.
+/// - Observing a closure of the server end indicates the interface no longer
+///   exists.
+protocol Control {
+    // TODO(https://fxbug.dev/80621): Currently Netstack2's implementation
+    // does not support any values being present in `parameters`, and will
+    // cause an event containing `AddressRemovalReason.INVALID` to be sent
+    // and the server end of the protocol to be closed.
+    /// Assigns an address to the interface.
+    ///
+    /// Errors are communicated via
+    /// [`fuchsia.net.interfaces.admin/AddressStateProvider.OnAddressRemoved`].
+    ///
+    /// + request `address` the address to assign to the interface.
+    /// + request `parameters` additional address-specific options.
+    /// + request `address_state_provider` provides address assignment state
+    ///     and enables updating address properties.
+    AddAddress(resource struct {
+        address fuchsia.net.InterfaceAddress;
+        parameters AddressParameters;
+        address_state_provider server_end:AddressStateProvider;
+    });
+
+    /// Removes an address from the interface.
+    ///
+    /// + request `address` the address to remove.
+    /// * error `ZX_ERR_NOT_FOUND` if the provided address is not associated
+    ///     with the interface.
+    RemoveAddress(struct {
+        address fuchsia.net.InterfaceAddress;
+    }) -> (struct {}) error zx.status;
+};

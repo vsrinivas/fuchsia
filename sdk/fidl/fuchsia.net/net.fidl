@@ -34,7 +34,7 @@ type IpAddress = strict union {
 // binding support is ready, so we don't have to recursively fix all users.
 /// An IP address with its subnet prefix length.
 type Subnet = struct {
-    /// The Ipv4 or Ipv6 address.
+    /// The IPv4 or IPv6 address.
     addr IpAddress;
 
     /// The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
@@ -42,6 +42,30 @@ type Subnet = struct {
     /// For Ipv4, prefix_len must be in the range [0, 32].
     /// For Ipv6, prefix_len must be in the range [0, 128].
     prefix_len uint8;
+};
+
+/// An IPv4 address with its subnet prefix length.
+type Ipv4AddressWithPrefix = struct {
+    /// The IPv4 address.
+    addr Ipv4Address;
+
+    /// The prefix length. Must be in the range [0, 32].
+    prefix_len uint8;
+};
+
+/// An address that can be assigned to a network interface.
+type InterfaceAddress = strict union {
+    /// An IPv4 address with the prefix length.
+    ///
+    /// The prefix length is necessary to determine the subnet to which an
+    /// IPv4 address belongs so that the broadcast address can be inferred.
+    1: ipv4 Ipv4AddressWithPrefix;
+    /// An IPv6 address.
+    ///
+    /// Note that the prefix length is not included because on-link information
+    /// for IPv6 should be configured statically via a a route or be discovered
+    /// through NDP messages.
+    2: ipv6 Ipv6Address;
 };
 
 /// A MAC address used to identify a network interface on the data link layer within the network.

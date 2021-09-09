@@ -4,16 +4,13 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.net.interfaces.admin") {
+fidl("fuchsia.net.debug") {
   sdk_category = "internal"
 
-  sources = [
-    "address.fidl",
-    "control.fidl",
-  ]
+  sources = [ "interfaces.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.net",
-    "//zircon/vdso/zx",
+    "//sdk/fidl/fuchsia.net.interfaces.admin",
   ]
 }

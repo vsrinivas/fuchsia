@@ -62,46 +62,71 @@ type AddressProperties = table {
 
 /// Assignment state of an IP address.
 type AddressAssignmentState = strict enum {
+    // TODO(https://fxbug.dev/82724): Replace this comment with FIDL that
+    // actually reserves 0.
+    //
+    // The value of 0 is reserved and should never be added to avoid the
+    // ambiguity of 0 being the default integer value in some languages. See:
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum.
+
     /// Address assignment is in progress, e.g. Duplicate Address Detection
     /// is being performed. The address cannot be used when in this state
     /// (cannot bind to it yet or receive packets destined to it).
     ///
     /// The Duplicate Address Detection mechanism is described in
     /// [RFC 4862, section 5.4](https://tools.ietf.org/html/rfc4862#section-5.4)
-    TENTATIVE = 0;
+    TENTATIVE = 1;
 
     /// The address is assigned to an interface.
-    ASSIGNED = 1;
+    ASSIGNED = 2;
 
     /// The address is unavailable, e.g. if the interface holding the address
     /// is offline.
-    UNAVAILABLE = 2;
+    UNAVAILABLE = 3;
 };
 
 /// Reasons from IP address removal.
 type AddressRemovalReason = strict enum {
+    // TODO(https://fxbug.dev/82724): Replace this comment with FIDL that
+    // actually reserves 0.
+    //
+    // The value of 0 is reserved and should never be added to avoid the
+    // ambiguity of 0 being the default integer value in some languages. See:
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum.
+
+    /// The address is not a valid address.
+    INVALID = 1;
+
+    /// The address is already assigned to the interface.
+    ALREADY_ASSIGNED = 2;
+
     /// Duplicate Address Detection failed.
     ///
     /// A neighbor was found to hold the address.
-    DAD_FAILED = 1;
+    DAD_FAILED = 3;
 
-    /// The address is already assigned on a local interface.
-    ALREADY_ASSIGNED = 2;
+    /// The address was removed as a result of the interface being removed.
+    INTERFACE_REMOVED = 4;
 
-    /// The address was removed from the interface.
-    REMOVED = 3;
+    /// The address was removed from the interface by user action.
+    USER_REMOVED = 5;
 };
 
 /// Offers state information about an IP address.
 ///
 /// This protocol encodes the underlying object's lifetime in both directions;
-/// the underlying object is alive iff both ends of the protocol are open. That
-/// is:
+/// the underlying object is alive iff both ends of the protocol are open
+/// (unless [`AddressStateProvider.Detach`] has been called). That is:
 ///
 /// - Closing the client end causes the object to be destroyed.
 /// - Observing a closure of the server end indicates the object no longer
 ///   exists.
 protocol AddressStateProvider {
+    // TODO(https://fxbug.dev/80621): Currently Netstack2's implementation does
+    // not support this method due to lack of support for updating addresses'
+    // valid and preferred lifetimes, and will send an
+    // `AddressRemovalReason.USER_REMOVED` event and close the server end of
+    // the protocol.
     /// Push an update when the address properties change.
     ///
     /// The client pushes updates on address properties changes, such as the
@@ -130,6 +155,12 @@ protocol AddressStateProvider {
     WatchAddressAssignmentState() -> (struct {
         assignment_state AddressAssignmentState;
     });
+
+    /// Detaches the address' lifetime from the client end of the protocol.
+    ///
+    /// The client end of the protocol can be closed immediately after
+    /// calling this method, and the address will not be removed.
+    Detach();
 
     /// Terminal event. Immediately precedes the closure of the server end of
     /// the protocol.
@@ -164,9 +195,4 @@ type AddressParameters = resource table {
     ///
     /// If not set, interpreted as false.
     2: temporary bool;
-
-    /// Used for exchanging state information about the address.
-    ///
-    /// Optional.
-    3: address_state_provider server_end:AddressStateProvider;
 };

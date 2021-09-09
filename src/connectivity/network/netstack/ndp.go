@@ -433,23 +433,34 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			// Handle the event.
 			switch event := event.(type) {
 			case *ndpDuplicateAddressDetectionEvent:
-				switch result := event.result.(type) {
-				case *stack.DADSucceeded:
-					_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
-				case *stack.DADError:
-					logFn := syslog.ErrorTf
-					if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
-						logFn = syslog.WarnTf
+				success, completed := func() (bool, bool) {
+					switch result := event.result.(type) {
+					case *stack.DADSucceeded:
+						_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+						return true, true
+					case *stack.DADError:
+						logFn := syslog.ErrorTf
+						if _, ok := result.Err.(*tcpip.ErrClosedForSend); ok {
+							logFn = syslog.WarnTf
+						}
+						_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
+						return false, true
+					case *stack.DADAborted:
+						_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
+						// Do not trigger on DAD complete because DAD was actually aborted.
+						// The link online change handler will update the address assignment
+						// state accordingly.
+						return false, false
+					case *stack.DADDupAddrDetected:
+						_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d), sending interface changed event...", result.HolderLinkAddress, event.addr, event.nicID)
+						return false, true
+					default:
+						panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 					}
-					_ = logFn(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, result.Err)
-				case *stack.DADAborted:
-					_ = syslog.WarnTf(ndpSyslogTagName, "DAD for %s on nicID (%d) aborted, sending interface changed event...", event.addr, event.nicID)
-				case *stack.DADDupAddrDetected:
-					_ = syslog.WarnTf(ndpSyslogTagName, "DAD found %s holding %s on nicID (%d), sending interface changed event...", result.HolderLinkAddress, event.addr, event.nicID)
-				default:
-					panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
+				}()
+				if completed {
+					n.ns.onDuplicateAddressDetectionComplete(event.nicID, event.addr, success)
 				}
-
 				n.ns.onPropertiesChange(event.nicID, nil)
 
 			case *ndpDiscoveredOffLinkRouteEvent:

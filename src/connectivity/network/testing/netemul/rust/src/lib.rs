@@ -740,6 +740,15 @@ impl<'a> TestInterface<'a> {
         })
     }
 
+    /// Disable interface.
+    ///
+    /// Equivalent to `stack.disable_interface(test_interface.id())`.
+    pub async fn disable_interface(&self) -> Result<()> {
+        self.stack.disable_interface(self.id).await.squash_result().with_context(|| {
+            format!("stack.disable_interface for endpoint {} failed", self.endpoint.name)
+        })
+    }
+
     /// Add interface address.
     ///
     /// Equivalent to `stack.add_interface_address(test_interface.id(), &mut addr)`.

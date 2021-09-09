@@ -402,8 +402,47 @@ impl Generator<CidrAddress> for FidlGen {
     }
 }
 
+/// Helper struct to parse Cidr addresses from string.
+struct Ipv4AddrWithPrefix {
+    address: std::net::Ipv4Addr,
+    prefix: u8,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum Ipv4AddrWithPrefixParseError {
+    #[error("failed to parse as CIDR address")]
+    CidrError(#[from] CidrParseError),
+    #[error("address is not IPv4")]
+    NotV4,
+}
+
+impl FromStr for Ipv4AddrWithPrefix {
+    type Err = Ipv4AddrWithPrefixParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let CidrAddress { address, prefix } = s.parse::<CidrAddress>()?;
+        match address {
+            IpAddr::V4(address) => return Ok(Ipv4AddrWithPrefix { address, prefix }),
+            IpAddr::V6(_) => return Err(Ipv4AddrWithPrefixParseError::NotV4),
+        }
+    }
+}
+
+impl Generator<Ipv4AddrWithPrefix> for FidlGen {
+    fn generate(Ipv4AddrWithPrefix { address, prefix }: Ipv4AddrWithPrefix) -> TokenStream {
+        let addr = Self::generate(address);
+        quote! {
+            fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                addr: #addr,
+                prefix_len: #prefix,
+            }
+        }
+    }
+}
+
 declare_macro!(fidl_ip, FidlGen, IpAddr);
 declare_macro!(fidl_ip_v4, FidlGen, Ipv4Addr);
+declare_macro!(fidl_ip_v4_with_prefix, FidlGen, Ipv4AddrWithPrefix);
 declare_macro!(fidl_ip_v6, FidlGen, Ipv6Addr);
 declare_macro!(fidl_socket_addr, FidlGen, SocketAddr);
 declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);

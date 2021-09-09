@@ -32,6 +32,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/logger"
+	"fidl/fuchsia/net/debug"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/neighbor"
 	"fidl/fuchsia/net/routes"
@@ -511,6 +512,19 @@ func Main() {
 			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := debug.InterfacesWithCtxStub{Impl: &debugInterfacesImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			debug.InterfacesName,
+			func(ctx context.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(debug.InterfacesName, "%s", err)
 				})
 				return nil
 			},

@@ -53,6 +53,10 @@ const (
 	dhcpRetransmission = 4 * zxtime.Second
 )
 
+var (
+	errNoSuchAddress = errors.New("no such address")
+)
+
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
@@ -175,6 +179,9 @@ type ifState struct {
 			enabled bool
 		}
 	}
+
+	adminControls         adminControlCollection
+	addressStateProviders addressStateProviderCollection
 
 	dns struct {
 		mu struct {
@@ -328,47 +335,59 @@ func (ns *Netstack) GetExtendedRouteTable() []routes.ExtendedRoute {
 func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Action) {
 	ns.routeTable.UpdateRoutesByInterface(nicid, action)
 	ns.routeTable.UpdateStack(ns.stack)
+	// TODO(https://fxbug.dev/82590): Avoid spawning the goroutine by not
+	// computing all interface properties and just sending the default route
+	// changes.
+	//
 	// ifState may be locked here, so run the default route change handler in a
 	// goroutine to prevent deadlock.
 	go ns.onDefaultRouteChange()
 }
 
-func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
-	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	_ = syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %s", addr.AddressWithPrefix, nic, route)
+func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, removeRoute bool) zx.Status {
+	_ = syslog.Infof("removing static IP %s from NIC %d, removeRoute=%t", addr.AddressWithPrefix, nic, removeRoute)
 
 	nicInfo, ok := ns.stack.NICInfo()[nic]
 	if !ok {
-		return false, nil
+		return zx.ErrNotFound
 	}
 
 	if _, foundAddr := findAddress(nicInfo.ProtocolAddresses, addr); !foundAddr {
-		return false, fmt.Errorf("address %s doesn't exist on NIC ID %d", addr.AddressWithPrefix, nic)
+		return zx.ErrNotFound
 	}
 
-	if err := ns.DelRoute(route); err == routes.ErrNoSuchRoute {
-		// The route might have been removed by user action. Continue.
-	} else if err != nil {
-		panic(fmt.Sprintf("unexpected error deleting route: %s", err))
+	if removeRoute {
+		route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
+		_ = syslog.Infof("removing subnet route %s", route)
+		if err := ns.DelRoute(route); err == routes.ErrNoSuchRoute {
+			// The route might have been removed by user action. Continue.
+		} else if err != nil {
+			panic(fmt.Sprintf("unexpected error deleting route: %s", err))
+		}
 	}
 
 	switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID:
 		panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
+	case *tcpip.ErrBadLocalAddress:
+		return zx.ErrNotFound
 	default:
-		return false, fmt.Errorf("error removing address %s from NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
+		return zx.ErrInternal
 	}
 
 	ns.onPropertiesChange(nic, nil)
-	return true, nil
+	nicInfo.Context.(*ifState).addressStateProviders.onAddressRemove(addr.AddressWithPrefix.Address)
+	return zx.ErrOk
 }
 
-// addInterfaceAddress returns whether the NIC corresponding to the supplied
-// tcpip.NICID was found or false and an error.
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) zx.Status {
-	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
-	_ = syslog.Infof("adding static IP %s to NIC %d, creating subnet route %s with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
+// addInterfaceAddress adds `addr` to `nic`, returning `zx.ErrOk` if successful.
+//
+// TODO(https://fxbug.dev/21222): Change this function to return
+// `admin.AddressRemovalReason` when we no longer need it for
+// `fuchsia.net.stack/Stack` or `fuchsia.netstack/Netstack`.
+func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, addRoute bool) zx.Status {
+	_ = syslog.Infof("adding static IP %s to NIC %d, addRoute=%t", addr.AddressWithPrefix, nic, addRoute)
 
 	if info, ok := ns.stack.NICInfo()[nic]; ok {
 		if a, addrFound := findAddress(info.ProtocolAddresses, addr); addrFound {
@@ -399,15 +418,53 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		panic(fmt.Sprintf("NIC %d: failed to add address %s: %s", nic, addr.AddressWithPrefix, err))
 	}
 
-	if err := ns.AddRoute(route, metricNotSet, false); err != nil {
-		if !errors.Is(err, routes.ErrNoSuchNIC) {
-			panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nic, route, err))
+	if addRoute {
+		route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
+		_ = syslog.Infof("creating subnet route %s with metric=<not-set>, dynamic=false", route)
+		if err := ns.AddRoute(route, metricNotSet, false); err != nil {
+			if !errors.Is(err, routes.ErrNoSuchNIC) {
+				panic(fmt.Sprintf("NIC %d: failed to add subnet route %s: %s", nic, route, err))
+			}
+			return zx.ErrNotFound
 		}
-		return zx.ErrNotFound
 	}
 
 	ns.onPropertiesChange(nic, nil)
 	return zx.ErrOk
+}
+
+// Called when DAD completes with either success or failure.
+//
+// Note that this function should not be called if DAD was aborted due to
+// interface going offline, as the link online change handler will update the
+// address assignment state accordingly.
+func (ns *Netstack) onDuplicateAddressDetectionComplete(nicid tcpip.NICID, addr tcpip.Address, success bool) {
+	nicInfo, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		_ = syslog.Warnf("DAD completed for address %s on interface %d, interface not found", addr, nicid)
+		return
+	}
+
+	ifs := nicInfo.Context.(*ifState)
+	ifs.onDuplicateAddressDetectionComplete(addr, success)
+}
+
+func (ifs *ifState) onDuplicateAddressDetectionComplete(addr tcpip.Address, success bool) {
+	// TODO(https://fxbug.dev/82045): DAD completion and interface
+	// online/offline race against each other since they both set address
+	// assignment state, which means that we must lock `ifState.mu`
+	// and then `addressStateProviderCollection.mu` here to prevent
+	// interface online change concurrently attempting to mutate the
+	// address assignment state.
+	online := func() bool {
+		ifs.mu.Lock()
+		defer ifs.mu.Unlock()
+
+		ifs.addressStateProviders.mu.Lock()
+		return ifs.IsUpLocked()
+	}()
+	defer ifs.addressStateProviders.mu.Unlock()
+	ifs.addressStateProviders.onDuplicateAddressDetectionCompleteLocked(ifs.nicid, addr, online, success)
 }
 
 func (ifs *ifState) updateMetric(metric routes.Metric) {
@@ -473,6 +530,10 @@ func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config 
 			validUntil: config.UpdatedAt.Add(config.LeaseLength.Duration()),
 		},
 	}
+	// TODO(https://fxbug.dev/82590): Avoid spawning this goroutine by sending
+	// the delta of the address property change only instead of computing the
+	// delta of all properties, which requires acquiring `ifState.mu`.
+	//
 	// Dispatch interface change handlers on another goroutine to prevent a
 	// deadlock while holding ifState.mu since dhcpAcquired is called on
 	// cancellation.
@@ -646,11 +707,23 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	name := ifs.ns.name(ifs.nicid)
 
-	ifs.mu.Lock()
-	changed := ifs.stateChangeLocked(name, ifs.mu.adminUp, linkOnline)
-	ifs.mu.Unlock()
-	_ = syslog.Infof("NIC %s: observed linkOnline=%t interfacesChanged=%t", name, linkOnline, changed)
-	if changed {
+	if func() bool {
+		after, changed := func() (bool, bool) {
+			ifs.mu.Lock()
+			defer func() {
+				ifs.addressStateProviders.mu.Lock()
+				ifs.mu.Unlock()
+			}()
+
+			changed := ifs.stateChangeLocked(name, ifs.mu.adminUp, linkOnline)
+			_ = syslog.Infof("NIC %s: observed linkOnline=%t when adminUp=%t, interfacesChanged=%t", name, linkOnline, ifs.mu.adminUp, changed)
+			return ifs.IsUpLocked(), changed
+		}()
+		defer ifs.addressStateProviders.mu.Unlock()
+
+		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(after)
+		return changed
+	}() {
 		ifs.ns.onPropertiesChange(ifs.nicid, nil)
 	}
 }
@@ -659,30 +732,45 @@ func (ifs *ifState) setState(enabled bool) error {
 	name := ifs.ns.name(ifs.nicid)
 
 	changed, err := func() (bool, error) {
-		ifs.mu.Lock()
-		defer ifs.mu.Unlock()
+		after, changed, err := func() (bool, bool, error) {
+			ifs.mu.Lock()
+			defer func() {
+				ifs.addressStateProviders.mu.Lock()
+				ifs.mu.Unlock()
+			}()
 
-		if ifs.mu.adminUp == enabled {
-			return false, nil
+			if ifs.mu.adminUp == enabled {
+				return ifs.IsUpLocked(), false, nil
+			}
+
+			if controller := ifs.controller; controller != nil {
+				fn := controller.Down
+				if enabled {
+					fn = controller.Up
+				}
+				if err := fn(); err != nil {
+					return false, false, err
+				}
+			}
+
+			changed := ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked())
+			_ = syslog.Infof("NIC %s: set adminUp=%t when linkOnline=%t, interfacesChanged=%t", name, ifs.mu.adminUp, ifs.LinkOnlineLocked(), changed)
+
+			return ifs.IsUpLocked(), changed, nil
+		}()
+		defer ifs.addressStateProviders.mu.Unlock()
+
+		if err != nil {
+			return false, err
 		}
 
-		if controller := ifs.controller; controller != nil {
-			fn := controller.Down
-			if enabled {
-				fn = controller.Up
-			}
-			if err := fn(); err != nil {
-				return false, err
-			}
-		}
-
-		return ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked()), nil
+		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(after)
+		return changed, nil
 	}()
 	if err != nil {
 		_ = syslog.Infof("NIC %s: setting adminUp=%t failed: %s", name, enabled, err)
 		return err
 	}
-	_ = syslog.Infof("NIC %s: set adminUp=%t interfacesChanged=%t", name, enabled, changed)
 
 	if changed {
 		ifs.ns.onPropertiesChange(ifs.nicid, nil)
@@ -715,6 +803,8 @@ func (ifs *ifState) Remove() {
 	_ = syslog.Infof("NIC %s: removed", name)
 
 	ifs.ns.interfaceWatchers.onInterfaceRemove(ifs.nicid)
+	ifs.adminControls.onInterfaceRemove()
+	ifs.addressStateProviders.onInterfaceRemove()
 }
 
 var nameProviderErrorLogged uint32 = 0
@@ -862,6 +952,8 @@ func (ns *Netstack) addEndpoint(
 		controller: controller,
 		observer:   observer,
 	}
+	ifs.adminControls.mu.controls = make(map[*adminControlImpl]struct{})
+	ifs.addressStateProviders.mu.providers = make(map[tcpip.Address]*adminAddressStateProviderImpl)
 	if observer != nil {
 		observer.SetOnLinkClosed(ifs.Remove)
 		observer.SetOnLinkOnlineChanged(ifs.onLinkOnlineChanged)

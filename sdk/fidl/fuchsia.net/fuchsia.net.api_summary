@@ -1,3 +1,6 @@
+union/member fuchsia.net/InterfaceAddress.ipv4 fuchsia.net/Ipv4AddressWithPrefix
+union/member fuchsia.net/InterfaceAddress.ipv6 fuchsia.net/Ipv6Address
+strict union fuchsia.net/InterfaceAddress
 union/member fuchsia.net/IpAddress.ipv4 fuchsia.net/Ipv4Address
 union/member fuchsia.net/IpAddress.ipv6 fuchsia.net/Ipv6Address
 strict union fuchsia.net/IpAddress
@@ -6,6 +9,9 @@ enum/member fuchsia.net/IpVersion.V6 2
 strict enum fuchsia.net/IpVersion uint32
 struct/member fuchsia.net/Ipv4Address.addr array<uint8,4>
 struct fuchsia.net/Ipv4Address
+struct/member fuchsia.net/Ipv4AddressWithPrefix.addr fuchsia.net/Ipv4Address
+struct/member fuchsia.net/Ipv4AddressWithPrefix.prefix_len uint8
+struct fuchsia.net/Ipv4AddressWithPrefix
 struct/member fuchsia.net/Ipv4SocketAddress.address fuchsia.net/Ipv4Address
 struct/member fuchsia.net/Ipv4SocketAddress.port uint16
 struct fuchsia.net/Ipv4SocketAddress

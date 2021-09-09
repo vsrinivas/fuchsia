@@ -13,6 +13,7 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.filter.Filter",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.neighbor.Controller",
@@ -28,6 +29,7 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.filter.Filter",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.neighbor.Controller",

@@ -6,6 +6,7 @@
 
 #![deny(missing_docs)]
 
+pub mod admin;
 mod reachability;
 
 pub use reachability::{is_globally_routable, to_reachability_stream, wait_for_reachability};

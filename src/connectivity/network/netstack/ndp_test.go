@@ -136,7 +136,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			if status := ns.addInterfaceAddress(ifs.nicid, tcpip.ProtocolAddress{
 				Protocol:          ipv6.ProtocolNumber,
 				AddressWithPrefix: test.addr,
-			}); status != zx.ErrOk {
+			}, true /* addRoute */); status != zx.ErrOk {
 				t.Fatalf("failed to add address: %s", status)
 			}
 

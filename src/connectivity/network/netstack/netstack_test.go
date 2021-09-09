@@ -1327,7 +1327,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.Remove)
 
-	if status := ns.addInterfaceAddress(ifState.nicid, addr); status != zx.ErrOk {
+	if status := ns.addInterfaceAddress(ifState.nicid, addr, true /* addRoute */); status != zx.ErrOk {
 		t.Fatalf("ns.addInterfaceAddress(%d, %s) = %s", ifState.nicid, addr.AddressWithPrefix, status)
 	}
 

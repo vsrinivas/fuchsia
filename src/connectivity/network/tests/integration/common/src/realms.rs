@@ -6,13 +6,13 @@
 
 use {
     anyhow::Context as _, async_trait::async_trait,
-    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_dhcp as fnet_dhcp,
-    fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6, fidl_fuchsia_net_filter as fnet_filter,
-    fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
-    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
-    fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
-    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_posix_socket as fposix_socket,
-    fidl_fuchsia_stash as fstash,
+    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_debug as fnet_debug,
+    fidl_fuchsia_net_dhcp as fnet_dhcp, fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6,
+    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
+    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
+    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
+    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
 };
 
 use crate::Result;
@@ -41,6 +41,7 @@ impl NetstackVersion {
             NetstackVersion::Netstack2 => &[
                 fnet_filter::FilterMarker::PROTOCOL_NAME,
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
+                fnet_debug::InterfacesMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ViewMarker::PROTOCOL_NAME,
                 fnet_routes::StateMarker::PROTOCOL_NAME,

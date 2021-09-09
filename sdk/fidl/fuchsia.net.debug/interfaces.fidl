@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.debug;
+
+using fuchsia.net;
+using fuchsia.net.interfaces.admin;
+
+/// Network interface debugging functionality.
+///
+/// This protocol is intended for debugging and testing only; and not meant for
+/// load-bearing code.
+@discoverable
+protocol Interfaces {
+    // TODO(https://fxbug.dev/81579): The lifetime of the interface is
+    // not currently tied to the `fuchsia.net.interfaces.admin/Control`
+    // channels, so dropping the client end will never cause the interface to
+    // be removed.
+    /// Obtain administrative control over a network interface.
+    ///
+    /// + request `id` identifies the interface to be controlled.
+    /// + request `control` grants the client administrative control over
+    ///     the interface.
+    GetAdmin(resource struct {
+        id fuchsia.net.interface_id;
+        control server_end:fuchsia.net.interfaces.admin.Control;
+    });
+};
