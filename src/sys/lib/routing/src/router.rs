@@ -1079,6 +1079,10 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
+                // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
+                assert_eq!(child.collection, None);
+                let child = &child.name;
+
                 let partial = PartialChildMoniker::new(child.clone(), None);
                 component.get_live_child(&partial).await?.ok_or_else(|| {
                     RoutingError::OfferFromChildInstanceNotFound {
@@ -1219,7 +1223,11 @@ where
 
 fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
     match (parent_target, child_moniker.collection()) {
-        (OfferTarget::Child(target_child_name), None) => target_child_name == child_moniker.name(),
+        (OfferTarget::Child(target_child), None) => {
+            // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
+            assert_eq!(target_child.collection, None);
+            target_child.name == child_moniker.name()
+        }
         (OfferTarget::Collection(target_collection_name), Some(collection)) => {
             target_collection_name == collection
         }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_rust::{ExposeSource, OfferSource, UseSource},
+    cm_rust::{ChildRef, ExposeSource, OfferSource, UseSource},
     std::{fmt, fmt::Display},
 };
 
@@ -50,7 +50,11 @@ impl From<&OfferSource> for CapabilitySourceType {
         match source {
             OfferSource::Framework => Self::Framework,
             OfferSource::Parent => Self::Parent,
-            OfferSource::Child(name) => Self::Child(name.to_string()),
+            OfferSource::Child(ChildRef { name, collection }) => {
+                // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
+                assert_eq!(collection, &None);
+                Self::Child(name.to_string())
+            }
             OfferSource::Self_ => Self::Self_,
             OfferSource::Capability(name) => Self::Capability(name.to_string()),
             OfferSource::Collection(_) => panic!("no"),

@@ -12,7 +12,7 @@ use {
         component_tree::ComponentNode,
     },
     cm_rust::{
-        CapabilityDecl, CapabilityName, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl,
+        CapabilityDecl, CapabilityName, ChildRef, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferTarget, UseDecl, UseDirectoryDecl,
     },
     fidl_fuchsia_io2::Operations,
@@ -99,7 +99,9 @@ impl<'a> CapabilityRouteVerifier<'a> for DirectoryCapabilityRouteVerifier {
         target_moniker: &'a PartialChildMoniker,
         offer_decl: &'a OfferDirectoryDecl,
     ) -> bool {
-        if let OfferTarget::Child(child_name) = &offer_decl.target {
+        if let OfferTarget::Child(ChildRef { name: child_name, collection }) = &offer_decl.target {
+            // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
+            assert_eq!(collection, &None);
             return (&child_name.as_str(), &offer_decl.target_name)
                 == (&target_moniker.as_str(), &target_state.name);
         }
@@ -275,11 +277,7 @@ mod tests {
     }
 
     fn new_directory_decl(name: CapabilityName, rights: Operations) -> DirectoryDecl {
-        DirectoryDecl {
-            name,
-            source_path: None,
-            rights,
-        }
+        DirectoryDecl { name, source_path: None, rights }
     }
 
     // Builds a `ComponentTree` with 4 nodes and the following structure:
@@ -332,9 +330,9 @@ mod tests {
             vec![],
             vec![],
             vec![OfferDecl::Directory(new_offer_directory_decl(
-                OfferSource::Child(bar_name.clone()),
+                OfferSource::static_child(bar_name.clone()),
                 root_dir_name,
-                OfferTarget::Child(foo_name.clone()),
+                OfferTarget::static_child(foo_name.clone()),
                 foo_dir_name.clone(),
                 root_rights,
             ))],
@@ -347,7 +345,7 @@ mod tests {
             vec![OfferDecl::Directory(new_offer_directory_decl(
                 OfferSource::Parent,
                 foo_dir_name,
-                OfferTarget::Child(baz_name.clone()),
+                OfferTarget::static_child(baz_name.clone()),
                 baz_dir_name.clone(),
                 foo_rights,
             ))],
@@ -387,7 +385,7 @@ mod tests {
         let root_offer_dir = new_offer_directory_decl(
             OfferSource::Self_,
             dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             dir_name.clone(),
             Some(offer_rights),
         );
@@ -425,7 +423,7 @@ mod tests {
                     capability: OfferDirectoryDecl {
                         source: OfferSource::Self_,
                         source_name: "dir_name".into(),
-                        target: OfferTarget::Child("child".to_string()),
+                        target: OfferTarget::static_child("child".to_string()),
                         target_name: "dir_name".into(),
                         ..default_offer_dir()
                     }
@@ -489,7 +487,7 @@ mod tests {
         let root_offer_dir = new_offer_directory_decl(
             OfferSource::Self_,
             dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             dir_name.clone(),
             None,
         );
@@ -533,7 +531,7 @@ mod tests {
         let root_offer_dir = new_offer_directory_decl(
             OfferSource::Self_,
             dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             dir_name.clone(),
             Some(offer_rights),
         );
@@ -599,7 +597,7 @@ mod tests {
                         node_path: node_path(vec!["foo"]),
                         capability: OfferDirectoryDecl {
                             source_name: "foo_dir_name".into(),
-                            target: OfferTarget::Child("baz".to_string()),
+                            target: OfferTarget::static_child("baz".to_string()),
                             target_name: "baz_dir_name".into(),
                             ..default_offer_dir()
                         }
@@ -608,9 +606,9 @@ mod tests {
                     RouteSegment::OfferBy {
                         node_path: node_path(vec![]),
                         capability: OfferDirectoryDecl {
-                            source: OfferSource::Child("bar".to_string()),
+                            source: OfferSource::static_child("bar".to_string()),
                             source_name: "root_dir_name".into(),
-                            target: OfferTarget::Child("foo".to_string()),
+                            target: OfferTarget::static_child("foo".to_string()),
                             target_name: "foo_dir_name".into(),
                             ..default_offer_dir()
                         }
@@ -676,7 +674,7 @@ mod tests {
                         node_path: node_path(vec!["foo"]),
                         capability: OfferDirectoryDecl {
                             source_name: "foo_dir_name".into(),
-                            target: OfferTarget::Child("baz".to_string()),
+                            target: OfferTarget::static_child("baz".to_string()),
                             target_name: "baz_dir_name".into(),
                             rights: None,
                             ..default_offer_dir()
@@ -686,9 +684,9 @@ mod tests {
                     RouteSegment::OfferBy {
                         node_path: node_path(vec![]),
                         capability: OfferDirectoryDecl {
-                            source: OfferSource::Child("bar".to_string()),
+                            source: OfferSource::static_child("bar".to_string()),
                             source_name: "root_dir_name".into(),
-                            target: OfferTarget::Child("foo".to_string()),
+                            target: OfferTarget::static_child("foo".to_string()),
                             target_name: "foo_dir_name".into(),
                             rights: None,
                             ..default_offer_dir()
@@ -772,14 +770,14 @@ mod tests {
         let good_offer_dir = new_offer_directory_decl(
             OfferSource::Self_,
             good_dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             good_dir_name.clone(),
             Some(offer_rights),
         );
         let bad_offer_dir = new_offer_directory_decl(
             OfferSource::Self_,
             bad_dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             bad_dir_name.clone(),
             Some(offer_rights),
         );
@@ -834,7 +832,7 @@ mod tests {
                     capability: OfferDirectoryDecl {
                         source: OfferSource::Self_,
                         source_name: "good_dir".into(),
-                        target: OfferTarget::Child("child".to_string()),
+                        target: OfferTarget::static_child("child".to_string()),
                         target_name: "good_dir".into(),
                         ..default_offer_dir()
                     }

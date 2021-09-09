@@ -54,7 +54,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -62,7 +62,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source: OfferSource::Capability("data".into()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -131,7 +131,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".into(),
                         target_name: "data".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: Some(PathBuf::from("foo")),
                         dependency_type: DependencyType::Strong,
@@ -153,7 +153,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source: OfferSource::Capability("storage".into()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("c")
@@ -204,10 +204,10 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Child("c".to_string()),
+                        source: OfferSource::static_child("c".to_string()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -244,7 +244,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("d".to_string()),
+                        target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -308,7 +308,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -376,7 +376,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -445,7 +445,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source: OfferSource::Capability("unrelated.protocol".into()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -497,10 +497,10 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Child("c".to_string()),
+                        source: OfferSource::static_child("c".to_string()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -538,7 +538,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     .protocol(ProtocolDeclBuilder::new("unrelated.protocol").build())
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("d".to_string()),
+                        target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -604,7 +604,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -671,7 +671,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source: OfferSource::Capability("data".into()),
                         source_name: "unrelated.protocol".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -722,10 +722,10 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Child("c".to_string()),
+                        source: OfferSource::static_child("c".to_string()),
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_name: "fuchsia.sys2.StorageAdmin".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
@@ -762,7 +762,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("d".to_string()),
+                        target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))

@@ -26,10 +26,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -80,10 +80,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -139,10 +139,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -193,10 +193,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -252,10 +252,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*READ_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -306,10 +306,10 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                        source: OfferSource::Child("b".to_string()),
+                        source: OfferSource::static_child("b".to_string()),
                         source_name: "bar_data".into(),
                         target_name: "baz_data".into(),
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -372,7 +372,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         source: OfferSource::Parent,
                         source_name: "foo_data".into(),
                         target_name: "bar_data".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: None,
                         subdir: None,
                         dependency_type: DependencyType::Strong,

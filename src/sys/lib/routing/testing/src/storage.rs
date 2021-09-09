@@ -48,7 +48,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -116,7 +116,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -177,7 +177,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -238,7 +238,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -302,7 +302,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".try_into().unwrap(),
                         target_name: "minfs".try_into().unwrap(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -315,7 +315,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -380,7 +380,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".try_into().unwrap(),
                         target_name: "minfs".try_into().unwrap(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: Some("subdir_1".into()),
                         dependency_type: DependencyType::Strong,
@@ -393,7 +393,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -464,7 +464,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".try_into().unwrap(),
                         target_name: "minfs".try_into().unwrap(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -477,7 +477,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -540,7 +540,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -559,7 +559,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -616,7 +616,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -691,7 +691,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -782,13 +782,13 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -820,13 +820,13 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
-                        target: OfferTarget::Child("d".to_string()),
+                        target: OfferTarget::static_child("d".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
-                        target: OfferTarget::Child("d".to_string()),
+                        target: OfferTarget::static_child("d".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -933,7 +933,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -993,7 +993,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".try_into().unwrap(),
                         target_name: "data".try_into().unwrap(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -1104,7 +1104,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source: OfferSource::Self_,
                         source_name: "data".try_into().unwrap(),
                         target_name: "minfs".try_into().unwrap(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         rights: Some(*READ_RIGHTS | *WRITE_RIGHTS),
                         subdir: None,
                         dependency_type: DependencyType::Strong,
@@ -1117,7 +1117,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "data".into(),
                         target_name: "data".into(),
                     }))
@@ -1175,7 +1175,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                     }))
                     .add_lazy_child("b")
                     .storage(StorageDecl {
@@ -1263,7 +1263,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     )
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))
@@ -1286,7 +1286,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                     }))
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Parent,
-                        target: OfferTarget::Child("c".to_string()),
+                        target: OfferTarget::static_child("c".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))

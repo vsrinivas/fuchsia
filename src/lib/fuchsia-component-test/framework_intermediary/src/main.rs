@@ -901,7 +901,7 @@ impl RealmNode {
 
         common_ancestor.add_offer_for_capability(
             &capability,
-            cm_rust::OfferSource::Child(first_expose_name.clone()),
+            cm_rust::OfferSource::static_child(first_expose_name.clone()),
             &first_offer_name,
             force_route,
         )?;
@@ -1134,7 +1134,7 @@ impl RealmNode {
                 cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                     source: offer_source,
                     source_name: capability_name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target: cm_rust::OfferTarget::static_child(target_name.to_string()),
                     target_name: capability_name.into(),
                     dependency_type: cm_rust::DependencyType::Strong,
                 })
@@ -1143,7 +1143,7 @@ impl RealmNode {
                 cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                     source: offer_source,
                     source_name: capability_name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target: cm_rust::OfferTarget::static_child(target_name.to_string()),
                     target_name: capability_name.into(),
                     rights: None,
                     subdir: None,
@@ -1154,7 +1154,7 @@ impl RealmNode {
                 cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                     source: offer_source,
                     source_name: capability_name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
+                    target: cm_rust::OfferTarget::static_child(target_name.to_string()),
                     target_name: capability_name.into(),
                 })
             }
@@ -1332,7 +1332,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("a".to_string()),
+                target: cm_rust::OfferTarget::static_child("a".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1342,7 +1342,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("b".to_string()),
+                target: cm_rust::OfferTarget::static_child("b".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1400,7 +1400,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("a".to_string()),
+                target: cm_rust::OfferTarget::static_child("a".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1410,7 +1410,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("b".to_string()),
+                target: cm_rust::OfferTarget::static_child("b".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1456,7 +1456,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("a".to_string()),
+                target: cm_rust::OfferTarget::static_child("a".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1466,7 +1466,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("b".to_string()),
+                target: cm_rust::OfferTarget::static_child("b".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1476,7 +1476,7 @@ mod tests {
             offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source: cm_rust::OfferSource::Parent,
                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: cm_rust::OfferTarget::Child("c".to_string()),
+                target: cm_rust::OfferTarget::static_child("c".to_string()),
                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })],
@@ -1978,7 +1978,7 @@ mod tests {
                         offers: vec![cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                             source: cm_rust::OfferSource::Parent,
                             source_name: "foo".into(),
-                            target: cm_rust::OfferTarget::Child("a".to_string()),
+                            target: cm_rust::OfferTarget::static_child("a".to_string()),
                             target_name: "foo".into(),
                         })],
                         children: vec![
@@ -2043,9 +2043,9 @@ mod tests {
                 "",
                 cm_rust::ComponentDecl {
                     offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                        source: cm_rust::OfferSource::Child("a".to_string()),
+                        source: cm_rust::OfferSource::static_child("a".to_string()),
                         source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                        target: cm_rust::OfferTarget::Child("b".to_string()),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
                         target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                         dependency_type: cm_rust::DependencyType::Strong,
                     })],
@@ -2115,9 +2115,9 @@ mod tests {
                     "",
                     cm_rust::ComponentDecl {
                         offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                            source: cm_rust::OfferSource::Child("a".to_string()),
+                            source: cm_rust::OfferSource::static_child("a".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("b".to_string()),
+                            target: cm_rust::OfferTarget::static_child("b".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                         })],
@@ -2228,7 +2228,7 @@ mod tests {
                         offers: vec![cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                             source: cm_rust::OfferSource::Self_,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("b".to_string()),
+                            target: cm_rust::OfferTarget::static_child("b".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                         })],
@@ -2313,16 +2313,16 @@ mod tests {
                     cm_rust::ComponentDecl {
                         offers: vec![
                             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                                source: cm_rust::OfferSource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::static_child("a".to_string()),
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("b".to_string()),
+                                target: cm_rust::OfferTarget::static_child("b".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                             }),
                             cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                                source: cm_rust::OfferSource::Child("b".to_string()),
+                                source: cm_rust::OfferSource::static_child("b".to_string()),
                                 source_name: "example-dir".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("c".to_string()),
+                                target: cm_rust::OfferTarget::static_child("c".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                                 rights: None,
@@ -2455,32 +2455,32 @@ mod tests {
                 cm_rust::ComponentDecl {
                     offers: vec![
                         cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                            source: cm_rust::OfferSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::static_child("b".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("a".to_string()),
+                            target: cm_rust::OfferTarget::static_child("a".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                         }),
                         cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                            source: cm_rust::OfferSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::static_child("b".to_string()),
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("c".to_string()),
+                            target: cm_rust::OfferTarget::static_child("c".to_string()),
                             target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                         }),
                         cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                            source: cm_rust::OfferSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::static_child("b".to_string()),
                             source_name: "example-dir".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("a".to_string()),
+                            target: cm_rust::OfferTarget::static_child("a".to_string()),
                             target_name: "example-dir".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                             rights: None,
                             subdir: None,
                         }),
                         cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                            source: cm_rust::OfferSource::Child("b".to_string()),
+                            source: cm_rust::OfferSource::static_child("b".to_string()),
                             source_name: "example-dir".try_into().unwrap(),
-                            target: cm_rust::OfferTarget::Child("c".to_string()),
+                            target: cm_rust::OfferTarget::static_child("c".to_string()),
                             target_name: "example-dir".try_into().unwrap(),
                             dependency_type: cm_rust::DependencyType::Strong,
                             rights: None,
@@ -2574,16 +2574,16 @@ mod tests {
                     cm_rust::ComponentDecl {
                         offers: vec![
                             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                                source: cm_rust::OfferSource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::static_child("a".to_string()),
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("c".to_string()),
+                                target: cm_rust::OfferTarget::static_child("c".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                             }),
                             cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                                source: cm_rust::OfferSource::Child("a".to_string()),
+                                source: cm_rust::OfferSource::static_child("a".to_string()),
                                 source_name: "example-dir".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("c".to_string()),
+                                target: cm_rust::OfferTarget::static_child("c".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                                 rights: None,
@@ -2634,14 +2634,14 @@ mod tests {
                             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                                 source: cm_rust::OfferSource::Parent,
                                 source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("d".to_string()),
+                                target: cm_rust::OfferTarget::static_child("d".to_string()),
                                 target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                             }),
                             cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                                 source: cm_rust::OfferSource::Parent,
                                 source_name: "example-dir".try_into().unwrap(),
-                                target: cm_rust::OfferTarget::Child("d".to_string()),
+                                target: cm_rust::OfferTarget::static_child("d".to_string()),
                                 target_name: "example-dir".try_into().unwrap(),
                                 dependency_type: cm_rust::DependencyType::Strong,
                                 rights: None,

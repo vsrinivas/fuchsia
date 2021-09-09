@@ -523,10 +523,10 @@ impl DataController for RouteSourcesController {
 mod tests {
     use {
         super::{
-            RouteSourcesController, RouteSourcesRequest, RouteSourcesSpec, RouteMatch,
-            Source, SourceDeclSpec, SourceSpec, UseSpec, VerifyComponentRouteResult,
-            BAD_REQUEST_CTX, MATCH_ONE_FAILED, MISSING_TARGET_NODE, ROUTE_LISTS_INCOMPLETE,
-            ROUTE_LISTS_OVERLAP, USE_DECL_NAME, USE_SPEC_NAME,
+            RouteMatch, RouteSourcesController, RouteSourcesRequest, RouteSourcesSpec, Source,
+            SourceDeclSpec, SourceSpec, UseSpec, VerifyComponentRouteResult, BAD_REQUEST_CTX,
+            MATCH_ONE_FAILED, MISSING_TARGET_NODE, ROUTE_LISTS_INCOMPLETE, ROUTE_LISTS_OVERLAP,
+            USE_DECL_NAME, USE_SPEC_NAME,
         },
         crate::verify::collection::V2ComponentTree,
         anyhow::{anyhow, Result},
@@ -643,9 +643,9 @@ mod tests {
                 ],
                 offers: vec![
                     OfferDirectoryDecl{
-                        source: OfferSource::Child("one_dir_provider".to_string()),
+                        source: OfferSource::static_child("one_dir_provider".to_string()),
                         source_name: CapabilityName("exposed_by_provider".to_string()),
-                        target: OfferTarget::Child("two_dir_user".to_string()),
+                        target: OfferTarget::static_child("two_dir_user".to_string()),
                         target_name: CapabilityName("routed_from_provider".to_string()),
                         dependency_type: DependencyType::Strong,
                         rights: Some(fio2::Operations::Connect),
@@ -654,7 +654,7 @@ mod tests {
                     OfferDirectoryDecl{
                         source: OfferSource::Self_,
                         source_name: CapabilityName("root_dir".to_string()),
-                        target: OfferTarget::Child("two_dir_user".to_string()),
+                        target: OfferTarget::static_child("two_dir_user".to_string()),
                         target_name: CapabilityName("routed_from_root".to_string()),
                         dependency_type: DependencyType::Strong,
                         rights: Some(fio2::Operations::Connect),

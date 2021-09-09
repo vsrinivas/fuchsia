@@ -716,6 +716,25 @@ pub struct ChildDecl {
     pub environment: Option<String>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChildRef {
+    pub name: String,
+    pub collection: Option<String>,
+}
+
+impl FidlIntoNative<ChildRef> for fsys::ChildRef {
+    fn fidl_into_native(self) -> ChildRef {
+        ChildRef { name: self.name, collection: self.collection }
+    }
+}
+
+impl NativeIntoFidl<fsys::ChildRef> for ChildRef {
+    fn native_into_fidl(self) -> fsys::ChildRef {
+        fsys::ChildRef { name: self.name, collection: self.collection }
+    }
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::CollectionDecl")]
 pub struct CollectionDecl {
@@ -1221,10 +1240,16 @@ impl NativeIntoFidl<fsys::Ref> for UseSource {
 pub enum OfferSource {
     Framework,
     Parent,
-    Child(String),
+    Child(ChildRef),
     Collection(String),
     Self_,
     Capability(CapabilityName),
+}
+
+impl OfferSource {
+    pub fn static_child(name: String) -> Self {
+        Self::Child(ChildRef { name, collection: None })
+    }
 }
 
 impl FidlIntoNative<OfferSource> for fsys::Ref {
@@ -1232,7 +1257,7 @@ impl FidlIntoNative<OfferSource> for fsys::Ref {
         match self {
             fsys::Ref::Parent(_) => OfferSource::Parent,
             fsys::Ref::Self_(_) => OfferSource::Self_,
-            fsys::Ref::Child(c) => OfferSource::Child(c.name),
+            fsys::Ref::Child(c) => OfferSource::Child(c.fidl_into_native()),
             fsys::Ref::Collection(c) => OfferSource::Collection(c.name),
             fsys::Ref::Framework(_) => OfferSource::Framework,
             fsys::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
@@ -1246,9 +1271,7 @@ impl NativeIntoFidl<fsys::Ref> for OfferSource {
         match self {
             OfferSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             OfferSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
-            OfferSource::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
+            OfferSource::Child(c) => fsys::Ref::Child(c.native_into_fidl()),
             OfferSource::Collection(name) => fsys::Ref::Collection(fsys::CollectionRef { name }),
             OfferSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             OfferSource::Capability(name) => {
@@ -1396,14 +1419,19 @@ impl NativeIntoFidl<fsys::Ref> for RegistrationSource {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
-    Child(String),
+    Child(ChildRef),
     Collection(String),
+}
+impl OfferTarget {
+    pub fn static_child(name: String) -> Self {
+        Self::Child(ChildRef { name, collection: None })
+    }
 }
 
 impl FidlIntoNative<OfferTarget> for fsys::Ref {
     fn fidl_into_native(self) -> OfferTarget {
         match self {
-            fsys::Ref::Child(c) => OfferTarget::Child(c.name),
+            fsys::Ref::Child(c) => OfferTarget::Child(c.fidl_into_native()),
             fsys::Ref::Collection(c) => OfferTarget::Collection(c.name),
             _ => panic!("invalid OfferTarget variant"),
         }
@@ -1413,9 +1441,7 @@ impl FidlIntoNative<OfferTarget> for fsys::Ref {
 impl NativeIntoFidl<fsys::Ref> for OfferTarget {
     fn native_into_fidl(self) -> fsys::Ref {
         match self {
-            OfferTarget::Child(child_name) => {
-                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
-            }
+            OfferTarget::Child(c) => fsys::Ref::Child(c.native_into_fidl()),
             OfferTarget::Collection(collection_name) => {
                 fsys::Ref::Collection(fsys::CollectionRef { name: collection_name })
             }
@@ -2072,7 +2098,7 @@ mod tests {
                         OfferDecl::Protocol(OfferProtocolDecl {
                             source: OfferSource::Parent,
                             source_name: "legacy_netstack".try_into().unwrap(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "legacy_mynetstack".try_into().unwrap(),
                             dependency_type: DependencyType::WeakForMigration,
                         }),
@@ -2094,19 +2120,19 @@ mod tests {
                         OfferDecl::Runner(OfferRunnerDecl {
                             source: OfferSource::Parent,
                             source_name: "elf".try_into().unwrap(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "elf2".try_into().unwrap(),
                         }),
                         OfferDecl::Resolver(OfferResolverDecl {
                             source: OfferSource::Parent,
                             source_name: "pkg".try_into().unwrap(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "pkg".try_into().unwrap(),
                         }),
                         OfferDecl::Event(OfferEventDecl {
                             source: OfferSource::Parent,
                             source_name: "started".into(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mystarted".into(),
                             filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/a".to_string())}),
                             mode: EventMode::Sync,
@@ -2114,13 +2140,13 @@ mod tests {
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
                                     source_name: "netstack1".try_into().unwrap(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
                                     source_name: "netstack2".try_into().unwrap(),
-                            target: OfferTarget::Child("echo".to_string()),
+                            target: OfferTarget::static_child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),
                     ],
@@ -2324,7 +2350,7 @@ mod tests {
             input_type = fsys::Ref,
             result = vec![
                 OfferSource::Self_,
-                OfferSource::Child("foo".to_string()),
+                OfferSource::static_child("foo".to_string()),
                 OfferSource::Framework,
                 OfferSource::Capability(CapabilityName("foo".to_string())),
                 OfferSource::Parent,

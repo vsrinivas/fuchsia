@@ -403,7 +403,7 @@ mod tests {
                         source_name: "foo".into(),
 
                         target_name: "foo".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
@@ -451,7 +451,7 @@ mod tests {
                         source_name: "foo".into(),
 
                         target_name: "foo".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                     }))
                     .service(ServiceDecl {
                         name: "foo".into(),
@@ -548,10 +548,10 @@ mod tests {
                 "a",
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Service(OfferServiceDecl {
-                        source: OfferSource::Child("c".into()),
+                        source: OfferSource::static_child("c".into()),
                         source_name: "foo".into(),
                         target_name: "foo".into(),
-                        target: OfferTarget::Child("b".to_string()),
+                        target: OfferTarget::static_child("b".to_string()),
                     }))
                     .add_lazy_child("b")
                     .add_lazy_child("c")

@@ -101,7 +101,7 @@ pub fn default_offer_dir() -> OfferDirectoryDecl {
     OfferDirectoryDecl {
         source: OfferSource::Parent,
         source_name: "default_source".into(),
-        target: OfferTarget::Child("default_child".to_string()),
+        target: OfferTarget::static_child("default_child".to_string()),
         target_name: "default_target".into(),
         rights: Some(fio2::Operations::Connect),
         subdir: None,
@@ -141,7 +141,7 @@ pub fn default_offer_protocol() -> OfferProtocolDecl {
     OfferProtocolDecl {
         source: OfferSource::Parent,
         source_name: "default_source".into(),
-        target: OfferTarget::Child("default_child".to_string()),
+        target: OfferTarget::static_child("default_child".to_string()),
         target_name: "default_target".into(),
         dependency_type: DependencyType::Strong,
     }

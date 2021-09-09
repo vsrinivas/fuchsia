@@ -111,7 +111,7 @@ async fn use_in_collection_from_parent() {
                     source: OfferSource::Self_,
                     source_name: "data".try_into().unwrap(),
                     target_name: "minfs".try_into().unwrap(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
@@ -279,13 +279,13 @@ async fn use_in_collection_from_grandparent() {
                 )
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     source_name: "data".into(),
                     target_name: "data".into(),
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
                 }))
@@ -512,7 +512,7 @@ async fn use_restricted_storage_start_failure() {
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
-                    target: OfferTarget::Child("parent_consumer".to_string()),
+                    target: OfferTarget::static_child("parent_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
                 }))
@@ -528,7 +528,7 @@ async fn use_restricted_storage_start_failure() {
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,
-                    target: OfferTarget::Child("child_consumer".to_string()),
+                    target: OfferTarget::static_child("child_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
                 }))
@@ -609,7 +609,7 @@ async fn use_restricted_storage_open_failure() {
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
-                    target: OfferTarget::Child("parent_consumer".to_string()),
+                    target: OfferTarget::static_child("parent_consumer".to_string()),
                     source_name: "cache".into(),
                     target_name: "cache".into(),
                 }))

@@ -407,9 +407,9 @@ async fn create_realm_instance(
     }));
     for DevfsUsage { component, capability_name, subdir } in components_using_devfs {
         let () = offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-            source: cm_rust::OfferSource::Child(NETEMUL_SERVICES_COMPONENT_NAME.to_string()),
+            source: cm_rust::OfferSource::static_child(NETEMUL_SERVICES_COMPONENT_NAME.to_string()),
             source_name: cm_rust::CapabilityName(DEVFS.to_string()),
-            target: cm_rust::OfferTarget::Child(component),
+            target: cm_rust::OfferTarget::static_child(component),
             target_name: cm_rust::CapabilityName(capability_name),
             dependency_type: cm_rust::DependencyType::Strong,
             // TODO(https://fxbug.dev/77059): remove write permissions once they are no longer

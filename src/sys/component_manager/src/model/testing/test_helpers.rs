@@ -168,7 +168,7 @@ pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::Offe
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
         source: cm_rust::OfferSource::Parent,
         source_name: runner_cap.into(),
-        target: cm_rust::OfferTarget::Child(child.to_string()),
+        target: cm_rust::OfferTarget::static_child(child.to_string()),
         target_name: runner_cap.into(),
     })
 }

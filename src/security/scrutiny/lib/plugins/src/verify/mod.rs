@@ -287,14 +287,14 @@ mod tests {
         let root_offer_good_dir = new_offer_directory_decl(
             OfferSource::Self_,
             good_dir_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             good_dir_name.clone(),
             Some(offer_rights),
         );
         let root_offer_protocol = new_offer_protocol_decl(
-            OfferSource::Child(missing_child_name.clone()),
+            OfferSource::static_child(missing_child_name.clone()),
             protocol_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             protocol_name.clone(),
         );
         let root_good_dir_decl = new_directory_decl(good_dir_name.clone(), offer_rights);
@@ -509,7 +509,10 @@ mod tests {
                         "source_name": "good_dir",
                         "subdir": null,
                         "target": {
-                          "child": "child"
+                          "child": {
+                            "name": "child",
+                            "collection": null,
+                          }
                         },
                         "target_name": "good_dir",
                         "type": "directory"

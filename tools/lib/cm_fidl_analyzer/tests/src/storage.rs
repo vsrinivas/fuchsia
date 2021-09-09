@@ -185,7 +185,7 @@ mod tests {
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
-                        target: OfferTarget::Child("consumer".to_string()),
+                        target: OfferTarget::static_child("consumer".to_string()),
                         source_name: "cache".into(),
                         target_name: "cache".into(),
                     }))

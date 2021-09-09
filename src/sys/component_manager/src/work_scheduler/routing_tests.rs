@@ -268,7 +268,7 @@ async fn use_work_scheduler_control_routed() {
                     source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.WorkSchedulerControl".into(),
                     target_name: offer_use_name.clone().into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
@@ -317,7 +317,7 @@ async fn use_work_scheduler_control_error() {
                     source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.WorkSchedulerControl".into(),
                     target_name: offer_use_name.clone().into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")

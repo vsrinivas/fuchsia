@@ -1069,9 +1069,9 @@ mod tests {
         let profile_test_name = CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string());
         let root = topology.get_decl(&vec![].into()).await.expect("failed to get root");
         let offer_profile_test = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(super::mock_piconet_server_moniker().to_string()),
+            source: OfferSource::static_child(super::mock_piconet_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
-            target: OfferTarget::Child(pico_member_moniker.to_string()),
+            target: OfferTarget::static_child(pico_member_moniker.to_string()),
             target_name: profile_test_name,
             dependency_type: DependencyType::Strong,
         });
@@ -1138,9 +1138,9 @@ mod tests {
 
         // Profile is offered by root to profile from interposer
         let profile_offer = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(interposer_name.clone()),
+            source: OfferSource::static_child(interposer_name.clone()),
             source_name: profile_capability_name.clone(),
-            target: OfferTarget::Child(profile_name.to_string()),
+            target: OfferTarget::static_child(profile_name.to_string()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
@@ -1149,9 +1149,9 @@ mod tests {
 
         // ProfileTest is offered by root to interposer from Mock Piconet Server
         let profile_test_offer = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(super::mock_piconet_server_moniker().to_string()),
+            source: OfferSource::static_child(super::mock_piconet_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
-            target: OfferTarget::Child(interposer_name.clone()),
+            target: OfferTarget::static_child(interposer_name.clone()),
             target_name: profile_test_name.clone(),
             dependency_type: DependencyType::Strong,
         });
@@ -1162,7 +1162,7 @@ mod tests {
         let log_offer = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Parent,
             source_name: log_capability_name.clone(),
-            target: OfferTarget::Child(profile_name.to_string()),
+            target: OfferTarget::static_child(profile_name.to_string()),
             target_name: log_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
@@ -1209,17 +1209,17 @@ mod tests {
 
         // `Profile` is offered by root to bt-rfcomm from interposer.
         let profile_offer1 = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(interposer_name.clone()),
+            source: OfferSource::static_child(interposer_name.clone()),
             source_name: profile_capability_name.clone(),
-            target: OfferTarget::Child(bt_rfcomm_name.clone()),
+            target: OfferTarget::static_child(bt_rfcomm_name.clone()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
         // `Profile` is offered from bt-rfcomm to profile.
         let profile_offer2 = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(bt_rfcomm_name.clone()),
+            source: OfferSource::static_child(bt_rfcomm_name.clone()),
             source_name: profile_capability_name.clone(),
-            target: OfferTarget::Child(profile_name.to_string()),
+            target: OfferTarget::static_child(profile_name.to_string()),
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
@@ -1276,7 +1276,7 @@ mod tests {
         let fake_capability_offer3 = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Parent,
             source_name: fake_cap3.clone().into(),
-            target: OfferTarget::Child(profile_name.to_string()),
+            target: OfferTarget::static_child(profile_name.to_string()),
             target_name: fake_cap3.into(),
             dependency_type: DependencyType::Strong,
         });

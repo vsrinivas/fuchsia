@@ -12,8 +12,8 @@ use {
         component_tree::ComponentNode,
     },
     cm_rust::{
-        CapabilityDecl, CapabilityName, ExposeDecl, ExposeProtocolDecl, ExposeTarget, OfferDecl,
-        OfferProtocolDecl, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
+        CapabilityDecl, CapabilityName, ChildRef, ExposeDecl, ExposeProtocolDecl, ExposeTarget,
+        OfferDecl, OfferProtocolDecl, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
     },
     moniker::{ChildMonikerBase, PartialChildMoniker},
 };
@@ -89,7 +89,9 @@ impl<'a> CapabilityRouteVerifier<'a> for ProtocolCapabilityRouteVerifier {
         target_moniker: &'a PartialChildMoniker,
         offer_decl: &'a OfferProtocolDecl,
     ) -> bool {
-        if let OfferTarget::Child(child_name) = &offer_decl.target {
+        if let OfferTarget::Child(ChildRef { name: child_name, collection }) = &offer_decl.target {
+            // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
+            assert_eq!(collection, &None);
             return (&child_name.as_str(), &offer_decl.target_name)
                 == (&target_moniker.as_str(), &target_state.name);
         }
@@ -248,10 +250,7 @@ mod tests {
     }
 
     fn new_protocol_decl(name: CapabilityName) -> ProtocolDecl {
-        ProtocolDecl {
-            name,
-            source_path: None,
-        }
+        ProtocolDecl { name, source_path: None }
     }
 
     // Builds a `ComponentTree` with 4 nodes and the following structure:
@@ -296,9 +295,9 @@ mod tests {
             vec![],
             vec![],
             vec![OfferDecl::Protocol(new_offer_protocol_decl(
-                OfferSource::Child(bar_name.clone()),
+                OfferSource::static_child(bar_name.clone()),
                 root_protocol_name,
-                OfferTarget::Child(foo_name.clone()),
+                OfferTarget::static_child(foo_name.clone()),
                 foo_protocol_name.clone(),
             ))],
             vec![],
@@ -310,7 +309,7 @@ mod tests {
             vec![OfferDecl::Protocol(new_offer_protocol_decl(
                 OfferSource::Parent,
                 foo_protocol_name,
-                OfferTarget::Child(baz_name.clone()),
+                OfferTarget::static_child(baz_name.clone()),
                 baz_protocol_name.clone(),
             ))],
             vec![],
@@ -343,7 +342,7 @@ mod tests {
         let root_offer_protocol = new_offer_protocol_decl(
             OfferSource::Self_,
             protocol_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             protocol_name.clone(),
         );
         let root_protocol_decl = new_protocol_decl(protocol_name.clone());
@@ -380,7 +379,7 @@ mod tests {
                     capability: OfferProtocolDecl {
                         source: OfferSource::Self_,
                         source_name: "protocol_name".into(),
-                        target: OfferTarget::Child("child".to_string()),
+                        target: OfferTarget::static_child("child".to_string()),
                         target_name: "protocol_name".into(),
                         ..default_offer_protocol()
                     }
@@ -446,7 +445,7 @@ mod tests {
         let root_offer_protocol = new_offer_protocol_decl(
             OfferSource::Self_,
             protocol_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             protocol_name.clone(),
         );
 
@@ -512,7 +511,7 @@ mod tests {
                         node_path: node_path(vec!["foo"]),
                         capability: OfferProtocolDecl {
                             source_name: "foo_protocol_name".into(),
-                            target: OfferTarget::Child("baz".to_string()),
+                            target: OfferTarget::static_child("baz".to_string()),
                             target_name: "baz_protocol_name".into(),
                             ..default_offer_protocol()
                         }
@@ -521,9 +520,9 @@ mod tests {
                     RouteSegment::OfferBy {
                         node_path: node_path(vec![]),
                         capability: OfferProtocolDecl {
-                            source: OfferSource::Child("bar".to_string()),
+                            source: OfferSource::static_child("bar".to_string()),
                             source_name: "root_protocol_name".into(),
-                            target: OfferTarget::Child("foo".to_string()),
+                            target: OfferTarget::static_child("foo".to_string()),
                             target_name: "foo_protocol_name".into(),
                             ..default_offer_protocol()
                         }
@@ -568,7 +567,7 @@ mod tests {
         let good_offer_protocol = new_offer_protocol_decl(
             OfferSource::Self_,
             good_protocol_name.clone(),
-            OfferTarget::Child(child_name.clone()),
+            OfferTarget::static_child(child_name.clone()),
             good_protocol_name.clone(),
         );
 
@@ -621,7 +620,7 @@ mod tests {
                     capability: OfferProtocolDecl {
                         source: OfferSource::Self_,
                         source_name: "good_protocol".into(),
-                        target: OfferTarget::Child("child".to_string()),
+                        target: OfferTarget::static_child("child".to_string()),
                         target_name: "good_protocol".into(),
                         ..default_offer_protocol()
                     }

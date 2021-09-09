@@ -236,7 +236,7 @@ async fn capability_requested_event_at_parent() {
                     source: OfferSource::Self_,
                     source_name: "foo_svc".into(),
                     target_name: "bar_svc".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
@@ -358,7 +358,7 @@ async fn use_in_collection() {
                     source_name: "foo_data".into(),
                     source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
@@ -367,7 +367,7 @@ async fn use_in_collection() {
                     source_name: "foo_svc".into(),
                     source: OfferSource::Self_,
                     target_name: "hippo_svc".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
@@ -480,7 +480,7 @@ async fn use_in_collection_not_offered() {
                     source_name: "foo_data".into(),
                     source: OfferSource::Self_,
                     target_name: "hippo_data".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
@@ -489,7 +489,7 @@ async fn use_in_collection_not_offered() {
                     source_name: "foo_svc".into(),
                     source: OfferSource::Self_,
                     target_name: "hippo_svc".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
@@ -752,7 +752,7 @@ async fn use_runner_from_grandparent_environment() {
                 .offer(OfferDecl::Runner(OfferRunnerDecl {
                     source: OfferSource::Self_,
                     source_name: CapabilityName("elf".to_string()),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     target_name: CapabilityName("dwarf".to_string()),
                 }))
                 .runner(RunnerDecl {
@@ -826,7 +826,7 @@ async fn use_runner_from_sibling_environment() {
                         .extends(fsys::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "dwarf".into(),
-                            source: RegistrationSource::Child("b".into()),
+                            source: RegistrationSource::Child("b".to_string()),
                             target_name: "hobbit".into(),
                         })
                         .build(),
@@ -1211,7 +1211,7 @@ async fn use_with_destroyed_parent() {
                     source: OfferSource::Parent,
                     source_name: "foo_svc".into(),
                     target_name: "foo_svc".into(),
-                    target: OfferTarget::Child("c".to_string()),
+                    target: OfferTarget::static_child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
@@ -1273,10 +1273,10 @@ async fn use_from_destroyed_but_not_removed() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferSource::Child("b".to_string()),
+                    source: OfferSource::static_child("b".to_string()),
                     source_name: "bar_svc".into(),
                     target_name: "baz_svc".into(),
-                    target: OfferTarget::Child("c".to_string()),
+                    target: OfferTarget::static_child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
@@ -1348,7 +1348,7 @@ async fn use_resolver_from_parent_environment() {
                         .extends(fsys::EnvironmentExtends::Realm)
                         .add_resolver(ResolverRegistration {
                             resolver: "base".into(),
-                            source: RegistrationSource::Child("c".into()),
+                            source: RegistrationSource::Child("c".to_string()),
                             scheme: "base".into(),
                         }),
                 )
@@ -1691,7 +1691,7 @@ async fn use_event_from_framework_denied_by_capability_policy() {
                     source: OfferSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
@@ -1865,7 +1865,7 @@ async fn route_service_from_parent_collection() {
                     source_name: "foo".into(),
 
                     target_name: "foo".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                 }))
                 .add_collection(CollectionDeclBuilder::new_transient_collection("coll"))
                 .add_lazy_child("b")
@@ -1917,7 +1917,7 @@ async fn list_service_instances_from_collection() {
                     source: OfferSource::Collection("coll".to_string()),
                     source_name: "foo".into(),
                     target_name: "foo".into(),
-                    target: OfferTarget::Child("client".to_string()),
+                    target: OfferTarget::static_child("client".to_string()),
                 }))
                 .add_collection(CollectionDeclBuilder::new_transient_collection("coll"))
                 .add_lazy_child("client")
@@ -2032,9 +2032,9 @@ async fn use_service_from_sibling_collection() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    source: OfferSource::Child("c".to_string()),
+                    source: OfferSource::static_child("c".to_string()),
                     source_name: "my.service.Service".into(),
-                    target: OfferTarget::Child("b".to_string()),
+                    target: OfferTarget::static_child("b".to_string()),
                     target_name: "my.service.Service".into(),
                 }))
                 .add_child(ChildDeclBuilder::new_lazy_child("b"))
