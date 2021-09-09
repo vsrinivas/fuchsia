@@ -188,6 +188,30 @@ class Transformer {
     __builtin_unreachable();
   }
 
+  zx_status_t TransformIterableInline(const fidl_type_t* type, uint32_t src_byte_size,
+                                      uint32_t src_element_size, uint32_t src_offset,
+                                      uint32_t dst_element_size, uint32_t dst_offset) {
+    if (type->type_tag() == kFidlTypePrimitive) {
+      ZX_DEBUG_ASSERT(src_offset + src_byte_size <= src_next_out_of_line_);
+      ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+      ZX_DEBUG_ASSERT(dst_offset + src_byte_size <= dst_next_out_of_line_);
+      ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
+      memcpy(&dst_bytes_[dst_offset], &src_bytes_[src_offset], src_byte_size);
+      return ZX_OK;
+    }
+
+    for (uint32_t b = 0; b < src_byte_size; b += src_element_size) {
+      zx_status_t status = TransformInline(type, src_offset, dst_offset);
+      if (status != ZX_OK) {
+        return status;
+      }
+      src_offset += src_element_size;
+      dst_offset += dst_element_size;
+    }
+    return ZX_OK;
+  }
+
   zx_status_t TransformPrimitive(const FidlCodedPrimitive* coded_primitive, uint32_t src_offset,
                                  uint32_t dst_offset) {
     uint32_t size = PrimitiveSize(coded_primitive->type);
@@ -312,17 +336,10 @@ class Transformer {
         SRC_VALUE(coded_array->element_size_v1, coded_array->element_size_v2);
     uint32_t dst_element_size =
         DST_VALUE(coded_array->element_size_v1, coded_array->element_size_v2);
-    uint32_t src_offset_end =
-        src_offset + SRC_VALUE(coded_array->array_size_v1, coded_array->array_size_v2);
+    uint32_t src_byte_size = SRC_VALUE(coded_array->array_size_v1, coded_array->array_size_v2);
 
-    for (; src_offset < src_offset_end;
-         src_offset += src_element_size, dst_offset += dst_element_size) {
-      zx_status_t status = TransformInline(coded_array->element, src_offset, dst_offset);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    return ZX_OK;
+    return TransformIterableInline(coded_array->element, src_byte_size, src_element_size,
+                                   src_offset, dst_element_size, dst_offset);
   }
 
   zx_status_t TransformStructPointer(const FidlCodedStructPointer* coded_struct_pointer,
@@ -419,15 +436,8 @@ class Transformer {
     if (status != ZX_OK) {
       return status;
     }
-    for (uint32_t i = 0; i < count; i++) {
-      status = TransformInline(coded_vector->element, src_body_offset, dst_body_offset);
-      if (status != ZX_OK) {
-        return status;
-      }
-      src_body_offset += src_element_size;
-      dst_body_offset += dst_element_size;
-    }
-    return ZX_OK;
+    return TransformIterableInline(coded_vector->element, src_size, src_element_size,
+                                   src_body_offset, dst_element_size, dst_body_offset);
   }
 
   zx_status_t TransformEnvelopeV1ToV2(const fidl_type_t* type, uint32_t src_offset,
