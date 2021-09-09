@@ -121,6 +121,86 @@ pub fn sys_socketpair(
     Ok(SUCCESS)
 }
 
+pub fn sys_recvmsg(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_message_header: UserRef<msghdr>,
+    _flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Respect the `flags` argument.
+
+    let mut message_header = msghdr::default();
+    ctx.task.mm.read_object(user_message_header.clone(), &mut message_header)?;
+
+    let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
+    let result = file.read(&ctx.task, &iovec)?;
+
+    // TODO: These control messages should be written and read in-band.
+    let socket = file.node().socket().map(|socket| socket.lock()).ok_or(errno!(ENOTSOCK))?;
+    if let Some(control_message) =
+        socket.connected_socket().and_then(|s| s.lock().take_control_message())
+    {
+        let max_bytes =
+            std::cmp::min(control_message.len(), message_header.msg_controllen as usize);
+        ctx.task.mm.write_memory(message_header.msg_control, &control_message[..max_bytes])?;
+        message_header.msg_controllen = max_bytes as u64;
+    } else {
+        message_header.msg_controllen = 0;
+    }
+    ctx.task.mm.write_object(user_message_header, &message_header)?;
+    Ok(result.into())
+}
+
+pub fn sys_sendmsg(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_message_header: UserRef<msghdr>,
+    _flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Respect the `flags` argument.
+
+    let mut message_header = msghdr::default();
+    ctx.task.mm.read_object(user_message_header, &mut message_header)?;
+
+    let mut bytes = vec![0u8; message_header.msg_controllen as usize];
+    ctx.task.mm.read_memory(message_header.msg_control, &mut bytes)?;
+
+    if let Some(socket) = file.node().socket() {
+        socket.lock().set_control_message(bytes);
+    }
+
+    let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
+    Ok(file.write(ctx.task, &iovec)?.into())
+}
+
+pub fn sys_shutdown(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    _how: i32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Respect the `how` argument.
+
+    let mut socket = file.node().socket().ok_or(errno!(ENOTSOCK))?.lock();
+    let _disconnected_node = socket.disconnect();
+
+    Ok(SUCCESS)
+}
+
 /// Creates a socket with the provided configuration options, and returns the file that owns it.
 ///
 /// The caller is responsible for adding the returned file to an `FdTable`. For example, by calling

@@ -79,6 +79,34 @@ impl Pipe {
         Box::new(PipeFileObject { pipe: Arc::clone(pipe) })
     }
 
+    /// Increments the reader count for this pipe by 1.
+    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
+    // that without the pipe semantics.
+    pub fn add_reader(&mut self) {
+        self.reader_count += 1;
+    }
+
+    /// Increments the writer count for this pipe by 1.
+    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
+    // that without the pipe semantics.
+    pub fn add_writer(&mut self) {
+        self.writer_count += 1;
+    }
+
+    /// Decrements the reader count for this pipe by 1.
+    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
+    // that without the pipe semantics.
+    pub fn remove_reader(&mut self) {
+        self.reader_count -= 1;
+    }
+
+    /// Decrements the writer count for this pipe by 1.
+    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
+    // that without the pipe semantics.
+    pub fn remove_writer(&mut self) {
+        self.writer_count -= 1;
+    }
+
     fn get_size(&self) -> usize {
         self.size
     }
@@ -120,7 +148,7 @@ impl Pipe {
         self.buffers.push_back(buffer);
     }
 
-    fn read(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
+    pub fn read(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
         // If there isn't any data to read from the pipe, then the behavior
         // depends on whether there are any open writers. If there is an
         // open writer, then we return EAGAIN, to signal that the callers
@@ -201,7 +229,7 @@ impl Pipe {
         Ok(actual)
     }
 
-    fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
+    pub fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
         if self.reader_count == 0 {
             send_checked_signal(task, Signal::SIGPIPE);
             return error!(EPIPE);

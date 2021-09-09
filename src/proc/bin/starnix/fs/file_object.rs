@@ -459,14 +459,22 @@ impl FileObject {
         if !self.can_read() {
             return error!(EBADF);
         }
-        self.blocking_op(task, || self.ops().read(self, task, data), FdEvents::POLLIN)
+        self.blocking_op(
+            task,
+            || self.ops().read(self, task, data),
+            FdEvents::POLLIN | FdEvents::POLLHUP,
+        )
     }
 
     pub fn read_at(&self, task: &Task, offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
         if !self.can_read() {
             return error!(EBADF);
         }
-        self.blocking_op(task, || self.ops().read_at(self, task, offset, data), FdEvents::POLLIN)
+        self.blocking_op(
+            task,
+            || self.ops().read_at(self, task, offset, data),
+            FdEvents::POLLIN | FdEvents::POLLHUP,
+        )
     }
 
     pub fn write(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
@@ -484,7 +492,7 @@ impl FileObject {
                     self.ops().write(self, task, data)
                 }
             },
-            FdEvents::POLLOUT,
+            FdEvents::POLLOUT | FdEvents::POLLHUP,
         )
     }
 
@@ -503,7 +511,7 @@ impl FileObject {
                 let _guard = self.node().append_lock.read();
                 self.ops().write_at(self, task, offset, data)
             },
-            FdEvents::POLLOUT,
+            FdEvents::POLLOUT | FdEvents::POLLHUP,
         )
     }
 

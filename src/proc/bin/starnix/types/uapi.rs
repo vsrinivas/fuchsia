@@ -122,3 +122,17 @@ impl Default for sockaddr_un {
         sockaddr_un { sun_family: 0, sun_path: [0; 108] }
     }
 }
+
+type socklen_t = u32;
+
+#[derive(Debug, Default, Clone, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct msghdr {
+    pub msg_name: UserAddress,
+    pub msg_namelen: u64,
+    pub msg_iov: UserAddress,
+    pub msg_iovlen: u64,
+    pub msg_control: UserAddress,
+    pub msg_controllen: u64,
+    pub msg_flags: u64,
+}

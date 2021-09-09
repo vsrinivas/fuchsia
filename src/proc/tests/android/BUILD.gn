@@ -117,6 +117,7 @@ gvisor_tests = [
   "sigaction_test",
   "sigprocmask_test",
   "sigaltstack_test",
+  "socket_test",
   "stat_test",
   "symlink_test",
   "timerfd_test",
