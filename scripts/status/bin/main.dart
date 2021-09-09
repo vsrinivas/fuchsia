@@ -17,6 +17,7 @@ class StatusCmd {
     ArgsGnCollector(),
     EnvironmentCollector(),
     GitCollector(),
+    JiriCollector(),
   ];
   Map<String, Category> aggregatedInfo = {};
 

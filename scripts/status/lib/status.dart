@@ -8,3 +8,4 @@ export 'env_reader.dart';
 export 'environment_collector.dart';
 export 'git_collector.dart';
 export 'gn_parser.dart';
+export 'jiri_collector.dart';

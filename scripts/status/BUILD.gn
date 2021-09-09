@@ -16,6 +16,7 @@ dart_tool("status") {
     "environment_collector.dart",
     "git_collector.dart",
     "gn_parser.dart",
+    "jiri_collector.dart",
     "status.dart",
   ]
 
