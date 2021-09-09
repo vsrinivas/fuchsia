@@ -10,7 +10,6 @@ executable("vkvalidation_bin") {
   output_name = "vkvalidation"
   sources = [ "vkvalidation.cc" ]
   deps = [
-    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
   ]
@@ -18,6 +17,11 @@ executable("vkvalidation_bin") {
 resource("override") {
   sources = [ "VkLayer_override.json" ]
   outputs = [ "data/test-xdg/vulkan/implicit_layer.d/VkLayer_override.json" ]
+}
+
+resource("override_from_path") {
+  sources = [ "VkLayer_override_path.json" ]
+  outputs = [ "data/test-xdg2/vulkan/implicit_layer.d/VkLayer_override.json" ]
 }
 
 fuchsia_component("vkvalidation_cmp") {
@@ -46,6 +50,7 @@ fuchsia_component("vkvalidation_external_cmp") {
   # Package must not include validation layers
   deps = [
     ":override",
+    ":override_from_path",
     ":vkvalidation_bin",
     "//src/lib/vulkan/validation-layer-package:validation-client",
   ]

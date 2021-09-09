@@ -9,7 +9,7 @@
         binary: "bin/vkvalidation",
         environ: [
             "VK_LOADER_DEBUG=all",
-            "VK_LAYER_PATH=/vulkan_validation_pkg/data/vulkan/explicit_layer.d",
+            "VK_REQUIRE_LAYER_PATH=true",
         ],
     },
 }

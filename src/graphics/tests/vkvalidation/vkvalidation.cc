@@ -2,12 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/defer.h>
-
 #include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
 
-TEST(ValidationLayers, InstanceLayers) {
+const char* kXdgConfigDirs = "XDG_CONFIG_DIRS";
+
+class ValidationLayers : public testing::Test {
+ public:
+  // Set an environment variable for the life of the test case.
+  void SetTemporaryEnv(const char* name, const char* value) {
+    EXPECT_FALSE(getenv(name));
+    setenv(name, value, true);
+    environment_variables_.push_back(name);
+  }
+
+  void SetLayerPathEnviron() {
+    if (getenv("VK_REQUIRE_LAYER_PATH")) {
+      SetTemporaryEnv("VK_LAYER_PATH", "/vulkan_validation_pkg/data/vulkan/explicit_layer.d");
+    }
+  }
+  void TearDown() override {
+    for (const char* variable : environment_variables_) {
+      unsetenv(variable);
+    }
+  }
+
+ private:
+  std::vector<const char*> environment_variables_;
+};
+
+TEST_F(ValidationLayers, InstanceLayers) {
+  SetLayerPathEnviron();
   uint32_t layer_count;
   EXPECT_EQ(VK_SUCCESS, vkEnumerateInstanceLayerProperties(&layer_count, NULL));
   ASSERT_GE(layer_count, 1u);
@@ -38,15 +63,7 @@ VkBool32 debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeve
   return VK_FALSE;
 }
 
-// If |from_file| is set, then the VkLayer_override.json in the package will be used to enable the
-// validation layers.
-void test_validation_layer(const char* layer_name, bool from_file) {
-  fit::deferred_callback unset_callback;
-  if (from_file) {
-    setenv("XDG_CONFIG_DIRS", "/pkg/data/test-xdg", false);
-    // Unset once this test is finished to avoid affecting other tests.
-    unset_callback = fit::defer_callback([] { unsetenv("XDG_CONFIG_DIRS"); });
-  }
+void test_validation_layer(const char* layer_name, bool explicit_validation) {
   uint32_t instance_extension_count;
   EXPECT_EQ(VK_SUCCESS,
             vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr));
@@ -86,9 +103,9 @@ void test_validation_layer(const char* layer_name, bool from_file) {
                                        .apiVersion = VK_API_VERSION_1_1};
 
   std::vector<const char*> layerNameArray;
-  if (!from_file) {
+  if (explicit_validation) {
     layerNameArray.push_back(layer_name);
-    EXPECT_EQ(nullptr, getenv("XDG_CONFIG_DIRS"));
+    EXPECT_EQ(nullptr, getenv(kXdgConfigDirs));
   }
   std::vector<const char*> instanceExtensionArray{VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 
@@ -179,10 +196,26 @@ void test_validation_layer(const char* layer_name, bool from_file) {
 
 }  // namespace
 
-TEST(ValidationLayers, KhronosValidation) {
-  test_validation_layer("VK_LAYER_KHRONOS_validation", false);
+TEST_F(ValidationLayers, KhronosValidation) {
+  SetLayerPathEnviron();
+  test_validation_layer("VK_LAYER_KHRONOS_validation", /*explicit_validation=*/true);
 }
 
-TEST(ValidationLayers, KhronosValidationFromFile) {
-  test_validation_layer("VK_LAYER_KHRONOS_validation", true);
+// VkLayer_override.json in the package will be used to enable the validation
+// layers.
+TEST_F(ValidationLayers, KhronosValidationFromFile) {
+  SetLayerPathEnviron();
+  SetTemporaryEnv(kXdgConfigDirs, "/pkg/data/test-xdg");
+  test_validation_layer("VK_LAYER_KHRONOS_validation", /*explicit_validation=*/false);
+}
+
+// VkLayer_override.json in the package will be used to enable the validation
+// layers and set the path to them
+TEST_F(ValidationLayers, KhronosValidationFromFileAndPath) {
+  if (!getenv("VK_REQUIRE_LAYER_PATH")) {
+    // Setting an explicit layer path won't work, so skip this test.
+    GTEST_SKIP();
+  }
+  SetTemporaryEnv(kXdgConfigDirs, "/pkg/data/test-xdg2");
+  test_validation_layer("VK_LAYER_KHRONOS_validation", /*explicit_validation=*/false);
 }
