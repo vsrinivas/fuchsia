@@ -57,7 +57,7 @@ class NumericProperty final {
   void Subtract(T value);
 
   // Return true if this metric is stored in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
  private:
   friend class ::inspect::internal::State;
@@ -102,7 +102,7 @@ class ArrayValue final {
   void Subtract(size_t index, T value);
 
   // Return true if this metric is stored in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
  private:
   friend class ::inspect::internal::State;
@@ -260,7 +260,7 @@ class Property final {
   Property& operator=(Property&& other) noexcept;
 
   // Return true if this property is stored in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
   // Set the value of this property.
   void Set(const T& value);
@@ -317,7 +317,7 @@ class Link final {
   Link& operator=(Link&& other) = default;
 
   // Return true if this node is stored in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
  private:
   friend class ::inspect::internal::State;
@@ -352,7 +352,7 @@ class LazyNode final {
   LazyNode& operator=(LazyNode&& other) = default;
 
   // Return true if this value is represented in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
  private:
   friend class ::inspect::internal::State;
@@ -674,7 +674,7 @@ class Node final {
   }
 
   // Return true if this node is stored in a buffer. False otherwise.
-  explicit operator bool() { return state_ != nullptr; }
+  explicit operator bool() const { return state_ != nullptr; }
 
   // Create a unique name for children of this node.
   //

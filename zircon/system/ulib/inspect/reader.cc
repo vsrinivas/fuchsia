@@ -112,7 +112,7 @@ struct ParsedNode {
     initialized_ = true;
   }
 
-  explicit operator bool() { return initialized_; }
+  explicit operator bool() const { return initialized_; }
 
   bool is_complete() { return hierarchy.children().size() == children_count; }
 
