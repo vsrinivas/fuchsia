@@ -440,23 +440,17 @@ async fn test_log_packets() {
         .map(|t| format!("{} udp {} -> {} len:{}", t, addr, addr, PAYLOAD.len()))
         .collect::<Vec<_>>();
 
-    // TODO(https://fxbug.dev/80510): use log selectors when they are implemented, rather than
-    // reading all logs and filtering afterwards.
-    let subscription =
-        diagnostics_reader::ArchiveReader::new().snapshot_then_subscribe().expect("subscribed");
     let netstack_moniker = get_component_moniker(&realm, constants::netstack::COMPONENT_NAME)
         .await
         .expect("failed to get netstack moniker");
+    let stream = diagnostics_reader::ArchiveReader::new()
+        .select_all_for_moniker(&netstack_moniker)
+        .snapshot_then_subscribe()
+        .expect("subscribed");
 
-    let stream = subscription.try_filter_map(|data| {
-        futures::future::ok(if data.moniker == netstack_moniker {
-            data.msg().map(ToOwned::to_owned)
-        } else {
-            None
-        })
-    });
-    let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, msg| {
-        let () = patterns.retain(|pattern| !msg.contains(pattern));
+    let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, data| {
+        let () = patterns
+            .retain(|pattern| !data.msg().map(|msg| msg.contains(pattern)).unwrap_or(false));
         futures::future::ok(if patterns.is_empty() {
             async_utils::fold::FoldWhile::Done(())
         } else {

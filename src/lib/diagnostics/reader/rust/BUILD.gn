@@ -26,6 +26,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

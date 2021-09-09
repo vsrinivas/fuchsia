@@ -156,6 +156,12 @@ impl ArchiveReader {
         self
     }
 
+    /// Requests all data for the component identified by the given moniker.
+    pub fn select_all_for_moniker(&mut self, moniker: &str) -> &mut Self {
+        let selector = format!("{}:root", selectors::sanitize_moniker_for_selectors(&moniker));
+        self.add_selector(selector)
+    }
+
     /// Requests to retry when an empty result is received.
     pub fn retry_if_empty(&mut self, retry: bool) -> &mut Self {
         self.should_retry = retry;
@@ -575,6 +581,32 @@ mod tests {
         });
 
         Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn select_all_for_moniker() {
+        let instance = start_component().await.expect("started component");
+
+        let moniker = format!(
+            "fuchsia_component_test_collection:{}/test_component",
+            instance.root.child_name()
+        );
+        let results = ArchiveReader::new()
+            .select_all_for_moniker(&moniker)
+            .snapshot::<Inspect>()
+            .await
+            .expect("snapshotted");
+
+        assert_eq!(results.len(), 1);
+        assert_data_tree!(results[0].payload.as_ref().unwrap(), root: {
+            int: 3u64,
+            "lazy-node": {
+                a: "test",
+                child: {
+                    double: 3.14,
+                },
+            }
+        });
     }
 
     #[fuchsia::test]

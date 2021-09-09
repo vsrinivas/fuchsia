@@ -634,6 +634,14 @@ pub fn sanitize_string_for_selectors(node: &str) -> String {
     sanitized_string
 }
 
+/// Sanitizes a moniker raw string such that it can be used in a selector.
+/// Monikers have a restricted set of characters `a-z`, `0-9`, `_`, `.`, `-`.
+/// Each moniker segment is separated by a `\`. Segments for collections also contain `:`.
+/// That `:` will be escaped.
+pub fn sanitize_moniker_for_selectors(moniker: &str) -> String {
+    moniker.replace(":", "\\:")
+}
+
 pub fn match_moniker_against_component_selector(
     moniker: &[impl AsRef<str> + std::string::ToString],
     component_selector: &ComponentSelector,
@@ -1501,5 +1509,15 @@ mod tests {
             parsed.component_selector.as_ref().unwrap()
         )
         .unwrap());
+    }
+
+    #[test]
+    fn sanitize_moniker_for_selectors_result_is_usable() {
+        let selector =
+            parse_selector(&format!("{}:root", sanitize_moniker_for_selectors("foo/coll:bar/baz")))
+                .unwrap();
+        let component_selector = selector.component_selector.as_ref().unwrap();
+        let moniker = vec!["foo".to_string(), "coll:bar".to_string(), "baz".to_string()];
+        assert!(match_moniker_against_component_selector(&moniker, &component_selector).unwrap());
     }
 }
