@@ -11,6 +11,7 @@ this behavior is not desired, do not pass more than one package argument.
 """
 
 import argparse
+import tempfile
 import os
 import shutil
 import subprocess
@@ -161,42 +162,47 @@ def generate_docs(
         0 if documentation was generated successfully, non-zero otherwise.
     """
     # Run pub over this package to fetch deps.
-    process = subprocess.run(
-        [os.path.join(dart_prebuilt_dir, 'pub'), 'get'],
-        cwd=package_dir,
-        capture_output=True,
-        universal_newlines=True)
-    if process.returncode:
-        print(process.stderr)
-        return 1
+    # Use temp dir for pub_cache to ensure hermetic build.
+    # TODO (https://fxbug.dev/84343) to have all deps locally.
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        process = subprocess.run(
+            [os.path.join(dart_prebuilt_dir, 'pub'), 'get'],
+            cwd=package_dir,
+            env=dict(os.environ, PUB_CACHE=tmpdirname),
+            capture_output=True,
+            universal_newlines=True)
+        if process.returncode:
+            print(process.stderr)
+            return 1
 
-    # Clear the docdir first.
-    docs_dir = os.path.join(out_dir, "docs")
-    pkg_to_docs_path = os.path.join(package_dir, docs_dir)
-    if os.path.exists(pkg_to_docs_path):
-        walk_rmtree(pkg_to_docs_path)
+        # Clear the docdir first.
+        docs_dir = os.path.join(out_dir, "docs")
+        pkg_to_docs_path = os.path.join(package_dir, docs_dir)
+        if os.path.exists(pkg_to_docs_path):
+            walk_rmtree(pkg_to_docs_path)
 
-    # Run dartdoc.
-    excluded_packages = ['Dart', 'logging']
-    process = subprocess.run(
-        [
-            os.path.join(dart_prebuilt_dir, 'dartdoc'),
-            '--no-validate-links',
-            '--auto-include-dependencies',
-            '--no-enhanced-reference-lookup',
-            '--exclude-packages',
-            ','.join(excluded_packages),
-            '--output',
-            docs_dir,
-            '--format',
-            'md',
-        ],
-        cwd=package_dir,
-        capture_output=True,
-        universal_newlines=True)
-    if process.returncode:
-        print(process.stderr)
-        return 1
+        # Run dartdoc.
+        excluded_packages = ['Dart', 'logging']
+        process = subprocess.run(
+            [
+                os.path.join(dart_prebuilt_dir, 'dartdoc'),
+                '--no-validate-links',
+                '--auto-include-dependencies',
+                '--no-enhanced-reference-lookup',
+                '--exclude-packages',
+                ','.join(excluded_packages),
+                '--output',
+                docs_dir,
+                '--format',
+                'md',
+            ],
+            cwd=package_dir,
+            env=dict(os.environ, PUB_CACHE=tmpdirname),
+            capture_output=True,
+            universal_newlines=True)
+        if process.returncode:
+            print(process.stderr)
+            return 1
 
     # Run toc.yaml generation
     if run_toc:
@@ -218,7 +224,6 @@ def generate_docs(
             root_dir=pkg_to_out,
             base_dir='docs')
         walk_rmtree(pkg_to_docs_path)
-
     return 0
 
 
