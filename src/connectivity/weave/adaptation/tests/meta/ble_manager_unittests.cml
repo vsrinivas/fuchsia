@@ -1,0 +1,24 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/ble_manager_unittests",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "weavestack-adaptation-unittests",
+        },
+    ],
+}

@@ -13,7 +13,7 @@ group("tests") {
 }
 
 fuchsia_unittest_component("ble-manager-test") {
-  manifest = rebase_path("meta/ble_manager_unittests.cmx")
+  manifest = rebase_path("meta/ble_manager_unittests.cml")
   deps = [ ":ble_manager_unittests" ]
 }
 
