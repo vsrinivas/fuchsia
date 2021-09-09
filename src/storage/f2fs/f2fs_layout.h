@@ -262,7 +262,7 @@ constexpr uint32_t kSitVBlockMapSize = 64;
 // Note that SitEntry->vblocks has the following bit-field information.
 // [15:10] : allocation type such as CURSEG_XXXX_TYPE
 // [9:0] : valid block count
-constexpr uint32_t kSitVblocksShift = 10;
+constexpr uint16_t kSitVblocksShift = 10;
 constexpr uint16_t kSitVblocksMask = (1 << kSitVblocksShift) - 1;
 
 // Note that SitEntry->vblocks has the following bit-field information.

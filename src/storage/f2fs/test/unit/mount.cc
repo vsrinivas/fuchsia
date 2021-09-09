@@ -93,7 +93,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
 
   // Dnode block test
   page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), vn->Ino());
-  fs->Nodemgr().FillNodeFooter(page, page->index, vn->Ino(), inode_ofs, true);
+  fs->Nodemgr().FillNodeFooter(page, static_cast<nid_t>(page->index), vn->Ino(), inode_ofs, true);
   fs->Nodemgr().SetColdNode(vn, page);
   type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
   out.push_back(type);
@@ -101,7 +101,8 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
 
   // indirect node block test
   page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), nid);
-  fs->Nodemgr().FillNodeFooter(page, page->index, vn->Ino(), indirect_node_ofs, true);
+  fs->Nodemgr().FillNodeFooter(page, static_cast<nid_t>(page->index), vn->Ino(), indirect_node_ofs,
+                               true);
   fs->Nodemgr().SetColdNode(vn, page);
   type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
   out.push_back(type);

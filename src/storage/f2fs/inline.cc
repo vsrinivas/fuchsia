@@ -23,19 +23,19 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
   if (zx_status_t ret = Vfs()->Nodemgr().GetNodePage(Ino(), &node_page); ret != ZX_OK)
     return nullptr;
 
-  f2fs_hash_t namehash = DentryHash(name.data(), name.length());
+  f2fs_hash_t namehash = DentryHash(name.data(), static_cast<int>(name.length()));
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(node_page);
 
   DirEntry *de = nullptr;
 
-  for (uint64_t bit_pos = 0; bit_pos < kNrInlineDentry;) {
+  for (uint32_t bit_pos = 0; bit_pos < kNrInlineDentry;) {
     bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
     if (bit_pos >= kNrInlineDentry)
       break;
 
     de = &dentry_blk->dentry[bit_pos];
-    if (EarlyMatchName(name.data(), name.length(), namehash, de)) {
+    if (EarlyMatchName(name.data(), static_cast<int>(name.length()), namehash, de)) {
       if (!memcmp(dentry_blk->filename[bit_pos], name.data(), name.length())) {
         *res_page = node_page;
 #if 0  // porting needed
@@ -211,7 +211,7 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
 zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *is_converted) {
   *is_converted = false;
 
-  f2fs_hash_t name_hash = DentryHash(name.data(), name.length());
+  f2fs_hash_t name_hash = DentryHash(name.data(), static_cast<int>(name.length()));
 
   Page *ipage = nullptr;
   if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(Ino(), &ipage); err != ZX_OK)
@@ -219,7 +219,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
 
-  int slots = GetDentrySlots(name.length());
+  int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
   unsigned int bit_pos = RoomInInlineDir(dentry_blk, slots);
   if (bit_pos >= kNrInlineDentry) {
     ZX_ASSERT(ConvertInlineDir(dentry_blk) == ZX_OK);
@@ -250,7 +250,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 
   DirEntry *de = &dentry_blk->dentry[bit_pos];
   de->hash_code = name_hash;
-  de->name_len = CpuToLe(name.length());
+  de->name_len = static_cast<uint16_t>(CpuToLe(name.length()));
   memcpy(dentry_blk->filename[bit_pos], name.data(), name.length());
   de->ino = CpuToLe(vnode->Ino());
   SetDeType(de, vnode);
@@ -287,7 +287,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
   InlineDentry *inline_dentry = GetInlineDentryAddr(page);
 
-  unsigned int bit_pos = dentry - inline_dentry->dentry;
+  unsigned int bit_pos = static_cast<uint32_t>(dentry - inline_dentry->dentry);
   int slots = GetDentrySlots(LeToCpu(dentry->name_len));
   for (int i = 0; i < slots; i++)
     TestAndClearBit(bit_pos + i, inline_dentry->dentry_bitmap);

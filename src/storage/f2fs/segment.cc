@@ -51,7 +51,7 @@ inline void SegMgr::SegInfoFromRawSit(SegEntry *se, SitEntry *rs) {
 }
 
 inline void SegMgr::SegInfoToRawSit(SegEntry *se, SitEntry *rs) {
-  uint16_t raw_vblocks = (se->type << kSitVblocksShift) | se->valid_blocks;
+  uint16_t raw_vblocks = static_cast<uint16_t>(se->type << kSitVblocksShift) | se->valid_blocks;
   rs->vblocks = CpuToLe(raw_vblocks);
   memcpy(rs->valid_map, se->cur_valid_map, kSitVBlockMapSize);
   memcpy(se->ckpt_valid_map, rs->valid_map, kSitVBlockMapSize);
@@ -349,7 +349,7 @@ uint64_t SegMgr::GetMtime() {
 
 void SegMgr::SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version) {
   sum->nid = CpuToLe(nid);
-  sum->ofs_in_node = CpuToLe(ofs_in_node);
+  sum->ofs_in_node = CpuToLe(static_cast<uint16_t>(ofs_in_node));
   sum->version = version;
 }
 
@@ -460,7 +460,7 @@ void SegMgr::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
 void SegMgr::LocateDirtySegment(uint32_t segno) {
   SbInfo &sbi = fs_->GetSbInfo();
   DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-  uint16_t valid_blocks;
+  uint32_t valid_blocks;
 
   if (segno == kNullSegNo || IsCurSeg(&sbi, segno))
     return;
@@ -548,7 +548,7 @@ void SegMgr::UpdateSitEntry(block_t blkaddr, int del) {
 
   ZX_ASSERT(!((new_vblocks >> (sizeof(uint16_t) << 3) || (new_vblocks > sbi.blocks_per_seg))));
 
-  se->valid_blocks = new_vblocks;
+  se->valid_blocks = static_cast<uint16_t>(new_vblocks);
   se->mtime = GetMtime();
   GetSitInfo(&sbi)->max_mtime = se->mtime;
 
@@ -802,7 +802,7 @@ void SegMgr::NextFreeBlkoff(CursegInfo *seg, block_t start) {
         !TestValidBitmap(ofs, reinterpret_cast<char *>(se->cur_valid_map)))
       break;
   }
-  seg->next_blkoff = ofs;
+  seg->next_blkoff = static_cast<uint16_t>(ofs);
 }
 
 // If a segment is written by LFS manner, next block offset is just obtained
@@ -1147,7 +1147,7 @@ zx_status_t SegMgr::WriteMetaPage(Page *page, WritebackControl *wbc) {
   // 	return kAopWritepageActivate;
 #endif
   SetPageWriteback(page);
-  SubmitWritePage(page, page->index, PageType::kMeta);
+  SubmitWritePage(page, static_cast<block_t>(page->index), PageType::kMeta);
   return ZX_OK;
 }
 
@@ -1205,7 +1205,8 @@ void SegMgr::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, bloc
     ChangeCurseg(type, true);
   }
 
-  curseg->next_blkoff = GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1);
+  curseg->next_blkoff =
+      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1));
   AddSumEntry(type, sum, curseg->next_blkoff);
 
   RefreshSitEntry(old_blkaddr, new_blkaddr);
@@ -1237,7 +1238,8 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
     curseg->next_segno = segno;
     ChangeCurseg(type, true);
   }
-  curseg->next_blkoff = GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1);
+  curseg->next_blkoff =
+      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1));
   AddSumEntry(type, sum, curseg->next_blkoff);
 
   /* change the current log to the next block addr in advance */
@@ -1245,7 +1247,8 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
     curseg->next_segno = next_segno;
     ChangeCurseg(type, true);
   }
-  curseg->next_blkoff = GetSegOffFromSeg0(&sbi, next_blkaddr) & (sbi.blocks_per_seg - 1);
+  curseg->next_blkoff =
+      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, next_blkaddr) & (sbi.blocks_per_seg - 1));
 
   /* rewrite node page */
   SetPageWriteback(page);
@@ -1298,7 +1301,7 @@ int SegMgr::ReadCompactedSummaries() {
     seg_i->next_blkoff = blk_off;
 
     if (seg_i->alloc_type == static_cast<uint8_t>(AllocMode::kSSR))
-      blk_off = sbi.blocks_per_seg;
+      blk_off = static_cast<uint16_t>(sbi.blocks_per_seg);
 
     for (j = 0; j < blk_off; j++) {
       Summary *s;
@@ -1429,7 +1432,7 @@ void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
     uint16_t blkoff;
     seg_i = CURSEG_I(&sbi, static_cast<CursegType>(i));
     if (sbi.ckpt->alloc_type[i] == static_cast<uint8_t>(AllocMode::kSSR)) {
-      blkoff = sbi.blocks_per_seg;
+      blkoff = static_cast<uint16_t>(sbi.blocks_per_seg);
     } else {
       blkoff = CursegBlkoff(i);
     }
@@ -1586,7 +1589,7 @@ void SegMgr::FlushSitEntries() {
   uint64_t *bitmap = sit_i->dirty_sentries_bitmap;
   CursegInfo *curseg = CURSEG_I(&sbi, CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
-  uint64_t nsegs = TotalSegs(&sbi);
+  block_t nsegs = TotalSegs(&sbi);
   Page *page = nullptr;
   SitBlock *raw_sit = nullptr;
   uint32_t start = 0, end = 0;
@@ -1714,7 +1717,7 @@ zx_status_t SegMgr::BuildSitInfo() {
 
   sit_i->sit_base_addr = LeToCpu(raw_super->sit_blkaddr);
   sit_i->sit_blocks = sit_segs << sbi.log_blocks_per_seg;
-  sit_i->written_valid_blocks = LeToCpu(ckpt->valid_block_count);
+  sit_i->written_valid_blocks = LeToCpu(static_cast<block_t>(ckpt->valid_block_count));
   sit_i->sit_bitmap = dst_bitmap;
   sit_i->bitmap_size = bitmap_size;
   sit_i->dirty_sentries = 0;
@@ -1853,7 +1856,7 @@ void SegMgr::InitDirtySegmap() {
     if (segno >= TotalSegs(&sbi))
       break;
     offset = segno + 1;
-    valid_blocks = GetValidBlocks(segno, 0);
+    valid_blocks = static_cast<uint16_t>(GetValidBlocks(segno, 0));
     if (valid_blocks >= sbi.blocks_per_seg || !valid_blocks) {
       full_block_cnt++;
       continue;

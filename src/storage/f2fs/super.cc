@@ -324,8 +324,8 @@ zx_status_t F2fs::FillSuper() {
 
   sbi_->total_valid_node_count = LeToCpu(sbi_->ckpt->valid_node_count);
   sbi_->total_valid_inode_count = LeToCpu(sbi_->ckpt->valid_inode_count);
-  sbi_->user_block_count = LeToCpu(sbi_->ckpt->user_block_count);
-  sbi_->total_valid_block_count = LeToCpu(sbi_->ckpt->valid_block_count);
+  sbi_->user_block_count = static_cast<block_t>(LeToCpu(sbi_->ckpt->user_block_count));
+  sbi_->total_valid_block_count = static_cast<block_t>(LeToCpu(sbi_->ckpt->valid_block_count));
   sbi_->last_valid_block_count = sbi_->total_valid_block_count;
   sbi_->alloc_valid_block_count = 0;
   list_initialize(&sbi_->dir_inode_list);

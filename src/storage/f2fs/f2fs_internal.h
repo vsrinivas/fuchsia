@@ -67,7 +67,7 @@ struct ExtentInfo {
   fs::SharedMutex ext_lock;  // rwlock for consistency
   uint64_t fofs = 0;         // start offset in a file
   uint32_t blk_addr = 0;     // start block address of the extent
-  uint64_t len = 0;          // lenth of the extent
+  uint32_t len = 0;          // lenth of the extent
 };
 
 // i_advise uses Fadvise:xxx bit. We can add additional hints later.
@@ -123,7 +123,7 @@ struct DnodeOfData {
   Page *inode_page = nullptr;      // its inode page, NULL is possible
   Page *node_page = nullptr;       // cached direct node page
   nid_t nid = 0;                   // node id of the direct node block
-  uint64_t ofs_in_node = 0;        // data offset in the node page
+  uint32_t ofs_in_node = 0;        // data offset in the node page
   bool inode_page_locked = false;  // inode page is locked or not
   block_t data_blkaddr = 0;        // block address of the node block
 };
@@ -295,7 +295,7 @@ struct SbInfo {
   struct f2fs_stat_info *stat_info = nullptr;  // FS status information
   uint64_t segment_count[2];                   // # of allocated segments
   uint64_t block_count[2];                     // # of allocated blocks
-  uint64_t last_victim[2];                     // last victim segment #
+  uint32_t last_victim[2];                     // last victim segment #
   int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
   int bg_gc = 0;                               // background gc calls
   fbl::Mutex stat_lock;                        // lock for stat operations

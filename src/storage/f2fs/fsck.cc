@@ -56,7 +56,9 @@ zx_status_t Fsck(Bcache *bc) {
   return fsck.Run();
 }
 
-zx_status_t FsckWorker::ReadBlock(void *data, uint64_t bno) { return bc_->Readblk(bno, data); }
+zx_status_t FsckWorker::ReadBlock(void *data, uint64_t bno) {
+  return bc_->Readblk(static_cast<block_t>(bno), data);
+}
 
 void FsckWorker::AddIntoHardLinkList(uint32_t nid, uint32_t link_cnt) {
   FsckInfo *fsck = &fsck_;
@@ -277,7 +279,7 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
   NodeType ntype;
   uint32_t i_links = LeToCpu(node_blk->i.i_links);
   uint64_t i_blocks = LeToCpu(node_blk->i.i_blocks);
-  uint32_t idx = 0;
+  uint16_t idx = 0;
 
   ZX_ASSERT(node_blk->footer.nid == node_blk->footer.ino);
   ZX_ASSERT(LeToCpu(node_blk->footer.nid) == nid);
@@ -399,7 +401,7 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
 void FsckWorker::ChkDnodeBlk(Inode *inode, uint32_t nid, FileType ftype, Node *node_blk,
                              uint32_t *blk_cnt, NodeInfo *ni) {
   uint32_t child_cnt = 0, child_files = 0;
-  for (uint32_t idx = 0; idx < kAddrsPerBlock; idx++) {
+  for (uint16_t idx = 0; idx < kAddrsPerBlock; idx++) {
     if (LeToCpu(node_blk->dn.addr[idx]) == 0x0)
       continue;
     *blk_cnt = *blk_cnt + 1;
@@ -495,7 +497,7 @@ void FsckWorker::ChkDentryBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_c
     std::string_view name(reinterpret_cast<char *>(de_blk->filename[i]),
                           LeToCpu(de_blk->dentry[i].name_len));
 
-    hash_code = DentryHash(name.data(), name.length());
+    hash_code = DentryHash(name.data(), static_cast<int>(name.length()));
 
     ftype = static_cast<FileType>(de_blk->dentry[i].file_type);
 
@@ -1007,7 +1009,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   }
 
   crc = *(unsigned int *)((unsigned char *)cp_block + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, crc_offset)) {
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset))) {
     delete reinterpret_cast<Block *>(cp_page_1);
     return nullptr;
   }
@@ -1032,7 +1034,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   }
 
   crc = *(unsigned int *)((unsigned char *)cp_block + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, crc_offset)) {
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset))) {
     delete reinterpret_cast<Block *>(cp_page_1);
     delete reinterpret_cast<Block *>(cp_page_2);
     return nullptr;
@@ -1056,7 +1058,7 @@ zx_status_t FsckWorker::GetValidCheckpoint() {
   void *cp1, *cp2, *cur_page;
   uint64_t blk_size = sbi_.blocksize;
   uint64_t cp1_version = 0, cp2_version = 0;
-  uint64_t cp_start_blk_no;
+  block_t cp_start_blk_no;
   Block *blk = new Block;
 
   if (sbi_.ckpt = reinterpret_cast<Checkpoint *>(blk); sbi_.ckpt == nullptr)
@@ -1188,7 +1190,7 @@ zx_status_t FsckWorker::BuildSitInfo() {
 
   sit_i->sit_base_addr = LeToCpu(raw_sb->sit_blkaddr);
   sit_i->sit_blocks = sit_segs << sbi_.log_blocks_per_seg;
-  sit_i->written_valid_blocks = LeToCpu(ckpt->valid_block_count);
+  sit_i->written_valid_blocks = LeToCpu(static_cast<uint32_t>(ckpt->valid_block_count));
   sit_i->sit_bitmap = dst_bitmap;
   sit_i->bitmap_size = bitmap_size;
   sit_i->dirty_sentries = 0;
@@ -1238,7 +1240,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
     curseg->next_blkoff = blk_off;
 
     if (curseg->alloc_type == static_cast<uint8_t>(AllocMode::kSSR))
-      blk_off = sbi_.blocks_per_seg;
+      blk_off = static_cast<unsigned short>(sbi_.blocks_per_seg);
 
     for (j = 0; j < blk_off; j++) {
       Summary *s;
@@ -1487,7 +1489,8 @@ zx_status_t FsckWorker::GetNatEntry(nid_t nid, RawNatEntry *raw_nat) {
   NmInfo *nm_i = GetNmInfo(&sbi_);
   pgoff_t block_off;
   pgoff_t block_addr;
-  int seg_off, entry_off;
+  pgoff_t seg_off;
+  int entry_off;
   int ret;
 
   if ((nid / kNatEntryPerBlock) > fsck->nr_nat_entries) {
@@ -1595,7 +1598,7 @@ void FsckWorker::BuildSitAreaBitmap() {
   memset(fsck->sit_area_bitmap, 0, fsck->sit_area_bitmap_sz);
   char *ptr = fsck->sit_area_bitmap;
 
-  for (uint64_t segno = 0; segno < sm_i->main_segments; segno++) {
+  for (uint32_t segno = 0; segno < sm_i->main_segments; segno++) {
     SegEntry *se = GetSegEntry(segno);
 
     memcpy(ptr, se->cur_valid_map, kSitVBlockMapSize);
@@ -1657,7 +1660,7 @@ void FsckWorker::BuildNatAreaBitmap() {
 
   pgoff_t block_off;
   pgoff_t block_addr;
-  int seg_off;
+  pgoff_t seg_off;
   int ret;
 
   Block *blk = new Block;
@@ -1683,7 +1686,7 @@ void FsckWorker::BuildNatAreaBitmap() {
     ret = ReadBlock(nat_block, block_addr);
     ZX_ASSERT(ret >= 0);
 
-    nid = block_off * kNatEntryPerBlock;
+    nid = static_cast<uint32_t>(block_off * kNatEntryPerBlock);
     for (uint32_t i = 0; i < kNatEntryPerBlock; i++) {
       RawNatEntry raw_nat;
       NodeInfo ni;
@@ -1751,8 +1754,8 @@ zx_status_t FsckWorker::DoMount() {
   PrintCkptInfo();
   sbi_.total_valid_node_count = LeToCpu(sbi_.ckpt->valid_node_count);
   sbi_.total_valid_inode_count = LeToCpu(sbi_.ckpt->valid_inode_count);
-  sbi_.user_block_count = LeToCpu(sbi_.ckpt->user_block_count);
-  sbi_.total_valid_block_count = LeToCpu(sbi_.ckpt->valid_block_count);
+  sbi_.user_block_count = LeToCpu(static_cast<block_t>(sbi_.ckpt->user_block_count));
+  sbi_.total_valid_block_count = LeToCpu(static_cast<block_t>(sbi_.ckpt->valid_block_count));
   sbi_.last_valid_block_count = sbi_.total_valid_block_count;
   sbi_.alloc_valid_block_count = 0;
 

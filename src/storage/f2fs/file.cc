@@ -310,7 +310,7 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   size_t off_in_buf = 0;
   Page *data_page = nullptr;
   void *data_buf = nullptr;
-  uint64_t n;
+  pgoff_t n;
   size_t left = len;
   uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
 

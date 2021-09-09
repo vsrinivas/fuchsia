@@ -20,7 +20,7 @@ using f2fs_hash_t = uint32_t;
 using gfp_t = uint32_t;
 using nid_t = uint32_t;
 using ino_t = uint32_t;
-using pgoff_t = unsigned long;
+using pgoff_t = uint64_t;
 using atomic_t = std::atomic_int;
 using umode_t = uint16_t;
 
@@ -67,7 +67,7 @@ constexpr size_t kWriteFlushFua = (kWrite | kSync | kFlush | kFua);
 
 struct Page {
   uint8_t data[kPageSize];
-  uint32_t index = -1;     // meta = lba, node = node id, file = fileofs;
+  pgoff_t index = -1;      // meta = lba, node = node id, file = fileofs;
   void *host = nullptr;    // meta = null, node = null, file = vnodef2fs
   uint32_t host_nid = -1;  // meta = F2FS_META_INO(sbi), node = F2FS_NODE_INO, file = host->nid_
 };

@@ -226,7 +226,7 @@ zx_status_t MkfsWorker::WriteToDisk(void *buf, uint64_t offset, size_t length) {
   uint64_t curr_offset = offset;
 
   for (uint64_t i = 0; i < length / kBlockSize; i++) {
-    if ((status = bc_->Writeblk((offset / kBlockSize) + i, buf)) != ZX_OK) {
+    if ((status = bc_->Writeblk(static_cast<block_t>((offset / kBlockSize) + i), buf)) != ZX_OK) {
       std::cout << "mkfs: Failed to write root directory: " << status << std::endl;
     }
 
@@ -275,9 +275,9 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.segs_per_sec = CpuToLe(params_.segs_per_sec);
   super_block_.secs_per_zone = CpuToLe(params_.secs_per_zone);
   uint64_t blk_size_bytes = 1 << log_blocksize;
-  uint32_t segment_size_bytes = blk_size_bytes * params_.blks_per_seg;
-  uint32_t zone_size_bytes =
-      blk_size_bytes * params_.secs_per_zone * params_.segs_per_sec * params_.blks_per_seg;
+  uint32_t segment_size_bytes = static_cast<uint32_t>(blk_size_bytes * params_.blks_per_seg);
+  uint32_t zone_size_bytes = static_cast<uint32_t>(blk_size_bytes * params_.secs_per_zone *
+                                                   params_.segs_per_sec * params_.blks_per_seg);
 
   super_block_.checksum_offset = 0;
 
@@ -294,11 +294,12 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
            params_.start_sector % kDefaultSectorsPerBlock, kDefaultSectorsPerBlock);
   }
 
-  super_block_.segment_count =
+  super_block_.segment_count = static_cast<uint32_t>(
       CpuToLe(((params_.total_sectors * kDefaultSectorSize) - zone_align_start_offset) /
-              segment_size_bytes);
+              segment_size_bytes));
 
-  super_block_.segment0_blkaddr = CpuToLe(zone_align_start_offset / blk_size_bytes);
+  super_block_.segment0_blkaddr =
+      static_cast<uint32_t>(CpuToLe(zone_align_start_offset / blk_size_bytes));
   super_block_.cp_blkaddr = super_block_.segment0_blkaddr;
 
   super_block_.segment_count_ckpt = CpuToLe(kNumberOfCheckpointPack);
@@ -364,8 +365,9 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 
   if (uint64_t diff = total_meta_segments % (params_.segs_per_sec * params_.secs_per_zone);
       diff != 0)
-    super_block_.segment_count_ssa = CpuToLe(LeToCpu(super_block_.segment_count_ssa) +
-                                             (params_.segs_per_sec * params_.secs_per_zone - diff));
+    super_block_.segment_count_ssa =
+        static_cast<uint32_t>(CpuToLe(LeToCpu(super_block_.segment_count_ssa) +
+                                      (params_.segs_per_sec * params_.secs_per_zone - diff)));
 
   super_block_.main_blkaddr =
       CpuToLe(LeToCpu(super_block_.ssa_blkaddr) +
@@ -729,12 +731,12 @@ zx_status_t MkfsWorker::WriteRootInode() {
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
-  raw_node->i.i_atime = cur_time.tv_sec;
-  raw_node->i.i_atime_nsec = cur_time.tv_nsec;
-  raw_node->i.i_ctime = cur_time.tv_sec;
-  raw_node->i.i_ctime_nsec = cur_time.tv_nsec;
-  raw_node->i.i_mtime = cur_time.tv_sec;
-  raw_node->i.i_mtime_nsec = cur_time.tv_nsec;
+  raw_node->i.i_atime = static_cast<uint64_t>(cur_time.tv_sec);
+  raw_node->i.i_atime_nsec = static_cast<uint32_t>(cur_time.tv_nsec);
+  raw_node->i.i_ctime = static_cast<uint64_t>(cur_time.tv_sec);
+  raw_node->i.i_ctime_nsec = static_cast<uint32_t>(cur_time.tv_nsec);
+  raw_node->i.i_mtime = static_cast<uint64_t>(cur_time.tv_sec);
+  raw_node->i.i_mtime_nsec = static_cast<uint32_t>(cur_time.tv_nsec);
   raw_node->i.i_generation = 0;
   raw_node->i.i_xattr_nid = 0;
   raw_node->i.i_flags = 0;
@@ -743,10 +745,10 @@ zx_status_t MkfsWorker::WriteRootInode() {
   uint64_t data_blk_nor =
       LeToCpu(super_block_.main_blkaddr) +
       params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)] * params_.blks_per_seg;
-  raw_node->i.i_addr[0] = CpuToLe(data_blk_nor);
+  raw_node->i.i_addr[0] = static_cast<uint32_t>(CpuToLe(data_blk_nor));
 
   raw_node->i.i_ext.fofs = 0;
-  raw_node->i.i_ext.blk_addr = CpuToLe(data_blk_nor);
+  raw_node->i.i_ext.blk_addr = static_cast<uint32_t>(CpuToLe(data_blk_nor));
   raw_node->i.i_ext.len = CpuToLe(uint32_t{1});
 
   uint64_t main_area_node_seg_blk_offset = LeToCpu(super_block_.main_blkaddr);
@@ -859,7 +861,9 @@ zx_status_t MkfsWorker::CreateRootDir() {
   return err;
 }
 
-zx_status_t MkfsWorker::TrimDevice() { return bc_->Trim(0, params_.total_sectors); }
+zx_status_t MkfsWorker::TrimDevice() {
+  return bc_->Trim(0, static_cast<block_t>(params_.total_sectors));
+}
 
 zx_status_t MkfsWorker::FormatDevice() {
   zx_status_t err = ZX_OK;

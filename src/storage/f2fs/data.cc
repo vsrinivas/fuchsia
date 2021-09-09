@@ -137,10 +137,10 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     /* Split the existing extent */
     if (fi->ext.len > 1 && fofs >= start_fofs && fofs <= end_fofs) {
       if ((end_fofs - fofs) < (fi->ext.len >> 1)) {
-        fi->ext.len = fofs - start_fofs;
+        fi->ext.len = static_cast<uint32_t>(fofs - start_fofs);
       } else {
         fi->ext.fofs = fofs + 1;
-        fi->ext.blk_addr = start_blkaddr + fofs - start_fofs + 1;
+        fi->ext.blk_addr = static_cast<uint32_t>(start_blkaddr + fofs - start_fofs + 1);
         fi->ext.len -= fofs - start_fofs + 1;
       }
       break;

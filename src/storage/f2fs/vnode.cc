@@ -240,7 +240,7 @@ struct f2fs_iget_args {
 // }
 #endif
 
-zx_status_t VnodeF2fs::Vget(F2fs *fs, uint64_t ino, fbl::RefPtr<VnodeF2fs> *out) {
+zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
 
   if (fs->LookupVnode(ino, &vnode_refptr) == ZX_OK) {
@@ -303,8 +303,8 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_mtime = CpuToLe(static_cast<uint64_t>(mtime_.tv_sec));
   ri->i_atime_nsec = CpuToLe(static_cast<uint32_t>(atime_.tv_nsec));
   ri->i_ctime_nsec = CpuToLe(static_cast<uint32_t>(ctime_.tv_nsec));
-  ri->i_mtime_nsec = CpuToLe(static_cast<uint64_t>(mtime_.tv_nsec));
-  ri->i_current_depth = CpuToLe(GetCurDirDepth());
+  ri->i_mtime_nsec = CpuToLe(static_cast<uint32_t>(mtime_.tv_nsec));
+  ri->i_current_depth = CpuToLe(static_cast<uint32_t>(GetCurDirDepth()));
   ri->i_xattr_nid = CpuToLe(GetXattrNid());
   ri->i_flags = CpuToLe(GetInodeFlags());
   ri->i_generation = CpuToLe(GetGeneration());
@@ -411,7 +411,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   // lock_page(page);
 #endif
   WaitOnPageWriteback(page);
-  zero_user(page, offset, kPageCacheSize - offset);
+  zero_user(page, static_cast<uint32_t>(offset), static_cast<uint32_t>(kPageCacheSize - offset));
 #if 0  // porting needed
   // set_page_dirty(page);
 #else
@@ -691,7 +691,7 @@ inline void VnodeF2fs::GetExtentInfo(const Extent &i_ext) {
 
 inline void VnodeF2fs::SetRawExtent(Extent &i_ext) {
   fs::SharedLock lock(fi_.ext.ext_lock);
-  i_ext.fofs = CpuToLe(fi_.ext.fofs);
+  i_ext.fofs = CpuToLe(static_cast<uint32_t>(fi_.ext.fofs));
   i_ext.blk_addr = CpuToLe(fi_.ext.blk_addr);
   i_ext.len = CpuToLe(fi_.ext.len);
 }

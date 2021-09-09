@@ -37,7 +37,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
     vnode->SetGid(getgid());
   }
 
-  vnode->SetMode(mode);
+  vnode->SetMode(static_cast<umode_t>(mode));
   vnode->InitSize();
   vnode->ClearNlink();
   vnode->InitBlocks();
@@ -62,7 +62,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
 
 int Dir::IsMultimediaFile(VnodeF2fs *vnode, const char *sub) {
   int slen = vnode->GetNameLen();
-  int sublen = strlen(sub);
+  int sublen = static_cast<int>(strlen(sub));
   int ret;
 
   if (sublen > slen)
@@ -73,7 +73,7 @@ int Dir::IsMultimediaFile(VnodeF2fs *vnode, const char *sub) {
     int i;
     char upper_sub[8];
     for (i = 0; i < sublen && i < static_cast<int>(sizeof(upper_sub)); i++)
-      upper_sub[i] = toupper(sub[i]);
+      upper_sub[i] = static_cast<char>(toupper(sub[i]));
     return memcmp(vnode->GetName() + slen - sublen, upper_sub, sublen);
   }
 

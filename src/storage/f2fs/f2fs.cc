@@ -200,7 +200,7 @@ block_t F2fs::ValidUserBlocks() {
   return sbi_->total_valid_block_count;
 }
 
-uint64_t F2fs::ValidNodeCount() {
+uint32_t F2fs::ValidNodeCount() {
   fbl::AutoLock lock(&sbi_->stat_lock);
   return sbi_->total_valid_node_count;
 }
@@ -217,7 +217,7 @@ void F2fs::DecValidInodeCount() {
   sbi_->total_valid_inode_count--;
 }
 
-uint64_t F2fs::ValidInodeCount() {
+uint32_t F2fs::ValidInodeCount() {
   fbl::AutoLock lock(&sbi_->stat_lock);
   return sbi_->total_valid_inode_count;
 }

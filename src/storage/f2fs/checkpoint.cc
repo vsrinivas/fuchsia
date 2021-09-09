@@ -31,7 +31,8 @@ repeat:
 #endif
     goto repeat;
   }
-  if (VnodeF2fs::Readpage(this, static_cast<Page *>(PageAddress(page)), index, kReadSync)) {
+  if (VnodeF2fs::Readpage(this, static_cast<Page *>(PageAddress(page)), static_cast<block_t>(index),
+                          kReadSync)) {
     F2fsPutPage(page, 1);
     goto repeat;
   }
@@ -352,7 +353,7 @@ Page *F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
     goto invalid_cp1;
 
   crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(cp_block) + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, crc_offset))
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset)))
     goto invalid_cp1;
 
   pre_version = LeToCpu(cp_block->checkpoint_ver);
@@ -367,7 +368,7 @@ Page *F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
     goto invalid_cp2;
 
   crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(cp_block) + crc_offset);
-  if (!F2fsCrcValid(crc, cp_block, crc_offset))
+  if (!F2fsCrcValid(crc, cp_block, static_cast<uint32_t>(crc_offset)))
     goto invalid_cp2;
 
   cur_version = LeToCpu(cp_block->checkpoint_ver);
@@ -390,7 +391,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   Page *cp1, *cp2, *cur_page;
   uint64_t blk_size = sbi_->blocksize;
   uint64_t cp1_version = 0, cp2_version = 0;
-  uint64_t cp_start_blk_no;
+  block_t cp_start_blk_no;
 
   sbi_->ckpt = reinterpret_cast<Checkpoint *>(new FsBlock);
   if (!sbi_->ckpt)
@@ -669,7 +670,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
     ckpt->ckpt_flags &= (~kCpCompactSumFlag);
   }
 
-  orphan_blocks = (sbi.n_orphans + kOrphansPerBlock - 1) / kOrphansPerBlock;
+  orphan_blocks = static_cast<uint32_t>((sbi.n_orphans + kOrphansPerBlock - 1) / kOrphansPerBlock);
   ckpt->cp_pack_start_sum = 1 + orphan_blocks;
   ckpt->cp_pack_total_block_count = 2 + data_sum_blocks + orphan_blocks;
 

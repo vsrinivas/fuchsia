@@ -389,7 +389,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     std::vector<uint32_t> exp_inos(orphan_inos);
     std::iota(exp_inos.begin(), exp_inos.end(), start_ino);
 
-    block_t start_blk = cp_page->index + 1;
+    pgoff_t start_blk = cp_page->index + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);
@@ -470,7 +470,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
       exp_inos.erase(exp_inos.begin() + (i * 10));
     }
 
-    block_t start_blk = cp_page->index + 1;
+    pgoff_t start_blk = cp_page->index + 1;
     block_t orphan_blkaddr = cp->cp_pack_start_sum - 1;
 
     ASSERT_EQ(cp->ckpt_flags & kCpOrphanPresentFlag, kCpOrphanPresentFlag);

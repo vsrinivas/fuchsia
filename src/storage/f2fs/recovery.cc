@@ -193,7 +193,8 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   SbInfo &sbi = GetSbInfo();
   SegEntry *sentry;
   uint32_t segno = GetSegNo(&sbi, blkaddr);
-  uint16_t blkoff = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
+  uint16_t blkoff =
+      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1));
   Summary sum;
   nid_t ino;
   void *kaddr;

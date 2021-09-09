@@ -75,7 +75,7 @@ inline pgoff_t NodeMgr::CurrentNatAddr(nid_t start) {
   NmInfo *nm_i = GetNmInfo(&sbi);
   pgoff_t block_off;
   pgoff_t block_addr;
-  int seg_off;
+  pgoff_t seg_off;
 
   block_off = NatBlockOffset(start);
   seg_off = block_off >> sbi.log_blocks_per_seg;
@@ -114,7 +114,7 @@ inline pgoff_t NodeMgr::NextNatAddr(pgoff_t block_addr) {
 }
 
 inline void NodeMgr::SetToNextNat(NmInfo *nm_i, nid_t start_nid) {
-  uint32_t block_off = NatBlockOffset(start_nid);
+  pgoff_t block_off = NatBlockOffset(start_nid);
 
   if (TestValidBitmap(block_off, nm_i->nat_bitmap))
     ClearValidBitmap(block_off, nm_i->nat_bitmap);
@@ -416,7 +416,7 @@ void NodeMgr::RaNatPages(nid_t nid) {
     page = GrabCachePage(nullptr, MetaIno(&sbi), index);
     if (!page)
       continue;
-    if (VnodeF2fs::Readpage(fs_, page, index, 0 /*READ*/)) {
+    if (VnodeF2fs::Readpage(fs_, page, static_cast<block_t>(index), 0 /*READ*/)) {
       F2fsPutPage(page, 1);
       continue;
     }
@@ -672,7 +672,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   noffset[0] = 0;
 
   if (block < direct_index) {
-    offset[n++] = block;
+    offset[n++] = static_cast<int>(block);
     level = 0;
     goto got;
   }
@@ -680,7 +680,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   if (block < direct_blks) {
     offset[n++] = kNodeDir1Block;
     noffset[n] = 1;
-    offset[n++] = block;
+    offset[n++] = static_cast<int>(block);
     level = 1;
     goto got;
   }
@@ -688,7 +688,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   if (block < direct_blks) {
     offset[n++] = kNodeDir2Block;
     noffset[n] = 2;
-    offset[n++] = block;
+    offset[n++] = static_cast<int>(block);
     level = 1;
     goto got;
   }
@@ -696,7 +696,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   if (block < indirect_blks) {
     offset[n++] = kNodeInd1Block;
     noffset[n] = 3;
-    offset[n++] = block / direct_blks;
+    offset[n++] = static_cast<int>(block / direct_blks);
     noffset[n] = 4 + offset[n - 1];
     offset[n++] = block % direct_blks;
     level = 2;
@@ -706,7 +706,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   if (block < indirect_blks) {
     offset[n++] = kNodeInd2Block;
     noffset[n] = 4 + dptrs_per_blk;
-    offset[n++] = block / direct_blks;
+    offset[n++] = static_cast<int>(block / direct_blks);
     noffset[n] = 5 + dptrs_per_blk + offset[n - 1];
     offset[n++] = block % direct_blks;
     level = 2;
@@ -716,7 +716,7 @@ zx::status<int> NodeMgr::GetNodePath(long block, int offset[4], uint32_t noffset
   if (block < dindirect_blks) {
     offset[n++] = kNodeDIndBlock;
     noffset[n] = 5 + (dptrs_per_blk * 2);
-    offset[n++] = block / indirect_blks;
+    offset[n++] = static_cast<int>(block / indirect_blks);
     noffset[n] = 6 + (dptrs_per_blk * 2) + offset[n - 1] * (dptrs_per_blk + 1);
     offset[n++] = (block / direct_blks) % dptrs_per_blk;
     noffset[n] = 7 + (dptrs_per_blk * 2) + offset[n - 2] * (dptrs_per_blk + 1) + offset[n - 1];
@@ -1234,7 +1234,7 @@ void NodeMgr::RaNodePage(nid_t nid) {
 }
 #endif
 
-zx_status_t NodeMgr::GetNodePage(pgoff_t nid, Page **out) {
+zx_status_t NodeMgr::GetNodePage(nid_t nid, Page **out) {
   int err;
   Page *page = nullptr;
   SbInfo &sbi = fs_->GetSbInfo();

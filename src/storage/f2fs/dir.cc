@@ -62,7 +62,7 @@ void Dir::SetDeType(DirEntry *de, VnodeF2fs *vnode) {
 }
 
 uint64_t Dir::DirBlockIndex(uint32_t level, uint32_t idx) {
-  uint64_t i;
+  uint32_t i;
   uint64_t bidx = 0;
 
   for (i = 0; i < level; i++)
@@ -84,7 +84,7 @@ bool Dir::EarlyMatchName(const char *name, int namelen, f2fs_hash_t namehash, Di
 DirEntry *Dir::FindInBlock(Page *dentry_page, const char *name, int namelen, int *max_slots,
                            f2fs_hash_t namehash, Page **res_page) {
   DirEntry *de;
-  uint64_t bit_pos, end_pos, next_pos;
+  uint32_t bit_pos, end_pos, next_pos;
 #if 0  // porting needed
   // f2fs_dentry_block *dentry_blk = kmap(dentry_page);
 #else
@@ -124,7 +124,7 @@ DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, int namele
                            f2fs_hash_t namehash, Page **res_page) {
   int s = (namelen + kNameLen - 1) / kNameLen;
   unsigned int nbucket, nblock;
-  unsigned int bidx, end_block;
+  uint64_t bidx, end_block;
   Page *dentry_page = nullptr;
   DirEntry *de = nullptr;
   bool room = false;
@@ -184,11 +184,12 @@ DirEntry *Dir::FindEntry(std::string_view name, Page **res_page) {
 
   *res_page = nullptr;
 
-  name_hash = DentryHash(name.data(), name.length());
-  max_depth = GetCurDirDepth();
+  name_hash = DentryHash(name.data(), static_cast<int>(name.length()));
+  max_depth = static_cast<unsigned int>(GetCurDirDepth());
 
   for (level = 0; level < max_depth; level++) {
-    if (de = FindInLevel(level, name, name.length(), name_hash, res_page); de != nullptr)
+    if (de = FindInLevel(level, name, static_cast<int>(name.length()), name_hash, res_page);
+        de != nullptr)
       break;
   }
   if (!de && !IsSameDirHash(name_hash)) {
@@ -384,7 +385,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
   f2fs_hash_t dentry_hash;
   DirEntry *de;
   unsigned int nbucket, nblock;
-  int namelen = name.length();
+  int namelen = static_cast<int>(name.length());
   Page *dentry_page = nullptr;
   DentryBlock *dentry_blk = nullptr;
   int slots = (namelen + kNameLen - 1) / kNameLen;
@@ -403,9 +404,9 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
 
   dentry_hash = DentryHash(name.data(), namelen);
   level = 0;
-  current_depth = GetCurDirDepth();
+  current_depth = static_cast<unsigned int>(GetCurDirDepth());
   if (IsSameDirHash(dentry_hash)) {
-    level = GetDirHashLevel();
+    level = static_cast<unsigned int>(GetDirHashLevel());
     ClearDirHash();
   }
 
@@ -503,7 +504,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   WaitOnPageWriteback(page);
 
   dentry_blk = static_cast<DentryBlock *>(kaddr);
-  bit_pos = dentry - dentry_blk->dentry;
+  bit_pos = static_cast<uint32_t>(dentry - dentry_blk->dentry);
   for (i = 0; i < slots; i++)
     TestAndClearBit(bit_pos + i, dentry_blk->dentry_bitmap);
 
@@ -656,7 +657,7 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
   DentryBlock *dentry_blk = nullptr;
   DirEntry *de = nullptr;
   Page *dentry_page = nullptr;
-  unsigned int n = 0;
+  uint64_t n = 0;
   unsigned char d_type = DT_UNKNOWN;
   int slots;
   zx_status_t ret = ZX_OK;

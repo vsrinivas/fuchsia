@@ -196,10 +196,10 @@ class F2fs : public fs::ManagedVfs {
   void DecValidBlockCount(VnodeF2fs *vnode, block_t count);
   zx_status_t IncValidBlockCount(VnodeF2fs *vnode, block_t count);
   block_t ValidUserBlocks();
-  uint64_t ValidNodeCount();
+  uint32_t ValidNodeCount();
   void IncValidInodeCount();
   void DecValidInodeCount();
-  uint64_t ValidInodeCount();
+  uint32_t ValidInodeCount();
   loff_t MaxFileSize(unsigned bits);
 
  private:

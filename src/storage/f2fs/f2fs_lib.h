@@ -9,7 +9,7 @@ namespace f2fs {
 
 // Page cache helper
 // TODO: Need to be changed once Pager is available
-inline Page *GrabCachePage(void *vnode, uint32_t nid, uint32_t /*TODO pgoff_t*/ index) {
+inline Page *GrabCachePage(void *vnode, uint32_t nid, pgoff_t index) {
   Page *page = new Page();
   page->index = index;
   page->host = vnode;

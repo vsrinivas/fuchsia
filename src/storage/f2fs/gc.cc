@@ -113,7 +113,7 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
 got_it:
 #endif
   if (p.min_segno != kNullSegNo) {
-    *out = (p.min_segno / p.ofs_unit) * p.ofs_unit;
+    *out = static_cast<uint32_t>((p.min_segno / p.ofs_unit) * p.ofs_unit);
     if (p.alloc_mode == AllocMode::kLFS) {
       for (uint32_t i = 0; i < p.ofs_unit; i++)
         SetBit(*out + i, dirty_i->victim_segmap[static_cast<int>(gc_type)]);

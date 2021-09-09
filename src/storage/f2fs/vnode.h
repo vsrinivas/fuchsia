@@ -71,7 +71,7 @@ class VnodeF2fs : public fs::Vnode,
   // int F2fsSetDataPageDirty(Page *page);
 #endif
 
-  static zx_status_t Vget(F2fs *fs, uint64_t ino, fbl::RefPtr<VnodeF2fs> *out);
+  static zx_status_t Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out);
   void UpdateInode(Page *node_page);
   zx_status_t WriteInode(WritebackControl *wbc);
   zx_status_t DoTruncate(size_t len);
@@ -210,15 +210,15 @@ class VnodeF2fs : public fs::Vnode,
 
   inline bool SetFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    return (TestAndSetBit(static_cast<int>(flag), &fi_.flags) != 0);
+    return TestAndSetBit(static_cast<int>(flag), &fi_.flags);
   }
   inline bool ClearFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
-    return (TestAndClearBit(static_cast<int>(flag), &fi_.flags) != 0);
+    return TestAndClearBit(static_cast<int>(flag), &fi_.flags);
   }
   inline bool TestFlag(const InodeInfoFlag &flag) __TA_EXCLUDES(mutex_) {
     fs::SharedLock lock(mutex_);
-    return (TestBit(static_cast<int>(flag), &fi_.flags) != 0);
+    return TestBit(static_cast<int>(flag), &fi_.flags);
   }
 
   inline void ClearAdvise(const FAdvise &bit) { ClearBit(static_cast<int>(bit), &fi_.i_advise); }

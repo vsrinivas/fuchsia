@@ -93,7 +93,7 @@ class NodeMgr {
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
   zx_status_t ReadNodePage(Page *page, nid_t nid, int type);
-  zx_status_t GetNodePage(pgoff_t nid, Page **out);
+  zx_status_t GetNodePage(nid_t nid, Page **out);
 
   // Caller should acquire LockType:kFileOp when |ro| = 0.
   zx_status_t GetDnodeOfData(DnodeOfData *dn, pgoff_t index, int ro);
