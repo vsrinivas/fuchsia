@@ -38,7 +38,7 @@ fuchsia_unittest_component("platform-auth-delegate-test") {
 }
 
 fuchsia_unittest_component("platform-manager-test") {
-  manifest = rebase_path("meta/platform_manager_unittests.cmx")
+  manifest = rebase_path("meta/platform_manager_unittests.cml")
   deps = [ ":platform_manager_unittests" ]
 }
 
