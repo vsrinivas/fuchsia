@@ -1,0 +1,66 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/graphics/examples/vkproto/common/common.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+fuchsia_component("vkproto_driver_tests") {
+  testonly = true
+  manifest = "meta/vkproto_driver_tests.cmx"
+  deps = [
+    ":bin",
+    "//src/graphics/examples/vkproto:shaders",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
+  ]
+}
+
+executable("bin") {
+  output_name = "vkproto-driver-tests"
+  testonly = true
+  sources = common_sources
+
+  sources += [ "main.cc" ]
+
+  include_dirs = [ "//src/graphics/examples/vkproto/common" ]
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+
+  include_dirs += [ "//src/graphics/examples/vkproto/fuchsia" ]
+
+  deps += [
+    "//src/lib/vulkan",
+    "//src/lib/vulkan/swapchain",
+  ]
+
+  sources += [
+    "../fuchsia/surface.cc",
+    "../fuchsia/surface.h",
+  ]
+
+  data = [
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
+  ]
+}
+
+fuchsia_test_package("vkproto-driver-tests") {
+  package_name = "vkproto-driver-tests"
+  test_components = [ ":vkproto_driver_tests" ]
+  test_specs = {
+    environments = magma_libvulkan_hardware_envs
+  }
+}
+
+group("driver-tests") {
+  testonly = true
+  deps = [ ":vkproto-driver-tests" ]
+}

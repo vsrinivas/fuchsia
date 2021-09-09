@@ -29,6 +29,7 @@ group("hw_tests") {
     ":vulkan-tests",
     "../examples/vkproto",
     "../examples/vkproto/cmd-buf-benchmark",
+    "../examples/vkproto/driver-tests",
     "../examples/vkproto/test",
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
