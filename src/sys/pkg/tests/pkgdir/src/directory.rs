@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, repeat_by_n, PackageSource},
+    crate::{dirs_to_test, repeat_by_n, OpenFlags, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
@@ -145,9 +145,13 @@ async fn assert_open_success<V, Fut>(
             let node = open_node(&parent, flag, mode, path);
             if let Err(e) = verifier(node, flag).await {
                 panic!(
-                    "failed to verify open. parent: {:?}, child: {:?}, flag: {:#x}, \
+                    "failed to verify open. parent: {:?}, child: {:?}, flag: {:?}, \
                        mode: {:#x}, error: {:#}",
-                    parent_path, path, flag, mode, e
+                    parent_path,
+                    path,
+                    OpenFlags(flag),
+                    mode,
+                    e
                 );
             }
         }
@@ -223,9 +227,13 @@ async fn assert_open_flag_and_mode_failure<V, Fut>(
             let node = open_node(&parent, flag, mode, path);
             if let Err(e) = verifier(node).await {
                 panic!(
-                    "failed to verify open failed. parent: {:?}, child: {:?}, flag: {:#x}, \
+                    "failed to verify open failed. parent: {:?}, child: {:?}, flag: {:?}, \
                        mode: {:#x}, error: {:#}",
-                    parent_path, path, flag, mode, e
+                    parent_path,
+                    path,
+                    OpenFlags(flag),
+                    mode,
+                    e
                 );
             }
         }
