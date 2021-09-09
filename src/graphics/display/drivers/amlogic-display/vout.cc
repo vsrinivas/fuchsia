@@ -99,6 +99,7 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
     DISP_ERROR("Could not create Clock: %s\n", clock.status_string());
     return clock.status_value();
   }
+
   dsi_.clock = std::move(clock.value());
   ZX_ASSERT(dsi_.clock);
 
@@ -239,6 +240,24 @@ void Vout::DisplayDisconnected() {
     default:
       break;
   }
+}
+
+zx::status<> Vout::PowerOff() {
+  if (type_ == kDsi) {
+    dsi_.clock->Disable();
+    dsi_.dsi_host->Disable(dsi_.disp_setting);
+    return zx::ok();
+  }
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
+}
+
+zx::status<> Vout::PowerOn() {
+  if (type_ == kDsi) {
+    dsi_.clock->Enable(dsi_.disp_setting);
+    dsi_.dsi_host->Enable(dsi_.disp_setting, dsi_.clock->GetBitrate());
+    return zx::ok();
+  }
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 bool Vout::CheckMode(const display_mode_t* mode) {

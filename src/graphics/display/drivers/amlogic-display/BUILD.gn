@@ -94,7 +94,10 @@ test("amlogic-display-test") {
     "//build/unification/config:zircon-migrated",
     "//build/config:all_source",
   ]
-  sources = [ "amlogic-display-test.cc" ]
+  sources = [
+    "amlogic-display-test.cc",
+    "vout-test.cc",
+  ]
   deps = [
     ":common_srcs",
     "//src/devices/testing/no_ddk",

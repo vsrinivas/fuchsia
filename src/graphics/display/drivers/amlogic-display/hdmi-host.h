@@ -100,7 +100,7 @@ struct hdmi_param {
 // VPU and HHI register handling, HDMI parameters, etc.
 class HdmiHost {
  public:
-  explicit HdmiHost(zx_device_t* parent, zx::channel&& chan)
+  explicit HdmiHost(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_hdmi::Hdmi>&& chan)
       : pdev_(ddk::PDev::FromFragment(parent)), hdmi_(std::move(chan)) {}
 
   zx_status_t Init();
