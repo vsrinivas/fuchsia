@@ -14,5 +14,17 @@
       "metric_type": "Integer",
       "event_codes": []
     },
+    {
+      "selector": "bootstrap/driver_manager:root/tas27xx:seconds_until_first_error",
+      "metric_id": 3,
+      "metric_type": "Integer",
+      "event_codes": []
+    },
+    {
+      "selector": "bootstrap/driver_manager:root/tas27xx:resets_count",
+      "metric_id": 4,
+      "metric_type": "Integer",
+      "event_codes": []
+    },
   ]
 }
