@@ -18,7 +18,7 @@ fuchsia_unittest_component("ble-manager-test") {
 }
 
 fuchsia_unittest_component("configuration-manager-test") {
-  manifest = rebase_path("meta/configuration_manager_unittests.cmx")
+  manifest = rebase_path("meta/configuration_manager_unittests.cml")
   deps = [ ":configuration_manager_unittests" ]
 }
 

@@ -1,0 +1,22 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/configuration_manager_unittests",
+    },
+    use: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "weavestack-adaptation-unittests",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+}
