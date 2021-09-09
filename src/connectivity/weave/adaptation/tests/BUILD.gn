@@ -33,7 +33,7 @@ fuchsia_unittest_component("group-key-store-test") {
 }
 
 fuchsia_unittest_component("platform-auth-delegate-test") {
-  manifest = rebase_path("meta/platform_auth_delegate_unittests.cmx")
+  manifest = rebase_path("meta/platform_auth_delegate_unittests.cml")
   deps = [ ":platform_auth_delegate_unittests" ]
 }
 
