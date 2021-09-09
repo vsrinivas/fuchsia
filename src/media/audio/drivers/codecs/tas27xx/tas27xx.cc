@@ -21,9 +21,6 @@
 
 namespace audio {
 
-constexpr uint8_t kCodecInterrupt = 0x01;
-constexpr uint8_t kCodecShutdown = 0x02;
-
 static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::I2S};
@@ -105,57 +102,35 @@ void Tas27xx::ReportState(State& state, const char* description) {
   }
 }
 
-int Tas27xx::Thread() {
-  while (true) {
-    zx::time hardware_state_check_timeout = zx::deadline_after(zx::sec(20));
-    zx_port_packet_t packet;
-    zx_status_t status = port_.wait(hardware_state_check_timeout, &packet);
-    if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-      zxlogf(ERROR, "port wait failed: %s", zx_status_get_string(status));
-      return thrd_error;
+void Tas27xx::PeriodicStateCheck() {
+  if (InErrorState()) {
+    zxlogf(ERROR, "codec in error state");
+    if (errors_count_ == 0) {
+      int64_t secs = zx::nsec(zx::clock::get_monotonic().get()).to_secs();
+      first_error_secs_ = driver_inspect_.CreateInt("seconds_until_first_error", secs);
     }
-    if (status == ZX_ERR_TIMED_OUT) {
-      // It is safe to capture "this" here, the dispatcher's loop is guaranteed to be shutdown
-      // before this object is destroyed.
-      async::PostTask(dispatcher(), [this]() {
-        if (InErrorState()) {
-          zxlogf(ERROR, "codec in error state");
-          if (errors_count_ == 0) {
-            int64_t secs = zx::nsec(zx::clock::get_monotonic().get()).to_secs();
-            first_error_secs_ = driver_inspect_.CreateInt("seconds_until_first_error", secs);
-          }
-          errors_count_++;
+    errors_count_++;
 
-          ReportState(state_after_error_, "error");
+    ReportState(state_after_error_, "error");
 
-          constexpr uint32_t kMaxRetries = 8;  // We don't want to reset forever.
-          if (errors_count_ <= kMaxRetries) {
-            resets_count_.Add(1);
-            Reset();
-            SetGainStateInternal(gain_state_);
-            if (format_.has_value()) {
-              __UNUSED auto format_info = SetDaiFormatInternal(*format_);
-            }
-            Start();
-          }
-        } else {
-          ReportState(state_after_timer_, "timer");
-        }
-      });
-    } else {
-      switch (packet.key) {
-        case kCodecShutdown:
-          return thrd_success;
-          break;
-        case kCodecInterrupt: {
-          ReportState(state_after_interrupt_, "interrupt");
-        } break;
+    constexpr uint32_t kMaxRetries = 8;  // We don't want to reset forever.
+    if (errors_count_ <= kMaxRetries) {
+      resets_count_.Add(1);
+      Reset();
+      SetGainStateInternal(gain_state_);
+      if (format_.has_value()) {
+        __UNUSED auto format_info = SetDaiFormatInternal(*format_);
       }
+      Start();
     }
+  } else {
+    ReportState(state_after_timer_, "timer");
   }
 
-  zxlogf(INFO, "tas27xx: Exiting interrupt thread");
-  return ZX_OK;
+  // It is safe to capture "this" here, the dispatcher's loop is guaranteed to be shutdown
+  // before this object is destroyed.
+  async::PostDelayedTask(
+      dispatcher(), [this]() { PeriodicStateCheck(); }, zx::sec(20));
 }
 
 zx_status_t Tas27xx::GetTemperature(float* temperature) {
@@ -280,46 +255,29 @@ zx_status_t Tas27xx::SetTdmSlots(uint64_t channels_to_use_bitmask) {
   return WriteReg(TDM_CFG2, (rx_scfg << 4) | (0x00 << 2) | 0x02);
 }
 
-zx::status<DriverIds> Tas27xx::Initialize() {
-  // Make it safe to re-init an already running device
-  auto status = Shutdown();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "tas27xx: Could not shutdown %d", status);
-    return zx::error(status);
+void Tas27xx::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                        const zx_packet_interrupt_t* interrupt) {
+  if (status == ZX_OK) {  // We only report state on good IRQ callbacks.
+    ReportState(state_after_interrupt_, "interrupt");
   }
+  irq_.ack();
+}
 
-  // Clean up and shutdown in event of error
-  auto on_error = fit::defer([this]() { Shutdown(); });
-
-  status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
+zx::status<DriverIds> Tas27xx::Initialize() {
+  zx_status_t status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d", status);
     return zx::error(status);
   }
 
-  status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "port creation failed: %s", zx_status_get_string(status));
-    return zx::error(status);
-  }
+  irq_handler_.set_object(irq_.get());
+  irq_handler_.Begin(dispatcher());
 
-  status = irq_.bind(port_, kCodecInterrupt, 0);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "interrupt bind failed: %s", zx_status_get_string(status));
-    return zx::error(status);
-  }
-
-  // Start the monitoring thread
-  running_.store(true);
-  auto thunk = [](void* arg) -> int { return reinterpret_cast<Tas27xx*>(arg)->Thread(); };
-  int ret = thrd_create_with_name(&thread_, thunk, this, "tas27xx-thread");
-  if (ret != thrd_success) {
-    running_.store(false);
-    irq_.destroy();
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-
-  on_error.cancel();
+  // Start a periodic state check.
+  // It is safe to capture "this" here, the dispatcher's loop is guaranteed to be shutdown
+  // before this object is destroyed.
+  async::PostDelayedTask(
+      dispatcher(), [this]() { PeriodicStateCheck(); }, zx::sec(20));
 
   return zx::ok(DriverIds{
       .vendor_id = PDEV_VID_TI,
@@ -441,14 +399,8 @@ Info Tas27xx::GetInfo() {
 }
 
 zx_status_t Tas27xx::Shutdown() {
-  if (running_.load()) {
-    running_.store(false);
-    zx_port_packet packet = {kCodecShutdown, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    zx_status_t status = port_.queue(&packet);
-    ZX_ASSERT(status == ZX_OK);
-    thrd_join(thread_, NULL);
-    irq_.destroy();
-  }
+  irq_handler_.Cancel();
+  irq_.destroy();
   return ZX_OK;
 }
 

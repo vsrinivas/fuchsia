@@ -56,7 +56,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   }
   virtual ~SimpleCodecServer() = default;
   void DdkRelease() {
-    loop_.Shutdown();
+    loop_->Shutdown();
     Shutdown();
     state_.Set("released");
     delete this;
@@ -93,11 +93,14 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
 
   zx_status_t CodecConnect(zx::channel(channel));
   // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+  async_dispatcher_t* dispatcher() { return loop_->dispatcher(); }
 
  protected:
-  explicit SimpleCodecServer(zx_device_t* parent)
-      : SimpleCodecServerDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  explicit SimpleCodecServer(zx_device_t* parent) : SimpleCodecServerDeviceType(parent) {
+    async_loop_config_t config = kAsyncLoopConfigNoAttachToCurrentThread;
+    config.irq_support = true;
+    loop_.emplace(&config);
+  }
   inspect::Inspector& inspect() { return inspect_; }
 
  private:
@@ -118,7 +121,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   zx_status_t CreateInternal();
 
   DriverIds driver_ids_;
-  async::Loop loop_;
+  std::optional<async::Loop> loop_;
 
   inspect::Inspector inspect_;
   inspect::Node simple_codec_;

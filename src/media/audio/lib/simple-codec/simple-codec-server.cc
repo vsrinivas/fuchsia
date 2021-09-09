@@ -34,7 +34,8 @@ zx_status_t SimpleCodecServer::CreateInternal() {
   if (res.is_error()) {
     return res.error_value();
   }
-  loop_.StartThread();
+  loop_->StartThread();
+
   driver_ids_ = res.value();
   Info info = GetInfo();
   simple_codec_.CreateString("manufacturer", info.manufacturer.c_str(), &inspect_);
@@ -62,7 +63,7 @@ zx_status_t SimpleCodecServer::CreateInternal() {
 }
 
 zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
-  return BindClient(std::move(channel), loop_.dispatcher());
+  return BindClient(std::move(channel), loop_->dispatcher());
 }
 
 template <class T>

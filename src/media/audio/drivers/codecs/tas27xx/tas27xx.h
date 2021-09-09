@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS27XX_TAS27XX_H_
 
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/async/cpp/irq.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -90,8 +91,6 @@ class Tas27xx : public SimpleCodecServer {
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
 
-  std::atomic<bool> initialized_ = false;
-  std::atomic<bool> running_ = false;
   zx::interrupt irq_;
   ddk::I2cChannel i2c_;
   const ddk::GpioProtocolClient fault_gpio_;
@@ -112,7 +111,7 @@ class Tas27xx : public SimpleCodecServer {
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
-  int Thread();
+  void PeriodicStateCheck();
   void DelayMs(uint32_t ms) { zx_nanosleep(zx_deadline_after(ZX_MSEC(ms))); }
   zx_status_t SetRate(uint32_t rate);
   zx_status_t SetTdmSlots(uint64_t channels_to_use_bitmask);
@@ -124,14 +123,15 @@ class Tas27xx : public SimpleCodecServer {
   void SetGainStateInternal(GainState state);
   bool InErrorState();
   void ReportState(State& registers, const char* description);
+  void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                 const zx_packet_interrupt_t* interrupt);
 
   bool started_ = false;
   GainState gain_state_ = kDefaultGainState;
   std::optional<DaiFormat> format_;
   uint64_t errors_count_ = 0;
-  thrd_t thread_;
   metadata::ti::TasConfig metadata_ = {};
-  zx::port port_;
+  async::IrqMethod<Tas27xx, &Tas27xx::HandleIrq> irq_handler_{this};
 
   uint8_t channels_to_use_bitmask_ = 1;  // Right channel if I2S.
   inspect::Node driver_inspect_;
