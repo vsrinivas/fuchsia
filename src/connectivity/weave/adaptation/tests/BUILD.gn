@@ -23,7 +23,7 @@ fuchsia_unittest_component("configuration-manager-test") {
 }
 
 fuchsia_unittest_component("connectivity-manager-test") {
-  manifest = rebase_path("meta/connectivity_manager_unittests.cmx")
+  manifest = rebase_path("meta/connectivity_manager_unittests.cml")
   deps = [ ":connectivity_manager_unittests" ]
 }
 
