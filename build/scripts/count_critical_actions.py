@@ -58,7 +58,14 @@ def main():
         action='store_true',
         help='Print extra information when this script is running',
     )
+    parser.add_argument(
+        '--skip_if_not_found',
+        dest='skip_if_not_found',
+        action='store_true',
+        help='Skip a build if build stats are not found',
+    )
     parser.set_defaults(verbose=False)
+    parser.set_defaults(skip_if_not_found=False)
     args = parser.parse_args()
 
     with open(args.build_ids, 'r') as f:
@@ -83,7 +90,16 @@ def main():
                 f'[{i}/{tot}] Loading and counting critical actions of build {bid} ...'
             )
 
-        buildstats = load_buildstats(args.gsutil, bid)
+        try:
+            buildstats = load_buildstats(args.gsutil, bid)
+        except Exception as err:
+            if args.skip_if_not_found:
+                print(f'Skipping build {bid}: {err}')
+                continue
+            print(
+                'Tip: set --skip_if_not_found to continue on failures like this'
+            )
+            raise err
         for step in buildstats['CriticalPath']:
             outputs = ','.join(sorted(step['Outputs']))
             counts[outputs] += 1
