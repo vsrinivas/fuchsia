@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime/trace"
@@ -68,7 +67,7 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 			}
 			for _, path := range match.Files {
 				if !contains(license.AllowedDirs, path) {
-					log.Printf("Prohibited: %q in %q\n", license.Category, path)
+					fmt.Fprintf(os.Stderr, "Prohibited: %q in %q\n", license.Category, path)
 					if _, found := set[path]; !found {
 						set[path] = true
 						filesWithProhibitedLicenses = append(filesWithProhibitedLicenses, path)
@@ -88,7 +87,7 @@ func (l *Licenses) GetFilesWithBadLicenseUsage() []string {
 	for _, license := range l.licenses {
 		if len(license.BadLicenseUsage) > 0 {
 			for _, path := range license.BadLicenseUsage {
-				log.Printf("Not allowlisted: %q in %q\n", license.Category, path)
+				fmt.Fprintf(os.Stderr, "Not allowlisted: %q in %q\n", license.Category, path)
 				if _, found := set[path]; !found {
 					set[path] = true
 					filesWithBadLicenseUsage = append(filesWithBadLicenseUsage, path)

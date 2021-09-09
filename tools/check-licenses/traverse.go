@@ -157,9 +157,7 @@ func Run(ctx context.Context, config *Config) error {
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {
-			sort.Strings(filesWithProhibitedLicenses)
-			files := strings.Join(filesWithProhibitedLicenses, "\n")
-			return fmt.Errorf("Encountered prohibited license types. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
+			return fmt.Errorf("Encountered prohibited license types.\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.")
 		}
 	}
 	year, _, _ := time.Now().Date()
@@ -174,9 +172,7 @@ func Run(ctx context.Context, config *Config) error {
 	if config.ExitOnDirRestrictedLicense {
 		filesWithBadLicenseUsage := licenses.GetFilesWithBadLicenseUsage()
 		if len(filesWithBadLicenseUsage) > 0 {
-			sort.Strings(filesWithBadLicenseUsage)
-			files := strings.Join(filesWithBadLicenseUsage, "\n")
-			return fmt.Errorf("Encountered files with licenses that may not be used in those directories. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
+			return fmt.Errorf("Encountered files with licenses that may not be used in those directories.\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.")
 		}
 	}
 
