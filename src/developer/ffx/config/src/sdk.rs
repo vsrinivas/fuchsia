@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     log::warn,
     serde::Deserialize,
     serde_json::Value,
@@ -170,7 +170,40 @@ impl Sdk {
         Ok(metas)
     }
 
+    /// Attempts to get a host tool from the SDK manifest. If it fails, this method falls
+    /// back to attempting to derive the path to the host tool binary by simply checking
+    /// for its existence in `ffx`'s directory.
+    /// If you don't want the fallback behavior, use [get_host_tool_from_manifest] instead.
+    /// TODO(fxb/84342): Remove when the linked bug is fixed.
     pub fn get_host_tool(&self, name: &str) -> Result<PathBuf> {
+        match self.get_host_tool_from_manifest(name) {
+            Ok(path) => Ok(path),
+            Err(error) => {
+                log::warn!(
+                    "failed to get host tool {} from manifest. Trying local SDK dir: {}",
+                    name,
+                    error
+                );
+                let mut ffx_path = std::env::current_exe()
+                    .context(format!("getting current ffx exe path for host tool {}", name))?;
+                ffx_path = std::fs::canonicalize(ffx_path.clone())
+                    .context(format!("canonicalizing ffx path {:?}", ffx_path))?;
+
+                let tool_path = ffx_path
+                    .parent()
+                    .context(format!("ffx path missing parent {:?}", ffx_path))?
+                    .join(name);
+
+                if tool_path.exists() {
+                    Ok(tool_path)
+                } else {
+                    bail!("Host tool '{}' not found after checking in `ffx` directory.");
+                }
+            }
+        }
+    }
+
+    pub fn get_host_tool_from_manifest(&self, name: &str) -> Result<PathBuf> {
         match self.get_host_tool_relative_path(name) {
             Ok(path) => {
                 let result = self.path_prefix.join(path);
@@ -221,7 +254,7 @@ impl Sdk {
                 .collect::<Result<Vec<_>>>()?
                 .into_iter()
                 .min_by_key(|x| x.len()) // Shortest path is the one with no arch specifier, i.e. the default arch, i.e. the current arch (we hope.)
-                .ok_or(anyhow!("Tool '{}' not found", name))?,
+                .ok_or(anyhow!("Tool '{}' not found in SDK dir", name))?,
         )
     }
 
