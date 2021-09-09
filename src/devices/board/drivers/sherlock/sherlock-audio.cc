@@ -431,6 +431,14 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.types[0] = metadata::CodecType::Tas5720;
     metadata.codecs.types[1] = metadata::CodecType::Tas5720;
     metadata.codecs.types[2] = metadata::CodecType::Tas5720;
+    // This driver advertises 4 channels.
+    // The samples in the first channel are unused (can be zero).
+    // The samples in the second channel are used for the woofer and are expected to have a mix of
+    // both left and right channel from stereo audio.
+    // The samples in the third channel are expected to come from the left channel of stereo audio
+    // and are used for the left tweeter.
+    // The samples in the fourth channel are expected to come from the right channel of stereo audio
+    // and are used for the right tweeter.
     metadata.ring_buffer.number_of_channels = 4;
     metadata.swaps = 0x1032;
     metadata.lanes_enable_mask[0] = 3;
@@ -444,8 +452,9 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.channels_to_use_bitmask[0] = 0x1;  // Woofer uses DAI right I2S channel.
     metadata.codecs.channels_to_use_bitmask[1] = 0x2;  // L tweeter uses DAI left I2S channel.
     metadata.codecs.channels_to_use_bitmask[2] = 0x1;  // R tweeter uses DAI right I2S channel.
-    metadata.mix_mask = 0x2;                           // Mix lane 1's L + R for woofer.
-    metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0xC;  // Woofer uses index 2 and 3.
+    // The woofer samples are expected in the second out of four channels.
+    // In a 4 bits bitmask, counting from the least significant bit this is index 2.
+    metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x4;  // Woofer uses index 2.
     metadata.codecs.ring_buffer_channels_to_use_bitmask[1] = 0x1;  // L tweeter uses index 0.
     metadata.codecs.ring_buffer_channels_to_use_bitmask[2] = 0x2;  // R tweeter uses index 1.
   } else if (is_ernie) {
