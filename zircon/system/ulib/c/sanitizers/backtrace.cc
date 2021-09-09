@@ -61,7 +61,7 @@ size_t BacktraceByShadowCallStack(cpp20::span<uintptr_t> pcs) {
       GetShadowCallStackPointer:
         mov x0, x18
         ret
-      .size GetShadowCallStackPointer, GetShadowCallStackPointer - .
+      .size GetShadowCallStackPointer, . - GetShadowCallStackPointer
       .popsection
       )""");
 #else
