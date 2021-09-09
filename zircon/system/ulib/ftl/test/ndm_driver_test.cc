@@ -11,7 +11,7 @@ namespace {
 
 class MockDriver final : public ftl::NdmBaseDriver {
  public:
-  MockDriver() : NdmBaseDriver(ftl::DefaultLogger()) {}
+  MockDriver() {}
   ~MockDriver() final {}
 
   void set_incomplete(bool value) { incomplete_ = value; }
