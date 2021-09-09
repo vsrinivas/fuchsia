@@ -1540,6 +1540,7 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
 zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
                                           list_node* alloc_list, LazyPageRequest* page_request,
                                           LookupInfo* out) {
+  VM_KTRACE_DURATION(2, "VmCowPages::LookupPagesLocked", page_attribution_user_id_, offset);
   canary_.Assert();
   DEBUG_ASSERT(!is_hidden_locked());
   DEBUG_ASSERT(out);

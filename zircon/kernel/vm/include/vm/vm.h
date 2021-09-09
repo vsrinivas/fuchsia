@@ -32,6 +32,14 @@
   TraceDuration<TraceEnabled<VM_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_VM, TraceContext::Thread> \
       duration{KTRACE_STRING_REF(string), ##args};
 
+#define VM_KTRACE_DURATION_BEGIN(level, string, args...)                                  \
+  ktrace_begin_duration(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
+                        KTRACE_GRP_VM, KTRACE_STRING_REF(string), ##args);
+
+#define VM_KTRACE_DURATION_END(level, string, args...)                                  \
+  ktrace_end_duration(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
+                      KTRACE_GRP_VM, KTRACE_STRING_REF(string), ##args);
+
 #define VM_KTRACE_FLOW_BEGIN(level, string, flow_id, args...)                         \
   ktrace_flow_begin(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
                     KTRACE_GRP_VM, KTRACE_STRING_REF(string), flow_id, ##args);

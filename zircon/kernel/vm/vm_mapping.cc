@@ -839,6 +839,10 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
     }
   }
 
+  VM_KTRACE_DURATION_BEGIN(2, "map_page", va, pf_flags);
+  auto trace_end =
+      fit::defer([va, pf_flags]() { VM_KTRACE_DURATION_END(2, "map_page", va, pf_flags); });
+
   // see if something is mapped here now
   // this may happen if we are one of multiple threads racing on a single address
   uint page_flags;
