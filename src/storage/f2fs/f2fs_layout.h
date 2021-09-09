@@ -202,7 +202,7 @@ struct Inode {
   uint32_t i_pino = 0;           // parent inode number
   uint32_t i_namelen = 0;        // file name length
   uint8_t i_name[kMaxNameLen];   // file name for SPOR
-  uint8_t i_rsvd = 0;            // reserved for compatibility
+  uint8_t i_dir_level = 0;       // dentry_level for large dir
 
   Extent i_ext;  // caching a largest extent
 

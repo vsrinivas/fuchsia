@@ -237,6 +237,9 @@ class VnodeF2fs : public fs::Vnode,
     fi_.clevel = level;
   }
 
+  inline uint8_t GetDirLevel() const { return fi_.i_dir_level; }
+  inline void SetDirLevel(const uint8_t level) { fi_.i_dir_level = level; }
+
   inline uint64_t GetCurDirDepth() const { return fi_.i_current_depth; }
   inline void SetCurDirDepth(const uint64_t depth) { fi_.i_current_depth = depth; }
 

@@ -43,9 +43,9 @@ Dir::Dir(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 block_t Dir::DirBlocks() { return safemath::checked_cast<block_t>(GetBlockCount()); }
 
-uint32_t Dir::DirBuckets(uint32_t level) {
-  if (level < kMaxDirHashDepth / 2)
-    return 1 << level;
+uint32_t Dir::DirBuckets(uint32_t level, uint8_t dir_level) {
+  if (level + dir_level < kMaxDirHashDepth / 2)
+    return 1 << (level + dir_level);
   else
     return 1 << ((kMaxDirHashDepth / 2) - 1);
 }
@@ -61,12 +61,13 @@ void Dir::SetDeType(DirEntry *de, VnodeF2fs *vnode) {
   de->file_type = kTypeByMode[(vnode->GetMode() & S_IFMT) >> kStatShift];
 }
 
-uint64_t Dir::DirBlockIndex(uint32_t level, uint32_t idx) {
+uint64_t Dir::DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx) {
   uint32_t i;
   uint64_t bidx = 0;
 
-  for (i = 0; i < level; i++)
-    bidx += DirBuckets(i) * BucketBlocks(i);
+  for (i = 0; i < level; i++) {
+    bidx += DirBuckets(i, dir_level) * BucketBlocks(i);
+  }
   bidx += idx * BucketBlocks(level);
   return bidx;
 }
@@ -132,10 +133,10 @@ DirEntry *Dir::FindInLevel(unsigned int level, std::string_view name, int namele
 
   ZX_ASSERT(level <= kMaxDirHashDepth);
 
-  nbucket = DirBuckets(level);
+  nbucket = DirBuckets(level, GetDirLevel());
   nblock = BucketBlocks(level);
 
-  bidx = DirBlockIndex(level, namehash % nbucket);
+  bidx = DirBlockIndex(level, GetDirLevel(), namehash % nbucket);
   end_block = bidx + nblock;
 
   for (; bidx < end_block; bidx++) {
@@ -418,10 +419,10 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
     if (level == current_depth)
       ++current_depth;
 
-    nbucket = DirBuckets(level);
+    nbucket = DirBuckets(level, GetDirLevel());
     nblock = BucketBlocks(level);
 
-    bidx = DirBlockIndex(level, (dentry_hash % nbucket));
+    bidx = DirBlockIndex(level, GetDirLevel(), (dentry_hash % nbucket));
 
     for (block = bidx; block <= (bidx + nblock - 1); block++) {
       std::lock_guard write_lock(io_lock_);

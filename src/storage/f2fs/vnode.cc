@@ -106,6 +106,7 @@ void VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   vnode->SetCurDirDepth(LeToCpu(ri->i_current_depth));
   vnode->SetXattrNid(LeToCpu(ri->i_xattr_nid));
   vnode->SetInodeFlags(LeToCpu(ri->i_flags));
+  vnode->SetDirLevel(ri->i_dir_level);
 #if 0  // porting needed
   // vnode->fi.data_version = LeToCpu(GetCheckpoint(sbi)->checkpoint_ver) - 1;
 #endif
@@ -308,6 +309,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_xattr_nid = CpuToLe(GetXattrNid());
   ri->i_flags = CpuToLe(GetInodeFlags());
   ri->i_generation = CpuToLe(GetGeneration());
+  ri->i_dir_level = GetDirLevel();
 
   ri->i_namelen = CpuToLe(GetNameLen());
   memcpy(ri->i_name, GetName(), GetNameLen());

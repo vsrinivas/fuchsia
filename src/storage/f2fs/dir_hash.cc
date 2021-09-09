@@ -14,6 +14,11 @@ f2fs_hash_t DentryHash(const char *name, int len) {
   const char *p;
   uint32_t in[8], buf[4];
 
+  if (len <= 2 &&
+      ((len == 1 && name[0] == '.') || (len == 2 && name[1] == '.' && name[2] == '.'))) {
+    return 0;
+  }
+
   /* Initialize the default seed for the hash checksum functions */
   buf[0] = 0x67452301;
   buf[1] = 0xefcdab89;

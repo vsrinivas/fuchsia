@@ -153,7 +153,7 @@ TEST(DirTest, DentryBucket) {
   }
 
   // check level 1, bucket 0
-  auto bidx = Dir::DirBlockIndex(1, 0);
+  auto bidx = Dir::DirBlockIndex(1, 0, 0);
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, first_bucket_child);
 
   // delete all children in level 1, bucket 0
@@ -164,7 +164,7 @@ TEST(DirTest, DentryBucket) {
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, empty_set);
 
   // check level 1, bucket 1
-  bidx = Dir::DirBlockIndex(1, 1);
+  bidx = Dir::DirBlockIndex(1, 0, 1);
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, second_bucket_child);
 
   // delete all children in level 1, bucket 1
@@ -273,6 +273,77 @@ TEST(DirTest, MultiSlotDentry) {
 
   std::unordered_set<std::string> empty_set;
   unittest_lib::CheckChildrenInBlock(test_dir_ptr, 0, empty_set);
+
+  ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
+  test_dir_vn = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  unittest_lib::Unmount(std::move(fs), &bc);
+}
+
+TEST(DirTest, SetDentryLevel1DoWriteAndRead) {
+  std::unique_ptr<Bcache> bc;
+  unittest_lib::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  unittest_lib::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  fbl::RefPtr<fs::Vnode> test_dir;
+  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
+
+  Dir *test_dir_ptr = static_cast<Dir *>(test_dir_vn.get());
+  test_dir_ptr->SetDirLevel(1);
+  ASSERT_EQ(test_dir_ptr->GetDirLevel(), 1);
+
+  // test_dir has two buckets in level 0.
+  std::unordered_set<std::string> child_set;
+  unsigned int child_count = 0;
+
+  std::unordered_set<std::string> first_bucket_child;
+  std::unordered_set<std::string> second_bucket_child;
+  for (; child_count < kNrDentryInBlock - 2; ++child_count) {
+    std::string name(std::to_string(child_count));
+    unittest_lib::CreateChild(test_dir_ptr, S_IFDIR, name);
+
+    auto bucket_id = DentryHash(name.data(), static_cast<int>(name.length())) % 2;
+
+    if (bucket_id == 0) {
+      first_bucket_child.insert(name);
+    } else {
+      second_bucket_child.insert(name);
+    }
+  }
+
+  // check level 0, bucket 0
+  auto bidx = Dir::DirBlockIndex(0, 1, 0);
+  unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, first_bucket_child);
+
+  // delete all children in level 0, bucket 0
+  for (auto iter : first_bucket_child) {
+    unittest_lib::DeleteChild(test_dir_ptr, iter);
+  }
+  std::unordered_set<std::string> empty_set;
+  unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, empty_set);
+
+  // check level 0, bucket 1
+  bidx = Dir::DirBlockIndex(0, 1, 1);
+  unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, second_bucket_child);
+
+  // delete all children in level 0, bucket 1
+  for (auto iter : second_bucket_child) {
+    unittest_lib::DeleteChild(test_dir_ptr, iter);
+  }
+  unittest_lib::CheckChildrenInBlock(test_dir_ptr, bidx, empty_set);
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;

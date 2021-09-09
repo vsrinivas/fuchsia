@@ -78,6 +78,7 @@ enum class FAdvise {
 struct InodeInfo {
   uint32_t i_flags = 0;          // keep an inode flags for ioctl
   uint8_t i_advise = 0;          // use to give file attribute hints
+  uint8_t i_dir_level = 0;       // use for dentry level for large dir
   uint64_t i_current_depth = 0;  // use only in directory structure
   umode_t i_acl_mode = 0;        // keep file acl mode temporarily
 
