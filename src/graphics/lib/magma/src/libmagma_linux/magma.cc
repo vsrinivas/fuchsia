@@ -5,22 +5,20 @@
 #include "magma.h"
 
 #include <assert.h>
+#include <pthread.h>
 #include <sys/mman.h>
-
-#include <mutex>
-#include <vector>
 
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/graphics/lib/magma/src/libmagma_linux/virtmagma_util.h"
 
-static std::once_flag gOnceFlag;
+static pthread_once_t gOnceFlag = PTHREAD_ONCE_INIT;
 static int gDefaultFd;
 
 // Most magma interfaces get their file descriptor from a wrapped parameter (device, connection,
 // etc) (or initially from the file descriptor "handle" in magma_device_import), but some interfaces
 // don't have any such parameter; for those, we open the default device, and never close it.
 static int get_default_fd() {
-  std::call_once(gOnceFlag, [] { gDefaultFd = open("/dev/magma0", O_RDWR); });
+  pthread_once(&gOnceFlag, [] { gDefaultFd = open("/dev/magma0", O_RDWR); });
   assert(gDefaultFd >= 0);
   return gDefaultFd;
 }
@@ -33,7 +31,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   if (count == 0)
     return MAGMA_STATUS_OK;
 
-  std::vector<magma_poll_item_t> unwrapped_items(count);
+  magma_poll_item_t unwrapped_items[count];
   int32_t file_descriptor = -1;
 
   for (uint32_t i = 0; i < count; ++i) {
@@ -61,7 +59,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   virtio_magma_poll_ctrl_t request{};
   virtio_magma_poll_resp_t response{};
   request.hdr.type = VIRTIO_MAGMA_CMD_POLL;
-  request.items = reinterpret_cast<uint64_t>(unwrapped_items.data());
+  request.items = reinterpret_cast<uint64_t>(&unwrapped_items[0]);
   // Send byte count so kernel knows how much memory to copy
   request.count = count * sizeof(magma_poll_item_t);
   request.timeout_ns = timeout_ns;
