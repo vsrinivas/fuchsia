@@ -23,6 +23,10 @@ pub struct AutoTestGeneratorCommand {
     #[argh(switch, short = 'm')]
     pub generate_mocks: bool,
 
+    /// generate test code in cpp, default is rust.
+    #[argh(switch, short = 'c')]
+    pub cpp: bool,
+
     /// also print to stdout.
     #[argh(switch, short = 'v')]
     pub verbose: bool,

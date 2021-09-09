@@ -1,0 +1,5 @@
+TEST_F(TEST_CLASS_NAME, TEST_NAME) {
+  auto realm = CreateRealm();
+  PROTOCOL_TYPE proxy;
+  realm -> Connect(proxy.NewRequest());
+}

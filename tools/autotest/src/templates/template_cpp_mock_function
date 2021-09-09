@@ -1,0 +1,19 @@
+class CLASS_NAME : public COMPONENT_PROTOCOL_NAME, public sys::testing::MockComponent {
+ public:
+  CLASS_NAME(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  // Add your implementation for the mocked functions
+  // void FIDLService1(args…) override {
+  //
+  // }
+
+  void Start(std::unique_ptr<sys::testing::MockHandles> mock_handles) override {
+    mock_handles_ = std::move(mock_handles);
+    ASSERT_EQ(mock_handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)), ZX_OK);
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<COMPONENT_PROTOCOL_NAME> bindings_;
+  std::unique_ptr<sys::testing::MockHandles> mock_handles_;
+}

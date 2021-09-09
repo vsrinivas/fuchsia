@@ -5,23 +5,23 @@
 use anyhow::Result;
 use std::io::Write;
 
+use crate::test_code::{CodeGenerator, TestCodeBuilder};
+
 const MOCK_FUNC_TEMPLATE: &'static str = include_str!("templates/template_rust_mock_function");
 const TEST_FUNC_TEMPLATE: &'static str = include_str!("templates/template_rust_test_function");
 
-pub trait CodeGenerator {
-    fn write_file<W: Write>(&self, writer: &mut W) -> Result<()>;
+pub struct RustTestCodeGenerator<'a> {
+    pub code: &'a RustTestCode,
 }
 
-pub struct RustTestCodeGenerator {
-    pub code: RustTestCode,
-}
-
-impl CodeGenerator for RustTestCodeGenerator {
+impl CodeGenerator for RustTestCodeGenerator<'_> {
     fn write_file<W: Write>(&self, writer: &mut W) -> Result<()> {
         let create_realm_func_start = r#"pub async fn create_realm() -> Result<RealmInstance, Error> {
     let mut builder = RealmBuilder::new().await?;
     builder
 "#;
+        let mut create_realm_impl = self.code.realm_builder_snippets.join("\n");
+        create_realm_impl.push_str(";\n\n");
         let create_realm_func_end = r#"
     let instance = builder.build().create().await?;
     Ok(instance)
@@ -42,11 +42,7 @@ impl CodeGenerator for RustTestCodeGenerator {
 
         // Generate create_realm() function
         writer.write_all(&create_realm_func_start.as_bytes())?;
-
-        let mut realm = self.code.realm_builder_snippets.join("\n");
-        realm.push_str(";\n\n");
-        writer.write_all(&realm.as_bytes())?;
-
+        writer.write_all(&create_realm_impl.as_bytes())?;
         writer.write_all(&create_realm_func_end.as_bytes())?;
 
         // Add mock implementation functions, one per component
@@ -67,11 +63,11 @@ impl CodeGenerator for RustTestCodeGenerator {
 
 pub struct RustTestCode {
     /// library import strings
-    imports: Vec<String>,
+    pub imports: Vec<String>,
     /// constant strings
     constants: Vec<String>,
     /// RealmBuilder compatibility routing code
-    realm_builder_snippets: Vec<String>,
+    pub realm_builder_snippets: Vec<String>,
     /// testcase functions
     test_case: Vec<String>,
     // skeleton functions for implementing mocks
@@ -80,8 +76,8 @@ pub struct RustTestCode {
     component_under_test: String,
 }
 
-impl RustTestCode {
-    pub fn new(component_name: &str) -> Self {
+impl TestCodeBuilder for RustTestCode {
+    fn new(component_name: &str) -> Self {
         RustTestCode {
             realm_builder_snippets: Vec::new(),
             constants: Vec::new(),
@@ -91,18 +87,18 @@ impl RustTestCode {
             component_under_test: component_name.to_string(),
         }
     }
-    pub fn add_import<'a>(&'a mut self, import_library: &str) -> &'a mut Self {
+    fn add_import<'a>(&'a mut self, import_library: &str) -> &'a dyn TestCodeBuilder {
         self.imports.push(format!(r#"use {};"#, import_library));
         self
     }
 
-    pub fn add_component<'a>(
+    fn add_component<'a>(
         &'a mut self,
         component_name: &str,
         url: &str,
         const_var: &str,
         mock: bool,
-    ) -> &'a mut Self {
+    ) -> &'a dyn TestCodeBuilder {
         if mock {
             let mock_function_name = format!("{}_impl", component_name);
             self.realm_builder_snippets.push(format!(
@@ -114,8 +110,6 @@ impl RustTestCode {
             .await?"#,
                 component_name, &mock_function_name,
             ));
-            self.mock_functions
-                .push(MOCK_FUNC_TEMPLATE.replace("FUNCTION_NAME", &mock_function_name));
         } else {
             self.realm_builder_snippets.push(format!(
                 r#"        .add_component("{}", ComponentSource::url({})).await?"#,
@@ -126,15 +120,26 @@ impl RustTestCode {
         self
     }
 
-    pub fn add_protocol<'a>(
+    fn add_mock_impl<'a>(
+        &'a mut self,
+        component_name: &str,
+        _protocol: &str,
+    ) -> &'a dyn TestCodeBuilder {
+        // Note: this function name must match the one we added in 'add_component'.
+        let mock_function_name = format!("{}_impl", component_name);
+        self.mock_functions.push(MOCK_FUNC_TEMPLATE.replace("FUNCTION_NAME", &mock_function_name));
+        self
+    }
+
+    fn add_protocol<'a>(
         &'a mut self,
         protocol: &str,
         source: &str,
         targets: Vec<String>,
-    ) -> &'a mut Self {
+    ) -> &'a dyn TestCodeBuilder {
         let source_code = match source {
             "root" => "RouteEndpoint::above_root()".to_string(),
-            "self" => format!("RouteEndpoint::component(\"{}\"), ", self.component_under_test),
+            "self" => format!("RouteEndpoint::component(\"{}\")", self.component_under_test),
             _ => format!("RouteEndpoint::component(\"{}\")", source),
         };
 
@@ -165,12 +170,12 @@ impl RustTestCode {
         self
     }
 
-    pub fn add_directory<'a>(
+    fn add_directory<'a>(
         &'a mut self,
         dir_name: &str,
         dir_path: &str,
         targets: Vec<String>,
-    ) -> &'a mut Self {
+    ) -> &'a dyn TestCodeBuilder {
         let mut targets_code: String = "".to_string();
         for i in 0..targets.len() {
             let t = &targets[i];
@@ -201,12 +206,12 @@ impl RustTestCode {
         self
     }
 
-    pub fn add_storage<'a>(
+    fn add_storage<'a>(
         &'a mut self,
         storage_name: &str,
         storage_path: &str,
         targets: Vec<String>,
-    ) -> &'a mut Self {
+    ) -> &'a dyn TestCodeBuilder {
         let mut targets_code: String = "".to_string();
         for i in 0..targets.len() {
             let t = &targets[i];
@@ -237,7 +242,7 @@ impl RustTestCode {
         self
     }
 
-    pub fn add_test_case<'a>(&'a mut self, marker: &str) -> &'a mut Self {
+    fn add_test_case<'a>(&'a mut self, marker: &str) -> &'a dyn TestCodeBuilder {
         self.test_case.push(
             TEST_FUNC_TEMPLATE
                 .replace("MARKER_VAR_NAME", &marker.to_ascii_lowercase())

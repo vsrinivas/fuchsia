@@ -1,0 +1,46 @@
+# Copyright CURRENT_YEAR The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+ testonly = true
+ sources = [ "src/BINARY_NAME.cc" ]
+ deps = [
+   # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
+   # ex: "//examples/components/routing/fidl:echo-rustc",
+   {COMPONENT_FIDL_BUILD_TARGET},
+   "//garnet/public/lib/gtest",
+   "//sdk/fidl/fuchsia.component",
+   "//sdk/fidl/fuchsia.logger",
+   "//sdk/lib/fidl/cpp",
+   "//sdk/lib/sys/cpp",
+   "//sdk/lib/sys/cpp/testing:realm_builder",
+   "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
+   "//src/lib/fxl/test:gtest_main",
+ ]
+}
+
+fuchsia_component(":BINARY_NAME") {
+ testonly = true
+ deps = [ ":bin" ]
+ manifest = "meta/BINARY_NAME.cml"
+
+}
+
+fuchsia_test_package("integration_test_pkg") {
+ package_name = "COMPONENT_NAME"
+ test_components = [ ":BINARY_NAME" ]
+ deps = [
+   ":BINARY_NAME",
+   # Change COMPONENT_BUILD_TARGET to component targets the test use
+   # ex: "//examples/components/routing/echo_server:echo_server_component",
+   {COMPONENT_BUILD_TARGET},
+ ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [":integration_test_pkg"]
+}

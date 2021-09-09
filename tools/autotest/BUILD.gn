@@ -18,6 +18,7 @@ if (is_host) {
       "//src/sys/lib/cm_rust",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:regex",
     ]
     source_root = "src/main.rs"
@@ -25,15 +26,21 @@ if (is_host) {
       "src/args.rs",
       "src/cm_parser.rs",
       "src/generate_build.rs",
+      "src/generate_cpp_test.rs",
       "src/generate_manifest.rs",
       "src/generate_rust_test.rs",
       "src/main.rs",
+      "src/test_code.rs",
     ]
     inputs = [
-      "src/templates/template_BUILD",
-      "src/templates/template_manifest",
+      "src/templates/template_rust_manifest",
+      "src/templates/template_rust_BUILD",
       "src/templates/template_rust_mock_function",
       "src/templates/template_rust_test_function",
+      "src/templates/template_cpp_mock_function",
+      "src/templates/template_cpp_test_function",
+      "src/templates/template_cpp_manifest",
+      "src/templates/template_cpp_BUILD",
     ]
   }
   install_host_tools("host") {

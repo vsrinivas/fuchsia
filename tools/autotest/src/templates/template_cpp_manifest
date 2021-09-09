@@ -1,0 +1,18 @@
+// Copyright CURRENT_YEAR The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+       "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+       "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+       binary: "bin/BINARY_NAME",
+    },
+    use: [
+       {
+           protocol: "fuchsia.sys2.Realm",
+           from: "framework",
+       },
+    ],
+}
