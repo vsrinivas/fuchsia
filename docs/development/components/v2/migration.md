@@ -1407,36 +1407,59 @@ component**. If you require this feature for your component, reach out to
 
 ### Lifecycle
 
-If your component is a client of the `fuchsia.process.lifecycle.Lifecycle`
-protocol, then follow the instructions in this section to migrate lifecycle
-access.
+If your component serves the `fuchsia.process.lifecycle.Lifecycle` protocol,
+follow these instructions to migrate to the lifecycle handle provided by the
+ELF runner in Components v2.
 
 1.  Remove your component's entry in the `appmgr`
     [allowlist][cs-appmgr-allowlist]:
 
-```cpp
-// Remove this entry.
-lifecycle_allowlist.insert(component::Moniker{
-    .url = "fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx", .realm_path = {"app", "sys"}});
-```
-
+    ```cpp
+    // Remove this entry.
+    lifecycle_allowlist.insert(component::Moniker{
+        .url = "fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx", .realm_path = {"app", "sys"}});
+    ```
 1.  When [migrating your component manifest](#create-component-manifest), add
     the lifecycle stop event:
 
-```json5
-// my_component.cml
-{
-    include: [
-        "syslog/client.shard.cml",
-    ],
-    program: {
-        runner: "elf",
-        binary: "bin/my_binary",
-        {{ '<strong>' }}lifecycle: { stop_event: "notify" },{{ '</strong>' }}
-    },
-    ...
-}
-```
+    ```json5
+    // my_component.cml
+    {
+        include: [
+            "syslog/client.shard.cml",
+        ],
+        program: {
+            runner: "elf",
+            binary: "bin/my_binary",
+            {{ '<strong>' }}lifecycle: { stop_event: "notify" },{{ '</strong>' }}
+        },
+        ...
+    }
+    ```
+
+1. Get the `fuchsia.process.lifecycle.Lifecycle` channel provided by the ELF
+   runner:
+
+    * {Rust}
+      ```rust
+      use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
+      let lifecycle_channel = take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0));
+      // Serve the Lifecycle protocol on `lifecycle_channel`
+      ```
+      A more complete sample is available in the [examples][rust-lifecycle].
+
+    * {C++}
+      ```cpp
+      #include <lib/zx/channel.h>
+      #include <zircon/processargs.h>
+      zx::channel lifecyecle_channel = zx_take_startup_handle(PA_LIFECYCLE);
+      // Serve the Lifecycle protocol on `lifecycle_channel`
+      ```
+      You can refer to [fshost code][fshost-lifecycle] for a sample
+      implementation.
+
+More information about the Lifecycle protocol is available in the [ELF runner
+documentation][elf-runner-docs].
 
 ## Converting CMX features {:#cmx-features}
 
@@ -2029,12 +2052,14 @@ described in the [Vulkan documentation][vulkan].
 [emulatortest]: /tools/emulator/emulatortest
 [eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
 [eager-manifest]: /docs/concepts/components/v2/component_manifests.md#children
+[elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [event-scopes]: /docs/concepts/components/v2/capabilities/event.md#using-events
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
 [example-services-config]: /src/sys/sysmgr/config/services.config
+[fshost-lifecycle]: /src/storage/fshost/main.cc
 [integration-test-monikers]: /docs/concepts/testing/v2/integration_testing.md#test-component-moniker
 [realm-builder-monikers]: /docs/development/components/v2/realm_builder.md#test-component-moniker
 [trf-intro]: /docs/concepts/testing/v2/test_runner_framework.md
@@ -2057,6 +2082,7 @@ described in the [Vulkan documentation][vulkan].
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[rust-lifecycle]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
