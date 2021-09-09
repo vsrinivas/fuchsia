@@ -322,13 +322,27 @@ fuchsia_test_package("h264_decoder_fuzzer_tests") {
   }
 }
 
-fuchsia_unittest_package("vp9_decoder_fuzzer_test") {
+fuchsia_unittest_component("vp9_decoder_fuzzer_test") {
   manifest = "use_media_decoder/meta/vp9_decoder_fuzzer_test.cmx"
   deps = [
     ":bear_vp9",
     "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
   ]
+}
 
+fuchsia_unittest_component("vp9_decoder_fuzzer_test_v2") {
+  manifest = "use_media_decoder/meta/vp9_decoder_fuzzer_test.cml"
+  deps = [
+    ":bear_vp9",
+    "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
+  ]
+}
+
+fuchsia_test_package("vp9_decoder_fuzzer_tests") {
+  test_components = [
+    ":vp9_decoder_fuzzer_test",
+    ":vp9_decoder_fuzzer_test_v2",
+  ]
   test_specs = {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
