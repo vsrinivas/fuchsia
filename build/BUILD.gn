@@ -136,6 +136,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/lib/elfldltl/*",
     "//src/lib/framebuffer/*",
     "//src/lib/storage/fs_management/*",
+    "//src/lib/trivial-allocator/*",
     "//src/media/audio/drivers/lib/audio-driver-proto/*",
     "//src/media/audio/drivers/lib/audio-proto-utils/*",
     "//src/media/audio/drivers/lib/audio-utils-legacy/*",

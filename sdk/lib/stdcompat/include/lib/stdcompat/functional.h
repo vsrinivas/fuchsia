@@ -9,8 +9,24 @@
 
 #include "internal/functional.h"
 
-// This version is always constexpr-qualified, with no other changes from C++17.
 namespace cpp20 {
+
+#if __cplusplus >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::identity;
+
+#else
+
+struct identity {
+  template <typename T>
+  constexpr T&& operator()(T&& arg) const noexcept {
+    return std::forward<T>(arg);
+  }
+};
+
+#endif  //  __cplusplus >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+// This version is always constexpr-qualified, with no other changes from C++17.
 
 #if __cpp_lib_invoke >= 201411L && __cpp_lib_constexpr_functional >= 201907L && \
     !defined(LIB_STDCOMPAT_USE_POLYFILLS)

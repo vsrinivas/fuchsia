@@ -1,0 +1,53 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/test.gni")
+import("//build/testing/zbi_test.gni")
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("trivial-allocator") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/trivial-allocator/basic-leaky-allocator.h",
+    "lib/trivial-allocator/single-heap-allocator.h",
+  ]
+
+  public_deps = [ "//sdk/lib/stdcompat" ]
+
+  sources = []
+  deps = []
+
+  if (is_kernel) {
+    deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
+test("trivial-allocator-unittests") {
+  sources = [
+    "basic-leaky-allocator-tests.cc",
+    "single-heap-allocator-tests.cc",
+  ]
+  deps = [
+    ":trivial-allocator",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("trivial-allocator-tests") {
+  deps = [ ":trivial-allocator-unittests" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":trivial-allocator-tests",
+    ":trivial-allocator-unittests($host_toolchain)",
+  ]
+}
