@@ -46,6 +46,19 @@ Inspect. Some examples include:
 * The number of errors that a parser has encountered.
 * The contents of a data structure.
 
+### API Reference
+
+- {C++}
+
+[Inspect library documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
+
+- {Rust}
+
+[fuchsia-inspect crate documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
+
+- {Dart}
+
+[fuchsia_inspect dart package documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
 
 ## Codelab
 
