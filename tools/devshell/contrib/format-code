@@ -141,6 +141,7 @@ function canonicalize() {
 DRY_RUN=
 VERBOSE=
 CHANGED_LINES=
+ALL_FILES=0
 
 fx-config-read
 
@@ -151,8 +152,14 @@ while [ $# -gt 0 ]; do
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
     --changed-lines) CHANGED_LINES="1" ;;
-    --all) GET_FILES=get_all_files ;;
-    --git) GET_FILES=get_git_files ;;
+    --all)
+      GET_FILES=get_all_files
+      ALL_FILES=1
+      ;;
+    --git)
+      GET_FILES=get_git_files
+      ALL_FILES=1
+      ;;
     --files=*)
       GET_FILES=:
       FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
@@ -254,7 +261,12 @@ done
 # Format files.
 for file in ${FILES[@]}; do
   # Git reports deleted files, which we don't want to try to format
-  [[ ! -f "${file}" ]] && continue
+  if [[ ! -f "${file}" ]]; then
+    if [[ ALL_FILES -ne 1 ]]; then
+      printf "File ${file} does not exist and was not formatted\n"
+    fi
+    continue
+  fi
 
   # Format the file
   format-file ${file}
