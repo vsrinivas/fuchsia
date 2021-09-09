@@ -28,7 +28,7 @@ fuchsia_unittest_component("connectivity-manager-test") {
 }
 
 fuchsia_unittest_component("group-key-store-test") {
-  manifest = rebase_path("meta/group_key_store_unittests.cmx")
+  manifest = rebase_path("meta/group_key_store_unittests.cml")
   deps = [ ":group_key_store_unittests" ]
 }
 
