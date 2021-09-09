@@ -1475,7 +1475,7 @@ static bool vmo_attribution_pager_test() {
   AutoVmScannerDisable scanner_disable;
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<StubPageProvider> pager = ktl::make_unique<StubPageProvider>(&ac);
+  fbl::RefPtr<StubPageProvider> pager = fbl::MakeRefCountedChecked<StubPageProvider>(&ac);
   ASSERT_TRUE(ac.check());
 
   fbl::RefPtr<PageSource> src = fbl::MakeRefCountedChecked<PageSource>(&ac, ktl::move(pager));

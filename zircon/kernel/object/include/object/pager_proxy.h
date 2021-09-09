@@ -26,11 +26,10 @@
 // until the packet is freed.
 class PagerProxy : public PageProvider, public PortAllocator {
  public:
+  PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
   ~PagerProxy() override;
 
  private:
-  PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
-
   // PortAllocator methods.
   PortPacket* Alloc() final {
     DEBUG_ASSERT(false);

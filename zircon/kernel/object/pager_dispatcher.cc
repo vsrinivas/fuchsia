@@ -49,13 +49,13 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
   }
 
   fbl::AllocChecker ac;
-  auto proxy = ktl::unique_ptr<PagerProxy>(new (&ac) PagerProxy(this, ktl::move(port), key));
+  auto proxy = fbl::MakeRefCountedChecked<PagerProxy>(&ac, this, ktl::move(port), key);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
   auto proxy_ptr = proxy.get();
 
-  auto src = fbl::AdoptRef(new (&ac) PageSource(ktl::move(proxy)));
+  auto src = fbl::MakeRefCountedChecked<PageSource>(&ac, ktl::move(proxy));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -92,7 +92,7 @@ zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
   // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
   // actually take any page faults.
   fbl::AllocChecker ac;
-  ktl::unique_ptr<StubPageProvider> pager = ktl::make_unique<StubPageProvider>(&ac);
+  fbl::RefPtr<StubPageProvider> pager = fbl::MakeRefCountedChecked<StubPageProvider>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -129,7 +129,7 @@ static zx_status_t create_precommitted_pager_backed_vmo(uint64_t size,
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<StubPageProvider> pager = ktl::make_unique<StubPageProvider>(&ac);
+  fbl::RefPtr<StubPageProvider> pager = fbl::MakeRefCountedChecked<StubPageProvider>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

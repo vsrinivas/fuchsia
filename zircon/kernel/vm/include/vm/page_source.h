@@ -31,7 +31,7 @@ struct VmoDebugInfo {
 };
 
 // Interface for providing pages to a VMO through page requests.
-class PageProvider {
+class PageProvider : public fbl::RefCounted<PageProvider> {
  public:
   virtual ~PageProvider() = default;
 
@@ -98,7 +98,7 @@ class PageSource : public fbl::RefCounted<PageSource>,
                    public fbl::DoublyLinkedListable<fbl::RefPtr<PageSource>> {
  public:
   PageSource() = delete;
-  explicit PageSource(ktl::unique_ptr<PageProvider> page_provider);
+  explicit PageSource(fbl::RefPtr<PageProvider>&& page_provider);
 
   // Sends a request to the backing source to provide the requested page.
   //
@@ -174,7 +174,7 @@ class PageSource : public fbl::RefCounted<PageSource>,
 
   // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
   // PagerProxy for details).
-  ktl::unique_ptr<PageProvider> page_provider_;
+  fbl::RefPtr<PageProvider> page_provider_;
 
   // Sends a read request to the backing source, or adds the request to the overlap_ list if the
   // needed region has already been requested from the source.
