@@ -234,21 +234,9 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
   }
 }
 
-}  // namespace inspector
-
-__EXPORT void inspector_print_stack_trace(FILE* out, zx_handle_t process, zx_handle_t thread,
-                                          const zx_thread_state_general_regs* regs) {
-  inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
-  inspector_print_markup_context(out, process);
-
-  inspector::decoded_registers decoded = inspector::decode_registers(regs);
-  inspector_print_backtrace_markup(out, process, thread, dso_list, decoded.pc, decoded.sp,
-                                   decoded.fp);
-  inspector_dso_free_list(dso_list);
-}
-
-__EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
-                                         zx_handle_t thread_handle) {
+// |skip_markup_context| avoids printing dso list repeatedly for multiple threads in a process.
+void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
+                                     zx_handle_t thread_handle, bool skip_markup_context) {
   zx_status_t status;
   // If the caller didn't supply |regs| use a local copy.
   zx_thread_state_general_regs_t regs;
@@ -277,7 +265,7 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
   // differentiable from other exceptions.
   bool backtrace_requested = false;
 
-  // Check if the process is on an exception.
+  // Check if the thread is on an exception.
   zx_exception_report_t report;
   if (thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
                        nullptr) == ZX_OK) {
@@ -311,27 +299,39 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
 #else
 #error unsupported architecture
 #endif
+      // Print the common stack part of the thread.
+      fprintf(out, "bottom of user stack:\n");
+      inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
+
+      fprintf(out, "arch: %s\n", inspector::kArch);
     }
   } else {
-    // The thread is suspended so we can safely print the stack trace.
+    // Print minimal information for threads not on an exception, e.g., other threads in a backtrace
+    // request.
     fprintf(out, "<== process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", process_name, pid,
             thread_name, tid);
-    fprintf(out, "<== PC at 0x%" PRIxPTR "\n", decoded.pc);
-    inspector_print_general_regs(out, &regs, nullptr);
   }
 
-  if (!backtrace_requested) {
-    // Print the common stack part of the thread.
-    fprintf(out, "bottom of user stack:\n");
-    inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
+  if (!skip_markup_context)
+    inspector_print_markup_context(out, process->get());
 
-    fprintf(out, "arch: %s\n", inspector::kArch);
-  }
-
-  inspector_print_stack_trace(out, process->get(), thread->get(), &regs);
+  inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process->get());
+  inspector_print_backtrace_markup(out, process->get(), thread->get(), dso_list, decoded.pc,
+                                   decoded.sp, decoded.fp);
+  inspector_dso_free_list(dso_list);
 
   if (inspector::verbosity_level >= 1)
     printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", pid, tid);
+}
+
+}  // namespace inspector
+
+__EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
+                                         zx_handle_t thread_handle) {
+  inspector::inspector_print_debug_info_impl(out, process_handle, thread_handle, false);
+
+  // Print one last reset to clear all symbolizer contextual state for the process.
+  fprintf(out, "{{{reset}}}\n");
 }
 
 // The approach of |inspector_print_debug_info_for_all_threads| is to suspend the process, obtain
@@ -409,6 +409,9 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
     thread_infos[i] = std::move(thread_info);
   }
 
+  // Ensure only the first thread has markup context printed.
+  bool skip_markup_context = false;
+
   // Print the threads in an exception first.
   for (size_t i = 0; i < actual; i++) {
     zx::thread& child = thread_handles[i];
@@ -421,7 +424,9 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
 
     // We print the thread and then mark this koid as empty, so that it won't be printed on the
     // suspended pass. This means we can free the handle after this.
-    inspector_print_debug_info(out, process->get(), child.get());
+    inspector::inspector_print_debug_info_impl(out, process->get(), child.get(),
+                                               skip_markup_context);
+    skip_markup_context = true;
     thread_handles[i].reset();
   }
 
@@ -459,6 +464,11 @@ __EXPORT void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t 
     }
 
     // We can now print the thread.
-    inspector_print_debug_info(out, process->get(), child.get());
+    inspector::inspector_print_debug_info_impl(out, process->get(), child.get(),
+                                               skip_markup_context);
+    skip_markup_context = true;
   }
+
+  // Print one last reset to clear all symbolizer contextual state for the process.
+  fprintf(out, "{{{reset}}}\n");
 }

@@ -93,9 +93,6 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
 
-  // Print one last reset to clear all symbolizer contextual state for the process.
-  fprintf(stdout, "{{{reset}}}\n");
-
   const std::string process_name = fsl::GetObjectName(process.get());
 
   // If the process serving fuchsia.exception.Handler crashes, the system will still send future
