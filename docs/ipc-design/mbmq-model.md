@@ -714,9 +714,9 @@ the `FooEventCallback` channel in advance, before the client calls
 not allow that.
 
 One reason for not applying this transformation with Zircon's current
-IPC primitives is that the relative ordering of the request and event
-messages would no longer be preserved.  It is possible that some code
-uses FIDL event messages (rather than using request messages on a
+IPC primitives is that the relative ordering of the reply messages and
+event messages would no longer be preserved.  It is possible that some
+code uses FIDL event messages (rather than using request messages on a
 separate channel) for that reason.  However, the MBMQ model allows the
 message ordering to be preserved across channels, as described below.
 
