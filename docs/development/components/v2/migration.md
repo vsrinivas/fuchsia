@@ -1441,20 +1441,24 @@ ELF runner in Components v2.
    runner:
 
     * {Rust}
+
       ```rust
       use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
       let lifecycle_channel = take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0));
       // Serve the Lifecycle protocol on `lifecycle_channel`
       ```
+
       A more complete sample is available in the [examples][rust-lifecycle].
 
     * {C++}
+
       ```cpp
       #include <lib/zx/channel.h>
       #include <zircon/processargs.h>
       zx::channel lifecyecle_channel = zx_take_startup_handle(PA_LIFECYCLE);
       // Serve the Lifecycle protocol on `lifecycle_channel`
       ```
+
       You can refer to [fshost code][fshost-lifecycle] for a sample
       implementation.
 
