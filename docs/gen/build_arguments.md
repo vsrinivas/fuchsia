@@ -1562,6 +1562,14 @@ used for host tools.  If this is "", then a standard prebuilt is used.
 
 From //build/toolchain/zircon/gcc.gni:15
 
+### generate_plasa_artifacts
+If set, causes the plasa artifacts to be generated.  Not all builds need to
+use the plasa artifacts, so we set the default to skip the generation.
+
+**Current value (from the default):** `false`
+
+From //sdk/cts/plasa/config.gni:8
+
 ### glm_build_root
 
 **Current value (from the default):** `"//third_party/glm"`
