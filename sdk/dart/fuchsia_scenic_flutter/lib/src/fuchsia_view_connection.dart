@@ -94,6 +94,8 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   static void _handleViewDisconnected(FuchsiaViewController controller) {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
     connection._onViewDisconnected?.call(controller);
+    // TODO(fxbug.dev/84035): Dispose eagerly, on widget disconnect lifecycle
+    // event. Here, injection races with view-disconnect on the server.
     if (connection.usePointerInjection) {
       connection.pointerInjector.dispose();
     }
@@ -110,12 +112,9 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     // was torn down, we need to create one.
     if (!connection.pointerInjector.registered) {
       // The only valid pointer event to start an injector with is DOWN event.
+      // This check affords protection against the first stream if malformed,
+      // but does not guard against future malformed streams.
       if (!(pointer is PointerDownEvent)) {
-        return;
-      }
-
-      // An empty viewport is pointless. Nothing will go through.
-      if (connection.viewport == Rect.zero) {
         return;
       }
 
@@ -127,14 +126,10 @@ class FuchsiaViewConnection extends FuchsiaViewController {
       connection.pointerInjector.register(
         hostViewRef: connection.hostViewRef,
         viewRef: viewRefDup,
-        viewport: connection.viewport!,
       );
     }
 
-    return connection.pointerInjector.dispatchEvent(
-      pointer: pointer,
-      viewport: connection.viewport,
-    );
+    return connection.pointerInjector.dispatchEvent(pointer: pointer);
   }
 
   @visibleForTesting

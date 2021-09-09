@@ -159,6 +159,8 @@ class FuchsiaViewController implements PlatformViewController {
   /// set's its [key] to the controller instance passed to it.
   ///
   /// Returns [null] if the child view has not been rendered.
+  ///
+  /// Note: this viewport is *not* used by the injector, not needed there.
   Rect? get viewport {
     final key = GlobalObjectKey(this);
     RenderBox? box = key.currentContext?.findRenderObject() as RenderBox?;

@@ -284,9 +284,6 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
 
   @override
   ViewRef get hostViewRef => _mockViewRef();
-
-  @override
-  Rect? get viewport => Rect.fromLTWH(0, 0, 100, 100);
 }
 
 class MockViewHolderToken extends Mock implements ViewHolderToken {
