@@ -50,11 +50,6 @@ class FuchsiaViewController implements PlatformViewController {
   // once during the controller's lifetime.
   bool _viewCreated = false;
 
-  // The [bool] that tracks whether the platform view was destroyed or not yet.
-  // The [FuchsiaViewController] will only destroy its associated platform view
-  // once during the controller's lifetime.
-  bool _viewDestroyed = false;
-
   // The [Completer] that is completed when the platform view is connected.
   Completer _whenConnected = Completer();
 
@@ -139,18 +134,13 @@ class FuchsiaViewController implements PlatformViewController {
     return FocusState.instance.requestFocus(viewRef);
   }
 
-  /// Dispose the underlying platform view controller.
+  /// Dispose relevant resources when the view is take [OffStage] by Flutter.
   ///
-  /// Destroys the underlying [ViewHolderToken] and cleans up view resources.
+  /// There are currently no resources that need to be released when the
+  /// [PlatformView] is taken [Offstage] because the underlying Fuchsia view
+  /// owner is still alive and the view can be bought back on stage.
   @override
-  Future<void> dispose() async {
-    if (_viewCreated && !_viewDestroyed) {
-      _viewDestroyed = true;
-
-      FuchsiaViewsService.instance.deregister(viewId);
-      await FuchsiaViewsService.instance.destroyView(viewId);
-    }
-  }
+  Future<void> dispose() async {}
 
   @override
   Future<void> clearFocus() async {}
