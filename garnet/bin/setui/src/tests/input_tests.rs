@@ -21,6 +21,7 @@ use crate::service::{Address, Payload, Role};
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::helpers::move_executor_forward;
 use crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnvironmentBuilder};
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use fidl::Error::ClientChannelClosed;
@@ -345,36 +346,6 @@ fn verify_muted_state(
             })
         },
     );
-}
-
-// Macro to run async calls with an executor, handling the Ready status
-// and panicking with a custom message if it does not succeed.
-#[macro_export]
-macro_rules! run_code_with_executor {
-    (
-        $executor:ident,
-        $async_code:expr,
-        $panic_msg:expr
-    ) => {{
-        let mut future = Box::pin(async { $async_code });
-        match $executor.run_until_stalled(&mut future) {
-            Poll::Ready(res) => res,
-            _ => panic!("{}", $panic_msg),
-        }
-    }};
-}
-
-// Run the provided `future` via the `executor`.
-fn move_executor_forward(
-    executor: &mut TestExecutor,
-    future: impl futures::Future<Output = ()>,
-    panic_msg: &str,
-) {
-    pin_mut!(future);
-    match executor.run_until_stalled(&mut future) {
-        Poll::Ready(res) => res,
-        _ => panic!("{}", panic_msg),
-    }
 }
 
 // Test that a watch is executed correctly.

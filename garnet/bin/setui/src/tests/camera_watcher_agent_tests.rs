@@ -5,14 +5,18 @@
 use crate::agent::camera_watcher::CameraWatcherAgent;
 use crate::agent::{AgentError, Context, Invocation, Lifespan, Payload};
 use crate::event::{self, Event};
+use crate::input::common::CAMERA_WATCHER_TIMEOUT;
 use crate::message::base::{Audience, MessengerType};
 use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::camera3_service::Camera3Service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
+use crate::tests::helpers::{move_executor_forward, move_executor_forward_and_get};
+use fuchsia_async::{TestExecutor, Time};
 use futures::lock::Mutex;
 use std::collections::HashSet;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 struct FakeServices {
@@ -108,31 +112,61 @@ async fn test_camera_agent_proxy() {
 
 // Tests that an error is returned if the camera watcher cannot find a camera device
 // after the timeout is reached.
-// TODO(fxbug.dev/82500): Use an executor so that the test doesn't have to wait for the timeout.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_camera_devices_watcher_timeout() {
+#[test]
+fn test_camera_devices_watcher_timeout() {
+    // Custom executor for this test so that we can advance the clock arbitrarily and verify the
+    // state of the executor at any given point.
+    let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
+    executor.set_fake_time(Time::from_nanos(0));
+
     let service_hub = service::MessageHub::create_hub();
 
     // Create the agent receptor for use by the agent.
-    let agent_receptor = service_hub
-        .create(MessengerType::Unbound)
-        .await
-        .expect("Unable to create agent messenger")
-        .1;
+    let agent_receptor_future = service_hub.create(MessengerType::Unbound);
+    let agent_receptor = move_executor_forward_and_get(
+        &mut executor,
+        agent_receptor_future,
+        "Unable to get agent receptor",
+    )
+    .expect("Unable to create agent messenger")
+    .1;
     let signature = agent_receptor.get_signature();
 
     // Create the messenger where we will send the invocations.
-    let (agent_messenger, _) =
-        service_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
+    let agent_messenger_future = service_hub.create(MessengerType::Unbound);
+    let (agent_messenger, _) = move_executor_forward_and_get(
+        &mut executor,
+        agent_messenger_future,
+        "Unable to create agent messenger",
+    )
+    .expect("Unable to get agent messenger");
 
     // Create the agent context and agent.
+    let context_future =
+        Context::new(agent_receptor, service_hub.clone(), HashSet::new(), HashSet::new(), None);
     let context =
-        Context::new(agent_receptor, service_hub, HashSet::new(), HashSet::new(), None).await;
-    // Setup the fake services.
-    let (service_registry, fake_services) = create_services(false, false).await;
+        move_executor_forward_and_get(&mut executor, context_future, "Could not create context");
 
-    fake_services.camera3_service.lock().await.set_camera_sw_muted(true);
-    CameraWatcherAgent::create(context).await;
+    // Setup the fake services.
+    let services_future = create_services(false, false);
+    let (service_registry, fake_services) =
+        move_executor_forward_and_get(&mut executor, services_future, "Could not create services");
+
+    // Mute the camera via software.
+    let camera_service_future = fake_services.camera3_service.lock();
+    move_executor_forward_and_get(
+        &mut executor,
+        camera_service_future,
+        "Unable to get camera service",
+    )
+    .set_camera_sw_muted(true);
+
+    let camera_watcher_agent_future = CameraWatcherAgent::create(context);
+    move_executor_forward(
+        &mut executor,
+        camera_watcher_agent_future,
+        "Unable to create camera watcher agent",
+    );
 
     let service_context =
         Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None));
@@ -142,12 +176,19 @@ async fn test_camera_devices_watcher_timeout() {
     let mut reply_receptor = agent_messenger
         .message(Payload::Invocation(invocation).into(), Audience::Messenger(signature))
         .send();
+
+    // Advance time past the timeout.
+    executor.set_fake_time(
+        Time::from_nanos(CAMERA_WATCHER_TIMEOUT * 10_i64.pow(6))
+            .try_into()
+            .expect("could not convert timeout into nanos"),
+    );
+
+    let completion_future = reply_receptor.next_of::<Payload>();
+    let completion =
+        move_executor_forward_and_get(&mut executor, completion_future, "Could not get next reply");
     let completion_result =
-        if let Ok((Payload::Complete(result), _)) = reply_receptor.next_of::<Payload>().await {
-            Some(result)
-        } else {
-            None
-        };
+        if let Ok((Payload::Complete(result), _)) = completion { Some(result) } else { None };
 
     // Validate that the setup is complete.
     assert!(
