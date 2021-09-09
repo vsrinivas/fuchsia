@@ -26,6 +26,12 @@ class RamNandCtl : public fbl::RefCounted<RamNandCtl> {
   // Creates an isolated devmgr and spawns a ram_nand_ctl device in it.
   static zx_status_t Create(fbl::RefPtr<RamNandCtl>* out);
 
+  static zx_status_t CreateWithRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+                                       std::optional<RamNand>* out);
+
+  zx_status_t CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+                            std::optional<RamNand>* out);
+
   ~RamNandCtl() = default;
 
   const fbl::unique_fd& fd() { return ctl_; }
@@ -46,15 +52,6 @@ class RamNand {
   // Creates a ram_nand under ram_nand_ctl running under the main devmgr.
   static zx_status_t Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out);
-
-  // Creates a ram_nand device underneath the ram_nand_ctl.
-  static zx_status_t Create(fbl::RefPtr<RamNandCtl> ctl,
-                            const fuchsia_hardware_nand_RamNandInfo* config,
-                            std::optional<RamNand>* out);
-
-  // Creates a ram_nand_ctl device and then a ram_device underneath.
-  static zx_status_t CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* config,
-                                    std::optional<RamNand>* out);
 
   // Not copyable.
   RamNand(const RamNand&) = delete;
@@ -84,14 +81,12 @@ class RamNand {
     return nullptr;
   }
 
-  const fbl::unique_fd& devfs_root() { return parent_->devfs_root(); }
+  explicit RamNand(fbl::unique_fd fd)
+      : fd_(std::move(fd)), path_(std::nullopt), filename_(std::nullopt) {}
 
  private:
-  RamNand(fbl::unique_fd fd, fbl::RefPtr<RamNandCtl> ctl)
-      : fd_(std::move(fd)), path_(std::nullopt), filename_(std::nullopt), parent_(ctl) {}
-
   RamNand(fbl::unique_fd fd, fbl::String path, fbl::String filename)
-      : fd_(std::move(fd)), path_(path), filename_(filename), parent_(nullptr) {}
+      : fd_(std::move(fd)), path_(path), filename_(filename) {}
 
   fbl::unique_fd fd_;
   bool unbind = true;
@@ -101,9 +96,6 @@ class RamNand {
 
   // Only valid if not spawned in an isolated devmgr.
   std::optional<fbl::String> filename_;
-
-  // Optional parent if spawned in an isolated devmgr.
-  fbl::RefPtr<RamNandCtl> parent_;
 };
 
 }  // namespace ramdevice_client

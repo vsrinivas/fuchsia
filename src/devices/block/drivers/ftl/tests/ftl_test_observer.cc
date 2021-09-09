@@ -45,9 +45,17 @@ void FtlTestObserver::OnProgramStart() {
 }
 
 void FtlTestObserver::CreateDevice() {
+  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
+  zx_status_t status = ramdevice_client::RamNandCtl::Create(&ctl);
+  if (status != ZX_OK) {
+    printf("Unable to create ram-nand-ctl\n");
+    return;
+  }
+  ram_nand_ctl_ = std::move(ctl);
+
   fuchsia_hardware_nand_RamNandInfo config = GetConfig();
 
-  if (ramdevice_client::RamNand::CreateIsolated(&config, &ram_nand_) != ZX_OK) {
+  if ((*ram_nand_ctl_)->CreateRamNand(&config, &ram_nand_) != ZX_OK) {
     printf("Unable to create ram-nand\n");
   }
 }

@@ -24,8 +24,9 @@ class FtlTestObserver {
   void CreateDevice();
   zx_status_t WaitForBlockDevice();
 
-  const fbl::unique_fd& devfs_root() { return ram_nand_->devfs_root(); }
+  const fbl::unique_fd& devfs_root() { return (*ram_nand_ctl_)->devfs_root(); }
 
+  std::optional<fbl::RefPtr<ramdevice_client::RamNandCtl>> ram_nand_ctl_;
   std::optional<ramdevice_client::RamNand> ram_nand_;
   bool ok_ = false;
 };

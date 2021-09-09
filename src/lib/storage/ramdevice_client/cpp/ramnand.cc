@@ -84,6 +84,57 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
 }
 
 __EXPORT
+zx_status_t RamNandCtl::CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+                                      std::optional<RamNand>* out) {
+  fdio_t* io = fdio_unsafe_fd_to_io(fd().get());
+  if (io == NULL) {
+    fprintf(stderr, "Could not get fdio object\n");
+    return ZX_ERR_INTERNAL;
+  }
+  zx_handle_t ctl_svc = fdio_unsafe_borrow_channel(io);
+
+  char name[fuchsia_hardware_nand_NAME_LEN + 1];
+  size_t out_name_size;
+  zx_status_t status;
+  zx_status_t st = fuchsia_hardware_nand_RamNandCtlCreateDevice(
+      ctl_svc, config, &status, name, fuchsia_hardware_nand_NAME_LEN, &out_name_size);
+  fdio_unsafe_release(io);
+  if (st != ZX_OK || status != ZX_OK) {
+    st = st != ZX_OK ? st : status;
+    fprintf(stderr, "Could not create ram_nand device, %d\n", st);
+    return st;
+  }
+  name[out_name_size] = '\0';
+
+  // TODO(fxbug.dev/33003): We should be able to open relative to ctl->fd(), but
+  // due to a bug, we have to be relative to devfs_root instead.
+  fbl::StringBuffer<PATH_MAX> path;
+  path.Append("sys/platform/00:00:2e/nand-ctl/");
+  path.Append(name);
+  fprintf(stderr, "Trying to open (%s)\n", path.c_str());
+
+  fbl::unique_fd fd;
+  st = devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path.c_str(), &fd);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  *out = RamNand(std::move(fd));
+  return ZX_OK;
+}
+
+__EXPORT
+zx_status_t RamNandCtl::CreateWithRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+                                          std::optional<RamNand>* out) {
+  fbl::RefPtr<RamNandCtl> ctl;
+  zx_status_t st = RamNandCtl::Create(&ctl);
+  if (st != ZX_OK) {
+    return st;
+  }
+  return ctl->CreateRamNand(config, out);
+}
+
+__EXPORT
 zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
   fbl::unique_fd control(open(kBasePath, O_RDWR));
@@ -125,58 +176,6 @@ zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
 
   *out = RamNand(std::move(ram_nand), path.ToString(), fbl::String(name));
   return ZX_OK;
-}
-
-__EXPORT
-zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
-                            const fuchsia_hardware_nand_RamNandInfo* config,
-                            std::optional<RamNand>* out) {
-  fdio_t* io = fdio_unsafe_fd_to_io(ctl->fd().get());
-  if (io == NULL) {
-    fprintf(stderr, "Could not get fdio object\n");
-    return ZX_ERR_INTERNAL;
-  }
-  zx_handle_t ctl_svc = fdio_unsafe_borrow_channel(io);
-
-  char name[fuchsia_hardware_nand_NAME_LEN + 1];
-  size_t out_name_size;
-  zx_status_t status;
-  zx_status_t st = fuchsia_hardware_nand_RamNandCtlCreateDevice(
-      ctl_svc, config, &status, name, fuchsia_hardware_nand_NAME_LEN, &out_name_size);
-  fdio_unsafe_release(io);
-  if (st != ZX_OK || status != ZX_OK) {
-    st = st != ZX_OK ? st : status;
-    fprintf(stderr, "Could not create ram_nand device, %d\n", st);
-    return st;
-  }
-  name[out_name_size] = '\0';
-
-  // TODO(fxbug.dev/33003): We should be able to open relative to ctl->fd(), but
-  // due to a bug, we have to be relative to devfs_root instead.
-  fbl::StringBuffer<PATH_MAX> path;
-  path.Append("sys/platform/00:00:2e/nand-ctl/");
-  path.Append(name);
-  fprintf(stderr, "Trying to open (%s)\n", path.c_str());
-
-  fbl::unique_fd fd;
-  st = devmgr_integration_test::RecursiveWaitForFile(ctl->devfs_root(), path.c_str(), &fd);
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  *out = RamNand(std::move(fd), std::move(ctl));
-  return ZX_OK;
-}
-
-__EXPORT
-zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* config,
-                                    std::optional<RamNand>* out) {
-  fbl::RefPtr<RamNandCtl> ctl;
-  zx_status_t st = RamNandCtl::Create(&ctl);
-  if (st != ZX_OK) {
-    return st;
-  }
-  return Create(std::move(ctl), config, out);
 }
 
 __EXPORT
