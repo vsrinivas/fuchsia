@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdio.h>

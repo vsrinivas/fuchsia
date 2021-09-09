@@ -12,6 +12,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
+#include <ramdevice-client-test/ramnandctl.h>
 #include <ramdevice-client/ramdisk.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
@@ -74,11 +75,11 @@ class SkipBlockDevice {
   ~SkipBlockDevice() = default;
 
  private:
-  SkipBlockDevice(fbl::RefPtr<ramdevice_client::RamNandCtl> ctl, ramdevice_client::RamNand ram_nand,
-                  fzl::VmoMapper mapper)
+  SkipBlockDevice(fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl,
+                  ramdevice_client::RamNand ram_nand, fzl::VmoMapper mapper)
       : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
-  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl_;
+  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl_;
   ramdevice_client::RamNand ram_nand_;
   fzl::VmoMapper mapper_;
 };

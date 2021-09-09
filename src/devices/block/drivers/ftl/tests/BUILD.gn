@@ -87,6 +87,7 @@ test("ftl-integration") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
+    "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -94,7 +95,6 @@ test("ftl-integration") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/ramdevice-client",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

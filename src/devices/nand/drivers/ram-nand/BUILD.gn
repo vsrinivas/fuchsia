@@ -85,6 +85,7 @@ test("ram-nand-test") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

@@ -11,7 +11,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/hw/gpt.h>
 
-#include <ramdevice-client/ramnand.h>
+#include <ramdevice-client-test/ramnandctl.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -79,12 +79,12 @@ class SkipBlockDevice {
 
   ~SkipBlockDevice() = default;
 
-  SkipBlockDevice(fbl::RefPtr<ramdevice_client::RamNandCtl> ctl, ramdevice_client::RamNand ram_nand,
-                  fzl::VmoMapper mapper)
+  SkipBlockDevice(fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl,
+                  ramdevice_client::RamNand ram_nand, fzl::VmoMapper mapper)
       : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
  private:
-  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl_;
+  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl_;
   ramdevice_client::RamNand ram_nand_;
   fzl::VmoMapper mapper_;
 };
@@ -120,8 +120,8 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
 
   fuchsia_hardware_nand_RamNandInfo info = nand_info;
   info.vmo = dup.release();
-  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
-  ASSERT_OK(ramdevice_client::RamNandCtl::Create(&ctl));
+  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  ASSERT_OK(ramdevice_client_test::RamNandCtl::Create(&ctl));
   std::optional<ramdevice_client::RamNand> ram_nand;
   ASSERT_OK(ctl->CreateRamNand(&info, &ram_nand));
   fbl::unique_fd fd;

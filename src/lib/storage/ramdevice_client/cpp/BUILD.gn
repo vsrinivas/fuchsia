@@ -17,11 +17,37 @@ shared_library("ramdevice-client") {
     "ramnand.cc",
   ]
   public_deps = [
-    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
-    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+shared_library("ramdevice-client-test") {
+  testonly = true
+  public_configs = [ ":headers_config" ]
+  public = [ "include/ramdevice-client-test/ramnandctl.h" ]
+  sources = [ "ramnandctl.cc" ]
+  public_deps = [
+    # <ramdevice-client-test/ramnandctl.h> has #include <lib/driver-integration-test/fixture.h>
+    ":ramdevice-client",
 
     # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -52,9 +78,6 @@ static_library("ramdevice-client-static") {
     "ramnand.cc",
   ]
   public_deps = [
-    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
-    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
-
     # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
   ]
@@ -62,6 +85,35 @@ static_library("ramdevice-client-static") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+static_library("ramdevice-client-test-static") {
+  testonly = true
+  public_configs = [ ":headers_config" ]
+  public = [ "include/ramdevice-client-test/ramnandctl.h" ]
+  sources = [ "ramnandctl.cc" ]
+  public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    ":ramdevice-client",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",

@@ -15,6 +15,7 @@ source_set("kms-stateless") {
     "//sdk/lib/fdio",
     "//src/security/keysafe",
     "//src/security/tee/tee-client-api",
+    "//zircon/public/lib/zx",
     "//zircon/system/ulib/ramdevice-client",
   ]
 }

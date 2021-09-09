@@ -15,11 +15,11 @@ test("sysconfig-sync-client-test") {
   include_dirs = [ ".." ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
     "//zircon/system/ulib/trace-engine",
   ]

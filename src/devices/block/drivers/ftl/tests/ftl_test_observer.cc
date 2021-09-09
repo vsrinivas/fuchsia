@@ -45,8 +45,8 @@ void FtlTestObserver::OnProgramStart() {
 }
 
 void FtlTestObserver::CreateDevice() {
-  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
-  zx_status_t status = ramdevice_client::RamNandCtl::Create(&ctl);
+  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  zx_status_t status = ramdevice_client_test::RamNandCtl::Create(&ctl);
   if (status != ZX_OK) {
     printf("Unable to create ram-nand-ctl\n");
     return;

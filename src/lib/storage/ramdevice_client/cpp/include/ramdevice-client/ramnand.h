@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
-#include <lib/driver-integration-test/fixture.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
 #include <memory>
@@ -18,32 +18,6 @@
 #include <fbl/string.h>
 
 namespace ramdevice_client {
-
-class RamNand;
-
-class RamNandCtl : public fbl::RefCounted<RamNandCtl> {
- public:
-  // Creates an isolated devmgr and spawns a ram_nand_ctl device in it.
-  static zx_status_t Create(fbl::RefPtr<RamNandCtl>* out);
-
-  static zx_status_t CreateWithRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
-                                       std::optional<RamNand>* out);
-
-  zx_status_t CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
-                            std::optional<RamNand>* out);
-
-  ~RamNandCtl() = default;
-
-  const fbl::unique_fd& fd() { return ctl_; }
-  const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
-
- private:
-  RamNandCtl(driver_integration_test::IsolatedDevmgr devmgr, fbl::unique_fd ctl)
-      : devmgr_(std::move(devmgr)), ctl_(std::move(ctl)) {}
-
-  driver_integration_test::IsolatedDevmgr devmgr_;
-  fbl::unique_fd ctl_;
-};
 
 class RamNand {
  public:

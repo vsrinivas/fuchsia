@@ -82,8 +82,8 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
 
   fuchsia_hardware_nand_RamNandInfo info = nand_info;
   info.vmo = dup.release();
-  fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
-  ASSERT_OK(ramdevice_client::RamNandCtl::Create(&ctl));
+  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  ASSERT_OK(ramdevice_client_test::RamNandCtl::Create(&ctl));
   std::optional<ramdevice_client::RamNand> ram_nand;
   ASSERT_OK(ctl->CreateRamNand(&info, &ram_nand));
   fbl::unique_fd fd;
