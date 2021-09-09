@@ -34,8 +34,11 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
  private:
   explicit PagerDispatcher();
 
-  mutable DECLARE_MUTEX(PagerDispatcher) list_mtx_;
-  fbl::DoublyLinkedList<fbl::RefPtr<PageSource>> srcs_ TA_GUARDED(list_mtx_);
+  mutable DECLARE_MUTEX(PagerDispatcher) lock_;
+  fbl::DoublyLinkedList<fbl::RefPtr<PageSource>> srcs_ TA_GUARDED(lock_);
+  // Track whether zero handles has been triggered. This prevents race conditions where we might
+  // create new sources after on_zero_handles has been called.
+  bool triggered_zero_handles_ TA_GUARDED(lock_) = false;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PAGER_DISPATCHER_H_

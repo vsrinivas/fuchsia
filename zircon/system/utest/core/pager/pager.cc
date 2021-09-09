@@ -14,6 +14,7 @@
 
 #include <iterator>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include <fbl/algorithm.h>
@@ -3047,6 +3048,43 @@ TEST(Pager, EvictionHintsWithResize) {
   // No more page requests are seen.
   uint64_t offset, length;
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
+TEST(Pager, ZeroHandlesRace) {
+  zx::pager pager;
+  ASSERT_OK(zx::pager::create(0, &pager));
+
+  std::atomic<bool> running = true;
+  // Keep the most recent pager handle stashed in an atomic. This lets the test synchronize the
+  // handle value without causing undefined behavior with racy memory accesses.
+  std::atomic<zx_handle_t> pager_handle = pager.get();
+
+  std::thread thread([&pager_handle, &running] {
+    zx::port port;
+    ASSERT_OK(zx::port::create(0, &port));
+    while (running) {
+      zx_handle_t vmo;
+      // Load the most recent pager handle value and attempt to create a vmo. This handle might have
+      // already been closed, so this call could fail, so just ignore any errors.
+      zx_status_t result = zx_pager_create_vmo(pager_handle.load(std::memory_order_relaxed), 0,
+                                               port.get(), 0, zx_system_get_page_size(), &vmo);
+      if (result == ZX_OK) {
+        // If the call succeeded make sure to close the vmo to not leak the handle.
+        zx_handle_close(vmo);
+      }
+    }
+  });
+
+  // Create and close pager handles in a loop. This is intended to trigger any race conditions that
+  // might exist between on_zero_handles getting called, and an in-progress pager_create_vmo call.
+  for (int i = 0; i < 10000; i++) {
+    pager.reset();
+    ASSERT_OK(zx::pager::create(0, &pager));
+    pager_handle.store(pager.get(), std::memory_order_relaxed);
+  }
+
+  running = false;
+  thread.join();
 }
 
 }  // namespace pager_tests

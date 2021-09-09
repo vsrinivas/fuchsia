@@ -40,6 +40,14 @@ PagerDispatcher::~PagerDispatcher() {
 
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key,
                                           fbl::RefPtr<PageSource>* src_out) {
+  Guard<Mutex> guard{&lock_};
+  // Make sure on_zero_handles has not been called. This could happen if a call to pager_create_vmo
+  // races with closing the last handle, as pager_create_vmo does not hold the handle table lock
+  // over this operation.
+  if (triggered_zero_handles_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   fbl::AllocChecker ac;
   auto proxy = ktl::unique_ptr<PagerProxy>(new (&ac) PagerProxy(this, ktl::move(port), key));
   if (!ac.check()) {
@@ -54,19 +62,24 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
 
   proxy_ptr->page_source_ = src.get();
 
-  Guard<Mutex> guard{&list_mtx_};
   srcs_.push_front(src);
   *src_out = ktl::move(src);
   return ZX_OK;
 }
 
 fbl::RefPtr<PageSource> PagerDispatcher::ReleaseSource(PageSource* src) {
-  Guard<Mutex> guard{&list_mtx_};
+  Guard<Mutex> guard{&lock_};
+  // src might not be in the container since we could be racing with a call to on_zero_handles, but
+  // that should only happen if we have triggered_zero_handles_. In particular the caller should not
+  // be trying to release a source that it knows is not here.
+  DEBUG_ASSERT(src->InContainer() != triggered_zero_handles_);
   return src->InContainer() ? srcs_.erase(*src) : nullptr;
 }
 
 void PagerDispatcher::on_zero_handles() {
-  Guard<Mutex> guard{&list_mtx_};
+  Guard<Mutex> guard{&lock_};
+  DEBUG_ASSERT(!triggered_zero_handles_);
+  triggered_zero_handles_ = true;
   while (!srcs_.is_empty()) {
     fbl::RefPtr<PageSource> src = srcs_.pop_front();
 
