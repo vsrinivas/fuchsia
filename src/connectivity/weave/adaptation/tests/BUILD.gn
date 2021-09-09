@@ -43,12 +43,10 @@ fuchsia_unittest_component("platform-manager-test") {
 }
 
 fuchsia_unittest_component("thread-stack-manager-test") {
-  manifest = rebase_path("meta/thread_stack_manager_unittests.cmx")
   deps = [ ":thread_stack_manager_unittests" ]
 }
 
 fuchsia_unittest_component("warm-platform-support-test") {
-  manifest = rebase_path("meta/warm_platform_support_unittests.cmx")
   deps = [ ":warm_platform_support_unittests" ]
 }
 
@@ -58,7 +56,6 @@ fuchsia_unittest_component("weave-config-manager-test") {
 }
 
 fuchsia_unittest_component("weave-inspector-test") {
-  manifest = rebase_path("meta/weave_inspector_unittests.cmx")
   deps = [ ":weave_inspector_unittests" ]
 }
 
