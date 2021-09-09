@@ -80,14 +80,47 @@ To become a Committer you must do the following:
 
 *   Contribute 10 non-trivial patches to the project, demonstrating the ability
 to write high-quality, well-tested code.
-*   Be nominated by a current Committer.
-*   Obtain reviews and approvals of those 10 non-trivial patches from at least
-2 different Committers.
-*   Ensure that your nomination is supported by 3 other Committers.
+*   Be nominated by a current Committer who has reviewed your code.
+*   Be supported by two other Committers who have reviewed your code.
 *   Ensure that your nomination is not blocked by any Committer.
 
-Committer nominations are evaluated within seven business days of the initial
-nomination request.
+A current Committer nominates you by sending email to committers@fuchsia.dev containing the
+following information. Please do not CC the nominee on the nomination email.
+
+*   Your first and last name.
+*   Your email address.
+*   An explanation of why you should be a Committer.
+*   Embedded list of links to revisions (about top 10) containing your patches.
+
+Two other Committers need to second your nomination. If no one objects in 5 working days (U.S.),
+you're a Committer.  If anyone objects or wants more information, the Committers discuss and usually
+come to a consensus (within the 5 working days). If issues can't be resolved, there's a vote among
+current Committers.
+
+That's it! There is no further action you need to take on your part. The Committers will get back to
+you once they make a decision.
+
+In the worst case, this can drag out for two weeks. Keep writing patches! Even in the rare cases
+where a nomination fails, the objection is usually something easy to address like "more patches" or
+"not enough people are familiar with this person's work."
+
+Once you get approval from the existing Committers, we'll send you instructions for write access to
+Git. You'll also be added to committers@fuchsia.dev.
+
+### Try job access
+
+If you are contributing patches but not (yet) a Committer, you may wish to be able to run jobs on
+the try servers directly rather than asking a Committer or reviewer to do so for you.
+
+The process to obtain try job access is the following:
+
+*   Ask a Committer you're working with (a frequent reviewer, for example) to send email to
+    committers@fuchsia.dev nominating you for try job access.
+*   You must provide an email address and at least a brief explanation of why you'd like access.
+*   It is helpful to provide a name and company affiliation (if any) as well.
+*   It is very helpful to have already had some patches landed, but is not absolutely necessary.
+*   If no one objects within two (U.S.) working days, you will be approved for access. It may take
+    an additional few days for the grant to propagate to all of the systems.
 
 ### Owner {#owner}
 
