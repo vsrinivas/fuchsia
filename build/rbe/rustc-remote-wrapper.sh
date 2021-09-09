@@ -394,7 +394,10 @@ trace_depfile_scanning_prefix=(
   "${trace_depfile_scanning_prefix[@]}" "${dep_only_command[@]}" > /dev/null 2>&1
   echo "File access trace [$depfile_trace]:"
   cat "$depfile_trace"
+  echo
 
+  verbose=1
+  debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   exit "$status"
 }
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
