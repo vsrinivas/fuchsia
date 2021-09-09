@@ -32,7 +32,11 @@ void PageQueues::RotatePagerBackedQueues() {
     // Process the LRU queue until we have at least one slot free.
     ProcessLruQueue(mru_gen_.load(ktl::memory_order_relaxed) - (kNumPagerBacked - 2), false);
   }
+
   // Now that we know there is space, can move the mru queue.
+  // Acquire the lock to increment the mru_gen_. This allows other queue logic to not worry about
+  // mru_gen_ changing whilst they hold the lock.
+  Guard<CriticalMutex> guard{&lock_};
   mru_gen_.fetch_add(1, ktl::memory_order_relaxed);
 }
 
@@ -223,9 +227,9 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
   // Specifically any parallel callers of MarkAccessed could move a page and change the counts,
   // causing us to either double count or miss count that page. As these counts are not load bearing
   // we accept the very small chance of potentially being off a few pages.
+  Guard<CriticalMutex> guard{&lock_};
   uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
   uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
-  Guard<CriticalMutex> guard{&lock_};
 
   counts.total = 0;
   for (uint32_t index = lru; index <= mru; index++) {
@@ -254,9 +258,9 @@ PageQueues::Counts PageQueues::QueueCounts() const {
 
   // Grab the lock to prevent LRU processing, this lets us get a slightly less racy snapshot of the
   // queue counts. We may still double count pages that move after we count them.
+  Guard<CriticalMutex> guard{&lock_};
   uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
   uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
-  Guard<CriticalMutex> guard{&lock_};
 
   for (uint32_t index = lru; index <= mru; index++) {
     counts.pager_backed[mru - index] =
