@@ -37,6 +37,8 @@
 
 namespace fidl_test_union {
 namespace wire {
+class UnionWithAttributes;
+
 class Union;
 
 struct StructWithNullableXUnion;
@@ -90,6 +92,93 @@ class ExplicitFoo;
 struct Empty;
 
 class XUnionContainingEmptyStruct;
+
+extern "C" const fidl_type_t fidl_test_union_UnionWithAttributesTable;
+
+class UnionWithAttributes {
+ public:
+  UnionWithAttributes()
+      : ordinal_(
+            ::fidl_test_union::wire::UnionWithAttributes::Ordinal::Invalid),
+        envelope_{} {}
+
+  UnionWithAttributes(const UnionWithAttributes&) = default;
+  UnionWithAttributes& operator=(const UnionWithAttributes&) = default;
+  UnionWithAttributes(UnionWithAttributes&&) = default;
+  UnionWithAttributes& operator=(UnionWithAttributes&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kX = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_union::wire::UnionWithAttributes::Ordinal::Invalid;
+  }
+
+  bool is_x() const {
+    return ordinal_ ==
+           ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX;
+  }
+
+  static UnionWithAttributes WithX(::fidl::ObjectView<int64_t> val) {
+    UnionWithAttributes result;
+    result.set_x(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static UnionWithAttributes WithX(::fidl::AnyArena& allocator,
+                                   Args&&... args) {
+    UnionWithAttributes result;
+    result.set_x(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_x(::fidl::ObjectView<int64_t> elem) {
+    ordinal_ = ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX;
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+  }
+
+  template <typename... Args>
+  void set_x(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX;
+    set_x(::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  int64_t& mutable_x() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX);
+    return *static_cast<int64_t*>(envelope_.data.get());
+  }
+  const int64_t& x() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX);
+    return *static_cast<int64_t*>(envelope_.data.get());
+  }
+  ::fidl_test_union::wire::UnionWithAttributes::Tag which() const;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_union_UnionWithAttributesTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kX = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_union::wire::UnionWithAttributes::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::Envelope<void> envelope_;
+};
 
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
 
@@ -5137,6 +5226,15 @@ struct Empty {
 }  // namespace wire
 }  // namespace fidl_test_union
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl_test_union::wire::UnionWithAttributes>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_union::wire::UnionWithAttributes>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_union::wire::UnionWithAttributes>);
 
 template <>
 struct IsFidlType<::fidl_test_union::wire::Union> : public std::true_type {};

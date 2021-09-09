@@ -649,12 +649,10 @@ struct Table;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
-struct TableMemberUsed : public Attributable, public Object {
+struct TableMemberUsed : public Object {
   TableMemberUsed(TypeConstructor type_ctor, SourceSpan name,
-                  std::unique_ptr<Constant> maybe_default_value,
-                  std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
-        type_ctor(std::move(type_ctor)),
+                  std::unique_ptr<Constant> maybe_default_value)
+      : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)) {}
   TypeConstructor type_ctor;
@@ -668,21 +666,25 @@ struct TableMemberUsed : public Attributable, public Object {
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table.
-struct TableMember : public Object {
+struct TableMember : public Attributable, public Object {
   using Used = TableMemberUsed;
 
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
               std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value),
-                                          std::move(attributes))) {}
+      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+        ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value))) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
               std::unique_ptr<AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), name, nullptr, std::move(attributes))) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
-      : ordinal(std::move(ordinal)), span(span) {}
+      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+        ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type), name, nullptr)) {}
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
+              std::unique_ptr<AttributeList> attributes)
+      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+        ordinal(std::move(ordinal)),
+        span(span) {}
 
   std::unique_ptr<raw::Ordinal64> ordinal;
 
@@ -715,12 +717,10 @@ struct Union;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMemberUsed : public Attributable, public Object {
+struct UnionMemberUsed : public Object {
   UnionMemberUsed(TypeConstructor type_ctor, SourceSpan name,
                   std::unique_ptr<AttributeList> attributes)
-      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
-        type_ctor(std::move(type_ctor)),
-        name(name) {}
+      : type_ctor(std::move(type_ctor)), name(name) {}
   TypeConstructor type_ctor;
   SourceSpan name;
 
@@ -733,15 +733,19 @@ struct UnionMemberUsed : public Attributable, public Object {
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMember : public Object {
+struct UnionMember : public Attributable, public Object {
   using Used = UnionMemberUsed;
 
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type_ctor, SourceSpan name,
               std::unique_ptr<AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
+      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
+        ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
-      : ordinal(std::move(ordinal)), span(span) {}
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span,
+              std::unique_ptr<AttributeList> attributes)
+      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
+        ordinal(std::move(ordinal)),
+        span(span) {}
 
   std::unique_ptr<raw::Ordinal64> ordinal;
 

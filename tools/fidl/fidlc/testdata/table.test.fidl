@@ -31,6 +31,14 @@ type ReverseOrdinalTable = table {
     1: z int64;
 };
 
+@foo
+type TableWithAttributes = table {
+    @bar
+    1: x int64;
+    @baz
+    2: reserved;
+};
+
 // There is one bitmask per 64-entries in the V2 wire format.
 // This tests the cases where there is more than one bitmask.
 type GreaterThan64OrdinalTable = table {

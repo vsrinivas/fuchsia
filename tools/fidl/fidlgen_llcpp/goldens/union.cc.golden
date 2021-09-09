@@ -4,6 +4,27 @@
 
 #include <memory>
 
+auto ::fidl_test_union::wire::UnionWithAttributes::which() const
+    -> ::fidl_test_union::wire::UnionWithAttributes::Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal_) {
+    case ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX:
+      return static_cast<::fidl_test_union::wire::UnionWithAttributes::Tag>(
+          ordinal_);
+    default:
+      return ::fidl_test_union::wire::UnionWithAttributes::Tag::kUnknown;
+  }
+}
+
+void ::fidl_test_union::wire::UnionWithAttributes::
+    SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(UnionWithAttributes) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(UnionWithAttributes, ordinal_) ==
+                offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(UnionWithAttributes, envelope_) ==
+                offsetof(fidl_xunion_t, envelope));
+}
+
 void ::fidl_test_union::wire::Union::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Union) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Union, ordinal_) == offsetof(fidl_xunion_t, tag));

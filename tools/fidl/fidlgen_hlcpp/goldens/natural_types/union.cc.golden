@@ -10,6 +10,217 @@
 namespace fidl {
 namespace test {
 namespace union_ {
+extern "C" const fidl_type_t fidl_test_union_UnionWithAttributesTable;
+const fidl_type_t* UnionWithAttributes::FidlType =
+    &fidl_test_union_UnionWithAttributesTable;
+
+UnionWithAttributes::UnionWithAttributes() {}
+
+UnionWithAttributes::~UnionWithAttributes() { Destroy(); }
+
+UnionWithAttributes::UnionWithAttributes(UnionWithAttributes&& other)
+    : tag_(other.tag_) {
+  switch (tag_) {
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+      x_ = std::move(other.x_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::union_::UnionWithAttributes::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+UnionWithAttributes& UnionWithAttributes::operator=(
+    UnionWithAttributes&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+        x_ = std::move(other.x_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::union_::UnionWithAttributes::Tag::Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+UnionWithAttributes UnionWithAttributes::WithX(int64_t&& val) {
+  UnionWithAttributes result;
+  result.set_x(std::move(val));
+  return result;
+}
+
+void UnionWithAttributes::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kX: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &x_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<int64_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &x_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &x_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
+                                 offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void UnionWithAttributes::Decode(::fidl::Decoder* _decoder,
+                                 UnionWithAttributes* value, size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::union_::UnionWithAttributes::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kX: {
+      ::fidl::Decode(_decoder, &value->x_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t UnionWithAttributes::Clone(UnionWithAttributes* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::fidl::test::union_::UnionWithAttributes::Tag::Invalid:
+      return ZX_OK;
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+      return ::fidl::Clone(x_, &result->x_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+UnionWithAttributes& UnionWithAttributes::set_x(int64_t value) {
+  EnsureStorageInitialized(::fidl::test::union_::UnionWithAttributes::Tag::kX);
+  x_ = std::move(value);
+  return *this;
+}
+UnionWithAttributes& UnionWithAttributes::SetUnknownData(
+    fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void UnionWithAttributes::Destroy() {
+  switch (tag_) {
+    case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::union_::UnionWithAttributes::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::UnionWithAttributes::Tag::Invalid);
+}
+
+void UnionWithAttributes::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::union_::UnionWithAttributes::Tag::Invalid):
+        break;
+      case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+        new (&x_) int64_t();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
 const fidl_type_t* Union::FidlType = &fidl_test_union_UnionTable;
 

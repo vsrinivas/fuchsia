@@ -13,6 +13,7 @@
 
 namespace fuzzing {
 
+using UnionWithAttributes = ::fidl::test::union_::UnionWithAttributes;
 using Union = ::fidl::test::union_::Union;
 using StructWithNullableXUnion = ::fidl::test::union_::StructWithNullableXUnion;
 using StrictUnion = ::fidl::test::union_::StrictUnion;
@@ -41,6 +42,35 @@ using Empty = ::fidl::test::union_::Empty;
 using XUnionContainingEmptyStruct =
     ::fidl::test::union_::XUnionContainingEmptyStruct;
 
+template <>
+struct MinSize<UnionWithAttributes> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<int64_t>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<UnionWithAttributes> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  UnionWithAttributes operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnionWithAttributes>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnionWithAttributes out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_x(Allocate<int64_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
 template <>
 struct MinSize<Union> {
   operator size_t() {

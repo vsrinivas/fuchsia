@@ -300,6 +300,52 @@ const $fidl.TableType<ReverseOrdinalTable> kReverseOrdinalTable_Type =
   resource: false,
 );
 
+class TableWithAttributes extends $fidl.Table {
+  const TableWithAttributes({
+    this.$unknownData,
+    this.x,
+  });
+
+  TableWithAttributes._(Map<int, dynamic> argv, this.$unknownData)
+      : x = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final int? x;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return x;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: x,
+    };
+  }
+
+  static TableWithAttributes _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      TableWithAttributes._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<TableWithAttributes> kTableWithAttributes_Type =
+    $fidl.TableType<TableWithAttributes>(
+  inlineSize: 16,
+  members: [
+    $fidl.Int64Type(),
+  ],
+  ctor: TableWithAttributes._ctor,
+  resource: false,
+);
+
 class GreaterThan64OrdinalTable extends $fidl.Table {
   const GreaterThan64OrdinalTable({
     this.$unknownData,

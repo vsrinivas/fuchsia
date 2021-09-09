@@ -75,6 +75,8 @@ type ExampleStruct = struct {
 type ExampleTable = table {
     @on_table_member
     1: member uint32;
+    @on_reserved_member
+    2: reserved;
 };
 
 @on_type_alias
@@ -84,6 +86,8 @@ alias ExampleTypeAlias = uint32;
 type ExampleUnion = union {
     @on_union_member
     1: variant uint32;
+    @on_reserved_member
+    2: reserved;
 };
 
 )FIDL",
@@ -136,7 +140,9 @@ type ExampleUnion = union {
   ASSERT_NOT_NULL(example_table);
   EXPECT_TRUE(example_table->HasAttribute("on_table"));
   EXPECT_TRUE(
-      example_table->members.front().maybe_used->attributes->HasAttribute("on_table_member"));
+      example_table->members.front().attributes->HasAttribute("on_table_member"));
+  EXPECT_TRUE(
+      example_table->members.back().attributes->HasAttribute("on_reserved_member"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
   ASSERT_NOT_NULL(example_type_alias);
@@ -146,7 +152,9 @@ type ExampleUnion = union {
   ASSERT_NOT_NULL(example_union);
   EXPECT_TRUE(example_union->HasAttribute("on_union"));
   EXPECT_TRUE(
-      example_union->members.front().maybe_used->attributes->HasAttribute("on_union_member"));
+      example_union->members.front().attributes->HasAttribute("on_union_member"));
+  EXPECT_TRUE(
+      example_union->members.back().attributes->HasAttribute("on_reserved_member"));
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
@@ -828,32 +836,6 @@ type MyUnion = union {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
-}
-
-TEST(AttributesTests, BadNoAttributesOnReserved) {
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-type Foo = union {
-  @foo
-  1: reserved;
-};
-)FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
-  }
-
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-type Foo = table {
-  @foo
-  1: reserved;
-};
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
-  }
 }
 
 TEST(AttributesTests, BadParameterAttributeIncorrectPlacement) {

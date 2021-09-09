@@ -139,6 +139,7 @@ class Compiling {
   Decl* decl_;
 };
 
+// The generic `ValidateUnknownConstraints` function is used by `Bits::Member` or `Enum::Member`.
 template <typename T>
 std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
                                                        types::Strictness decl_strictness,
@@ -169,6 +170,46 @@ std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
 
     if (found_member) {
       return Reporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->name);
+    }
+
+    found_member = true;
+  }
+
+  return nullptr;
+}
+
+// This specialization for `Union::Member` is necessary because the `name` of the member is stored
+// inside of the `maybe_used` sub-struct.
+template <>
+std::unique_ptr<Diagnostic> ValidateUnknownConstraints(
+    const Decl& decl, types::Strictness decl_strictness,
+    const std::vector<const Union::Member*>* members) {
+  if (!members)
+    return nullptr;
+
+  const bool is_transitional = decl.HasAttribute("transitional");
+
+  const bool is_strict = [&] {
+    switch (decl_strictness) {
+      case types::Strictness::kStrict:
+        return true;
+      case types::Strictness::kFlexible:
+        return false;
+    }
+  }();
+
+  bool found_member = false;
+  for (const auto* member : *members) {
+    const bool has_unknown = member->attributes && member->attributes->HasAttribute("unknown");
+    if (!has_unknown)
+      continue;
+
+    if (is_strict && !is_transitional) {
+      return Reporter::MakeError(ErrUnknownAttributeOnInvalidType, member->maybe_used->name);
+    }
+
+    if (found_member) {
+      return Reporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->maybe_used->name);
     }
 
     found_member = true;
@@ -3437,7 +3478,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
                            member->maybe_used->identifier->span(), std::move(maybe_default_value),
                            std::move(attributes));
     } else {
-      members.emplace_back(std::move(ordinal_literal), member->span());
+      members.emplace_back(std::move(ordinal_literal), member->span(), nullptr);
     }
   }
 
@@ -3482,7 +3523,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
       members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor),
                            member->maybe_used->identifier->span(), std::move(attributes));
     } else {
-      members.emplace_back(std::move(explicit_ordinal), member->span());
+      members.emplace_back(std::move(explicit_ordinal), member->span(), nullptr);
     }
   }
 
@@ -3572,14 +3613,13 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
   std::vector<M> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
-    if (member->reserved) {
-      members.emplace_back(std::move(member->ordinal), member->span());
-      continue;
-    }
-
     std::unique_ptr<AttributeList> attributes;
     if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
       return false;
+    }
+    if (member->reserved) {
+      members.emplace_back(std::move(member->ordinal), member->span(), std::move(attributes));
+      continue;
     }
 
     std::unique_ptr<TypeConstructorNew> type_ctor;
@@ -4960,15 +5000,11 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
       // Attributes: check placement.
       ValidateAttributesPlacement(table_declaration);
       for (const auto& member : table_declaration->members) {
-        if (!member.maybe_used)
-          continue;
-        ValidateAttributesPlacement(member.maybe_used.get());
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : table_declaration->members) {
-          if (!member.maybe_used)
-            continue;
-          ValidateAttributesConstraints(member.maybe_used.get());
+          ValidateAttributesPlacement(&member);
         }
         // Attributes: check constraint.
         ValidateAttributesConstraints(table_declaration);
@@ -4980,15 +5016,11 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
       // Attributes: check placement.
       ValidateAttributesPlacement(union_declaration);
       for (const auto& member : union_declaration->members) {
-        if (!member.maybe_used)
-          continue;
-        ValidateAttributesPlacement(member.maybe_used.get());
+        ValidateAttributesPlacement(&member);
       }
       if (placement_ok.NoNewErrors()) {
         for (const auto& member : union_declaration->members) {
-          if (!member.maybe_used)
-            continue;
-          ValidateAttributesConstraints(member.maybe_used.get());
+          ValidateAttributesConstraints(&member);
         }
         // Attributes: check constraint.
         ValidateAttributesConstraints(union_declaration);
@@ -5632,16 +5664,16 @@ bool Library::CompileTable(Table* table_declaration) {
   }
 
   for (auto& member : table_declaration->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
       return Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
                   ordinal_result.previous_occurrence());
     }
     if (member.maybe_used) {
-      if (!CompileAttributeList(member.maybe_used->attributes.get())) {
-        return false;
-      }
-
       auto& member_used = *member.maybe_used;
       const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
@@ -5681,16 +5713,16 @@ bool Library::CompileUnion(Union* union_declaration) {
   }
 
   for (const auto& member : union_declaration->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
       return Fail(ErrDuplicateUnionMemberOrdinal, member.ordinal->span(),
                   ordinal_result.previous_occurrence());
     }
     if (member.maybe_used) {
-      if (!CompileAttributeList(member.maybe_used->attributes.get())) {
-        return false;
-      }
-
       const auto& member_used = *member.maybe_used;
       const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
@@ -5720,14 +5752,13 @@ bool Library::CompileUnion(Union* union_declaration) {
   }
 
   {
-    std::vector<const Union::Member::Used*> used_members;
+    std::vector<const Union::Member*> members;
     for (const auto& member : union_declaration->members) {
-      if (member.maybe_used)
-        used_members.push_back(member.maybe_used.get());
+      members.push_back(&member);
     }
 
-    auto err = ValidateUnknownConstraints(*union_declaration, union_declaration->strictness,
-                                          &used_members);
+    auto err =
+        ValidateUnknownConstraints(*union_declaration, union_declaration->strictness, &members);
     if (err) {
       return Fail(std::move(err));
     }

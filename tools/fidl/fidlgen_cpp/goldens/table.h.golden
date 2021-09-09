@@ -6,6 +6,8 @@
 #include <fidl/test/table/cpp/natural_types.h>
 
 namespace fidl_test_table {
+using TableWithAttributes = ::fidl::test::table::TableWithAttributes;
+
 using SimpleTable = ::fidl::test::table::SimpleTable;
 
 using ReverseOrdinalTable = ::fidl::test::table::ReverseOrdinalTable;

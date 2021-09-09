@@ -36,6 +36,8 @@
 
 namespace fidl_test_table {
 namespace wire {
+class TableWithAttributes;
+
 class SimpleTable;
 
 class ReverseOrdinalTable;
@@ -47,6 +49,238 @@ class NewerSimpleTable;
 class GreaterThan64OrdinalTable;
 
 class EmptyTable;
+
+extern "C" const fidl_type_t fidl_test_table_TableWithAttributesTable;
+
+class TableWithAttributes final {
+ public:
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  class Frame_;
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return *frame_ptr_->x_.data;
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
+  }
+  TableWithAttributes& set_x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.data = elem;
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+  TableWithAttributes& set_x(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.data = nullptr;
+    return *this;
+  }
+  template <typename... Args>
+  TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.data =
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  TableWithAttributes() = default;
+  explicit TableWithAttributes(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
+  explicit TableWithAttributes(::fidl::ObjectView<Frame_>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+  ~TableWithAttributes() = default;
+  TableWithAttributes(const TableWithAttributes& other) noexcept = default;
+  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept =
+      default;
+  TableWithAttributes(TableWithAttributes&& other) noexcept = default;
+  TableWithAttributes& operator=(TableWithAttributes&& other) noexcept =
+      default;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_table_TableWithAttributesTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr bool HasPointer = true;
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+  }
+  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                          TableWithAttributes* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size,
+                          TableWithAttributes* value)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = iovec_capacity,
+              .backing_buffer = backing_buffer,
+              .backing_buffer_capacity = backing_buffer_size,
+          }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+      message_.Encode<TableWithAttributes>(value);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::internal::IovecBuffer iovecs_;
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(TableWithAttributes* value)
+        : message_(1u, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        TableWithAttributes* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    ::fidl::internal::InlineMessageBuffer<40> backing_buffer_;
+    UnownedEncodedMessage message_;
+  };
+
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<TableWithAttributes> {
+   public:
+    using DecodedMessageBase<TableWithAttributes>::DecodedMessageBase;
+
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(
+              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+              ::fidl::IncomingMessage(
+                  bytes, byte_actual, handles, handle_actual,
+                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+    // Internal constructor for specifying a specific wire format version.
+    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                   uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(
+              wire_format_version,
+              ::fidl::IncomingMessage(
+                  bytes, byte_actual, handles, handle_actual,
+                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    // Internal constructor for specifying a specific wire format version.
+    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                   const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(wire_format_version,
+                         reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    TableWithAttributes* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<TableWithAttributes*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the |DecodedMessage| object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+  // Frame_s are managed automatically by the Arena class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
+  class Frame_ final {
+   public:
+    Frame_() = default;
+    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
+    Frame_(const Frame_&) = delete;
+    Frame_& operator=(const Frame_&) = delete;
+
+   private:
+    Frame_(Frame_&&) noexcept = default;
+    Frame_& operator=(Frame_&&) noexcept = default;
+    ::fidl::Envelope<int64_t> x_;
+
+    friend class TableWithAttributes;
+  };
+
+ private:
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<Frame_> frame_ptr_;
+};
 
 extern "C" const fidl_type_t fidl_test_table_SimpleTableTable;
 
@@ -3710,6 +3944,15 @@ class EmptyTable final {
 }  // namespace wire
 }  // namespace fidl_test_table
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl_test_table::wire::TableWithAttributes>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_table::wire::TableWithAttributes>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_table::wire::TableWithAttributes>);
 
 template <>
 struct IsFidlType<::fidl_test_table::wire::SimpleTable>

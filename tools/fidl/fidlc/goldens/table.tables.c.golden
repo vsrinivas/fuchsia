@@ -3,6 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedTable fidl_test_table_TableWithAttributesTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_SimpleTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable;
@@ -11,6 +12,11 @@ __LOCAL extern const struct FidlCodedTable fidl_test_table_GreaterThan64OrdinalT
 __LOCAL extern const struct FidlCodedTable fidl_test_table_EmptyTableTable;
 
 
+
+static const struct FidlTableField Fields35fidl_test_table_TableWithAttributes[] = {
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u}
+};
+const struct FidlCodedTable fidl_test_table_TableWithAttributesTable = {.tag=kFidlTypeTable, .fields=Fields35fidl_test_table_TableWithAttributes, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/TableWithAttributes"};
 
 static const struct FidlTableField Fields27fidl_test_table_SimpleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},

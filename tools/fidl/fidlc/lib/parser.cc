@@ -1611,8 +1611,6 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
     if (!Ok())
       return Fail();
-    if (attributes != nullptr)
-      return Fail(ErrCannotAttachAttributesToReservedOrdinals);
     return std::make_unique<raw::TableMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
@@ -1711,8 +1709,6 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
     if (!Ok())
       return Fail();
-    if (attributes)
-      return Fail(ErrCannotAttachAttributesToReservedOrdinals);
     return std::make_unique<raw::UnionMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
@@ -2086,8 +2082,6 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
       return Fail();
 
     if (identifier_is_reserved && Peek().kind() == Token::Kind::kSemicolon) {
-      if (attributes != nullptr)
-        return Fail(ErrCannotAttachAttributesToReservedOrdinals);
       return std::make_unique<raw::OrdinaledLayoutMember>(
           scope.GetSourceElement(), std::move(attributes), std::move(ordinal));
     }

@@ -663,6 +663,28 @@
 </td>
         </tr></table>
 
+### UnionWithAttributes [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionWithAttributes data-text="UnionWithAttributes"}
+*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=152)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionWithAttributes.x">
+            <td><code>x</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="UnionWithAttributes.">
+            <td><code></code></td>
+            <td>
+                <code></code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
 ### XUnionContainingEmptyStruct [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#XUnionContainingEmptyStruct data-text="XUnionContainingEmptyStruct"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=115)*
 

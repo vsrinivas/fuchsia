@@ -3,6 +3,8 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedXUnion fidl_test_union_UnionWithAttributesTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_union_UnionWithAttributesNullableRefTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_UnionTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_UnionNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct fidl_test_union_StructWithNullableXUnionTable;
@@ -80,6 +82,16 @@ static const struct FidlStructElement Fields82fidl_test_union_TestProtocolFlexib
 const struct FidlCodedStruct fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.tag=kFidlTypeStruct, .elements=Fields82fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse"};
 
 
+static const struct FidlXUnionField Fields35fidl_test_union_UnionWithAttributes[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table)},
+    /*FidlXUnionField*/{.type=NULL}
+};
+const struct FidlCodedXUnion fidl_test_union_UnionWithAttributesTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields35fidl_test_union_UnionWithAttributes, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.union/UnionWithAttributes", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields46fidl_test_union_UnionWithAttributesNullableRef[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table)},
+    /*FidlXUnionField*/{.type=NULL}
+};
+const struct FidlCodedXUnion fidl_test_union_UnionWithAttributesNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields46fidl_test_union_UnionWithAttributesNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.union/UnionWithAttributes", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields21fidl_test_union_Union[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},

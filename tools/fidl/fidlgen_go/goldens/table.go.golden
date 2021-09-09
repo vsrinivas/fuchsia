@@ -305,6 +305,45 @@ func (u *ReverseOrdinalTable) GetUnknownData() map[uint64]_bindings.UnknownData 
 	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }
 
+type TableWithAttributes struct {
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	X             int64 `fidl_ordinal:"1"`
+	XPresent      bool
+}
+
+func (u *TableWithAttributes) SetX(x int64) {
+	u.X = x
+	u.XPresent = true
+}
+
+func (u *TableWithAttributes) GetX() int64 {
+	return u.X
+}
+
+func (u *TableWithAttributes) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
+		return _default
+	}
+	return u.X
+}
+
+func (u *TableWithAttributes) HasX() bool {
+	return u.XPresent
+}
+
+func (u *TableWithAttributes) ClearX() {
+	u.XPresent = false
+}
+
+func (u *TableWithAttributes) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *TableWithAttributes) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
+}
+
 type GreaterThan64OrdinalTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}

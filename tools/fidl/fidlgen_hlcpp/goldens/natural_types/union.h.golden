@@ -10,6 +10,8 @@
 namespace fidl {
 namespace test {
 namespace union_ {
+class UnionWithAttributes;
+
 class Union;
 
 class StructWithNullableXUnion;
@@ -67,6 +69,98 @@ class ExplicitFoo;
 class Empty;
 
 class XUnionContainingEmptyStruct;
+
+class UnionWithAttributes final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  UnionWithAttributes();
+  ~UnionWithAttributes();
+
+  UnionWithAttributes(UnionWithAttributes&&);
+  UnionWithAttributes& operator=(UnionWithAttributes&&);
+
+  static UnionWithAttributes WithX(int64_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+
+    kX = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<UnionWithAttributes> New() {
+    return ::std::make_unique<UnionWithAttributes>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionWithAttributes* value,
+                     size_t offset);
+  zx_status_t Clone(UnionWithAttributes* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_x() const {
+    return tag_ == ::fidl::test::union_::UnionWithAttributes::Tag::kX;
+  }
+
+  int64_t& x() {
+    EnsureStorageInitialized(
+        ::fidl::test::union_::UnionWithAttributes::Tag::kX);
+    return x_;
+  }
+
+  const int64_t& x() const {
+    ZX_ASSERT(is_x());
+    return x_;
+  }
+  UnionWithAttributes& set_x(int64_t value);
+  UnionWithAttributes& SetUnknownData(fidl_xunion_tag_t ordinal,
+                                      std::vector<uint8_t> bytes);
+
+  ::fidl::test::union_::UnionWithAttributes::Tag Which() const {
+    switch (tag_) {
+      case ::fidl::test::union_::UnionWithAttributes::Tag::Invalid:
+      case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+        return ::fidl::test::union_::UnionWithAttributes::Tag(tag_);
+      default:
+        return ::fidl::test::union_::UnionWithAttributes::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::fidl::test::union_::UnionWithAttributes::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::fidl::test::union_::UnionWithAttributes>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::union_::UnionWithAttributes::Tag::Invalid);
+  union {
+    int64_t x_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::fidl::test::union_::UnionWithAttributes& value,
+                         ::fidl::test::union_::UnionWithAttributes* result) {
+  return value.Clone(result);
+}
+
+using UnionWithAttributesPtr = ::std::unique_ptr<UnionWithAttributes>;
 
 class Union final {
  public:
@@ -2413,6 +2507,73 @@ using XUnionContainingEmptyStructPtr =
 
 }  // namespace union_
 }  // namespace test
+template <>
+struct IsFidlXUnion<::fidl::test::union_::UnionWithAttributes>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::fidl::test::union_::UnionWithAttributes>
+    : public EncodableCodingTraits<::fidl::test::union_::UnionWithAttributes,
+                                   24, 16> {};
+
+template <>
+struct CodingTraits<
+    std::unique_ptr<::fidl::test::union_::UnionWithAttributes>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::union_::UnionWithAttributes>* value,
+      size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(
+      Decoder* _decoder,
+      std::unique_ptr<::fidl::test::union_::UnionWithAttributes>* value,
+      size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::fidl::test::union_::UnionWithAttributes);
+
+    ::fidl::test::union_::UnionWithAttributes::Decode(_decoder, value->get(),
+                                                      offset);
+  }
+};
+
+inline zx_status_t Clone(const ::fidl::test::union_::UnionWithAttributes& value,
+                         ::fidl::test::union_::UnionWithAttributes* result) {
+  return ::fidl::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::union_::UnionWithAttributes> {
+  bool operator()(const ::fidl::test::union_::UnionWithAttributes& _lhs,
+                  const ::fidl::test::union_::UnionWithAttributes& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::union_::UnionWithAttributes::Tag::Invalid):
+        return true;
+      case ::fidl::test::union_::UnionWithAttributes::Tag::kX:
+        return ::fidl::Equals(_lhs.x_, _rhs.x_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
 template <>
 struct IsFidlXUnion<::fidl::test::union_::Union> : public std::true_type {};
 

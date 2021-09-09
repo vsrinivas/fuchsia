@@ -29,7 +29,7 @@
 ### GreaterThan64OrdinalTable  {#GreaterThan64OrdinalTable data-text="GreaterThan64OrdinalTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=36)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=44)*
 
 
 
@@ -745,6 +745,34 @@
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+### TableWithAttributes  {#TableWithAttributes data-text="TableWithAttributes"}
+
+
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=35)*
+
+
+
+
+<table>
+    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr id="TableWithAttributes.x">
+            <td>1</td>
+            <td><code>x</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="TableWithAttributes.">
+            <td>2</td>
+            <td><code>RESERVED</code></td>
+            <td>
+                <code></code>
             </td>
             <td>
 </td>

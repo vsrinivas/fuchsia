@@ -964,6 +964,63 @@ fidl_union! {
     value_unknown_member: __Unknown,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnionWithAttributes {
+    X(i64),
+    #[deprecated = "Use `UnionWithAttributes::unknown()` to construct and `UnionWithAttributesUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown {
+        ordinal: u64,
+        bytes: Vec<u8>,
+    },
+}
+/// Pattern that matches an unknown `UnionWithAttributes` member.
+#[macro_export]
+macro_rules! UnionWithAttributesUnknown {
+    () => {
+        _
+    };
+}
+
+impl UnionWithAttributes {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for UnionWithAttributes {}
+
+fidl_union! {
+    name: UnionWithAttributes,
+    members: [
+        X {
+            ty: i64,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: __Unknown,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Pizza {
     pub toppings: Vec<String>,

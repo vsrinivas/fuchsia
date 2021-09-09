@@ -2151,6 +2151,93 @@ const $fidl.NullableUnionType<ExplicitXUnion> kExplicitXUnion_OptType =
   resource: false,
 );
 
+enum UnionWithAttributesTag {
+  $unknown,
+  x, // 0x1
+}
+
+const Map<int, UnionWithAttributesTag> _UnionWithAttributesTag_map = {
+  1: UnionWithAttributesTag.x,
+};
+
+class UnionWithAttributes extends $fidl.XUnion {
+  const UnionWithAttributes.withX(int value)
+      : _ordinal = 1,
+        _data = value;
+  const UnionWithAttributes.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  UnionWithAttributes._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionWithAttributesTag get $tag =>
+      _UnionWithAttributesTag_map[_ordinal] ?? UnionWithAttributesTag.$unknown;
+
+  int? get x {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'UnionWithAttributes.x(' + x.toString() + ')';
+      default:
+        return r'UnionWithAttributes.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static UnionWithAttributes _ctor(int ordinal, Object data) {
+    return UnionWithAttributes._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<UnionWithAttributes> kUnionWithAttributes_Type =
+    $fidl.UnionType<UnionWithAttributes>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+  },
+  ctor: UnionWithAttributes._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<UnionWithAttributes>
+    kUnionWithAttributes_OptType = $fidl.NullableUnionType<UnionWithAttributes>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Int64Type(),
+  },
+  ctor: UnionWithAttributes._ctor,
+  flexible: true,
+  resource: false,
+);
+
 class Pizza extends $fidl.Struct {
   const Pizza({
     required this.toppings,

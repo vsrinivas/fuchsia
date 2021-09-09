@@ -1371,6 +1371,58 @@ func (_m *ExplicitXUnion) GetUnknownData() _bindings.UnknownData {
 	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
+type I_unionWithAttributesTag uint64
+
+const (
+	UnionWithAttributes_unknownData = 0 // 0x00000000
+	UnionWithAttributesX            = 1 // 0x00000001
+)
+
+type UnionWithAttributes struct {
+	I_unionWithAttributesTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData            interface{}
+	X                        int64 `fidl_ordinal:"1"`
+}
+
+func (_m *UnionWithAttributes) reset() {
+	switch _m.I_unionWithAttributesTag {
+	case 1:
+		var _zeroed int64
+		_m.X = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *UnionWithAttributes) Which() I_unionWithAttributesTag {
+	switch _m.I_unionWithAttributesTag {
+	case 1:
+		return UnionWithAttributesX
+	default:
+		return UnionWithAttributes_unknownData
+	}
+}
+
+func (_m *UnionWithAttributes) Ordinal() uint64 {
+	return uint64(_m.I_unionWithAttributesTag)
+}
+
+func (_m *UnionWithAttributes) SetX(x int64) {
+	_m.reset()
+	_m.I_unionWithAttributesTag = UnionWithAttributesX
+	_m.X = x
+}
+
+func UnionWithAttributesWithX(x int64) UnionWithAttributes {
+	var _u UnionWithAttributes
+	_u.SetX(x)
+	return _u
+}
+func (_m *UnionWithAttributes) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
 const (
 	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal   uint64 = 0x747b084a44f0dc3e
 	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x57615a25c2a785d2

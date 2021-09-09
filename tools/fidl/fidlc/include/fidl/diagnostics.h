@@ -52,8 +52,6 @@ constexpr ErrorDef ErrOldUsingSyntaxDeprecated(
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");
 constexpr ErrorDef ErrExpectedProtocolMember("expected protocol member");
-constexpr ErrorDef ErrCannotAttachAttributesToReservedOrdinals(
-    "Cannot attach attributes to reserved ordinals");
 constexpr ErrorDef ErrCannotAttachAttributeToIdentifier("cannot attach attributes to identifiers");
 constexpr ErrorDef ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "

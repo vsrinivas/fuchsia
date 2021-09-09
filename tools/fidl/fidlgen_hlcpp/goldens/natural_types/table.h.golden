@@ -10,6 +10,8 @@
 namespace fidl {
 namespace test {
 namespace table {
+class TableWithAttributes;
+
 class SimpleTable;
 
 class ReverseOrdinalTable;
@@ -21,6 +23,112 @@ class NewerSimpleTable;
 class GreaterThan64OrdinalTable;
 
 class EmptyTable;
+
+class TableWithAttributes final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const int64_t& x() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return x_value_.value;
+  }
+  bool has_x() const { return field_presence_.IsSet<0>(); }
+
+  int64_t* mutable_x() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value);
+    }
+    return &x_value_.value;
+  }
+  TableWithAttributes& set_x(int64_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(_value));
+    } else {
+      x_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_x() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
+  TableWithAttributes();
+  TableWithAttributes(TableWithAttributes&& other);
+  ~TableWithAttributes();
+  TableWithAttributes& operator=(TableWithAttributes&& other);
+
+  static inline ::std::unique_ptr<TableWithAttributes> New() {
+    return ::std::make_unique<TableWithAttributes>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value,
+                     size_t _offset);
+  zx_status_t Clone(TableWithAttributes* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_x {
+    ValueUnion_x() {}
+    ~ValueUnion_x() {}
+
+    int64_t value;
+  };
+  ValueUnion_x x_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
+};
+
+using TableWithAttributesPtr = ::std::unique_ptr<TableWithAttributes>;
 
 class SimpleTable final {
  public:
@@ -3283,6 +3391,32 @@ using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 
 }  // namespace table
 }  // namespace test
+template <>
+struct CodingTraits<::fidl::test::table::TableWithAttributes>
+    : public EncodableCodingTraits<::fidl::test::table::TableWithAttributes, 16,
+                                   16> {};
+
+inline zx_status_t Clone(const ::fidl::test::table::TableWithAttributes& _value,
+                         ::fidl::test::table::TableWithAttributes* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::fidl::test::table::TableWithAttributes> {
+  bool operator()(const ::fidl::test::table::TableWithAttributes& _lhs,
+                  const ::fidl::test::table::TableWithAttributes& _rhs) const {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+        return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+  }
+};
 template <>
 struct CodingTraits<::fidl::test::table::SimpleTable>
     : public EncodableCodingTraits<::fidl::test::table::SimpleTable, 16, 16> {};

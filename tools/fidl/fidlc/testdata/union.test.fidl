@@ -147,3 +147,11 @@ type UnionSandwich = struct {
     u ExplicitXUnion;
     b uint32;
 };
+
+@foo
+type UnionWithAttributes = flexible union {
+    @bar
+    1: x int64;
+    @baz
+    2: reserved;
+};

@@ -619,13 +619,15 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
-      if (value.maybe_used->attributes && !value.maybe_used->attributes->attributes.empty())
-        GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
       // TODO(fxbug.dev/7932): Support defaults on tables.
     } else {
       assert(value.span);
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
+    }
+
+    if (value.attributes && !value.attributes->attributes.empty()) {
+      GenerateObjectMember("maybe_attributes", value.attributes);
     }
   });
 }
@@ -671,11 +673,13 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
-      if (value.maybe_used->attributes && !value.maybe_used->attributes->attributes.empty())
-        GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
     } else {
       GenerateObjectMember("reserved", true);
       GenerateObjectMember("location", NameSpan(value.span.value()));
+    }
+
+    if (value.attributes && !value.attributes->attributes.empty()) {
+      GenerateObjectMember("maybe_attributes", value.attributes);
     }
   });
 }

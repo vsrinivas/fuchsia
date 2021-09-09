@@ -6,6 +6,8 @@
 #include <fidl/test/union/cpp/natural_types.h>
 
 namespace fidl_test_union {
+using UnionWithAttributes = ::fidl::test::union_::UnionWithAttributes;
+
 using Union = ::fidl::test::union_::Union;
 
 using StructWithNullableXUnion = ::fidl::test::union_::StructWithNullableXUnion;

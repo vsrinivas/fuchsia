@@ -197,6 +197,36 @@ fidl_table! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TableWithAttributes {
+    pub x: Option<i64>,
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableWithAttributes::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl TableWithAttributes {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for TableWithAttributes {}
+
+fidl_table! {
+    name: TableWithAttributes,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct GreaterThan64OrdinalTable {
     pub v1: Option<i64>,
     pub v2: Option<i64>,
