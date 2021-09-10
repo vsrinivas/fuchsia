@@ -518,7 +518,7 @@ uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& p
   }
 
   auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
-  uint32_t bytes_added = 0;
+  uint64_t bytes_added = 0;
 
   // WavReader copies audio samples from the WAV file directly into our payload buffer.
   auto status = wav_reader_->Read(audio_buff, packet.payload_size);

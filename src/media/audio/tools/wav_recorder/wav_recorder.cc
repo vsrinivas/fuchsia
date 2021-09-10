@@ -438,12 +438,12 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
                                           << fuchsia::media::MAX_PCM_CHANNEL_COUNT);
   }
 
-  uint32_t bytes_per_sample =
+  uint16_t bytes_per_sample =
       (sample_format_ == fuchsia::media::AudioSampleFormat::FLOAT)             ? sizeof(float)
       : (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) ? sizeof(int32_t)
                                                                                : sizeof(int16_t);
   bytes_per_frame_ = channel_count_ * bytes_per_sample;
-  uint32_t bits_per_sample = bytes_per_sample * 8;
+  uint16_t bits_per_sample = bytes_per_sample * 8;
   if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
       pack_24bit_samples_ == true) {
     bits_per_sample = 24;
@@ -495,9 +495,9 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
         "payload_buf_frames must be a multiple of frames_per_packet; both must be non-zero");
   }
 
-  // Write the inital WAV header
-  CLI_CHECK(wav_writer_.Initialize(filename_, sample_format_, channel_count_, frames_per_second_,
-                                   bits_per_sample),
+  // Write the initial WAV header
+  CLI_CHECK(wav_writer_.Initialize(filename_, sample_format_, static_cast<uint16_t>(channel_count_),
+                                   frames_per_second_, bits_per_sample),
             "Could not create the file '" << filename_ << "'");
   wav_writer_initialized_ = true;
 

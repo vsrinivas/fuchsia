@@ -25,9 +25,6 @@ executable("wav_player_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_shell_package("wav_player") {

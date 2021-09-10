@@ -53,9 +53,6 @@ driver_module("virtual_audio_driver-driver") {
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("virtual_audio_driver") {

@@ -401,7 +401,11 @@ void VirtualAudioStream::HandlePositionRequests() {
     auto mono_now = MonoTimeFromRefTime(reference_clock_, ref_now);
 
     auto frames = ref_time_to_running_frame_.Apply(ref_now.get());
-    uint32_t ring_buffer_position = (frames % num_rb_frames) * frame_size;
+    ZX_ASSERT_MSG(frames >= 0, "running frames should never be negative");
+
+    // This cast is safe unless the ring-buffer exceeds 4GB, which even at max bit-rate (8-channel,
+    // float32 format, 192kHz) would be a 700-second ring buffer (!).
+    auto ring_buffer_position = static_cast<uint32_t>((frames % num_rb_frames) * frame_size);
 
     parent_->PostToDispatcher(
         [position_callback = std::move(position_callback), time_for_position = mono_now.get(),
@@ -456,8 +460,10 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   num_ring_buffer_frames_ = std::max(
       min_buffer_frames_,
       fbl::round_up<uint32_t, uint32_t>(req.min_ring_buffer_frames, modulo_buffer_frames_));
-  uint32_t ring_buffer_size = fbl::round_up<size_t, size_t>(num_ring_buffer_frames_ * frame_size_,
-                                                            zx_system_get_page_size());
+  // Using uint32_t (not size_t) is safe unless the ring-buffer exceeds 4GB, which even at max
+  // bit-rate (8-channel, float32 format, 192kHz) would be a 700-second ring buffer (!).
+  uint32_t ring_buffer_size = fbl::round_up<uint32_t, uint32_t>(
+      num_ring_buffer_frames_ * frame_size_, zx_system_get_page_size());
 
   if (ring_buffer_mapper_.start() != nullptr) {
     ring_buffer_mapper_.Unmap();
@@ -608,7 +614,10 @@ void VirtualAudioStream::ProcessRingNotification() {
 
   auto running_frame_position =
       ref_time_to_running_frame_.Apply(target_ref_notification_time_.get());
-  auto ring_buffer_position = (running_frame_position % num_ring_buffer_frames_) * frame_size_;
+  ZX_ASSERT_MSG(running_frame_position >= 0, "running_frame_position should never be negative");
+
+  auto ring_buffer_position =
+      static_cast<uint32_t>((running_frame_position % num_ring_buffer_frames_) * frame_size_);
   audio::audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
   resp.monotonic_time = target_mono_notification_time_.get();
@@ -652,7 +661,10 @@ void VirtualAudioStream::ProcessVaClientRingNotification() {
 
   auto running_frame_position =
       ref_time_to_running_frame_.Apply(target_va_client_ref_notification_time_.get());
-  auto ring_buffer_position = (running_frame_position % num_ring_buffer_frames_) * frame_size_;
+  ZX_ASSERT_MSG(running_frame_position >= 0, "running_frame_position should never be negative");
+
+  auto ring_buffer_position =
+      static_cast<uint32_t>((running_frame_position % num_ring_buffer_frames_) * frame_size_);
   parent_->NotifyPosition(target_va_client_mono_notification_time_.get(), ring_buffer_position);
 
   // Post the next alt position notification
@@ -670,7 +682,10 @@ zx_status_t VirtualAudioStream::Stop() {
   va_client_notify_timer_.Cancel();
 
   auto stop_frame = ref_time_to_running_frame_.Apply(ref_stop_time.get());
-  uint32_t ring_buf_position = (stop_frame % num_ring_buffer_frames_) * frame_size_;
+  ZX_ASSERT_MSG(stop_frame >= 0, "stop_frame should never be negative");
+
+  auto ring_buf_position =
+      static_cast<uint32_t>((stop_frame % num_ring_buffer_frames_) * frame_size_);
   parent_->NotifyStop(mono_stop_time.get(), ring_buf_position);
 
   ref_start_time_ = zx::time(0);
