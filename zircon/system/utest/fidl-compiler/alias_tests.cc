@@ -12,9 +12,6 @@
 
 namespace {
 
-using fidl::flat::GetLayoutInvocation;
-using fidl::flat::GetType;
-
 TEST(AliasTests, BadDuplicateAlias) {
   TestLibrary library(R"FIDL(
 library example;
@@ -43,14 +40,14 @@ alias alias_of_int16 = int16;
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kPrimitive);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
 
   auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_int16");
@@ -73,14 +70,14 @@ type Message = struct {
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kPrimitive);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
 
   auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_int16");
@@ -154,7 +151,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
 
@@ -163,7 +160,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_vector_of_string");
@@ -214,7 +211,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
 
@@ -222,7 +219,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kString);
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count), 8u);
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_vector_of_string");
@@ -246,7 +243,7 @@ alias alias_of_vector_of_string_nullable = vector<string>:optional;
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNullable);
 
@@ -255,7 +252,7 @@ alias alias_of_vector_of_string_nullable = vector<string>:optional;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_vector_of_string_nullable");
@@ -278,7 +275,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_NOT_NULL(msg);
   ASSERT_EQ(msg->members.size(), 1);
 
-  auto type = GetType(msg->members[0].type_ctor);
+  auto type = msg->members[0].type_ctor->type;
   ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
   ASSERT_EQ(type->nullability, fidl::types::Nullability::kNullable);
 
@@ -287,7 +284,7 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
-  auto invocation = GetLayoutInvocation(msg->members[0].type_ctor);
+  auto invocation = msg->members[0].type_ctor->resolved_params;
   ASSERT_NOT_NULL(invocation.from_type_alias);
   EXPECT_STR_EQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
                 "example/alias_of_vector_of_string");

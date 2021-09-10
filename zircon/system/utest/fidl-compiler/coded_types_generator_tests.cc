@@ -183,8 +183,8 @@ type Value = resource struct {
   ASSERT_NOT_NULL(decl);
   const fidl::flat::Struct* str = static_cast<fidl::flat::Struct*>(decl);
   auto elem_might_mutate = [&str](size_t index) {
-    const fidl::flat::VectorType* vec = static_cast<const fidl::flat::VectorType*>(
-        fidl::flat::GetType(str->members.at(index).type_ctor));
+    const fidl::flat::VectorType* vec =
+        static_cast<const fidl::flat::VectorType*>(str->members.at(index).type_ctor->type);
     return fidl::ComputeMemcpyCompatibility(vec->element_type);
   };
   // Note: these EXPECT_EQ are not in a loop so that they give more useful errors.

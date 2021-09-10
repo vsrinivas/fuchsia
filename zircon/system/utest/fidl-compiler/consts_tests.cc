@@ -230,7 +230,7 @@ const EXPLICIT string:4 = "four";
   ASSERT_COMPILED(library);
 
   auto inferred_const = library.LookupConstant("INFERRED");
-  auto inferred_const_type = fidl::flat::GetType(inferred_const->type_ctor);
+  auto inferred_const_type = inferred_const->type_ctor->type;
   ASSERT_NOT_NULL(inferred_const_type);
   ASSERT_EQ(inferred_const_type->kind, fidl::flat::Type::Kind::kString);
   auto inferred_string_type = static_cast<const fidl::flat::StringType*>(inferred_const_type);
@@ -238,7 +238,7 @@ const EXPLICIT string:4 = "four";
   ASSERT_EQ(static_cast<uint32_t>(*inferred_string_type->max_size), 4294967295u);
 
   auto explicit_const = library.LookupConstant("EXPLICIT");
-  auto explicit_const_type = fidl::flat::GetType(explicit_const->type_ctor);
+  auto explicit_const_type = explicit_const->type_ctor->type;
   ASSERT_NOT_NULL(explicit_const_type);
   ASSERT_EQ(explicit_const_type->kind, fidl::flat::Type::Kind::kString);
   auto explicit_string_type = static_cast<const fidl::flat::StringType*>(explicit_const_type);

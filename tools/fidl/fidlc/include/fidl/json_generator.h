@@ -131,10 +131,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Union& value);
   void Generate(const flat::Union::Member& value);
   void Generate(const flat::LayoutInvocation& value);
-  // A TypeConstructorPtr is a variant of pointers, so just calling Generate on
-  // a type constructor pointer will first try to generate as a bool. A different
-  // name is picked to be unambiguous.
-  void GenerateTypeCtor(const flat::TypeConstructorPtr& value);
   void Generate(const flat::TypeConstructor& value);
   void Generate(const flat::TypeAlias& value);
   void Generate(const flat::Library* library);
@@ -144,9 +140,9 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
     kConcrete,
     kParameterized,
   };
-  void GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind, flat::TypeConstructorPtr value,
+  void GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind, const flat::TypeConstructor* value,
                                     Position position = Position::kSubsequent);
-  void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
+  void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor* value,
                                     Position position = Position::kSubsequent);
 
   // This is a generator for the builtin generics: array, vector, and request.
@@ -164,7 +160,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   // be a nullable vector of size 5, but the de-aliased constructor passed in
   // will be the underlying type for just Foo, in this is case "vector<bool:5>."
   void GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
-                                 flat::TypeConstructorPtr type_ctor,
+                                 const flat::TypeConstructor* type_ctor,
                                  Position position = Position::kSubsequent);
   void GenerateExperimentalMaybeFromTypeAlias(const flat::LayoutInvocation& invocation);
   void GenerateRequest(const std::string& prefix, const flat::Struct* value);

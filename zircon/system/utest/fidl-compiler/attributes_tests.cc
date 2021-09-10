@@ -320,7 +320,7 @@ library example;
 using we.should.not.care;
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributesNewNotAllowedOnLibraryImport);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributesNotAllowedOnLibraryImport);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "no_attribute_on_using");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "even_doc");

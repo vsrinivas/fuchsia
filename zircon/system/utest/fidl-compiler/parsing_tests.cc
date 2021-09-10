@@ -509,7 +509,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  std::unique_ptr<fidl::raw::AttributeNew> attribute =
+  std::unique_ptr<fidl::raw::Attribute> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
   ASSERT_STR_EQ(attribute->name.c_str(), "foo");
   ASSERT_TRUE(attribute->args.size() == 1);
@@ -533,7 +533,7 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  std::unique_ptr<fidl::raw::AttributeNew> attribute =
+  std::unique_ptr<fidl::raw::Attribute> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
   ASSERT_STR_EQ(attribute->name.c_str(), "doc");
   ASSERT_TRUE(attribute->args.size() == 1);

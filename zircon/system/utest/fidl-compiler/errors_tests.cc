@@ -27,10 +27,9 @@ protocol Example {
   ASSERT_NOT_NULL(response);
   ASSERT_EQ(response->members.size(), 1);
   auto response_member = &response->members.at(0);
-  ASSERT_EQ(fidl::flat::GetType(response_member->type_ctor)->kind,
-            fidl::flat::Type::Kind::kIdentifier);
-  auto result_identifier = static_cast<const fidl::flat::IdentifierType*>(
-      fidl::flat::GetType(response_member->type_ctor));
+  ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto result_identifier =
+      static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
   const fidl::flat::Union* result_union =
       library.LookupUnion(std::string(result_identifier->name.decl_name()));
   ASSERT_NOT_NULL(result_union);
@@ -46,11 +45,10 @@ protocol Example {
   ASSERT_NOT_NULL(error.maybe_used);
   ASSERT_STR_EQ("err", std::string(error.maybe_used->name.data()).c_str());
 
-  ASSERT_NOT_NULL(fidl::flat::GetType(error.maybe_used->type_ctor));
-  ASSERT_EQ(fidl::flat::GetType(error.maybe_used->type_ctor)->kind,
-            fidl::flat::Type::Kind::kPrimitive);
-  auto primitive_type = static_cast<const fidl::flat::PrimitiveType*>(
-      fidl::flat::GetType(error.maybe_used->type_ctor));
+  ASSERT_NOT_NULL(error.maybe_used->type_ctor->type);
+  ASSERT_EQ(error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
+  auto primitive_type =
+      static_cast<const fidl::flat::PrimitiveType*>(error.maybe_used->type_ctor->type);
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
 }
 

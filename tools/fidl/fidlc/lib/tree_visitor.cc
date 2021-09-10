@@ -110,7 +110,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
 void DeclarationOrderTreeVisitor::OnProtocolDeclaration(
     std::unique_ptr<ProtocolDeclaration> const& element) {
   SourceElementMark sem(this, *element);
-  if (IsAttributeListDefined(element->attributes)) {
+  if (element->attributes != nullptr) {
     OnAttributeList(element->attributes);
   }
   OnIdentifier(element->identifier);

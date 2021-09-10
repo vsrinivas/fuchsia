@@ -181,32 +181,6 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
 
 std::string NameFlatName(const flat::Name& name) { return FormatName(name, ".", "/"); }
 
-void NameFlatTypeConstructorHelperOld(std::ostringstream& buf,
-                                      const flat::TypeConstructorOld* type_ctor) {
-  buf << NameFlatName(type_ctor->name);
-  if (type_ctor->maybe_arg_type_ctor) {
-    buf << "<";
-    NameFlatTypeConstructorHelperOld(buf, type_ctor->maybe_arg_type_ctor.get());
-    buf << ">";
-  }
-  if (type_ctor->maybe_size) {
-    auto size = static_cast<const flat::Size&>(type_ctor->maybe_size->Value());
-    if (size != flat::Size::Max()) {
-      buf << ":";
-      buf << size.value;
-    }
-  }
-  if (type_ctor->nullability == types::Nullability::kNullable) {
-    buf << "?";
-  }
-}
-
-std::string NameFlatTypeConstructorOld(const flat::TypeConstructorOld* type_ctor) {
-  std::ostringstream buf;
-  NameFlatTypeConstructorHelperOld(buf, type_ctor);
-  return buf.str();
-}
-
 std::string NameFlatTypeKind(const flat::Type* type) {
   switch (type->kind) {
     case flat::Type::Kind::kArray:
@@ -217,8 +191,6 @@ std::string NameFlatTypeKind(const flat::Type* type) {
       return "string";
     case flat::Type::Kind::kHandle:
       return "handle";
-    case flat::Type::Kind::kRequestHandle:
-      return "request";
     case flat::Type::Kind::kTransportSide: {
       // TODO(fxbug.dev/70186): transition the JSON and other backends to using
       // client/server end
@@ -369,13 +341,6 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       }
       break;
     }
-    case flat::Type::Kind::kRequestHandle: {
-      const auto* request_handle_type = static_cast<const flat::RequestHandleType*>(type);
-      buf << "<";
-      buf << NameFlatName(request_handle_type->protocol_type->name);
-      buf << ">";
-      break;
-    }
     case flat::Type::Kind::kTransportSide: {
       const auto* transport_side = static_cast<const flat::TransportSideType*>(type);
       buf << (transport_side->end == flat::TransportSide::kClient ? "client" : "server");
@@ -410,7 +375,6 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
   for (;;) {
     switch (type->kind) {
       case flat::Type::Kind::kHandle:
-      case flat::Type::Kind::kRequestHandle:
       case flat::Type::Kind::kTransportSide:
         return "zx_handle_t";
 

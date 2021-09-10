@@ -18,8 +18,6 @@
 
 namespace {
 
-using fidl::flat::GetType;
-
 TEST(HandleTests, GoodHandleRightsTest) {
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -34,17 +32,10 @@ type MyStruct = resource struct {
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
 
-  std::visit(fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                                     assert(false && "new syntax should be used");
-                                   },
-                                   [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                                     EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
-                                     EXPECT_EQ("THREAD",
-                                               t->resolved_params.subtype_raw->span.data());
-                                   }},
-             h_type_ctor);
+  EXPECT_TRUE(h_type_ctor->resolved_params.subtype_raw != nullptr);
+  EXPECT_EQ("THREAD", h_type_ctor->resolved_params.subtype_raw->span.data());
 
-  auto h_type = GetType(h_type_ctor);
+  auto h_type = h_type_ctor->type;
   ASSERT_NOT_NULL(h_type);
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
@@ -69,19 +60,13 @@ type MyStruct = resource struct {
   ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
-  auto h_type = GetType(h_type_ctor);
+  auto h_type = h_type_ctor->type;
   ASSERT_NOT_NULL(h_type);
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
 
-  std::visit(fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                                     assert(false && "new syntax should be used");
-                                   },
-                                   [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                                     EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
-                                     EXPECT_EQ("VMO", t->resolved_params.subtype_raw->span.data());
-                                   }},
-             h_type_ctor);
+  EXPECT_TRUE(h_type_ctor->resolved_params.subtype_raw != nullptr);
+  EXPECT_EQ("VMO", h_type_ctor->resolved_params.subtype_raw->span.data());
   EXPECT_EQ(3, handle_type->obj_type);
   EXPECT_EQ(
       static_cast<const fidl::flat::NumericConstantValue<uint32_t>*>(handle_type->rights)->value,
@@ -119,7 +104,7 @@ type MyStruct = resource struct {
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
 
-  auto h_type = GetType(h_type_ctor);
+  auto h_type = h_type_ctor->type;
   ASSERT_NOT_NULL(h_type);
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
@@ -145,7 +130,7 @@ type MyStruct = resource struct {
 
   ASSERT_COMPILED(library);
   const auto& a = library.LookupStruct("MyStruct")->members[0].type_ctor;
-  auto a_type = GetType(a);
+  auto a_type = a->type;
   ASSERT_NOT_NULL(a_type);
   ASSERT_EQ(a_type->kind, fidl::flat::Type::Kind::kHandle);
   auto a_handle_type = static_cast<const fidl::flat::HandleType*>(a_type);
@@ -154,7 +139,7 @@ type MyStruct = resource struct {
             fidl::flat::kHandleSameRights);
 
   const auto& b = library.LookupStruct("MyStruct")->members[1].type_ctor;
-  auto b_type = GetType(b);
+  auto b_type = b->type;
   ASSERT_NOT_NULL(b_type);
   ASSERT_EQ(b_type->kind, fidl::flat::Type::Kind::kHandle);
   auto b_handle_type = static_cast<const fidl::flat::HandleType*>(b_type);
@@ -163,7 +148,7 @@ type MyStruct = resource struct {
             fidl::flat::kHandleSameRights);
 
   const auto& c = library.LookupStruct("MyStruct")->members[2].type_ctor;
-  auto c_type = GetType(c);
+  auto c_type = c->type;
   ASSERT_NOT_NULL(c_type);
   ASSERT_EQ(c_type->kind, fidl::flat::Type::Kind::kHandle);
   auto c_handle_type = static_cast<const fidl::flat::HandleType*>(c_type);
@@ -228,20 +213,13 @@ type MyStruct = resource struct {
   ASSERT_COMPILED(library);
 
   const auto& h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor;
-  auto h_type = GetType(h_type_ctor);
+  auto h_type = h_type_ctor->type;
   ASSERT_NOT_NULL(h_type);
   ASSERT_EQ(h_type->kind, fidl::flat::Type::Kind::kHandle);
   auto handle_type = static_cast<const fidl::flat::HandleType*>(h_type);
 
-  std::visit(
-      fidl::utils::matchers{[&](const std::unique_ptr<fidl::flat::TypeConstructorOld>& t) {
-                              assert(false && "old syntax should not be used");
-                            },
-                            [](const std::unique_ptr<fidl::flat::TypeConstructorNew>& t) {
-                              EXPECT_TRUE(t->resolved_params.subtype_raw != nullptr);
-                              ASSERT_TRUE(t->resolved_params.subtype_raw->span.data() == "VMO");
-                            }},
-      h_type_ctor);
+  EXPECT_TRUE(h_type_ctor->resolved_params.subtype_raw != nullptr);
+  ASSERT_TRUE(h_type_ctor->resolved_params.subtype_raw->span.data() == "VMO");
   EXPECT_EQ(3, handle_type->obj_type);
   EXPECT_EQ(
       static_cast<const fidl::flat::NumericConstantValue<uint32_t>*>(handle_type->rights)->value,

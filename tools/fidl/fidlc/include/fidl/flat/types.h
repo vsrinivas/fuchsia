@@ -12,7 +12,6 @@
 namespace fidl {
 namespace flat {
 
-struct CreateInvocation;
 struct Decl;
 struct TypeDecl;
 struct Struct;
@@ -31,8 +30,6 @@ struct Type : public Object {
     kVector,
     kString,
     kHandle,
-    // TODO(fxbug.dev/70247): Delete this
-    kRequestHandle,
     kTransportSide,
     kPrimitive,
     kIdentifier,
@@ -90,16 +87,6 @@ struct Type : public Object {
     return Comparison().Compare(nullability, other.nullability);
   }
 
-  // The old syntax's CreateInvocation contains both what would considered to be
-  // layout arguments and constraints in the new syntax. These are applied to
-  // the current type to produce a new type - this is the old syntax equivalent
-  // of ApplyConstraints
-  virtual bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                                       const CreateInvocation& create_invocation,
-                                                       const flat::TypeTemplate* layout,
-                                                       std::unique_ptr<Type>* out_type,
-                                                       LayoutInvocation* out_params) const = 0;
-
   // Apply the provided constraints to this type, returning the newly constrained
   // Type and recording the invocation inside resolved_args.
   // For types in the new syntax, we receive the unresolved TypeConstraints.
@@ -131,12 +118,6 @@ struct ArrayType final : public Type {
         .Compare(element_count->value, o.element_count->value)
         .Compare(*element_type, *o.element_type);
   }
-
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
 
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
@@ -179,12 +160,6 @@ struct VectorType final : public Type, public VectorBaseType {
         .Compare(*element_type, *o.element_type);
   }
 
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
-
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
@@ -204,12 +179,6 @@ struct StringType final : public Type, public VectorBaseType {
     const auto& o = static_cast<const StringType&>(other);
     return Type::Compare(o).Compare(max_size->value, o.max_size->value);
   }
-
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
 
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
@@ -257,12 +226,6 @@ struct HandleType final : public Type {
         .Compare(*rights_val, *other_rights_val);
   }
 
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
-
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
@@ -282,12 +245,6 @@ struct PrimitiveType final : public Type {
     const auto& o = static_cast<const PrimitiveType&>(other);
     return Type::Compare(o).Compare(subtype, o.subtype);
   }
-
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
 
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
@@ -312,41 +269,6 @@ struct IdentifierType final : public Type {
     return Type::Compare(o).Compare(name, o.name);
   }
 
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
-
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
-                        LayoutInvocation* out_params) const override;
-};
-
-// TODO(fxbug.dev/70247): Delete this
-// TODO(fxbug.dev/43803) Add required and optional rights.
-struct RequestHandleType final : public Type {
-  RequestHandleType(const Name& name, const IdentifierType* protocol_type)
-      : RequestHandleType(name, protocol_type, types::Nullability::kNonnullable) {}
-  RequestHandleType(const Name& name, const IdentifierType* protocol_type,
-                    types::Nullability nullability)
-      : Type(name, Kind::kRequestHandle, nullability), protocol_type(protocol_type) {}
-
-  const IdentifierType* protocol_type;
-
-  std::any AcceptAny(VisitorAny* visitor) const override;
-
-  Comparison Compare(const Type& other) const override {
-    const auto& o = static_cast<const RequestHandleType&>(other);
-    return Type::Compare(o).Compare(*protocol_type, *o.protocol_type);
-  }
-
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
-
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
@@ -357,6 +279,7 @@ enum class TransportSide {
   kServer,
 };
 
+// TODO(fxbug.dev/43803) Add required and optional rights.
 struct TransportSideType final : public Type {
   TransportSideType(const Name& name, TransportSide end)
       : TransportSideType(name, nullptr, types::Nullability::kNonnullable, end) {}
@@ -377,12 +300,6 @@ struct TransportSideType final : public Type {
         .Compare(protocol_decl, o.protocol_decl);
   }
 
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
-
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
@@ -400,12 +317,6 @@ struct BoxType final : public Type {
     const auto& o = static_cast<const BoxType&>(other);
     return Type::Compare(o).Compare(name, o.name).Compare(boxed_type, o.boxed_type);
   }
-
-  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
-                                               const CreateInvocation& create_invocation,
-                                               const flat::TypeTemplate* layout,
-                                               std::unique_ptr<Type>* out_type,
-                                               LayoutInvocation* out_params) const override;
 
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,

@@ -23,8 +23,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       : file_(file), tokens_(std::move(tokens)) {}
   void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
   void OnAttributeArg(std::unique_ptr<raw::AttributeArg> const& element) override;
-  void OnAttributeNew(std::unique_ptr<raw::AttributeNew> const& element) override;
-  void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override;
+  void OnAttribute(std::unique_ptr<raw::Attribute> const& element) override;
+  void OnAttributeList(std::unique_ptr<raw::AttributeList> const& element) override;
   void OnBinaryOperatorConstant(
       std::unique_ptr<raw::BinaryOperatorConstant> const& element) override;
   void OnCompoundIdentifier(std::unique_ptr<raw::CompoundIdentifier> const& element) override;
@@ -45,7 +45,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override;
   void OnOrdinal64(raw::Ordinal64& element) override;
   void OnOrdinaledLayoutMember(std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override;
-  void OnParameterListNew(std::unique_ptr<raw::ParameterListNew> const& element) override;
+  void OnParameterList(std::unique_ptr<raw::ParameterList> const& element) override;
   void OnProtocolCompose(std::unique_ptr<raw::ProtocolCompose> const& element) override;
   void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override;
   void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
@@ -54,7 +54,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override;
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override;
   void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override;
-  void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override;
+  void OnTypeConstructor(std::unique_ptr<raw::TypeConstructor> const& element) override;
   void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override;
   void OnUsing(std::unique_ptr<raw::Using> const& element) override;
   void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override;

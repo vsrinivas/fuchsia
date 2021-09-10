@@ -114,38 +114,9 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnAttributeOld(const AttributeOld& element) { element.Accept(this); }
+  virtual void OnAttribute(const std::unique_ptr<Attribute>& element) { element->Accept(this); }
 
-  virtual void OnAttributeNew(const std::unique_ptr<AttributeNew>& element) {
-    element->Accept(this);
-  }
-
-  void OnAttributeList(AttributeList const& element) {
-    std::visit(fidl::utils::matchers{
-                   [this](const std::unique_ptr<AttributeListOld>& e) { OnAttributeListOld(e); },
-                   [this](const std::unique_ptr<AttributeListNew>& e) { OnAttributeListNew(e); },
-               },
-               element);
-  }
-
-  virtual void OnAttributeListOld(std::unique_ptr<AttributeListOld> const& element) {
-    element->Accept(this);
-  }
-
-  virtual void OnAttributeListNew(std::unique_ptr<AttributeListNew> const& element) {
-    element->Accept(this);
-  }
-
-  void OnTypeConstructor(TypeConstructor const& element) {
-    std::visit(
-        fidl::utils::matchers{
-            [this](const std::unique_ptr<TypeConstructorOld>& e) { OnTypeConstructorOld(e); },
-            [this](const std::unique_ptr<TypeConstructorNew>& e) { OnTypeConstructorNew(e); },
-        },
-        element);
-  }
-
-  virtual void OnTypeConstructorOld(std::unique_ptr<TypeConstructorOld> const& element) {
+  virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) {
     element->Accept(this);
   }
 
@@ -161,18 +132,7 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnParameter(std::unique_ptr<Parameter> const& element) { element->Accept(this); }
-  void OnParameterList(ParameterList const& element) {
-    std::visit(fidl::utils::matchers{
-                   [this](const std::unique_ptr<ParameterListOld>& e) { OnParameterListOld(e); },
-                   [this](const std::unique_ptr<ParameterListNew>& e) { OnParameterListNew(e); },
-               },
-               element);
-  }
-  virtual void OnParameterListOld(std::unique_ptr<ParameterListOld> const& element) {
-    element->Accept(this);
-  }
-  virtual void OnParameterListNew(std::unique_ptr<ParameterListNew> const& element) {
+  virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) {
     element->Accept(this);
   }
   virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) {
@@ -286,7 +246,7 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnTypeConstructorNew(std::unique_ptr<TypeConstructorNew> const& element) {
+  virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) {
     element->Accept(this);
   }
 

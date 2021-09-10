@@ -403,25 +403,25 @@ type Foo = resource struct {
 
   size_t i = 0;
 
-  auto a_type_base = GetType(container->members[i++].type_ctor);
+  auto a_type_base = container->members[i++].type_ctor->type;
   ASSERT_EQ(a_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
   const auto* a_type = static_cast<const fidl::flat::TransportSideType*>(a_type_base);
   EXPECT_EQ(a_type->end, fidl::flat::TransportSide::kClient);
   EXPECT_EQ(a_type->nullability, fidl::types::Nullability::kNonnullable);
 
-  auto b_type_base = GetType(container->members[i++].type_ctor);
+  auto b_type_base = container->members[i++].type_ctor->type;
   ASSERT_EQ(b_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
   const auto* b_type = static_cast<const fidl::flat::TransportSideType*>(b_type_base);
   EXPECT_EQ(b_type->end, fidl::flat::TransportSide::kClient);
   EXPECT_EQ(b_type->nullability, fidl::types::Nullability::kNullable);
 
-  auto c_type_base = GetType(container->members[i++].type_ctor);
+  auto c_type_base = container->members[i++].type_ctor->type;
   ASSERT_EQ(c_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
   const auto* c_type = static_cast<const fidl::flat::TransportSideType*>(c_type_base);
   EXPECT_EQ(c_type->end, fidl::flat::TransportSide::kServer);
   EXPECT_EQ(c_type->nullability, fidl::types::Nullability::kNonnullable);
 
-  auto d_type_base = GetType(container->members[i++].type_ctor);
+  auto d_type_base = container->members[i++].type_ctor->type;
   ASSERT_EQ(d_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
   const auto* d_type = static_cast<const fidl::flat::TransportSideType*>(d_type_base);
   EXPECT_EQ(d_type->end, fidl::flat::TransportSide::kServer);

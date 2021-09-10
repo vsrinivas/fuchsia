@@ -48,18 +48,15 @@ service SomeService {
   EXPECT_EQ(service->members.size(), 3);
   const auto& member0 = service->members[0];
   EXPECT_STR_EQ(std::string(member0.name.data()).c_str(), "some_protocol_first_first");
-  const auto* type0 =
-      static_cast<const fidl::flat::TransportSideType*>(fidl::flat::GetType(member0.type_ctor));
+  const auto* type0 = static_cast<const fidl::flat::TransportSideType*>(member0.type_ctor->type);
   EXPECT_STR_EQ(fidl::NameFlatName(type0->protocol_decl->name).c_str(), "example/SomeProtocol1");
   const auto& member1 = service->members[1];
   EXPECT_STR_EQ(std::string(member1.name.data()).c_str(), "some_protocol_first_second");
-  const auto* type1 =
-      static_cast<const fidl::flat::TransportSideType*>(fidl::flat::GetType(member1.type_ctor));
+  const auto* type1 = static_cast<const fidl::flat::TransportSideType*>(member1.type_ctor->type);
   EXPECT_STR_EQ(fidl::NameFlatName(type1->protocol_decl->name).c_str(), "example/SomeProtocol1");
   const auto& member2 = service->members[2];
   EXPECT_STR_EQ(std::string(member2.name.data()).c_str(), "some_protocol_second");
-  const auto* type2 =
-      static_cast<const fidl::flat::TransportSideType*>(fidl::flat::GetType(member2.type_ctor));
+  const auto* type2 = static_cast<const fidl::flat::TransportSideType*>(member2.type_ctor->type);
   EXPECT_STR_EQ(fidl::NameFlatName(type2->protocol_decl->name).c_str(), "example/SomeProtocol2");
 }
 

@@ -21,7 +21,7 @@ coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
 }
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member)
-    : type(flat::GetType(member.type_ctor)),
+    : type(member.type_ctor->type),
       name(member.name),
       inline_size_v1(member.typeshape(WireFormat::kV1NoEe).InlineSize()),
       inline_size_v2(member.typeshape(WireFormat::kV2).InlineSize()),
@@ -34,10 +34,10 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::St
 std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::FlattenedStructMembers(
     const flat::Struct& input) {
   auto get_struct_decl = [](const flat::StructMember& member) -> const flat::Struct* {
-    if (flat::GetType(member.type_ctor)->nullability == types::Nullability::kNullable) {
+    if (member.type_ctor->type->nullability == types::Nullability::kNullable) {
       return nullptr;
     }
-    const flat::Type* type = flat::GetType(member.type_ctor);
+    const flat::Type* type = member.type_ctor->type;
     if (type->kind != flat::Type::Kind::kIdentifier) {
       return nullptr;
     }
@@ -164,19 +164,6 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           std::move(name), handle_type->subtype, rights, handle_type->nullability);
       handle_type_map_[handle_type] = coded_handle_type.get();
       coded_types_.push_back(std::move(coded_handle_type));
-      return coded_types_.back().get();
-    }
-    case flat::Type::Kind::kRequestHandle: {
-      auto request_type = static_cast<const flat::RequestHandleType*>(type);
-      auto iter = request_type_map_.find(request_type);
-      if (iter != request_type_map_.end())
-        return iter->second;
-      auto name = NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name),
-                                         request_type->nullability);
-      auto coded_request_type =
-          std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
-      request_type_map_[request_type] = coded_request_type.get();
-      coded_types_.push_back(std::move(coded_request_type));
       return coded_types_.back().get();
     }
     case flat::Type::Kind::kTransportSide: {
@@ -404,7 +391,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           assert(false && "Duplicate ordinal found in table generation");
         }
         if (member.maybe_used) {
-          const auto* coded_member_type = CompileType(flat::GetType(member.maybe_used->type_ctor),
+          const auto* coded_member_type = CompileType(member.maybe_used->type_ctor->type,
                                                       coded::CodingContext::kInsideEnvelope);
           coded_xunion->fields.emplace_back(coded_member_type);
           nullable_coded_xunion->fields.emplace_back(coded_member_type);
@@ -432,8 +419,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           continue;
         std::string member_name =
             coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-        auto coded_member_type = CompileType(flat::GetType(member.maybe_used->type_ctor),
-                                             coded::CodingContext::kInsideEnvelope);
+        auto coded_member_type =
+            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
         table_fields.emplace_back(coded_member_type, member.ordinal->value);
       }
       break;
@@ -449,8 +436,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
       std::string bits_name = NameCodedName(bits_decl->name);
-      auto primitive_type =
-          static_cast<const flat::PrimitiveType*>(flat::GetType(bits_decl->subtype_ctor));
+      auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
       named_coded_types_.emplace(
           bits_decl->name,
           std::make_unique<coded::BitsType>(

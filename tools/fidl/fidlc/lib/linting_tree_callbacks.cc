@@ -84,7 +84,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     }
     void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
       ProcessGapText(element->start_);
-      if (raw::IsParameterListDefined(element->maybe_request)) {
+      if (element->maybe_request != nullptr) {
         for (auto& callback : callbacks_.method_callbacks_) {
           callback(*element);
         }
@@ -96,32 +96,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       DeclarationOrderTreeVisitor::OnProtocolMethod(element);
       ProcessGapText(element->end_);
     }
-    void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.parameter_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnParameter(element);
-      ProcessGapText(element->end_);
-    }
-
-    // TODO(fxbug.dev/70247): Delete this.
-    // --- start old syntax ---
-    void OnAttributeOld(const raw::AttributeOld& element) override {
-      for (auto& callback : callbacks_.attribute_old_callbacks_) {
-        callback(element);
-      }
-    }
-    void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
-      for (auto& callback : callbacks_.type_constructor_old_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnTypeConstructorOld(element);
-    }
-    // --- end old syntax ---
-
-    // --- start new syntax ---
-    void OnAttributeNew(std::unique_ptr<raw::AttributeNew> const& element) override {
+    void OnAttribute(const std::unique_ptr<raw::Attribute>& element) override {
       for (auto& callback : callbacks_.attribute_callbacks_) {
         callback(*element);
       }
@@ -184,11 +159,11 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       DeclarationOrderTreeVisitor::OnIdentifierLayoutParameter(element);
     }
-    void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override {
+    void OnTypeConstructor(std::unique_ptr<raw::TypeConstructor> const& element) override {
       for (auto& callback : callbacks_.type_constructor_callbacks_) {
         callback(*element);
       }
-      DeclarationOrderTreeVisitor::OnTypeConstructorNew(element);
+      DeclarationOrderTreeVisitor::OnTypeConstructor(element);
     }
     // --- end new syntax ---
 

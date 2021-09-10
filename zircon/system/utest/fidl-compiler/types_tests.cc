@@ -13,17 +13,8 @@ namespace flat {
 
 namespace {
 
-bool TypespaceCreateOld(Library* library, Typespace* typespace, const Name& name,
-                        const Type** out_type) {
-  LayoutInvocation invocation;
-  return typespace->Create(LibraryMediator(library), name, nullptr /* maybe_arg_type */,
-                           std::optional<Name>() /* handle_subtype_identifier */,
-                           nullptr /* handle_rights */, nullptr /* maybe_size */,
-                           types::Nullability::kNonnullable, out_type, &invocation);
-}
-
-bool TypespaceCreateNew(Library* library, Typespace* typespace, const Name& name,
-                        const Type** out_type) {
+bool TypespaceCreate(Library* library, Typespace* typespace, const Name& name,
+                     const Type** out_type) {
   LayoutInvocation invocation;
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
@@ -39,22 +30,13 @@ void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name
   ASSERT_NOT_NULL(typespace);
 
   auto the_type_name = Name::CreateDerived(library, SourceSpan(), std::string(name));
-  {
-    const Type* the_type;
-    ASSERT_TRUE(TypespaceCreateOld(library, typespace, the_type_name, &the_type));
-    ASSERT_NOT_NULL(the_type, "%s", name);
-    auto the_type_p = static_cast<const PrimitiveType*>(the_type);
-    ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
-  }
-  {
-    std::vector<std::unique_ptr<LayoutParameter>> no_params;
-    std::vector<std::unique_ptr<Constant>> no_constraints;
-    const Type* the_type;
-    ASSERT_TRUE(TypespaceCreateNew(library, typespace, the_type_name, &the_type));
-    ASSERT_NOT_NULL(the_type, "%s", name);
-    auto the_type_p = static_cast<const PrimitiveType*>(the_type);
-    ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
-  }
+  std::vector<std::unique_ptr<LayoutParameter>> no_params;
+  std::vector<std::unique_ptr<Constant>> no_constraints;
+  const Type* the_type;
+  ASSERT_TRUE(TypespaceCreate(library, typespace, the_type_name, &the_type));
+  ASSERT_NOT_NULL(the_type, "%s", name);
+  auto the_type_p = static_cast<const PrimitiveType*>(the_type);
+  ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
 }
 
 }  // namespace

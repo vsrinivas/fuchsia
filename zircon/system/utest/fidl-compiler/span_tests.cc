@@ -45,15 +45,12 @@ namespace {
   DO(LiteralConstant)           \
   DO(BinaryOperatorConstant)    \
   DO(Attribute)                 \
+  DO(AttributeArg)              \
   DO(AttributeList)             \
   DO(TypeConstructor)           \
   DO(Library)                   \
   DO(Using)                     \
   DO(ConstDeclaration)          \
-  DO(BitsMember)                \
-  DO(BitsDeclaration)           \
-  DO(EnumMember)                \
-  DO(EnumDeclaration)           \
   DO(Parameter)                 \
   DO(ParameterList)             \
   DO(ProtocolCompose)           \
@@ -63,15 +60,6 @@ namespace {
   DO(ResourceProperty)          \
   DO(ServiceMember)             \
   DO(ServiceDeclaration)        \
-  DO(StructMember)              \
-  DO(StructDeclaration)         \
-  DO(TableMember)               \
-  DO(TableDeclaration)          \
-  DO(UnionMember)               \
-  DO(UnionDeclaration)          \
-  DO(AttributeArg)              \
-  DO(AttributeNew)              \
-  DO(AttributeListNew)          \
   DO(Modifiers)                 \
   DO(IdentifierLayoutParameter) \
   DO(LiteralLayoutParameter)    \
@@ -161,13 +149,9 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::ConstDeclaration, *element);
     TreeVisitor::OnConstDeclaration(element);
   }
-  void OnParameter(std::unique_ptr<fidl::raw::Parameter> const& element) override {
-    CheckSpanOfType(ElementType::Parameter, *element);
-    TreeVisitor::OnParameter(element);
-  }
-  void OnParameterListNew(std::unique_ptr<fidl::raw::ParameterListNew> const& element) override {
+  void OnParameterList(std::unique_ptr<fidl::raw::ParameterList> const& element) override {
     CheckSpanOfType(ElementType::ParameterListNew, *element);
-    TreeVisitor::OnParameterListNew(element);
+    TreeVisitor::OnParameterList(element);
   }
   void OnProtocolCompose(std::unique_ptr<fidl::raw::ProtocolCompose> const& element) override {
     CheckSpanOfType(ElementType::ProtocolCompose, *element);
@@ -200,20 +184,17 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::ServiceDeclaration, *element);
     TreeVisitor::OnServiceDeclaration(element);
   }
-
-  // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
-  // --- start new syntax ---
   void OnAttributeArg(std::unique_ptr<fidl::raw::AttributeArg> const& element) override {
     CheckSpanOfType(ElementType::AttributeArg, *element);
     TreeVisitor::OnAttributeArg(element);
   }
-  void OnAttributeNew(std::unique_ptr<fidl::raw::AttributeNew> const& element) override {
-    CheckSpanOfType(ElementType::AttributeNew, *element);
-    TreeVisitor::OnAttributeNew(element);
+  void OnAttribute(std::unique_ptr<fidl::raw::Attribute> const& element) override {
+    CheckSpanOfType(ElementType::Attribute, *element);
+    TreeVisitor::OnAttribute(element);
   }
-  void OnAttributeListNew(std::unique_ptr<fidl::raw::AttributeListNew> const& element) override {
-    CheckSpanOfType(ElementType::AttributeListNew, *element);
-    TreeVisitor::OnAttributeListNew(element);
+  void OnAttributeList(std::unique_ptr<fidl::raw::AttributeList> const& element) override {
+    CheckSpanOfType(ElementType::AttributeList, *element);
+    TreeVisitor::OnAttributeList(element);
   }
   void OnModifiers(std::unique_ptr<fidl::raw::Modifiers> const& element) override {
     CheckSpanOfType(ElementType::Modifiers, *element);
@@ -271,10 +252,9 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::TypeConstraints, *element);
     TreeVisitor::OnTypeConstraints(element);
   }
-  void OnTypeConstructorNew(
-      std::unique_ptr<fidl::raw::TypeConstructorNew> const& element) override {
+  void OnTypeConstructor(std::unique_ptr<fidl::raw::TypeConstructor> const& element) override {
     CheckSpanOfType(ElementType::TypeConstructorNew, *element);
-    TreeVisitor::OnTypeConstructorNew(element);
+    TreeVisitor::OnTypeConstructor(element);
   }
   void OnTypeDecl(std::unique_ptr<fidl::raw::TypeDecl> const& element) override {
     CheckSpanOfType(ElementType::TypeDecl, *element);
@@ -380,7 +360,7 @@ const std::vector<TestCase> test_cases = {
           const MY_OTHER_BOOL bool = false;
          )FIDL",
      }},
-    {ElementType::AttributeNew,
+    {ElementType::Attribute,
      {
          R"FIDL(library x; «@foo("foo")» «@bar» const MY_BOOL bool = false;)FIDL",
          R"FIDL(library x;

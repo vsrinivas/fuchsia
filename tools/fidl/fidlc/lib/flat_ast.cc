@@ -220,18 +220,6 @@ std::unique_ptr<Diagnostic> ValidateUnknownConstraints(
 
 }  // namespace
 
-TypeConstructorPtr GetTypeCtorAsPtr(const TypeConstructor& type_ctor) {
-  return std::visit(fidl::utils::matchers{
-                        [](const std::unique_ptr<TypeConstructorOld>& e) -> TypeConstructorPtr {
-                          return e.get();
-                        },
-                        [](const std::unique_ptr<TypeConstructorNew>& e) -> TypeConstructorPtr {
-                          return e.get();
-                        },
-                    },
-                    type_ctor);
-}
-
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   switch (subtype) {
     case types::PrimitiveSubtype::kBool:
@@ -370,7 +358,6 @@ bool IsSimple(const Type* type, Reporter* reporter) {
         return false;
       switch (vector_type->element_type->kind) {
         case Type::Kind::kHandle:
-        case Type::Kind::kRequestHandle:
         case Type::Kind::kTransportSide:
         case Type::Kind::kPrimitive:
           return true;
@@ -388,7 +375,6 @@ bool IsSimple(const Type* type, Reporter* reporter) {
     }
     case Type::Kind::kArray:
     case Type::Kind::kHandle:
-    case Type::Kind::kRequestHandle:
     case Type::Kind::kTransportSide:
     case Type::Kind::kPrimitive:
       return depth == 0u;
@@ -447,21 +433,6 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
 }
 
 bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
-                       const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
-                       const std::optional<Name>& handle_subtype_identifier,
-                       const std::unique_ptr<Constant>& handle_rights,
-                       const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
-                       const Type** out_type, LayoutInvocation* out_params) {
-  std::unique_ptr<Type> type;
-  if (!CreateNotOwned(lib, name, maybe_arg_type_ctor, handle_subtype_identifier, handle_rights,
-                      maybe_size, nullability, &type, out_params))
-    return false;
-  types_.push_back(std::move(type));
-  *out_type = types_.back().get();
-  return true;
-}
-
-bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
                        const std::unique_ptr<LayoutParameterList>& parameters,
                        const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
                        LayoutInvocation* out_params) {
@@ -474,36 +445,6 @@ bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
 }
 
 bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
-                               const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
-                               const std::optional<Name>& handle_subtype_identifier,
-                               const std::unique_ptr<Constant>& handle_rights,
-                               const std::unique_ptr<Constant>& maybe_size,
-                               types::Nullability nullability, std::unique_ptr<Type>* out_type,
-                               LayoutInvocation* out_params) {
-  // TODO(pascallouis): lookup whether we've already created the type, and
-  // return it rather than create a new one. Lookup must be by name,
-  // arg_type, size, and nullability.
-
-  auto type_template = LookupTemplate(name, fidl::utils::Syntax::kOld);
-  if (type_template == nullptr) {
-    reporter_->Report(ErrUnknownType, name.span(), name);
-    return false;
-  }
-  if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
-    reporter_->Report(ErrAnonymousNameReference, name.span(), name);
-    return false;
-  }
-  return type_template->Create(lib,
-                               {.name = name,
-                                .maybe_arg_type_ctor = maybe_arg_type_ctor,
-                                .handle_subtype_identifier = handle_subtype_identifier,
-                                .handle_rights = handle_rights,
-                                .maybe_size = maybe_size,
-                                .nullability = nullability},
-                               out_type, out_params);
-}
-
-bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
                                const std::unique_ptr<LayoutParameterList>& parameters,
                                const std::unique_ptr<TypeConstraints>& constraints,
                                std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) {
@@ -511,7 +452,7 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
 
-  auto type_template = LookupTemplate(name, fidl::utils::Syntax::kNew);
+  auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
     reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
@@ -525,22 +466,17 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
                                out_type, out_params);
 }
 
-template <typename T>
-void Typespace::AddTemplate(std::unique_ptr<T> type_template) {
-  old_syntax_templates_.emplace(type_template->name(), std::make_unique<T>(*type_template));
-  new_syntax_templates_.emplace(type_template->name(), std::move(type_template));
+void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
+  templates_.emplace(type_template->name(), std::move(type_template));
 }
 
-const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name,
-                                              fidl::utils::Syntax syntax) const {
-  const auto& typemap =
-      syntax == fidl::utils::Syntax::kNew ? new_syntax_templates_ : old_syntax_templates_;
+const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   auto global_name = Name::Key(nullptr, name.decl_name());
-  if (auto iter = typemap.find(global_name); iter != typemap.end()) {
+  if (auto iter = templates_.find(global_name); iter != templates_.end()) {
     return iter->second.get();
   }
 
-  if (auto iter = typemap.find(name); iter != typemap.end()) {
+  if (auto iter = templates_.find(name); iter != templates_.end()) {
     return iter->second.get();
   }
 
@@ -560,72 +496,6 @@ bool TypeTemplate::Fail(const ErrorDef<Args...>& err, const Args&... args) const
   return false;
 }
 
-bool TypeTemplate::ResolveOldSyntaxArgs(const LibraryMediator& lib,
-                                        const OldSyntaxParamsAndConstraints& unresolved_args,
-                                        std::unique_ptr<CreateInvocation>* out_args,
-                                        LayoutInvocation* out_params) const {
-  const Type* maybe_arg_type = nullptr;
-  if (unresolved_args.maybe_arg_type_ctor != nullptr) {
-    if (!lib.ResolveType(unresolved_args.maybe_arg_type_ctor.get()))
-      return false;
-    maybe_arg_type = unresolved_args.maybe_arg_type_ctor->type;
-    out_params->element_type_resolved = maybe_arg_type;
-    out_params->element_type_raw = unresolved_args.maybe_arg_type_ctor.get();
-  }
-
-  const Size* size = nullptr;
-  if (unresolved_args.maybe_size != nullptr) {
-    if (!lib.ResolveSizeBound(unresolved_args.maybe_size.get(), &size)) {
-      reporter_->Report(ErrCouldNotParseSizeBound, unresolved_args.maybe_size->span);
-      return false;
-    }
-    out_params->size_resolved = size;
-    out_params->size_raw = unresolved_args.maybe_size.get();
-  }
-
-  Resource* handle_resource_decl = nullptr;
-  if (unresolved_args.handle_subtype_identifier || unresolved_args.handle_rights) {
-    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
-      return false;
-    assert(handle_resource_decl);
-  }
-
-  std::optional<uint32_t> obj_type = std::nullopt;
-  std::optional<types::HandleSubtype> handle_subtype = std::nullopt;
-  if (unresolved_args.handle_subtype_identifier) {
-    const Name& name = *unresolved_args.handle_subtype_identifier;
-    // the new path uses Constants, the old path uses Names; convert the Name
-    // to a Constant here to share code paths.
-    auto into_constant = static_cast<std::unique_ptr<Constant>>(
-        std::make_unique<IdentifierConstant>(name, *name.span()));
-    assert(handle_resource_decl);
-    uint32_t raw_obj_type;
-    if (!lib.ResolveAsHandleSubtype(handle_resource_decl, into_constant, &raw_obj_type))
-      return Fail(ErrCouldNotResolveHandleSubtype, name);
-    obj_type = raw_obj_type;
-    handle_subtype = types::HandleSubtype(raw_obj_type);
-    out_params->subtype_resolved = raw_obj_type;
-  }
-
-  const HandleRights* rights = nullptr;
-  if (unresolved_args.handle_rights) {
-    if (!lib.ResolveAsHandleRights(handle_resource_decl, unresolved_args.handle_rights.get(),
-                                   &rights))
-      return Fail(ErrCouldNotResolveHandleRights);
-    out_params->rights_resolved = rights;
-    out_params->rights_raw = unresolved_args.handle_rights.get();
-  }
-
-  // No work needed for nullability - in the old syntax there's nothing to resolve
-  // because ? always indicates nullable.
-  out_params->nullability = unresolved_args.nullability;
-
-  *out_args =
-      std::make_unique<CreateInvocation>(unresolved_args.name, maybe_arg_type, obj_type,
-                                         handle_subtype, rights, size, unresolved_args.nullability);
-  return true;
-}
-
 bool TypeTemplate::GetResource(const LibraryMediator& lib, const Name& name,
                                Resource** out_resource) const {
   assert(false &&
@@ -642,7 +512,7 @@ class PrimitiveTypeTemplate : public TypeTemplate {
                         types::PrimitiveSubtype subtype)
       : TypeTemplate(Name::CreateIntrinsic(name), typespace, reporter), subtype_(subtype) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
@@ -652,22 +522,6 @@ class PrimitiveTypeTemplate : public TypeTemplate {
 
     PrimitiveType type(name_, subtype_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args->name.span());
-
-    PrimitiveType type(name_, subtype_);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
   }
 
  private:
@@ -690,24 +544,12 @@ bool PrimitiveType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool PrimitiveType::ApplySomeLayoutParametersAndConstraints(
-    const LibraryMediator& lib, const CreateInvocation& create_invocation,
-    const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
-    LayoutInvocation* out_params) const {
-  if (create_invocation.size != nullptr)
-    return lib.Fail(ErrCannotHaveSize, create_invocation.name.span(), layout);
-  if (create_invocation.nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotBeNullable, create_invocation.name.span(), layout);
-  *out_type = std::make_unique<PrimitiveType>(name, subtype);
-  return true;
-}
-
 class ArrayTypeTemplate final : public TypeTemplate {
  public:
   ArrayTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("array"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     size_t expected_params = 2;
@@ -731,26 +573,6 @@ class ArrayTypeTemplate final : public TypeTemplate {
     ArrayType type(name_, element_type, size);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
   }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args->name.span());
-    if (args->size == nullptr)
-      return Fail(ErrMustHaveSize, args->name.span());
-    if (args->size->value == 0)
-      return Fail(ErrMustHaveNonZeroSize, args->name.span());
-
-    ArrayType type(name_, args->arg_type, args->size);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
-  }
 };
 
 bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
@@ -769,26 +591,13 @@ bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool ArrayType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
-                                                        const CreateInvocation& create_invocation,
-                                                        const TypeTemplate* layout,
-                                                        std::unique_ptr<Type>* out_type,
-                                                        LayoutInvocation* out_params) const {
-  if (create_invocation.size && create_invocation.size != element_count)
-    return lib.Fail(ErrCannotParameterizeAlias, create_invocation.name.span(), layout);
-  if (create_invocation.nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotBeNullable, create_invocation.name.span(), layout);
-  *out_type = std::make_unique<ArrayType>(name, element_type, element_count);
-  return true;
-}
-
 class BytesTypeTemplate final : public TypeTemplate {
  public:
   BytesTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter),
         uint8_type_(kUint8Type) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
@@ -798,22 +607,6 @@ class BytesTypeTemplate final : public TypeTemplate {
 
     VectorType type(name_, &uint8_type_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args->name.span());
-
-    VectorType type(name_, &uint8_type_);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
   }
 
  private:
@@ -869,7 +662,7 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 1) {
@@ -885,21 +678,6 @@ class VectorTypeTemplate final : public TypeTemplate {
 
     VectorType type(name_, element_type);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args->name.span());
-    VectorType type(name_, args->arg_type);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
   }
 };
 
@@ -926,35 +704,12 @@ bool VectorType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool VectorType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
-                                                         const CreateInvocation& create_invocation,
-                                                         const TypeTemplate* layout,
-                                                         std::unique_ptr<Type>* out_type,
-                                                         LayoutInvocation* out_params) const {
-  bool is_already_nullable = nullability == types::Nullability::kNullable;
-  bool is_nullability_applied = create_invocation.nullability == types::Nullability::kNullable;
-  if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, create_invocation.name.span(), layout);
-  auto merged_nullability = is_already_nullable || is_nullability_applied
-                                ? types::Nullability::kNullable
-                                : types::Nullability::kNonnullable;
-
-  // TODO(fxbug.dev/74193): take the smaller bound
-  if (element_count != &kMaxSize && create_invocation.size) {
-    return lib.Fail(ErrCannotBoundTwice, std::nullopt, layout);
-  }
-  auto merged_size = create_invocation.size ? create_invocation.size : element_count;
-
-  *out_type = std::make_unique<VectorType>(name, element_type, merged_size, merged_nullability);
-  return true;
-}
-
 class StringTypeTemplate final : public TypeTemplate {
  public:
   StringTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("string"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
@@ -964,22 +719,6 @@ class StringTypeTemplate final : public TypeTemplate {
 
     StringType type(name_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args->name.span());
-
-    StringType type(name_);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
   }
 };
 
@@ -1006,32 +745,6 @@ bool StringType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool StringType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
-                                                         const CreateInvocation& create_invocation,
-                                                         const TypeTemplate* layout,
-                                                         std::unique_ptr<Type>* out_type,
-                                                         LayoutInvocation* out_params) const {
-  bool is_already_nullable = nullability == types::Nullability::kNullable;
-  bool is_nullability_applied = create_invocation.nullability == types::Nullability::kNullable;
-  if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, create_invocation.name.span(), layout);
-  auto merged_nullability = is_already_nullable || is_nullability_applied
-                                ? types::Nullability::kNullable
-                                : types::Nullability::kNonnullable;
-
-  // Note that we don't have a way of knowing whether a size was actually specified,
-  // since unspecified sizes are always replaced with a MAX default. Assume that
-  // MAX means unspecified (this means that we would allow bounding twice if the
-  // user uses MAX both times).
-  // TODO(fxbug.dev/74193): take the smaller bound
-  if (*max_size != kMaxSize && create_invocation.size)
-    return lib.Fail(ErrCannotBoundTwice, std::nullopt, layout);
-  auto merged_size = create_invocation.size ? create_invocation.size : max_size;
-
-  *out_type = std::make_unique<StringType>(name, merged_size, merged_nullability);
-  return true;
-}
-
 class HandleTypeTemplate final : public TypeTemplate {
  public:
   HandleTypeTemplate(Typespace* typespace, Reporter* reporter)
@@ -1052,8 +765,7 @@ class HandleTypeTemplate final : public TypeTemplate {
     }
 
     auto* resource = static_cast<Resource*>(handle_decl);
-    if (!IsTypeConstructorDefined(resource->subtype_ctor) ||
-        GetName(resource->subtype_ctor).full_name() != "uint32") {
+    if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
       reporter_->Report(ErrResourceMustBeUint32Derived, resource->name);
       return false;
     }
@@ -1062,7 +774,7 @@ class HandleTypeTemplate final : public TypeTemplate {
     return true;
   }
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     Resource* handle_resource_decl = nullptr;
     if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
@@ -1076,31 +788,6 @@ class HandleTypeTemplate final : public TypeTemplate {
 
     HandleType type(name_, handle_resource_decl);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> resolved;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &resolved, out_params))
-      return false;
-
-    assert(resolved->arg_type == nullptr);
-
-    if (resolved->size != nullptr)
-      return Fail(ErrCannotHaveSize, resolved->name.span());
-
-    // Note that in the old syntax, we'll already have looked up the Resource*
-    // (if necessary) since the old syntax resolves arguments ahead of time (see
-    // call to ResolveOldSyntaxArgs above). However, we still need to obtain the
-    // Resource* and pass it to the HandleType, since it may be used to resolve
-    // more constraints later (e.g. if there's an alias to this handle that also
-    // specifies more constraints) in the new syntax.
-    Resource* handle_resource_decl = nullptr;
-    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
-      return false;
-
-    HandleType type(name_, handle_resource_decl);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *resolved, this, out_type, out_params);
   }
 
  private:
@@ -1224,105 +911,6 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool HandleType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
-                                                         const CreateInvocation& create_invocation,
-                                                         const TypeTemplate* layout,
-                                                         std::unique_ptr<Type>* out_type,
-                                                         LayoutInvocation* out_params) const {
-  if (create_invocation.size)
-    return lib.Fail(ErrCannotHaveSize, create_invocation.name.span(), layout);
-
-  bool has_obj_type = subtype != types::HandleSubtype::kHandle;
-  if (has_obj_type && create_invocation.obj_type)
-    return lib.Fail(ErrCannotConstrainTwice, std::nullopt, layout);
-  uint32_t merged_obj_type = obj_type;
-  if (create_invocation.obj_type.has_value())
-    merged_obj_type = create_invocation.obj_type.value();
-
-  bool has_nullability = nullability == types::Nullability::kNullable;
-  if (has_nullability && create_invocation.nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
-  auto merged_nullability =
-      has_nullability || create_invocation.nullability == types::Nullability::kNullable
-          ? types::Nullability::kNullable
-          : types::Nullability::kNonnullable;
-
-  bool has_rights = rights != &kSameRights;
-  if (has_rights && create_invocation.handle_rights)
-    return lib.Fail(ErrCannotConstrainTwice, std::nullopt, layout);
-  auto merged_rights = rights;
-  if (create_invocation.handle_rights)
-    merged_rights = create_invocation.handle_rights;
-
-  *out_type = std::make_unique<HandleType>(name, resource_decl, merged_obj_type,
-                                           types::HandleSubtype(merged_obj_type), merged_rights,
-                                           merged_nullability);
-  return true;
-}
-
-// TODO(fxbug.dev/70247): Remove this in favor of TransportSideTypeTemplate
-class RequestTypeTemplate final : public TypeTemplate {
- public:
-  RequestTypeTemplate(Typespace* typespace, Reporter* reporter)
-      : TypeTemplate(Name::CreateIntrinsic("request"), typespace, reporter) {}
-
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    assert(false && "Compiler bug: this type template should only be used in the old syntax");
-    return false;
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (args->arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args->name.span());
-    if (args->arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(ErrMustBeAProtocol, args->name.span());
-    auto protocol_type = static_cast<const IdentifierType*>(args->arg_type);
-    if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(ErrMustBeAProtocol, args->name.span());
-    if (args->size != nullptr)
-      return Fail(ErrCannotHaveSize, args->name.span());
-
-    RequestHandleType type(name_, protocol_type);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
-  }
-};
-
-bool RequestHandleType::ApplyConstraints(const flat::LibraryMediator& lib,
-                                         const TypeConstraints& constraints,
-                                         const TypeTemplate* layout,
-                                         std::unique_ptr<Type>* out_type,
-                                         LayoutInvocation* out_params) const {
-  assert(false && "Compiler bug: this type should only be used in the old syntax");
-  return false;
-}
-
-bool RequestHandleType::ApplySomeLayoutParametersAndConstraints(
-    const LibraryMediator& lib, const CreateInvocation& create_invocation,
-    const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
-    LayoutInvocation* out_params) const {
-  if (create_invocation.size)
-    return lib.Fail(ErrCannotHaveSize, create_invocation.name.span(), layout);
-
-  if (nullability == types::Nullability::kNullable &&
-      create_invocation.nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
-  auto merged_nullability = nullability;
-  if (create_invocation.nullability == types::Nullability::kNullable)
-    merged_nullability = create_invocation.nullability;
-
-  *out_type = std::make_unique<RequestHandleType>(name, protocol_type, merged_nullability);
-  return true;
-}
-
 class TransportSideTypeTemplate final : public TypeTemplate {
  public:
   TransportSideTypeTemplate(Typespace* typespace, Reporter* reporter, TransportSide end)
@@ -1331,7 +919,7 @@ class TransportSideTypeTemplate final : public TypeTemplate {
                      typespace, reporter),
         end_(end) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = !unresolved_args.parameters->items.empty();
     if (num_params)
@@ -1340,12 +928,6 @@ class TransportSideTypeTemplate final : public TypeTemplate {
 
     TransportSideType type(name_, end_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    assert(false && "Compiler bug: this type template should only be used in the new syntax");
-    return false;
   }
 
  private:
@@ -1419,14 +1001,6 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool TransportSideType::ApplySomeLayoutParametersAndConstraints(
-    const LibraryMediator& lib, const CreateInvocation& create_invocation,
-    const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
-    LayoutInvocation* out_params) const {
-  assert(false && "Compiler bug: this type should only be used in the new syntax");
-  return false;
-}
-
 class TypeDeclTypeTemplate final : public TypeTemplate {
  public:
   TypeDeclTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Library* library,
@@ -1435,7 +1009,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         library_(library),
         type_decl_(type_decl) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
       if (type_decl_->compiling) {
@@ -1455,31 +1029,6 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
     IdentifierType type(name_, type_decl_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    assert(!args->handle_subtype);
-
-    if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
-      if (type_decl_->compiling) {
-        type_decl_->recursive = true;
-      } else {
-        if (!library_->CompileDecl(type_decl_)) {
-          return false;
-        }
-      }
-    }
-
-    if (args->arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args->name.span());
-
-    IdentifierType type(name_, type_decl_);
-    return type.ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type, out_params);
   }
 
  private:
@@ -1555,61 +1104,12 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
   return true;
 }
 
-bool IdentifierType::ApplySomeLayoutParametersAndConstraints(
-    const LibraryMediator& lib, const CreateInvocation& create_invocation,
-    const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
-    LayoutInvocation* out_params) const {
-  switch (type_decl->kind) {
-    // These types can't be nullable
-    case Decl::Kind::kBits:
-    case Decl::Kind::kEnum:
-    case Decl::Kind::kTable:
-      if (create_invocation.nullability == types::Nullability::kNullable)
-        return lib.Fail(ErrCannotBeNullable, create_invocation.name.span(), layout);
-      break;
-
-    // These types have one allowed constraint (`optional`). For type aliases,
-    // we need to allow the possibility that the concrete type does allow `optional`,
-    // if it doesn't the Type itself will catch the error.
-    case Decl::Kind::kProtocol:
-    case Decl::Kind::kTypeAlias:
-    case Decl::Kind::kStruct:
-    case Decl::Kind::kUnion:
-      if (nullability == types::Nullability::kNullable &&
-          create_invocation.nullability == types::Nullability::kNullable)
-        return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
-      break;
-
-    // These should never be encountered
-    case Decl::Kind::kConst:
-    case Decl::Kind::kResource: {
-      // Cannot have const: entries for constants do not exist in the typespace
-      // Cannot have resource: resource types should have resolved to the HandleTypeTemplate
-      assert(false);
-      break;
-    }
-
-    // TODO(fxbug.dev/75837):
-    // Services are not allowed to be used as types. This is caught later, during
-    // VerifyTypeCategory.
-    case Decl::Kind::kService:
-      break;
-  }
-
-  auto merged_nullability = nullability;
-  if (create_invocation.nullability == types::Nullability::kNullable)
-    merged_nullability = create_invocation.nullability;
-
-  *out_type = std::make_unique<IdentifierType>(name, type_decl, merged_nullability);
-  return true;
-}
-
 class TypeAliasTypeTemplate final : public TypeTemplate {
  public:
   TypeAliasTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, TypeAlias* decl)
       : TypeTemplate(std::move(name), typespace, reporter), decl_(decl) {}
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     if (!decl_->compiled) {
       if (decl_->compiling) {
@@ -1628,48 +1128,12 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 
     // Compilation failed while trying to resolve something farther up the chain;
     // exit early
-    if (!GetType(decl_->partial_type_ctor))
+    if (decl_->partial_type_ctor->type == nullptr)
       return false;
-    const auto& aliased_type = GetType(decl_->partial_type_ctor);
+    const auto& aliased_type = decl_->partial_type_ctor->type;
     out_params->from_type_alias = decl_;
     return aliased_type->ApplyConstraints(lib, *unresolved_args.constraints, this, out_type,
                                           out_params);
-  }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    std::unique_ptr<CreateInvocation> args;
-    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &args, out_params))
-      return false;
-
-    // Note that because fidlc only populates these handle fields if it sees
-    // "handle" in the type constructor, aliases of handles will never correctly
-    // capture any handle constraints. It is not a TODO to fix this since this
-    // issue does not exist in the new syntax.
-    assert(!args->handle_subtype);
-    assert(!args->handle_rights);
-
-    if (!decl_->compiled) {
-      if (decl_->compiling) {
-        return Fail(ErrIncludeCycle);
-      }
-
-      if (!lib.CompileDecl(decl_)) {
-        return false;
-      }
-    }
-
-    if (unresolved_args.maybe_arg_type_ctor != nullptr)
-      return Fail(ErrCannotParameterizeAlias, args->name.span());
-
-    // Compilation failed while trying to resolve something farther up the chain;
-    // exit early
-    if (!GetType(decl_->partial_type_ctor))
-      return false;
-    const auto& aliased_type = GetType(decl_->partial_type_ctor);
-    out_params->from_type_alias = decl_;
-    return aliased_type->ApplySomeLayoutParametersAndConstraints(lib, *args, this, out_type,
-                                                                 out_params);
   }
 
  private:
@@ -1688,7 +1152,7 @@ class BoxTypeTemplate final : public TypeTemplate {
     return static_cast<const IdentifierType*>(boxed_type)->type_decl->kind == Decl::Kind::kStruct;
   }
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 1) {
@@ -1723,12 +1187,6 @@ class BoxTypeTemplate final : public TypeTemplate {
     BoxType type(name_, boxed_type);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
   }
-
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
-              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    assert(false && "Compiler bug: this type template should only be used in the new syntax");
-    return false;
-  }
 };
 
 bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
@@ -1746,33 +1204,16 @@ bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConst
   return true;
 }
 
-bool BoxType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
-                                                      const CreateInvocation& create_invocation,
-                                                      const TypeTemplate* layout,
-                                                      std::unique_ptr<Type>* out_type,
-                                                      LayoutInvocation* out_params) const {
-  assert(false && "Compiler bug: this type should only be used in the new syntax");
-  return false;
-}
-
 Typespace Typespace::RootTypes(Reporter* reporter) {
   Typespace root_typespace(reporter);
 
-  auto add_template_old = [&](std::unique_ptr<TypeTemplate> type_template) {
+  auto add_template = [&](std::unique_ptr<TypeTemplate> type_template) {
     const Name& name = type_template->name();
-    root_typespace.old_syntax_templates_.emplace(name, std::move(type_template));
-  };
-
-  auto add_template_new = [&](std::unique_ptr<TypeTemplate> type_template) {
-    const Name& name = type_template->name();
-    root_typespace.new_syntax_templates_.emplace(name, std::move(type_template));
+    root_typespace.templates_.emplace(name, std::move(type_template));
   };
 
   auto add_primitive = [&](const std::string& name, types::PrimitiveSubtype subtype) {
-    add_template_old(
-        std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
-    add_template_new(
-        std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
+    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
   };
 
   add_primitive("bool", types::PrimitiveSubtype::kBool);
@@ -1792,40 +1233,21 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   // TODO(fxbug.dev/7807): Remove when there is generalized support.
   const static auto kByteName = Name::CreateIntrinsic("byte");
   const static auto kBytesName = Name::CreateIntrinsic("bytes");
-  root_typespace.old_syntax_templates_.emplace(
+  root_typespace.templates_.emplace(
       kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
                                                          types::PrimitiveSubtype::kUint8));
-  root_typespace.new_syntax_templates_.emplace(
-      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
-                                                         types::PrimitiveSubtype::kUint8));
-  root_typespace.old_syntax_templates_.emplace(
-      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
-  root_typespace.new_syntax_templates_.emplace(
-      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
+  root_typespace.templates_.emplace(kBytesName,
+                                    std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
 
-  add_template_old(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
-  add_template_new(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
-  add_template_old(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
-  add_template_new(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
-  add_template_old(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template_new(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template_old(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
-  add_template_new(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
-
-  // add syntax specific typespace entries
-  // TODO(fxbug.dev/70247): consolidate maps
-  auto request = std::make_unique<RequestTypeTemplate>(&root_typespace, reporter);
-  root_typespace.old_syntax_templates_.emplace(request->name(), std::move(request));
-  auto server_end = std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
-                                                                TransportSide::kServer);
-  root_typespace.new_syntax_templates_.emplace(server_end->name(), std::move(server_end));
-
-  auto client_end = std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
-                                                                TransportSide::kClient);
-  root_typespace.new_syntax_templates_.emplace(client_end->name(), std::move(client_end));
-
-  auto box = std::make_unique<BoxTypeTemplate>(&root_typespace, reporter);
-  root_typespace.new_syntax_templates_.emplace(box->name(), std::move(box));
+  add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
+  add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
+                                                           TransportSide::kServer));
+  add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
+                                                           TransportSide::kClient));
+  add_template(std::make_unique<BoxTypeTemplate>(&root_typespace, reporter));
   return root_typespace;
 }
 
@@ -2044,7 +1466,7 @@ bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>
       auto struct_decl = static_cast<const Struct*>(attributable);
       bool ok = true;
       for (const auto& member : struct_decl->members) {
-        if (!IsSimple(GetType(member.type_ctor), reporter)) {
+        if (!IsSimple(member.type_ctor->type, reporter)) {
           reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
           ok = false;
         }
@@ -2203,7 +1625,7 @@ bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>&
   assert(union_decl->members.size() == 2);
   auto& error_member = union_decl->members.at(1);
   assert(error_member.maybe_used && "must have an error member");
-  auto error_type = GetType(error_member.maybe_used->type_ctor);
+  auto error_type = error_member.maybe_used->type_ctor->type;
 
   const PrimitiveType* error_primitive = nullptr;
   if (error_type->kind == Type::Kind::kPrimitive) {
@@ -2212,8 +1634,8 @@ bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>&
     auto identifier_type = static_cast<const IdentifierType*>(error_type);
     if (identifier_type->type_decl->kind == Decl::Kind::kEnum) {
       auto error_enum = static_cast<const Enum*>(identifier_type->type_decl);
-      assert(GetType(error_enum->subtype_ctor)->kind == Type::Kind::kPrimitive);
-      error_primitive = static_cast<const PrimitiveType*>(GetType(error_enum->subtype_ctor));
+      assert(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+      error_primitive = static_cast<const PrimitiveType*>(error_enum->subtype_ctor->type);
     }
   }
 
@@ -2775,30 +2197,8 @@ VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
 }
 VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
 
-bool Library::ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw_attribute_list,
-                                      std::unique_ptr<AttributeList>* out_attribute_list) {
-  AttributesBuilder<Attribute> attributes_builder(reporter_);
-  if (raw_attribute_list) {
-    for (auto& raw_attribute : raw_attribute_list->attributes) {
-      std::vector<std::unique_ptr<AttributeArg>> args;
-      if (raw_attribute.value) {
-        auto constant = std::make_unique<LiteralConstant>(std::move(raw_attribute.value));
-        args.emplace_back(std::make_unique<AttributeArg>(std::nullopt, std::move(constant),
-                                                         raw_attribute.span()));
-      }
-      auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kOld,
-                                                   raw_attribute.span(), std::move(args));
-      attributes_builder.Insert(std::move(attribute));
-    }
-  }
-
-  auto attributes = attributes_builder.Done();
-  *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
-  return true;
-}
-
-bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
-                                      std::unique_ptr<AttributeList>* out_attribute_list) {
+bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                                   std::unique_ptr<AttributeList>* out_attribute_list) {
   AttributesBuilder<Attribute> attributes_builder(reporter_);
   if (raw_attribute_list != nullptr) {
     for (auto& raw_attribute : raw_attribute_list->attributes) {
@@ -2821,19 +2221,6 @@ bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw
   auto attributes = attributes_builder.Done();
   *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
   return true;
-}
-
-bool Library::ConsumeAttributeList(raw::AttributeList raw_attribute_list,
-                                   std::unique_ptr<AttributeList>* out_attribute_list) {
-  return std::visit(fidl::utils::matchers{
-                        [&, this](std::unique_ptr<raw::AttributeListOld> e) -> bool {
-                          return ConsumeAttributeListOld(std::move(e), out_attribute_list);
-                        },
-                        [&, this](std::unique_ptr<raw::AttributeListNew> e) -> bool {
-                          return ConsumeAttributeListNew(std::move(e), out_attribute_list);
-                        },
-                    },
-                    std::move(raw_attribute_list));
 }
 
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
@@ -2884,56 +2271,10 @@ void Library::ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
   *out_constant = std::make_unique<LiteralConstant>(std::move(raw_constant->literal));
 }
 
-bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                        std::unique_ptr<TypeConstructorOld>* out_type_ctor) {
-  auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
-  if (!name)
-    return false;
-
-  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
-  if (raw_type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!ConsumeTypeConstructorOld(std::move(raw_type_ctor->maybe_arg_type_ctor),
-                                   &maybe_arg_type_ctor))
-      return false;
-  }
-
-  std::unique_ptr<Constant> maybe_size;
-  if (raw_type_ctor->maybe_size != nullptr) {
-    if (!ConsumeConstant(std::move(raw_type_ctor->maybe_size), &maybe_size))
-      return false;
-  }
-
-  std::unique_ptr<Constant> handle_rights;
-  if (raw_type_ctor->handle_rights != nullptr) {
-    if (!ConsumeConstant(std::move(raw_type_ctor->handle_rights), &handle_rights))
-      return false;
-  }
-
-  std::optional<Name> handle_subtype_identifier;
-  if (raw_type_ctor->handle_subtype_identifier) {
-    handle_subtype_identifier =
-        Name::CreateSourced(this, raw_type_ctor->handle_subtype_identifier->span());
-  }
-
-  *out_type_ctor = std::make_unique<TypeConstructorOld>(
-      std::move(name.value()), std::move(maybe_arg_type_ctor), std::move(handle_subtype_identifier),
-      std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability);
-  return true;
-}
-
 void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-  if (raw::IsAttributeListNotEmpty(using_directive->attributes)) {
-    std::visit(fidl::utils::matchers{
-                   [&](const std::unique_ptr<raw::AttributeListOld>& attributes) -> void {
-                     Fail(ErrAttributesOldNotAllowedOnLibraryImport, using_directive->span(),
-                          attributes.get());
-                   },
-                   [&](const std::unique_ptr<raw::AttributeListNew>& attributes) -> void {
-                     Fail(ErrAttributesNewNotAllowedOnLibraryImport, using_directive->span(),
-                          attributes.get());
-                   },
-               },
-               using_directive->attributes);
+  if (using_directive->attributes != nullptr && !using_directive->attributes->attributes.empty()) {
+    Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
+         using_directive->attributes.get());
     return;
   }
 
@@ -2961,7 +2302,7 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 }
 
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
-  assert(alias_declaration->alias && IsTypeConstructorDefined(alias_declaration->type_ctor));
+  assert(alias_declaration->alias && alias_declaration->type_ctor != nullptr);
 
   std::unique_ptr<AttributeList> attributes;
   if (!ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes)) {
@@ -2969,7 +2310,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
   }
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
-  TypeConstructor type_ctor_;
+  std::unique_ptr<TypeConstructor> type_ctor_;
 
   if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor),
                               NamingContext::Create(alias_name), &type_ctor_))
@@ -2987,7 +2328,7 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
     return;
   }
 
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), NamingContext::Create(name),
                               &type_ctor))
     return;
@@ -3003,10 +2344,10 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 namespace {
 
 // Create a type constructor pointing to an anonymous layout.
-std::unique_ptr<TypeConstructorNew> IdentifierTypeForDecl(const Decl* decl) {
+std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl) {
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
-  return std::make_unique<TypeConstructorNew>(
+  return std::make_unique<TypeConstructor>(
       decl->name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
       std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
 }
@@ -3017,7 +2358,7 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
                                  SourceSpan response_span, raw::ProtocolMethod* method,
                                  Struct* success_variant, Struct** out_response) {
   // Compile the error type.
-  flat::TypeConstructor error_type_ctor;
+  std::unique_ptr<flat::TypeConstructor> error_type_ctor;
   if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), err_variant_context,
                               &error_type_ctor))
     return false;
@@ -3100,25 +2441,21 @@ void Library::ConsumeProtocolDeclaration(
     }
 
     SourceSpan method_name = method->identifier->span();
-    bool has_request = raw::IsParameterListDefined(method->maybe_request);
+    bool has_request = method->maybe_request != nullptr;
     Struct* maybe_request = nullptr;
     if (has_request) {
-      bool result = std::visit(
-          [this, method_name, &maybe_request, &protocol_context](auto params) -> bool {
-            return ConsumeParameterList(method_name, protocol_context->EnterRequest(method_name),
-                                        std::move(params), true, &maybe_request);
-          },
-          std::move(method->maybe_request));
+      bool result = ConsumeParameterList(method_name, protocol_context->EnterRequest(method_name),
+                                         std::move(method->maybe_request), true, &maybe_request);
       if (!result)
         return;
     }
 
     Struct* maybe_response = nullptr;
-    bool has_response = raw::IsParameterListDefined(method->maybe_response);
+    bool has_response = method->maybe_response != nullptr;
     if (has_response) {
-      const bool has_error = raw::IsTypeConstructorDefined(method->maybe_error_ctor);
+      const bool has_error = method->maybe_error_ctor != nullptr;
 
-      SourceSpan response_span = raw::GetSpan(method->maybe_response);
+      SourceSpan response_span = method->maybe_response->span();
       auto response_context = has_request ? protocol_context->EnterResponse(method_name)
                                           : protocol_context->EnterEvent(method_name);
 
@@ -3160,12 +2497,8 @@ void Library::ConsumeProtocolDeclaration(
       // (i.e. `Foo() -> («this source») ...`) is either the top level response context
       // or that of the success variant of the result type
       auto ctx = has_error ? success_variant_context : response_context;
-      bool result = std::visit(
-          [this, method_name, has_error, ctx, &maybe_response](auto params) -> bool {
-            return ConsumeParameterList(method_name, ctx, std::move(params), !has_error,
-                                        &maybe_response);
-          },
-          std::move(method->maybe_response));
+      bool result = ConsumeParameterList(method_name, ctx, std::move(method->maybe_response),
+                                         !has_error, &maybe_response);
       if (!result)
         return;
 
@@ -3194,46 +2527,7 @@ void Library::ConsumeProtocolDeclaration(
 }
 
 bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                                   std::unique_ptr<raw::ParameterListOld> parameter_list,
-                                   bool is_request_or_response, Struct** out_struct_decl) {
-  // If is_request_or_response is false, this parameter list is being generated
-  // as one of two members in the "Foo_Result" union.  In this case, we proceed
-  // with generating an empty struct, so that the first member of this union,
-  // "Foo_Response," may be filled.  In the other case, an empty parameter list
-  // means that the body payload is expected to be empty, so the out_struct_decl
-  // should be left as null to indicate as much.
-  if (is_request_or_response && parameter_list->parameter_list.empty()) {
-    return true;
-  }
-
-  std::vector<Struct::Member> members;
-  for (auto& parameter : parameter_list->parameter_list) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(parameter->attributes), &attributes)) {
-      return false;
-    }
-
-    TypeConstructor type_ctor;
-    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor),
-                                context->EnterMember(parameter->span()), &type_ctor))
-      return false;
-    members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
-                         /* maybe_default_value=*/nullptr, std::move(attributes));
-  }
-
-  if (!RegisterDecl(std::make_unique<Struct>(
-          nullptr /* attributes */,
-          Name::CreateAnonymous(this, parameter_list->span(), std::move(context)),
-          std::move(members), std::nullopt /* resourceness */, is_request_or_response)))
-    return false;
-
-  *out_struct_decl = struct_declarations_.back().get();
-  struct_declarations_.back()->from_parameter_list_span = parameter_list->span();
-  return true;
-}
-
-bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                                   std::unique_ptr<raw::ParameterListNew> parameter_layout,
+                                   std::unique_ptr<raw::ParameterList> parameter_layout,
                                    bool is_request_or_response, Struct** out_struct_decl) {
   // If is_request_or_response is false, this parameter list is being generated
   // as one of two members in the "Foo_Result" union.  In this case, we proceed
@@ -3250,9 +2544,9 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
   }
 
   Name name = Name::CreateAnonymous(this, parameter_layout->span(), context);
-  if (!ConsumeTypeConstructorNew(std::move(parameter_layout->type_ctor), std::move(context),
-                                 /*raw_attribute_list=*/nullptr, is_request_or_response,
-                                 /*out_type_=*/nullptr))
+  if (!ConsumeTypeConstructor(std::move(parameter_layout->type_ctor), std::move(context),
+                              /*raw_attribute_list=*/nullptr, is_request_or_response,
+                              /*out_type_=*/nullptr))
     return false;
 
   auto* decl = LookupDeclByName(name);
@@ -3294,7 +2588,7 @@ bool Library::ConsumeResourceDeclaration(
       return false;
     }
 
-    TypeConstructor type_ctor;
+    std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(property->type_ctor), NamingContext::Create(name),
                                 &type_ctor))
       return false;
@@ -3307,13 +2601,13 @@ bool Library::ConsumeResourceDeclaration(
     return false;
   }
 
-  TypeConstructor type_ctor;
-  if (raw::IsTypeConstructorDefined(resource_declaration->maybe_type_ctor)) {
+  std::unique_ptr<TypeConstructor> type_ctor;
+  if (resource_declaration->maybe_type_ctor != nullptr) {
     if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor),
                                 NamingContext::Create(name), &type_ctor))
       return false;
   } else {
-    type_ctor = TypeConstructorOld::CreateSizeType();
+    type_ctor = TypeConstructor::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
@@ -3330,7 +2624,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
       return;
     }
 
-    TypeConstructor type_ctor;
+    std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), context->EnterMember(member->span()),
                                 &type_ctor))
       return;
@@ -3371,7 +2665,7 @@ void MaybeOverrideName(const AttributeList& attributes, NamingContext* context) 
 template <typename T, typename M>
 bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
                                  const std::shared_ptr<NamingContext>& context,
-                                 std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
+                                 std::unique_ptr<raw::AttributeList> raw_attribute_list) {
   std::vector<M> members;
   size_t index = 0;
   for (auto& mem : layout->members) {
@@ -3391,14 +2685,14 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
     index++;
   }
 
-  std::unique_ptr<TypeConstructorNew> subtype_ctor;
+  std::unique_ptr<TypeConstructor> subtype_ctor;
   if (layout->subtype_ctor != nullptr) {
-    if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context,
-                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
-                                   &subtype_ctor))
+    if (!ConsumeTypeConstructor(std::move(layout->subtype_ctor), context,
+                                /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                &subtype_ctor))
       return false;
   } else {
-    subtype_ctor = TypeConstructorNew::CreateSizeType();
+    subtype_ctor = TypeConstructor::CreateSizeType();
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -3418,7 +2712,7 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
 template <typename T, typename M>
 bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
                                      const std::shared_ptr<NamingContext>& context,
-                                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
+                                     std::unique_ptr<raw::AttributeList> raw_attribute_list) {
   std::vector<M> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
@@ -3431,8 +2725,8 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
       continue;
     }
 
-    std::unique_ptr<TypeConstructorNew> type_ctor;
-    if (!ConsumeTypeConstructorNew(
+    std::unique_ptr<TypeConstructor> type_ctor;
+    if (!ConsumeTypeConstructor(
             std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
             /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
       return false;
@@ -3462,7 +2756,7 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
 
 bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                                   const std::shared_ptr<NamingContext>& context,
-                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                                  std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                   bool is_request_or_response) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
@@ -3473,8 +2767,8 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
       return false;
     }
 
-    std::unique_ptr<TypeConstructorNew> type_ctor;
-    if (!ConsumeTypeConstructorNew(
+    std::unique_ptr<TypeConstructor> type_ctor;
+    if (!ConsumeTypeConstructor(
             std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
             /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
       return false;
@@ -3506,7 +2800,7 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 
 bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                             const std::shared_ptr<NamingContext>& context,
-                            std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                            std::unique_ptr<raw::AttributeList> raw_attribute_list,
                             bool is_request_or_response) {
   switch (layout->kind) {
     case raw::Layout::Kind::kBits: {
@@ -3534,11 +2828,11 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
   return true;
 }
 
-bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
-                                        const std::shared_ptr<NamingContext>& context,
-                                        std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
-                                        bool is_request_or_response,
-                                        std::unique_ptr<TypeConstructorNew>* out_type_ctor) {
+bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
+                                     const std::shared_ptr<NamingContext>& context,
+                                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                                     bool is_request_or_response,
+                                     std::unique_ptr<TypeConstructor>* out_type_ctor) {
   std::vector<std::unique_ptr<LayoutParameter>> params;
   std::optional<SourceSpan> params_span;
   if (raw_type_ctor->parameters) {
@@ -3559,10 +2853,10 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
         }
         case raw::LayoutParameter::Kind::kType: {
           auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
-          std::unique_ptr<TypeConstructorNew> type_ctor;
-          if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), context,
-                                         /*raw_attribute_list=*/nullptr, is_request_or_response,
-                                         &type_ctor))
+          std::unique_ptr<TypeConstructor> type_ctor;
+          if (!ConsumeTypeConstructor(std::move(type_param->type_ctor), context,
+                                      /*raw_attribute_list=*/nullptr, is_request_or_response,
+                                      &type_ctor))
             return false;
 
           std::unique_ptr<LayoutParameter> consumed =
@@ -3607,7 +2901,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
       return false;
 
     if (out_type_ctor)
-      *out_type_ctor = std::make_unique<TypeConstructorNew>(
+      *out_type_ctor = std::make_unique<TypeConstructor>(
           context->ToName(this, raw_type_ctor->layout_ref->span()),
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
           std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
@@ -3627,33 +2921,18 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     return false;
 
   assert(out_type_ctor && "out type ctors should always be provided for a named type ctor");
-  *out_type_ctor = std::make_unique<TypeConstructorNew>(
+  *out_type_ctor = std::make_unique<TypeConstructor>(
       std::move(name.value()),
       std::make_unique<LayoutParameterList>(std::move(params), params_span),
       std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
   return true;
 }
 
-bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor,
+bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                                      const std::shared_ptr<NamingContext>& context,
-                                     TypeConstructor* out_type) {
-  return std::visit(fidl::utils::matchers{
-                        [&, this](std::unique_ptr<raw::TypeConstructorOld> e) -> bool {
-                          std::unique_ptr<TypeConstructorOld> out;
-                          bool result = ConsumeTypeConstructorOld(std::move(e), &out);
-                          *out_type = std::move(out);
-                          return result;
-                        },
-                        [&, this](std::unique_ptr<raw::TypeConstructorNew> e) -> bool {
-                          std::unique_ptr<TypeConstructorNew> out;
-                          bool result = ConsumeTypeConstructorNew(
-                              std::move(e), context, /*raw_attribute_list=*/nullptr,
-                              /*is_request_or_response=*/false, &out);
-                          *out_type = std::move(out);
-                          return result;
-                        },
-                    },
-                    std::move(raw_type_ctor));
+                                     std::unique_ptr<TypeConstructor>* out_type) {
+  return ConsumeTypeConstructor(std::move(raw_type_ctor), context, /*raw_attribute_list=*/nullptr,
+                                /*is_request_or_response=*/false, out_type);
 }
 
 void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
@@ -3666,14 +2945,14 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     return;
   }
 
-  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), NamingContext::Create(name),
-                            std::move(type_decl->attributes),
-                            /*is_request_or_response=*/false,
-                            /*out_type=*/nullptr);
+  ConsumeTypeConstructor(std::move(type_decl->type_ctor), NamingContext::Create(name),
+                         std::move(type_decl->attributes),
+                         /*is_request_or_response=*/false,
+                         /*out_type=*/nullptr);
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  if (raw::IsAttributeListDefined(file->library_decl->attributes)) {
+  if (file->library_decl->attributes != nullptr) {
     std::unique_ptr<AttributeList> consumed_attributes;
     if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
       return false;
@@ -3875,7 +3154,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   switch (decl->kind) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<Const*>(decl);
-      const_type = GetType(const_decl->type_ctor);
+      const_type = const_decl->type_ctor->type;
       const_val = &const_decl->value->Value();
       break;
     }
@@ -3883,7 +3162,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       // If there is no member name, fallthrough to default.
       if (auto member_name = identifier_constant->name.member_name(); member_name) {
         auto enum_decl = static_cast<Enum*>(decl);
-        const_type = GetType(enum_decl->subtype_ctor);
+        const_type = enum_decl->subtype_ctor->type;
         for (auto& member : enum_decl->members) {
           if (member.name.data() == member_name) {
             const_val = &member.value->Value();
@@ -3901,7 +3180,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       // If there is no member name, fallthrough to default.
       if (auto member_name = identifier_constant->name.member_name(); member_name) {
         auto bits_decl = static_cast<Bits*>(decl);
-        const_type = GetType(bits_decl->subtype_ctor);
+        const_type = bits_decl->subtype_ctor->type;
         for (auto& member : bits_decl->members) {
           if (member.name.data() == member_name) {
             const_val = &member.value->Value();
@@ -3946,14 +3225,14 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
       switch (identifier_type->type_decl->kind) {
         case Decl::Kind::kEnum: {
           auto enum_decl = static_cast<const Enum*>(identifier_type->type_decl);
-          assert(GetType(enum_decl->subtype_ctor)->kind == Type::Kind::kPrimitive);
-          primitive_type = static_cast<const PrimitiveType*>(GetType(enum_decl->subtype_ctor));
+          assert(enum_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          primitive_type = static_cast<const PrimitiveType*>(enum_decl->subtype_ctor->type);
           break;
         }
         case Decl::Kind::kBits: {
           auto bits_decl = static_cast<const Bits*>(identifier_type->type_decl);
-          assert(GetType(bits_decl->subtype_ctor)->kind == Type::Kind::kPrimitive);
-          primitive_type = static_cast<const PrimitiveType*>(GetType(bits_decl->subtype_ctor));
+          assert(bits_decl->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+          primitive_type = static_cast<const PrimitiveType*>(bits_decl->subtype_ctor->type);
           break;
         }
         default: {
@@ -4236,9 +3515,9 @@ const Type* Library::TypeResolve(const Type* type) {
     return nullptr;
   switch (decl->kind) {
     case Decl::Kind::kBits:
-      return GetType(static_cast<const Bits*>(decl)->subtype_ctor);
+      return static_cast<const Bits*>(decl)->subtype_ctor->type;
     case Decl::Kind::kEnum:
-      return GetType(static_cast<const Enum*>(decl)->subtype_ctor);
+      return static_cast<const Enum*>(decl)->subtype_ctor->type;
     default:
       return type;
   }
@@ -4372,10 +3651,10 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<const D
 bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
   std::set<const Decl*> edges;
 
-  auto maybe_add_decl = [&edges](TypeConstructorPtr type_ctor) {
-    TypeConstructorPtr current = type_ctor;
+  auto maybe_add_decl = [&edges](const TypeConstructor* type_ctor) {
+    const TypeConstructor* current = type_ctor;
     for (;;) {
-      const auto& invocation = GetLayoutInvocation(current);
+      const auto& invocation = current->resolved_params;
       if (invocation.from_type_alias) {
         assert(!invocation.element_type_resolved &&
                "Compiler bug: partial aliases should be disallowed");
@@ -4383,7 +3662,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         return;
       }
 
-      const Type* type = GetType(current);
+      const Type* type = current->type;
       if (type->nullability == types::Nullability::kNullable)
         return;
 
@@ -4397,13 +3676,12 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         }
         case Type::Kind::kPrimitive:
         case Type::Kind::kString:
-        case Type::Kind::kRequestHandle:
         case Type::Kind::kTransportSide:
         case Type::Kind::kBox:
           return;
         case Type::Kind::kArray:
         case Type::Kind::kVector: {
-          if (IsTypeConstructorDefined(invocation.element_type_raw)) {
+          if (invocation.element_type_raw != nullptr) {
             current = invocation.element_type_raw;
             break;
           }
@@ -4428,7 +3706,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
   switch (decl->kind) {
     case Decl::Kind::kBits: {
       auto bits_decl = static_cast<const Bits*>(decl);
-      maybe_add_decl(GetTypeCtorAsPtr(bits_decl->subtype_ctor));
+      maybe_add_decl(bits_decl->subtype_ctor.get());
       for (const auto& member : bits_decl->members) {
         if (!AddConstantDependencies(member.value.get(), &edges)) {
           return false;
@@ -4438,7 +3716,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     }
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
-      maybe_add_decl(GetTypeCtorAsPtr(const_decl->type_ctor));
+      maybe_add_decl(const_decl->type_ctor.get());
       if (!AddConstantDependencies(const_decl->value.get(), &edges)) {
         return false;
       }
@@ -4446,7 +3724,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     }
     case Decl::Kind::kEnum: {
       auto enum_decl = static_cast<const Enum*>(decl);
-      maybe_add_decl(GetTypeCtorAsPtr(enum_decl->subtype_ctor));
+      maybe_add_decl(enum_decl->subtype_ctor.get());
       for (const auto& member : enum_decl->members) {
         if (!AddConstantDependencies(member.value.get(), &edges)) {
           return false;
@@ -4473,20 +3751,20 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     }
     case Decl::Kind::kResource: {
       auto resource_decl = static_cast<const Resource*>(decl);
-      maybe_add_decl(GetTypeCtorAsPtr(resource_decl->subtype_ctor));
+      maybe_add_decl(resource_decl->subtype_ctor.get());
       break;
     }
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       for (const auto& member : service_decl->members) {
-        maybe_add_decl(GetTypeCtorAsPtr(member.type_ctor));
+        maybe_add_decl(member.type_ctor.get());
       }
       break;
     }
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
       for (const auto& member : struct_decl->members) {
-        maybe_add_decl(GetTypeCtorAsPtr(member.type_ctor));
+        maybe_add_decl(member.type_ctor.get());
         if (member.maybe_default_value) {
           if (!AddConstantDependencies(member.maybe_default_value.get(), &edges)) {
             return false;
@@ -4500,7 +3778,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
       for (const auto& member : table_decl->members) {
         if (!member.maybe_used)
           continue;
-        maybe_add_decl(GetTypeCtorAsPtr(member.maybe_used->type_ctor));
+        maybe_add_decl(member.maybe_used->type_ctor.get());
         if (member.maybe_used->maybe_default_value) {
           if (!AddConstantDependencies(member.maybe_used->maybe_default_value.get(), &edges)) {
             return false;
@@ -4514,13 +3792,13 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
       for (const auto& member : union_decl->members) {
         if (!member.maybe_used)
           continue;
-        maybe_add_decl(GetTypeCtorAsPtr(member.maybe_used->type_ctor));
+        maybe_add_decl(member.maybe_used->type_ctor.get());
       }
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<const TypeAlias*>(decl);
-      maybe_add_decl(GetTypeCtorAsPtr(type_alias_decl->partial_type_ctor));
+      maybe_add_decl(type_alias_decl->partial_type_ctor.get());
     }
   }  // switch
   *out_edges = std::move(edges);
@@ -4831,7 +4109,7 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
       const auto* struct_decl = static_cast<const Struct*>(decl);
       if (struct_decl->resourceness == types::Resourceness::kValue) {
         for (const auto& member : struct_decl->members) {
-          if (EffectiveResourceness(GetType(member.type_ctor)) == types::Resourceness::kResource) {
+          if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
             library_->reporter_->Report(ErrTypeMustBeResource, struct_decl->name.span(),
                                         struct_decl->name, member.name.data(),
                                         std::string_view("struct"), struct_decl->name);
@@ -4846,7 +4124,7 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
         for (const auto& member : table_decl->members) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
-            if (EffectiveResourceness(GetType(used.type_ctor)) == types::Resourceness::kResource) {
+            if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
               library_->reporter_->Report(ErrTypeMustBeResource, table_decl->name.span(),
                                           table_decl->name, used.name.data(),
                                           std::string_view("table"), table_decl->name);
@@ -4862,7 +4140,7 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
         for (const auto& member : union_decl->members) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
-            if (EffectiveResourceness(GetType(used.type_ctor)) == types::Resourceness::kResource) {
+            if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
               library_->reporter_->Report(ErrTypeMustBeResource, union_decl->name.span(),
                                           union_decl->name, used.name.data(),
                                           std::string_view("union"), union_decl->name);
@@ -4883,7 +4161,6 @@ types::Resourceness Type::Resourceness() const {
     case Type::Kind::kString:
       return types::Resourceness::kValue;
     case Type::Kind::kHandle:
-    case Type::Kind::kRequestHandle:
     case Type::Kind::kTransportSide:
       return types::Resourceness::kResource;
     case Type::Kind::kArray:
@@ -4928,7 +4205,6 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Type::Kind::kString:
       return types::Resourceness::kValue;
     case Type::Kind::kHandle:
-    case Type::Kind::kRequestHandle:
     case Type::Kind::kTransportSide:
       return types::Resourceness::kResource;
     case Type::Kind::kArray:
@@ -4985,7 +4261,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
   switch (decl->kind) {
     case Decl::Kind::kStruct:
       for (const auto& member : static_cast<const Struct*>(decl)->members) {
-        if (EffectiveResourceness(GetType(member.type_ctor)) == types::Resourceness::kResource) {
+        if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
           effective_resourceness_[decl] = types::Resourceness::kResource;
           return types::Resourceness::kResource;
         }
@@ -4995,7 +4271,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       for (const auto& member : static_cast<const Table*>(decl)->members) {
         const auto& used = member.maybe_used;
         if (used &&
-            EffectiveResourceness(GetType(used->type_ctor)) == types::Resourceness::kResource) {
+            EffectiveResourceness(used->type_ctor->type) == types::Resourceness::kResource) {
           effective_resourceness_[decl] = types::Resourceness::kResource;
           return types::Resourceness::kResource;
         }
@@ -5005,7 +4281,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       for (const auto& member : static_cast<const Union*>(decl)->members) {
         const auto& used = member.maybe_used;
         if (used &&
-            EffectiveResourceness(GetType(used->type_ctor)) == types::Resourceness::kResource) {
+            EffectiveResourceness(used->type_ctor->type) == types::Resourceness::kResource) {
           effective_resourceness_[decl] = types::Resourceness::kResource;
           return types::Resourceness::kResource;
         }
@@ -5029,16 +4305,16 @@ bool Library::CompileBits(Bits* bits_declaration) {
     }
   }
 
-  if (!CompileTypeConstructor(&bits_declaration->subtype_ctor))
+  if (!CompileTypeConstructor(bits_declaration->subtype_ctor.get()))
     return false;
 
-  if (GetType(bits_declaration->subtype_ctor)->kind != Type::Kind::kPrimitive) {
+  if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
     return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
-                GetType(bits_declaration->subtype_ctor));
+                bits_declaration->subtype_ctor->type);
   }
 
   // Validate constants.
-  auto primitive_type = static_cast<const PrimitiveType*>(GetType(bits_declaration->subtype_ctor));
+  auto primitive_type = static_cast<const PrimitiveType*>(bits_declaration->subtype_ctor->type);
   switch (primitive_type->subtype) {
     case types::PrimitiveSubtype::kUint8: {
       uint8_t mask;
@@ -5076,7 +4352,7 @@ bool Library::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
       return Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
-                  GetType(bits_declaration->subtype_ctor));
+                  bits_declaration->subtype_ctor->type);
   }
 
   {
@@ -5097,9 +4373,9 @@ bool Library::CompileConst(Const* const_declaration) {
     return false;
   }
 
-  if (!CompileTypeConstructor(&const_declaration->type_ctor))
+  if (!CompileTypeConstructor(const_declaration->type_ctor.get()))
     return false;
-  const auto* const_type = GetType(const_declaration->type_ctor);
+  const auto* const_type = const_declaration->type_ctor->type;
   if (!TypeCanBeConst(const_type)) {
     return Fail(ErrInvalidConstantType, *const_declaration, const_type);
   }
@@ -5119,16 +4395,16 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     }
   }
 
-  if (!CompileTypeConstructor(&enum_declaration->subtype_ctor))
+  if (!CompileTypeConstructor(enum_declaration->subtype_ctor.get()))
     return false;
 
-  if (GetType(enum_declaration->subtype_ctor)->kind != Type::Kind::kPrimitive) {
+  if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
     return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
-                GetType(enum_declaration->subtype_ctor));
+                enum_declaration->subtype_ctor->type);
   }
 
   // Validate constants.
-  auto primitive_type = static_cast<const PrimitiveType*>(GetType(enum_declaration->subtype_ctor));
+  auto primitive_type = static_cast<const PrimitiveType*>(enum_declaration->subtype_ctor->type);
   enum_declaration->type = primitive_type;
   switch (primitive_type->subtype) {
     case types::PrimitiveSubtype::kInt8: {
@@ -5191,7 +4467,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
       return Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
-                  GetType(enum_declaration->subtype_ctor));
+                  enum_declaration->subtype_ctor->type);
   }
 
   return true;
@@ -5206,12 +4482,12 @@ bool Library::CompileResource(Resource* resource_declaration) {
     return false;
   }
 
-  if (!CompileTypeConstructor(&resource_declaration->subtype_ctor))
+  if (!CompileTypeConstructor(resource_declaration->subtype_ctor.get()))
     return false;
 
-  if (GetType(resource_declaration->subtype_ctor)->kind != Type::Kind::kPrimitive) {
+  if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
     return Fail(ErrEnumTypeMustBeIntegralPrimitive, *resource_declaration,
-                GetType(resource_declaration->subtype_ctor));
+                resource_declaration->subtype_ctor->type);
   }
 
   for (auto& property : resource_declaration->properties) {
@@ -5224,7 +4500,7 @@ bool Library::CompileResource(Resource* resource_declaration) {
       return Fail(ErrDuplicateResourcePropertyName, property.name,
                   name_result.previous_occurrence());
 
-    if (!CompileTypeConstructor(&property.type_ctor))
+    if (!CompileTypeConstructor(property.type_ctor.get()))
       return false;
   }
   return true;
@@ -5365,26 +4641,11 @@ bool Library::CompileService(Service* service_decl) {
       return Fail(ErrDuplicateServiceMemberNameCanonical, member.name, original_name,
                   previous_span.data(), previous_span, canonical_name);
     }
-    if (!CompileTypeConstructor(&member.type_ctor))
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
-    // There's a mismatch between the "default" allowed categories and what is actually allowed
-    // in this context: in the new syntax, nothing changes. In the old syntax, we are more
-    // restrictive in this context, requiring kProtocolOnly rather than kTypeOrProtocol (which is
-    // the default for TypeConstructorOld).
-    bool ok = std::visit(fidl::utils::matchers{
-                             [this](const std::unique_ptr<TypeConstructorOld>& type_ctor) -> bool {
-                               return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(),
-                                                         AllowedCategories::kProtocolOnly);
-                             },
-                             [&member, this](const std::unique_ptr<TypeConstructorNew>& t) -> bool {
-                               if (t->type->kind != Type::Kind::kTransportSide)
-                                 return Fail(ErrMustBeTransportSide, member.name);
-                               return true;
-                             }},
-                         member.type_ctor);
-    if (!ok)
-      return false;
-    if (GetType(member.type_ctor)->nullability != types::Nullability::kNonnullable)
+    if (member.type_ctor->type->kind != Type::Kind::kTransportSide)
+      return Fail(ErrMustBeTransportSide, member.name);
+    if (member.type_ctor->type->nullability != types::Nullability::kNonnullable)
       return Fail(ErrNullableServiceMember, member.name);
   }
   return true;
@@ -5419,12 +4680,12 @@ bool Library::CompileStruct(Struct* struct_declaration) {
                   member.name, original_name, previous_span.data(), previous_span, canonical_name);
     }
 
-    if (!CompileTypeConstructor(&member.type_ctor))
+    if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
            "method parameters cannot have default values");
     if (member.maybe_default_value) {
-      const auto* default_value_type = GetType(member.type_ctor);
+      const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {
         return Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
                     default_value_type);
@@ -5433,7 +4694,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         return false;
       }
     }
-    derive_resourceness.AddType(GetType(member.type_ctor));
+    derive_resourceness.AddType(member.type_ctor->type);
   }
 
   return true;
@@ -5470,10 +4731,10 @@ bool Library::CompileTable(Table* table_declaration) {
         return Fail(ErrDuplicateTableFieldNameCanonical, member_used.name, original_name,
                     previous_span.data(), previous_span, canonical_name);
       }
-      if (!CompileTypeConstructor(&member_used.type_ctor)) {
+      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
       }
-      if (GetType(member_used.type_ctor)->nullability != types::Nullability::kNonnullable) {
+      if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
         return Fail(ErrNullableTableMember, member_used.name);
       }
     }
@@ -5520,13 +4781,13 @@ bool Library::CompileUnion(Union* union_declaration) {
                     previous_span.data(), previous_span, canonical_name);
       }
 
-      if (!CompileTypeConstructor(const_cast<TypeConstructor*>(&member_used.type_ctor))) {
+      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
       }
-      if (GetType(member_used.type_ctor)->nullability != types::Nullability::kNonnullable) {
+      if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
         return Fail(ErrNullableUnionMember, member_used.name);
       }
-      derive_resourceness.AddType(GetType(member_used.type_ctor));
+      derive_resourceness.AddType(member_used.type_ctor->type);
     }
   }
 
@@ -5556,7 +4817,7 @@ bool Library::CompileTypeAlias(TypeAlias* type_alias) {
     return false;
   }
 
-  if (GetName(type_alias->partial_type_ctor) == type_alias->name)
+  if (type_alias->partial_type_ctor->name == type_alias->name)
     // fidlc's current semantics for cases like `alias foo = foo;` is to
     // include the LHS in the scope while compiling the RHS. Note that because
     // of an interaction with a fidlc scoping bug that prevents shadowing builtins,
@@ -5566,7 +4827,7 @@ bool Library::CompileTypeAlias(TypeAlias* type_alias) {
     // resolve the RHS. To avoid inconsistent semantics, we need to manually
     // catch this case and fail.
     return Fail(ErrIncludeCycle);
-  return CompileTypeConstructor(&type_alias->partial_type_ctor);
+  return CompileTypeConstructor(type_alias->partial_type_ctor.get());
 }
 
 bool Library::Compile() {
@@ -5619,31 +4880,6 @@ bool Library::Compile() {
 }
 
 bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
-  return std::visit(fidl::utils::matchers{
-                        [&, this](const std::unique_ptr<TypeConstructorOld>& type_ctor) -> bool {
-                          return CompileTypeConstructorOld(type_ctor.get());
-                        },
-                        [&, this](const std::unique_ptr<TypeConstructorNew>& type_ctor) -> bool {
-                          return CompileTypeConstructorNew(type_ctor.get());
-                        },
-                    },
-                    *type_ctor);
-}
-
-bool Library::CompileTypeConstructorOld(TypeConstructorOld* type_ctor) {
-  if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->maybe_arg_type_ctor,
-                          type_ctor->handle_subtype_identifier, type_ctor->handle_rights,
-                          type_ctor->maybe_size, type_ctor->nullability, &type_ctor->type,
-                          &type_ctor->resolved_params))
-    return false;
-
-  // postcondition: compilation sets the Type of the TypeConstructor
-  assert(type_ctor->type && "type constructors' type not resolved after compilation");
-  return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(),
-                            AllowedCategories::kTypeOrProtocol);
-}
-
-bool Library::CompileTypeConstructorNew(TypeConstructorNew* type_ctor) {
   if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->parameters,
                           type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params))
     return false;
@@ -5682,8 +4918,7 @@ bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> spa
 
 bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                           const HandleRights** out_rights) {
-  if (!IsTypeConstructorDefined(resource->subtype_ctor) ||
-      GetName(resource->subtype_ctor).full_name() != "uint32") {
+  if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
     return Fail(ErrResourceMustBeUint32Derived, resource->name);
   }
 
@@ -5692,16 +4927,16 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
     return false;
   }
 
-  Decl* rights_decl = LookupDeclByName(GetName(rights_property->type_ctor));
+  Decl* rights_decl = LookupDeclByName(rights_property->type_ctor->name);
   if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
     return false;
   }
 
-  if (!GetType(rights_property->type_ctor)) {
-    if (!CompileTypeConstructor(&rights_property->type_ctor))
+  if (rights_property->type_ctor->type == nullptr) {
+    if (!CompileTypeConstructor(rights_property->type_ctor.get()))
       return false;
   }
-  const Type* rights_type = GetType(rights_property->type_ctor);
+  const Type* rights_type = rights_property->type_ctor->type;
 
   if (!ResolveConstant(constant, rights_type))
     return false;
@@ -5726,8 +4961,7 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
   auto identifier_constant = static_cast<IdentifierConstant*>(constant.get());
   const Name& handle_subtype_identifier = identifier_constant->name;
 
-  if (!IsTypeConstructorDefined(resource->subtype_ctor) ||
-      GetName(resource->subtype_ctor).full_name() != "uint32") {
+  if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
     return false;
   }
   auto subtype_property = resource->LookupProperty("subtype");
@@ -5735,16 +4969,16 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
     return false;
   }
 
-  Decl* subtype_decl = LookupDeclByName(GetName(subtype_property->type_ctor));
+  Decl* subtype_decl = LookupDeclByName(subtype_property->type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
     return false;
   }
 
-  if (!GetType(subtype_property->type_ctor)) {
-    if (!CompileTypeConstructor(&subtype_property->type_ctor))
+  if (subtype_property->type_ctor->type == nullptr) {
+    if (!CompileTypeConstructor(subtype_property->type_ctor.get()))
       return false;
   }
-  const Type* subtype_type = GetType(subtype_property->type_ctor);
+  const Type* subtype_type = subtype_property->type_ctor->type;
 
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);
   for (const auto& member : subtype_enum->members) {
@@ -5793,7 +5027,7 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
   for (const auto& member : decl->members) {
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
-    if (!ResolveConstant(member.value.get(), GetType(decl->subtype_ctor))) {
+    if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
       return Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
     }
 
@@ -5872,7 +5106,7 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
 
   auto unknown_value = std::numeric_limits<MemberType>::max();
   for (const auto& member : enum_decl->members) {
-    if (!ResolveConstant(member.value.get(), GetType(enum_decl->subtype_ctor))) {
+    if (!ResolveConstant(member.value.get(), enum_decl->subtype_ctor->type)) {
       return Fail(ErrCouldNotResolveMember, member.name, std::string("enum"));
     }
     auto attributes = member.attributes.get();
@@ -5943,23 +5177,23 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
     direct_dependencies.insert(dep_library);
   };
   auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
-    if (auto dep_library = GetName(type_ctor).library())
+    if (auto dep_library = type_ctor.name.library())
       direct_dependencies.insert(dep_library);
 
     // TODO(fxbug.dev/64629): Add dependencies introduced through handle constraints.
     // This code currently assumes the handle constraints are always defined in the same
     // library as the resource_definition and so does not check for them separately.
-    const auto& invocation = GetLayoutInvocation(type_ctor);
+    const auto& invocation = type_ctor.resolved_params;
     if (invocation.size_raw)
       add_constant_deps(invocation.size_raw);
     if (invocation.protocol_decl_raw)
       add_constant_deps(invocation.protocol_decl_raw);
-    if (IsTypeConstructorDefined(invocation.element_type_raw)) {
-      if (auto dep_library = GetName(invocation.element_type_raw).library())
+    if (invocation.element_type_raw != nullptr) {
+      if (auto dep_library = invocation.element_type_raw->name.library())
         direct_dependencies.insert(dep_library);
     }
-    if (IsTypeConstructorDefined(invocation.boxed_type_raw)) {
-      if (auto dep_library = GetName(invocation.boxed_type_raw).library())
+    if (invocation.boxed_type_raw != nullptr) {
+      if (auto dep_library = invocation.boxed_type_raw->name.library())
         direct_dependencies.insert(dep_library);
     }
   };
@@ -5972,12 +5206,12 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
     for (const auto method_with_info : protocol->all_methods) {
       if (auto request = method_with_info.method->maybe_request_payload) {
         for (const auto& member : request->members) {
-          add_type_ctor_deps(member.type_ctor);
+          add_type_ctor_deps(*member.type_ctor);
         }
       }
       if (auto response = method_with_info.method->maybe_response_payload) {
         for (const auto& member : response->members) {
-          add_type_ctor_deps(member.type_ctor);
+          add_type_ctor_deps(*member.type_ctor);
         }
       }
       direct_dependencies.insert(method_with_info.method->owning_protocol->name.library());
@@ -5987,17 +5221,10 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
   return direct_dependencies;
 }
 
-std::unique_ptr<TypeConstructorOld> TypeConstructorOld::CreateSizeType() {
-  return std::make_unique<TypeConstructorOld>(
-      Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
-      std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
-      nullptr /* maybe_size */, types::Nullability::kNonnullable);
-}
-
-std::unique_ptr<TypeConstructorNew> TypeConstructorNew::CreateSizeType() {
+std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
-  return std::make_unique<TypeConstructorNew>(
+  return std::make_unique<TypeConstructor>(
       Name::CreateIntrinsic("uint32"),
       std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt /* span */),
       std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt /* span */));
@@ -6094,12 +5321,8 @@ bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& const
   return false;
 }
 
-bool LibraryMediator::ResolveType(TypeConstructorOld* type) const {
-  return library_->CompileTypeConstructorOld(type);
-}
-
-bool LibraryMediator::ResolveType(TypeConstructorNew* type) const {
-  return library_->CompileTypeConstructorNew(type);
+bool LibraryMediator::ResolveType(TypeConstructor* type) const {
+  return library_->CompileTypeConstructor(type);
 }
 
 bool LibraryMediator::ResolveSizeBound(Constant* size_constant, const Size** out_size) const {
@@ -6145,13 +5368,13 @@ Decl* LibraryMediator::LookupDeclByName(Name::Key name) const {
   return library_->LookupDeclByName(name);
 }
 
-TypeConstructorNew* LiteralLayoutParameter::AsTypeCtor() const { return nullptr; }
-TypeConstructorNew* TypeLayoutParameter::AsTypeCtor() const { return type_ctor.get(); }
-TypeConstructorNew* IdentifierLayoutParameter::AsTypeCtor() const {
+TypeConstructor* LiteralLayoutParameter::AsTypeCtor() const { return nullptr; }
+TypeConstructor* TypeLayoutParameter::AsTypeCtor() const { return type_ctor.get(); }
+TypeConstructor* IdentifierLayoutParameter::AsTypeCtor() const {
   if (!as_type_ctor) {
     std::vector<std::unique_ptr<LayoutParameter>> no_params;
     std::vector<std::unique_ptr<Constant>> no_constraints;
-    as_type_ctor = std::make_unique<TypeConstructorNew>(
+    as_type_ctor = std::make_unique<TypeConstructor>(
         name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
         std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
   }

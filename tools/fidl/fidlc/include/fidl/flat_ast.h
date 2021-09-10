@@ -233,43 +233,7 @@ struct TypeDecl : public Decl, public Object {
   bool recursive = false;
 };
 
-// TODO(fxbug.dev/70247): Remove the two type constructor versions and remove
-// the New suffix.
-struct TypeConstructorOld;
-struct TypeConstructorNew;
-using TypeConstructor =
-    std::variant<std::unique_ptr<TypeConstructorNew>, std::unique_ptr<TypeConstructorOld>>;
-
-// Functions that recursively traverse a type constructor can't operate on
-// const std::unique_ptr<T>& because the inner type constructors accessed through
-// LayoutInvocation::element_type_raw are pointers. To get around this, the top
-// level call must extract the pointers out, so that the function can be defined
-// for and called recursively over pointers.
-using TypeConstructorPtr = std::variant<const TypeConstructorNew*, const TypeConstructorOld*>;
-
-TypeConstructorPtr GetTypeCtorAsPtr(const TypeConstructor& type_ctor);
-
-template <typename T>
-const Type* GetType(const T& type_ctor) {
-  return std::visit([](const auto& ptr) { return ptr->type; }, type_ctor);
-}
-
-template <typename T>
-bool IsTypeConstructorDefined(const T& type_ctor) {
-  return std::visit([](const auto& ptr) { return ptr != nullptr; }, type_ctor);
-}
-
-template <typename T>
-Name GetName(const T& type_ctor) {
-  return std::visit([](const auto& ptr) { return ptr->name; }, type_ctor);
-}
-
-template <typename T>
-const LayoutInvocation& GetLayoutInvocation(const T& type_ctor) {
-  return std::visit([](const auto& ptr) -> const LayoutInvocation& { return ptr->resolved_params; },
-                    type_ctor);
-}
-
+struct TypeConstructor;
 struct TypeAlias;
 class Protocol;
 
@@ -281,14 +245,9 @@ class Protocol;
 // concrete (and eventually, canonicalized) type that the type constructor
 // resolves to, this struct stores data about the actual parameters on this
 // type constructor used to produce the type.
-// This struct overlaps with CreateInvocation because they both store resolved
-// parameters/constraints. This overlap will no longer exist after the old syntax
-// and CreateInvocation are cleaned up - LayoutInvocation is in some sense the
-// successor to CreateInvocation.
 // These fields should be set in the same place where the parameters actually get
-// resolved - for the new syntax, this is in Create (for layout parameters) and
-// in ApplyConstraints (for type constraints) but in the old syntax they are all
-// set in ResolveOldSyntaxArgs.
+// resolved, i.e. Create (for layout parameters) and ApplyConstraints (for type
+// constraints)
 struct LayoutInvocation {
   // set if this type constructor refers to a type alias
   const TypeAlias* from_type_alias = nullptr;
@@ -313,14 +272,11 @@ struct LayoutInvocation {
   const Type* boxed_type_resolved = nullptr;
 
   // raw form of this type constructor's arguments
-  TypeConstructorPtr element_type_raw = {};
-  TypeConstructorPtr boxed_type_raw = {};
+  const TypeConstructor* element_type_raw = {};
+  const TypeConstructor* boxed_type_raw = {};
   const Constant* size_raw = nullptr;
   // This has no users, probably because it's missing in the JSON IR (it is not
-  // yet generated for partial_type_ctors). Notably, this is probably because this
-  // is parsed as a Name in the old syntax but the consistent thing to do would
-  // be to emit it as a Constant, which made it awkward to implement (and thus
-  // was never done). This field is never set in the old syntax.
+  // yet generated for partial_type_ctors).
   const Constant* subtype_raw = nullptr;
   const Constant* rights_raw = nullptr;
   const Constant* protocol_decl_raw = nullptr;
@@ -330,38 +286,10 @@ struct LayoutInvocation {
   types::Nullability nullability = types::Nullability::kNonnullable;
 };
 
-struct TypeConstructorOld final {
-  TypeConstructorOld(Name name, std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor,
-                     std::optional<Name> handle_subtype_identifier,
-                     std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
-                     types::Nullability nullability)
-      : name(std::move(name)),
-        maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-        handle_subtype_identifier(std::move(handle_subtype_identifier)),
-        handle_rights(std::move(handle_rights)),
-        maybe_size(std::move(maybe_size)),
-        nullability(nullability) {}
-
-  // Returns a type constructor for the size type (used for bounds).
-  static std::unique_ptr<TypeConstructorOld> CreateSizeType();
-
-  // Set during construction.
-  const Name name;
-  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
-  std::optional<Name> handle_subtype_identifier;
-  std::unique_ptr<Constant> handle_rights;
-  std::unique_ptr<Constant> maybe_size;
-  types::Nullability nullability;
-
-  // Set during compilation.
-  const Type* type = nullptr;
-  LayoutInvocation resolved_params;
-};
-
 struct LayoutParameterList;
 struct TypeConstraints;
 
-// Unlike raw::TypeConstructorNew which will either store a name referencing
+// Unlike raw::TypeConstructor which will either store a name referencing
 // a layout or an anonymous layout directly, in the flat AST all type
 // constructors store a Name. In the case where the type constructor represents
 // an anonymous layout, the data of the anonymous layout is consumed and stored
@@ -371,15 +299,15 @@ struct TypeConstraints;
 // This allows all type compilation to share the code paths through the
 // consume step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
 // while ensuring that users cannot refer to anonymous layouts by name.
-struct TypeConstructorNew final {
-  TypeConstructorNew(Name name, std::unique_ptr<LayoutParameterList> parameters,
-                     std::unique_ptr<TypeConstraints> constraints)
+struct TypeConstructor final {
+  TypeConstructor(Name name, std::unique_ptr<LayoutParameterList> parameters,
+                  std::unique_ptr<TypeConstraints> constraints)
       : name(std::move(name)),
         parameters(std::move(parameters)),
         constraints(std::move(constraints)) {}
 
   // Returns a type constructor for the size type (used for bounds).
-  static std::unique_ptr<TypeConstructorNew> CreateSizeType();
+  static std::unique_ptr<TypeConstructor> CreateSizeType();
 
   // Set during construction.
   const Name name;
@@ -420,7 +348,7 @@ struct LayoutParameter {
   // Returns the interpretation of this layout parameter as a type if possible
   // or nullptr otherwise. There are no guarantees that the returned type has
   // been compiled or will actually successfully compile.
-  virtual TypeConstructorNew* AsTypeCtor() const = 0;
+  virtual TypeConstructor* AsTypeCtor() const = 0;
 
   // Returns the interpretation of this layout parameter as a constant if possible
   // or nullptr otherwise. There are no guarantees that the returned constant has
@@ -435,31 +363,31 @@ struct LiteralLayoutParameter final : public LayoutParameter {
   explicit LiteralLayoutParameter(std::unique_ptr<LiteralConstant> literal, SourceSpan span)
       : LayoutParameter(Kind::kLiteral, span), literal(std::move(literal)) {}
 
-  TypeConstructorNew* AsTypeCtor() const override;
+  TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
   std::unique_ptr<LiteralConstant> literal;
 };
 
 struct TypeLayoutParameter final : public LayoutParameter {
-  explicit TypeLayoutParameter(std::unique_ptr<TypeConstructorNew> type_ctor, SourceSpan span)
+  explicit TypeLayoutParameter(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan span)
       : LayoutParameter(Kind::kType, span), type_ctor(std::move(type_ctor)) {}
 
-  TypeConstructorNew* AsTypeCtor() const override;
+  TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
 };
 
 struct IdentifierLayoutParameter final : public LayoutParameter {
   explicit IdentifierLayoutParameter(Name name, SourceSpan span)
       : LayoutParameter(Kind::kIdentifier, span), name(std::move(name)) {}
 
-  TypeConstructorNew* AsTypeCtor() const override;
+  TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
 
   // Stores an interpretation of this layout as a TypeConstructor, if asked
   // at some point (i.e. on demand by calling AsTypeCtor). We store this to
   // store a reference to the compiled Type and LayoutInvocation
-  mutable std::unique_ptr<TypeConstructorNew> as_type_ctor;
+  mutable std::unique_ptr<TypeConstructor> as_type_ctor;
 
   // Stores an interpretation of this layout as a Constant, if asked at some
   // point (i.e. on demand by calling AsConstant). We store this to store a
@@ -497,12 +425,12 @@ struct Using final {
 // Constant. For the _value_, see ConstantValue.) A Const consists of a
 // left-hand-side Name (found in Decl) and a right-hand-side Constant.
 struct Const final : public Decl {
-  Const(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor type_ctor,
-        std::unique_ptr<Constant> value)
+  Const(std::unique_ptr<AttributeList> attributes, Name name,
+        std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Constant> value)
       : Decl(Kind::kConst, std::move(attributes), std::move(name)),
         type_ctor(std::move(type_ctor)),
         value(std::move(value)) {}
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Constant> value;
 };
 
@@ -517,15 +445,16 @@ struct Enum final : public TypeDecl {
     std::unique_ptr<Constant> value;
   };
 
-  Enum(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
-       std::vector<Member> members, types::Strictness strictness)
+  Enum(std::unique_ptr<AttributeList> attributes, Name name,
+       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       types::Strictness strictness)
       : TypeDecl(Kind::kEnum, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
         members(std::move(members)),
         strictness(strictness) {}
 
   // Set during construction.
-  TypeConstructor subtype_ctor;
+  std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Member> members;
   const types::Strictness strictness;
 
@@ -550,15 +479,16 @@ struct Bits final : public TypeDecl {
     std::unique_ptr<Constant> value;
   };
 
-  Bits(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
-       std::vector<Member> members, types::Strictness strictness)
+  Bits(std::unique_ptr<AttributeList> attributes, Name name,
+       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       types::Strictness strictness)
       : TypeDecl(Kind::kBits, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
         members(std::move(members)),
         strictness(strictness) {}
 
   // Set during construction.
-  TypeConstructor subtype_ctor;
+  std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Member> members;
   const types::Strictness strictness;
 
@@ -570,12 +500,13 @@ struct Bits final : public TypeDecl {
 
 struct Service final : public TypeDecl {
   struct Member : public Attributable {
-    Member(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
+    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+           std::unique_ptr<AttributeList> attributes)
         : Attributable(AttributePlacement::kServiceMember, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
 
-    TypeConstructor type_ctor;
+    std::unique_ptr<TypeConstructor> type_ctor;
     SourceSpan name;
   };
 
@@ -595,14 +526,14 @@ struct Struct;
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
 struct StructMember : public Attributable, public Object {
-  StructMember(TypeConstructor type_ctor, SourceSpan name,
+  StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kStructMember, std::move(attributes)),
         type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)) {}
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
 
@@ -638,7 +569,7 @@ struct Struct final : public TypeDecl {
   // This is true iff this struct is a method request/response in a transaction header.
   const bool is_request_or_response;
   // TODO(fxbug.dev/70247): To avoid re-deriving resourceness of request/response
-  // structs, we store the resourceness in a map using the raw::ParameterListOld's
+  // structs, we store the resourceness in a map using the raw::ParameterList's
   // SourceSpan as a key so that we may look it up during conversion
   std::optional<SourceSpan> from_parameter_list_span;
 
@@ -650,12 +581,12 @@ struct Table;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object {
-  TableMemberUsed(TypeConstructor type_ctor, SourceSpan name,
+  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value)
       : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)) {}
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
 
@@ -669,13 +600,13 @@ struct TableMemberUsed : public Object {
 struct TableMember : public Attributable, public Object {
   using Used = TableMemberUsed;
 
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
-              std::unique_ptr<Constant> maybe_default_value,
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
+              SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value))) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type, SourceSpan name,
               std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
@@ -718,10 +649,10 @@ struct Union;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
 struct UnionMemberUsed : public Object {
-  UnionMemberUsed(TypeConstructor type_ctor, SourceSpan name,
+  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                   std::unique_ptr<AttributeList> attributes)
       : type_ctor(std::move(type_ctor)), name(name) {}
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
@@ -736,7 +667,7 @@ struct UnionMemberUsed : public Object {
 struct UnionMember : public Attributable, public Object {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type_ctor, SourceSpan name,
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
               std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
@@ -858,29 +789,31 @@ class Protocol final : public TypeDecl {
 
 struct Resource final : public Decl {
   struct Property : public Attributable {
-    Property(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
+    Property(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+             std::unique_ptr<AttributeList> attributes)
         : Attributable(AttributePlacement::kResourceProperty, std::move(attributes)),
           type_ctor(std::move(type_ctor)),
           name(name) {}
-    TypeConstructor type_ctor;
+    std::unique_ptr<TypeConstructor> type_ctor;
     SourceSpan name;
   };
 
-  Resource(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
-           std::vector<Property> properties)
+  Resource(std::unique_ptr<AttributeList> attributes, Name name,
+           std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Property> properties)
       : Decl(Kind::kResource, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
         properties(std::move(properties)) {}
 
   // Set during construction.
-  TypeConstructor subtype_ctor;
+  std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Property> properties;
 
   Property* LookupProperty(std::string_view name);
 };
 
 struct TypeAlias final : public Decl {
-  TypeAlias(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor partial_type_ctor)
+  TypeAlias(std::unique_ptr<AttributeList> attributes, Name name,
+            std::unique_ptr<TypeConstructor> partial_type_ctor)
       : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
         partial_type_ctor(std::move(partial_type_ctor)) {}
 
@@ -894,7 +827,7 @@ struct TypeAlias final : public Decl {
   // at any point in a "type alias chain" can specify a constraint, but any
   // constraint can only specified once. This behavior will change in
   // fxbug.dev/74193.
-  TypeConstructor partial_type_ctor;
+  std::unique_ptr<TypeConstructor> partial_type_ctor;
 };
 
 // Wrapper class around a Library to provide specific methods to TypeTemplates.
@@ -943,9 +876,8 @@ class LibraryMediator {
                            Resource* resource_decl, ResolvedConstraint* out) const;
 
   // These methods forward their implementation to the library_. They are used
-  // by the top level methods above, as well as directly by ResolveOldSyntaxArgs
-  bool ResolveType(TypeConstructorOld* type) const;
-  bool ResolveType(TypeConstructorNew* type) const;
+  // by the top level methods above
+  bool ResolveType(TypeConstructor* type) const;
   bool ResolveSizeBound(Constant* size_constant, const Size** out_size) const;
   bool ResolveAsOptional(Constant* constant) const;
   bool ResolveAsHandleSubtype(Resource* resource, const std::unique_ptr<Constant>& constant,
@@ -967,30 +899,6 @@ class LibraryMediator {
   Library* library_;
 };
 
-// CreateInvocation represents a set of resolved layout parameters/constraints.
-// It is only used in the old syntax path.
-struct CreateInvocation {
-  CreateInvocation(const Name& name, const Type* arg_type, std::optional<uint32_t> obj_type,
-                   std::optional<types::HandleSubtype> handle_subtype,
-                   const HandleRights* handle_rights, const Size* size,
-                   const types::Nullability nullability)
-      : name(name),
-        arg_type(arg_type),
-        obj_type(obj_type),
-        handle_subtype(handle_subtype),
-        handle_rights(handle_rights),
-        size(size),
-        nullability(nullability) {}
-
-  const Name& name;
-  const Type* arg_type;
-  std::optional<uint32_t> obj_type;
-  std::optional<types::HandleSubtype> handle_subtype;
-  const HandleRights* handle_rights;
-  const Size* size;
-  const types::Nullability nullability;
-};
-
 class TypeTemplate {
  public:
   TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
@@ -1006,27 +914,7 @@ class TypeTemplate {
 
   const Name& name() const { return name_; }
 
-  // The set of unresolved layout arguments and constraints as they appear in the
-  // old syntax, i.e. coming directly from flat::TypeConstructor.
-  // Unlike in the more general form ArgsAndConstraintsNew, this representation
-  // can be resolved to a CreateInvocation before determining what the layout is.
-  struct OldSyntaxParamsAndConstraints {
-    const Name& name;
-    const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor;
-    const std::optional<Name>& handle_subtype_identifier;
-    const std::unique_ptr<Constant>& handle_rights;
-    const std::unique_ptr<Constant>& maybe_size;
-    const types::Nullability nullability;
-  };
-
-  virtual bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& args,
-                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const = 0;
-
-  bool ResolveOldSyntaxArgs(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& args,
-                            std::unique_ptr<CreateInvocation>* out_args,
-                            LayoutInvocation* out_params) const;
-
-  struct NewSyntaxParamsAndConstraints {
+  struct ParamsAndConstraints {
     // Type templates should not need to know the name of the layout and should
     // only require a span for reporting errors, since any logic related to the
     // name itself should be encapsulated in the layout resolution process. However,
@@ -1038,7 +926,7 @@ class TypeTemplate {
     const std::unique_ptr<TypeConstraints>& constraints;
   };
 
-  virtual bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& args,
+  virtual bool Create(const LibraryMediator& lib, const ParamsAndConstraints& args,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const = 0;
 
   virtual bool GetResource(const LibraryMediator& lib, const Name& name,
@@ -1070,29 +958,11 @@ class Typespace {
   explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
 
   bool Create(const LibraryMediator& lib, const flat::Name& name,
-              const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
-              const std::optional<Name>& handle_subtype_identifier,
-              const std::unique_ptr<Constant>& handle_rights,
-              const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
-              const Type** out_type, LayoutInvocation* out_params);
-  bool Create(const LibraryMediator& lib, const flat::Name& name,
               const std::unique_ptr<LayoutParameterList>& parameters,
               const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
               LayoutInvocation* out_params);
 
-  // TODO(fxbug.dev/70247): T is ordinarily always a TypeTemplate, but we temporarily
-  // parameterize this method so that T is the specific subclass in order to
-  // call the subclass' copy constructor. A copy is needed so that the type template
-  // can be added to both template maps.
-  // An alternative would be to use the "virtual constructor" idiom, which would
-  // involve more code for this temporary workaround.
-  template <typename T>
-  void AddTemplate(std::unique_ptr<T> type_template);
-
-  // TODO(fxbug.dev/70247): this method has been made public solely for the
-  //   benefit of fidlconv.  Once the conversion using that tool has been
-  //   completed and tool has been removed, this method should be re-privatized.
-  const TypeTemplate* LookupTemplate(const flat::Name& name, fidl::utils::Syntax syntax) const;
+  void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
   // RootTypes creates a instance with all primitive types. It is meant to be
   // used as the top-level types lookup mechanism, providing definitional
@@ -1102,20 +972,14 @@ class Typespace {
  private:
   friend class TypeAliasTypeTemplate;
 
-  bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
-                      const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
-                      const std::optional<Name>& handle_subtype_identifier,
-                      const std::unique_ptr<Constant>& handle_rights,
-                      const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
-                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
+  const TypeTemplate* LookupTemplate(const flat::Name& name) const;
+
   bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
                       const std::unique_ptr<LayoutParameterList>& parameters,
                       const std::unique_ptr<TypeConstraints>& constraints,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
 
-  // TODO(fxbug.dev/70247): go back to a single map
-  std::map<Name::Key, std::unique_ptr<TypeTemplate>> old_syntax_templates_;
-  std::map<Name::Key, std::unique_ptr<TypeTemplate>> new_syntax_templates_;
+  std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Type>> types_;
 
   Reporter* reporter_;
@@ -1394,14 +1258,10 @@ class Library : Attributable {
   VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
 
-  bool ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw_attribute_list,
-                               std::unique_ptr<AttributeList>* out_attribute_list);
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
                               std::unique_ptr<LiteralConstant>* out_constant);
-  bool ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                 std::unique_ptr<TypeConstructorOld>* out_type);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
   bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
@@ -1409,40 +1269,34 @@ class Library : Attributable {
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
   bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                            std::unique_ptr<raw::ParameterListOld> parameter_list,
-                            bool is_request_or_response, Struct** out_struct_decl);
-  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                            std::unique_ptr<raw::ParameterListNew> parameter_layout,
+                            std::unique_ptr<raw::ParameterList> parameter_layout,
                             bool is_request_or_response, Struct** out_struct_decl);
   bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
                           SourceSpan response_span, raw::ProtocolMethod* method,
                           Struct* success_variant, Struct** out_response);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
 
-  // start new syntax
-  bool ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
-                               std::unique_ptr<AttributeList>* out_attribute_list);
-  bool ConsumeAttributeList(raw::AttributeList raw_attribute_list,
+  bool ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
                             std::unique_ptr<AttributeList>* out_attribute_list);
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
-  bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
-                                 const std::shared_ptr<NamingContext>& context,
-                                 std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
-                                 bool is_request_or_response,
-                                 std::unique_ptr<TypeConstructorNew>* out_type);
-  bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor,
+  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                               const std::shared_ptr<NamingContext>& context,
-                              TypeConstructor* out_type);
+                              std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                              bool is_request_or_response,
+                              std::unique_ptr<TypeConstructor>* out_type);
+  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
+                              const std::shared_ptr<NamingContext>& context,
+                              std::unique_ptr<TypeConstructor>* out_type);
 
   // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
   // Union), while M is its "Member" sub-class.
   template <typename T, typename M>
   bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
                               const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+                              std::unique_ptr<raw::AttributeList> raw_attribute_list);
   bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                            const std::shared_ptr<NamingContext>& context,
-                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                           std::unique_ptr<raw::AttributeList> raw_attribute_list,
                            bool is_request_or_response);
 
   // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
@@ -1450,12 +1304,11 @@ class Library : Attributable {
   template <typename T, typename M>
   bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
                           const std::shared_ptr<NamingContext>& context,
-                          std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+                          std::unique_ptr<raw::AttributeList> raw_attribute_list);
   bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
                      const std::shared_ptr<NamingContext>& context,
-                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
                      bool is_request_or_response);
-  // end new syntax
 
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
@@ -1479,12 +1332,7 @@ class Library : Attributable {
   bool CompileTable(Table* table_declaration);
   bool CompileUnion(Union* union_declaration);
   bool CompileTypeAlias(TypeAlias* type_alias);
-
-  // This top level function switches behavior depending on what syntax is
-  // being read
   bool CompileTypeConstructor(TypeConstructor* type_ctor);
-  bool CompileTypeConstructorOld(TypeConstructorOld* type_ctor);
-  bool CompileTypeConstructorNew(TypeConstructorNew* type_ctor);
 
   enum class AllowedCategories {
     kTypeOrProtocol,
@@ -1697,7 +1545,6 @@ struct Object::VisitorAny {
   virtual std::any Visit(const HandleType&) = 0;
   virtual std::any Visit(const PrimitiveType&) = 0;
   virtual std::any Visit(const IdentifierType&) = 0;
-  virtual std::any Visit(const RequestHandleType&) = 0;
   virtual std::any Visit(const TransportSideType&) = 0;
   virtual std::any Visit(const BoxType&) = 0;
   virtual std::any Visit(const Enum&) = 0;
@@ -1738,10 +1585,6 @@ inline std::any PrimitiveType::AcceptAny(VisitorAny* visitor) const {
 }
 
 inline std::any IdentifierType::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any RequestHandleType::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
 

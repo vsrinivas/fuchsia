@@ -248,49 +248,6 @@ class BinaryOperatorConstant final : public Constant {
   void Accept(TreeVisitor* visitor) const;
 };
 
-// TODO(fxbug.dev/70247): Remove the two type constructor versions and remove
-//  the New suffix.
-class AttributeOld;
-class AttributeNew;
-class AttributeListOld;
-class AttributeListNew;
-using AttributeList =
-    std::variant<std::unique_ptr<AttributeListNew>, std::unique_ptr<AttributeListOld>>;
-
-bool IsAttributeListDefined(const raw::AttributeList& attribute_list);
-bool IsAttributeListNotEmpty(const raw::AttributeList& attribute_list);
-
-class AttributeOld final : public SourceElement {
- public:
-  enum Provenance {
-    kDefault,
-    kDocComment,
-  };
-
-  AttributeOld(SourceElement const& element, Provenance provenance, std::string name,
-               std::unique_ptr<Literal> value)
-      : SourceElement(element),
-        provenance(provenance),
-        name(std::move(name)),
-        value(std::move(value)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  Provenance provenance;
-  const std::string name;
-  std::unique_ptr<Literal> value;
-};
-
-class AttributeListOld final : public SourceElement {
- public:
-  AttributeListOld(SourceElement const& element, std::vector<AttributeOld> attributes)
-      : SourceElement(element), attributes(std::move(attributes)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::vector<AttributeOld> attributes;
-};
-
 class AttributeArg final : public SourceElement {
  public:
   // Constructor for cases where the arg name has been explicitly defined in the text.
@@ -307,7 +264,7 @@ class AttributeArg final : public SourceElement {
   std::unique_ptr<Constant> value;
 };
 
-class AttributeNew final : public SourceElement {
+class Attribute final : public SourceElement {
  public:
   enum Provenance {
     kDefault,
@@ -315,17 +272,17 @@ class AttributeNew final : public SourceElement {
   };
 
   // Constructor for cases where the name of the attribute is explicitly defined in the text.
-  AttributeNew(SourceElement const& element, std::string name,
-               std::vector<std::unique_ptr<AttributeArg>> args)
+  Attribute(SourceElement const& element, std::string name,
+            std::vector<std::unique_ptr<AttributeArg>> args)
       : SourceElement(element),
         provenance(kDefault),
         name(std::move(name)),
         args(std::move(args)) {}
 
   // Static constructor for "///"-style doc comments, which always name the attribute "doc."
-  static AttributeNew CreateDocComment(SourceElement const& element,
-                                       std::vector<std::unique_ptr<AttributeArg>> args) {
-    auto attr = AttributeNew(element, "doc", std::move(args));
+  static Attribute CreateDocComment(SourceElement const& element,
+                                    std::vector<std::unique_ptr<AttributeArg>> args) {
+    auto attr = Attribute(element, "doc", std::move(args));
     attr.provenance = kDocComment;
     return attr;
   }
@@ -337,50 +294,17 @@ class AttributeNew final : public SourceElement {
   std::vector<std::unique_ptr<AttributeArg>> args;
 };
 
-class AttributeListNew final : public SourceElement {
+class AttributeList final : public SourceElement {
  public:
-  AttributeListNew(SourceElement const& element,
-                   std::vector<std::unique_ptr<AttributeNew>> attributes)
+  AttributeList(SourceElement const& element, std::vector<std::unique_ptr<Attribute>> attributes)
       : SourceElement(element), attributes(std::move(attributes)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::vector<std::unique_ptr<AttributeNew>> attributes;
+  std::vector<std::unique_ptr<Attribute>> attributes;
 };
 
-// TODO(fxbug.dev/70247): Remove the two type constructor versions and remove
-//  the New suffix.
-class TypeConstructorOld;
-class TypeConstructorNew;
-using TypeConstructor =
-    std::variant<std::unique_ptr<TypeConstructorNew>, std::unique_ptr<TypeConstructorOld>>;
-
-bool IsTypeConstructorDefined(const raw::TypeConstructor& maybe_type_ctor);
-
-class TypeConstructorOld final : public SourceElement {
- public:
-  TypeConstructorOld(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
-                     std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor,
-                     std::unique_ptr<Identifier> handle_subtype_identifier,
-                     std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
-                     types::Nullability nullability)
-      : SourceElement(element),
-        identifier(std::move(identifier)),
-        maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-        handle_subtype_identifier(std::move(handle_subtype_identifier)),
-        handle_rights(std::move(handle_rights)),
-        maybe_size(std::move(maybe_size)),
-        nullability(nullability) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<CompoundIdentifier> identifier;
-  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
-  std::unique_ptr<Identifier> handle_subtype_identifier;
-  std::unique_ptr<Constant> handle_rights;
-  std::unique_ptr<Constant> maybe_size;
-  types::Nullability nullability;
-};
+class TypeConstructor;
 
 class LayoutReference;
 class LayoutParameterList;
@@ -388,13 +312,13 @@ class TypeConstraints;
 
 // The monostate variant is used to represent a parse failure.
 using ConstraintOrSubtype = std::variant<std::unique_ptr<TypeConstraints>,
-                                         std::unique_ptr<TypeConstructorNew>, std::monostate>;
+                                         std::unique_ptr<TypeConstructor>, std::monostate>;
 
-class TypeConstructorNew final : public SourceElement {
+class TypeConstructor final : public SourceElement {
  public:
-  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> layout_ref,
-                     std::unique_ptr<LayoutParameterList> parameters,
-                     std::unique_ptr<TypeConstraints> constraints)
+  TypeConstructor(SourceElement const& element, std::unique_ptr<LayoutReference> layout_ref,
+                  std::unique_ptr<LayoutParameterList> parameters,
+                  std::unique_ptr<TypeConstraints> constraints)
       : SourceElement(element),
         layout_ref(std::move(layout_ref)),
         parameters(std::move(parameters)),
@@ -409,8 +333,8 @@ class TypeConstructorNew final : public SourceElement {
 
 class AliasDeclaration final : public SourceElement {
  public:
-  AliasDeclaration(SourceElement const& element, AttributeList attributes,
-                   std::unique_ptr<Identifier> alias, TypeConstructor type_ctor)
+  AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                   std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructor> type_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         alias(std::move(alias)),
@@ -418,26 +342,26 @@ class AliasDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> alias;
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
 };
 
 class LibraryDecl final : public SourceElement {
  public:
-  LibraryDecl(SourceElement const& element, AttributeList attributes,
+  LibraryDecl(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
               std::unique_ptr<CompoundIdentifier> path)
       : SourceElement(element), attributes(std::move(attributes)), path(std::move(path)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> path;
 };
 
 class Using final : public SourceElement {
  public:
-  Using(SourceElement const& element, AttributeList attributes,
+  Using(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
         std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -446,16 +370,16 @@ class Using final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> using_path;
   std::unique_ptr<Identifier> maybe_alias;
 };
 
 class ConstDeclaration final : public SourceElement {
  public:
-  ConstDeclaration(SourceElement const& element, AttributeList attributes,
-                   TypeConstructor type_ctor, std::unique_ptr<Identifier> identifier,
-                   std::unique_ptr<Constant> constant)
+  ConstDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                   std::unique_ptr<TypeConstructor> type_ctor,
+                   std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
       : SourceElement(element),
         attributes(std::move(attributes)),
         type_ctor(std::move(type_ctor)),
@@ -464,87 +388,48 @@ class ConstDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
-  TypeConstructor type_ctor;
+  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<Constant> constant;
 };
 
-class Parameter final : public SourceElement {
+class ParameterList final : public SourceElement {
  public:
-  Parameter(SourceElement const& element, TypeConstructor type_ctor,
-            std::unique_ptr<Identifier> identifier, AttributeList attributes)
-      : SourceElement(element),
-        type_ctor(std::move(type_ctor)),
-        identifier(std::move(identifier)),
-        attributes(std::move(attributes)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  TypeConstructor type_ctor;
-  std::unique_ptr<Identifier> identifier;
-  AttributeList attributes;
-};
-
-class ParameterListNew;
-class ParameterListOld;
-using ParameterList =
-    std::variant<std::unique_ptr<ParameterListNew>, std::unique_ptr<ParameterListOld>>;
-
-bool IsParameterListDefined(const raw::ParameterList& maybe_parameter_list);
-
-SourceSpan GetSpan(const raw::ParameterList& parameter_list);
-
-class ParameterListOld final : public SourceElement {
- public:
-  ParameterListOld(SourceElement const& element,
-                   std::vector<std::unique_ptr<Parameter>> parameter_list)
-      : SourceElement(element), parameter_list(std::move(parameter_list)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::vector<std::unique_ptr<Parameter>> parameter_list;
-};
-
-class ParameterListNew final : public SourceElement {
- public:
-  ParameterListNew(SourceElement const& element, std::unique_ptr<TypeConstructorNew> type_ctor)
+  ParameterList(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor)
       : SourceElement(element), type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
 };
 
 class ProtocolMethod : public SourceElement {
  public:
-  ProtocolMethod(SourceElement const& element, AttributeList attributes,
-                 std::unique_ptr<Identifier> identifier, ParameterList maybe_request,
-                 ParameterList maybe_response, raw::TypeConstructor maybe_error_ctor)
+  ProtocolMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                 std::unique_ptr<Identifier> identifier,
+                 std::unique_ptr<ParameterList> maybe_request,
+                 std::unique_ptr<ParameterList> maybe_response,
+                 std::unique_ptr<TypeConstructor> maybe_error_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         maybe_request(std::move(maybe_request)),
         maybe_response(std::move(maybe_response)),
-        maybe_error_ctor(std::move(maybe_error_ctor)) {
-    // `maybe_response` must exist if `maybe_error_ctor` is exists.
-    if (IsTypeConstructorDefined(maybe_error_ctor)) {
-      assert(IsParameterListDefined(maybe_response));
-    }
-  }
+        maybe_error_ctor(std::move(maybe_error_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  ParameterList maybe_request;
-  ParameterList maybe_response;
-  raw::TypeConstructor maybe_error_ctor;
+  std::unique_ptr<ParameterList> maybe_request;
+  std::unique_ptr<ParameterList> maybe_response;
+  std::unique_ptr<TypeConstructor> maybe_error_ctor;
 };
 
 class ProtocolCompose final : public SourceElement {
  public:
-  ProtocolCompose(SourceElement const& element, AttributeList attributes,
+  ProtocolCompose(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                   std::unique_ptr<CompoundIdentifier> protocol_name)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -552,13 +437,13 @@ class ProtocolCompose final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> protocol_name;
 };
 
 class ProtocolDeclaration final : public SourceElement {
  public:
-  ProtocolDeclaration(SourceElement const& element, AttributeList attributes,
+  ProtocolDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                       std::unique_ptr<Identifier> identifier,
                       std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols,
                       std::vector<std::unique_ptr<ProtocolMethod>> methods)
@@ -570,7 +455,7 @@ class ProtocolDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<ProtocolMethod>> methods;
@@ -578,8 +463,9 @@ class ProtocolDeclaration final : public SourceElement {
 
 class ResourceProperty final : public SourceElement {
  public:
-  ResourceProperty(SourceElement const& element, TypeConstructor type_ctor,
-                   std::unique_ptr<Identifier> identifier, AttributeList attributes)
+  ResourceProperty(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+                   std::unique_ptr<Identifier> identifier,
+                   std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
         identifier(std::move(identifier)),
@@ -587,15 +473,16 @@ class ResourceProperty final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Identifier> identifier;
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
 };
 
 class ResourceDeclaration final : public SourceElement {
  public:
-  ResourceDeclaration(SourceElement const& element, AttributeList attributes,
-                      std::unique_ptr<Identifier> identifier, TypeConstructor maybe_type_ctor,
+  ResourceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                      std::unique_ptr<Identifier> identifier,
+                      std::unique_ptr<TypeConstructor> maybe_type_ctor,
                       std::vector<std::unique_ptr<ResourceProperty>> properties)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -605,16 +492,16 @@ class ResourceDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  TypeConstructor maybe_type_ctor;
+  std::unique_ptr<TypeConstructor> maybe_type_ctor;
   std::vector<std::unique_ptr<ResourceProperty>> properties;
 };
 
 class ServiceMember final : public SourceElement {
  public:
-  ServiceMember(SourceElement const& element, TypeConstructor type_ctor,
-                std::unique_ptr<Identifier> identifier, AttributeList attributes)
+  ServiceMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
+                std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
         identifier(std::move(identifier)),
@@ -622,14 +509,14 @@ class ServiceMember final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  TypeConstructor type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Identifier> identifier;
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
 };
 
 class ServiceDeclaration final : public SourceElement {
  public:
-  ServiceDeclaration(SourceElement const& element, AttributeList attributes,
+  ServiceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                      std::unique_ptr<Identifier> identifier,
                      std::vector<std::unique_ptr<ServiceMember>> members)
       : SourceElement(element),
@@ -639,7 +526,7 @@ class ServiceDeclaration final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<ServiceMember>> members;
 };
@@ -652,7 +539,7 @@ class LayoutMember : public SourceElement {
   };
 
   explicit LayoutMember(SourceElement const& element, Kind kind,
-                        std::unique_ptr<AttributeListNew> attributes,
+                        std::unique_ptr<AttributeList> attributes,
                         std::unique_ptr<Identifier> identifier)
       : SourceElement(element),
         kind(kind),
@@ -662,22 +549,22 @@ class LayoutMember : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   const Kind kind;
-  std::unique_ptr<AttributeListNew> attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
 };
 
 class OrdinaledLayoutMember final : public LayoutMember {
  public:
   explicit OrdinaledLayoutMember(SourceElement const& element,
-                                 std::unique_ptr<AttributeListNew> attributes,
+                                 std::unique_ptr<AttributeList> attributes,
                                  std::unique_ptr<Ordinal64> ordinal,
                                  std::unique_ptr<Identifier> identifier,
-                                 std::unique_ptr<TypeConstructorNew> type_ctor)
+                                 std::unique_ptr<TypeConstructor> type_ctor)
       : LayoutMember(element, Kind::kOrdinaled, std::move(attributes), std::move(identifier)),
         ordinal(std::move(ordinal)),
         type_ctor(std::move(type_ctor)) {}
   explicit OrdinaledLayoutMember(SourceElement const& element,
-                                 std::unique_ptr<AttributeListNew> attributes,
+                                 std::unique_ptr<AttributeList> attributes,
                                  std::unique_ptr<Ordinal64> ordinal)
       : LayoutMember(element, Kind::kOrdinaled, std::move(attributes), nullptr),
         ordinal(std::move(ordinal)),
@@ -687,14 +574,14 @@ class OrdinaledLayoutMember final : public LayoutMember {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<Ordinal64> ordinal;
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   const bool reserved = false;
 };
 
 class ValueLayoutMember final : public LayoutMember {
  public:
   explicit ValueLayoutMember(SourceElement const& element,
-                             std::unique_ptr<AttributeListNew> attributes,
+                             std::unique_ptr<AttributeList> attributes,
                              std::unique_ptr<Identifier> identifier,
                              std::unique_ptr<Constant> value)
       : LayoutMember(element, Kind::kValue, std::move(attributes), std::move(identifier)),
@@ -708,9 +595,9 @@ class ValueLayoutMember final : public LayoutMember {
 class StructLayoutMember final : public LayoutMember {
  public:
   explicit StructLayoutMember(SourceElement const& element,
-                              std::unique_ptr<AttributeListNew> attributes,
+                              std::unique_ptr<AttributeList> attributes,
                               std::unique_ptr<Identifier> identifier,
-                              std::unique_ptr<TypeConstructorNew> type_ctor,
+                              std::unique_ptr<TypeConstructor> type_ctor,
                               std::unique_ptr<Constant> default_value)
       : LayoutMember(element, Kind::kStruct, std::move(attributes), std::move(identifier)),
         type_ctor(std::move(type_ctor)),
@@ -718,7 +605,7 @@ class StructLayoutMember final : public LayoutMember {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Constant> default_value;
 };
 
@@ -757,7 +644,7 @@ class Layout final : public SourceElement {
   Layout(SourceElement const& element,
          // TODO(fxbug.dev/65978): Support layout attributes.
          Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::unique_ptr<Modifiers> modifiers, std::unique_ptr<TypeConstructorNew> subtype_ctor)
+         std::unique_ptr<Modifiers> modifiers, std::unique_ptr<TypeConstructor> subtype_ctor)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
@@ -774,7 +661,7 @@ class Layout final : public SourceElement {
   //  classes to inherit from the now-abstract Layout class, similar to what can
   //  currently be seen on LayoutMember and its children.  When that happens
   //  this field will only exist on ValueLayout.
-  std::unique_ptr<TypeConstructorNew> subtype_ctor;
+  std::unique_ptr<TypeConstructor> subtype_ctor;
 };
 
 class LayoutReference : public SourceElement {
@@ -794,7 +681,7 @@ class LayoutReference : public SourceElement {
 class InlineLayoutReference final : public LayoutReference {
  public:
   explicit InlineLayoutReference(SourceElement const& element,
-                                 std::unique_ptr<AttributeListNew> attributes,
+                                 std::unique_ptr<AttributeList> attributes,
                                  std::unique_ptr<Layout> layout)
       : LayoutReference(element, Kind::kInline),
         attributes(std::move(attributes)),
@@ -802,7 +689,7 @@ class InlineLayoutReference final : public LayoutReference {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<AttributeListNew> attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Layout> layout;
 };
 
@@ -846,12 +733,12 @@ class LiteralLayoutParameter final : public LayoutParameter {
 class TypeLayoutParameter final : public LayoutParameter {
  public:
   explicit TypeLayoutParameter(SourceElement const& element,
-                               std::unique_ptr<TypeConstructorNew> type_ctor)
+                               std::unique_ptr<TypeConstructor> type_ctor)
       : LayoutParameter(element, Kind::kType), type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
 };
 
 class IdentifierLayoutParameter final : public LayoutParameter {
@@ -888,11 +775,11 @@ class TypeConstraints final : public SourceElement {
 
 class TypeDecl final : public SourceElement {
  public:
-  TypeDecl(SourceElement const& element, std::unique_ptr<AttributeListNew> attributes,
+  TypeDecl(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
            std::unique_ptr<Identifier> identifier,
            // TODO(fxbug.dev/65978): We should also allow type decl over type
            // constructors, i.e. FTP-052 type declaration.
-           std::unique_ptr<TypeConstructorNew> type_ctor)
+           std::unique_ptr<TypeConstructor> type_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
@@ -900,9 +787,9 @@ class TypeDecl final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<AttributeListNew> attributes;
+  std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<TypeConstructor> type_ctor;
 };
 
 class File final : public SourceElement {

@@ -33,18 +33,7 @@ std::string Display(const SourceSpan& s) { return s.position_str(); }
 
 std::string Display(const Token::KindAndSubkind& t) { return std::string(Token::Name(t)); }
 
-std::string Display(const raw::AttributeListOld* a) {
-  std::stringstream attributes_found;
-  for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
-    if (it != a->attributes.cbegin()) {
-      attributes_found << ", ";
-    }
-    attributes_found << it->name;
-  }
-  return attributes_found.str();
-}
-
-std::string Display(const raw::AttributeListNew* a) {
+std::string Display(const raw::AttributeList* a) {
   std::stringstream attributes_found;
   for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
     if (it != a->attributes.cbegin()) {
@@ -118,8 +107,6 @@ std::string Display(const flat::Decl* d) {
 
   return decl_kind;
 }
-
-std::string Display(const flat::TypeConstructorOld* tc) { return NameFlatTypeConstructorOld(tc); }
 
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
 

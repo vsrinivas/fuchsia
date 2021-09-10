@@ -266,7 +266,7 @@ std::unique_ptr<raw::AttributeArg> Parser::ParseSubsequentAttributeArg() {
                                              std::string(name->span().data()), std::move(value));
 }
 
-std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
+std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
   ASTScope scope(this);
   ConsumeToken(OfKind(Token::Kind::kAt));
   if (!Ok())
@@ -364,18 +364,19 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseAttributeNew() {
     }
   }
 
-  return std::make_unique<raw::AttributeNew>(scope.GetSourceElement(),
-                                             std::string(name->span().data()), std::move(args));
+  return std::make_unique<raw::Attribute>(scope.GetSourceElement(),
+                                          std::string(name->span().data()), std::move(args));
 }
 
-std::unique_ptr<raw::AttributeListNew> Parser::ParseAttributeListNew(
-    std::unique_ptr<raw::AttributeNew> doc_comment, ASTScope& scope) {
-  std::vector<std::unique_ptr<raw::AttributeNew>> attributes;
+std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
+    std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope) {
+  std::vector<std::unique_ptr<raw::Attribute>> attributes;
+  ;
   if (doc_comment)
     attributes.emplace_back(std::move(doc_comment));
 
   for (;;) {
-    auto attribute = ParseAttributeNew();
+    auto attribute = ParseAttribute();
     if (!Ok()) {
       auto result = RecoverToEndOfAttributeNew();
       if (result == RecoverResult::Failure) {
@@ -393,12 +394,10 @@ std::unique_ptr<raw::AttributeListNew> Parser::ParseAttributeListNew(
     }
   }
 
-  auto attribute_list =
-      std::make_unique<raw::AttributeListNew>(scope.GetSourceElement(), std::move(attributes));
-  return attribute_list;
+  return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
 }
 
-std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
+std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   ASTScope scope(this);
   std::optional<Token> doc_line;
   std::optional<Token> first_doc_line;
@@ -428,36 +427,34 @@ std::unique_ptr<raw::AttributeNew> Parser::ParseDocCommentNew() {
       std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), std::move(constant)));
 
   auto doc_comment_attr =
-      raw::AttributeNew::CreateDocComment(scope.GetSourceElement(), std::move(args));
-  return std::make_unique<raw::AttributeNew>(std::move(doc_comment_attr));
+      raw::Attribute::CreateDocComment(scope.GetSourceElement(), std::move(args));
+  return std::make_unique<raw::Attribute>(std::move(doc_comment_attr));
 }
 
-std::unique_ptr<raw::AttributeListNew> Parser::MaybeParseAttributeListNew(bool for_parameter) {
+std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_parameter) {
   ASTScope scope(this);
-  std::unique_ptr<raw::AttributeNew> doc_comment;
+  std::unique_ptr<raw::Attribute> doc_comment;
   // Doc comments must appear above attributes
   if (Peek().kind() == Token::Kind::kDocComment) {
-    doc_comment = ParseDocCommentNew();
+    doc_comment = ParseDocComment();
   }
   if (for_parameter && doc_comment) {
     reporter_->Report(ErrDocCommentOnParameters, previous_token_);
     return Fail();
   }
   if (Peek().kind() == Token::Kind::kAt) {
-    return ParseAttributeListNew(std::move(doc_comment), scope);
+    return ParseAttributeList(std::move(doc_comment), scope);
   }
   // no generic attributes, start the attribute list
   if (doc_comment) {
-    std::vector<std::unique_ptr<raw::AttributeNew>> attributes;
+    std::vector<std::unique_ptr<raw::Attribute>> attributes;
     if (doc_comment)
       attributes.emplace_back(std::move(doc_comment));
 
-    return std::make_unique<raw::AttributeListNew>(scope.GetSourceElement(), std::move(attributes));
+    return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
   }
   return nullptr;
 }
-
-raw::AttributeList Parser::MaybeParseAttributeList() { return MaybeParseAttributeListNew(); }
 
 std::unique_ptr<raw::Constant> Parser::ParseConstant() {
   std::unique_ptr<raw::Constant> constant;
@@ -517,8 +514,8 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
   return constant;
 }
 
-std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(raw::AttributeList attributes,
-                                                                     ASTScope& scope) {
+std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kAlias));
   if (!Ok())
     return Fail();
@@ -539,7 +536,8 @@ std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(raw::Attrib
                                                  std::move(alias), std::move(type_ctor));
 }
 
-std::unique_ptr<raw::Using> Parser::ParseUsing(raw::AttributeList attributes, ASTScope& scope) {
+std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
+                                               ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
   if (!Ok())
     return Fail();
@@ -561,8 +559,8 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(raw::AttributeList attributes, AS
                                       std::move(using_path), std::move(maybe_alias));
 }
 
-std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(raw::AttributeList attributes,
-                                                                     ASTScope& scope) {
+std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kConst));
   if (!Ok())
     return Fail();
@@ -586,16 +584,16 @@ std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(raw::Attrib
                                                  std::move(constant));
 }
 
-std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
+std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
   ASTScope scope(this);
-  std::unique_ptr<raw::TypeConstructorNew> type_ctor;
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
 
   ConsumeToken(OfKind(Token::Kind::kLeftParen));
   if (!Ok())
     return Fail();
 
   if (Peek().kind() != Token::Kind::kRightParen) {
-    type_ctor = ParseTypeConstructorNew();
+    type_ctor = ParseTypeConstructor();
     if (!Ok()) {
       const auto result = RecoverToEndOfParamList();
       if (result == RecoverResult::Failure) {
@@ -629,13 +627,11 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::ParameterListNew>(scope.GetSourceElement(), std::move(type_ctor));
+  return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(type_ctor));
 }
 
-raw::ParameterList Parser::ParseParameterList() { return ParseParameterListNew(); }
-
-std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeList attributes,
-                                                                ASTScope& scope) {
+std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   ConsumeToken(OfKind(Token::Kind::kArrow));
   if (!Ok())
     return Fail();
@@ -644,7 +640,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
   if (!Ok())
     return Fail();
 
-  auto parse_params = [this](raw::ParameterList* params_out) {
+  auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
     if (!Ok())
       return false;
     *params_out = ParseParameterList();
@@ -654,12 +650,12 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
     return true;
   };
 
-  std::unique_ptr<raw::ParameterListOld> request;
-  raw::ParameterList response;
+  std::unique_ptr<raw::ParameterList> request;
+  std::unique_ptr<raw::ParameterList> response;
   if (!parse_params(&response))
     return Fail();
 
-  raw::TypeConstructor maybe_error;
+  std::unique_ptr<raw::TypeConstructor> maybe_error;
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
     maybe_error = ParseTypeConstructor();
     if (!Ok())
@@ -667,7 +663,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
   }
 
   assert(method_name);
-  assert(raw::IsParameterListDefined(response));
+  assert(response != nullptr);
 
   return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
                                                std::move(method_name), std::move(request),
@@ -675,20 +671,21 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
-    raw::AttributeList attributes, ASTScope& scope, std::unique_ptr<raw::Identifier> method_name) {
-  auto parse_params = [this](raw::ParameterList* params_out) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+    std::unique_ptr<raw::Identifier> method_name) {
+  auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
     *params_out = ParseParameterList();
     if (!Ok())
       return false;
     return true;
   };
 
-  raw::ParameterList request;
+  std::unique_ptr<raw::ParameterList> request;
   if (!parse_params(&request))
     return Fail();
 
-  raw::ParameterList maybe_response;
-  raw::TypeConstructor maybe_error;
+  std::unique_ptr<raw::ParameterList> maybe_response;
+  std::unique_ptr<raw::TypeConstructor> maybe_error;
   if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
     if (!Ok())
       return Fail();
@@ -702,15 +699,15 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
   }
 
   assert(method_name);
-  assert(raw::IsParameterListDefined(request));
+  assert(request != nullptr);
 
   return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
                                                std::move(method_name), std::move(request),
                                                std::move(maybe_response), std::move(maybe_error));
 }
 
-std::unique_ptr<raw::ProtocolCompose> Parser::ParseProtocolCompose(raw::AttributeList attributes,
-                                                                   ASTScope& scope) {
+std::unique_ptr<raw::ProtocolCompose> Parser::ParseProtocolCompose(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
@@ -723,7 +720,7 @@ void Parser::ParseProtocolMember(
     std::vector<std::unique_ptr<raw::ProtocolCompose>>* composed_protocols,
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
   ASTScope scope(this);
-  raw::AttributeList attributes = MaybeParseAttributeList();
+  std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
   if (!Ok()) {
     Fail();
     return;
@@ -786,7 +783,7 @@ void Parser::ParseProtocolMember(
 }
 
 std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
-    raw::AttributeList attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   std::vector<std::unique_ptr<raw::ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
 
@@ -849,7 +846,7 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
 }
 
 std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
-    raw::AttributeList attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   std::vector<std::unique_ptr<raw::ResourceProperty>> properties;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResourceDefinition));
@@ -860,14 +857,14 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
   if (!Ok())
     return Fail();
 
-  raw::TypeConstructor maybe_type_ctor;
+  std::unique_ptr<raw::TypeConstructor> maybe_type_ctor;
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     ASTScope type_identifier_scope(this);
     auto resource_type_identifier = ParseCompoundIdentifier();
     if (!Ok())
       return Fail();
 
-    maybe_type_ctor = std::make_unique<raw::TypeConstructorNew>(
+    maybe_type_ctor = std::make_unique<raw::TypeConstructor>(
         scope.GetSourceElement(),
         std::make_unique<raw::NamedLayoutReference>(type_identifier_scope.GetSourceElement(),
                                                     std::move(resource_type_identifier)),
@@ -952,7 +949,7 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
 }
 
 std::unique_ptr<raw::ServiceDeclaration> Parser::ParseServiceDeclaration(
-    raw::AttributeList attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   std::vector<std::unique_ptr<raw::ServiceMember>> members;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kService));
@@ -1007,7 +1004,7 @@ std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
                                                          std::move(constant));
   }
   default: {
-    auto type_ctor = ParseTypeConstructorNew();
+    auto type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
 
@@ -1077,7 +1074,7 @@ std::unique_ptr<raw::TypeConstraints> Parser::ParseTypeConstraints() {
 std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::Kind kind) {
   ASTScope scope(this);
 
-  auto attributes = MaybeParseAttributeListNew();
+  auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
 
@@ -1105,9 +1102,9 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
       return Fail();
   }
 
-  std::unique_ptr<raw::TypeConstructorNew> layout = nullptr;
+  std::unique_ptr<raw::TypeConstructor> layout = nullptr;
   if (kind != raw::LayoutMember::Kind::kValue) {
-    layout = ParseTypeConstructorNew();
+    layout = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   }
@@ -1152,7 +1149,7 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
 std::unique_ptr<raw::Layout> Parser::ParseLayout(
     ASTScope& scope, std::unique_ptr<raw::Modifiers> modifiers,
     std::unique_ptr<raw::CompoundIdentifier> compound_identifier,
-    std::unique_ptr<raw::TypeConstructorNew> subtype_ctor) {
+    std::unique_ptr<raw::TypeConstructor> subtype_ctor) {
   raw::Layout::Kind kind;
   raw::LayoutMember::Kind member_kind;
 
@@ -1269,7 +1266,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
 // we assume that it is a named layout with constraints ("type B"). If a parse
 // failure occurs, std::monostate is returned.
 raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
-  std::unique_ptr<raw::TypeConstructorNew> type_ctor;
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
   std::unique_ptr<raw::TypeConstraints> constraints;
   ConsumeToken(OfKind(Token::Kind::kColon));
   if (!Ok()) {
@@ -1312,21 +1309,21 @@ raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
   auto subtype_constant = static_cast<raw::IdentifierConstant*>(constraint_or_subtype.get());
   auto subtype_ref = std::make_unique<raw::NamedLayoutReference>(
       subtype_element, std::move(subtype_constant->identifier));
-  return std::make_unique<raw::TypeConstructorNew>(subtype_element, std::move(subtype_ref),
-                                                   /*parameters=*/nullptr, /*constraints=*/nullptr);
+  return std::make_unique<raw::TypeConstructor>(subtype_element, std::move(subtype_ref),
+                                                /*parameters=*/nullptr, /*constraints=*/nullptr);
 }
 
 using NamedOrInline =
     std::variant<std::unique_ptr<raw::CompoundIdentifier>, std::unique_ptr<raw::Layout>>;
 
 // [ name | { ... } ][ < ... > ][ : ... ]
-std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
+std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   ASTScope scope(this);
   std::unique_ptr<raw::LayoutReference> layout_ref;
   std::unique_ptr<raw::LayoutParameterList> parameters;
   std::unique_ptr<raw::TypeConstraints> constraints;
   NamedOrInline layout;
-  auto attributes = MaybeParseAttributeListNew();
+  auto attributes = MaybeParseAttributeList();
 
   // Everything except for the (optional) attributes at the start of the type constructor
   // declaration is placed in its own scope.  This is done because in cases of type-level attributes
@@ -1458,7 +1455,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
                          constraints = std::move(constraint);
                          layout = std::move(identifier);
                        },
-                       [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
+                       [&](std::unique_ptr<raw::TypeConstructor>& type_ctor) -> void {
                          layout = ParseLayout(layout_scope, std::move(modifiers),
                                               std::move(identifier), std::move(type_ctor));
                          if (!Ok()) {
@@ -1514,17 +1511,13 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       return Fail();
   }
 
-  assert(layout_ref != nullptr &&
-         "ParseTypeConstructorNew must always produce a non-null layout_ref");
-  return std::make_unique<raw::TypeConstructorNew>(scope.GetSourceElement(), std::move(layout_ref),
-                                                   std::move(parameters), std::move(constraints));
+  assert(layout_ref != nullptr && "ParseTypeConstructor must always produce a non-null layout_ref");
+  return std::make_unique<raw::TypeConstructor>(scope.GetSourceElement(), std::move(layout_ref),
+                                                std::move(parameters), std::move(constraints));
 }
 
-// TODO
-raw::TypeConstructor Parser::ParseTypeConstructor() { return ParseTypeConstructorNew(); }
-
-std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(
-    std::unique_ptr<raw::AttributeListNew> attributes, ASTScope& scope) {
+std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(std::unique_ptr<raw::AttributeList> attributes,
+                                                     ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kType));
   if (!Ok())
     return Fail();
@@ -1537,7 +1530,7 @@ std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(
   if (!Ok())
     return Fail();
 
-  auto layout = ParseTypeConstructorNew();
+  auto layout = ParseTypeConstructor();
   if (!Ok())
     return Fail();
 
@@ -1574,7 +1567,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     //  necessary when top-level definitions could begin with modifiers (ex: "strict struct S {...")
     //  which is no longer possible in the new syntax.
     ASTScope scope(this);
-    std::unique_ptr<raw::AttributeListNew> attributes = MaybeParseAttributeListNew();
+    std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
       return More;
 

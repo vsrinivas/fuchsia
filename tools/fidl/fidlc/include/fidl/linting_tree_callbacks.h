@@ -39,15 +39,6 @@ class LintingTreeCallbacks {
     exit_file_callbacks_.push_back(std::move(callback));
   }
 
-  // Note that an Attribute with name "Doc" has content from comments that
-  // start with exactly three forward slashes (///), with those slashes
-  // removed. The first line of the Doc Comment is consumed without triggering
-  // OnLineComment(), but follow-on consecutive Doc Comment lines do trigger
-  // OnLineComment().
-  void OnAttributeOld(fit::function<void(const raw::AttributeOld&)> callback) {
-    attribute_old_callbacks_.push_back(std::move(callback));
-  }
-
   void OnSourceElement(fit::function<void(const raw::SourceElement&)> callback) {
     source_element_callbacks_.push_back(std::move(callback));
   }
@@ -95,13 +86,7 @@ class LintingTreeCallbacks {
   void OnEvent(fit::function<void(const raw::ProtocolMethod&)> callback) {
     event_callbacks_.push_back(std::move(callback));
   }
-  void OnParameter(fit::function<void(const raw::Parameter&)> callback) {
-    parameter_callbacks_.push_back(std::move(callback));
-  }
-  void OnTypeConstructorOld(fit::function<void(const raw::TypeConstructorOld&)> callback) {
-    type_constructor_old_callbacks_.push_back(std::move(callback));
-  }
-  void OnAttributeNew(fit::function<void(const raw::AttributeNew&)> callback) {
+  void OnAttribute(fit::function<void(const raw::Attribute&)> callback) {
     attribute_callbacks_.push_back(std::move(callback));
   }
   void OnOrdinaledLayoutMember(fit::function<void(const raw::OrdinaledLayoutMember&)> callback) {
@@ -129,10 +114,9 @@ class LintingTreeCallbacks {
       fit::function<void(const raw::IdentifierLayoutParameter&)> callback) {
     identifier_layout_parameter_callbacks_.push_back(std::move(callback));
   }
-  void OnTypeConstructorNew(fit::function<void(const raw::TypeConstructorNew&)> callback) {
+  void OnTypeConstructor(fit::function<void(const raw::TypeConstructor&)> callback) {
     type_constructor_callbacks_.push_back(std::move(callback));
   }
-  // --- end new syntax ---
 
  private:
   // tree_visitor_ is initialized to a locally-defined class
@@ -163,12 +147,8 @@ class LintingTreeCallbacks {
       exit_protocol_declaration_callbacks_;
   std::vector<fit::function<void(const raw::ProtocolMethod&)>> method_callbacks_;
   std::vector<fit::function<void(const raw::ProtocolMethod&)>> event_callbacks_;
-  std::vector<fit::function<void(const raw::Parameter&)>> parameter_callbacks_;
 
-  std::vector<fit::function<void(const raw::AttributeOld&)>> attribute_old_callbacks_;
-  std::vector<fit::function<void(const raw::TypeConstructorOld&)>> type_constructor_old_callbacks_;
-
-  std::vector<fit::function<void(const raw::AttributeNew&)>> attribute_callbacks_;
+  std::vector<fit::function<void(const raw::Attribute&)>> attribute_callbacks_;
   std::vector<fit::function<void(const raw::OrdinaledLayoutMember&)>>
       ordinaled_layout_member_callbacks_;
   std::vector<fit::function<void(const raw::StructLayoutMember&)>> struct_layout_member_callbacks_;
@@ -179,7 +159,7 @@ class LintingTreeCallbacks {
       identifier_layout_parameter_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> type_decl_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> exit_type_decl_callbacks_;
-  std::vector<fit::function<void(const raw::TypeConstructorNew&)>> type_constructor_callbacks_;
+  std::vector<fit::function<void(const raw::TypeConstructor&)>> type_constructor_callbacks_;
 };
 
 }  // namespace fidl::linter

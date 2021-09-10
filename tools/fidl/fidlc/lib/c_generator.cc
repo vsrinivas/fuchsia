@@ -132,7 +132,7 @@ bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args
     return true;
   }
   for (const auto& member : args->members) {
-    if (!TypeAllowed(library, flat::GetType(member.type_ctor))) {
+    if (!TypeAllowed(library, member.type_ctor->type)) {
       return false;
     }
   }
@@ -234,7 +234,6 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
             << "size_t " << member.name << "_size";
       break;
     case flat::Type::Kind::kHandle:
-    case flat::Type::Kind::kRequestHandle:
     case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
       *file << member.type << " " << member.name;
@@ -291,7 +290,6 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
             << "size_t* out_" << member.name << "_size";
       break;
     case flat::Type::Kind::kHandle:
-    case flat::Type::Kind::kRequestHandle:
     case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
       *file << member.type << "* out_" << member.name;
@@ -510,7 +508,6 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         *file << kIndent << "}\n";
         break;
       case flat::Type::Kind::kHandle:
-      case flat::Type::Kind::kRequestHandle:
       case flat::Type::Kind::kTransportSide:
       case flat::Type::Kind::kPrimitive:
         *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
@@ -691,7 +688,7 @@ template <typename T>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
                                 bool* out_allowed = nullptr) {
   std::string name = NameIdentifier(decl.name);
-  const flat::Type* type = flat::GetType(decl.type_ctor);
+  const flat::Type* type = decl.type_ctor->type;
   // treat box types like we do nullable structs
   if (type->kind == flat::Type::Kind::kBox)
     type = static_cast<const flat::BoxType*>(type)->boxed_type;
@@ -735,7 +732,6 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
     }
     case flat::Type::Kind::kHandle:
       break;
-    case flat::Type::Kind::kRequestHandle:
     case flat::Type::Kind::kTransportSide:
       break;
     case flat::Type::Kind::kPrimitive:
@@ -1033,8 +1029,7 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
 
 void CGenerator::ProduceBitsForwardDeclaration(const NamedBits& named_bits) {
   auto subtype =
-      static_cast<const flat::PrimitiveType*>(flat::GetType(named_bits.bits_info.subtype_ctor))
-          ->subtype;
+      static_cast<const flat::PrimitiveType*>(named_bits.bits_info.subtype_ctor->type)->subtype;
   GenerateIntegerTypedef(subtype, named_bits.name);
   for (const auto& member : named_bits.bits_info.members) {
     std::string member_name = named_bits.name + "_" + NameIdentifier(member.name);
@@ -1104,11 +1099,10 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
     return;
   }
 
-  switch (flat::GetType(ci.type_ctor)->kind) {
+  switch (ci.type_ctor->type->kind) {
     case flat::Type::Kind::kPrimitive:
       GeneratePrimitiveDefine(
-          named_const.name,
-          static_cast<const flat::PrimitiveType*>(flat::GetType(ci.type_ctor))->subtype,
+          named_const.name, static_cast<const flat::PrimitiveType*>(ci.type_ctor->type)->subtype,
           static_cast<flat::LiteralConstant*>(ci.value.get())->literal->span().data());
       break;
     case flat::Type::Kind::kString:
@@ -1371,7 +1365,6 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             file_ << kIndent << "*out_" << name << "_size = _response->" << name << ".size;\n";
             break;
           case flat::Type::Kind::kHandle:
-          case flat::Type::Kind::kRequestHandle:
           case flat::Type::Kind::kTransportSide:
           case flat::Type::Kind::kPrimitive:
             file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
@@ -1499,7 +1492,6 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
           __builtin_unreachable();
         case flat::Type::Kind::kArray:
         case flat::Type::Kind::kHandle:
-        case flat::Type::Kind::kRequestHandle:
         case flat::Type::Kind::kTransportSide:
         case flat::Type::Kind::kPrimitive:
           file_ << ", request->" << member.name;

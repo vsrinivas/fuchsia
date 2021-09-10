@@ -33,11 +33,11 @@ resource_definition SomeResource : uint32 {
   ASSERT_NOT_NULL(resource);
 
   ASSERT_EQ(resource->properties.size(), 1u);
-  EXPECT_EQ(fidl::flat::GetName(resource->properties[0].type_ctor).span()->data(), "MyEnum");
+  EXPECT_EQ(resource->properties[0].type_ctor->name.span()->data(), "MyEnum");
   EXPECT_EQ(resource->properties[0].name.data(), "subtype");
 
-  ASSERT_TRUE(fidl::flat::IsTypeConstructorDefined(resource->subtype_ctor));
-  EXPECT_EQ(fidl::flat::GetName(resource->subtype_ctor).span()->data(), "uint32");
+  ASSERT_NOT_NULL(resource->subtype_ctor);
+  EXPECT_EQ(resource->subtype_ctor->name.span()->data(), "uint32");
 }
 
 TEST(ResourceTests, BadEmpty) {

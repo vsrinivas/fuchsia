@@ -602,72 +602,21 @@ Linter::Linter()
                             "change '${IDENTIFIER}' to '${REPLACEMENT}'", "${REPLACEMENT}");
         }
       });
-  callbacks_.OnParameter(
-      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
-      //
-      (const raw::Parameter& element) {
-        linter.CheckCase("parameters", element.identifier, case_check, case_type);
-      });
   callbacks_.OnExitProtocolDeclaration(
       [&linter = *this]
       //
       (const raw::ProtocolDeclaration& element) { linter.ExitContext(); });
 
-  // TODO(fxbug.dev/70247): Delete this.
-  // --- start old syntax ---
-  callbacks_.OnAttributeOld(
+  callbacks_.OnAttribute(
       [&linter = *this, check = copyright_should_not_be_doc_comment,
        copyright_regex =
            std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase),
        todo_check = todo_should_not_be_doc_comment,
        todo_regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
       //
-      (const raw::AttributeOld& element) {
+      (const raw::Attribute& element) {
         if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
-          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
-          if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
-            linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
-          }
-          if (std::regex_search(doc_comment->MakeContents(), todo_regex)) {
-            linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
-          }
-        }
-      });
-
-  // clang-format off
-  callbacks_.OnTypeConstructorOld(
-      [& linter = *this,
-       string_bounds_check = string_bounds_not_specified,
-       vector_bounds_check = vector_bounds_not_specified]
-      //
-      (const raw::TypeConstructorOld& element) {
-        if (element.identifier->components.size() != 1) {
-          return;
-        }
-        auto type = to_string(element.identifier->components[0]);
-        if (!linter.in_const_declaration_) {
-          if (type == "string" && element.maybe_size == nullptr) {
-            linter.AddFinding(element.identifier, string_bounds_check);
-          }
-          if (type == "vector" && element.maybe_size == nullptr) {
-            linter.AddFinding(element.identifier, vector_bounds_check);
-          }
-        }
-      });
-  // clang-format on
-  // --- end old syntax ---
-
-  // --- start new syntax ---
-  callbacks_.OnAttributeNew(
-      [&linter = *this, check = copyright_should_not_be_doc_comment,
-       copyright_regex =
-           std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase),
-       todo_check = todo_should_not_be_doc_comment,
-       todo_regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
-      //
-      (const raw::AttributeNew& element) {
-        if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
-          if (element.args.empty() || element.provenance != raw::AttributeNew::kDocComment)
+          if (element.args.empty() || element.provenance != raw::Attribute::kDocComment)
             return;
           auto constant = static_cast<raw::LiteralConstant*>(element.args.front()->value.get());
           auto doc_comment = static_cast<raw::DocCommentLiteral*>(constant->literal.get());
@@ -765,12 +714,12 @@ Linter::Linter()
           linter.AddFinding(element.identifier, string_bounds_check);
         }
       });
-  callbacks_.OnTypeConstructorNew(
+  callbacks_.OnTypeConstructor(
       [& linter = *this,
           string_bounds_check = string_bounds_not_specified,
           vector_bounds_check = vector_bounds_not_specified]
           //
-          (const raw::TypeConstructorNew& element) {
+          (const raw::TypeConstructor& element) {
         if (element.layout_ref->kind != raw::LayoutReference::kNamed)
           return;
         const auto as_named = static_cast<raw::NamedLayoutReference*>(element.layout_ref.get());
@@ -811,7 +760,6 @@ Linter::Linter()
         }
       });
   // clang-format on
-  // --- end new syntax ---
 }
 
 }  // namespace fidl::linter

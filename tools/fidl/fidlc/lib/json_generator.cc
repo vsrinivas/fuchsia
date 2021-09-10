@@ -200,14 +200,13 @@ void JSONGenerator::Generate(const flat::Type* value) {
       case flat::Type::Kind::kTransportSide: {
         const auto* type = static_cast<const flat::TransportSideType*>(value);
         // This code path should only apply to client ends. The server end code
-        // path is colocated with kRequestHandle.
+        // path is colocated with the parameterized types.
         assert(type->end == flat::TransportSide::kClient);
         GenerateObjectMember("identifier", type->protocol_decl->name);
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
-      case flat::Type::Kind::kArray:
-      case flat::Type::Kind::kRequestHandle: {
+      case flat::Type::Kind::kArray: {
         assert(false &&
                "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
       }
@@ -271,7 +270,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     // TODO(fxbug.dev/79094): refactor this to only have a single null state.
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.subtype_ctor);
+    GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
     // TODO(fxbug.dev/7660): When all numbers are wrapped as string, we can simply
     // call GenerateObjectMember directly.
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -298,7 +297,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.type_ctor);
+    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
     GenerateObjectMember("value", value.value);
   });
 }
@@ -313,7 +312,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     // the primitive subtype, and therefore cannot use
     // GenerateTypeAndFromTypeAlias here.
     GenerateObjectMember("type", value.type->name);
-    GenerateExperimentalMaybeFromTypeAlias(flat::GetLayoutInvocation(value.subtype_ctor));
+    GenerateExperimentalMaybeFromTypeAlias(value.subtype_ctor->resolved_params);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     if (value.strictness == types::Strictness::kFlexible) {
@@ -377,9 +376,9 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   });
 }
 
-void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
+void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor* value,
                                                  Position position) {
-  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, flat::GetTypeCtorAsPtr(value), position);
+  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, value, position);
 }
 
 bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
@@ -389,20 +388,18 @@ bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
     is_server_end = transport_side->end == flat::TransportSide::kServer;
   }
   return type.kind == flat::Type::Kind::kArray || type.kind == flat::Type::Kind::kVector ||
-         type.kind == flat::Type::Kind::kRequestHandle || is_server_end;
+         is_server_end;
 }
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
-                                                 flat::TypeConstructorPtr value,
+                                                 const flat::TypeConstructor* value,
                                                  Position position) {
-  const auto* type = flat::GetType(value);
-  const auto& invocation = flat::GetLayoutInvocation(value);
+  const auto* type = value->type;
+  const auto& invocation = value->resolved_params;
   if (fidl::ShouldExposeTypeAliasOfParametrizedType(*type)) {
-    const auto& invocation = flat::GetLayoutInvocation(value);
     if (invocation.from_type_alias) {
-      GenerateParameterizedType(
-          parent_type_kind, type,
-          flat::GetTypeCtorAsPtr(invocation.from_type_alias->partial_type_ctor), position);
+      GenerateParameterizedType(parent_type_kind, type,
+                                invocation.from_type_alias->partial_type_ctor.get(), position);
     } else {
       GenerateParameterizedType(parent_type_kind, type, value, position);
     }
@@ -422,15 +419,14 @@ void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(
 }
 
 void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
-                                              flat::TypeConstructorPtr type_ctor,
+                                              const flat::TypeConstructor* type_ctor,
                                               Position position) {
-  const auto& invocation = flat::GetLayoutInvocation(type_ctor);
+  const auto& invocation = type_ctor->resolved_params;
   std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
 
   // Special case: type "bytes" is a builtin alias, so it will have no
   // user-specified arg type.
-  if (type->kind == flat::Type::Kind::kVector &&
-      !flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
+  if (type->kind == flat::Type::Kind::kVector && invocation.element_type_raw == nullptr) {
     GenerateObjectMember(key, type, position);
     return;
   }
@@ -453,17 +449,6 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         if (*vector_type->element_count < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", vector_type->element_count->value);
         GenerateObjectMember("nullable", vector_type->nullability);
-        break;
-      }
-      case flat::Type::Kind::kRequestHandle: {
-        const auto* request_type = static_cast<const flat::RequestHandleType*>(type);
-        GenerateObjectMember("subtype", request_type->protocol_type->name);
-        if (flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
-          GenerateExperimentalMaybeFromTypeAlias(
-              flat::GetLayoutInvocation(invocation.element_type_raw));
-        }
-        // TODO(fxbug.dev/43803): Add required and optional rights.
-        GenerateObjectMember("nullable", request_type->nullability);
         break;
       }
       case flat::Type::Kind::kTransportSide: {
@@ -532,7 +517,7 @@ void JSONGenerator::Generate(const flat::Resource::Property& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    GenerateTypeAndFromTypeAlias(value.type_ctor);
+    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
@@ -544,7 +529,7 @@ void JSONGenerator::Generate(const flat::Resource& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.subtype_ctor);
+    GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
     GenerateObjectMember("properties", value.properties);
   });
 }
@@ -561,7 +546,7 @@ void JSONGenerator::Generate(const flat::Service& value) {
 
 void JSONGenerator::Generate(const flat::Service::Member& value) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(value.type_ctor, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
@@ -586,7 +571,7 @@ void JSONGenerator::Generate(const flat::Struct* value) { Generate(*value); }
 
 void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_or_response) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(value.type_ctor, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
@@ -616,7 +601,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
     if (value.maybe_used) {
       assert(!value.span);
       GenerateObjectMember("reserved", false);
-      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
+      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       // TODO(fxbug.dev/7932): Support defaults on tables.
@@ -671,7 +656,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       assert(!value.span);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
-      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
+      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
     } else {
       GenerateObjectMember("reserved", true);
@@ -697,7 +682,7 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
     if (value.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      Generate(flat::GetName(value.element_type_raw));
+      Generate(value.element_type_raw->name);
       Outdent();
       EmitNewlineWithIndent();
     }
@@ -711,12 +696,8 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
 }
 
 void JSONGenerator::Generate(const flat::TypeConstructor& value) {
-  GenerateTypeCtor(GetTypeCtorAsPtr(value));
-}
-
-void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
   GenerateObject([&]() {
-    const auto* type = GetType(value);
+    const auto* type = value.type;
     // TODO(fxbug.dev/70186, fxbug.dev/70247): We need to coerce client/server
     // ends into the same representation as P, request<P>; and box<S> into S?
     // For box, we just need to access the inner IdentifierType and the rest
@@ -738,12 +719,11 @@ void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
         server_end = end_type;
       }
     } else {
-      GenerateObjectMember("name", GetType(value) ? GetType(value)->name : GetName(value),
-                           Position::kFirst);
+      GenerateObjectMember("name", value.type ? value.type->name : value.name, Position::kFirst);
     }
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
-    const auto& invocation = flat::GetLayoutInvocation(value);
+    const auto& invocation = value.resolved_params;
 
     // In preparation of template support, it is better to expose a
     // heterogeneous argument list to backends, rather than the currently
@@ -753,25 +733,25 @@ void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
       Indent();
       EmitNewlineWithIndent();
       if (server_end) {
-        // TODO(fxbug.dev/70186, fxbug.dev/70246): We need to emit a "fake" arg for server
-        // ends. Create a TypeConstructor to simulate this argument - we use TypeConstructorOld
-        // simply because it's easier to create and this code will be removed at the same
-        // time as TypeConstructorOld
-        flat::TypeConstructorOld type_ctor(server_end->protocol_decl->name, nullptr, std::nullopt,
-                                           nullptr, nullptr,
-                                           // server_end<Protocol:optional> is a parse error, so
-                                           // it's guaranteed to be non nullable here.
-                                           types::Nullability::kNonnullable);
-        GenerateTypeCtor(&type_ctor);
+        // TODO(fxbug.dev/70186): We need to emit a "fake" arg for server
+        // ends - create a TypeConstructor to simulate this argument
+        std::vector<std::unique_ptr<flat::LayoutParameter>> no_params;
+        std::vector<std::unique_ptr<flat::Constant>> no_constraints;
+        flat::TypeConstructor type_ctor(server_end->protocol_decl->name,
+                                        std::make_unique<flat::LayoutParameterList>(
+                                            std::move(no_params), std::nullopt /* span */),
+                                        std::make_unique<flat::TypeConstraints>(
+                                            std::move(no_constraints), std::nullopt /* span */));
+        Generate(type_ctor);
       } else {
-        GenerateTypeCtor(invocation.element_type_raw);
+        Generate(*invocation.element_type_raw);
       }
       Outdent();
       EmitNewlineWithIndent();
     }
     EmitArrayEnd();
 
-    if (GetType(value) && GetType(value)->kind == flat::Type::Kind::kBox) {
+    if (value.type && value.type->kind == flat::Type::Kind::kBox) {
       // invocation.nullability will always be non nullable, because users can't
       // specify optional on box. however, we need to output nullable in this case
       // in order to match the behavior for Struct?

@@ -18,7 +18,7 @@ namespace fidl {
 // Forward decls
 namespace raw {
 class AttributeListOld;
-class AttributeListNew;
+class AttributeList;
 }  // namespace raw
 
 namespace flat {
@@ -44,8 +44,7 @@ std::string Display(std::string_view s);
 std::string Display(const std::set<std::string>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
-std::string Display(const raw::AttributeListOld* a);
-std::string Display(const raw::AttributeListNew* a);
+std::string Display(const raw::AttributeList* a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Attribute* a);
 std::string Display(const flat::AttributeArg* a);

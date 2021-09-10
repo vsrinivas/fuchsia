@@ -37,7 +37,6 @@ std::string NameUnionTag(std::string_view union_name, const flat::Union::Member:
 std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op);
 std::string NameFlatConstant(const flat::Constant* constant);
-std::string NameFlatTypeConstructorOld(const flat::TypeConstructorOld* type_ctor);
 std::string NameFlatType(const flat::Type* type);
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind);
 std::string NameDiscoverable(const flat::Protocol& protocol);
