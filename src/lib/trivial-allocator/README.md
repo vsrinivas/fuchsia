@@ -1,7 +1,8 @@
 # Trivial C++ Allocator Library
 
 The trivial-allocator library provides a small, header-only C++ template
-implementation of a trivial memory allocator for C++ code.
+implementation of a trivial memory allocator for C++ code.  It can provide
+variants of the C++ `new` expression syntax using an explicit allocator object.
 
 These allocators are intended for two classes of use:
 

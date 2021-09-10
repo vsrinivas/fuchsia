@@ -12,10 +12,16 @@ zx_library("trivial-allocator") {
   sdk = "source"
   sdk_headers = [
     "lib/trivial-allocator/basic-leaky-allocator.h",
+    "lib/trivial-allocator/new.h",
     "lib/trivial-allocator/single-heap-allocator.h",
   ]
 
-  public_deps = [ "//sdk/lib/stdcompat" ]
+  public_deps = [
+    "//sdk/lib/stdcompat",
+
+    # <lib/trivial-allocator/new.h> has #include <fbl/alloc_checker.h>.
+    "//zircon/system/ulib/fbl",
+  ]
 
   sources = []
   deps = []
@@ -31,6 +37,7 @@ zx_library("trivial-allocator") {
 test("trivial-allocator-unittests") {
   sources = [
     "basic-leaky-allocator-tests.cc",
+    "new-tests.cc",
     "single-heap-allocator-tests.cc",
   ]
   deps = [
