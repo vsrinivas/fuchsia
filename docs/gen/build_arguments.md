@@ -803,13 +803,6 @@ Tells openweave to include files that require heap access.
 
 From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/14f76e27123473bdeec54512a733df02e737fd6c/config.gni#32)
 
-### conformance_testing_netstack
-If true, uses a netstack tailored for network conformance testing.
-
-**Current value (from the default):** `false`
-
-From //src/connectivity/network/BUILD.gn:13
-
 ### core_realm_package_name
 The following arguments are all used to configure the contents of the core
 component realm. See //src/sys/core/build/core.gni for documentation on what
@@ -2464,12 +2457,6 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 From //src/graphics/drivers/msd-intel-gen/tests/integration/BUILD.gn:8
 
-### netcfg_autostart
-
-**Current value (from the default):** `true`
-
-From //src/connectivity/management/BUILD.gn:6
-
 ### netsvc_extra_defines
 
 **Current value (from the default):** `[]`
@@ -3920,16 +3907,6 @@ defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
 **Current value (from the default):** `false`
 
 From //src/lib/ui/input-synthesis/BUILD.gn:12
-
-### use_netstack3
-If true, replaces netstack with netstack3.
-
-When set as a GN argument, requires that sysmgr_config_warn_override be set
-to true to avoid build failures. See that flag's documentation for details.
-
-**Current value (from the default):** `false`
-
-From //src/connectivity/network/BUILD.gn:10
 
 ### use_null_vulkan_on_host
 TODO(liyl): Currently non-x64 platforms don't have Vulkan support,
