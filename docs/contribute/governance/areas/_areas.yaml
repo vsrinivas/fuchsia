@@ -85,7 +85,7 @@
   api_secondary: ''
 
 - name: 'Storage'
-  api_primary: 'manalib@google.com'
+  api_primary: 'csuter@google.com'
   api_secondary: ''
 
 - name: 'Toolchain'
