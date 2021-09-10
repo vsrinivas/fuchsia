@@ -233,7 +233,6 @@ class CrashReporterTest : public UnitTestFixture {
         {"reportTimeMillis", Not(IsEmpty())},
         {"guid", kDefaultDeviceId},
         {"channel", kDefaultChannel},
-        {"should_process", "false"},
         {"debug.snapshot.shared-request.num-clients", Not(IsEmpty())},
         {"debug.snapshot.shared-request.uuid", Not(IsEmpty())},
     };
@@ -636,7 +635,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
       {"crash.process.koid", "123"},
       {"crash.thread.name", "crashing_thread"},
       {"crash.thread.koid", "1234"},
-      {"should_process", "true"},
   });
   CheckAttachmentsOnServer({"uploadFileMinidump", kDefaultAttachmentBundleKey});
 }
@@ -706,7 +704,6 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
       {"error_runtime_type", "FileSystemException"},
       {"error_message", "cannot open file"},
       {"type", "DartError"},
-      {"should_process", "true"},
   });
   CheckAttachmentsOnServer({"DartError", kEmptyAttachmentBundleKey});
 }

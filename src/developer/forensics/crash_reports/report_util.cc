@@ -112,8 +112,7 @@ std::pair<bool, std::optional<std::string>> ParseDartModules(
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       AnnotationMap* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
-                                      std::optional<fuchsia::mem::Buffer>* minidump,
-                                      bool* should_process) {
+                                      std::optional<fuchsia::mem::Buffer>* minidump) {
   // Default annotations common to all crash reports.
   if (report.has_annotations()) {
     annotations->Set(report.annotations());
@@ -194,7 +193,6 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     auto& native_report = report.mutable_specific_report()->native();
     if (native_report.has_minidump()) {
       *minidump = std::move(*native_report.mutable_minidump());
-      *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
       // We don't want to overwrite the client-provided signature.
@@ -210,7 +208,6 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     if (dart_report.has_exception_stack_trace()) {
       (*attachments)[kDartExceptionStackTraceKey] =
           std::move(*dart_report.mutable_exception_stack_trace());
-      *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no Dart exception stack trace to attach to Crashpad report";
       annotations->Set(kCrashSignatureKey, "fuchsia-no-dart-stack-trace");
@@ -228,8 +225,7 @@ void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& s
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
                                const ::fpromise::result<std::string, Error>& device_id,
-                               const Product& product, const bool should_process,
-                               AnnotationMap* annotations) {
+                               const Product& product, AnnotationMap* annotations) {
   // Product.
   annotations->Set("product", product.name)
       .Set("version", product.version)
@@ -254,10 +250,6 @@ void AddCrashServerAnnotations(const std::string& program_name,
   } else {
     annotations->Set("debug.guid.set", false).Set("debug.device-id.error", device_id.error());
   }
-
-  // Not all reports need to be processed by the crash server.
-  // Typically only reports with a minidump or a Dart stack trace file need to be processed.
-  annotations->Set("should_process", should_process);
 }
 
 }  // namespace
@@ -274,18 +266,15 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   AnnotationMap annotations = default_annotations;
   std::map<std::string, fuchsia::mem::Buffer> attachments;
   std::optional<fuchsia::mem::Buffer> minidump;
-  bool should_process = false;
 
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump,
-                                   &should_process);
+  ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump);
 
   // Snapshot annotations specific to this crash report.
   AddSnapshotAnnotations(snapshot_uuid, snapshot, &annotations);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, current_time, device_id, product, should_process,
-                            &annotations);
+  AddCrashServerAnnotations(program_name, current_time, device_id, product, &annotations);
 
   return Report::MakeReport(report_id, shortname, annotations, std::move(attachments),
                             snapshot_uuid, std::move(minidump), is_hourly_report);
