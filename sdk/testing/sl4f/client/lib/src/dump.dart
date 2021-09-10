@@ -4,6 +4,10 @@
 
 import 'dart:io';
 
+import 'package:logging/logging.dart';
+
+final _log = Logger('Dump');
+
 /// Dumps data received in various facades as timestamped files into a directory
 /// in the host filesystem.
 ///
@@ -63,8 +67,11 @@ class Dump {
   /// no dump directory is configured.
   ///
   /// Returns the [File] object of the newly created file.
-  Future<File> writeAsBytes(String name, String suffix, List<int> bytes) =>
-      createFile(name, suffix)?.writeAsBytes(bytes);
+  Future<File> writeAsBytes(String name, String suffix, List<int> bytes) {
+    final file = createFile(name, suffix);
+    _log.info('writeAsBytes to file: ${file?.path}');
+    return file?.writeAsBytes(bytes);
+  }
 
   /// Writes the string to the dump directory under a timestamp, the
   /// given topic name and the given file type suffix. Does nothing if
@@ -87,8 +94,8 @@ class Dump {
     if (!hasDumpDirectory) {
       return null;
     }
-
     final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
+    _log.info('createFile $_dumpDirectory/$filename');
 
     return File([_dumpDirectory, filename].join('/'));
   }

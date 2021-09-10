@@ -5,18 +5,25 @@
 import 'dart:convert' show base64Decode;
 
 import 'package:image/image.dart';
+import 'package:logging/logging.dart';
 import 'package:pedantic/pedantic.dart';
 
+import 'device_log.dart';
 import 'dump.dart';
 import 'sl4f_client.dart';
+
+final _log = Logger('Scenic');
 
 /// Interact with Scenic on the device under test.
 class Scenic {
   final Sl4f _sl4f;
   final Dump _dump;
+  final DeviceLog _deviceLog;
 
   /// Constructs a [Scenic] object.
-  Scenic(this._sl4f, [Dump dump]) : _dump = dump ?? Dump();
+  Scenic(this._sl4f, [Dump dump])
+      : _dump = dump ?? Dump(),
+        _deviceLog = DeviceLog(_sl4f);
 
   /// Captures the screen of the device.
   ///
@@ -32,6 +39,8 @@ class Scenic {
         format: Format.bgra);
 
     if (dumpName != null) {
+      await _deviceLog.info('writing screenshot file to $dumpName');
+      _log.info('writing screenshot file to $dumpName');
       unawaited(_dump.writeAsBytes(dumpName, 'png', encodePng(image)));
     }
 
