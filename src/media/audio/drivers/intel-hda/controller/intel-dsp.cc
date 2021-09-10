@@ -126,7 +126,7 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   if (!result.ok()) {
     return PrependMessage("Error parsing NHLT", result);
   }
-  LOG(DEBUG, "parse success, found %zu formats", nhlt_->i2s_configs().size());
+  LOG(DEBUG, "parse success, found %zu formats", nhlt_->configs().size());
 
   // Perform hardware initialization in a thread.
   state_ = State::INITIALIZING;

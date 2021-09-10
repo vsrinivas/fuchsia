@@ -17,7 +17,6 @@
 namespace audio {
 namespace intel_hda {
 
-namespace {
 // Module config parameters extracted from kbl_i2s_chrome.conf
 
 // To route audio from the system memory to the audio codecs, we must
@@ -162,14 +161,15 @@ std::vector<uint8_t> RawBytesOf(const T* object) {
   return RawBytesOf(reinterpret_cast<const uint8_t*>(object), sizeof(*object));
 }
 
-zx_status_t GetI2SBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction,
-                       const AudioDataFormat& format, const void** out_blob, size_t* out_size) {
-  for (const auto& cfg : nhlt.i2s_configs()) {
-    if ((cfg.bus_id != bus_id) || (cfg.direction != direction)) {
+zx_status_t GetNhltBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction, uint8_t link_type,
+                        const AudioDataFormat& format, const void** out_blob, size_t* out_size) {
+  for (const auto& cfg : nhlt.configs()) {
+    if ((cfg.bus_id != bus_id) || (cfg.direction != direction) ||
+        (cfg.header.link_type != link_type)) {
       continue;
     }
     // TODO better matching here
-    for (const I2SConfig::Format& endpoint_format : cfg.formats) {
+    for (const EndPointConfig::Format& endpoint_format : cfg.formats) {
       if (format.valid_bit_depth != endpoint_format.config.valid_bits_per_sample) {
         continue;
       }
@@ -181,12 +181,13 @@ zx_status_t GetI2SBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction,
   return ZX_ERR_NOT_FOUND;
 }
 
-StatusOr<std::vector<uint8_t>> GetI2SModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
-                                                  uint8_t direction, const CopierCfg& base_cfg) {
+StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
+                                               uint8_t direction, uint8_t link_type,
+                                               const CopierCfg& base_cfg) {
   const void* blob;
   size_t blob_size;
-  zx_status_t st = GetI2SBlob(
-      nhlt, i2s_instance_id, direction,
+  zx_status_t st = GetNhltBlob(
+      nhlt, i2s_instance_id, direction, link_type,
       (direction == NHLT_DIRECTION_RENDER) ? base_cfg.out_fmt : base_cfg.base_cfg.audio_fmt, &blob,
       &blob_size);
   if (st != ZX_OK) {
@@ -223,7 +224,7 @@ StatusOr<DspPipelineId> ConnectHostToI2S(const Nhlt& nhlt, DspModuleController* 
   CopierCfg host_out_copier = CreateGatewayCopierCfg(kHostFormat, kDspFormat, host_gateway_id);
   CopierCfg i2s_out_copier = CreateGatewayCopierCfg(kDspFormat, i2s_format, i2s_gateway_id);
   StatusOr<std::vector<uint8_t>> i2s_out_gateway_cfg =
-      GetI2SModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_RENDER, i2s_out_copier);
+      GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
   if (!i2s_out_gateway_cfg.ok()) {
     return i2s_out_gateway_cfg.status();
   }
@@ -247,7 +248,7 @@ StatusOr<DspPipelineId> ConnectI2SToHost(const Nhlt& nhlt, DspModuleController* 
   CopierCfg i2s_in_copier = CreateGatewayCopierCfg(i2s_format, kDspFormat, i2s_gateway_id);
   CopierCfg host_in_copier = CreateGatewayCopierCfg(kDspFormat, kHostFormat, host_gateway_id);
   StatusOr<std::vector<uint8_t>> i2s_in_gateway_cfg =
-      GetI2SModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_CAPTURE, i2s_in_copier);
+      GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_SSP, i2s_in_copier);
   if (!i2s_in_gateway_cfg.ok()) {
     return i2s_in_gateway_cfg.status();
   }
@@ -326,8 +327,6 @@ StatusOr<PixelbookEvePipelines> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
   result.headphone = headphones.ValueOrDie();
   return result;
 }
-
-}  // namespace
 
 Status IntelDsp::StartPipeline(DspPipeline pipeline) {
   // Pipeline must be paused before starting.

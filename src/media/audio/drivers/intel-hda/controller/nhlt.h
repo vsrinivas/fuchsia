@@ -24,7 +24,7 @@
 namespace audio::intel_hda {
 
 // Details about an available I2S bus.
-struct I2SConfig {
+struct EndPointConfig {
   struct Format {
     format_config_t config;
     fbl::Vector<uint8_t> capabilities;
@@ -46,14 +46,14 @@ class Nhlt {
   static StatusOr<std::unique_ptr<Nhlt>> FromBuffer(fbl::Span<const uint8_t> buffer);
 
   // Get parsed I2S configs.
-  const fbl::Vector<I2SConfig>& i2s_configs() const { return i2s_configs_; }
+  const fbl::Vector<EndPointConfig>& configs() const { return configs_; }
 
   // Log debugging information about the NHLT to console.
   static void DumpNhlt(const uint8_t* data, size_t length);
   void Dump() const;
 
  private:
-  fbl::Vector<I2SConfig> i2s_configs_;
+  fbl::Vector<EndPointConfig> configs_;
 };
 
 }  // namespace audio::intel_hda

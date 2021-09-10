@@ -105,7 +105,7 @@ std::vector<uint8_t> SampleNHLT() {
 
 TEST(Nhlt, DefaultInitializer) {
   Nhlt x{};
-  EXPECT_TRUE(x.i2s_configs().is_empty());
+  EXPECT_TRUE(x.configs().is_empty());
 }
 
 TEST(Nhlt, ParseEmpty) {
@@ -119,9 +119,9 @@ TEST(Nhlt, ParseSimple) {
   ASSERT_OK(nhlt.status().code());
 
   // Ensure the data looks reasonable.
-  ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs().size(), 1);
-  ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs()[0].formats.size(), 1);
-  ASSERT_EQ(nhlt.ValueOrDie()->i2s_configs()[0].formats[0].config.format_tag, 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs().size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs()[0].formats.size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs()[0].formats[0].config.format_tag, 1);
 }
 
 TEST(Nhlt, ParseTruncated) {

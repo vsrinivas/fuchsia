@@ -62,12 +62,12 @@ StatusOr<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
 // This consists of:
 //
 //   * A header of type nhlt_descriptor.
-//   * A specifc config block.
+//   * A specific config block.
 //   * A byte specifying the number of formats.
 //   * N format blocks.
-StatusOr<I2SConfig> ParseDescriptor(const nhlt_descriptor_t& header,
-                                    fbl::Span<const uint8_t> additional_bytes) {
-  I2SConfig config;
+StatusOr<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
+                                         fbl::Span<const uint8_t> additional_bytes) {
+  EndPointConfig config;
   config.header = header;
   config.bus_id = header.virtual_bus_id;
   config.direction = header.direction;
@@ -88,7 +88,7 @@ StatusOr<I2SConfig> ParseDescriptor(const nhlt_descriptor_t& header,
 
   // Parse formats.
   for (size_t i = 0; i < maybe_format_count.ValueOrDie().format_config_count; i++) {
-    I2SConfig::Format format;
+    EndPointConfig::Format format;
 
     // Read the format header.
     auto maybe_format = decoder.Read<format_config_t>();
@@ -148,19 +148,20 @@ StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer
     auto [desc_header, desc_additional_bytes] = maybe_desc.ValueOrDie();
 
     // Parse the descriptor.
-    StatusOr<I2SConfig> maybe_config = ParseDescriptor(desc_header, desc_additional_bytes);
+    StatusOr<EndPointConfig> maybe_config = ParseDescriptor(desc_header, desc_additional_bytes);
     if (!maybe_config.ok()) {
       return PrependMessage(fbl::StringPrintf("Error reading NHLT descriptor body at index %lu", i),
                             maybe_config.status());
     }
 
     // If the returned descriptor is nullopt, we don't support it. Just ignore it.
-    if (maybe_config.ValueOrDie().header.link_type != NHLT_LINK_TYPE_SSP) {
-      GLOBAL_LOG(DEBUG, "Ignoring non-SSP NHLT descriptor at index %lu.", i);
+    if (maybe_config.ValueOrDie().header.link_type != NHLT_LINK_TYPE_SSP &&
+        maybe_config.ValueOrDie().header.link_type != NHLT_LINK_TYPE_PDM) {
+      GLOBAL_LOG(DEBUG, "Ignoring non-SSP, non-PDM NHLT descriptor at index %lu.", i);
       continue;
     }
     fbl::AllocChecker ac;
-    result->i2s_configs_.push_back(maybe_config.ConsumeValueOrDie(), &ac);
+    result->configs_.push_back(maybe_config.ConsumeValueOrDie(), &ac);
     if (!ac.check()) {
       return Status(ZX_ERR_NO_MEMORY);
     }
@@ -170,9 +171,9 @@ StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer
 }
 
 void Nhlt::Dump() const {
-  GLOBAL_LOG(INFO, "Got %lu NHLT endpoints:", i2s_configs_.size());
+  GLOBAL_LOG(INFO, "Got %lu NHLT endpoints:", configs_.size());
   size_t n = 0;
-  for (const I2SConfig& endpoint : i2s_configs_) {
+  for (const EndPointConfig& endpoint : configs_) {
     GLOBAL_LOG(INFO, "  Endpoint %lu:", n++);
     GLOBAL_LOG(INFO, "    link_type: %u", endpoint.header.link_type);
     GLOBAL_LOG(INFO, "    instance_id: %u", endpoint.header.instance_id);

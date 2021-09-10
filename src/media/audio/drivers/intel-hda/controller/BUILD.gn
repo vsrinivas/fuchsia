@@ -127,6 +127,7 @@ test("controller_test") {
     "binary_decoder_test.cc",
     "intel-dsp-ipc-test.cc",
     "intel-dsp-modules-test.cc",
+    "intel-dsp-topology-test.cc",
     "nhlt_test.cc",
   ]
   deps = [

@@ -8,6 +8,7 @@
 #include <cstdint>
 
 #include "intel-dsp-modules.h"
+#include "nhlt.h"
 
 namespace audio {
 namespace intel_hda {
@@ -16,6 +17,12 @@ namespace intel_hda {
 struct DspPipeline {
   DspPipelineId id;
 };
+
+zx_status_t GetNhltBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction, uint8_t type,
+                        const AudioDataFormat& format, const void** out_blob, size_t* out_size);
+StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
+                                               uint8_t direction, uint8_t type,
+                                               const CopierCfg& base_cfg);
 
 }  // namespace intel_hda
 }  // namespace audio
