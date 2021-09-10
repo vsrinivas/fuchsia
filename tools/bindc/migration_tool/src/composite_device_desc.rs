@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common::*;
 use regex::Regex;
 
 pub struct PBusDeviceDesc {
@@ -62,7 +63,7 @@ fn get_pdev_device_desc(contents: &str) -> Result<Option<CompositeDeviceDesc>, &
     let primary_node = if composite_add_capture.name("null_val").is_some() {
         "pdev".to_string()
     } else {
-        composite_add_capture.name("node_name").unwrap().as_str().to_string()
+        capture_name(&composite_add_capture, "node_name")?
     };
 
     Ok(Some(CompositeDeviceDesc {
@@ -83,8 +84,7 @@ fn get_composite_device_desc_t(
     }
 
     // Get primary node name from .primary_fragment = "{primary_node}",
-    let primary_fragment_regex =
-        Regex::new(r#".primary_fragment = "(?P<primary>[^"]*)","#).unwrap();
+    let primary_fragment_regex = Regex::new(r#".primary_fragment = "(?P<primary>[^"]*)""#).unwrap();
     let primary_cap = primary_fragment_regex.captures(contents).unwrap();
     let primary_node = primary_cap.name("primary").unwrap().as_str().to_string();
 
@@ -94,9 +94,9 @@ fn get_composite_device_desc_t(
 
     // Try to get the device name from DdkAddComposite() or device_add_composite().
     let device_name = if let Some(ddk_cap) = ddk_add_regex.captures(contents) {
-        ddk_cap.name("name").unwrap().as_str().to_string()
+        capture_name(&ddk_cap, "name")?
     } else if let Some(composite_add_cap) = composite_add_regex.captures(contents) {
-        composite_add_cap.name("name").unwrap().as_str().to_string()
+        capture_name(&composite_add_cap, "name")?
     } else {
         return Err("Unable to find DdkAddComposite() or device_add_composite()");
     };

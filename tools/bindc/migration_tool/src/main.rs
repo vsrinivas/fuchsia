@@ -4,6 +4,7 @@
 
 //! This is a migration tool to help move from C-macro style bind rules to using the bind compiler.
 
+mod common;
 mod composite_bind;
 mod composite_device_desc;
 pub mod library;
@@ -122,7 +123,7 @@ fn write_bind_rules(
     build_file_path: PathBuf,
     source_file_path: PathBuf,
     data: composite_bind::CompositeDeviceData,
-) -> Result<(), &'static str> {
+) -> Result<String, &'static str> {
     let mut nodes_str = String::new();
     let mut primary_node_str = String::new();
 
@@ -167,7 +168,8 @@ fn write_bind_rules(
         .map_err(|_| "Failed to format output")?;
 
     let mut bind_file_path = source_file_path;
-    bind_file_path.set_file_name(format!("{}.bind", data.desc.device_name).as_str());
+    let file_name = format!("{}.bind", data.desc.device_name);
+    bind_file_path.set_file_name(file_name.as_str());
     let mut bind_file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -177,14 +179,16 @@ fn write_bind_rules(
     bind_file.write_all(output.as_bytes()).map_err(|_| "Failed to write to bind file")?;
 
     // Insert the dependency in the BUILD file.
-    insert_build_rule(build_file_path, data.libraries, &data.desc.device_name)
+    insert_build_rule(build_file_path, data.libraries, &data.desc.device_name)?;
+
+    Ok(file_name.to_string())
 }
 
 fn main() -> Result<(), &'static str> {
     let opt = Opt::from_iter(std::env::args());
 
-    let mut migrate_success: Vec<String> = vec![];
-    let mut migrate_failure: Vec<String> = vec![];
+    let mut migrate_success: Vec<(String, String)> = vec![];
+    let mut migrate_failure: Vec<(String, String)> = vec![];
 
     for source_file in process_build_file(opt.input.clone())? {
         if let Some(source_file_str) = source_file.to_str() {
@@ -195,24 +199,26 @@ fn main() -> Result<(), &'static str> {
             match result {
                 Err(e) => {
                     println!("Unable to migrate: {}", e);
-                    migrate_failure.push(src_file_str);
+                    migrate_failure.push((src_file_str, e.to_string()));
                 }
-                Ok(()) => {
-                    println!("Migration successful!");
-                    migrate_success.push(src_file_str);
+                Ok(file_name) => {
+                    println!("Migration successful! Generated {}", file_name);
+                    migrate_success.push((src_file_str, file_name));
                 }
             };
         }
     }
 
-    println!("\nSuccessfully migrated: ");
-    for file in migrate_success {
-        println!("   {}", file);
-    }
+    println!("\n========================================================");
 
     println!("\nUnable to migrate: ");
-    for file in migrate_failure {
-        println!("   {}", file);
+    for (src_file, err) in migrate_failure {
+        println!("   {} \n        => {}", src_file, err);
+    }
+
+    println!("\nSuccessfully migrated: ");
+    for (src_file, bind_file) in migrate_success {
+        println!("   {} => {}", src_file, bind_file);
     }
 
     Ok(())

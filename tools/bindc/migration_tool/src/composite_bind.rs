@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common::*;
 use crate::composite_device_desc::*;
 use crate::library::*;
 use regex::Regex;
@@ -166,15 +167,15 @@ pub fn process_source_file(input: PathBuf) -> Result<CompositeDeviceData, &'stat
 
     let mut iter = part_regex.captures_iter(&contents);
     while let Some(part_cap) = iter.next() {
-        let part_var = part_cap.name("part_var").unwrap().as_str().trim();
-        let match_var = part_cap.name("match_var").unwrap().as_str().trim();
+        let part_var = capture_name(&part_cap, "part_var")?;
+        let match_var = capture_name(&part_cap, "match_var")?;
 
         // Look up the zx_bind_inst_t[] with the matching variable name.
         let instructions = composite_bind
             .match_insts
-            .get(&match_var.to_string())
+            .get(&match_var)
             .ok_or("Undefined zx_bind_inst_t[] value in device_fragment_part_t")?;
-        fragment_parts.insert(part_var.to_string(), instructions.to_string());
+        fragment_parts.insert(part_var, instructions.to_string());
     }
 
     // Get device_fragment_t.
@@ -188,10 +189,12 @@ pub fn process_source_file(input: PathBuf) -> Result<CompositeDeviceData, &'stat
     let mut fragment_list_iter = fragment_list_regex.find_iter(&contents);
 
     // TODO(spqchan): Support more than one fragment list.
-    let mut cap_iter = fragment_regex.captures_iter(fragment_list_iter.next().unwrap().as_str());
+    let mut cap_iter = fragment_regex.captures_iter(
+        fragment_list_iter.next().ok_or("Unable to parse device_fragment_t")?.as_str(),
+    );
     while let Some(fragment_cap) = cap_iter.next() {
-        let node_name = fragment_cap.name("node").unwrap().as_str().trim();
-        let part_var = fragment_cap.name("part_var").unwrap().as_str().trim();
+        let node_name = capture_name(&fragment_cap, "node")?;
+        let part_var = capture_name(&fragment_cap, "part_var")?;
 
         // Push the instructions from the matching device_fragment_part_t.
         let instructions = fragment_parts

@@ -12,6 +12,7 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
 
     sources = [
+      "src/common.rs",
       "src/composite_bind.rs",
       "src/composite_device_desc.rs",
       "src/library.rs",

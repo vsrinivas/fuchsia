@@ -10,12 +10,15 @@ pub enum Library {
     Amlogic,
     Bluetooth,
     Clock,
+    Dsi,
     Gpio,
     I2c,
     Pci,
     Platform,
     Pwm,
     Serial,
+    Sysmem,
+    Tee,
     Test,
     Usb,
     Wlan,
@@ -27,6 +30,7 @@ impl Library {
             Library::Acpi => "fuchsia.acpi",
             Library::Amlogic => "fuchsia.amlogic.platform",
             Library::Bluetooth => "fuchsia.bluetooth",
+            Library::Dsi => "fuchsia.dsi",
             Library::I2c => "fuchsia.i2c",
             Library::Clock => "fuchsia.clock",
             Library::Gpio => "fuchsia.gpio",
@@ -34,6 +38,8 @@ impl Library {
             Library::Platform => "fuchsia.platform",
             Library::Pwm => "fuchsia.pwm",
             Library::Serial => "fuchsia.serial",
+            Library::Sysmem => "fuchsia.sysmem",
+            Library::Tee => "fuchsia.tee",
             Library::Test => "fuchsia.test",
             Library::Usb => "fuchsia.usb",
             Library::Wlan => "fuchsia.wlan",
@@ -46,12 +52,15 @@ impl Library {
             Library::Amlogic => "//src/devices/bind/fuchsia.amlogic.platform",
             Library::Bluetooth => "//src/devices/bind/fuchsia.bluetooth",
             Library::Clock => "//src/devices/bind/fuchsia.clock",
+            Library::Dsi => "//src/devices/bind/fuchsia.dsi",
             Library::Gpio => "//src/devices/bind/fuchsia.gpio",
             Library::I2c => "//src/devices/bind/fuchsia.i2c",
             Library::Pci => "//src/devices/bind/fuchsia.pci",
             Library::Platform => "//src/devices/bind/fuchsia.platform",
             Library::Pwm => "//src/devices/bind/fuchsia.pwm",
             Library::Serial => "//src/devices/bind/fuchsia.serial",
+            Library::Sysmem => "//src/devices/bind/fuchsia.sysmem",
+            Library::Tee => "//src/devices/bind/fuchsia.tee",
             Library::Test => "//src/devices/bind/fuchsia.test",
             Library::Usb => "//src/devices/bind/fuchsia.usb",
             Library::Wlan => "//src/devices/bind/fuchsia.wlan",
@@ -228,6 +237,22 @@ pub fn rename_and_add<'a>(libraries: &mut HashSet<Library>, original: &'a str) -
         "BIND_I2C_ADDRESS" => {
             libraries.insert(Library::I2c);
             "fuchsia.BIND_I2C_ADDRESS"
+        }
+        "ZX_PROTOCOL_I2C" => {
+            libraries.insert(Library::I2c);
+            "fuchsia.i2c.BIND_PROTOCOL.DEVICE"
+        }
+        "ZX_PROTOCOL_DSI_IMPL" => {
+            libraries.insert(Library::Dsi);
+            "fuchsia.dsi.BIND_PROTOCOL.IMPL"
+        }
+        "ZX_PROTOCOL_SYSMEM" => {
+            libraries.insert(Library::Sysmem);
+            "fuchsia.sysmem.BIND_PROTOCOL.DEVICE"
+        }
+        "ZX_PROTOCOL_TEE" => {
+            libraries.insert(Library::Tee);
+            "fuchsia.tee.BIND_PROTOCOL.DEVICE"
         }
 
         "BIND_CLOCK_ID" => "fuchsia.BIND_CLOCK_ID",
