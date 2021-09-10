@@ -6,7 +6,7 @@ use crate::dev_control_handler;
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::types::{Farads, Hertz, Volts, Watts};
+use crate::types::{Farads, Hertz, PState, Volts, Watts};
 use crate::utils::connect_to_driver;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
@@ -39,13 +39,6 @@ use std::rc::Rc;
 /// FIDL dependencies:
 ///     - fuchsia.hardware.cpu.ctrl.Device: the node uses this protocol to communicate with the
 ///       CpuCtrl interface of the CPU device specified in the CpuControlHandler constructor
-
-/// Describes a processor performance state.
-#[derive(Clone, Debug, Copy)]
-pub struct PState {
-    pub frequency: Hertz,
-    pub voltage: Volts,
-}
 
 /// Describes the parameters of the CPU domain.
 pub struct CpuControlParams {

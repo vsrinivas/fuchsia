@@ -86,6 +86,7 @@ rustc_binary("bin") {
   sources = [
     "src/activity_handler.rs",
     "src/cpu_control_handler.rs",
+    "src/cpu_device_handler.rs",
     "src/cpu_stats_handler.rs",
     "src/crash_report_handler.rs",
     "src/dev_control_handler.rs",

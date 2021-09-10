@@ -66,7 +66,6 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
         Self::new_with_driver_path(data.config.driver_path)
     }
 
-    #[cfg(test)]
     pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
         self.inspect_root = Some(root);
         self
@@ -240,7 +239,7 @@ pub mod tests {
     use inspect::assert_data_tree;
     use std::cell::Cell;
 
-    fn setup_fake_driver(
+    pub fn setup_fake_driver(
         get_performance_state: impl Fn() -> u32 + 'static,
         mut set_performance_state: impl FnMut(u32) + 'static,
     ) -> fdev::ControllerProxy {
@@ -259,7 +258,8 @@ pub mod tests {
                         set_performance_state(requested_state as u32);
                         let _ = responder.send(zx::Status::OK.into_raw(), requested_state);
                     }
-                    _ => assert!(false),
+                    Some(other) => panic!("Unexpected request: {:?}", other),
+                    None => return, // Client connection closed
                 }
             }
         })

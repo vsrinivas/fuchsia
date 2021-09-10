@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::shutdown_request::ShutdownRequest;
-use crate::types::{Celsius, Nanoseconds, ThermalLoad, Watts};
+use crate::types::{Celsius, Nanoseconds, PState, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -21,6 +21,9 @@ pub enum Message {
     /// time since the previous GetCpuLoads call. The returned vector will have NUM_CPUS elements,
     /// where NUM_CPUS is the value returned by the GetNumCpus message.
     GetCpuLoads,
+
+    /// Get all performance states for the handler's CPU domain
+    GetCpuPerformanceStates,
 
     /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
     /// Arg: the max number of watts that the component should be allowed to consume
@@ -85,6 +88,9 @@ pub enum MessageReturn {
     /// 1.0]. The returned vector will have NUM_CPUS elements, where NUM_CPUS is the value returned
     /// by the GetNumCpus message.
     GetCpuLoads(Vec<f32>),
+
+    /// Arg: all performance states for the CPU domain seviced by the message handler.
+    GetCpuPerformanceStates(Vec<PState>),
 
     /// Arg: the max number of watts that the component will use. This number should typically be at
     /// or below the number that was specified in the Message, but there may be cases where it

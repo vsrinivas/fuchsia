@@ -5,12 +5,11 @@
 use crate::test::mock_node::create_dummy_node;
 use crate::thermal_policy::tests::get_sample_interval;
 use crate::thermal_policy::*;
-use crate::types::{Celsius, Farads, Hertz, Nanoseconds, Seconds, Volts, Watts};
+use crate::types::{Celsius, Farads, Hertz, Nanoseconds, PState, Seconds, Volts, Watts};
 use crate::{
     cpu_control_handler, cpu_stats_handler, dev_control_handler, system_shutdown_handler,
     temperature_handler, thermal_limiter,
 };
-use cpu_control_handler::PState;
 use fuchsia_async as fasync;
 use futures::{
     future::LocalBoxFuture,

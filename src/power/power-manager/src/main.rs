@@ -14,6 +14,7 @@ mod utils;
 // nodes
 mod activity_handler;
 mod cpu_control_handler;
+mod cpu_device_handler;
 mod cpu_stats_handler;
 mod crash_report_handler;
 mod dev_control_handler;

@@ -115,6 +115,35 @@
       {
         "properties": {
           "type": {
+            "pattern": "CpuDeviceHandler"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "driver_path": {
+                "type": "string"
+              }
+            },
+          "additionalProperties": false,
+            "required": [
+              "driver_path"
+            ]
+
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "CpuStatsHandler"
           },
           "name": {

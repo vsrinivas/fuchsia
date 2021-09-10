@@ -158,3 +158,10 @@ impl ops::Div<Hertz> for f64 {
         Seconds(self / rhs.0)
     }
 }
+
+/// Describes a processor performance state.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PState {
+    pub frequency: Hertz,
+    pub voltage: Volts,
+}
