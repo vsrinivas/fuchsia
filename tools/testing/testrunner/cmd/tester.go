@@ -522,104 +522,110 @@ type parseOutKernelReader struct {
 	// unprocessed stores the last characters read from a Read() but not returned
 	// by it. This could happen if we read more than necessary to try to complete
 	// a possible kernel log and cannot return all of the bytes. This will be
-	// prepended to the next Read() block.
-	unprocessed string
+	// read in the next call to Read().
+	unprocessed []byte
 	// kernelLineStart stores the last characters read from a Read() block if it
 	// ended with a truncated line and possibly contains a kernel log. This will
 	// be prepended to the next Read() block.
-	kernelLineStart string
+	kernelLineStart []byte
 	reachedEOF      bool
 }
 
 func (r *parseOutKernelReader) Read(buf []byte) (int, error) {
-	var err error
+	// If the underlying reader already reached EOF, that means kernelLineStart is
+	// not the start of a kernel log, so append it to unprocessed to be read normally.
 	if r.reachedEOF {
-		r.unprocessed += r.kernelLineStart
-		r.kernelLineStart = ""
-		bytesToRead := int(math.Min(float64(len(buf)), float64(len(r.unprocessed))))
-		copy(buf, []byte(r.unprocessed[:bytesToRead]))
-		r.unprocessed = r.unprocessed[bytesToRead:]
-		if bytesToRead > 0 {
-			err = nil
-		} else {
-			err = io.EOF
-		}
-		return bytesToRead, err
+		r.unprocessed = append(r.unprocessed, r.kernelLineStart...)
+		r.kernelLineStart = []byte{}
 	}
-	bytesRead := 0
-	for bytesRead < len(buf) {
-		if r.ctx.Err() != nil {
-			err = r.ctx.Err()
-			break
-		}
-		bytesLeftToRead := len(buf) - bytesRead
-		b := make([]byte, bytesLeftToRead)
-		var n int
-		ch := make(chan error)
-		// Call the underlying reader's Read() in a goroutine so that we can
-		// break out if the context is canceled.
-		go func() {
-			n, err = r.reader.Read(b)
-			ch <- err
-		}()
-		select {
-		case err = <-ch:
-		case <-r.ctx.Done():
-			err = r.ctx.Err()
-		}
+	// If there are any unprocessed bytes, read them first instead of calling the
+	// underlying reader's Read() again.
+	if len(r.unprocessed) > 0 {
+		bytesToRead := int(math.Min(float64(len(buf)), float64(len(r.unprocessed))))
+		copy(buf, r.unprocessed[:bytesToRead])
+		r.unprocessed = r.unprocessed[bytesToRead:]
+		return bytesToRead, nil
+	} else if r.reachedEOF {
+		// r.unprocessed was empty so we can just return EOF.
+		return 0, io.EOF
+	}
 
-		if err != nil && err != io.EOF {
-			break
+	if r.ctx.Err() != nil {
+		return 0, r.ctx.Err()
+	}
+
+	b := make([]byte, len(buf))
+	type readResult struct {
+		n   int
+		err error
+	}
+	ch := make(chan readResult, 1)
+	// Call the underlying reader's Read() in a goroutine so that we can
+	// break out if the context is canceled.
+	go func() {
+		readN, readErr := r.reader.Read(b)
+		ch <- readResult{readN, readErr}
+	}()
+	var n int
+	var err error
+	select {
+	case res := <-ch:
+		n = res.n
+		err = res.err
+		break
+	case <-r.ctx.Done():
+		err = r.ctx.Err()
+	}
+
+	if err != nil && err != io.EOF {
+		return n, err
+	}
+	// readBlock contains everything stored in kernelLineStart (bytes last read
+	// from the underlying reader in the previous Read() call that possibly contain
+	// a truncated kernel log that has not been processed by this reader yet) along
+	// with the new bytes just read. Because readBlock contains unprocessed bytes,
+	// its length will likely be greater than len(buf).
+	// However, it is necessary to read more bytes in the case that the unprocessed
+	// bytes contain a long truncated kernel log and we need to keep reading more
+	// bytes until we get to the end of the line so we can discard it.
+	readBlock := append(r.kernelLineStart, b[:n]...)
+	r.kernelLineStart = []byte{}
+	lines := bytes.Split(readBlock, []byte("\n"))
+	var bytesRead, bytesLeftToRead int
+	for i, line := range lines {
+		bytesLeftToRead = len(buf) - bytesRead
+		isTruncated := i == len(lines)-1
+		line = r.lineWithoutKernelLog(line, isTruncated)
+		if bytesLeftToRead == 0 {
+			// If there are no more bytes left to read, store the rest of the lines
+			// into r.unprocessed to be read at the next call to Read().
+			r.unprocessed = append(r.unprocessed, line...)
+			continue
 		}
-		// readBlock contains everything stored in unprocessed and kernelLineStart
-		// (bytes read from the underlying reader but not processed or read by this
-		// reader yet) along with the new bytes just read. Because readBlock contains
-		// unprocessed bytes, its length will likely be greater than bytesLeftToRead.
-		// However, it is necessary to read more bytes in the case that the unprocessed
-		// bytes contain a long truncated kernel log and we need to keep reading more
-		// bytes until we get to the end of the line so we can discard it.
-		readBlock := r.unprocessed + r.kernelLineStart + string(b[:n])
-		r.unprocessed = ""
-		r.kernelLineStart = ""
-		lines := strings.Split(readBlock, "\n")
-		for i, line := range lines {
-			bytesLeftToRead = len(buf) - bytesRead
-			isTruncated := i == len(lines)-1
-			line = r.lineWithoutKernelLog(line, isTruncated)
-			if bytesLeftToRead == 0 {
-				// If there are no more bytes left to read, store the rest of the lines
-				// into r.unprocessed to be read at the next call to Read().
-				r.unprocessed += line
-				continue
-			}
-			if len(line) > bytesLeftToRead {
-				// If the line is longer than bytesLeftToRead, read as much as possible
-				// and store the rest in r.unprocessed.
-				copy(buf[bytesRead:], []byte(line[:bytesLeftToRead]))
-				r.unprocessed = line[bytesLeftToRead:]
-				bytesRead += bytesLeftToRead
-			} else {
-				copy(buf[bytesRead:bytesRead+len(line)], []byte(line))
-				bytesRead += len(line)
-			}
+		if len(line) > bytesLeftToRead {
+			// If the line is longer than bytesLeftToRead, read as much as possible
+			// and store the rest in r.unprocessed.
+			copy(buf[bytesRead:], line[:bytesLeftToRead])
+			r.unprocessed = line[bytesLeftToRead:]
+			bytesRead += bytesLeftToRead
+		} else {
+			copy(buf[bytesRead:bytesRead+len(line)], line)
+			bytesRead += len(line)
 		}
-		if n < len(b) {
-			if err == io.EOF {
-				r.reachedEOF = true
-			}
-			if len(r.unprocessed+r.kernelLineStart) > 0 {
-				err = nil
-			}
-			break
-		}
+	}
+	if err == io.EOF {
+		r.reachedEOF = true
+	}
+	if len(r.unprocessed)+len(r.kernelLineStart) > 0 {
+		err = nil
 	}
 	return bytesRead, err
 }
 
-func (r *parseOutKernelReader) lineWithoutKernelLog(line string, isTruncated bool) string {
+func (r *parseOutKernelReader) lineWithoutKernelLog(line []byte, isTruncated bool) []byte {
 	containsKernelLog := false
 	re := regexp.MustCompile(`\[[0-9]+\.?[0-9]+\]`)
-	match := re.FindStringIndex(line)
+	match := re.FindIndex(line)
 	if match != nil {
 		if isTruncated {
 			r.kernelLineStart = line[match[0]:]
@@ -632,14 +638,14 @@ func (r *parseOutKernelReader) lineWithoutKernelLog(line string, isTruncated boo
 		// Match the beginning of a possible kernel log timestamp.
 		// i.e. `[`, `[123` `[123.4`
 		re = regexp.MustCompile(`\[[0-9]*\.?[0-9]*$`)
-		match = re.FindStringIndex(line)
+		match = re.FindIndex(line)
 		if match != nil {
 			r.kernelLineStart = line[match[0]:]
 			line = line[:match[0]]
 		}
 	}
 	if !containsKernelLog && !isTruncated {
-		line = line + "\n"
+		line = append(line, '\n')
 	}
 	return line
 }

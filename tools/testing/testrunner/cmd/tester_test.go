@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -600,23 +601,14 @@ func longPotentialKernelLog(numChars int) string {
 }
 
 type hangForeverReader struct {
-	mu         sync.Mutex
-	readCalled bool
+	readCalled chan struct{}
+	readChan   chan struct{}
 }
 
 func (r *hangForeverReader) Read(buf []byte) (int, error) {
-	r.mu.Lock()
-	r.readCalled = true
-	r.mu.Unlock()
-	for {
-	}
+	r.readCalled <- struct{}{}
+	<-r.readChan
 	return 0, nil
-}
-
-func (r *hangForeverReader) getReadCalled() bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.readCalled
 }
 
 func TestParseOutKernelReader(t *testing.T) {
@@ -662,7 +654,7 @@ func TestParseOutKernelReader(t *testing.T) {
 	}
 	t.Run("canceled context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		reader := &hangForeverReader{}
+		reader := &hangForeverReader{readCalled: make(chan struct{}), readChan: make(chan struct{})}
 		r := &parseOutKernelReader{
 			ctx:    ctx,
 			reader: reader,
@@ -673,12 +665,12 @@ func TestParseOutKernelReader(t *testing.T) {
 			errs <- err
 		}()
 		// Wait for Read() to be called before canceling the context.
-		for !reader.getReadCalled() {
-		}
+		<-reader.readCalled
 		cancel()
-		if err := <-errs; err == nil {
-			t.Fatal("expected canceled context, got nil error")
+		if err := <-errs; !errors.Is(err, ctx.Err()) {
+			t.Errorf("expected: %s, got: %s", ctx.Err(), err)
 		}
+		close(reader.readChan)
 	})
 }
 
