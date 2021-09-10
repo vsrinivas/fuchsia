@@ -211,6 +211,9 @@ where
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
     strace!(task, "lookup_parent_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
+    if path.is_empty() {
+        return error!(ENOENT);
+    }
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     callback(parent, basename)
 }

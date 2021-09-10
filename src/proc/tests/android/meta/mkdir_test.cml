@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/mkdir_test",
+        args: [ "--gunit_filter=-*.FailsOnDirWithoutWritePerms:*.DirAlreadyExists" ],
+    },
+}

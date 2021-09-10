@@ -108,6 +108,7 @@ gvisor_tests = [
   "kill_test",
   "link_test",
   "lseek_test",
+  "mkdir_test",
   "mmap_test",
   "munmap_test",
   "open_create_test",
