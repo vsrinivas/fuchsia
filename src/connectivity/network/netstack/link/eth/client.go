@@ -214,6 +214,8 @@ func (c *Client) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ 
 	return c.write(pkts)
 }
 
+func (*Client) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcher = dispatcher
 

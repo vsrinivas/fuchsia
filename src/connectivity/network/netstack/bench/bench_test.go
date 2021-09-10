@@ -41,10 +41,11 @@ func (*nullEndpoint) WritePacket(stack.RouteInfo, tcpip.NetworkProtocolNumber, *
 func (*nullEndpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	return pkts.Len(), nil
 }
-func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher) {}
-func (*nullEndpoint) IsAttached() bool                          { return false }
-func (*nullEndpoint) Wait()                                     {}
-func (*nullEndpoint) ARPHardwareType() header.ARPHardwareType   { return header.ARPHardwareNone }
+func (*nullEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher)      {}
+func (*nullEndpoint) IsAttached() bool                               { return false }
+func (*nullEndpoint) Wait()                                          {}
+func (*nullEndpoint) ARPHardwareType() header.ARPHardwareType        { return header.ARPHardwareNone }
 func (*nullEndpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 

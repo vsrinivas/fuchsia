@@ -32,8 +32,8 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
-	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
 
 // An infallible version of fuchsia.inspect.Inspect with FIDL details omitted.
@@ -929,7 +929,7 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		state = tcp.EndpointState(impl.state).String()
 	case header.UDPProtocolNumber:
 		transString = "UDP"
-		state = udp.EndpointState(impl.state).String()
+		state = transport.DatagramEndpointState(impl.state).String()
 	case header.ICMPv4ProtocolNumber:
 		transString = "ICMPv4"
 	case header.ICMPv6ProtocolNumber:

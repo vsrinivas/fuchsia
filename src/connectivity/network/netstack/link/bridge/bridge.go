@@ -180,6 +180,8 @@ func (ep *Endpoint) WritePackets(r stack.RouteInfo, pkts stack.PacketBufferList,
 	return n, nil
 }
 
+func (*Endpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 	ep.mu.Lock()
 	defer ep.mu.Unlock()

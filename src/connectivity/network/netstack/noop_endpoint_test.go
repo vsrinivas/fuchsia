@@ -52,6 +52,8 @@ func (*noopEndpoint) WritePackets(stack.RouteInfo, stack.PacketBufferList, tcpip
 	return 0, nil
 }
 
+func (*noopEndpoint) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+
 func (ep *noopEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
 	if dispatcher != nil {
 		ep.attached = make(chan struct{})
