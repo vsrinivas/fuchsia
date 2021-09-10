@@ -7,17 +7,21 @@ use {
         Destroyed, DirectoryReady, Event, EventMode, EventSource, EventSubscription, Running,
         Started,
     },
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_syslog as syslog,
     log::*,
+    matches::assert_matches,
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init_with_tags(&[]).unwrap();
+    let event_source = EventSource::new().unwrap();
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .await
+        .unwrap();
 
     // Make 4 components: 1 directory ready child and 3 stub children
     let mut instances = vec![];
@@ -30,10 +34,22 @@ async fn main() {
         ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await.unwrap();
     let _ = scoped_instance.connect_to_binder().unwrap();
     instances.push(scoped_instance);
+    assert_matches!(
+        event_stream.next().await.unwrap(),
+        fsys::Event { header: Some(fsys::EventHeader { event_type: Some(Started::TYPE), .. }), .. }
+    );
+
     for _ in 0..3 {
         let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await.unwrap();
         let _ = scoped_instance.connect_to_binder().unwrap();
         instances.push(scoped_instance);
+        assert_matches!(
+            event_stream.next().await.unwrap(),
+            fsys::Event {
+                header: Some(fsys::EventHeader { event_type: Some(Started::TYPE), .. }),
+                ..
+            }
+        );
     }
 
     // Destroy one stub child, this shouldn't appear anywhere in the events.
@@ -46,7 +62,7 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Running::NAME, Destroyed::NAME, DirectoryReady::NAME],
+            vec![Running::NAME, Destroyed::NAME, DirectoryReady::NAME],
             EventMode::Async,
         )])
         .await

@@ -272,14 +272,14 @@ rustc_binary("synthesis_reporter_bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:echofactory-rustc",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:regex",
   ]
 
