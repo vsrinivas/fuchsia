@@ -145,9 +145,6 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ t
 	t.pkt = pkt
 }
 
-func (*testNetworkDispatcher) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
-
 const channelEndpointHeaderLen = 1
 
 var _ stack.LinkEndpoint = (*channelEndpoint)(nil)

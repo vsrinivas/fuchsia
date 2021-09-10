@@ -54,9 +54,6 @@ func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.Li
 	}
 }
 
-func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
-
 func fifoReadsTransformer(in *fifo.FifoStats) []uint64 {
 	reads := make([]uint64, in.Size())
 	for i := in.Size(); i > 0; i-- {

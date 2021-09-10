@@ -55,9 +55,6 @@ func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.Li
 	}
 }
 
-func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
-}
-
 var _ SessionConfigFactory = (*MockSessionConfigFactory)(nil)
 
 type MockSessionConfigFactory struct {
