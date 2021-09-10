@@ -46,7 +46,7 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
+  const std::regex pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
   std::smatch sm;
   std::string error_msg(library.errors()[0]->msg);
   ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
@@ -70,7 +70,7 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
-  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
+  const std::regex pattern(R"REGEX(@selector\("(ClashOne|ClashTwo)_"\))REGEX");
   std::smatch sm;
   std::string error_msg(library.errors()[0]->msg);
   ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",

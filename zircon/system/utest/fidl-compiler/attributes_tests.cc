@@ -139,10 +139,8 @@ type ExampleUnion = union {
   auto example_table = library.LookupTable("ExampleTable");
   ASSERT_NOT_NULL(example_table);
   EXPECT_TRUE(example_table->HasAttribute("on_table"));
-  EXPECT_TRUE(
-      example_table->members.front().attributes->HasAttribute("on_table_member"));
-  EXPECT_TRUE(
-      example_table->members.back().attributes->HasAttribute("on_reserved_member"));
+  EXPECT_TRUE(example_table->members.front().attributes->HasAttribute("on_table_member"));
+  EXPECT_TRUE(example_table->members.back().attributes->HasAttribute("on_reserved_member"));
 
   auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
   ASSERT_NOT_NULL(example_type_alias);
@@ -151,10 +149,8 @@ type ExampleUnion = union {
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NOT_NULL(example_union);
   EXPECT_TRUE(example_union->HasAttribute("on_union"));
-  EXPECT_TRUE(
-      example_union->members.front().attributes->HasAttribute("on_union_member"));
-  EXPECT_TRUE(
-      example_union->members.back().attributes->HasAttribute("on_reserved_member"));
+  EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("on_union_member"));
+  EXPECT_TRUE(example_union->members.back().attributes->HasAttribute("on_reserved_member"));
 }
 
 TEST(AttributesTests, GoodOfficialAttributes) {
@@ -544,7 +540,7 @@ type U = strict union {
 };
   )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
+    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@unknown");
   }
 
   {
@@ -556,7 +552,7 @@ type E = strict enum : uint32 {
 };
   )FIDL");
     ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Unknown");
+    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@unknown");
   }
 }
 

@@ -164,7 +164,7 @@ constexpr ErrorDef<std::string, std::string, std::string, std::string>
         "flexible enums must not have a member with a value of {}, which is "
         "reserved for the unknown value. either: remove the member with the {} "
         "value, change the member with the {} value to something other than {}, or "
-        "explicitly specify the unknown value with the [Unknown] attribute. see "
+        "explicitly specify the unknown value with the @unknown attribute. see "
         "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
         "language#unions> for more info.");
 // TODO(65978): Investigate folding these two errors into InvalidWrappedType
@@ -174,9 +174,9 @@ constexpr ErrorDef<const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitiv
 constexpr ErrorDef<const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
     "enums may only be of integral primitive type, found {}");
 constexpr ErrorDef ErrUnknownAttributeOnInvalidType(
-    "[Unknown] attribute can be only be used on flexible or [Transitional] types.");
+    "the @unknown attribute can be only be used on flexible or @transitional types.");
 constexpr ErrorDef ErrUnknownAttributeOnMultipleMembers(
-    "[Unknown] attribute can be only applied to one member.");
+    "the @unknown attribute can be only applied to one member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
 constexpr ErrorDef ErrNamedParameterListTypesNotYetSupported(
     "using named types in this position is not yet allowed, use `struct { ... }` instead "
@@ -198,7 +198,7 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
 constexpr ErrorDef ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
 constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
-    "Consider using attribute [Selector=\"{}\"] to change the name used to "
+    "Consider using attribute @selector(\"{}\") to change the name used to "
     "calculate the ordinal.");
 constexpr ErrorDef ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
