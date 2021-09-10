@@ -78,14 +78,12 @@ using MaybeAttributeArg = std::optional<std::reference_wrapper<const AttributeAr
 
 struct Attribute final {
   // A constructor for synthetic attributes like "Result."
-  Attribute(std::string name, fidl::utils::Syntax syntax) : name(std::move(name)), syntax(syntax) {}
+  explicit Attribute(std::string name) : name(std::move(name)) {}
 
-  Attribute(std::string name, fidl::utils::Syntax syntax, SourceSpan span)
-      : name(std::move(name)), syntax(syntax), span_(span) {}
+  Attribute(std::string name, SourceSpan span) : name(std::move(name)), span_(span) {}
 
-  Attribute(std::string name, fidl::utils::Syntax syntax, SourceSpan span,
-            std::vector<std::unique_ptr<AttributeArg>> args)
-      : name(std::move(name)), syntax(syntax), args(std::move(args)), span_(span) {}
+  Attribute(std::string name, SourceSpan span, std::vector<std::unique_ptr<AttributeArg>> args)
+      : name(std::move(name)), args(std::move(args)), span_(span) {}
 
   bool HasArg(std::string_view arg_name) const;
   MaybeAttributeArg GetArg(std::string_view arg_name) const;
@@ -97,7 +95,6 @@ struct Attribute final {
   MaybeAttributeArg GetStandaloneAnonymousArg() const;
 
   const std::string name;
-  const fidl::utils::Syntax syntax;
   std::vector<std::unique_ptr<AttributeArg>> args;
   SourceSpan span_;
 
@@ -568,11 +565,6 @@ struct Struct final : public TypeDecl {
 
   // This is true iff this struct is a method request/response in a transaction header.
   const bool is_request_or_response;
-  // TODO(fxbug.dev/70247): To avoid re-deriving resourceness of request/response
-  // structs, we store the resourceness in a map using the raw::ParameterList's
-  // SourceSpan as a key so that we may look it up during conversion
-  std::optional<SourceSpan> from_parameter_list_span;
-
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
@@ -904,10 +896,6 @@ class TypeTemplate {
   TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
       : typespace_(typespace), name_(std::move(name)), reporter_(reporter) {}
 
-  // TODO(fxbug.dev/70247): The copy constructor can be deleted, it only exists
-  // to allow adding a type template to multiple typespace maps (we add one
-  // to the old typespace, then make a copy to add to the new typespace).
-  TypeTemplate(const TypeTemplate& type_template) = default;
   TypeTemplate(TypeTemplate&& type_template) = default;
 
   virtual ~TypeTemplate() = default;
@@ -1117,7 +1105,6 @@ class Libraries {
 
   const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
                                                  const std::unique_ptr<Attribute>& attribute,
-                                                 fidl::utils::Syntax syntax,
                                                  bool warn_on_typo = false) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
@@ -1253,7 +1240,7 @@ class Library : Attributable {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
-  ConsumeStep StartConsumeStep(fidl::utils::Syntax syntax);
+  ConsumeStep StartConsumeStep();
   CompileStep StartCompileStep();
   VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
@@ -1386,13 +1373,6 @@ class Library : Attributable {
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
 
-  // TODO(fxbug.dev/70247): this method has been created solely for the benefit
-  //   of fidlconv.  Once the conversion using that tool has been completed and
-  //   and the tool has been removed, this method should be removed as well.
-  // Looks up a dependent library by |filename| and |name|.
-  bool LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
-                        Library** out_library) const;
-
   template <typename NumericType>
   bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
 
@@ -1479,7 +1459,7 @@ class StepBase {
 
 class ConsumeStep : public StepBase {
  public:
-  ConsumeStep(Library* library, fidl::utils::Syntax syntax) : StepBase(library) {}
+  explicit ConsumeStep(Library* library) : StepBase(library) {}
 
   void ForAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
     library_->ConsumeTypeAlias(std::move(alias_declaration));

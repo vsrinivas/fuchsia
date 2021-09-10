@@ -233,41 +233,6 @@ TEST(UtilsTests, LowerNoSeparatorCase) {
   ASSERT_CASE(lower_no_separator, "kURLLoader", "urlloader");
 }
 
-// TODO(fxbug.dev/70247): Delete this test
-TEST(UtilsTests, HasDeprecatedSyntaxToken) {
-  const std::vector<std::string> success_cases = {
-      "deprecated_syntax;",
-      "\tdeprecated_syntax;",
-      "  deprecated_syntax;",
-      "  deprecated_syntax;  ",
-      "deprecated_syntax;  ",
-      "\ndeprecated_syntax;",
-      "\ndeprecated_syntax;\n",
-      "deprecated_syntax;\n",
-      "deprecated_syntax;\nlibrary foo;",
-      "//foo\ndeprecated_syntax;\nlibrary foo;",
-      "//foo\n\n\ndeprecated_syntax;\nlibrary foo;",
-  };
-
-  for (const auto& success_case : success_cases) {
-    auto source_file = fidl::SourceFile("example.fidl", success_case + "\n");
-    EXPECT_TRUE(HasDeprecatedSyntaxToken(source_file));
-  }
-  const std::vector<std::string> failure_cases = {
-      "//deprecated_syntax;",
-      "library foo;\n//deprecated_syntax;",
-      "library foo;//deprecated_syntax;",
-      "library foo;deprecated_syntax;",
-      "library foo;\ndeprecated_syntax;",
-      "library foo;",
-  };
-
-  for (const auto& failure_case : failure_cases) {
-    auto source_file = fidl::SourceFile("example.fidl", failure_case + "\n");
-    EXPECT_FALSE(HasDeprecatedSyntaxToken(source_file));
-  }
-}
-
 TEST(UtilsTests, WhitespaceAndComments) {
   ASSERT_TRUE(IsWhitespace(' '));
   ASSERT_TRUE(IsWhitespace('\t'));

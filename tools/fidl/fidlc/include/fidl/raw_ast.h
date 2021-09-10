@@ -641,10 +641,9 @@ class Layout final : public SourceElement {
     kUnion,
   };
 
-  Layout(SourceElement const& element,
-         // TODO(fxbug.dev/65978): Support layout attributes.
-         Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::unique_ptr<Modifiers> modifiers, std::unique_ptr<TypeConstructor> subtype_ctor)
+  Layout(SourceElement const& element, Kind kind,
+         std::vector<std::unique_ptr<LayoutMember>> members, std::unique_ptr<Modifiers> modifiers,
+         std::unique_ptr<TypeConstructor> subtype_ctor)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
@@ -776,10 +775,7 @@ class TypeConstraints final : public SourceElement {
 class TypeDecl final : public SourceElement {
  public:
   TypeDecl(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-           std::unique_ptr<Identifier> identifier,
-           // TODO(fxbug.dev/65978): We should also allow type decl over type
-           // constructors, i.e. FTP-052 type declaration.
-           std::unique_ptr<TypeConstructor> type_ctor)
+           std::unique_ptr<Identifier> identifier, std::unique_ptr<TypeConstructor> type_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
@@ -802,8 +798,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<ResourceDeclaration>> resource_declaration_list,
        std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
        std::vector<std::unique_ptr<TypeDecl>> type_decls,
-       std::vector<std::unique_ptr<Token>> tokens,
-       std::vector<std::unique_ptr<Token>> comment_tokens_list, fidl::utils::Syntax syntax)
+       std::vector<std::unique_ptr<Token>> tokens)
       : SourceElement(element),
         library_decl(std::move(library_decl)),
         alias_list(std::move(alias_list)),
@@ -814,9 +809,7 @@ class File final : public SourceElement {
         service_declaration_list(std::move(service_declaration_list)),
         type_decls(std::move(type_decls)),
         tokens(std::move(tokens)),
-        comment_tokens_list(std::move(comment_tokens_list)),
-        end_(end),
-        syntax(syntax) {}
+        end_(end) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -831,13 +824,7 @@ class File final : public SourceElement {
 
   // An ordered list of all tokens (including comments) in the source file.
   std::vector<std::unique_ptr<Token>> tokens;
-
-  // TODO(fxbug.dev/70247): this member has been created solely for the benefit
-  //   of fidlconv.  Once the conversion using that tool has been completed and
-  //   tool has been removed, this member should be removed as well.
-  std::vector<std::unique_ptr<Token>> comment_tokens_list;
   Token end_;
-  fidl::utils::Syntax syntax;
 };
 
 }  // namespace raw

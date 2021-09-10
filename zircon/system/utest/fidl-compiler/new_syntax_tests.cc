@@ -454,9 +454,6 @@ type TypeDecl = struct {
 }
 
 TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
-  // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
-  //  been commented out until their respective features (client/server_end)
-  //  have been added to the compiler.
   TestLibrary library(R"FIDL(
 library example;
 

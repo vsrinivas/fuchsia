@@ -93,11 +93,6 @@ class LintTest {
     return *this;
   }
 
-  LintTest& source_syntax(fidl::utils::Syntax syntax) {
-    source_syntax_ = syntax;
-    return *this;
-  }
-
   LintTest& message(std::string message) {
     default_message_ = std::move(message);
     return *this;
@@ -340,7 +335,6 @@ class LintTest {
   bool exclude_by_default_ = false;
   Findings expected_findings_;
   TemplateString source_template_;
-  fidl::utils::Syntax source_syntax_ = fidl::utils::Syntax::kOld;
   Substitutions substitutions_;
 
   std::unique_ptr<TestLibrary> library_;
@@ -348,7 +342,7 @@ class LintTest {
 
 TEST(LintFindingsTests, ModifierOrder) {
   LintTest test;
-  test.check_id("modifier-order").source_syntax(utils::Syntax::kNew).source_template(R"FIDL(
+  test.check_id("modifier-order").source_template(R"FIDL(
 library fidl.a;
 
 type MyUnion = ${TEST} union {
@@ -427,9 +421,7 @@ protocol Foo {
 
   for (auto const& named_template : named_templates) {
     LintTest test;
-    test.check_id("explicit-flexible-modifier")
-        .source_syntax(utils::Syntax::kNew)
-        .source_template(named_template.second);
+    test.check_id("explicit-flexible-modifier").source_template(named_template.second);
 
     test.substitute("TEST", "flexible ");
     ASSERT_NO_FINDINGS(test);
@@ -840,7 +832,6 @@ type DeclName = struct {
   for (auto const& named_template : named_templates) {
     LintTest test;
     test.check_id("invalid-case-for-decl-member")
-        .source_syntax(utils::Syntax::kNew)
         .message(named_template.first + " must be named in lower_snake_case")
         .source_template(named_template.second);
 

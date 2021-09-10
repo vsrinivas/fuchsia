@@ -90,7 +90,7 @@ type TimeZone = struct {
   ASSERT_EQ(errors.size(), 6);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[2], fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERR(errors[2], fidl::ErrMissingOrdinalBeforeMember);
   // NOTE(fxbug.dev/72924): In the new syntax this is a parse error instead of
   // ErrExpectedDeclaration, which no longer applies in the new syntax.
   ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
@@ -246,7 +246,7 @@ type Table = table {
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
   // NOTE(fxbug.dev/72924): the difference here is just due to the type/member
   // reordering, not a behavior change
-  ASSERT_ERR(errors[2], fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERR(errors[2], fidl::ErrMissingOrdinalBeforeMember);
 }
 
 TEST(RecoverableParsingTests, BadRecoverToNextUnionMember) {

@@ -41,9 +41,7 @@ constexpr ErrorDef ErrAttributeArgsMustAllBeNamed(
     "attributes that take multiple arguments must name all of them explicitly");
 // end new_syntax
 
-// TODO(fxbug.dev/65978): This is a misnomer in the new syntax: the ordinal comes
-// before the member name, not the type.
-constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
+constexpr ErrorDef ErrMissingOrdinalBeforeMember("missing ordinal before member");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain '.'");
@@ -165,8 +163,6 @@ constexpr ErrorDef<std::string, std::string, std::string, std::string>
         "explicitly specify the unknown value with the @unknown attribute. see "
         "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
         "language#unions> for more info.");
-// TODO(65978): Investigate folding these two errors into InvalidWrappedType
-//  when removing old syntax.
 constexpr ErrorDef<const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr ErrorDef<const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(

@@ -87,8 +87,8 @@ type Foo = strict union {
 };
 
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType,
-                                      fidl::ErrMissingOrdinalBeforeType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember,
+                                      fidl::ErrMissingOrdinalBeforeMember);
 }
 
 TEST(UnionTests, GoodExplicitOrdinals) {
@@ -241,7 +241,7 @@ type Foo = strict union {
   // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
   // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
-                                      fidl::ErrMissingOrdinalBeforeType);
+                                      fidl::ErrMissingOrdinalBeforeMember);
 }
 
 TEST(UnionTests, BadMustBeDense) {

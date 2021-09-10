@@ -190,7 +190,7 @@ std::unique_ptr<raw::Ordinal64> Parser::ParseOrdinal64() {
   ASTScope scope(this);
 
   if (!MaybeConsumeToken(OfKind(Token::Kind::kNumericLiteral)))
-    return Fail(ErrMissingOrdinalBeforeType);
+    return Fail(ErrMissingOrdinalBeforeMember);
   if (!Ok())
     return Fail();
   auto data = scope.GetSourceElement().span().data();
@@ -1158,10 +1158,6 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   }
   std::unique_ptr<raw::Identifier> identifier = std::move(compound_identifier->components[0]);
 
-  // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
-  // remove token subkinds for struct, union, table, bits, and enum. Or
-  // maybe we want to have a 'recognize token subkind' on an identifier
-  // instead of doing string comparison directly.
   if (identifier->span().data() == "bits") {
     if (modifiers != nullptr)
       ValidateModifiers<types::Strictness>(modifiers, identifier->start_);
@@ -1562,10 +1558,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   std::vector<std::unique_ptr<raw::ServiceDeclaration>> service_declaration_list;
   std::vector<std::unique_ptr<raw::TypeDecl>> type_decls;
   auto parse_declaration = [&]() {
-    // TODO(fxbug.dev/70247): Once we're fully on the new syntax, we should refactor all of the
-    //  top-level "Parse..." methods to omit their externally defined ASTScope parameter.  This was
-    //  necessary when top-level definitions could begin with modifiers (ex: "strict struct S {...")
-    //  which is no longer possible in the new syntax.
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1652,8 +1644,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       scope.GetSourceElement(), end.value(), std::move(library_decl), std::move(alias_list),
       std::move(using_list), std::move(const_declaration_list),
       std::move(protocol_declaration_list), std::move(resource_declaration_list),
-      std::move(service_declaration_list), std::move(type_decls), std::move(tokens_),
-      std::move(comment_tokens_), fidl::utils::Syntax::kNew);
+      std::move(service_declaration_list), std::move(type_decls), std::move(tokens_));
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

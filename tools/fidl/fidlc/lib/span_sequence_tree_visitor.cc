@@ -927,11 +927,7 @@ void SpanSequenceTreeVisitor::OnResourceProperty(
   const auto builder = StatementBuilder<AtomicSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineIndented);
 
-  // TODO(fxbug.dev/70247): once the old syntax is removed, TreeVisitor::OnResourceProperty should
-  //  visit its children in the proper order ("types come second...").  For now, we do this
-  //  visitation manually instead.
-  OnIdentifier(element->identifier);
-  OnTypeConstructor(element->type_ctor);
+  TreeVisitor::OnResourceProperty(element);
   SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
@@ -976,11 +972,7 @@ void SpanSequenceTreeVisitor::OnServiceMember(const std::unique_ptr<raw::Service
   const auto builder = StatementBuilder<AtomicSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineIndented);
 
-  // TODO(fxbug.dev/70247): once the old syntax is removed, TreeVisitor::OnServiceMember will visit
-  //  its children in the proper order ("types come second...").  For now, we do this visitation
-  //  manually instead.
-  OnIdentifier(element->identifier);
-  OnTypeConstructor(element->type_ctor);
+  TreeVisitor::OnServiceMember(element);
   SetSpacesBetweenChildren(building_.top(), true);
   ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }

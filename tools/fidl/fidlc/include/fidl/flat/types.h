@@ -40,9 +40,9 @@ struct Type : public Object {
 
   const Name name;
   const Kind kind;
-  // TODO(fxbug.dev/70247): This is temporarily not-const so that we can modify
-  // any boxed structs' nullability to always be nullable, in order to share code
-  // paths between the old and new syntax.
+  // TODO(fxbug.dev/70186): This is temporarily not-const so that we can modify
+  // any boxed structs' nullability to always be nullable, in order use
+  // pre-existing "box <=> nullable struct" logic
   types::Nullability nullability;
 
   // Returns the nominal resourceness of the type per the FTP-057 definition.
@@ -307,6 +307,8 @@ struct TransportSideType final : public Type {
 
 struct BoxType final : public Type {
   BoxType(const Name& name, const Type* boxed_type)
+      // Note that all boxes are implicitly nullable, so the value of the nullability
+      // member here doesn't actually matter.
       : Type(name, Kind::kBox, types::Nullability::kNullable), boxed_type(boxed_type) {}
 
   const Type* boxed_type;

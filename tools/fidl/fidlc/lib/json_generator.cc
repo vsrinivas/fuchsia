@@ -18,8 +18,6 @@ void JSONGenerator::Generate(const flat::Decl* decl) { Generate(decl->name); }
 void JSONGenerator::Generate(SourceSpan value) { EmitString(value.data()); }
 
 void JSONGenerator::Generate(NameSpan value) {
-  if (omit_locations_)
-    return;
   GenerateObject([&]() {
     GenerateObjectMember("filename", value.filename, Position::kFirst);
     GenerateObjectMember("line", (uint32_t)value.position.line);
@@ -698,7 +696,7 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
 void JSONGenerator::Generate(const flat::TypeConstructor& value) {
   GenerateObject([&]() {
     const auto* type = value.type;
-    // TODO(fxbug.dev/70186, fxbug.dev/70247): We need to coerce client/server
+    // TODO(fxbug.dev/70186): We need to coerce client/server
     // ends into the same representation as P, request<P>; and box<S> into S?
     // For box, we just need to access the inner IdentifierType and the rest
     // mostly works (except for the correct value for nullability)

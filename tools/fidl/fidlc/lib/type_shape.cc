@@ -142,7 +142,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return DataSize(kHandleSize);
-          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // TODO(fxbug.dev/70186): this should be handled as a box and nullable structs should
           // never be visited
           case flat::Decl::Kind::kStruct:
             return DataSize(8);
@@ -267,7 +267,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return DataSize(kHandleSize);
-          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // TODO(fxbug.dev/70186): this should be handled as a box and nullable structs should
           // never be visited
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
@@ -855,7 +855,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return false;
-          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // TODO(fxbug.dev/70186): this should be handled as a box and nullable structs should
           // never be visited
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:

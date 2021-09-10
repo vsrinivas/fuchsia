@@ -280,11 +280,7 @@ MaybeAttributeArg Attribute::GetStandaloneAnonymousArg() const {
 
 bool AttributeList::HasAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
-    // TODO(fxbug.dev/70247): once the migration is complete, we no longer
-    //  need to do the the casting to lower_snake_case, so this check should
-    //  be removed.
-    if (attribute->name == attribute_name ||
-        fidl::utils::to_lower_snake_case(attribute->name) == attribute_name)
+    if (attribute->name == attribute_name)
       return true;
   }
   return false;
@@ -292,11 +288,7 @@ bool AttributeList::HasAttribute(std::string_view attribute_name) const {
 
 MaybeAttribute AttributeList::GetAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
-    // TODO(fxbug.dev/70247): once the migration is complete, we no longer
-    //  need to do the the casting to lower_snake_case, so this check should
-    //  be removed.
-    if (attribute->name == attribute_name ||
-        fidl::utils::to_lower_snake_case(attribute->name) == attribute_name)
+    if (attribute->name == attribute_name)
       return *attribute;
   }
   return std::nullopt;
@@ -390,9 +382,8 @@ bool IsSimple(const Type* type, Reporter* reporter) {
           return false;
         }
       }
-      // TODO(fxbug.dev/70247): This only applies to nullable structs, which goes
-      // through the kBox path in the new syntax. This can be removed along with
-      // old syntax support
+      // TODO(fxbug.dev/70186): This only applies to nullable structs, which should
+      // be handled as box.
       switch (identifier_type->nullability) {
         case types::Nullability::kNullable:
           // If the identifier is nullable, then we can handle a depth of 1
@@ -1171,10 +1162,10 @@ class BoxTypeTemplate final : public TypeTemplate {
       return false;
     }
     // We disallow specifying the boxed type as nullable in FIDL source but
-    // then mark the boxed type is nullable, so that internally it shares the
+    // then mark the boxed type as nullable, so that internally it shares the
     // same code path as its old syntax equivalent (a nullable struct). This
-    // allows us to call `f(type)` in the old code and `f(type->boxed_type)`
-    // in the new code.
+    // allows us to call `f(type->boxed_type)` wherever we used to call `f(type)`
+    // in the old code.
     // As a temporary workaround for piping unconst-ness everywhere or having
     // box types own their own boxed types, we cast away the const to be able
     // to change the boxed type to be mutable.
@@ -1825,15 +1816,9 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 }
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(
-    Reporter* reporter, const std::unique_ptr<Attribute>& attribute, fidl::utils::Syntax syntax,
+    Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
     bool warn_on_typo) const {
   auto attribute_name = attribute->name;
-
-  // TODO(fxbug.dev/70247): once the migration is complete, we no longer need to
-  //  do the the casting to lower_snake_case, so this check should be removed.
-  if (syntax == fidl::utils::Syntax::kOld) {
-    attribute_name = fidl::utils::to_lower_snake_case(attribute->name);
-  }
 
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
@@ -1850,14 +1835,6 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
   for (const auto& name_and_schema : attribute_schemas_) {
     std::string supplied_name = attribute_name;
     std::string suspected_name = name_and_schema.first;
-
-    // TODO(fxbug.dev/70247): once the migration is complete, we no longer need
-    //  to do the the casting to lower_snake_case, so this check should be
-    //  removed.
-    if (syntax == fidl::utils::Syntax::kOld) {
-      supplied_name = attribute->name;
-      suspected_name = fidl::utils::to_upper_camel_case(name_and_schema.first);
-    }
 
     auto edit_distance = EditDistance(supplied_name, suspected_name);
     if (0 < edit_distance && edit_distance < 2) {
@@ -1987,7 +1964,7 @@ bool Library::ValidateAttributesPlacement(const Attributable* attributable) {
   if (attributable == nullptr || attributable->attributes == nullptr)
     return ok;
   for (const auto& attribute : attributable->attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax);
+    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
     if (schema != nullptr && !schema->ValidatePlacement(reporter_, attribute, attributable)) {
       ok = false;
     }
@@ -2007,17 +1984,12 @@ bool Library::ValidateAttributesConstraints(const Attributable* attributable,
   if (attributable == nullptr || attributes == nullptr)
     return ok;
   for (const auto& attribute : attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute, attribute->syntax);
+    auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
     if (schema != nullptr && !schema->ValidateConstraint(reporter_, attribute, attributable)) {
       ok = false;
     }
   }
   return ok;
-}
-
-bool Library::LookupDependency(std::string_view filename, const std::vector<std::string_view>& name,
-                               Library** out_library) const {
-  return dependencies_.Lookup(filename, name, Dependencies::LookupMode::kSilent, out_library);
 }
 
 SourceSpan Library::GeneratedSimpleName(const std::string& name) {
@@ -2188,9 +2160,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
-ConsumeStep Library::StartConsumeStep(fidl::utils::Syntax syntax) {
-  return ConsumeStep(this, syntax);
-}
+ConsumeStep Library::StartConsumeStep() { return ConsumeStep(this); }
 CompileStep Library::StartCompileStep() { return CompileStep(this); }
 VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
   return VerifyResourcenessStep(this);
@@ -2212,8 +2182,8 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
         args.emplace_back(
             std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
       }
-      auto attribute = std::make_unique<Attribute>(raw_attribute->name, fidl::utils::Syntax::kNew,
-                                                   raw_attribute->span(), std::move(args));
+      auto attribute = std::make_unique<Attribute>(raw_attribute->name, raw_attribute->span(),
+                                                   std::move(args));
       attributes_builder.Insert(std::move(attribute));
     }
   }
@@ -2377,7 +2347,7 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
   result_members.push_back(std::move(success_member));
   result_members.push_back(std::move(error_member));
   std::vector<std::unique_ptr<Attribute>> result_attributes;
-  result_attributes.emplace_back(std::make_unique<Attribute>("result", fidl::utils::Syntax::kNew));
+  result_attributes.emplace_back(std::make_unique<Attribute>("result"));
 
   // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_context = err_variant_context->parent();
@@ -2984,7 +2954,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     library_name_ = new_name;
   }
 
-  auto step = StartConsumeStep(file->syntax);
+  auto step = StartConsumeStep();
 
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
@@ -3446,7 +3416,7 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
   if (attributes && !attributes->attributes.empty()) {
     for (auto& attribute : attributes->attributes) {
       auto schema =
-          all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax, true);
+          all_libraries_->RetrieveAttributeSchema(reporter_, attribute, true);
 
       // Check for duplicate args, and return early if we find them.
       std::set<std::string> seen;
@@ -3925,10 +3895,6 @@ bool Library::CompileDecl(Decl* decl) {
       auto struct_decl = static_cast<Struct*>(decl);
       if (!CompileStruct(struct_decl))
         return false;
-      if (struct_decl->from_parameter_list_span) {
-        bool value = *struct_decl->resourceness == types::Resourceness::kResource;
-        derived_resourceness.insert({struct_decl->from_parameter_list_span->ToKey(), value});
-      }
       break;
     }
     case Decl::Kind::kTable: {

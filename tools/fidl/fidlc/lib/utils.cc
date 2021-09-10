@@ -10,27 +10,6 @@
 namespace fidl {
 namespace utils {
 
-// TODO(fxbug.dev/70247): Delete this
-bool HasDeprecatedSyntaxToken(const fidl::SourceFile& source_file) {
-  const std::string_view text = source_file.data();
-  size_t line_start = 0;
-  size_t next_line_break = text.find('\n');
-  while (next_line_break != std::string_view::npos) {
-    static std::string needle = "deprecated_syntax;";
-    std::string_view line = text.substr(line_start, next_line_break - line_start);
-    line.remove_prefix(std::min(line.find_first_not_of(" \t\f\v"), line.size()));
-    line = line.substr(0, std::min(needle.size(), line.size()));
-    if (line == needle)
-      return true;
-    if (!line.empty() && line[0] != '/')
-      return false;
-
-    line_start = next_line_break + 1;
-    next_line_break = text.find('\n', line_start);
-  }
-  return false;
-}
-
 const std::string kLibraryComponentPattern = "[a-z][a-z0-9]*";
 const std::string kIdentifierComponentPattern = "[A-Za-z]([A-Za-z0-9_]*[A-Za-z0-9])?";
 

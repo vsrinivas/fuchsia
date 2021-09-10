@@ -172,7 +172,7 @@ class TestLibrary final {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(library_.get(), true);
+    auto json_generator = fidl::JSONGenerator(library_.get());
     auto out = json_generator.Produce();
     return out.str();
   }

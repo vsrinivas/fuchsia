@@ -86,7 +86,7 @@ type Foo = table {
 )FIDL");
   // NOTE(fxbug.dev/72924): difference in parser implementation, the old syntax
   // checks for this case specifically.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType)
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember)
 }
 
 TEST(TableTests, BadDuplicateFieldNames) {
@@ -274,7 +274,7 @@ type Foo = table {
   // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
   // TODO(fxbug.dev/72924): the second error doesn't make any sense
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
-                                      fidl::ErrMissingOrdinalBeforeType);
+                                      fidl::ErrMissingOrdinalBeforeMember);
 }
 
 TEST(TableTests, BadMustBeDense) {

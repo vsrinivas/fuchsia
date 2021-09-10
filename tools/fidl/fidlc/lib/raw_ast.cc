@@ -173,8 +173,8 @@ void ResourceProperty::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
+  visitor->OnTypeConstructor(type_ctor);
 }
 
 void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
@@ -196,8 +196,8 @@ void ServiceMember::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
-  visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
+  visitor->OnTypeConstructor(type_ctor);
 }
 
 void ServiceDeclaration::Accept(TreeVisitor* visitor) const {

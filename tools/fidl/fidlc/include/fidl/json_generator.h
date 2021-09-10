@@ -54,8 +54,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   using utils::JsonWriter<JSONGenerator>::Generate;
   using utils::JsonWriter<JSONGenerator>::GenerateArray;
 
-  explicit JSONGenerator(const flat::Library* library, bool omit_locations = false)
-      : JsonWriter(json_file_), library_(library), omit_locations_(omit_locations) {}
+  explicit JSONGenerator(const flat::Library* library)
+      : JsonWriter(json_file_), library_(library) {}
 
   ~JSONGenerator() = default;
 
@@ -178,10 +178,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
                            bool is_request_or_response = false);
 
   const flat::Library* library_;
-  // TODO(fxbug.dev/70247): this is a temporary setting used during the syntax
-  // migration to allow directly comparing the IR from the old and new syntax
-  // to ensure that no semantic information has changed.
-  const bool omit_locations_;
   std::ostringstream json_file_;
 };
 
