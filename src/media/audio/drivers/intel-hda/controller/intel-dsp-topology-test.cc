@@ -110,8 +110,11 @@ TEST(DspTopology, GetI2sModuleConfig) {
     0x7D, 0x00, 0x00, 0x00};
   // clang-format on.
   EXPECT_EQ(sizeof(expected_config), i2s_config.ValueOrDie().size() - sizeof(CopierCfg));
-  EXPECT_BYTES_EQ(i2s_config.ValueOrDie().data() + sizeof(CopierCfg), expected_config,
-                  i2s_config.ValueOrDie().size() - sizeof(CopierCfg));
+  EXPECT_BYTES_EQ(i2s_config.ValueOrDie().data() + sizeof(CopierCfg) - 4, expected_config,
+                  sizeof(expected_config));
+  uint32_t expected_zero_word = 0;
+  EXPECT_BYTES_EQ(i2s_config.ValueOrDie().data() + sizeof(CopierCfg) - 4 + sizeof(expected_config),
+                  &expected_zero_word, sizeof(expected_zero_word));
 }
 
 }  // namespace

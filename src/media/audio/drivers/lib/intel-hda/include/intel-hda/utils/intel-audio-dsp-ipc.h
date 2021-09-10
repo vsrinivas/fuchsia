@@ -600,7 +600,10 @@ struct CopierGatewayCfg {
   uint32_t node_id;
   uint32_t dma_buffer_size;
   uint32_t config_words;  // Size of config_data, measured in 32-bit words.
-  uint8_t config_data[];
+  // Reserve space for extra word in the config data, expected by the DSP.
+  // Extra word is not included in config_words, but it is included in the size of CopierGatewayCfg
+  // and hence in the size of CopierCfg.
+  uint32_t config_data[1];
 } __PACKED;
 
 static inline constexpr uint32_t HDA_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t dma_id) {

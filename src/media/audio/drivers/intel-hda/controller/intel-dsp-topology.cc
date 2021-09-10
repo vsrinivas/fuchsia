@@ -204,13 +204,20 @@ StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_ins
     return Status(ZX_ERR_NO_MEMORY,
                   "out of memory while attempting to allocate copier config buffer");
   }
-  memcpy(cfg_buf.get() + sizeof(base_cfg), blob, blob_size);
 
-  // Copy the copier config
+  // Copy the copier config.
   memcpy(cfg_buf.get(), &base_cfg, sizeof(base_cfg));
   auto copier_cfg = reinterpret_cast<CopierCfg*>(cfg_buf.get());
   ZX_ASSERT(!(blob_size % kCopierBytesPerWord));
   copier_cfg->gtw_cfg.config_words = static_cast<uint32_t>(blob_size) / kCopierBytesPerWord;
+
+  // Copy the config data.
+  size_t offset_to_data = offsetof(CopierCfg, gtw_cfg) + offsetof(CopierGatewayCfg, config_data);
+  memcpy(cfg_buf.get() + offset_to_data, blob, blob_size);
+
+  // DSP expects appending one empty word (4 bytes) to the config data.
+  // Space is reserved in CopierGatewayCfg config_data.
+  memset(cfg_buf.get() + offset_to_data + blob_size, 0, 4);
 
   return RawBytesOf(cfg_buf.get(), cfg_size);
 }
