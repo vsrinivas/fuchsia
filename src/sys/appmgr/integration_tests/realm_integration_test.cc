@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -31,7 +32,6 @@
 #include <string>
 #include <vector>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <test/appmgr/integration/cpp/fidl.h>
@@ -176,14 +176,14 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   auto env_services = CreateServices();
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
-                                        "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                                        "appmgr_integration_tests#meta/echo_server.cmx"),
                        fidl::examples::echo::Echo::Name_));
   auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   WaitForEnclosingEnvToStart(enclosing_environment.get());
   // launch component normally
   auto controller1 =
       RunComponent(enclosing_environment.get(),
-                   "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
+                   "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/echo_server.cmx");
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
@@ -210,7 +210,7 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   auto env_services = CreateServices();
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
-                                        "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                                        "appmgr_integration_tests#meta/echo_server.cmx"),
                        fidl::examples::echo::Echo::Name_));
   auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   WaitForEnclosingEnvToStart(enclosing_environment.get());
@@ -323,7 +323,7 @@ TEST_F(RealmTest, RealmDiesWhenItsJobDies) {
 
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                        CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
-                                        "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                                        "appmgr_integration_tests#meta/echo_server.cmx"),
                        fidl::examples::echo::Echo::Name_));
   auto enclosing_environment = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   WaitForEnclosingEnvToStart(enclosing_environment.get());

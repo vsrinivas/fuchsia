@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -13,7 +14,6 @@
 #include <sstream>
 #include <vector>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
 
 #include "fuchsia/sys/cpp/fidl.h"
@@ -348,7 +348,7 @@ class RealmRunnerServiceTest : public RealmRunnerTest {
     ASSERT_EQ(ZX_OK, env_services->AddService(runner_registry_.GetHandler()));
     ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
                          CreateLaunchInfo("fuchsia-pkg://fuchsia.com/"
-                                          "echo_server_cpp#meta/echo_server_cpp.cmx"),
+                                          "appmgr_integration_tests#meta/echo_server.cmx"),
                          fidl::examples::echo::Echo::Name_));
     enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   }

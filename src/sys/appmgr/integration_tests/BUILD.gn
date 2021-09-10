@@ -21,6 +21,9 @@ group("integration_tests") {
     "policy",
     "sandbox",
     "util",
+
+    # External packages depended on by tests.
+    "//garnet/bin/glob",
   ]
 }
 
@@ -58,10 +61,8 @@ executable("realm_tests") {
   deps = [
     "fidl:test.component.mockrunner",
     "fidl/fuchsia.testing.appmgr",
-    "mock_runner",
     "util:data_file_reader_writer",
     "util:data_file_reader_writer_util",
-    "//garnet//examples/fidl/echo_server_cpp",
     "//garnet//examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
@@ -86,7 +87,6 @@ executable("hub_tests") {
   sources = [ "hub_integration_test.cc" ]
 
   deps = [
-    "//garnet/bin/glob",
     "//garnet/bin/sysmgr:lib",
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
