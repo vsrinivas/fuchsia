@@ -8,17 +8,31 @@
 
 #include <lib/arch/cache.h>
 #include <lib/code-patching/code-patching.h>
+#include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 
+#include <fbl/alloc_checker.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
+#include <phys/zbitl-allocation.h>
 
 #include "../test-main.h"
 
 const char Symbolize::kProgramName_[] = "code-patching-test";
+
+// The kernel package under which code patching blobs live.
+constexpr ktl::string_view kPackage = "code-patches-test";
+
+// The file within the kernel package containing the code-patch metadata.
+constexpr ktl::string_view kPatchesBin = "code-patches.bin";
+
+// The namespace within the kernel package under which the patche alternatives
+// are found.
+constexpr ktl::string_view kPatchAlternativeDir = "code-patches";
 
 // Defined in add-one.S.
 extern "C" uint64_t AddOne(uint64_t x);
@@ -27,6 +41,8 @@ extern "C" uint64_t AddOne(uint64_t x);
 extern "C" uint64_t multiply_by_factor(uint64_t x);
 
 namespace {
+
+using BootfsView = zbitl::BootfsView<ktl::span<const ktl::byte>>;
 
 constexpr size_t kExpectedNumPatches = 2;
 
@@ -44,6 +60,11 @@ ktl::span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size
   return loaded_range.subspan(range_start, range_size);
 }
 
+void SyncInstructionRange(ktl::span<ktl::byte> insns) {
+  arch::GlobalCacheConsistencyContext().SyncRange(reinterpret_cast<uint64_t>(insns.data()),
+                                                  insns.size());
+}
+
 int TestAddOnePatching(const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kAddOnePatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kAddOneCaseId,
@@ -58,7 +79,7 @@ int TestAddOnePatching(const code_patching::Directive& patch) {
   // expect AddOne() to be the identity function.
   auto insns = GetInstructionRange(patch.range_start, patch.range_size);
   code_patching::NopFill(insns);
-  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  SyncInstructionRange(insns);
   {
     uint64_t result = AddOne(583);
     ZX_ASSERT_MSG(result == 583, "Patched AddOne(583) returned %lu; expected 583.\n", result);
@@ -66,7 +87,7 @@ int TestAddOnePatching(const code_patching::Directive& patch) {
   return 0;
 }
 
-int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
+int TestMultiplyByFactorPatching(BootfsView& bootfs, const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kMultiplyByFactorPatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kMultiplyByFactorCaseId,
                 kMultiplyByFactorPatchSize, patch.range_size);
@@ -75,9 +96,20 @@ int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
 
   // After patching and synchronizing, we expect multiply_by_factor() to
   // multiply by 2.
-  ktl::span<const ktl::byte> multiply_by_two = GetPatchAlternative("multiply_by_two");
-  code_patching::Patch(insns, multiply_by_two);
-  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  auto it = bootfs.find({kPackage, kPatchAlternativeDir, "multiply_by_two"});
+  if (auto result = bootfs.take_error(); result.is_error()) {
+    printf("FAILED: Error in looking for the mutiply_by_two patch alternative: ");
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  }
+  if (it == bootfs.end()) {
+    printf("FAILED: Could not find \"%.*s/%.*s/multiply_by_two\" within BOOTFS\n",
+           static_cast<int>(kPackage.size()), kPackage.data(),
+           static_cast<int>(kPatchAlternativeDir.size()), kPatchAlternativeDir.data());
+    return 1;
+  }
+  code_patching::Patch(insns, it->data);
+  SyncInstructionRange(insns);
 
   {
     uint64_t result = multiply_by_factor(583);
@@ -87,9 +119,21 @@ int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
 
   // After patching and synchronizing, we expect multiply_by_factor() to
   // multiply by ten.
-  ktl::span<const ktl::byte> multiply_by_ten = GetPatchAlternative("multiply_by_ten");
-  code_patching::Patch(insns, multiply_by_ten);
-  arch::GlobalCacheConsistencyContext().SyncRange(patch.range_start, patch.range_size);
+  it = bootfs.find({kPackage, kPatchAlternativeDir, "multiply_by_ten"});
+  if (auto result = bootfs.take_error(); result.is_error()) {
+    printf("FAILED: Error in looking for the mutiply_by_ten patch alternative: ");
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  }
+  if (it == bootfs.end()) {
+    printf("physboot: Could not find \"%.*s/%.*s/multiply_by_ten\" within BOOTFS\n",
+           static_cast<int>(kPackage.size()), kPackage.data(),
+           static_cast<int>(kPatchAlternativeDir.size()), kPatchAlternativeDir.data());
+    return 1;
+  }
+  code_patching::Patch(insns, it->data);
+  SyncInstructionRange(insns);
+
   {
     uint64_t result = multiply_by_factor(583);
     ZX_ASSERT_MSG(result == 10 * 583, "multiply_by_factor(583) returned %lu; expected %d.\n",
@@ -102,34 +146,77 @@ int TestMultiplyByFactorPatching(const code_patching::Directive& patch) {
 }  // namespace
 
 int TestMain(void* zbi_ptr, arch::EarlyTicks) {
-  zbitl::View<ktl::span<ktl::byte>> zbi({static_cast<ktl::byte*>(zbi_ptr), SIZE_MAX});
+  // Initialize memory for allocation/free.
+  InitMemory(zbi_ptr);
 
-  ktl::span<ktl::byte> raw_patches;
-  for (auto [header, payload] : zbi) {
-    // The patch metadata is expected to be stored in an uncompressed ramdisk
-    // item.
-    if (header->type == ZBI_TYPE_STORAGE_RAMDISK &&
-        (header->flags & ZBI_FLAG_STORAGE_COMPRESSED) == 0) {
-      raw_patches = payload;
-      break;
-    }
+  zbitl::View zbi(zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi_ptr)));
+
+  // Search for a payload of type ZBI_TYPE_STORAGE_KERNEL
+  auto zbi_it = zbi.begin();
+  while (zbi_it != zbi.end() && zbi_it->header->type != ZBI_TYPE_STORAGE_KERNEL) {
+    ++zbi_it;
   }
+
+  // Ensure there was no error during iteration.
   if (auto result = zbi.take_error(); result.is_error()) {
+    printf("FAILED: Error while enumerating ZBI: ");
     zbitl::PrintViewError(result.error_value());
     return 1;
   }
 
-  if (raw_patches.size() % sizeof(code_patching::Directive)) {
-    printf("Expected total size of code patch directives to be a multiple of %lu: got %zu\n",
-           sizeof(code_patching::Directive), raw_patches.size());
+  // Fail if we didn't find anything.
+  if (zbi_it == zbi.end()) {
+    printf("FAILED: No STORAGE_KERNEL item found.\n");
     return 1;
   }
 
-  ktl::span<code_patching::Directive> patches{
-      reinterpret_cast<code_patching::Directive*>(raw_patches.data()),
-      raw_patches.size() / sizeof(code_patching::Directive),
-  };
+  fbl::AllocChecker ac;
+  const uint32_t bootfs_size = zbitl::UncompressedLength(*(zbi_it->header));
+  auto bootfs_buffer = Allocation::New(ac, memalloc::Type::kKernelStorage, bootfs_size);
+  if (!ac.check()) {
+    printf("FAILED: Cannot allocate %#x bytes for decompressed STORAGE_KERNEL item!\n",
+           bootfs_size);
+    abort();
+  }
 
+  if (auto result = zbi.CopyStorageItem(bootfs_buffer.data(), zbi_it, ZbitlScratchAllocator);
+      result.is_error()) {
+    printf("FAILED: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ", bootfs_size);
+    zbitl::PrintViewCopyError(result.error_value());
+    abort();
+  }
+
+  BootfsView bootfs;
+  if (auto result = BootfsView::Create(bootfs_buffer.data()); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  } else {
+    bootfs = std::move(result.value());
+  }
+
+  auto bootfs_it = bootfs.find({kPackage, kPatchesBin});
+  if (auto result = bootfs.take_error(); result.is_error()) {
+    printf("FAILED: Error in looking for code patching metadata: ");
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  }
+  if (bootfs_it == bootfs.end()) {
+    printf("FAILED: Could not find \"/%.*s/%.*s\" within BOOTFS\n",
+           static_cast<int>(kPackage.size()), kPackage.data(), static_cast<int>(kPatchesBin.size()),
+           kPatchesBin.data());
+    return 1;
+  }
+
+  if (bootfs_it->data.size() % sizeof(code_patching::Directive)) {
+    printf("Expected total size of code patch directives to be a multiple of %lu: got %zu\n",
+           sizeof(code_patching::Directive), bootfs_it->data.size());
+    return 1;
+  }
+
+  ktl::span<const code_patching::Directive> patches = {
+      reinterpret_cast<const code_patching::Directive*>(bootfs_it->data.data()),
+      bootfs_it->data.size() / sizeof(code_patching::Directive),
+  };
   printf("Patches found:\n");
   printf("| %-4s | %-8s | %-8s | %-4s |\n", "ID", "Start", "End", "Size");
   for (const auto& patch : patches) {
@@ -151,7 +238,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
         }
         break;
       case kMultiplyByFactorCaseId:
-        if (int result = TestMultiplyByFactorPatching(patch); result != 0) {
+        if (int result = TestMultiplyByFactorPatching(bootfs, patch); result != 0) {
           return result;
         }
         break;

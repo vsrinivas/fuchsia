@@ -69,7 +69,6 @@ template("code_patches") {
                            [
                              "testonly",
                              "visibility",
-                             "metadata",
                            ])
     outputs = [ output_file ]
 
@@ -82,6 +81,25 @@ template("code_patches") {
     ]
 
     deps = [ ":$rspfile_target" ]
+
+    metadata = {
+      # Behaves like a resource() target, for aggregation within a kernel
+      # package.
+      distribution_entries_barrier = []
+      distribution_entries = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      distribution_entries += [
+        {
+          source = rebase_path(outputs[0], root_build_dir)
+          destination = "code-patches.bin"
+          label = get_label_info(":$main_target", "label_with_toolchain")
+        },
+      ]
+    }
   }
 }
 
@@ -158,6 +176,10 @@ template("code_patching_hermetic_alternative") {
     output_dir = target_out_dir
     output_extension = "bin"
 
+    output_path = rebase_path("$output_dir/$output_name.$output_extension",
+                              root_build_dir)
+    image_label = get_label_info(":$image_target", "label_with_toolchain")
+
     # We expect no dynamic relocations.
     pure = true
 
@@ -165,10 +187,20 @@ template("code_patching_hermetic_alternative") {
       code_patching_hermetic_alternative_barrier = []
       code_patching_hermetic_alternatives = [
         {
-          label = get_label_info(":$image_target", "label_with_toolchain")
+          label = image_label
           name = entrypoint
-          path = rebase_path("$output_dir/$output_name.$output_extension",
-                             root_build_dir)
+          path = output_path
+        },
+      ]
+
+      # Behaves like a resource() target, for aggregation within a kernel
+      # package.
+      distribution_entries_barrier = []
+      distribution_entries = [
+        {
+          source = output_path
+          destination = "code-patches/$entrypoint"
+          label = image_label
         },
       ]
     }

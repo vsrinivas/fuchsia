@@ -92,7 +92,8 @@ class BootfsView {
       bootfs_->StartIteration();
       // Add the NUL-terminator back to the name size when calculating dirent
       // size.
-      uint32_t next_offset = offset_ + ZBI_BOOTFS_DIRENT_SIZE(value_.name.size() + 1);
+      uint32_t next_offset =
+          offset_ + static_cast<uint32_t>(ZBI_BOOTFS_DIRENT_SIZE(value_.name.size() + 1));
       Update(next_offset);
       return *this;
     }
@@ -148,7 +149,7 @@ class BootfsView {
         return;
       }
 
-      uint32_t offset_into_dir = dirent_offset - sizeof(zbi_bootfs_header_t);
+      uint32_t offset_into_dir = dirent_offset - uint32_t{sizeof(zbi_bootfs_header_t)};
       const auto* dirent =
           reinterpret_cast<const zbi_bootfs_dirent_t*>(&(bootfs_->dir_[offset_into_dir]));
 
@@ -451,7 +452,9 @@ class BootfsView {
     return path.empty();
   }
 
-  uint32_t dir_end_offset() const { return sizeof(zbi_bootfs_header_t) + dir_.size(); }
+  uint32_t dir_end_offset() const {
+    return static_cast<uint32_t>(sizeof(zbi_bootfs_header_t) + dir_.size());
+  }
 
   storage_type storage_;
   ErrorState error_;

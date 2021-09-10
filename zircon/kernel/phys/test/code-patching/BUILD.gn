@@ -6,6 +6,7 @@
 
 import("//build/testing/zbi_test.gni")
 import("//build/zbi/zbi_input.gni")
+import("//zircon/kernel/kernel_package.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
@@ -34,11 +35,6 @@ code_patching_hermetic_stub("multiply_by_factor") {
   include_dirs = [ "." ]
 }
 
-code_patching_hermetic_embedding("embedding") {
-  testonly = true
-  deps = [ ":multiply_by_factor" ]
-}
-
 zbi_executable("zbi-code-patching-test.executable") {
   testonly = true
   sources = [
@@ -47,38 +43,42 @@ zbi_executable("zbi-code-patching-test.executable") {
   ]
 
   deps = [
-    ":embedding",
     ":multiply_by_factor",
     "..:zbi-test-main",
     "//zircon/kernel/lib/code-patching",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
+    "//zircon/kernel/phys:allocation",
+    "//zircon/kernel/phys:zbi-memory",
+    "//zircon/kernel/phys:zbitl-allocation",
+    "//zircon/kernel/phys/lib/memalloc",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zbitl",
   ]
 
   include_dirs = [ "." ]
 }
 
-code_patches("zbi-code-patching-test.patches") {
+code_patches("code-patches") {
   testonly = true
   deps = [ ":zbi-code-patching-test.executable" ]
 }
 
-zbi_input("zbi-code-patching-test.data") {
+# We use a kernel package to transport code-patches.bin and the patch
+# alternatives, as that is how they will be transported in production.
+kernel_package("code-patches-test") {
   testonly = true
-
-  # TODO(68585): package code-patches.bin in a STORAGE_KERNEL item along
-  # the hermetic alternatives when available.
-  type = "ramdisk"
-  args = [ "--uncompressed" ]
-  sources = get_target_outputs(":zbi-code-patching-test.patches")
-  deps = [ ":zbi-code-patching-test.patches" ]
+  deps = [
+    ":code-patches",
+    ":multiply_by_ten",
+    ":multiply_by_two",
+  ]
 }
 
 zbi_test("zbi-code-patching-test") {
   args = []
   deps = [
-    ":zbi-code-patching-test.data",
+    ":code-patches-test",
     ":zbi-code-patching-test.executable",
   ]
 

@@ -43,9 +43,6 @@ constexpr size_t kAddOnePatchSize = PATCH_SIZE_ADD_ONE;
 constexpr uint32_t kMultiplyByFactorCaseId = CASE_ID_MULTIPLY_BY_FACTOR;
 constexpr size_t kMultiplyByFactorPatchSize = PATCH_SIZE_MULTIPLY_BY_FACTOR;
 
-// Defined by //zircon/kernel/phys/test/code-patching:embedding.
-ktl::span<const ktl::byte> GetPatchAlternative(ktl::string_view name);
-
 #endif  // #ifndef __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_PHYS_TEST_CODE_PATCHING_TEST_H_
