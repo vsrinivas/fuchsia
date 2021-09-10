@@ -13,11 +13,13 @@ table/member fuchsia.io.test/Io1Config.immutable_file bool
 table/member fuchsia.io.test/Io1Config.no_admin bool
 table/member fuchsia.io.test/Io1Config.no_execfile bool
 table/member fuchsia.io.test/Io1Config.no_get_buffer bool
+table/member fuchsia.io.test/Io1Config.no_get_token bool
 table/member fuchsia.io.test/Io1Config.no_link bool
 table/member fuchsia.io.test/Io1Config.no_remote_dir bool
 table/member fuchsia.io.test/Io1Config.no_rename bool
 table/member fuchsia.io.test/Io1Config.no_set_attr bool
 table/member fuchsia.io.test/Io1Config.no_vmofile bool
+table/member fuchsia.io.test/Io1Config.non_conformant_path_handling bool
 table fuchsia.io.test/Io1Config
 protocol/member fuchsia.io.test/Io1Harness.GetConfig() -> (fuchsia.io.test/Io1Config config)
 protocol/member fuchsia.io.test/Io1Harness.GetDirectory(fuchsia.io.test/Directory root,uint32 flags,server_end:fuchsia.io/Directory directory_request)

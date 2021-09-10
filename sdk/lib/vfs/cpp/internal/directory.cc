@@ -10,7 +10,47 @@
 #include <lib/vfs/cpp/internal/directory_connection.h>
 #include <zircon/errors.h>
 
+#include <string_view>
+
 namespace vfs {
+namespace {
+
+/// Validates consistency of mode and flags passed to an Open call.
+///
+/// As the SDK VFS does not support the CREATE flags, as per the fuchsia.io protocol, the
+/// mode only needs to be consistent with the flags/path if the resource already exists
+/// (i.e. even if the path points to a file that reports it's mode as MODE_TYPE_FILE, it is
+/// not an error to open the file with MODE_TYPE_DIRECTORY).
+bool ValidateMode(uint32_t mode, uint32_t flags, std::string_view path) {
+  if (path.empty()) {
+    return false;
+  }
+
+  const uint32_t mode_type = mode & fuchsia::io::MODE_TYPE_MASK;
+
+  // The mode type must always be consistent with OPEN_FLAG_DIRECTORY/NOT_DIRECTORY.
+  if ((mode_type == fuchsia::io::MODE_TYPE_DIRECTORY) && Flags::IsNotDirectory(flags)) {
+    return false;
+  }
+  if ((mode_type == fuchsia::io::MODE_TYPE_FILE) && Flags::IsDirectory(flags)) {
+    return false;
+  }
+
+  // Can't open "." with OPEN_FLAG_NOT_DIRECTORY
+  if (Flags::IsNotDirectory(flags) && (path == ".")) {
+    return false;
+  }
+  // If the path specifies a directory (indicated by a trailing slash), reject
+  // either OPEN_FLAG_NOT_DIRECTORY or MODE_TYPE_FILE.
+  if (path.back() == '/') {
+    return !(Flags::IsNotDirectory(flags) || (mode_type == fuchsia::io::MODE_TYPE_FILE));
+  }
+
+  return true;
+}
+
+}  // namespace
+
 namespace internal {
 
 Directory::Directory() = default;
@@ -40,7 +80,7 @@ zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
 }
 
 NodeKind::Type Directory::GetKind() const {
-  return NodeKind::kDirectory | NodeKind::kReadable | NodeKind::kWritable;
+  return NodeKind::kDirectory | NodeKind::kReadable | NodeKind::kWritable | NodeKind::kExecutable;
 }
 
 zx_status_t Directory::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
@@ -152,7 +192,8 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
-  if (!Flags::IsNodeReference(open_flags) && !(open_flags & Flags::kFsRights)) {
+  if (!Flags::IsNodeReference(open_flags) &&
+      !(open_flags & (Flags::kFsRights | Flags::kFsAllPosixFlags))) {
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -164,16 +205,21 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_BAD_PATH);
     return;
   }
+  if (!ValidateMode(mode, open_flags, std::string_view{path, path_len})) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request), ZX_ERR_INVALID_ARGS);
+    return;
+  }
 
   Node* n = nullptr;
   bool path_is_dir = false;
   size_t new_path_len = path_len;
   const char* new_path = path;
+  /// TODO(fxbug.dev/82672): Path handling does not conform to in-tree behavior. Update to comply
+  /// with open_path() test in io1_tests.rs, and remove `non_conformant_path_handling` option.
   zx_status_t status = LookupPath(path, path_len, &path_is_dir, &n, &new_path, &new_path_len);
   if (status != ZX_OK) {
     return SendOnOpenEventOnError(open_flags, std::move(request), status);
   }
-  bool node_is_dir = n->IsDirectory();
 
   // Explicitly expand OPEN_FLAG_POSIX into new set of equivalent flags.
   // TODO(fxbug.dev/40862): Remove entire branch when removing OPEN_FLAG_POSIX.
@@ -212,7 +258,7 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
   }
 
   // Perform POSIX rights expansion if required.
-  if (node_is_dir) {
+  if (n->IsDirectory()) {
     if (Flags::IsPosixWritable(open_flags))
       open_flags |= (parent_flags & fuchsia::io::OPEN_RIGHT_WRITABLE);
     if (Flags::IsPosixExecutable(open_flags))
@@ -225,7 +271,7 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
   if (path_is_dir) {
     open_flags |= fuchsia::io::OPEN_FLAG_DIRECTORY;
   }
-  n->ServeWithMode(open_flags, mode, std::move(request), dispatcher);
+  n->Serve(open_flags, std::move(request), dispatcher);
 }
 
 }  // namespace internal

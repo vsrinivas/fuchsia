@@ -65,6 +65,14 @@ type Io1Config = table {
 
     /// The SetAttr method is not supported.
    10: no_set_attr bool;
+
+    /// The GetToken method is not supported.
+   11: no_get_token bool;
+
+    /// Path handling does not conform to in-tree behavior.
+    /// TODO(fxbug.dev/82672): Ensure all libraries are conformant and remove this option.
+    /// Currently the only non-conformant implementation being tested is the SDK VFS.
+   12: non_conformant_path_handling bool;
 };
 
 /// Directory entries should support opening with any combination of read/write/execute rights.

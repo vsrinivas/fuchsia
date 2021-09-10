@@ -24,6 +24,7 @@ constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
     {NodeKind::kReadable, fuchsia::io::OPEN_RIGHT_READABLE},
     {NodeKind::kMountable, fuchsia::io::OPEN_RIGHT_ADMIN},
     {NodeKind::kWritable, fuchsia::io::OPEN_RIGHT_WRITABLE},
+    {NodeKind::kExecutable, fuchsia::io::OPEN_RIGHT_EXECUTABLE},
     {NodeKind::kAppendable, fuchsia::io::OPEN_FLAG_APPEND},
     {NodeKind::kCanTruncate, fuchsia::io::OPEN_FLAG_TRUNCATE},
     {NodeKind::kCreatable,
@@ -113,19 +114,10 @@ zx_status_t Node::ValidateFlags(uint32_t flags) const {
   if ((flags & ~allowed_flags) != 0) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return ZX_OK;
-}
-
-zx_status_t Node::ValidateMode(uint32_t mode) const {
-  fuchsia::io::NodeAttributes attr;
-  uint32_t mode_from_attr = 0;
-  zx_status_t status = GetAttr(&attr);
-  if (status == ZX_OK) {
-    mode_from_attr = attr.mode & fuchsia::io::MODE_TYPE_MASK;
-  }
-
-  if (((mode & ~fuchsia::io::MODE_PROTECTION_MASK) & ~mode_from_attr) != 0) {
-    return ZX_ERR_INVALID_ARGS;
+  // Only allow executable rights on directories.
+  // Changing this can be dangerous! Flags operations may have security implications.
+  if (!is_directory && Flags::IsExecutable(flags)) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
 }
@@ -193,16 +185,6 @@ zx_status_t Node::Connect(uint32_t flags, zx::channel request, async_dispatcher_
     AddConnection(std::move(connection));
   }
   return status;
-}
-
-zx_status_t Node::ServeWithMode(uint32_t flags, uint32_t mode, zx::channel request,
-                                async_dispatcher_t* dispatcher) {
-  zx_status_t status = ValidateMode(mode);
-  if (status != ZX_OK) {
-    SendOnOpenEventOnError(flags, std::move(request), status);
-    return status;
-  }
-  return Serve(flags, std::move(request), dispatcher);
 }
 
 void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request, zx_status_t status) {

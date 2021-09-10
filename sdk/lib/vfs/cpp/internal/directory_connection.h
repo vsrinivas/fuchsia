@@ -50,6 +50,8 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void Link(std::string src, zx::handle dst_parent_token, std::string dst,
             LinkCallback callback) override;
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher, WatchCallback callback) override;
+  void NodeGetFlags(NodeGetFlagsCallback callback) override;
+  void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
 
  protected:
   // |Connection| Implementation:

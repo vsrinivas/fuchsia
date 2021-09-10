@@ -807,8 +807,9 @@ TEST_F(PseudoDirConnection, OpenDirWithIncorrectMode) {
     for (auto mode : modes) {
       SCOPED_TRACE("path: " + path + ", mode: " + std::to_string(mode));
       fuchsia::io::NodeSyncPtr node_ptr;
-      AssertOpenPath(ptr, path, node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode,
-                     ZX_ERR_INVALID_ARGS);
+      // Opening should succeed even with the incorrect mode, since we are not
+      // creating a new resource (see io.fidl for further details on mode handling).
+      AssertOpenPath(ptr, path, node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode);
     }
   }
 }
@@ -836,8 +837,9 @@ TEST_F(PseudoDirConnection, OpenFileWithIncorrectMode) {
   for (auto mode : modes) {
     SCOPED_TRACE("mode: " + std::to_string(mode));
     fuchsia::io::NodeSyncPtr node_ptr;
-    AssertOpenPath(ptr, "file1", node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode,
-                   ZX_ERR_INVALID_ARGS);
+    // Opening should succeed even with the incorrect mode, since we are not
+    // creating a new resource (see io.fidl for further details on mode handling).
+    AssertOpenPath(ptr, "file1", node_ptr, fuchsia::io::OPEN_RIGHT_READABLE, mode);
   }
 }
 

@@ -244,12 +244,9 @@ async fn validate_file_rights() {
     // Opening with WRITE must succeed.
     open_node::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_WRITABLE, 0, TEST_FILE).await;
     // Opening with EXECUTE must fail.
-    assert_eq!(
-        open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
-            .await
-            .expect_err("open succeeded"),
-        zx::Status::ACCESS_DENIED
-    );
+    open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
+        .await
+        .expect_err("open succeeded");
 }
 
 // Validate allowed rights for VmoFile objects (ensures cannot be opened as executable).
@@ -555,6 +552,10 @@ async fn open_file_with_extra_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn open_path() {
     let harness = TestHarness::new().await;
+    if harness.config.non_conformant_path_handling.unwrap_or_default() {
+        return;
+    }
+
     let root = root_directory(vec![directory("dir", vec![])]);
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
 
@@ -1045,6 +1046,9 @@ async fn vmo_file_describe() {
 #[fasync::run_singlethreaded(test)]
 async fn get_token_with_sufficient_rights() {
     let harness = TestHarness::new().await;
+    if harness.config.no_get_token.unwrap_or_default() {
+        return;
+    }
 
     for dir_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
@@ -1059,6 +1063,9 @@ async fn get_token_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn get_token_with_insufficient_rights() {
     let harness = TestHarness::new().await;
+    if harness.config.no_get_token.unwrap_or_default() {
+        return;
+    }
 
     for dir_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![]);
@@ -1072,7 +1079,9 @@ async fn get_token_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default() {
+    if harness.config.no_rename.unwrap_or_default()
+        || harness.config.no_get_token.unwrap_or_default()
+    {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1105,7 +1114,9 @@ async fn rename_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default() {
+    if harness.config.no_rename.unwrap_or_default()
+        || harness.config.no_get_token.unwrap_or_default()
+    {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1133,7 +1144,9 @@ async fn rename_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn rename_with_slash_in_path_fails() {
     let harness = TestHarness::new().await;
-    if harness.config.no_rename.unwrap_or_default() {
+    if harness.config.no_rename.unwrap_or_default()
+        || harness.config.no_get_token.unwrap_or_default()
+    {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1166,7 +1179,8 @@ async fn rename_with_slash_in_path_fails() {
 #[fasync::run_singlethreaded(test)]
 async fn link_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.no_link.unwrap_or_default() || harness.config.no_get_token.unwrap_or_default()
+    {
         return;
     }
     let contents = "abcdef".as_bytes();
@@ -1196,7 +1210,8 @@ async fn link_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn link_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if harness.config.no_link.unwrap_or_default() {
+    if harness.config.no_link.unwrap_or_default() || harness.config.no_get_token.unwrap_or_default()
+    {
         return;
     }
     let contents = "abcdef".as_bytes();

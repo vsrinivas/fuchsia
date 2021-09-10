@@ -53,5 +53,13 @@ void NodeConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
+void NodeConnection::NodeGetFlags(NodeGetFlagsCallback callback) {
+  callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
+}
+
+void NodeConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) {
+  callback(ZX_ERR_NOT_SUPPORTED);
+}
+
 }  // namespace internal
 }  // namespace vfs

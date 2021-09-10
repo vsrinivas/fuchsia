@@ -52,7 +52,7 @@ void FileConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attribu
 void FileConnection::Read(uint64_t count, ReadCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
-    callback(ZX_ERR_ACCESS_DENIED, std::move(data));
+    callback(ZX_ERR_BAD_HANDLE, std::move(data));
     return;
   }
   zx_status_t status = vn_->ReadAt(count, offset(), &data);
@@ -65,7 +65,7 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
 void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
-    callback(ZX_ERR_ACCESS_DENIED, std::move(data));
+    callback(ZX_ERR_BAD_HANDLE, std::move(data));
     return;
   }
   zx_status_t status = vn_->ReadAt(count, offset, &data);
@@ -74,7 +74,7 @@ void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback call
 
 void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
   if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_ACCESS_DENIED, 0);
+    callback(ZX_ERR_BAD_HANDLE, 0);
     return;
   }
   uint64_t actual = 0u;
@@ -87,7 +87,7 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
 
 void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
   if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_ACCESS_DENIED, 0);
+    callback(ZX_ERR_BAD_HANDLE, 0);
     return;
   }
   uint64_t actual = 0u;
@@ -125,7 +125,7 @@ void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, Seek
 
 void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
   if (!Flags::IsWritable(flags())) {
-    callback(ZX_ERR_ACCESS_DENIED);
+    callback(ZX_ERR_BAD_HANDLE);
     return;
   }
   callback(vn_->Truncate(length));
@@ -144,6 +144,14 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
 
 void FileConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
+}
+
+void FileConnection::NodeGetFlags(NodeGetFlagsCallback callback) {
+  callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
+}
+
+void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) {
+  callback(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace internal

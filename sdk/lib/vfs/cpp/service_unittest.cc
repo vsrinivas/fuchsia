@@ -4,9 +4,10 @@
 
 #include "lib/vfs/cpp/service.h"
 
-#include <test/placeholders/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/binding_set.h>
+
+#include <test/placeholders/cpp/fidl.h>
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
@@ -103,7 +104,19 @@ TEST_F(ServiceTest, TestDescribe) {
 TEST_F(ServiceTest, CanOpenAsAService) {
   uint32_t flags[] = {fuchsia::io::OPEN_RIGHT_READABLE, fuchsia::io::OPEN_RIGHT_WRITABLE,
                       fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_NOT_DIRECTORY};
-  uint32_t modes[] = {0, fuchsia::io::MODE_TYPE_SERVICE, V_IRWXU, V_IRUSR, V_IWUSR, V_IXUSR};
+  uint32_t modes[] = {
+      // Valid mode types:
+      0,
+      fuchsia::io::MODE_TYPE_SERVICE,
+      V_IRWXU,
+      V_IRUSR,
+      V_IWUSR,
+      V_IXUSR,
+      // Invalid mode types (should be ignored as node already exists):
+      // fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
+      fuchsia::io::MODE_TYPE_FILE,
+      fuchsia::io::MODE_TYPE_SOCKET,
+  };
 
   for (uint32_t mode : modes) {
     for (uint32_t flag : flags) {
@@ -132,13 +145,4 @@ TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
   AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_ADMIN, 0, ZX_ERR_ACCESS_DENIED);
   AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_DIRECTORY, 0,
                     ZX_ERR_NOT_DIR);
-}
-
-TEST_F(ServiceTest, CannotOpenServiceWithInvalidMode) {
-  uint32_t modes[] = {fuchsia::io::MODE_TYPE_DIRECTORY, fuchsia::io::MODE_TYPE_BLOCK_DEVICE,
-                      fuchsia::io::MODE_TYPE_FILE, fuchsia::io::MODE_TYPE_SOCKET};
-
-  for (uint32_t mode : modes) {
-    AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE, mode, ZX_ERR_INVALID_ARGS);
-  }
 }

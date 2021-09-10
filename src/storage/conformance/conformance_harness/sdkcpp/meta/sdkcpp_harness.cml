@@ -1,0 +1,19 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/io_conformance_harness_sdkcpp",
+    },
+    capabilities: [
+        { protocol: "fuchsia.io.test.Io1Harness" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.io.test.Io1Harness",
+            from: "self",
+        },
+    ],
+}

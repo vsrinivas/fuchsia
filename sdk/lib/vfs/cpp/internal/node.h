@@ -76,12 +76,6 @@ class Node {
   // Calls |Connect| after validating flags and modes.
   zx_status_t Serve(uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher = nullptr);
 
-  // Validates |mode| and passes request to serve
-  //
-  // Would be called by |Open|.
-  zx_status_t ServeWithMode(uint32_t flags, uint32_t mode, zx::channel request,
-                            async_dispatcher_t* dispatcher = nullptr);
-
   // Find an entry in this directory with the given |name|.
   //
   // The entry is returned via |out_node|. The returned entry is owned by this
@@ -162,13 +156,6 @@ class Node {
   //
   // Returns ZX_OK if none of the above cases are true.
   zx_status_t ValidateFlags(uint32_t flags) const;
-
-  // Validate flags on |ServeWithMode|.
-  //
-  // Calls |GetAttr| and checks that mode should not be anything other than
-  // |MODE_PROTECTION_MASK| and one in attr. Returns |ZX_ERR_INVALID_ARGS| if it
-  // is, else returns |ZX_OK|.
-  zx_status_t ValidateMode(uint32_t mode) const;
 
   // Filters out flags that are invalid when combined with
   // |OPEN_FLAG_NODE_REFERENCE|.

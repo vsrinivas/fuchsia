@@ -1,0 +1,40 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/io1_conformance_test",
+    },
+    children: [
+        {
+            // TODO(fxbug.dev/33880): Don't hardcode the sdkcpp harness URL here. This
+            // needs to work for all the different filesystem test harnesses.
+            name: "fs_test",
+            url: "fuchsia-pkg://fuchsia.com/sdkcpp-io1-conformance-test#meta/sdkcpp-harness.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#fs_test",
+        },
+    ],
+}

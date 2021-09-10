@@ -56,6 +56,11 @@ class Flags {
       fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
       fuchsia::io::OPEN_RIGHT_EXECUTABLE | fuchsia::io::OPEN_RIGHT_ADMIN;
 
+  // All POSIX flags used for rights expansion.
+  static constexpr uint32_t kFsAllPosixFlags = fuchsia::io::OPEN_FLAG_POSIX |
+                                               fuchsia::io::OPEN_FLAG_POSIX_WRITABLE |
+                                               fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
+
   // All lower 16 bits are reserved for future rights extensions.
   static constexpr uint32_t kFsRightsSpace = 0x0000FFFF;
 
@@ -79,6 +84,11 @@ class Flags {
   static bool InputPrecondition(uint32_t flags) {
     // If the caller specified an unknown right, reject the request.
     if ((flags & Flags::kFsRightsSpace) & ~Flags::kFsRights) {
+      return false;
+    }
+
+    // Reject if OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY are both specified.
+    if (Flags::IsDirectory(flags) && Flags::IsNotDirectory(flags)) {
       return false;
     }
 

@@ -24,8 +24,6 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
 
-zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
-
 zx_status_t DummyWriter(std::string_view input) { return ZX_OK; }
 
 class TestHarness : public fuchsia::io::test::Io1Harness {
@@ -54,6 +52,7 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
     config.set_no_admin(false);
+    config.set_no_get_token(false);
 
     // PseudoFile/PseudoDir do not support a variety of methods:
     config.set_no_execfile(true);

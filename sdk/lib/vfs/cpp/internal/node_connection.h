@@ -34,6 +34,8 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void GetAttr(GetAttrCallback callback) override;
   void SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
+  void NodeGetFlags(NodeGetFlagsCallback callback) override;
+  void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
 
  protected:
   // |Connection| Implementation:

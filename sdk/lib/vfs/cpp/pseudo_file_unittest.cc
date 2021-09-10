@@ -477,7 +477,7 @@ TEST_F(PseudoFileTest, WriteFailsForReadOnly) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
 
-  AssertWrite(file, "is", ZX_ERR_ACCESS_DENIED, 0);
+  AssertWrite(file, "is", ZX_ERR_BAD_HANDLE, 0);
 
   CloseFile(file);
 
@@ -490,7 +490,7 @@ TEST_F(PseudoFileTest, WriteAtFailsForReadOnly) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
 
-  AssertWriteAt(file, "is", 0, ZX_ERR_ACCESS_DENIED, 0);
+  AssertWriteAt(file, "is", 0, ZX_ERR_BAD_HANDLE, 0);
 
   CloseFile(file);
 
@@ -503,7 +503,7 @@ TEST_F(PseudoFileTest, TruncateFailsForReadOnly) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
 
-  AssertTruncate(file, 10, ZX_ERR_ACCESS_DENIED);
+  AssertTruncate(file, 10, ZX_ERR_BAD_HANDLE);
 
   CloseFile(file);
 
@@ -517,7 +517,7 @@ TEST_F(PseudoFileTest, ReadAtFailsForWriteOnly) {
   auto file =
       OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE, file_wrapper.dispatcher());
 
-  AssertReadAt(file, 0, 10, "", ZX_ERR_ACCESS_DENIED);
+  AssertReadAt(file, 0, 10, "", ZX_ERR_BAD_HANDLE);
 }
 
 TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
@@ -526,7 +526,7 @@ TEST_F(PseudoFileTest, ReadFailsForWriteOnly) {
   auto file =
       OpenFile(file_wrapper.file(), fuchsia::io::OPEN_RIGHT_WRITABLE, file_wrapper.dispatcher());
 
-  AssertRead(file, 10, "", ZX_ERR_ACCESS_DENIED);
+  AssertRead(file, 10, "", ZX_ERR_BAD_HANDLE);
 }
 
 TEST_F(PseudoFileTest, CapacityisSameAsFileContentSize) {

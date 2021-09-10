@@ -36,6 +36,9 @@ class NodeKind {
   // Node is Readable.
   static constexpr Type kReadable = 0x0200;
 
+  // Node is Executable.
+  static constexpr Type kExecutable = 0x0200;
+
   // Node can be mounted,
   static constexpr Type kMountable = 0x0400;
 

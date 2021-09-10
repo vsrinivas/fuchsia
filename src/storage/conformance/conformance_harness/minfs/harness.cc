@@ -69,6 +69,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_rename(false);
     config.set_no_link(false);
     config.set_no_set_attr(false);
+    config.set_no_get_token(false);
 
     // Minfs doesn't support executable files, VMO files, nor remote directories.
     config.set_no_execfile(true);
