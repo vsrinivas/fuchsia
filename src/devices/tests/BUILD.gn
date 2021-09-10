@@ -6,7 +6,6 @@ group("tests") {
   testonly = true
   deps = [
     "bind-fail-test",
-    "bind-test",
     "bind-test-v2",
     "ddk-environment-test:tests",
     "ddk-fallback-test:tests",
@@ -32,7 +31,6 @@ group("drivers") {
   testonly = true
   deps = [
     "bind-fail-test:driver",
-    "bind-test:bind-test-driver",
     "bind-test-v2:bind-test-driver-v2",
     "ddk-environment-test:ddk-environment-test",
     "ddk-fallback-test:ddk-fallback-test",

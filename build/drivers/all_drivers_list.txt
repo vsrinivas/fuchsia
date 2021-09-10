@@ -183,7 +183,6 @@
 //src/devices/temperature/drivers/tmp112:tmp112-driver
 //src/devices/tests/bind-fail-test:driver_module
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
-//src/devices/tests/bind-test:bind-test-driver-driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver
 //src/devices/tests/ddk-fallback-test-v2:ddk-fallback-test-driver-module
 //src/devices/tests/ddk-fallback-test:ddk-fallback-test-driver
