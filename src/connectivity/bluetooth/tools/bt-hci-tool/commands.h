@@ -9,7 +9,6 @@
 
 #include "src/connectivity/bluetooth/core/bt-host/transport/command_channel.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace hcitool {
 
