@@ -31,7 +31,6 @@ use {
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
-    parking_lot::RwLock,
     std::sync::Arc,
     std::time::Instant,
     system_image::CachePackages,
@@ -48,7 +47,7 @@ pub fn make_package_fetch_queue(
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
-    rewriter: Arc<RwLock<RewriteManager>>,
+    rewriter: Arc<AsyncRwLock<RewriteManager>>,
     blob_fetcher: BlobFetcher,
     max_concurrency: usize,
     inspect: Arc<ResolverServiceInspectState>,
@@ -81,7 +80,7 @@ pub fn make_package_fetch_queue(
 
 pub async fn run_resolver_service(
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
-    rewriter: Arc<RwLock<RewriteManager>>,
+    rewriter: Arc<AsyncRwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
@@ -172,8 +171,11 @@ pub async fn run_resolver_service(
         .await
 }
 
-fn rewrite_url(rewriter: &RwLock<RewriteManager>, url: &PkgUrl) -> Result<PkgUrl, Status> {
-    Ok(rewriter.read().rewrite(url))
+async fn rewrite_url(
+    rewriter: &AsyncRwLock<RewriteManager>,
+    url: &PkgUrl,
+) -> Result<PkgUrl, Status> {
+    Ok(rewriter.read().await.rewrite(url))
 }
 
 fn missing_cache_package_disk_fallback(
@@ -211,7 +213,7 @@ enum HashSource<TufError> {
 
 async fn hash_from_base_or_repo_or_cache(
     repo_manager: &AsyncRwLock<RepositoryManager>,
-    rewriter: &RwLock<RewriteManager>,
+    rewriter: &AsyncRwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
@@ -222,7 +224,7 @@ async fn hash_from_base_or_repo_or_cache(
         return Ok(blob);
     }
 
-    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    let rewritten_url = rewrite_url(rewriter, &pkg_url).await?;
     hash_from_repo_or_cache(repo_manager, system_cache_list, pkg_url, &rewritten_url, inspect_state)
         .await
         .map_err(|e| {
@@ -288,7 +290,7 @@ async fn hash_from_repo_or_cache(
 
 async fn package_from_base_or_repo_or_cache(
     repo_manager: &AsyncRwLock<RepositoryManager>,
-    rewriter: &RwLock<RewriteManager>,
+    rewriter: &AsyncRwLock<RewriteManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,
     pkg_url: &PkgUrl,
@@ -307,7 +309,7 @@ async fn package_from_base_or_repo_or_cache(
         return Ok(dir);
     }
 
-    let rewritten_url = rewrite_url(rewriter, &pkg_url).map_err(|e| e.to_resolve_error())?;
+    let rewritten_url = rewrite_url(rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
     let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
     package_from_repo_or_cache(
         repo_manager,
@@ -452,7 +454,7 @@ fn hash_from_cache_packages_manifest<'a>(
 }
 
 async fn get_hash(
-    rewriter: &RwLock<RewriteManager>,
+    rewriter: &AsyncRwLock<RewriteManager>,
     repo_manager: &AsyncRwLock<RepositoryManager>,
     base_package_index: &BasePackageIndex,
     system_cache_list: &CachePackages,

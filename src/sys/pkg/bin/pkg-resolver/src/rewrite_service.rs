@@ -5,6 +5,7 @@
 use {
     crate::rewrite_manager::{CommitError, RewriteManager},
     anyhow::{anyhow, Error},
+    async_lock::RwLock,
     fidl_fuchsia_pkg_rewrite::{
         EditTransactionRequest, EditTransactionRequestStream, EngineRequest, EngineRequestStream,
         RuleIteratorRequest, RuleIteratorRequestStream,
@@ -15,7 +16,6 @@ use {
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
-    parking_lot::RwLock,
     std::{convert::TryInto, sync::Arc},
 };
 
@@ -36,23 +36,24 @@ impl RewriteService {
             match request {
                 EngineRequest::List { iterator, control_handle: _control_handle } => {
                     let iterator = iterator.into_stream()?;
-                    self.serve_list(iterator);
+                    self.serve_list(iterator).await;
                 }
                 EngineRequest::ListStatic { iterator, control_handle: _control_handle } => {
                     let iterator = iterator.into_stream()?;
-                    self.serve_list_static(iterator);
+                    self.serve_list_static(iterator).await;
                 }
                 EngineRequest::StartEditTransaction {
                     transaction,
                     control_handle: _control_handle,
                 } => {
                     let transaction = transaction.into_stream()?;
-                    self.serve_edit_transaction(transaction);
+                    self.serve_edit_transaction(transaction).await;
                 }
                 EngineRequest::TestApply { url, responder } => {
                     responder.send(
                         &mut self
                             .handle_test_apply(url.as_str())
+                            .await
                             .map(|url| url.to_string())
                             .map_err(|e| e.into_raw()),
                     )?;
@@ -63,33 +64,33 @@ impl RewriteService {
         Ok(())
     }
 
-    pub(self) fn handle_test_apply(&self, url: &str) -> Result<PkgUrl, Status> {
+    pub(self) async fn handle_test_apply(&self, url: &str) -> Result<PkgUrl, Status> {
         let url = url.parse::<PkgUrl>().map_err(|e| {
             fx_log_err!("client provided invalid URL ({:?}): {:#}", url, anyhow!(e));
             Status::INVALID_ARGS
         })?;
 
-        let rewritten = self.state.read().rewrite(&url);
+        let rewritten = self.state.read().await.rewrite(&url);
         Ok(rewritten)
     }
 
-    pub(self) fn serve_list(&mut self, stream: RuleIteratorRequestStream) {
-        let rules = self.state.read().list().cloned().collect();
+    pub(self) async fn serve_list(&mut self, stream: RuleIteratorRequestStream) {
+        let rules = self.state.read().await.list().cloned().collect();
 
         Self::serve_rule_iterator(rules, stream);
     }
 
-    pub(self) fn serve_list_static(&mut self, stream: RuleIteratorRequestStream) {
-        let rules = self.state.read().list_static().cloned().collect();
+    pub(self) async fn serve_list_static(&mut self, stream: RuleIteratorRequestStream) {
+        let rules = self.state.read().await.list_static().cloned().collect();
 
         Self::serve_rule_iterator(rules, stream);
     }
 
-    pub(self) fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
+    pub(self) async fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
         fx_log_info!("opening rewrite transaction");
 
         let state = self.state.clone();
-        let mut transaction = state.read().transaction();
+        let mut transaction = state.read().await.transaction();
 
         fasync::Task::spawn(
             async move {
@@ -117,7 +118,7 @@ impl RewriteService {
                             responder.send(&mut response)?;
                         }
                         EditTransactionRequest::Commit { responder } => {
-                            let mut response = match state.write().apply(transaction) {
+                            let mut response = match state.write().await.apply(transaction).await {
                                 Ok(()) => {
                                     fx_log_info!("rewrite transaction committed");
                                     Ok(())
@@ -180,7 +181,10 @@ impl RewriteService {
 mod tests {
     use {
         super::*,
-        crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder, Transaction},
+        crate::rewrite_manager::{
+            tests::{make_rule_config, temp_path_into_proxy_and_path},
+            RewriteManagerBuilder, Transaction,
+        },
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_pkg_rewrite::{
             EditTransactionMarker, EditTransactionProxy, RuleIteratorMarker,
@@ -225,18 +229,18 @@ mod tests {
         res
     }
 
-    fn list_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
+    async fn list_rules(state: Arc<RwLock<RewriteManager>>) -> Vec<Rule> {
         let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-        RewriteService::new(state).serve_list(request_stream);
+        RewriteService::new(state).serve_list(request_stream).await;
 
-        collect_iterator(move || iterator.next())
+        collect_iterator(move || iterator.next()).await
     }
 
-    fn list_static_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
+    async fn list_static_rules(state: Arc<RwLock<RewriteManager>>) -> Vec<Rule> {
         let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-        RewriteService::new(state).serve_list_static(request_stream);
+        RewriteService::new(state).serve_list_static(request_stream).await;
 
-        collect_iterator(move || iterator.next())
+        collect_iterator(move || iterator.next()).await
     }
 
     fn transaction_list_dynamic_rules(
@@ -248,19 +252,21 @@ mod tests {
         collect_iterator(move || iterator.next())
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_list() {
         let dynamic_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
-        let dynamic_config = make_rule_config(dynamic_rules.clone());
+        let path = make_rule_config(dynamic_rules.clone());
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let static_rules = vec![
             rule!("fuchsia.com" => "static.fuchsia.com", "/3" => "/3"),
             rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config))
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -271,18 +277,20 @@ mod tests {
         assert_eq!(list_rules(state.clone()).await, expected);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_list_static() {
-        let dynamic_config = make_rule_config(vec![
+        let path = make_rule_config(vec![
             rule!("fuchsia.com" => "dynamic.fuchsia.com", "/1" => "/1"),
             rule!("fuchsia.com" => "dynamic.fuchsia.com", "/2" => "/2"),
         ]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let static_rules = vec![
             rule!("fuchsia.com" => "static.fuchsia.com", "/3" => "/3"),
             rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config))
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -291,37 +299,43 @@ mod tests {
         assert_eq!(list_static_rules(state.clone()).await, static_rules);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_reset_all() {
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
-        let dynamic_config = make_rule_config(rules.clone());
+        let path = make_rule_config(rules.clone());
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
 
         client.reset_all().unwrap();
         assert_yields_result!(client.commit(), Ok(()));
 
-        assert_eq!(state.read().transaction(), Transaction::new(vec![], 1));
+        assert_eq!(state.read().await.transaction(), Transaction::new(vec![], 1));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_transaction_list_dynamic() {
         let dynamic_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
-        let dynamic_config = make_rule_config(dynamic_rules.clone());
+        let path = make_rule_config(dynamic_rules.clone());
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let static_rules = vec![rule!("fuchsia.com" => "static.fuchsia.com", "/" => "/")];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config))
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
                 .unwrap()
                 .static_rules(static_rules)
                 .build(),
@@ -329,7 +343,7 @@ mod tests {
         let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
 
         // The transaction should list all dynamic rules.
         assert_eq!(transaction_list_dynamic_rules(&client).await, dynamic_rules.clone());
@@ -348,29 +362,33 @@ mod tests {
         assert_eq!(pending_list.await, dynamic_rules);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_concurrent_edit() {
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
-        let dynamic_config = make_rule_config(rules.clone());
+        let path = make_rule_config(rules.clone());
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
         let client1 = {
             let (client, request_stream) =
                 create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-            service.serve_edit_transaction(request_stream);
+            service.serve_edit_transaction(request_stream).await;
             client
         };
 
         let client2 = {
             let (client, request_stream) =
                 create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-            service.serve_edit_transaction(request_stream);
+            service.serve_edit_transaction(request_stream).await;
             client
         };
 
@@ -383,24 +401,28 @@ mod tests {
         assert_yields_result!(client1.commit(), Ok(()));
         assert_yields_result!(client2.commit(), Err(Status::UNAVAILABLE));
 
-        assert_eq!(state.read().transaction(), Transaction::new(vec![rule], 1),);
+        assert_eq!(state.read().await.transaction(), Transaction::new(vec![rule], 1),);
 
         let client2 = {
             let (client, request_stream) =
                 create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-            service.serve_edit_transaction(request_stream);
+            service.serve_edit_transaction(request_stream).await;
             client
         };
         client2.reset_all().unwrap();
         assert_yields_result!(client2.commit(), Ok(()));
-        assert_eq!(state.read().transaction(), Transaction::new(vec![], 2));
+        assert_eq!(state.read().await.transaction(), Transaction::new(vec![], 2));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_concurrent_list_and_edit() {
-        let dynamic_config = make_rule_config(vec![]);
+        let path = make_rule_config(vec![]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
@@ -409,7 +431,7 @@ mod tests {
         let edit_client = {
             let (client, request_stream) =
                 create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-            service.serve_edit_transaction(request_stream);
+            service.serve_edit_transaction(request_stream).await;
             client
         };
 
@@ -421,7 +443,7 @@ mod tests {
 
         let long_list_call = {
             let (client, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-            service.serve_list(request_stream);
+            service.serve_list(request_stream).await;
             client
         };
 
@@ -432,16 +454,18 @@ mod tests {
         assert_eq!(list_rules(state.clone()).await, vec![rule]);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rewrite() {
-        let dynamic_config = make_rule_config(vec![]);
+        let path = make_rule_config(vec![]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let static_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/old/" => "/new/"),
             rule!("fuchsia.com" => "devhost", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/identity" => "/identity"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config))
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -453,7 +477,7 @@ mod tests {
             ("fuchsia-pkg://fuchsia.com/rolldice", "fuchsia-pkg://devhost/rolldice"),
             ("fuchsia-pkg://fuchsia.com/identity", "fuchsia-pkg://fuchsia.com/identity"),
         ] {
-            assert_eq!(service.handle_test_apply(url), Ok(rewritten.parse().unwrap()));
+            assert_eq!(service.handle_test_apply(url).await, Ok(rewritten.parse().unwrap()));
         }
 
         for url in &[
@@ -461,35 +485,42 @@ mod tests {
             "fuchsia-pkg://devhost/unmatcheddomain",
             "fuchsia-pkg://fuchsia.com/new/unmatcheddir",
         ] {
-            assert_eq!(service.handle_test_apply(url), Ok(url.parse().unwrap()));
+            assert_eq!(service.handle_test_apply(url).await, Ok(url.parse().unwrap()));
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_rewrite_rejects_invalid_inputs() {
-        let dynamic_config = make_rule_config(vec![]);
+        let path = make_rule_config(vec![]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let service = RewriteService::new(state.clone());
 
         for url in &["not-fuchsia-pkg://fuchsia.com/test", "fuchsia-pkg://fuchsia.com/a*"] {
-            assert_eq!(service.handle_test_apply(url), Err(Status::INVALID_ARGS));
+            assert_eq!(service.handle_test_apply(url).await, Err(Status::INVALID_ARGS));
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_concurrent_rewrite_and_edit() {
-        let dynamic_config =
-            make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
+        let path = make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
         let (edit_client, request_stream) =
             create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
 
         let replacement_rule = rule!("fuchsia.com" => "fuchsia.com", "/a" => "/c");
 
@@ -498,7 +529,7 @@ mod tests {
 
         // Pending transaction does not affect apply call.
         assert_eq!(
-            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a"),
+            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a").await,
             Ok("fuchsia-pkg://fuchsia.com/b".parse().unwrap())
         );
 
@@ -506,21 +537,25 @@ mod tests {
 
         // New rule set now applies.
         assert_eq!(
-            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a"),
+            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a").await,
             Ok("fuchsia-pkg://fuchsia.com/c".parse().unwrap())
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_enables_amber_source() {
-        let dynamic_config = make_rule_config(vec![]);
+        let path = make_rule_config(vec![]);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
 
         let rules = vec![
             rule!("example.com" => "wrong_host.fuchsia.com", "/" => "/"),
@@ -536,50 +571,54 @@ mod tests {
 
         // Adding a duplicate of the currently enabled source is a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
         let rule = rule!("fuchsia.com" => "correct.fuchsia.com", "/" => "/");
         assert_yields_result!(client.add(&mut rule.into()), Ok(()));
         assert_yields_result!(client.commit(), Ok(()));
 
         // Adding a different entry with higher priority enables the new source.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
         let rule = rule!("fuchsia.com" => "correcter.fuchsia.com", "/" => "/");
         assert_yields_result!(client.add(&mut rule.into()), Ok(()));
         assert_yields_result!(client.commit(), Ok(()));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_disables_amber_sources() {
         let rules = vec![rule!("fuchsia.com" => "enabled.fuchsia.com", "/" => "/")];
 
-        let dynamic_config = make_rule_config(rules);
+        let path = make_rule_config(rules);
+        let (dynamic_config_dir, dynamic_config_file) = temp_path_into_proxy_and_path(&path);
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build(),
+            RewriteManagerBuilder::new(dynamic_config_dir, dynamic_config_file)
+                .await
+                .unwrap()
+                .build(),
         ));
         let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
         client.reset_all().unwrap();
         assert_yields_result!(client.commit(), Ok(()));
 
         // Edits that don't change the enabled source are a no-op.
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
         client.reset_all().unwrap();
         assert_yields_result!(client.commit(), Ok(()));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn test_transaction_commit_fails_if_no_dynamic_rules_path() {
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(Option::<&std::path::Path>::None).unwrap().build(),
+            RewriteManagerBuilder::new(None, Option::<&str>::None).await.unwrap().build(),
         ));
         let mut service = RewriteService::new(state);
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
-        service.serve_edit_transaction(request_stream);
+        service.serve_edit_transaction(request_stream).await;
 
         let status = Status::from_raw(client.commit().await.unwrap().unwrap_err());
 

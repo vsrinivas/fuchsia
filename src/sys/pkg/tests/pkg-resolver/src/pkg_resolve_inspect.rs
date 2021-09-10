@@ -35,7 +35,7 @@ async fn initial_inspect_state() {
         root: {
             rewrite_manager: {
                 dynamic_rules: {},
-                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
+                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("rewrites.json"))),
                 static_rules: {},
                 generation: 0u64,
             },

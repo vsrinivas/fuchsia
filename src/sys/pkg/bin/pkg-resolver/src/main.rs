@@ -56,7 +56,7 @@ use crate::{
     repository_manager::{RepositoryManager, RepositoryManagerBuilder},
     repository_service::RepositoryService,
     resolver_service::ResolverServiceInspectState,
-    rewrite_manager::{RewriteManager, RewriteManagerBuilder},
+    rewrite_manager::{LoadRulesError, RewriteManager, RewriteManagerBuilder},
     rewrite_service::RewriteService,
 };
 
@@ -80,8 +80,10 @@ const STATIC_REPO_DIR: &str = "/config/data/repositories";
 // Relative to /data.
 const DYNAMIC_REPO_PATH: &str = "repositories.json";
 
-const STATIC_RULES_PATH: &str = "/config/data/rewrites.json";
-const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
+// Relative to /config/data.
+const STATIC_RULES_PATH: &str = "rewrites.json";
+// Relative to /data.
+const DYNAMIC_RULES_PATH: &str = "rewrites.json";
 
 const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
@@ -163,10 +165,19 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
-            fx_log_err!("failed to open /data: {:?}", anyhow!(e));
+            fx_log_err!("failed to open /data: {:#}", anyhow!(e));
             None
         }
     };
+
+    let config_proxy =
+        match io_util::directory::open_in_namespace("/config/data", io_util::OPEN_RIGHT_READABLE) {
+            Ok(proxy) => Some(proxy),
+            Err(e) => {
+                fx_log_err!("failed to open /config/data: {:#}", anyhow!(e));
+                None
+            }
+        };
 
     let font_package_manager = Arc::new(load_font_package_manager(cobalt_sender.clone()));
     let repo_manager = Arc::new(AsyncRwLock::new(
@@ -177,17 +188,19 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             cobalt_sender.clone(),
             local_mirror.clone(),
             args.tuf_metadata_timeout,
-            data_proxy,
+            data_proxy.clone(),
         )
         .await,
     ));
-    let rewrite_manager = Arc::new(RwLock::new(
+    let rewrite_manager = Arc::new(AsyncRwLock::new(
         load_rewrite_manager(
             inspector.root().create_child("rewrite_manager"),
             Arc::clone(&repo_manager),
             &config,
             &channel_inspect_state,
             cobalt_sender.clone(),
+            data_proxy,
+            config_proxy,
         )
         .await,
     ));
@@ -386,25 +399,43 @@ async fn load_rewrite_manager(
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
     cobalt_sender: CobaltSender,
+    data_proxy: Option<DirectoryProxy>,
+    config_proxy: Option<DirectoryProxy>,
 ) -> RewriteManager {
     let dynamic_rules_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_RULES_PATH) } else { None };
-    let builder = RewriteManagerBuilder::new(dynamic_rules_path)
+    let builder = RewriteManagerBuilder::new(data_proxy, dynamic_rules_path)
+        .await
         .unwrap_or_else(|(builder, err)| {
-            if err.kind() != io::ErrorKind::NotFound {
-                fx_log_err!(
+            match err {
+                // Given a fresh /data, it's expected the file doesn't exist.
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
+                    fuchsia_zircon::Status::NOT_FOUND,
+                )) => {}
+                // Unable to open /data dir proxy.
+                LoadRulesError::DirOpen(_) => {}
+                err => fx_log_err!(
                     "unable to load dynamic rewrite rules from disk, using defaults: {:#}",
                     anyhow!(err)
-                );
-            }
+                ),
+            };
             builder
         })
         .inspect_node(node)
-        .static_rules_path(STATIC_RULES_PATH)
+        .static_rules_path(config_proxy, STATIC_RULES_PATH)
+        .await
         .unwrap_or_else(|(builder, err)| {
-            if err.kind() != io::ErrorKind::NotFound {
-                fx_log_err!("unable to load static rewrite rules from disk: {:#}", anyhow!(err));
-            }
+            match err {
+                // No static rules are configured for this system version.
+                LoadRulesError::FileOpen(io_util::node::OpenError::OpenError(
+                    fuchsia_zircon::Status::NOT_FOUND,
+                )) => {}
+                // Unable to open /config/data dir proxy.
+                LoadRulesError::DirOpen(_) => {}
+                err => {
+                    fx_log_err!("unable to load static rewrite rules from disk: {:#}", anyhow!(err))
+                }
+            };
             builder
         });
 

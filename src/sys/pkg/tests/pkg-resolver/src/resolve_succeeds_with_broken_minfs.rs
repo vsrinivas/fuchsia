@@ -75,7 +75,6 @@ where
                         )
                     }
                     DirectoryRequest::Close { .. } => (),
-                    DirectoryRequest::GetToken { .. } => (),
                     req => panic!("DirectoryStreamHandler unhandled request {:?}", req),
                 }
             }
@@ -644,10 +643,9 @@ async fn minfs_fails_write_to_repo_configs_and_rewrite_rules() {
         || open_handler.get_write_fail_count(),
         // The only time the test should hit the write failure path is when we add a repo config
         // when should_fail = true, in which case we fail at writing both repositories.json.new and
-        // rewrites.json.new. rewrites.json.new fails twice because it goes through a
-        // std::io::BufWriter which attempts to write again on flush.
-        3,
-        3,
+        // rewrites.json.new.
+        2,
+        2,
         || open_handler.make_write_succeed(),
     )
     .await;
