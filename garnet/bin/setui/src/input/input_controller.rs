@@ -17,10 +17,10 @@ use crate::input::types::{
     DeviceState, DeviceStateSource, InputDevice, InputDeviceType, InputInfo, InputInfoSources,
     InputState, Microphone,
 };
-use crate::input::ButtonType;
+use crate::input::MediaButtons;
 
 use async_trait::async_trait;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -199,20 +199,6 @@ impl InputControllerInner {
         self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
-    /// Sets the hardware mic state to `muted`.
-    // TODO(fxbug.dev/66881): Send in name of device to set state for, instead
-    // of using the device type's to_string.
-    async fn set_hw_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
-        self.set_hw_muted_state(InputDeviceType::MICROPHONE, muted).await
-    }
-
-    /// Sets the hardware camera disable to `disabled`.
-    // TODO(fxbug.dev/66881): Send in name of device to set state for, instead
-    // of using the device type's to_string.
-    async fn set_hw_camera_disable(&mut self, disabled: bool) -> SettingHandlerResult {
-        self.set_hw_muted_state(InputDeviceType::CAMERA, disabled).await
-    }
-
     async fn set_sw_camera_mute(&mut self, disabled: bool, name: String) -> SettingHandlerResult {
         let mut input_info = self.get_stored_info().await;
         input_info.input_device_state.set_source_state(
@@ -232,51 +218,61 @@ impl InputControllerInner {
         self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
-    // A helper for setting the hw state for a |device_type| given the
-    // muted |state|.
-    async fn set_hw_muted_state(
+    /// Sets the hardware mic/cam state from the muted states in `media_buttons`.
+    // TODO(fxbug.dev/66881): Send in name of device to set state for, instead
+    // of using the device type's to_string.
+    async fn set_hw_media_buttons_state(
         &mut self,
-        device_type: InputDeviceType,
-        muted: bool,
+        media_buttons: MediaButtons,
     ) -> SettingHandlerResult {
-        let mut input_info = self.get_stored_info().await;
-
-        // Fetch current state.
-        let hw_state_res = input_info.input_device_state.get_source_state(
-            device_type,
-            device_type.to_string(),
-            DeviceStateSource::HARDWARE,
-        );
-
-        let mut hw_state = hw_state_res.map_err(|err| {
-            ControllerError::UnexpectedError(
-                format!("Could not fetch current hw mute state: {:?}", err).into(),
-            )
-        })?;
-
-        if muted {
-            // Unset available and set muted.
-            hw_state &= !DeviceState::AVAILABLE;
-            hw_state |= DeviceState::MUTED;
-        } else {
-            // Set available and unset muted.
-            hw_state |= DeviceState::AVAILABLE;
-            hw_state &= !DeviceState::MUTED;
+        let mut states_to_process = Vec::new();
+        if let Some(mic_mute) = media_buttons.mic_mute {
+            states_to_process.push((InputDeviceType::MICROPHONE, mic_mute));
+        }
+        if let Some(camera_disable) = media_buttons.camera_disable {
+            states_to_process.push((InputDeviceType::CAMERA, camera_disable));
         }
 
-        // Set the updated state.
-        input_info.input_device_state.set_source_state(
-            device_type,
-            device_type.to_string(),
-            DeviceStateSource::HARDWARE,
-            hw_state,
-        );
-        self.input_device_state.set_source_state(
-            device_type,
-            device_type.to_string(),
-            DeviceStateSource::HARDWARE,
-            hw_state,
-        );
+        let mut input_info = self.get_stored_info().await;
+
+        for (device_type, muted) in states_to_process.into_iter() {
+            // Fetch current state.
+            let hw_state_res = input_info.input_device_state.get_source_state(
+                device_type,
+                device_type.to_string(),
+                DeviceStateSource::HARDWARE,
+            );
+
+            let mut hw_state = hw_state_res.map_err(|err| {
+                ControllerError::UnexpectedError(
+                    format!("Could not fetch current hw mute state: {:?}", err).into(),
+                )
+            })?;
+
+            if muted {
+                // Unset available and set muted.
+                hw_state &= !DeviceState::AVAILABLE;
+                hw_state |= DeviceState::MUTED;
+            } else {
+                // Set available and unset muted.
+                hw_state |= DeviceState::AVAILABLE;
+                hw_state &= !DeviceState::MUTED;
+            }
+
+            // Set the updated state.
+            input_info.input_device_state.set_source_state(
+                device_type,
+                device_type.to_string(),
+                DeviceStateSource::HARDWARE,
+                hw_state,
+            );
+            self.input_device_state.set_source_state(
+                device_type,
+                device_type.to_string(),
+                DeviceStateSource::HARDWARE,
+                hw_state,
+            );
+        }
 
         // Store the newly set value.
         let nonce = fuchsia_trace::generate_nonce();
@@ -459,17 +455,20 @@ impl controller::Handle for InputController {
                 }
                 None
             }
-            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
-                if !self.has_input_device(InputDeviceType::MICROPHONE).await {
-                    return Some(Ok(None));
+            Request::OnButton(mut buttons) => {
+                if buttons.mic_mute.is_some()
+                    && !self.has_input_device(InputDeviceType::MICROPHONE).await
+                {
+                    fx_log_warn!("Device does not have a microphone, skipping");
+                    buttons.set_mic_mute(None);
                 }
-                Some(self.inner.lock().await.set_hw_mic_mute(state).await)
-            }
-            Request::OnButton(ButtonType::CameraDisable(disabled)) => {
-                if !self.has_input_device(InputDeviceType::CAMERA).await {
-                    return Some(Ok(None));
+                if buttons.camera_disable.is_some()
+                    && !self.has_input_device(InputDeviceType::CAMERA).await
+                {
+                    fx_log_warn!("Device does not have a camera, skipping");
+                    buttons.set_camera_disable(None);
                 }
-                Some(self.inner.lock().await.set_hw_camera_disable(disabled).await)
+                Some(self.inner.lock().await.set_hw_media_buttons_state(buttons).await)
             }
             Request::SetInputStates(input_states) => Some(
                 self.inner

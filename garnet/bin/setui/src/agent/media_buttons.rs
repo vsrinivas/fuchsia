@@ -9,8 +9,7 @@ use crate::blueprint_definition;
 use crate::event::{media_buttons, Event, Publisher};
 use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::input::common::ButtonType;
-use crate::input::{monitor_media_buttons, VolumeGain};
+use crate::input::{monitor_media_buttons, MediaButtons, VolumeGain};
 use crate::message::base::Audience;
 use crate::service;
 use crate::service_context::ServiceContext;
@@ -114,12 +113,9 @@ impl EventHandler {
             self.handle_volume(volume_gain, nonce);
         }
 
-        if let Some(mic_mute) = event.mic_mute {
-            self.send_event(ButtonType::MicrophoneMute(mic_mute), nonce);
-        }
-
-        if let Some(camera_disable) = event.camera_disable {
-            self.send_event(ButtonType::CameraDisable(camera_disable), nonce);
+        if event.mic_mute.is_some() || event.camera_disable.is_some() {
+            let media_buttons: MediaButtons = event.into();
+            self.send_event(media_buttons, nonce);
         }
     }
 
@@ -174,6 +170,7 @@ mod tests {
     use super::*;
     use crate::event;
     use crate::input::common::MediaButtonsEventBuilder;
+    use crate::input::MediaButtons;
     use crate::message::base::{MessageEvent, MessengerType};
     use crate::message::MessageHubUtil;
     use crate::service;
@@ -288,11 +285,7 @@ mod tests {
         service_message_hub.delete(handler_receptor.get_signature());
         service_message_hub.delete(event_receptor.get_signature());
 
-        let (
-            mut agent_received_volume,
-            mut agent_received_mic_mute,
-            mut agent_received_camera_disable,
-        ) = (false, false, false);
+        let (mut agent_received_volume, mut agent_received_media_buttons) = (false, false);
 
         let mut received_events: usize = 0;
 
@@ -312,20 +305,13 @@ mod tests {
                     {
                         match event {
                             event::media_buttons::Event::OnButton(
-                                ButtonType::MicrophoneMute(muted)
+                                MediaButtons{..}
                             ) => {
-                                assert!(muted);
-                                agent_received_mic_mute = true;
+                                agent_received_media_buttons = true;
                             }
                             event::media_buttons::Event::OnVolume(state) => {
                                 assert_eq!(state, VolumeGain::Up);
                                 agent_received_volume = true;
-                            }
-                            event::media_buttons::Event::OnButton(
-                                ButtonType::CameraDisable(disabled)
-                            ) => {
-                                assert!(disabled);
-                                agent_received_camera_disable = true;
                             }
                         }
                     }
@@ -346,11 +332,10 @@ mod tests {
         }
 
         assert!(agent_received_volume);
-        assert!(agent_received_mic_mute);
-        assert!(agent_received_camera_disable);
+        assert!(agent_received_media_buttons);
 
-        // setting should have received two events, one for mic and one for camera.
-        assert_eq!(received_events, 2);
+        // setting should have received one event for both mic and camera.
+        assert_eq!(received_events, 1);
     }
 
     // Tests that events are not sent to unavailable settings.

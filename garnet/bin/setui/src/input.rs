@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use self::common::{ButtonType, InputType, VolumeGain};
+pub use self::common::{InputType, MediaButtons, VolumeGain};
 pub(crate) use self::input_fidl_handler::fidl_io;
 pub mod common;
 pub mod input_controller;

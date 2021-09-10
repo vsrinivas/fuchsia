@@ -17,7 +17,7 @@ use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, Event, IntoHandlerResult,
     SettingHandlerResult, State,
 };
-use crate::input::ButtonType;
+use crate::input::MediaButtons;
 use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
 use async_trait::async_trait;
@@ -334,9 +334,9 @@ impl controller::Handle for AudioController {
                 let nonce = fuchsia_trace::generate_nonce();
                 Some(self.volume.lock().await.get_info(nonce).await.map(|info| Some(info.into())))
             }
-            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
+            Request::OnButton(MediaButtons { mic_mute: Some(mic_mute), .. }) => {
                 let nonce = fuchsia_trace::generate_nonce();
-                Some(self.volume.lock().await.set_mic_mute_state(state, nonce).await)
+                Some(self.volume.lock().await.set_mic_mute_state(mic_mute, nonce).await)
             }
             _ => None,
         }

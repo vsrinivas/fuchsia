@@ -13,7 +13,7 @@ use crate::handler::setting_handler::persist::{controller as data_controller, Cl
 use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,
 };
-use crate::input::ButtonType;
+use crate::input::MediaButtons;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
@@ -81,8 +81,8 @@ impl controller::Handle for LightController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Restore => Some(self.restore().await),
-            Request::OnButton(ButtonType::MicrophoneMute(state)) => {
-                Some(self.on_mic_mute(state).await)
+            Request::OnButton(MediaButtons { mic_mute: Some(mic_mute), .. }) => {
+                Some(self.on_mic_mute(mic_mute).await)
             }
             Request::SetLightGroupValue(name, state) => {
                 // Validate state contains valid float numbers.

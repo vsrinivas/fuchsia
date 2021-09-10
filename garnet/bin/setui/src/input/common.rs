@@ -82,10 +82,41 @@ pub enum InputType {
     VolumeButtons,
 }
 
+/// Setting service internal representation of hw media buttons. Used to send
+/// OnButton events in the service.
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum ButtonType {
-    MicrophoneMute(bool),
-    CameraDisable(bool),
+pub struct MediaButtons {
+    pub mic_mute: Option<bool>,
+    pub camera_disable: Option<bool>,
+}
+
+impl MediaButtons {
+    fn new() -> Self {
+        Self { mic_mute: None, camera_disable: None }
+    }
+
+    pub(crate) fn set_mic_mute(&mut self, mic_mute: Option<bool>) {
+        self.mic_mute = mic_mute;
+    }
+
+    pub(crate) fn set_camera_disable(&mut self, camera_disable: Option<bool>) {
+        self.camera_disable = camera_disable;
+    }
+}
+
+impl From<MediaButtonsEvent> for MediaButtons {
+    fn from(event: MediaButtonsEvent) -> Self {
+        let mut buttons = MediaButtons::new();
+
+        if let Some(mic_mute) = event.mic_mute {
+            buttons.set_mic_mute(Some(mic_mute));
+        }
+        if let Some(camera_disable) = event.camera_disable {
+            buttons.set_camera_disable(Some(camera_disable));
+        }
+
+        buttons
+    }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
@@ -96,9 +127,9 @@ pub enum VolumeGain {
     Down,
 }
 
-impl From<ButtonType> for Request {
-    fn from(button_type: ButtonType) -> Self {
-        Request::OnButton(button_type)
+impl From<MediaButtons> for Request {
+    fn from(event: MediaButtons) -> Self {
+        Request::OnButton(event)
     }
 }
 

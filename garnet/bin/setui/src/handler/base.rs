@@ -9,7 +9,7 @@ use crate::display::types::SetDisplayInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
-use crate::input::{ButtonType, VolumeGain};
+use crate::input::{MediaButtons, VolumeGain};
 use crate::intl::types::IntlInfo;
 use crate::light::types::LightState;
 use crate::night_mode::types::NightModeInfo;
@@ -85,7 +85,7 @@ generate_inspect! {
         OnCameraSWState(bool),
 
         // Input events.
-        OnButton(ButtonType),
+        OnButton(MediaButtons),
         OnVolume(VolumeGain),
 
         // Accessibility requests.

@@ -7,7 +7,7 @@ use crate::agent::Invocation;
 use crate::agent::Lifespan;
 use crate::agent::{Context, Payload};
 use crate::event::{self, Event};
-use crate::input::{ButtonType, VolumeGain};
+use crate::input::{MediaButtons, VolumeGain};
 use crate::message::base::{Audience, MessengerType};
 use crate::message::MessageHubUtil;
 use crate::service;
@@ -100,7 +100,10 @@ async fn test_media_buttons_proxied() {
     {
         if let Event::MediaButtons(event) = event {
             match event {
-                event::media_buttons::Event::OnButton(ButtonType::MicrophoneMute(true)) => {
+                event::media_buttons::Event::OnButton(MediaButtons {
+                    mic_mute: Some(true),
+                    ..
+                }) => {
                     mic_mute_received = true;
                     if volume_received {
                         break;
