@@ -11,7 +11,7 @@ use {
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
     futures::{
-        future::{join_all, ready},
+        future::{join_all, ready, try_join_all},
         io::Cursor,
         stream::{once, BoxStream},
         AsyncReadExt, StreamExt as _,
@@ -135,6 +135,10 @@ pub enum Error {
     Io(#[source] io::Error),
     #[error(transparent)]
     Tuf(#[from] tuf::Error),
+    #[error(transparent)]
+    Far(#[from] fuchsia_archive::Error),
+    #[error(transparent)]
+    Meta(#[from] fuchsia_pkg::MetaContentsError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -398,6 +402,23 @@ impl Repository {
                 let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
                 let path = format!("blobs/{}", hash);
                 Some(async move {
+                    let res = self.fetch_bytes(&path).await?;
+                    let mut archive = AsyncReader::new(Adapter::new(Cursor::new(res))).await?;
+                    let contents = archive.read_file("meta/contents").await?;
+                    let contents = MetaContents::deserialize(contents.as_slice())?;
+
+                    let size = size
+                        + try_join_all(contents.contents().into_iter().map(
+                            |(_, hash)| async move {
+                                self.fetch(&format!("blobs/{}", hash.to_string()))
+                                    .await
+                                    .map(|x| x.len)
+                            },
+                        ))
+                        .await?
+                        .into_iter()
+                        .sum::<u64>();
+
                     let modified = self
                         .backend
                         .target_modification_time(&path)
