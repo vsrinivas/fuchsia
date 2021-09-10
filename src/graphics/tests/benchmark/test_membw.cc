@@ -44,9 +44,6 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     buffer_size = strtoul(argv[2], nullptr, 0);
   }
-  if (argc > 3) {
-    iterations = strtoul(argv[3], nullptr, 0);
-  }
 
   printf("Allocating buffers\n");fflush(stdout);
   a = malloc(buffer_size);
@@ -66,6 +63,9 @@ int main(int argc, char** argv) {
   }
 
   iterations = 10000;
+  if (argc > 3) {
+    iterations = strtoul(argv[3], nullptr, 0);
+  }
   printf("Running %lu iterations\n", iterations);fflush(stdout);
 
   auto start = std::chrono::high_resolution_clock::now();
