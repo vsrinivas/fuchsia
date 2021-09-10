@@ -151,7 +151,7 @@ TEST(DspModuleController, CreateModuleIpc) {
   DspModuleController controller(&fake_channel);
 
   // Send the IPC.
-  uint8_t data[] = {1, 2, 3};
+  uint8_t data[] = {1, 2, 3, 4};
   EXPECT_TRUE(controller
                   .CreateModule(/*type=*/42, /*parent_pipeline=*/{17},
                                 /*scheduling_domain=*/ProcDomain::LOW_LATENCY, data)
@@ -165,8 +165,20 @@ TEST(DspModuleController, CreateModuleIpc) {
           IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::INIT_INSTANCE,
                   /*instance_id=*/0, /*module_id=*/42),
           IPC_INIT_INSTANCE_EXT(ProcDomain::LOW_LATENCY, /*core_id=*/0, /*ppl_instance_id=*/17,
-                                /*param_block_size=*/3),
-          {1, 2, 3}}));
+                                /*param_block_words=*/1),
+          {1, 2, 3, 4}}));
+}
+
+TEST(DspModuleController, CreateModuleIpcBadDataSize) {
+  FakeDspChannel fake_channel;
+  DspModuleController controller(&fake_channel);
+
+  // Send the IPC.
+  uint8_t data[] = {1, 2, 3};  // Non word-sized data.
+  EXPECT_FALSE(controller
+                   .CreateModule(/*type=*/42, /*parent_pipeline=*/{17},
+                                 /*scheduling_domain=*/ProcDomain::LOW_LATENCY, data)
+                   .ok());
 }
 
 TEST(DspModuleController, CreateModuleIpcBigData) {

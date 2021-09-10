@@ -107,8 +107,9 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
                                                         DspPipelineId parent_pipeline,
                                                         ProcDomain scheduling_domain,
                                                         fbl::Span<const uint8_t> data) {
-  // Ensure data is not too large.
-  if (data.size() >= std::numeric_limits<uint16_t>::max()) {
+  // Ensure data is not too large or non-word sized.
+  if ((data.size() % kIpcInitInstanceExtBytesPerWord) ||
+      data.size() >= std::numeric_limits<uint16_t>::max()) {
     return Status(ZX_ERR_INVALID_ARGS);
   }
 
@@ -124,7 +125,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::INIT_INSTANCE,
               instance_id.ValueOrDie(), type),
       IPC_INIT_INSTANCE_EXT(scheduling_domain, /*core_id=*/0, parent_pipeline.id,
-                            static_cast<uint16_t>(data.size())),
+                            static_cast<uint16_t>((data.size()) / kIpcInitInstanceExtBytesPerWord)),
       data, fbl::Span<uint8_t>(), nullptr);
   if (!result.ok()) {
     GLOBAL_LOG(TRACE, "CreateModule failed: %s", result.ToString().c_str());

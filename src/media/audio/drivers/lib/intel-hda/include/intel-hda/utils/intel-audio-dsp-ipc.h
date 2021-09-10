@@ -398,12 +398,14 @@ static inline constexpr uint32_t IPC_PRI(MsgTarget msg_tgt, MsgDir rsp, ModuleMs
 
 // Init Instance
 
+constexpr size_t kIpcInitInstanceExtBytesPerWord = 4;
+
 static inline constexpr uint32_t IPC_INIT_INSTANCE_EXT(ProcDomain proc_domain, uint8_t core_id,
                                                        uint8_t ppl_instance_id,
-                                                       uint16_t param_block_size) {
+                                                       uint16_t param_block_words) {
   return (static_cast<uint8_t>(proc_domain) << IPC_EXT_PROC_DOMAIN_SHIFT) |
          ((core_id & IPC_EXT_CORE_ID_MASK) << IPC_EXT_CORE_ID_SHIFT) |
-         (ppl_instance_id << IPC_EXT_PPL_INSTANCE_ID_SHIFT) | param_block_size;
+         (ppl_instance_id << IPC_EXT_PPL_INSTANCE_ID_SHIFT) | param_block_words;
 }
 
 // Large Config Get/Set
