@@ -1,0 +1,33 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite sherlock_buttons;
+
+using fuchsia.amlogic.platform.t931;
+using fuchsia.gpio;
+
+primary node "volume-up" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_4; // GPIO_VOLUME_UP
+}
+
+node "volume-down" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_5; // GPIO_VOLUME_DOWN;
+}
+
+node "volume-both" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_13; // GPIO_VOLUME_BOTH;
+}
+
+node "mic-privacy" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOH_PIN_ID.PIN_3; // GPIO_MIC_PRIVACY
+}
+
+node "cam-mute" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_13; // GPIO_CAM_MUTE
+}

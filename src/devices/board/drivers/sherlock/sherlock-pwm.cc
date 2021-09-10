@@ -13,6 +13,7 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-pwm-bind.h"
 
 namespace sherlock {
 
@@ -65,34 +66,6 @@ static pbus_dev_t pwm_dev = []() {
   return dev;
 }();
 
-// Composite binding rules for pwm init driver.
-static const zx_bind_inst_t pwm_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
-};
-static const zx_bind_inst_t wifi_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_WIFI_LPO_32k768),
-};
-static const zx_bind_inst_t bt_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_BT_REG_ON),
-};
-static const device_fragment_part_t pwm_fragment[] = {
-    {countof(pwm_match), pwm_match},
-};
-static const device_fragment_part_t wifi_gpio_fragment[] = {
-    {countof(wifi_gpio_match), wifi_gpio_match},
-};
-static const device_fragment_part_t bt_gpio_fragment[] = {
-    {countof(bt_gpio_match), bt_gpio_match},
-};
-static const device_fragment_t composite[] = {
-    {"pwm", countof(pwm_fragment), pwm_fragment},
-    {"gpio-wifi", countof(wifi_gpio_fragment), wifi_gpio_fragment},
-    {"gpio-bt", countof(bt_gpio_fragment), bt_gpio_fragment},
-};
-
 zx_status_t Sherlock::PwmInit() {
   zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
   if (status != ZX_OK) {
@@ -110,8 +83,8 @@ zx_status_t Sherlock::PwmInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = composite,
-      .fragments_count = countof(composite),
+      .fragments = pwm_init_fragments,
+      .fragments_count = countof(pwm_init_fragments),
       .primary_fragment = "pwm",
       .spawn_colocated = true,
       .metadata_list = nullptr,

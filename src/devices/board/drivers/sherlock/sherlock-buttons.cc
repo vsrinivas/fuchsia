@@ -14,53 +14,11 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-buttons-bind.h"
 
 namespace sherlock {
 
 zx_status_t Sherlock::ButtonsInit() {
-  static const zx_bind_inst_t volume_up_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_UP),
-  };
-  static const zx_bind_inst_t volume_down_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_DOWN),
-  };
-  static const zx_bind_inst_t volume_both_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_BOTH),
-  };
-  static const zx_bind_inst_t mic_privacy_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_MIC_PRIVACY),
-  };
-  static const zx_bind_inst_t cam_mute_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-      BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_MUTE),
-  };
-  static const device_fragment_part_t volume_up_fragment[] = {
-      {countof(volume_up_match), volume_up_match},
-  };
-  static const device_fragment_part_t volume_down_fragment[] = {
-      {countof(volume_down_match), volume_down_match},
-  };
-  static const device_fragment_part_t volume_both_fragment[] = {
-      {countof(volume_both_match), volume_both_match},
-  };
-  static const device_fragment_part_t mic_privacy_fragment[] = {
-      {countof(mic_privacy_match), mic_privacy_match},
-  };
-  static const device_fragment_part_t cam_mute_fragment[] = {
-      {countof(cam_mute_match), cam_mute_match},
-  };
-  static const device_fragment_t fragments[] = {
-      {"volume-up", countof(volume_up_fragment), volume_up_fragment},
-      {"volume-down", countof(volume_down_fragment), volume_down_fragment},
-      {"volume-both", countof(volume_both_fragment), volume_both_fragment},
-      {"mic-privacy", countof(mic_privacy_fragment), mic_privacy_fragment},
-      {"cam-mute", countof(cam_mute_fragment), cam_mute_fragment},
-  };
-
   static constexpr buttons_button_config_t sherlock_buttons[] = {
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_DOWN, 1, 0, 0},
@@ -119,8 +77,8 @@ zx_status_t Sherlock::ButtonsInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = fragments,
-      .fragments_count = button_count,
+      .fragments = sherlock_buttons_fragments,
+      .fragments_count = kSherlockButtonCount,
       .primary_fragment = "volume-up",  // ???
       .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,

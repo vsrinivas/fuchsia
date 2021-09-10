@@ -1,0 +1,144 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.amlogic.platform.t931;
+
+// Values taken from <soc/aml-t931/t931-gpio.h>
+
+extend uint fuchsia.BIND_PWM_ID {
+    PWM_A = 0,
+    PWM_B = 1,
+    PWM_C = 2,
+    PWM_D = 3,
+    PWM_E = 4,
+    PWM_F = 5,
+    PWM_AO_A = 6,
+    PWM_AO_B = 7,
+    PWM_AO_C = 8,
+    PWM_AO_D = 9,
+};
+
+uint GPIOZ_PIN_ID {
+    PIN_1 = 1,
+    PIN_2 = 2,
+    PIN_3 = 3,
+    PIN_4 = 4,
+    PIN_5 = 5,
+    PIN_6 = 6,
+    PIN_7 = 7,
+    PIN_8 = 8,
+    PIN_9 = 9,
+    PIN_10 = 10,
+    PIN_11 = 11,
+    PIN_12 = 12,
+    PIN_13 = 13,
+    PIN_14 = 14,
+    PIN_15 = 15,
+    PIN_16 = 16,
+};
+
+uint GPIOA_PIN_ID {
+    PIN_1 = 17,
+    PIN_2 = 18,
+    PIN_3 = 19,
+    PIN_4 = 20,
+    PIN_5 = 21,
+    PIN_6 = 22,
+    PIN_7 = 23,
+    PIN_8 = 24,
+    PIN_9 = 25,
+    PIN_10 = 26,
+    PIN_11 = 27,
+    PIN_12 = 28,
+    PIN_13 = 29,
+    PIN_14 = 30,
+    PIN_15 = 31,
+    PIN_16 = 32,
+};
+
+uint GPIOBOOT_PIN_ID {
+    PIN_1 = 33,
+    PIN_2 = 34,
+    PIN_3 = 35,
+    PIN_4 = 36,
+    PIN_5 = 37,
+    PIN_6 = 38,
+    PIN_7 = 39,
+    PIN_8 = 40,
+    PIN_9 = 41,
+    PIN_10 = 42,
+    PIN_11 = 43,
+    PIN_12 = 44,
+    PIN_13 = 45,
+    PIN_14 = 46,
+    PIN_15 = 47,
+    PIN_16 = 48,
+};
+
+uint GPIOC_PIN_ID {
+    PIN_1 = 49,
+    PIN_2 = 50,
+    PIN_3 = 51,
+    PIN_4 = 52,
+    PIN_5 = 53,
+    PIN_6 = 54,
+    PIN_7 = 55,
+    PIN_8 = 56,
+};
+
+uint GPIOX_PIN_ID {
+    PIN_1 = 57,
+    PIN_2 = 58,
+    PIN_3 = 59,
+    PIN_4 = 60,
+    PIN_5 = 61,
+    PIN_6 = 62,
+    PIN_7 = 63,
+    PIN_8 = 64,
+    PIN_9 = 65,
+    PIN_10 = 66,
+    PIN_11 = 67,
+    PIN_12 = 68,
+    PIN_13 = 69,
+    PIN_14 = 70,
+    PIN_15 = 71,
+    PIN_16 = 72,
+    PIN_17 = 73,
+    PIN_18 = 74,
+    PIN_19 = 75,
+    PIN_20 = 76,
+};
+
+uint GPIOH_PIN_ID {
+    PIN_1 = 77,
+    PIN_2 = 78,
+    PIN_3 = 79,
+    PIN_4 = 80,
+    PIN_5 = 81,
+    PIN_6 = 82,
+    PIN_7 = 83,
+    PIN_8 = 84,
+    PIN_9 = 85,
+};
+
+uint GPIOAO_PIN_ID {
+    PIN_1 = 86,
+    PIN_2 = 87,
+    PIN_3 = 88,
+    PIN_4 = 89,
+    PIN_5 = 90,
+    PIN_6 = 91,
+    PIN_7 = 92,
+    PIN_8 = 93,
+    PIN_9 = 94,
+    PIN_10 = 95,
+    PIN_11 = 96,
+    PIN_12 = 97,
+};
+
+uint GPIOE_PIN_ID {
+    PIN_1 = 98,
+    PIN_2 = 99,
+    PIN_3 = 100,
+};

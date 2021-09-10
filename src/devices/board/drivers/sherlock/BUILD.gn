@@ -36,6 +36,27 @@ driver_bind_rules("luis-bind") {
   ]
 }
 
+driver_bind_rules("sherlock-buttons-bind") {
+  rules = "bind/sherlock-buttons.bind"
+  header_output = "sherlock-buttons-bind.h"
+  bind_output = "sherlock-buttons-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("sherlock-pwm-bind") {
+  rules = "bind/sherlock-pwm.bind"
+  header_output = "sherlock-pwm-bind.h"
+  bind_output = "sherlock-pwm-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -93,6 +114,8 @@ template("sherlock_driver") {
     ]
 
     deps = [
+      ":sherlock-buttons-bind_header",
+      ":sherlock-pwm-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
