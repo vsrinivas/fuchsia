@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1440
+From //build/config/BUILDCONFIG.gn:1434
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1214,7 +1214,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1197
+From //build/config/BUILDCONFIG.gn:1191
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1824,7 +1824,7 @@ and the analysis overhead turned off by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:26
+From //build/config/BUILDCONFIG.gn:20
 
 ### is_debug
 Debug build.
@@ -1835,7 +1835,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:29
+From //build/config/BUILDCONFIG.gn:23
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1843,7 +1843,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:29
+From //build/config/BUILDCONFIG.gn:23
 
 ### jtrace_enabled
 Please refer to https://fuchsia.dev/fuchsia-src/development/debugging/jtrace
@@ -2099,7 +2099,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1037
+From //build/config/BUILDCONFIG.gn:1031
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2956,14 +2956,14 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:32
+From //build/config/BUILDCONFIG.gn:26
 
 ### output_gsym
 Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:35
+From //build/config/BUILDCONFIG.gn:29
 
 ### package_flavor_selections
 Used to configure the set of package flavors desired.
@@ -3444,7 +3444,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1430
+From //build/config/BUILDCONFIG.gn:1424
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3453,7 +3453,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1435
+From //build/config/BUILDCONFIG.gn:1429
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3497,7 +3497,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1243
+From //build/config/BUILDCONFIG.gn:1237
 
 ### size_checker_input
 The input to the size checker.
@@ -3757,7 +3757,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:143
+From //build/config/BUILDCONFIG.gn:137
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3788,7 +3788,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1227
+From //build/config/BUILDCONFIG.gn:1221
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4310,7 +4310,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:160
+From //build/config/BUILDCONFIG.gn:154
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -4400,5 +4400,5 @@ be removed after everyone has had a chance to get hold of their machines.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/BUILD.gn:27
+From //zircon/kernel/BUILD.gn:29
 
