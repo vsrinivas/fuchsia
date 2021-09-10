@@ -5,6 +5,7 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("devmgr-launcher") {
+  testonly = true
   sdk = "shared"
   sdk_headers = [
     "lib/devmgr-launcher/launch.h",

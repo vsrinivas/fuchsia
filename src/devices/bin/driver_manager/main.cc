@@ -7,7 +7,6 @@
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
@@ -52,6 +51,9 @@
 #include "system_instance.h"
 
 namespace {
+
+#define DEVMGR_LAUNCHER_DEVFS_ROOT_HND PA_HND(PA_USER1, 0)
+#define DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND PA_HND(PA_USER1, 1)
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
