@@ -350,6 +350,7 @@
             reboot_on_terminate: [
                 "/bootstrap/driver_index",
                 "/core/appmgr",
+                "/core/network/netstack",
                 "/core/wlancfg",
                 "/core/wlandevicemonitor",
                 "/core/wlanstack",

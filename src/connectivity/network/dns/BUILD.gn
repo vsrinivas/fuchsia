@@ -107,9 +107,6 @@ fuchsia_component("component") {
 }
 
 fuchsia_component("component-v2") {
-  # TODO(https://fxbug.dev/74101): Remove testonly restriction once networking components are ready
-  # for V2 migration.
-  testonly = true
   component_name = "dns_resolver"
   manifest = "meta/dns_resolver.cml"
   deps = [ ":bin" ]

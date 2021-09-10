@@ -128,7 +128,7 @@ func printNetstackGoroutines(ctx context.Context, serial net.Conn) error {
 	// Print out the netstack goroutines while only using shell-builtin commands to avoid hitting the package resolver.
 	const shellFmtStr = `(export PATH=;
 		echo '%s --- netstack goroutine traces ---';
-		export P="$(echo /hub/r/sys/*/c/netstack.cmx/*/out/debug/goroutines)" &&
+		export P="$(echo hub-v2/children/core/children/network/children/netstack/exec/out/debug/goroutines)" &&
 		test -e "$P" && while IFS='' read line; do echo "$line"; done < "$P";
 		echo '------------------------------------') &
 `
@@ -152,7 +152,7 @@ func printNetstackInspect(ctx context.Context, serial net.Conn) error {
 	// Print iquery. This will also emit a newline before
 	// the command to get a fresh line, and print markers before and after
 	// the backtrace to make it easier to distinguish in the logs.
-	cmd := fmt.Sprintf("\n(echo '%s --- iquery netstack logs ---' && /boot/bin/iquery show netstack.cmx && echo '------------------------------------') &\n", time.Now().Format(time.RFC3339Nano))
+	cmd := fmt.Sprintf("\n(echo '%s --- iquery netstack logs ---' && /boot/bin/iquery show --manifest netstack.cm && echo '------------------------------------') &\n", time.Now().Format(time.RFC3339Nano))
 
 	err := run(ctx, serial, cmd)
 	if err != nil {

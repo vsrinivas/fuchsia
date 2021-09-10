@@ -29,5 +29,14 @@
             rights: [ "rw*" ],
             path: "/dev/class/network",
         },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
     ],
 }

@@ -191,7 +191,7 @@
         // TODO(fxbug.dev/83038): Remove once e2e is better supported.
         {
             protocol: "fuchsia.net.http.Loader",
-            from: "#http-client",
+            from: "#network",
             to: "#test_manager",
         },
     ],

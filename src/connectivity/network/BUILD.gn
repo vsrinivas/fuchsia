@@ -2,42 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # If true, replaces netstack with netstack3.
-  #
-  # When set as a GN argument, requires that sysmgr_config_warn_override be set
-  # to true to avoid build failures. See that flag's documentation for details.
-  use_netstack3 = false
+import("//build/components.gni")
 
-  # If true, uses a netstack tailored for network conformance testing.
-  conformance_testing_netstack = false
+fuchsia_component("component") {
+  component_name = "network"
+  manifest = "meta/network.cml"
+  deps = [
+    "dhcp:component",
+    "dhcpv6/client:component-v2",
+    "dns:component-v2",
+    "http-client:component_v2",
+    "netcfg:component-v2",
+    "netstack:component-v2",
+  ]
 }
 
-group("config") {
-  if (use_netstack3) {
-    deps = [
-      "netstack3",
-      "netstack3/sysmgr:config",
-    ]
-  } else if (conformance_testing_netstack) {
-    deps = [
-      "netstack:netstack-conformance-testing",
-      "netstack/sysmgr:config",
-    ]
-  } else {
-    deps = [
-      "netstack",
-      "netstack/sysmgr:config",
-    ]
-  }
+fuchsia_package("network") {
+  deps = [ ":component" ]
+}
 
-  deps += [
-    "dhcpv6/client",
-    "dhcpv6/client/sysmgr:config",
+# TODO(https://fxbug.dev/83959): Remove this target once in-tree
+# integration tests no longer depend upon these packages being in the universe.
+group("integration-test-deps") {
+  deps = [
     "dns:dns-resolver",
-    "dns/sysmgr:config",
     "http-client",
+    "netstack",
   ]
+}
+
+# TODO(https://fxbug.dev/84248): Remove once ready to transition out of tree
+# dependents.
+group("config") {
+  deps = [ ":network" ]
 }
 
 group("drivers") {

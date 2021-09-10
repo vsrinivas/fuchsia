@@ -47,17 +47,11 @@
         },
         {
             instance_id: "20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5",
-            moniker: "/core/dhcpd",
+            moniker: "/core/network/dhcpd",
         },
         {
             instance_id: "b63d06982a705d04fcfc5f401db2b2f9faa640fa973ff99adb4f62a39f23d24f",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/network/netcfg",
         },
         {
             instance_id: "18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d",

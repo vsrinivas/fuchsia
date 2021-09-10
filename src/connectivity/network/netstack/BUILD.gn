@@ -43,23 +43,6 @@ fuchsia_package("netstack") {
   deps = [ ":component" ]
 }
 
-fuchsia_component("component-conformance-testing") {
-  component_name = "netstack"
-  manifest = "meta/netstack_conformance_testing.cmx"
-  deps = [ ":bin" ]
-  visibility = [
-    ":netstack-conformance-testing",
-    "//src/connectivity/network/netstack:netstack-conformance-testing_manifest_dist",
-    "//src/connectivity/network/netstack:netstack-conformance-testing_manifest_dist_generate",
-  ]
-}
-
-fuchsia_package("netstack-conformance-testing") {
-  package_name = "netstack"
-  deps = [ ":component-conformance-testing" ]
-  visibility = [ "//src/connectivity/network:config" ]
-}
-
 generated_go("gen/netstack") {
   definitions = [
     {

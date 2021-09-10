@@ -4,67 +4,67 @@
             "event_codes": [],
             "metric_id": 15,
             "metric_type": "Integer",
-            "selector": "netstack.cmx:Networking Stat Counters:SocketCount"
+            "selector": "core/network/netstack:Networking Stat Counters:SocketCount"
         },
         {
             "event_codes": [],
             "metric_id": 28,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:SocketsCreated"
+            "selector": "core/network/netstack:Networking Stat Counters:SocketsCreated"
         },
         {
             "event_codes": [],
             "metric_id": 29,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters:SocketsDestroyed"
+            "selector": "core/network/netstack:Networking Stat Counters:SocketsDestroyed"
         },
         {
             "event_codes": [],
             "metric_id": 30,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/NICs/Tx:Packets"
+            "selector": "core/network/netstack:Networking Stat Counters/NICs/Tx:Packets"
         },
         {
             "event_codes": [],
             "metric_id": 31,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/NICs/Rx:Packets"
+            "selector": "core/network/netstack:Networking Stat Counters/NICs/Rx:Packets"
         },
         {
             "event_codes": [],
             "metric_id": 32,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/NICs/Tx:Bytes"
+            "selector": "core/network/netstack:Networking Stat Counters/NICs/Tx:Bytes"
         },
         {
             "event_codes": [],
             "metric_id": 33,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/NICs/Rx:Bytes"
+            "selector": "core/network/netstack:Networking Stat Counters/NICs/Rx:Bytes"
         },
         {
             "event_codes": [],
             "metric_id": 22,
             "metric_type": "Integer",
-            "selector": "netstack.cmx:Networking Stat Counters/TCP:CurrentEstablished"
+            "selector": "core/network/netstack:Networking Stat Counters/TCP:CurrentEstablished"
         },
         {
             "event_codes": [],
             "metric_id": 34,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedClosed"
+            "selector": "core/network/netstack:Networking Stat Counters/TCP:EstablishedClosed"
         },
         {
             "event_codes": [],
             "metric_id": 35,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedResets"
+            "selector": "core/network/netstack:Networking Stat Counters/TCP:EstablishedResets"
         },
         {
             "event_codes": [],
             "metric_id": 36,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedTimedout"
+            "selector": "core/network/netstack:Networking Stat Counters/TCP:EstablishedTimedout"
         },
         {
             "event_codes": [
@@ -72,7 +72,7 @@
             ],
             "metric_id": 26,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:NoConfiguration"
+            "selector": "core/network/netstack:Networking Stat Counters/DHCPv6:NoConfiguration"
         },
         {
             "event_codes": [
@@ -80,7 +80,7 @@
             ],
             "metric_id": 26,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:ManagedAddress"
+            "selector": "core/network/netstack:Networking Stat Counters/DHCPv6:ManagedAddress"
         },
         {
             "event_codes": [
@@ -88,7 +88,7 @@
             ],
             "metric_id": 26,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:OtherConfiguration"
+            "selector": "core/network/netstack:Networking Stat Counters/DHCPv6:OtherConfiguration"
         },
         {
             "event_codes": [
@@ -96,7 +96,7 @@
             ],
             "metric_id": 37,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/IPv6AddressConfig:NoGlobalSLAACOrDHCPv6ManagedAddress"
+            "selector": "core/network/netstack:Networking Stat Counters/IPv6AddressConfig:NoGlobalSLAACOrDHCPv6ManagedAddress"
         },
         {
             "event_codes": [
@@ -104,7 +104,7 @@
             ],
             "metric_id": 37,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/IPv6AddressConfig:GlobalSLAACOnly"
+            "selector": "core/network/netstack:Networking Stat Counters/IPv6AddressConfig:GlobalSLAACOnly"
         },
         {
             "event_codes": [
@@ -112,7 +112,7 @@
             ],
             "metric_id": 37,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/IPv6AddressConfig:DHCPv6ManagedAddressOnly"
+            "selector": "core/network/netstack:Networking Stat Counters/IPv6AddressConfig:DHCPv6ManagedAddressOnly"
         },
         {
             "event_codes": [
@@ -120,7 +120,7 @@
             ],
             "metric_id": 37,
             "metric_type": "Occurrence",
-            "selector": "netstack.cmx:Networking Stat Counters/IPv6AddressConfig:GlobalSLAACAndDHCPv6ManagedAddress"
+            "selector": "core/network/netstack:Networking Stat Counters/IPv6AddressConfig:GlobalSLAACAndDHCPv6ManagedAddress"
         }
     ],
     "poll_rate_sec": 600,

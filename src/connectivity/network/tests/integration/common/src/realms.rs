@@ -209,6 +209,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                         subdir: Some(constants::netcfg::CLASS_NETWORK_PATH.to_string()),
                         ..fnetemul::DevfsDep::EMPTY
                     }),
+                    fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                        variant: Some(fnetemul::StorageVariant::Data),
+                        path: Some("/data".to_string()),
+                        ..fnetemul::StorageDep::EMPTY
+                    }),
                 ])),
                 eager: Some(true),
                 ..fnetemul::ChildDef::EMPTY

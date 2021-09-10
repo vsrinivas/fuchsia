@@ -17,5 +17,5 @@ print "Search for the appmgr component"
 search.components --url appmgr.cm$
 
 # 3. Search for a few more packages this time using v1 pathing.
-print "Search for network based components"
-search.components --url netstack.cmx
+print "Search for the mdns component"
+search.components --url mdns.cmx

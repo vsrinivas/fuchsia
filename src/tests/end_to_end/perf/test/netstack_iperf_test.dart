@@ -158,8 +158,8 @@ void main(List<String> args) {
     for (var i = 0; i < 15; i++) {
       await Future.delayed(Duration(seconds: 1));
       final inspect = Inspect(helper.sl4fDriver);
-      final results =
-          await inspect.snapshot(['netstack.cmx:Socket Info/*:LocalAddress']);
+      final results = await inspect
+          .snapshot(['core/network/netstack:Socket Info/*:LocalAddress']);
       if (results != null && results.isNotEmpty) {
         for (var j = 0; j < results.length; j++) {
           if (results[j]['payload'] != null &&

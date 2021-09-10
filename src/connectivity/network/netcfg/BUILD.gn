@@ -86,7 +86,6 @@ fuchsia_component("component-netemul") {
 
 fuchsia_component("component-v2") {
   component_name = "netcfg"
-  testonly = true
   manifest = "meta/netcfg.cml"
   deps = [ ":bin" ]
 }

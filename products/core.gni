@@ -67,7 +67,11 @@ base_package_labels += [
   "//src/connectivity/management:network_config_default",
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
-  "//src/connectivity/network:config",
+  "//src/connectivity/network",
+
+  # TODO(https://fxbug.dev/83959): Remove this target once in-tree integration
+  # tests no longer depend upon these packages being in the universe.
+  "//src/connectivity/network:integration-test-deps",
   "//src/connectivity/wlan:packages",
   "//src/developer/build_info:build-info-service",
   "//src/developer/forensics:pkg",

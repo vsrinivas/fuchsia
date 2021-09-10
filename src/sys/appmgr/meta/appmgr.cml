@@ -54,15 +54,8 @@
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.neighbor.Controller",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",
@@ -303,6 +296,51 @@
 
         // From v2 components
         {
+            protocol: "fuchsia.net.interfaces.State",
+            path: "/svc_for_sys/fuchsia.net.interfaces.State",
+        },
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            path: "/svc_for_sys/fuchsia.net.name.Lookup",
+        },
+
+        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
+        // this API in appmgr.
+        {
+            protocol: "fuchsia.net.dhcp.Server",
+            path: "/svc_for_sys/fuchsia.net.dhcp.Server",
+        },
+
+        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
+        // this API in appmgr.
+        {
+            protocol: "fuchsia.net.neighbor.Controller",
+            path: "/svc_for_sys/fuchsia.net.neighbor.Controller",
+        },
+
+        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
+        // this API in appmgr.
+        {
+            protocol: "fuchsia.net.stack.Log",
+            path: "/svc_for_sys/fuchsia.net.stack.Log",
+        },
+        {
+            protocol: "fuchsia.net.stack.Stack",
+            path: "/svc_for_sys/fuchsia.net.stack.Stack",
+        },
+        {
+            protocol: "fuchsia.net.NameLookup",
+            path: "/svc_for_sys/fuchsia.net.NameLookup",
+        },
+        {
+            protocol: "fuchsia.netstack.Netstack",
+            path: "/svc_for_sys/fuchsia.netstack.Netstack",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            path: "/svc_for_sys/fuchsia.posix.socket.Provider",
+        },
+        {
             protocol: "fuchsia.net.http.Loader",
             path: "/svc_for_sys/fuchsia.net.http.Loader",
         },
@@ -515,12 +553,6 @@
             path: "/svc_for_sys/fuchsia.ssh.AuthorizedKeys",
         },
 
-        // From dhcpd
-        {
-            protocol: "fuchsia.net.dhcp.Server",
-            path: "/svc_for_sys/fuchsia.net.dhcp.Server",
-        },
-
         // From wlancfg
         {
             protocol: "fuchsia.wlan.policy.ClientProvider",
@@ -640,15 +672,8 @@
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.neighbor.Controller",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Audio",

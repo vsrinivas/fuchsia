@@ -58,10 +58,6 @@
             url: "fuchsia-pkg://fuchsia.com/diagnostics-kcounter#meta/diagnostics-kcounter.cm",
         },
         {
-            name: "http-client",
-            url: "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cm",
-        },
-        {
             name: "log-stats",
             url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
         },
@@ -133,10 +129,6 @@
             url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm",
         },
         {
-            name: "dhcpd",
-            url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm",
-        },
-        {
             name: "soundplayer",
             url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
             environment: "#universe-resolver-env",
@@ -154,6 +146,10 @@
             name: "bt-avrcp",
             url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
             environment: "#universe-resolver-env",
+        },
+        {
+            name: "network",
+            url: "fuchsia-pkg://fuchsia.com/network#meta/network.cm",
         },
         {
             name: "hwinfo",
@@ -284,6 +280,101 @@
             to: "#appmgr",
         },
         {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "parent",
+            to: [ "#network" ],
+        },
+        {
+            protocol: [
+                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
+                // needs this API in appmgr.
+                "fuchsia.net.dhcp.Server",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.NameLookup",
+
+                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
+                // needs this API in appmgr.
+                "fuchsia.net.neighbor.Controller",
+
+                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
+                // needs this API in appmgr.
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: "#appmgr",
+        },
+        {
+            protocol: [ "fuchsia.net.http.Loader" ],
+            from: "#network",
+            to: [
+                "#appmgr",
+                "#cobalt",
+                "#emergency",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.interfaces.State" ],
+            from: "#network",
+            to: [
+                "#appmgr",
+                "#last_reboot",
+                "#remote-control",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [
+                "#cobalt",
+                "#pkg-resolver",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#network",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+            to: [ "#network" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#network" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-ethernet",
+            to: [ "#network" ],
+            subdir: "class/ethernet",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-network",
+            to: [ "#network" ],
+            subdir: "class/network",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#network" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#network" ],
+        },
+        {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
             to: "#universe-resolver",
@@ -324,11 +415,7 @@
             to: "#pkg-resolver",
         },
         {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "#appmgr",
             to: "#pkg-resolver",
             dependency: "weak_for_migration",
@@ -424,15 +511,14 @@
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
-                "#dhcpd",
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
                 "#emergency",
                 "#font_provider",
-                "#http-client",
                 "#hwinfo",
                 "#last_reboot",
                 "#log-stats",
+                "#network",
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#regulatory_region",
@@ -490,7 +576,6 @@
         {
             protocol: [
                 "fuchsia.hwinfo.Device",
-                "fuchsia.net.interfaces.State",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
@@ -547,7 +632,6 @@
             protocol: "fuchsia.feedback.CrashReporter",
             from: "#appmgr",
             to: [ "#detect" ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.feedback.CrashReportingProductRegister",
@@ -608,7 +692,7 @@
             from: "parent",
             to: [
                 "#cobalt",
-                "#http-client",
+                "#network",
                 "#pkg-resolver",
             ],
         },
@@ -711,7 +795,6 @@
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys2.Realm",
                 "fuchsia.tracing.provider.Registry",
@@ -740,44 +823,9 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: "fuchsia.net.http.Loader",
-            from: "#http-client",
-            to: [
-                "#appmgr",
-                "#cobalt",
-                "#emergency",
-            ],
-        },
-        {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "#appmgr",
-            to: "#http-client",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.neighbor.Controller",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.stash.SecureStore",
-            ],
-            from: "#appmgr",
-            to: "#dhcpd",
-        },
-        {
-            protocol: "fuchsia.net.dhcp.Server",
-            from: "#dhcpd",
-            to: "#appmgr",
-            dependency: "weak_for_migration",
-        },
-        {
             storage: "data",
             from: "self",
             to: [
-                "#dhcpd",
                 "#last_reboot",
                 "#stash",
                 "#stash2",
@@ -907,8 +955,6 @@
         },
         {
             protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.settings.Privacy",
                 "fuchsia.tracing.provider.Registry",
             ],
@@ -967,6 +1013,16 @@
                 "fuchsia.pkg.rewrite.Engine",
             ],
             from: "#pkg-resolver",
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
         },
         {
             protocol: [ "fuchsia.ui.activity.Provider" ],

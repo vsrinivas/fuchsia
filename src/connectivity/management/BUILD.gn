@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  netcfg_autostart = true
-}
-
 group("management") {
   testonly = true
   deps = [
@@ -16,10 +12,6 @@ group("management") {
 
 group("netcfg") {
   deps = [ "//src/connectivity/network/netcfg" ]
-
-  if (netcfg_autostart) {
-    deps += [ "//src/connectivity/network/netcfg/sysmgr:config" ]
-  }
 }
 
 group("network_config_default") {

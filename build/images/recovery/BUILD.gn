@@ -38,7 +38,7 @@ recovery_packages = [
   "//garnet/bin/sysmgr",
   "//src/connectivity/location/regulatory_region:regulatory_region",
   "//src/connectivity/management:network_config_default",
-  "//src/connectivity/network:config",
+  "//src/connectivity/network",
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlandevicemonitor",
   "//src/connectivity/wlan/wlanstack",

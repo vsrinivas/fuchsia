@@ -879,10 +879,15 @@ async fn inspect_for_sampler() {
         project_configs => panic!("expected one project_config but got {:#?}", project_configs),
     };
     for metric_config in &project_config.metrics {
-        let selector = metric_config
-            .selector
-            .strip_prefix("netstack.cmx:")
-            .expect("failed to strip \"netstack.cmx:\"");
+        let selector = {
+            let selector = &metric_config.selector;
+            let index = selector
+                .find(':')
+                .unwrap_or_else(|| panic!("selector {:#?} has no component", selector));
+            selector
+                .get(index + 1..)
+                .unwrap_or_else(|| panic!("selector {:#?} has no component", selector))
+        };
         let (_, expected_key) = selector
             .rsplit_once(":")
             .unwrap_or_else(|| panic!("selector {:#?} has no key", selector));

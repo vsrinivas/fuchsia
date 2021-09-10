@@ -1,0 +1,184 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "dhcpd",
+            url: "#meta/dhcpd.cm",
+        },
+        {
+            name: "dhcpv6-client",
+            url: "#meta/dhcpv6-client.cm",
+        },
+        {
+            name: "dns-resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+        {
+            name: "http-client",
+            url: "#meta/http-client.cm",
+        },
+        {
+            name: "netcfg",
+            url: "#meta/netcfg.cm",
+            startup: "eager",
+        },
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+            on_terminate: "reboot",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#dhcpd",
+                "#dhcpv6-client",
+                "#dns-resolver",
+                "#http-client",
+                "#netcfg",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.stash.SecureStore" ],
+            from: "parent",
+            to: [
+                "#dhcpd",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.dhcp.Server" ],
+            from: "#dhcpd",
+            to: [ "#netcfg" ],
+        },
+        {
+            protocol: [ "fuchsia.net.dhcpv6.ClientProvider" ],
+            from: "#dhcpv6-client",
+            to: [ "#netcfg" ],
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns-resolver",
+            to: [
+                "#dhcpd",
+                "#http-client",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.name.LookupAdmin" ],
+            from: "#dns-resolver",
+            to: [ "#netcfg" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.filter.Filter",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+            ],
+            from: "#netstack",
+            to: [ "#netcfg" ],
+        },
+        {
+            protocol: [ "fuchsia.net.neighbor.Controller" ],
+            from: "#netstack",
+            to: [ "#dhcpd" ],
+        },
+        {
+            protocol: [ "fuchsia.net.routes.State" ],
+            from: "#netstack",
+            to: [ "#dns-resolver" ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: [
+                "#dhcpd",
+                "#dhcpv6-client",
+                "#dns-resolver",
+                "#http-client",
+            ],
+        },
+        {
+            directory: "dev-class-ethernet",
+            from: "parent",
+            to: [ "#netcfg" ],
+        },
+        {
+            directory: "dev-class-network",
+            from: "parent",
+            to: [ "#netcfg" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#netcfg" ],
+            subdir: "netcfg",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#http-client" ],
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#netcfg" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+
+                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
+                // needs this API in appmgr.
+                "fuchsia.net.neighbor.Controller",
+
+                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
+                // needs this API in appmgr.
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack",
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+
+                // TODO(https://fxbug.dev/49741): Remove once migration is
+                // complete.
+                "fuchsia.net.NameLookup",
+            ],
+            from: "#dns-resolver",
+        },
+
+        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
+        // this API in appmgr.
+        {
+            protocol: [ "fuchsia.net.dhcp.Server" ],
+            from: "#dhcpd",
+        },
+        {
+            protocol: [ "fuchsia.net.http.Loader" ],
+            from: "#http-client",
+        },
+    ],
+}

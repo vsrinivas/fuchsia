@@ -22,7 +22,7 @@
 ## usage: fx extract_pprof --inspect FILE --component CMX
 ##
 ##   --inspect   Path to the inspect.json file
-##   --component Component to extract pprof data for (i.e. netstack.cmx)
+##   --component Component to extract pprof data for (i.e. netstack)
 
 import argparse
 import base64
@@ -40,7 +40,7 @@ def main():
   parser.add_argument(
       "--component",
       required=True,
-      help="Component to extract pprof data for (i.e. netstack.cmx)")
+      help="Component to extract pprof data for (i.e. netstack)")
   args = parser.parse_args()
 
   tempdir = tempfile.mkdtemp()
