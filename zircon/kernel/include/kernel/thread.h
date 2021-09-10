@@ -683,6 +683,12 @@ struct Thread {
   // Deliver a kill signal to a thread.
   void Kill();
 
+  // Checks whether the kill or suspend signal has been raised. If kill has been
+  // raised, then `ZX_ERR_INTERNAL_INTR_KILLED` will be returned. If suspend has
+  // been raised, then `ZX_ERR_INTERNAL_INTR_RETRY` will be returned. Otherwise,
+  // `ZX_OK` will be returned.
+  zx_status_t CheckKillOrSuspendSignal() const;
+
   // Erase this thread from all global lists, where applicable.
   void EraseFromListsLocked() TA_REQ(thread_lock);
 

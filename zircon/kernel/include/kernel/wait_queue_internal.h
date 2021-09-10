@@ -56,10 +56,9 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
   }
 
   if (interruptible == Interruptible::Yes && (unlikely(current_thread->signals() & ~signal_mask))) {
-    if (current_thread->signals() & THREAD_SIGNAL_KILL) {
-      return ZX_ERR_INTERNAL_INTR_KILLED;
-    } else if (current_thread->signals() & THREAD_SIGNAL_SUSPEND) {
-      return ZX_ERR_INTERNAL_INTR_RETRY;
+    zx_status_t status = current_thread->CheckKillOrSuspendSignal();
+    if (status != ZX_OK) {
+      return status;
     }
   }
 

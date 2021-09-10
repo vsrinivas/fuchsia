@@ -967,6 +967,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
   zx_status_t status;
   do {
+    // If the thread was killed or suspended, then we should exit with an error.
+    status = current_thread->CheckKillOrSuspendSignal();
+    if (status != ZX_OK) {
+      return status;
+    }
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
     status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
     if (status != ZX_OK) {

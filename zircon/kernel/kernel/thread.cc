@@ -783,6 +783,17 @@ bool Thread::CheckKillSignal() {
   }
 }
 
+zx_status_t Thread::CheckKillOrSuspendSignal() const {
+  const auto current_signals = signals();
+  if (unlikely(current_signals & THREAD_SIGNAL_KILL)) {
+    return ZX_ERR_INTERNAL_INTR_KILLED;
+  }
+  if (unlikely(current_signals & THREAD_SIGNAL_SUSPEND)) {
+    return ZX_ERR_INTERNAL_INTR_RETRY;
+  }
+  return ZX_OK;
+}
+
 // finish suspending the current thread
 void Thread::Current::DoSuspend() {
   Thread* current_thread = Thread::Current::Get();

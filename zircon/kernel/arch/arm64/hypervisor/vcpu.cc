@@ -268,6 +268,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
   IchState* ich_state = &el2_state_->ich_state;
   zx_status_t status;
   do {
+    // If the thread was killed or suspended, then we should exit with an error.
+    status = current_thread->CheckKillOrSuspendSignal();
+    if (status != ZX_OK) {
+      return status;
+    }
     timer_maybe_interrupt(guest_state, &gich_state_);
     gich_maybe_interrupt(&gich_state_, ich_state);
     {
@@ -282,13 +287,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     }
     gich_state_.TrackAllListRegisters(ich_state);
     if (status == ZX_ERR_NEXT) {
-      // We received a physical interrupt. If it was due to the thread
-      // being killed, then we should exit with an error, otherwise return
-      // to the guest.
+      // We received a physical interrupt. Continue execution of the guest.
       ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(ich_state->misr),
                        guest_state->system_state.elr_el2);
-      status = current_thread->signals() & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
       GUEST_STATS_INC(interrupts);
+      status = ZX_OK;
     } else if (status == ZX_OK) {
       status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                               guest_->Traps(), packet);
