@@ -3704,22 +3704,6 @@ zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_ch
   return ret;
 }
 
-static zx_status_t iwl_mvm_update_quotas_single_iface(struct iwl_mvm_vif* mvmvif) {
-  struct iwl_time_quota_cmd cmd = {};
-  struct iwl_time_quota_data_v1* quotas = (struct iwl_time_quota_data_v1*)cmd.quotas;
-  quotas[0].id_and_color = quotas[1].id_and_color = quotas[2].id_and_color =
-      quotas[3].id_and_color = FW_CTXT_INVALID;
-  zx_status_t ret = iwl_mvm_send_cmd_pdu(mvmvif->mvm, TIME_QUOTA_CMD, 0,
-                                         iwl_mvm_quota_cmd_size(mvmvif->mvm), &cmd);
-  if (ret == ZX_OK) {
-    mvmvif->mvm->last_quota_cmd = cmd;
-  } else {
-    IWL_ERR(mvmvif, "cannot set time quota: %s\n", zx_status_get_string(ret));
-  }
-
-  return ret;
-}
-
 static zx_status_t __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
                                                   bool switching_chanctx) {
 #if 0   // NEEDS_PORTING
@@ -3777,13 +3761,7 @@ static zx_status_t __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
       break;
   }
 
-#if 1  // The current code only supports single interface. See TODO below for more details.
-  ret = iwl_mvm_update_quotas_single_iface(mvmvif);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot update the quotas of the interface: %s\n", zx_status_get_string(ret));
-    return ret;
-  }
-#else   // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(43218): support multiple interfaces. Port iwl_mvm_update_quotas() in mvm/quota.c.
   iwl_mvm_update_quotas(mvm, false, disabled_vif);
 #endif  // NEEDS_PORTING
