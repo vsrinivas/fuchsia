@@ -209,7 +209,8 @@ StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_ins
   // Copy the copier config
   memcpy(cfg_buf.get(), &base_cfg, sizeof(base_cfg));
   auto copier_cfg = reinterpret_cast<CopierCfg*>(cfg_buf.get());
-  copier_cfg->gtw_cfg.config_length = static_cast<uint32_t>(blob_size);
+  ZX_ASSERT(!(blob_size % kCopierBytesPerWord));
+  copier_cfg->gtw_cfg.config_words = static_cast<uint32_t>(blob_size) / kCopierBytesPerWord;
 
   return RawBytesOf(cfg_buf.get(), cfg_size);
 }

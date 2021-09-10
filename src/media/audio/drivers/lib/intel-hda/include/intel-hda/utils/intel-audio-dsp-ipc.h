@@ -592,10 +592,12 @@ constexpr uint8_t DMA_TYPE_HDA_HOST_INPUT = 1;
 constexpr uint8_t DMA_TYPE_I2S_LINK_OUTPUT = 12;
 constexpr uint8_t DMA_TYPE_I2S_LINK_INPUT = 13;
 
+constexpr size_t kCopierBytesPerWord = 4;
+
 struct CopierGatewayCfg {
   uint32_t node_id;
   uint32_t dma_buffer_size;
-  uint32_t config_length;
+  uint32_t config_words;  // Size of config_data, measured in 32-bit words.
   uint8_t config_data[];
 } __PACKED;
 

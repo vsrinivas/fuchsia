@@ -23,6 +23,8 @@ zx_status_t GetNhltBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction, uin
 StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
                                                uint8_t direction, uint8_t type,
                                                const CopierCfg& base_cfg);
+CopierCfg CreateGatewayCopierCfg(const AudioDataFormat& input, const AudioDataFormat& output,
+                                 uint32_t gateway_node_id);
 
 }  // namespace intel_hda
 }  // namespace audio
