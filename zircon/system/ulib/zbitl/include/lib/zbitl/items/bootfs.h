@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <variant>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 
 namespace zbitl {
@@ -118,6 +119,8 @@ class BootfsView {
       ZX_ASSERT_MSG(bootfs_, "%s on default-constructed zbitl::BootfsView::iterator", __func__);
       return *bootfs_;
     }
+
+    uint32_t dirent_offset() const { return offset_; }
 
    private:
     // BootfsView accesses iterator's private constructor.
@@ -317,7 +320,11 @@ class BootfsView {
       dir = std::move(result).value();
       ZX_DEBUG_ASSERT(dir.size() == dirsize);
     } else {
-      dir = fbl::MakeArray<std::byte>(dirsize);
+      fbl::AllocChecker ac;
+      dir = fbl::MakeArray<std::byte>(&ac, dirsize);
+      if (!ac.check()) {
+        return fitx::error{to_error("failed to allocate directory: out of memory"sv)};
+      }
       if constexpr (Traits::CanUnbufferedRead()) {
         if (auto result = Traits::Read(storage, dir_payload, dir.data(), dirsize);
             result.is_error()) {

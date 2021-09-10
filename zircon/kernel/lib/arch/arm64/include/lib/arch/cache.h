@@ -41,7 +41,7 @@ class GlobalCacheConsistencyContext {
   void SyncRange(uintptr_t vaddr, size_t size);
 
  private:
-  const bool possible_aliasing_ = CacheTypeEl0::Read().l1_ip() == ArmL1ICachePolicy::VIPT;
+  bool possible_aliasing_ = CacheTypeEl0::Read().l1_ip() == ArmL1ICachePolicy::VIPT;
 };
 
 // Invalidate the entire instruction cache.

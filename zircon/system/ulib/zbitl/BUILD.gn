@@ -32,6 +32,7 @@ zx_library("zbitl") {
     # <lib/zbitl/view.h> has #include <lib/cksum.h>.
     "//zircon/third_party/ulib/cksum:headers",
 
+    # <lib/zbitl/items/bootfs.h> has #include <fbl/alloc_checker.h>.
     # <lib/zbitl/items/mem_config.h> has #include <fbl/span.h>.
     "//zircon/system/ulib/fbl:headers",
 

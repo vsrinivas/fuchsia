@@ -6,7 +6,6 @@
 
 #include "test.h"
 
-#include <lib/arch/cache.h>
 #include <lib/code-patching/code-patching.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
@@ -24,15 +23,8 @@
 
 const char Symbolize::kProgramName_[] = "code-patching-test";
 
-// The kernel package under which code patching blobs live.
-constexpr ktl::string_view kPackage = "code-patches-test";
-
-// The file within the kernel package containing the code-patch metadata.
-constexpr ktl::string_view kPatchesBin = "code-patches.bin";
-
-// The namespace within the kernel package under which the patche alternatives
-// are found.
-constexpr ktl::string_view kPatchAlternativeDir = "code-patches";
+// The BOOTFS namespace under which code patching blobs live.
+constexpr ktl::string_view kNamespace = "code-patches-test";
 
 // Defined in add-one.S.
 extern "C" uint64_t AddOne(uint64_t x);
@@ -60,12 +52,7 @@ ktl::span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size
   return loaded_range.subspan(range_start, range_size);
 }
 
-void SyncInstructionRange(ktl::span<ktl::byte> insns) {
-  arch::GlobalCacheConsistencyContext().SyncRange(reinterpret_cast<uint64_t>(insns.data()),
-                                                  insns.size());
-}
-
-int TestAddOnePatching(const code_patching::Directive& patch) {
+int TestAddOnePatching(code_patching::Patcher& patcher, const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kAddOnePatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kAddOneCaseId,
                 kAddOnePatchSize, patch.range_size);
@@ -78,8 +65,9 @@ int TestAddOnePatching(const code_patching::Directive& patch) {
   // After patching (and synchronizing the instruction and data caches), we
   // expect AddOne() to be the identity function.
   auto insns = GetInstructionRange(patch.range_start, patch.range_size);
-  code_patching::NopFill(insns);
-  SyncInstructionRange(insns);
+  patcher.NopFill(insns);
+  patcher.Commit();
+
   {
     uint64_t result = AddOne(583);
     ZX_ASSERT_MSG(result == 583, "Patched AddOne(583) returned %lu; expected 583.\n", result);
@@ -87,7 +75,8 @@ int TestAddOnePatching(const code_patching::Directive& patch) {
   return 0;
 }
 
-int TestMultiplyByFactorPatching(BootfsView& bootfs, const code_patching::Directive& patch) {
+int TestMultiplyByFactorPatching(code_patching::Patcher& patcher,
+                                 const code_patching::Directive& patch) {
   ZX_ASSERT_MSG(patch.range_size == kMultiplyByFactorPatchSize,
                 "Expected patch case #%u to cover %zu bytes; got %u", kMultiplyByFactorCaseId,
                 kMultiplyByFactorPatchSize, patch.range_size);
@@ -96,20 +85,12 @@ int TestMultiplyByFactorPatching(BootfsView& bootfs, const code_patching::Direct
 
   // After patching and synchronizing, we expect multiply_by_factor() to
   // multiply by 2.
-  auto it = bootfs.find({kPackage, kPatchAlternativeDir, "multiply_by_two"});
-  if (auto result = bootfs.take_error(); result.is_error()) {
-    printf("FAILED: Error in looking for the mutiply_by_two patch alternative: ");
+  if (auto result = patcher.PatchWithAlternative(insns, "multiply_by_two"sv); result.is_error()) {
+    printf("FAILED: ");
     zbitl::PrintBootfsError(result.error_value());
     return 1;
   }
-  if (it == bootfs.end()) {
-    printf("FAILED: Could not find \"%.*s/%.*s/multiply_by_two\" within BOOTFS\n",
-           static_cast<int>(kPackage.size()), kPackage.data(),
-           static_cast<int>(kPatchAlternativeDir.size()), kPatchAlternativeDir.data());
-    return 1;
-  }
-  code_patching::Patch(insns, it->data);
-  SyncInstructionRange(insns);
+  patcher.Commit();
 
   {
     uint64_t result = multiply_by_factor(583);
@@ -119,20 +100,12 @@ int TestMultiplyByFactorPatching(BootfsView& bootfs, const code_patching::Direct
 
   // After patching and synchronizing, we expect multiply_by_factor() to
   // multiply by ten.
-  it = bootfs.find({kPackage, kPatchAlternativeDir, "multiply_by_ten"});
-  if (auto result = bootfs.take_error(); result.is_error()) {
-    printf("FAILED: Error in looking for the mutiply_by_ten patch alternative: ");
+  if (auto result = patcher.PatchWithAlternative(insns, "multiply_by_ten"sv); result.is_error()) {
+    printf("FAILED: ");
     zbitl::PrintBootfsError(result.error_value());
     return 1;
   }
-  if (it == bootfs.end()) {
-    printf("physboot: Could not find \"%.*s/%.*s/multiply_by_ten\" within BOOTFS\n",
-           static_cast<int>(kPackage.size()), kPackage.data(),
-           static_cast<int>(kPatchAlternativeDir.size()), kPatchAlternativeDir.data());
-    return 1;
-  }
-  code_patching::Patch(insns, it->data);
-  SyncInstructionRange(insns);
+  patcher.Commit();
 
   {
     uint64_t result = multiply_by_factor(583);
@@ -194,29 +167,15 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     bootfs = std::move(result.value());
   }
 
-  auto bootfs_it = bootfs.find({kPackage, kPatchesBin});
-  if (auto result = bootfs.take_error(); result.is_error()) {
-    printf("FAILED: Error in looking for code patching metadata: ");
+  code_patching::Patcher patcher;
+  if (auto result = patcher.Init(std::move(bootfs), kNamespace); result.is_error()) {
+    printf("FAILED: Could not initialize code_patching::Patcher: ");
     zbitl::PrintBootfsError(result.error_value());
     return 1;
   }
-  if (bootfs_it == bootfs.end()) {
-    printf("FAILED: Could not find \"/%.*s/%.*s\" within BOOTFS\n",
-           static_cast<int>(kPackage.size()), kPackage.data(), static_cast<int>(kPatchesBin.size()),
-           kPatchesBin.data());
-    return 1;
-  }
 
-  if (bootfs_it->data.size() % sizeof(code_patching::Directive)) {
-    printf("Expected total size of code patch directives to be a multiple of %lu: got %zu\n",
-           sizeof(code_patching::Directive), bootfs_it->data.size());
-    return 1;
-  }
+  ktl::span<const code_patching::Directive> patches = patcher.patches();
 
-  ktl::span<const code_patching::Directive> patches = {
-      reinterpret_cast<const code_patching::Directive*>(bootfs_it->data.data()),
-      bootfs_it->data.size() / sizeof(code_patching::Directive),
-  };
   printf("Patches found:\n");
   printf("| %-4s | %-8s | %-8s | %-4s |\n", "ID", "Start", "End", "Size");
   for (const auto& patch : patches) {
@@ -229,16 +188,15 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     return 1;
   }
 
-  for (size_t i = 0; i < patches.size(); ++i) {
-    const auto& patch = patches[i];
+  for (const auto& patch : patches) {
     switch (patch.id) {
       case kAddOneCaseId:
-        if (int result = TestAddOnePatching(patch); result != 0) {
+        if (int result = TestAddOnePatching(patcher, patch); result != 0) {
           return result;
         }
         break;
       case kMultiplyByFactorCaseId:
-        if (int result = TestMultiplyByFactorPatching(bootfs, patch); result != 0) {
+        if (int result = TestMultiplyByFactorPatching(patcher, patch); result != 0) {
           return result;
         }
         break;

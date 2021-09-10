@@ -7,23 +7,29 @@
 import("//build/cpp/library_headers.gni")
 
 source_set("code-patching") {
+  sources = [ "code-patching.cc" ]
   public_deps = [ ":headers" ]
 }
 
 library_headers("headers") {
   headers = [
     "lib/code-patching/asm.h",
+    "lib/code-patching/code-patches.h",
     "lib/code-patching/code-patching.h",
   ]
 
   public_deps = [
     "//zircon/kernel/lib/ktl:headers",
 
+    # code-patches.h includes <lib/arch/cache.h>
     # code-patching.h includes <lib/arch/nop.h>.
     "//zircon/kernel/lib/arch:headers",
 
-    # code-patching.h includes <lib/fbl/span.h>.
-    "//zircon/system/ulib/fbl:headers",
+    # code-patches.h includes <lib/zbitl/items/bootfs.h>
+    "//zircon/system/ulib/zbitl:headers",
+
+    # code-patches.h includes <lib/fitx/result.h>
+    "//zircon/system/ulib/zxc:headers",
   ]
 }
 
