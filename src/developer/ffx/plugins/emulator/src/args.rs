@@ -43,7 +43,10 @@ pub enum VDLCommand {
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
-    /// bool, run emulator in headless mode.
+    /// bool, run emulator in headless mode where there is no GUI.
+    /// Note that ssh console in terminal will still be started.
+    /// In order to run the emulator completely in the background
+    /// use this flag along with --nointeractive and --vdl-output
     #[argh(switch, short = 'H')]
     pub headless: bool,
 
@@ -159,9 +162,12 @@ pub struct StartCommand {
     pub kernel_args: Option<String>,
 
     /// bool, turn off interactive mode.
-    /// if turned off, fvdl will not land user in ssh console. A ssh port will still be forwarded.
+    /// if turned off, fvdl will not land user in the ssh console but GUI will still be launched.
+    /// A ssh port will still be forwarded.
     /// User needs to specify --vdl-output flag with this mode, and manually call
     /// the `kill` subcommand to perform clean shutdown.
+    /// In order to run the emulator completely in the background
+    /// use this flag along with --headless.
     #[argh(switch)]
     pub nointeractive: bool,
 
@@ -288,7 +294,9 @@ fn default_dir() -> String {
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "kill")]
-/// Killing Fuchsia Emulator
+/// Killing Fuchsia Emulator -
+/// only required in nointeractive mode else emulator can be closed by hitting the close button
+/// on the GUI or sending a `dm poweroff` command through the console.
 pub struct KillCommand {
     /// device_launcher binary location. Defaults to looking in prebuilt/vdl/device_launcher
     #[argh(option, short = 'd')]
