@@ -21,7 +21,6 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   explicit SpanSequenceTreeVisitor(std::string_view file,
                                    std::vector<std::unique_ptr<Token>> tokens)
       : file_(file), tokens_(std::move(tokens)) {}
-  // These "On*" methods may be called on files written in the new syntax.
   void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
   void OnAttributeArg(std::unique_ptr<raw::AttributeArg> const& element) override;
   void OnAttributeNew(std::unique_ptr<raw::AttributeNew> const& element) override;
@@ -59,52 +58,6 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override;
   void OnUsing(std::unique_ptr<raw::Using> const& element) override;
   void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override;
-
-  // The remaining "On*" methods are all untouched by the new syntax, and should never be used by
-  // this formatter.
-  void OnAttributeOld(const raw::AttributeOld& element) override { AbortUnimplemented(); }
-  void OnAttributeListOld(std::unique_ptr<raw::AttributeListOld> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnParameterListOld(std::unique_ptr<raw::ParameterListOld> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnStructMember(std::unique_ptr<raw::StructMember> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnTableDeclaration(std::unique_ptr<raw::TableDeclaration> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override {
-    AbortUnimplemented();
-  }
-  void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {
-    AbortUnimplemented();
-  }
 
   // Must be called after OnFile() has been called.  Returns the result of the file fragmentation
   // work done by this class.

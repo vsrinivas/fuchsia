@@ -112,106 +112,11 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         callback(element);
       }
     }
-    void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.bits_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnBitsDeclaration(element);
-      for (auto& callback : callbacks_.exit_bits_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
-    }
-    void OnBitsMember(std::unique_ptr<raw::BitsMember> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.bits_member_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnBitsMember(element);
-      ProcessGapText(element->end_);
-    }
-    void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.enum_member_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnEnumMember(element);
-      ProcessGapText(element->end_);
-    }
-    void OnEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.enum_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnEnumDeclaration(element);
-      for (auto& callback : callbacks_.exit_enum_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
-    }
-    void OnStructMember(std::unique_ptr<raw::StructMember> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.struct_member_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnStructMember(element);
-      ProcessGapText(element->end_);
-    }
-    void OnStructDeclaration(std::unique_ptr<raw::StructDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.struct_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnStructDeclaration(element);
-      for (auto& callback : callbacks_.exit_struct_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
-    }
-    void OnTableMember(std::unique_ptr<raw::TableMember> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.table_member_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnTableMember(element);
-      ProcessGapText(element->end_);
-    }
-    void OnTableDeclaration(std::unique_ptr<raw::TableDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.table_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnTableDeclaration(element);
-      for (auto& callback : callbacks_.exit_table_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
-    }
     void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
       for (auto& callback : callbacks_.type_constructor_old_callbacks_) {
         callback(*element);
       }
       DeclarationOrderTreeVisitor::OnTypeConstructorOld(element);
-    }
-    void OnUnionMember(std::unique_ptr<raw::UnionMember> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.union_member_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnUnionMember(element);
-      ProcessGapText(element->end_);
-    }
-    void OnUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.union_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnUnionDeclaration(element);
-      for (auto& callback : callbacks_.exit_union_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
     }
     // --- end old syntax ---
 

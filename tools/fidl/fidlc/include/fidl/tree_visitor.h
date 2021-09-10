@@ -161,14 +161,6 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnBitsMember(std::unique_ptr<BitsMember> const& element) { element->Accept(this); }
-  virtual void OnBitsDeclaration(std::unique_ptr<BitsDeclaration> const& element) {
-    element->Accept(this);
-  }
-  virtual void OnEnumMember(std::unique_ptr<EnumMember> const& element) { element->Accept(this); }
-  virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) {
-    element->Accept(this);
-  }
   virtual void OnParameter(std::unique_ptr<Parameter> const& element) { element->Accept(this); }
   void OnParameterList(ParameterList const& element) {
     std::visit(fidl::utils::matchers{
@@ -204,23 +196,6 @@ class TreeVisitor {
   virtual void OnServiceDeclaration(std::unique_ptr<ServiceDeclaration> const& element) {
     element->Accept(this);
   }
-  virtual void OnStructMember(std::unique_ptr<StructMember> const& element) {
-    element->Accept(this);
-  }
-  virtual void OnStructDeclaration(std::unique_ptr<StructDeclaration> const& element) {
-    element->Accept(this);
-  }
-  virtual void OnTableMember(std::unique_ptr<TableMember> const& element) { element->Accept(this); }
-  virtual void OnTableDeclaration(std::unique_ptr<TableDeclaration> const& element) {
-    element->Accept(this);
-  }
-  virtual void OnUnionMember(std::unique_ptr<UnionMember> const& element) { element->Accept(this); }
-  virtual void OnUnionDeclaration(std::unique_ptr<UnionDeclaration> const& element) {
-    element->Accept(this);
-  }
-
-  // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
-  // --- start new syntax ---
   virtual void OnModifiers(std::unique_ptr<Modifiers> const& element) { element->Accept(this); }
 
   virtual void OnLayoutParameter(std::unique_ptr<LayoutParameter> const& element) {

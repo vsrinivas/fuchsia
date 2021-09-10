@@ -77,29 +77,11 @@ class LintingTreeCallbacks {
   void OnUsing(fit::function<void(const raw::Using&)> callback) {
     using_callbacks_.push_back(std::move(callback));
   }
-  void OnBitsDeclaration(fit::function<void(const raw::BitsDeclaration&)> callback) {
-    bits_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnBitsMember(fit::function<void(const raw::BitsMember&)> callback) {
-    bits_member_callbacks_.push_back(std::move(callback));
-  }
-  void OnExitBitsDeclaration(fit::function<void(const raw::BitsDeclaration&)> callback) {
-    exit_bits_declaration_callbacks_.push_back(std::move(callback));
-  }
   void OnConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
     const_declaration_callbacks_.push_back(std::move(callback));
   }
   void OnExitConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
     exit_const_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
-    enum_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnEnumMember(fit::function<void(const raw::EnumMember&)> callback) {
-    enum_member_callbacks_.push_back(std::move(callback));
-  }
-  void OnExitEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
-    exit_enum_declaration_callbacks_.push_back(std::move(callback));
   }
   void OnProtocolDeclaration(fit::function<void(const raw::ProtocolDeclaration&)> callback) {
     protocol_declaration_callbacks_.push_back(std::move(callback));
@@ -116,38 +98,9 @@ class LintingTreeCallbacks {
   void OnParameter(fit::function<void(const raw::Parameter&)> callback) {
     parameter_callbacks_.push_back(std::move(callback));
   }
-  void OnStructDeclaration(fit::function<void(const raw::StructDeclaration&)> callback) {
-    struct_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnStructMember(fit::function<void(const raw::StructMember&)> callback) {
-    struct_member_callbacks_.push_back(std::move(callback));
-  }
-  void OnExitStructDeclaration(fit::function<void(const raw::StructDeclaration&)> callback) {
-    exit_struct_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
-    table_declaration_callbacks_.push_back(std::move(callback));
-  }
   void OnTypeConstructorOld(fit::function<void(const raw::TypeConstructorOld&)> callback) {
     type_constructor_old_callbacks_.push_back(std::move(callback));
   }
-  void OnTableMember(fit::function<void(const raw::TableMember&)> callback) {
-    table_member_callbacks_.push_back(std::move(callback));
-  }
-  void OnExitTableDeclaration(fit::function<void(const raw::TableDeclaration&)> callback) {
-    exit_table_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
-    union_declaration_callbacks_.push_back(std::move(callback));
-  }
-  void OnUnionMember(fit::function<void(const raw::UnionMember&)> callback) {
-    union_member_callbacks_.push_back(std::move(callback));
-  }
-  void OnExitUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
-    exit_union_declaration_callbacks_.push_back(std::move(callback));
-  }
-
-  // --- start new syntax ---
   void OnAttributeNew(fit::function<void(const raw::AttributeNew&)> callback) {
     attribute_callbacks_.push_back(std::move(callback));
   }
@@ -212,29 +165,9 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::ProtocolMethod&)>> event_callbacks_;
   std::vector<fit::function<void(const raw::Parameter&)>> parameter_callbacks_;
 
-  // TODO(fxbug.dev/70247): Delete this.
-  // --- start old syntax ---
   std::vector<fit::function<void(const raw::AttributeOld&)>> attribute_old_callbacks_;
-  std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::BitsDeclaration&)>> exit_bits_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::BitsMember&)>> bits_member_callbacks_;
-  std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::EnumDeclaration&)>> exit_enum_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;
-  std::vector<fit::function<void(const raw::StructMember&)>> struct_member_callbacks_;
-  std::vector<fit::function<void(const raw::StructDeclaration&)>> struct_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::StructDeclaration&)>>
-      exit_struct_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::TableMember&)>> table_member_callbacks_;
-  std::vector<fit::function<void(const raw::TableDeclaration&)>> table_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::TableDeclaration&)>> exit_table_declaration_callbacks_;
   std::vector<fit::function<void(const raw::TypeConstructorOld&)>> type_constructor_old_callbacks_;
-  std::vector<fit::function<void(const raw::UnionMember&)>> union_member_callbacks_;
-  std::vector<fit::function<void(const raw::UnionDeclaration&)>> union_declaration_callbacks_;
-  std::vector<fit::function<void(const raw::UnionDeclaration&)>> exit_union_declaration_callbacks_;
-  // --- end old syntax ---
 
-  // --- start new syntax ---
   std::vector<fit::function<void(const raw::AttributeNew&)>> attribute_callbacks_;
   std::vector<fit::function<void(const raw::OrdinaledLayoutMember&)>>
       ordinaled_layout_member_callbacks_;
@@ -247,7 +180,6 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::TypeDecl&)>> type_decl_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> exit_type_decl_callbacks_;
   std::vector<fit::function<void(const raw::TypeConstructorNew&)>> type_constructor_callbacks_;
-  // --- end new syntax ---
 };
 
 }  // namespace fidl::linter

@@ -2979,41 +2979,6 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
                                                   std::move(type_ctor_)));
 }
 
-void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
-  std::vector<Bits::Member> members;
-  for (auto& member : bits_declaration->members) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return;
-    }
-    auto span = member->identifier->span();
-    std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), &value))
-      return;
-    members.emplace_back(span, std::move(value), std::move(attributes));
-    // TODO(pascallouis): right now, members are not registered. Look into
-    // registering them, potentially under the bits name qualifier such as
-    // <name_of_bits>.<name_of_member>.
-  }
-
-  std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(bits_declaration->attributes), &attributes)) {
-    return;
-  }
-
-  std::unique_ptr<TypeConstructorOld> type_ctor;
-  if (bits_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(bits_declaration->maybe_type_ctor), &type_ctor))
-      return;
-  } else {
-    type_ctor = TypeConstructorOld::CreateSizeType();
-  }
-
-  RegisterDecl(std::make_unique<Bits>(
-      std::move(attributes), Name::CreateSourced(this, bits_declaration->identifier->span()),
-      std::move(type_ctor), std::move(members), bits_declaration->strictness));
-}
-
 void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
@@ -3033,42 +2998,6 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 
   RegisterDecl(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type_ctor),
                                        std::move(constant)));
-}
-
-void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
-  std::vector<Enum::Member> members;
-  for (auto& member : enum_declaration->members) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return;
-    }
-
-    auto span = member->identifier->span();
-    std::unique_ptr<Constant> value;
-    if (!ConsumeConstant(std::move(member->value), &value))
-      return;
-    members.emplace_back(span, std::move(value), std::move(attributes));
-    // TODO(pascallouis): right now, members are not registered. Look into
-    // registering them, potentially under the enum name qualifier such as
-    // <name_of_enum>.<name_of_member>.
-  }
-
-  std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(enum_declaration->attributes), &attributes)) {
-    return;
-  }
-
-  std::unique_ptr<TypeConstructorOld> type_ctor;
-  if (enum_declaration->maybe_type_ctor) {
-    if (!ConsumeTypeConstructorOld(std::move(enum_declaration->maybe_type_ctor), &type_ctor))
-      return;
-  } else {
-    type_ctor = TypeConstructorOld::CreateSizeType();
-  }
-
-  RegisterDecl(std::make_unique<Enum>(
-      std::move(attributes), Name::CreateSourced(this, enum_declaration->identifier->span()),
-      std::move(type_ctor), std::move(members), enum_declaration->strictness));
 }
 
 namespace {
@@ -3415,126 +3344,6 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
 
   RegisterDecl(
       std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
-}
-
-void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
-  auto name = Name::CreateSourced(this, struct_declaration->identifier->span());
-
-  std::vector<Struct::Member> members;
-  for (auto& member : struct_declaration->members) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return;
-    }
-
-    std::unique_ptr<TypeConstructorOld> type_ctor;
-    if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
-      return;
-    std::unique_ptr<Constant> maybe_default_value;
-    if (member->maybe_default_value != nullptr) {
-      if (!ConsumeConstant(std::move(member->maybe_default_value), &maybe_default_value))
-        return;
-    }
-    members.emplace_back(std::move(type_ctor), member->identifier->span(),
-                         std::move(maybe_default_value), std::move(attributes));
-  }
-
-  std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(struct_declaration->attributes), &attributes)) {
-    return;
-  }
-
-  RegisterDecl(std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members),
-                                        struct_declaration->resourceness));
-}
-
-void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
-  auto name = Name::CreateSourced(this, table_declaration->identifier->span());
-
-  std::vector<Table::Member> members;
-  for (auto& member : table_declaration->members) {
-    auto ordinal_literal = std::move(member->ordinal);
-
-    if (member->maybe_used) {
-      std::unique_ptr<AttributeList> attributes;
-      if (!ConsumeAttributeList(std::move(member->maybe_used->attributes), &attributes)) {
-        return;
-      }
-
-      std::unique_ptr<TypeConstructorOld> type_ctor;
-      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
-        return;
-      std::unique_ptr<Constant> maybe_default_value;
-      if (member->maybe_used->maybe_default_value) {
-        // TODO(fxbug.dev/7932): Support defaults on tables.
-        const auto default_value = member->maybe_used->maybe_default_value.get();
-        reporter_->Report(ErrDefaultsOnTablesNotSupported, default_value->span());
-      }
-      if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        Fail(ErrNullableTableMember, member->span());
-        return;
-      }
-      members.emplace_back(std::move(ordinal_literal), std::move(type_ctor),
-                           member->maybe_used->identifier->span(), std::move(maybe_default_value),
-                           std::move(attributes));
-    } else {
-      members.emplace_back(std::move(ordinal_literal), member->span(), nullptr);
-    }
-  }
-
-  std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(table_declaration->attributes), &attributes)) {
-    return;
-  }
-
-  RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members),
-                                       table_declaration->strictness,
-                                       table_declaration->resourceness));
-}
-
-void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
-  auto name = Name::CreateSourced(this, union_declaration->identifier->span());
-
-  assert(!union_declaration->members.empty() && "unions must have at least one member");
-  auto union_name =
-      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.decl_name());
-  std::vector<Union::Member> members;
-  for (auto& member : union_declaration->members) {
-    auto explicit_ordinal = std::move(member->ordinal);
-
-    if (member->maybe_used) {
-      std::unique_ptr<AttributeList> attributes;
-      if (!ConsumeAttributeList(std::move(member->maybe_used->attributes), &attributes)) {
-        return;
-      }
-
-      std::unique_ptr<TypeConstructorOld> type_ctor;
-      if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
-        return;
-      if (member->maybe_used->maybe_default_value) {
-        const auto default_value = member->maybe_used->maybe_default_value.get();
-        reporter_->Report(ErrDefaultsOnUnionsNotSupported, default_value->span());
-      }
-      if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        Fail(ErrNullableUnionMember, member->span());
-        return;
-      }
-
-      members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor),
-                           member->maybe_used->identifier->span(), std::move(attributes));
-    } else {
-      members.emplace_back(std::move(explicit_ordinal), member->span(), nullptr);
-    }
-  }
-
-  std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(union_declaration->attributes), &attributes)) {
-    return;
-  }
-
-  RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members),
-                                       union_declaration->strictness,
-                                       union_declaration->resourceness));
 }
 
 namespace {
@@ -3908,19 +3717,9 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     step.ForAliasDeclaration(std::move(alias_declaration));
   }
 
-  auto bits_declaration_list = std::move(file->bits_declaration_list);
-  for (auto& bits_declaration : bits_declaration_list) {
-    step.ForBitsDeclaration(std::move(bits_declaration));
-  }
-
   auto const_declaration_list = std::move(file->const_declaration_list);
   for (auto& const_declaration : const_declaration_list) {
     step.ForConstDeclaration(std::move(const_declaration));
-  }
-
-  auto enum_declaration_list = std::move(file->enum_declaration_list);
-  for (auto& enum_declaration : enum_declaration_list) {
-    step.ForEnumDeclaration(std::move(enum_declaration));
   }
 
   auto protocol_declaration_list = std::move(file->protocol_declaration_list);
@@ -3936,21 +3735,6 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   auto service_declaration_list = std::move(file->service_declaration_list);
   for (auto& service_declaration : service_declaration_list) {
     step.ForServiceDeclaration(std::move(service_declaration));
-  }
-
-  auto struct_declaration_list = std::move(file->struct_declaration_list);
-  for (auto& struct_declaration : struct_declaration_list) {
-    step.ForStructDeclaration(std::move(struct_declaration));
-  }
-
-  auto table_declaration_list = std::move(file->table_declaration_list);
-  for (auto& table_declaration : table_declaration_list) {
-    step.ForTableDeclaration(std::move(table_declaration));
-  }
-
-  auto union_declaration_list = std::move(file->union_declaration_list);
-  for (auto& union_declaration : union_declaration_list) {
-    step.ForUnionDeclaration(std::move(union_declaration));
   }
 
   auto type_decls = std::move(file->type_decls);

@@ -1405,9 +1405,7 @@ class Library : Attributable {
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
   bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
-  void ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
   void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
-  void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
   bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
@@ -1420,9 +1418,6 @@ class Library : Attributable {
                           SourceSpan response_span, raw::ProtocolMethod* method,
                           Struct* success_variant, Struct** out_response);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
-  void ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
-  void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
-  void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
   // start new syntax
   bool ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
@@ -1644,14 +1639,8 @@ class ConsumeStep : public StepBase {
   void ForUsing(std::unique_ptr<raw::Using> using_directive) {
     library_->ConsumeUsing(std::move(using_directive));
   }
-  void ForBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
-    library_->ConsumeBitsDeclaration(std::move(bits_declaration));
-  }
   void ForConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     library_->ConsumeConstDeclaration(std::move(const_declaration));
-  }
-  void ForEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
-    library_->ConsumeEnumDeclaration(std::move(enum_declaration));
   }
   void ForProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
     library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
@@ -1661,15 +1650,6 @@ class ConsumeStep : public StepBase {
   }
   void ForServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
     library_->ConsumeServiceDeclaration(std::move(service_decl));
-  }
-  void ForStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
-    library_->ConsumeStructDeclaration(std::move(struct_declaration));
-  }
-  void ForTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
-    library_->ConsumeTableDeclaration(std::move(table_declaration));
-  }
-  void ForUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
-    library_->ConsumeUnionDeclaration(std::move(union_declaration));
   }
   void ForTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     library_->ConsumeTypeDecl(std::move(type_decl));

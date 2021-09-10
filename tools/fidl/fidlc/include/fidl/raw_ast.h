@@ -407,47 +407,6 @@ class TypeConstructorNew final : public SourceElement {
   std::unique_ptr<TypeConstraints> constraints;
 };
 
-class BitsMember final : public SourceElement {
- public:
-  BitsMember(SourceElement const& element, std::unique_ptr<Identifier> identifier,
-             std::unique_ptr<Constant> value, std::unique_ptr<AttributeListOld> attributes)
-      : SourceElement(element),
-        identifier(std::move(identifier)),
-        value(std::move(value)),
-        attributes(std::move(attributes)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<Constant> value;
-  std::unique_ptr<AttributeListOld> attributes;
-};
-
-class BitsDeclaration final : public SourceElement {
- public:
-  BitsDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-                  std::unique_ptr<AttributeListOld> attributes,
-                  std::unique_ptr<Identifier> identifier,
-                  std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
-                  std::vector<std::unique_ptr<BitsMember>> members, types::Strictness strictness)
-      : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        maybe_type_ctor(std::move(maybe_type_ctor)),
-        members(std::move(members)),
-        strictness(strictness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Token> decl_start_token;
-  std::unique_ptr<AttributeListOld> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
-  std::vector<std::unique_ptr<BitsMember>> members;
-  const types::Strictness strictness;
-};
-
 class AliasDeclaration final : public SourceElement {
  public:
   AliasDeclaration(SourceElement const& element, AttributeList attributes,
@@ -509,47 +468,6 @@ class ConstDeclaration final : public SourceElement {
   TypeConstructor type_ctor;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<Constant> constant;
-};
-
-class EnumMember final : public SourceElement {
- public:
-  EnumMember(SourceElement const& element, std::unique_ptr<Identifier> identifier,
-             std::unique_ptr<Constant> value, std::unique_ptr<AttributeListOld> attributes)
-      : SourceElement(element),
-        identifier(std::move(identifier)),
-        value(std::move(value)),
-        attributes(std::move(attributes)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<Constant> value;
-  std::unique_ptr<AttributeListOld> attributes;
-};
-
-class EnumDeclaration final : public SourceElement {
- public:
-  EnumDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-                  std::unique_ptr<AttributeListOld> attributes,
-                  std::unique_ptr<Identifier> identifier,
-                  std::unique_ptr<TypeConstructorOld> maybe_type_ctor,
-                  std::vector<std::unique_ptr<EnumMember>> members, types::Strictness strictness)
-      : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        maybe_type_ctor(std::move(maybe_type_ctor)),
-        members(std::move(members)),
-        strictness(strictness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Token> decl_start_token;
-  std::unique_ptr<AttributeListOld> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<TypeConstructorOld> maybe_type_ctor;
-  std::vector<std::unique_ptr<EnumMember>> members;
-  const types::Strictness strictness;
 };
 
 class Parameter final : public SourceElement {
@@ -725,174 +643,6 @@ class ServiceDeclaration final : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<ServiceMember>> members;
 };
-
-class StructMember final : public SourceElement {
- public:
-  StructMember(SourceElement const& element, std::unique_ptr<TypeConstructorOld> type_ctor,
-               std::unique_ptr<Identifier> identifier,
-               std::unique_ptr<Constant> maybe_default_value,
-               std::unique_ptr<AttributeListOld> attributes)
-      : SourceElement(element),
-        type_ctor(std::move(type_ctor)),
-        identifier(std::move(identifier)),
-        maybe_default_value(std::move(maybe_default_value)),
-        attributes(std::move(attributes)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<TypeConstructorOld> type_ctor;
-  std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<Constant> maybe_default_value;
-  std::unique_ptr<AttributeListOld> attributes;
-};
-
-class StructDeclaration final : public SourceElement {
- public:
-  // Note: A nullptr passed to attributes means an empty attribute list.
-  StructDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-                    std::unique_ptr<AttributeListOld> attributes,
-                    std::unique_ptr<Identifier> identifier,
-                    std::vector<std::unique_ptr<StructMember>> members,
-                    types::Resourceness resourceness)
-      : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        members(std::move(members)),
-        resourceness(resourceness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Token> decl_start_token;
-  std::unique_ptr<AttributeListOld> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::vector<std::unique_ptr<StructMember>> members;
-  const types::Resourceness resourceness;
-};
-
-struct TableMember final : public SourceElement {
-  TableMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-              std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
-              std::unique_ptr<Constant> maybe_default_value,
-              std::unique_ptr<AttributeListOld> attributes)
-      : SourceElement(element),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
-                                          std::move(maybe_default_value), std::move(attributes))) {}
-
-  TableMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal)
-      : SourceElement(element), ordinal(std::move(ordinal)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Ordinal64> ordinal;
-  // A used member is not 'reserved'
-  struct Used {
-    Used(std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
-         std::unique_ptr<Constant> maybe_default_value,
-         std::unique_ptr<AttributeListOld> attributes)
-        : type_ctor(std::move(type_ctor)),
-          identifier(std::move(identifier)),
-          maybe_default_value(std::move(maybe_default_value)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructorOld> type_ctor;
-    std::unique_ptr<Identifier> identifier;
-    // We parse default values on union members so that we can give precise
-    // errors later in the compiler, but defaults are not supported
-    std::unique_ptr<Constant> maybe_default_value;
-    std::unique_ptr<AttributeListOld> attributes;
-  };
-  std::unique_ptr<Used> maybe_used;
-};
-
-struct TableDeclaration final : public SourceElement {
-  TableDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-                   std::unique_ptr<AttributeListOld> attributes,
-                   std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness,
-                   types::Resourceness resourceness)
-      : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        members(std::move(members)),
-        strictness(strictness),
-        resourceness(resourceness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Token> decl_start_token;
-  std::unique_ptr<AttributeListOld> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::vector<std::unique_ptr<TableMember>> members;
-  const types::Strictness strictness;
-  const types::Resourceness resourceness;
-};
-
-class UnionMember final : public SourceElement {
- public:
-  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-              std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
-              std::unique_ptr<Constant> maybe_default_value,
-              std::unique_ptr<AttributeListOld> attributes)
-      : SourceElement(element),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
-                                          std::move(maybe_default_value), std::move(attributes))) {}
-
-  UnionMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal)
-      : SourceElement(element), ordinal(std::move(ordinal)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Ordinal64> ordinal;
-
-  // A used member is not 'reserved'
-  struct Used {
-    Used(std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Identifier> identifier,
-         std::unique_ptr<Constant> maybe_default_value,
-         std::unique_ptr<AttributeListOld> attributes)
-        : type_ctor(std::move(type_ctor)),
-          identifier(std::move(identifier)),
-          maybe_default_value(std::move(maybe_default_value)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructorOld> type_ctor;
-    std::unique_ptr<Identifier> identifier;
-    // We parse default values on union members so that we can give precise
-    // errors later in the compiler, but defaults are not supported
-    std::unique_ptr<Constant> maybe_default_value;
-    std::unique_ptr<AttributeListOld> attributes;
-  };
-  std::unique_ptr<Used> maybe_used;
-};
-
-class UnionDeclaration final : public SourceElement {
- public:
-  UnionDeclaration(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-                   std::unique_ptr<AttributeListOld> attributes,
-                   std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness,
-                   bool strictness_specified, types::Resourceness resourceness)
-      : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        members(std::move(members)),
-        strictness(strictness),
-        strictness_specified(strictness_specified),
-        resourceness(resourceness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Token> decl_start_token;
-  std::unique_ptr<AttributeListOld> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::vector<std::unique_ptr<UnionMember>> members;
-  const types::Strictness strictness;
-  const bool strictness_specified;
-  const types::Resourceness resourceness;
-};
-
 class LayoutMember : public SourceElement {
  public:
   enum Kind {
@@ -1160,15 +910,10 @@ class File final : public SourceElement {
   File(SourceElement const& element, Token end, std::unique_ptr<LibraryDecl> library_decl,
        std::vector<std::unique_ptr<AliasDeclaration>> alias_list,
        std::vector<std::unique_ptr<Using>> using_list,
-       std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list,
        std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
-       std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
        std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list,
        std::vector<std::unique_ptr<ResourceDeclaration>> resource_declaration_list,
        std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
-       std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
-       std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
-       std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
        std::vector<std::unique_ptr<TypeDecl>> type_decls,
        std::vector<std::unique_ptr<Token>> tokens,
        std::vector<std::unique_ptr<Token>> comment_tokens_list, fidl::utils::Syntax syntax)
@@ -1176,15 +921,10 @@ class File final : public SourceElement {
         library_decl(std::move(library_decl)),
         alias_list(std::move(alias_list)),
         using_list(std::move(using_list)),
-        bits_declaration_list(std::move(bits_declaration_list)),
         const_declaration_list(std::move(const_declaration_list)),
-        enum_declaration_list(std::move(enum_declaration_list)),
         protocol_declaration_list(std::move(protocol_declaration_list)),
         resource_declaration_list(std::move(resource_declaration_list)),
         service_declaration_list(std::move(service_declaration_list)),
-        struct_declaration_list(std::move(struct_declaration_list)),
-        table_declaration_list(std::move(table_declaration_list)),
-        union_declaration_list(std::move(union_declaration_list)),
         type_decls(std::move(type_decls)),
         tokens(std::move(tokens)),
         comment_tokens_list(std::move(comment_tokens_list)),
@@ -1196,15 +936,10 @@ class File final : public SourceElement {
   std::unique_ptr<LibraryDecl> library_decl;
   std::vector<std::unique_ptr<AliasDeclaration>> alias_list;
   std::vector<std::unique_ptr<Using>> using_list;
-  std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list;
   std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
-  std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
   std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list;
   std::vector<std::unique_ptr<ResourceDeclaration>> resource_declaration_list;
   std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list;
-  std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
-  std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
-  std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
   std::vector<std::unique_ptr<TypeDecl>> type_decls;
 
   // An ordered list of all tokens (including comments) in the source file.

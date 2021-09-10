@@ -238,18 +238,11 @@ class Parser {
   std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
                       const Args&... args);
 
-  struct Modifiers {
-    std::optional<types::Strictness> strictness;
-    std::optional<Token> strictness_token;
-    std::optional<types::Resourceness> resourceness;
-    std::optional<Token> resourceness_token;
-  };
-
   // Reports an error if |modifiers| contains a modifier whose type is not
   // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
   // Marks the error as recovered so that parsing will continue.
   template <typename... Allowlist>
-  void ValidateModifiersNew(const std::unique_ptr<raw::Modifiers>& modifiers, Token decl_token) {
+  void ValidateModifiers(const std::unique_ptr<raw::Modifiers>& modifiers, Token decl_token) {
     const auto fail = [&](std::optional<Token> token) {
       Fail(ErrCannotSpecifyModifier, token.value(), token.value().kind_and_subkind(),
            decl_token.kind_and_subkind());
@@ -262,26 +255,6 @@ class Parser {
     if (!(std::is_same_v<types::Resourceness, Allowlist> || ...) &&
         modifiers->maybe_resourceness != std::nullopt) {
       fail(modifiers->maybe_resourceness_token);
-    }
-  }
-
-  Modifiers ParseModifiers();
-
-  // Reports an error if |modifiers| contains a modifier whose type is not
-  // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
-  // Marks the error as recovered so that parsing will continue.
-  template <typename... Allowlist>
-  void ValidateModifiers(const Modifiers& modifiers, Token decl_token) {
-    const auto fail = [&](std::optional<Token> token) {
-      Fail(ErrCannotSpecifyModifier, token.value(), token.value().kind_and_subkind(),
-           decl_token.kind_and_subkind());
-      RecoverOneError();
-    };
-    if (!(std::is_same_v<types::Strictness, Allowlist> || ...) && modifiers.strictness) {
-      fail(modifiers.strictness_token);
-    }
-    if (!(std::is_same_v<types::Resourceness, Allowlist> || ...) && modifiers.resourceness) {
-      fail(modifiers.resourceness_token);
     }
   }
 
@@ -299,33 +272,13 @@ class Parser {
   std::unique_ptr<raw::Ordinal64> ParseOrdinal64();
 
   std::unique_ptr<raw::Constant> ParseConstant();
-
-  std::unique_ptr<raw::AttributeOld> ParseAttributeOld();
-  std::unique_ptr<raw::AttributeOld> ParseDocCommentOld();
-  std::unique_ptr<raw::AttributeListOld> ParseAttributeListOld(
-      std::unique_ptr<raw::AttributeOld> doc_comment, ASTScope& scope);
-  std::unique_ptr<raw::AttributeListOld> MaybeParseAttributeListOld(bool for_parameter = false);
+  std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(raw::AttributeList attributes,
+                                                               ASTScope&);
 
   std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(raw::AttributeList attributes,
-                                                               ASTScope&, const Modifiers&);
-  std::unique_ptr<raw::Using> ParseUsing(raw::AttributeList attributes, ASTScope&,
-                                         const Modifiers&);
+                                                               ASTScope&);
+  std::unique_ptr<raw::Using> ParseUsing(raw::AttributeList attributes, ASTScope&);
 
-  std::unique_ptr<raw::TypeConstructorOld> ParseTypeConstructorOld();
-
-  std::unique_ptr<raw::BitsMember> ParseBitsMember();
-  std::unique_ptr<raw::BitsDeclaration> ParseBitsDeclaration(
-      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(raw::AttributeList attributes,
-                                                               ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::EnumMember> ParseEnumMember();
-  std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(
-      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::Parameter> ParseParameter();
-  std::unique_ptr<raw::ParameterListOld> ParseParameterListOld();
   std::unique_ptr<raw::ParameterListNew> ParseParameterListNew();
   raw::ParameterList ParseParameterList();
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolEvent(raw::AttributeList attributes,
@@ -338,40 +291,18 @@ class Parser {
   // a method, or a compose stanza.
   void ParseProtocolMember(std::vector<std::unique_ptr<raw::ProtocolCompose>>* composed_protocols,
                            std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods);
-  std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(raw::AttributeList, ASTScope&,
-                                                                     const Modifiers&);
-
+  std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(raw::AttributeList, ASTScope&);
   std::unique_ptr<raw::ResourceProperty> ParseResourcePropertyDeclaration();
   // TODO(fxbug.dev/64629): When we properly generalize handles, we will most
   // likely alter the name of a resource declaration, and how it looks
   // syntactically. While we rely on this feature in `library zx;`, it should
   // be considered experimental for all other intents and purposes.
-  std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(raw::AttributeList, ASTScope&,
-                                                                     const Modifiers&);
-
+  std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(raw::AttributeList, ASTScope&);
   std::unique_ptr<raw::ServiceMember> ParseServiceMember();
-  std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(raw::AttributeList, ASTScope&,
-                                                                   const Modifiers&);
-
-  std::unique_ptr<raw::StructMember> ParseStructMember();
-  std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration(
-      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::TableMember> ParseTableMember();
-  std::unique_ptr<raw::TableDeclaration> ParseTableDeclaration(
-      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::UnionMember> ParseUnionMember();
-  std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(
-      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
-
-  std::unique_ptr<raw::File> ParseFile();
-
-  // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
-  // --- start new syntax ---
   // This method may be used to parse the second attribute argument onward - the first argument in
   // the list is handled separately in ParseAttributeNew().
   std::unique_ptr<raw::AttributeArg> ParseSubsequentAttributeArg();
+  std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(raw::AttributeList, ASTScope&);
   std::unique_ptr<raw::AttributeNew> ParseAttributeNew();
   std::unique_ptr<raw::AttributeNew> ParseDocCommentNew();
   std::unique_ptr<raw::AttributeListNew> ParseAttributeListNew(
@@ -392,9 +323,7 @@ class Parser {
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(std::unique_ptr<raw::AttributeListNew> attributes,
                                                ASTScope&);
-  std::unique_ptr<raw::File> ParseFileNewSyntax(ASTScope&,
-                                                std::unique_ptr<raw::LibraryDecl> library_decl);
-  // --- end new syntax ---
+  std::unique_ptr<raw::File> ParseFile();
 
   enum class RecoverResult {
     Failure,
@@ -440,7 +369,6 @@ class Parser {
   void RecoverAllErrors() { recovered_errors_ = reporter_->errors().size(); }
   size_t recovered_errors_ = 0;
 
-  utils::Syntax syntax_ = utils::Syntax::kNew;
   Lexer* lexer_;
   Reporter* reporter_;
   const ExperimentalFlags experimental_flags_;
