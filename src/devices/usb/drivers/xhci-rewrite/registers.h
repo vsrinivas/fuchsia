@@ -535,7 +535,10 @@ class MFINDEX : public hwreg::RegisterBase<MFINDEX, uint32_t> {
   }
 };
 
+// Interrupter registers
+
 // Section 5.5.2.3.1
+// Event Ring Segment Table Size
 class ERSTSZ : public hwreg::RegisterBase<ERSTSZ, uint32_t> {
  public:
   DEF_FIELD(15, 0, TableSize);
@@ -545,6 +548,7 @@ class ERSTSZ : public hwreg::RegisterBase<ERSTSZ, uint32_t> {
 };
 
 // Section 5.5.2.3.2
+// Event Ring Segment Table Base Address
 class ERSTBA : public hwreg::RegisterBase<ERSTBA, uint64_t> {
  public:
   // Spec incorrectly had 63, 6.
@@ -555,6 +559,7 @@ class ERSTBA : public hwreg::RegisterBase<ERSTBA, uint64_t> {
 };
 
 // Section 5.5.2.3.3
+// Event Ring Dequeue Pointer
 // Address overlaps EHB, which isn't supported by our register library.
 // This is safe due to the page-alignment requirements of the ERDP
 class ERDP : public hwreg::RegisterBase<ERDP, uint64_t> {
@@ -572,6 +577,7 @@ class ERDP : public hwreg::RegisterBase<ERDP, uint64_t> {
 };
 
 // Section 5.5.2.1
+// Interrupter management
 class IMAN : public hwreg::RegisterBase<IMAN, uint32_t> {
  public:
   // Interrupt enable
@@ -585,6 +591,7 @@ class IMAN : public hwreg::RegisterBase<IMAN, uint32_t> {
 };
 
 // Section 5.5.2.2
+// Interrupter Moderation
 class IMODI : public hwreg::RegisterBase<IMODI, uint32_t> {
  public:
   // Interrupt pending

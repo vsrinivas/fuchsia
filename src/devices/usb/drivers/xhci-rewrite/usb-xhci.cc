@@ -121,8 +121,8 @@ struct UsbXhci::UsbRequestState {
   // Whether or not the request is complete
   bool complete = false;
 
-  // Size of the slot
-  size_t slot_size;
+  // Size of the slot in bytes
+  size_t slot_size_bytes;
 
   // Max burst size (value of the max burst size register + 1, since it is zero-based)
   uint32_t burst_size;
@@ -309,9 +309,8 @@ TRBPromise UsbXhci::SetMaxPacketSizeCommand(uint8_t slot_id, uint8_t bMaxPacketS
   {
     fbl::AutoLock _(&state.transaction_lock());
     auto control = reinterpret_cast<uint32_t*>(state.GetInputContext()->virt());
-    size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
     auto endpoint_context = reinterpret_cast<EndpointContext*>(
-        reinterpret_cast<unsigned char*>(control) + (slot_size * 2));
+        reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * 2));
     endpoint_context->set_MAX_PACKET_SIZE(bMaxPacketSize0);
     Control::Get().FromValue(0).set_Type(Control::EvaluateContextCommand).ToTrb(&cmd);
     cmd.set_SlotID(slot_id);
@@ -442,7 +441,6 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
     }
     state->GetHubLocked() = hub;
     uint8_t slot = state->GetSlot();
-    size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
     // Initialize input slot context data structure (6.2.2) with 1 context entry
     // Set root hub port number to port number and context entries to 1
     auto control = static_cast<uint32_t*>(state->GetInputContext()->virt());
@@ -450,7 +448,7 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
     control[0] = 0;
     control[1] = 1;
     auto slot_context =
-        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size);
+        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size_bytes_);
     slot_context->set_SPEED(speed)
         .set_MULTI_TT(multi_tt)
         .set_HUB(1)
@@ -811,9 +809,8 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
     return;
   }
   auto* control = reinterpret_cast<uint32_t*>(state.GetInputContext()->virt());
-  size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
   auto endpoint_context = reinterpret_cast<EndpointContext*>(
-      reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + (index + 1))));
+      reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + (index + 1))));
   if (!state.GetTransferRing((index)).active()) {
     return;
   }
@@ -821,7 +818,7 @@ void UsbXhci::UsbHciNormalRequestQueue(Request request) {
   pending_transfer.transfer_ring = &state.GetTransferRing(index);
   pending_transfer.burst_size = endpoint_context->MaxBurstSize() + 1;
   pending_transfer.max_packet_size = endpoint_context->MAX_PACKET_SIZE();
-  pending_transfer.slot_size = (hcc_.CSZ()) ? 64 : 32;
+  pending_transfer.slot_size_bytes = slot_size_bytes_;
   pending_transfer.complete = false;
   pending_transfer.index = index;
   pending_transfer.context = state.GetTransferRing(index).AllocateContext();
@@ -1108,11 +1105,11 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
   {
     fbl::AutoLock _(&state->transaction_lock());
     auto control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
-    size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
+
     // Initialize input slot context data structure (6.2.2) with 1 context entry
     // Set root hub port number to port number and context entries to 1
     slot_context =
-        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size);
+        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size_bytes_);
     context_entries = slot_context->CONTEXT_ENTRIES();
     index = XhciEndpointIndex(ep_desc->b_endpoint_address);
     if (index >= context_entries) {
@@ -1130,7 +1127,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     // Initialize endpoint context 0
     // Set CERR to 3, TR dequeue pointer, max packet size, EP type = control, DCS = 1
     auto endpoint_context = reinterpret_cast<EndpointContext*>(
-        reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + index)));
+        reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + index)));
 
     // See section 4.3.6
     uint32_t ep_type = ep_desc->bm_attributes & USB_ENDPOINT_TYPE_MASK;
@@ -1197,7 +1194,6 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
                                           const usb_ss_ep_comp_descriptor_t* ss_com_desc) {
   auto context = command_ring_.AllocateContext();
   auto state = &device_state_[device_id];
-  size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
   uint8_t index = XhciEndpointIndex(ep_desc->b_endpoint_address);
   TRB trb;
   uint32_t* control;
@@ -1228,7 +1224,7 @@ TRBPromise UsbXhci::UsbHciDisableEndpoint(uint32_t device_id,
               return fpromise::error(ZX_ERR_BAD_STATE);
             }
             auto endpoint_context = reinterpret_cast<EndpointContext*>(
-                reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + index)));
+                reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + index)));
             endpoint_context->Deinit();
             fbl::AutoLock _(&state->transaction_lock());
             zx_status_t status = state->GetTransferRing(index - 1).Deinit();
@@ -1453,10 +1449,9 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
 
   fbl::AutoLock _(&state->transaction_lock());
   auto control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
-  size_t slot_size = (hcc_.CSZ()) ? 64 : 32;
   uint8_t index = XhciEndpointIndex(ep_address);
   auto endpoint_context = reinterpret_cast<EndpointContext*>(
-      reinterpret_cast<unsigned char*>(control) + (slot_size * (2 + index)));
+      reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + index)));
   return endpoint_context->MAX_PACKET_SIZE();
 }
 
@@ -1700,6 +1695,7 @@ int UsbXhci::InitThread() {
   }
   // Perform the BIOS handoff if necessary
   BiosHandoff();
+
   // At startup the device is in an unknown state
   // Reset the xHCI to place everything in its well-defined
   // initial state.
@@ -1735,6 +1731,7 @@ int UsbXhci::InitThread() {
 zx_status_t UsbXhci::HciFinalize() {
   hcc_ = HCCPARAMS1::Get().ReadFrom(&mmio_.value());
   HCSPARAMS1 hcsparams1 = HCSPARAMS1::Get().ReadFrom(&mmio_.value());
+
   is_32bit_ = !hcc_.AC64();
   params_ = hcsparams1;
   CONFIG::Get(cap_length_)
@@ -1806,6 +1803,7 @@ zx_status_t UsbXhci::HciFinalize() {
   }
   static_cast<uint64_t*>(dcbaa_buffer_->virt())[0] = scratchpad_buffer_array_->phys()[0];
   max_slots_ = hcsparams1.MaxSlots();
+  slot_size_bytes_ = hcc_.CSZ() == 1 ? 64 : 32;
   device_state_ = fbl::MakeArray<DeviceState>(&ac, max_slots_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -1853,6 +1851,11 @@ zx_status_t UsbXhci::HciFinalize() {
   while (USBSTS::Get(cap_length_).ReadFrom(&mmio_.value()).HCHalted()) {
     zx::nanosleep(zx::deadline_after(zx::msec(1)));
   }
+
+  // Initialize Inspect values
+  HciVersion hci_version = HciVersion::Get().ReadFrom(&mmio_.value());
+  inspect_.Init(hci_version.reg_value(), hcsparams1, hcc_);
+
   sync_completion_signal(&bringup_);
   return ZX_OK;
 }
@@ -1868,7 +1871,12 @@ zx_status_t UsbXhci::Init() {
     zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
-  return DdkAdd("xhci");
+  status = DdkAdd(ddk::DeviceAddArgs("xhci").set_inspect_vmo(inspect_.inspector.DuplicateVmo()));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkAdd() error: %s", zx_status_get_string(status));
+  }
+  return status;
+
 }
 
 void UsbXhci::DdkInit(ddk::InitTxn txn) {
@@ -1902,6 +1910,19 @@ TRBPromise UsbXhci::SubmitCommand(const TRB& command, std::unique_ptr<TRBContext
   return bridge.consumer.promise().box();
 }
 
+// Initialize xHCI Inspect node and values.
+void Inspect::Init(uint16_t hci_version_in, HCSPARAMS1& hcs1, HCCPARAMS1& hcc1) {
+  root = inspector.GetRoot().CreateChild("usb-xhci");
+
+  hci_version = root.CreateUint("hci_version", hci_version_in);
+  max_device_slots = root.CreateUint("max_device_slots", hcs1.MaxSlots());
+  max_interrupters = root.CreateUint("max_interrupters", hcs1.MaxIntrs());
+  max_ports = root.CreateUint("max_ports", hcs1.MaxPorts());
+  has_64_bit_addressing = root.CreateBool("has_64_bit_addressing", hcc1.AC64());
+  context_size_bytes = root.CreateUint("context_size_bytes", hcc1.CSZ() == 1 ? 64 : 32);
+}
+
+// Static function; called by the DDK bind operation.
 zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto dev = std::unique_ptr<UsbXhci>(new (&ac) UsbXhci(parent, dma_buffer::CreateBufferFactory()));

@@ -16,6 +16,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/single_threaded_executor.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/synchronous-executor/executor.h>
@@ -43,6 +44,7 @@
 #include "xhci-interrupter.h"
 #include "xhci-port-state.h"
 #include "xhci-transfer-ring.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 namespace usb_xhci {
 
@@ -51,6 +53,20 @@ inline void InvalidatePageCache(void* addr, uint32_t options) {
   page = fbl::round_down(page, static_cast<uintptr_t>(zx_system_get_page_size()));
   zx_cache_flush(reinterpret_cast<void*>(page), zx_system_get_page_size(), options);
 }
+
+// Inspect values for the xHCI driver.
+struct Inspect {
+  inspect::Inspector inspector;
+  inspect::Node root;
+  inspect::UintProperty hci_version;
+  inspect::UintProperty max_device_slots;
+  inspect::UintProperty max_interrupters;
+  inspect::UintProperty max_ports;
+  inspect::BoolProperty has_64_bit_addressing;
+  inspect::UintProperty context_size_bytes;
+
+  void Init(uint16_t hci_version, HCSPARAMS1& hcs1, HCCPARAMS1& hcc1);
+};
 
 // This is the main class for the USB XHCI host controller driver.
 // Refer to 3.1 for general architectural information on xHCI.
@@ -72,6 +88,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
         ddk_interaction_loop_(&kAsyncLoopConfigNeverAttachToThread),
         ddk_interaction_executor_(ddk_interaction_loop_.dispatcher()) {}
 
+  // Called by the DDK bind operation.
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Forces an immediate shutdown of the HCI
@@ -151,8 +168,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   usb_speed_t GetPortSpeed(uint8_t port_id) const;
 
-  // Returns the CSZ bit from HCCPARAMS1
-  bool CSZ() const { return hcc_.CSZ(); }
+  size_t slot_size_bytes() const { return slot_size_bytes_; }
 
   // Returns the value in the CAPLENGTH register
   uint8_t CapLength() const { return cap_length_; }
@@ -425,6 +441,9 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Number of slots supported by the HCI
   size_t max_slots_;
 
+  // The size of a slot entry in bytes
+  size_t slot_size_bytes_;
+
   // Whether or not we are running on Qemu
   bool qemu_quirk_ = false;
 
@@ -463,6 +482,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void BiosHandoff();
   // Performs platform-specific initialization functions
   void InitQuirks();
+  // Complete initialization of host controller.
+  // Called after controller is first reset on startup.
   zx_status_t HciFinalize();
   // Completion event which is signalled when driver initialization finishes
   sync_completion_t init_complete_;
@@ -472,6 +493,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   sync_completion_t bringup_;
   std::optional<thrd_t> init_thread_;
   std::optional<ddk::InitTxn> init_txn_;
+
+  Inspect inspect_;
 };
 
 }  // namespace usb_xhci

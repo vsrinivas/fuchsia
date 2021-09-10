@@ -27,7 +27,7 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   // Enable bit starts at offset 2
   auto control = static_cast<uint32_t*>(buffer->virt());
   control[1] = 0x3;  // Enable both slot and endpoint context.
-  size_t slot_size = (hci.CSZ()) ? 64 : 32;
+  size_t slot_size = hci.slot_size_bytes();
   // Initialize input slot context data structure (6.2.2) with 1 context entry
   // Set root hub port number to port number and context entries to 1
   auto slot_context =
@@ -50,7 +50,7 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
                                                    dma_buffer::PagedBuffer* slot_context_buffer) {
   CRCR trb_phys = tr_.phys(hci.CapLength());
   auto* control = static_cast<uint32_t*>(slot_context_buffer->virt());
-  size_t slot_size = (hci.CSZ()) ? 64 : 32;
+  size_t slot_size = hci.slot_size_bytes();
   auto slot_context =
       reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size);
   // Initialize endpoint context 0
