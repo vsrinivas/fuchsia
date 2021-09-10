@@ -214,33 +214,21 @@ impl NamespaceNode {
         Ok(FileObject::new(self.entry.node.open(flags)?, self.clone(), flags))
     }
 
-    fn create_namespace_node<F>(&self, name: &FsStr, mk_callback: F) -> Result<NamespaceNode, Errno>
-    where
-        F: FnOnce() -> Result<DirEntryHandle, Errno>,
-    {
-        // TODO: Figure out what these errors should be, and if they are consistent across
-        // callsites. If so, checks can be removed from, for example, sys_symlinkat.
-        if name.is_empty() || name == b"." || name == b".." {
-            return error!(EEXIST);
-        }
-        Ok(self.with_new_entry(mk_callback()?))
-    }
-
     pub fn create_node(
         &self,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
     ) -> Result<NamespaceNode, Errno> {
-        self.create_namespace_node(name, || self.entry.create_node(name, mode, dev))
+        Ok(self.with_new_entry(self.entry.create_node(name, mode, dev)?))
     }
 
     pub fn symlink(&self, name: &FsStr, target: &FsStr) -> Result<NamespaceNode, Errno> {
-        self.create_namespace_node(name, || self.entry.create_symlink(name, target))
+        Ok(self.with_new_entry(self.entry.create_symlink(name, target)?))
     }
 
     pub fn unlink(&self, task: &Task, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
-        if name.is_empty() || name == b"." || name == b".." {
+        if DirEntry::is_reserved_name(name) {
             return error!(EINVAL);
         }
         let mut context = LookupContext::new(SymlinkMode::NoFollow);

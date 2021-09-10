@@ -109,10 +109,16 @@ impl DirEntry {
         self.state.read().parent.as_ref().unwrap_or(self).clone()
     }
 
-    fn is_reserved_name(name: &FsStr) -> bool {
+    /// Whether the given name has special semantics as a directory entry.
+    ///
+    /// Specifically, whether the name is empty (which means "self"), dot
+    /// (which also means "self"), or dot dot (which means "parent").
+    pub fn is_reserved_name(name: &FsStr) -> bool {
         name.is_empty() || name == b"." || name == b".."
     }
 
+    /// Look up a directory entry with the given name as direct child of this
+    /// entry.
     pub fn component_lookup(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
         let (node, _) = self.get_or_create_child(name, || self.node.lookup(name))?;
         Ok(node)
@@ -138,6 +144,10 @@ impl DirEntry {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
         if DirEntry::is_reserved_name(name) {
             return error!(EEXIST);
+        }
+        // TODO: Do we need to check name for embedded "/" or NUL characters?
+        if name.len() > NAME_MAX as usize {
+            return error!(ENAMETOOLONG);
         }
         let (entry, exists) = self.get_or_create_child(name, || {
             let node = create_node_fn()?;

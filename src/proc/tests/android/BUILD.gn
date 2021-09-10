@@ -95,6 +95,7 @@ gvisor_tests = [
   "chmod_test",
   "clock_getres_test",
   "clock_gettime_test",
+  "creat_test",
   "dev_test",
   "dup_test",
   "epoll_test",
