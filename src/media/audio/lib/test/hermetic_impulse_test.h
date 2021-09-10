@@ -24,6 +24,7 @@ class HermeticImpulseTest : public HermeticPipelineTest {
 
     TypedFormat<InputFormat> input_format;
     TypedFormat<OutputFormat> output_format;
+    std::optional<const std::set<int32_t>> channels_to_test;
 
     // Width, height, and location of the input impulses. Impulses should be separated by
     // at least pipeline.pre_end_ramp_frames + pipeline.post_start_ramp_frames.

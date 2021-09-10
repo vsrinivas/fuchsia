@@ -23,6 +23,17 @@ namespace media::audio::test {
 
 template <ASF InputFormat, ASF OutputFormat>
 void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, OutputFormat>& tc) {
+  // If tc.channels_to_test ever becomes mandatory (not optional), use it directly
+  std::set<int32_t> chans_to_test;
+  if (tc.channels_to_test.has_value()) {
+    ASSERT_FALSE(tc.channels_to_test->empty()) << "channels_to_test is present but empty";
+    chans_to_test = *tc.channels_to_test;
+  } else {
+    for (auto chan = 0; chan < tc.output_format.channels(); ++chan) {
+      chans_to_test.insert(chan);
+    }
+  }
+
   // Compute the number of input frames.
   auto start_of_last_impulse = tc.impulse_locations_in_frames.back();
   auto num_input_frames = start_of_last_impulse + tc.impulse_width_in_frames +
@@ -93,13 +104,16 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
         input_frame_to_output_frame(input_impulse_start + tc.impulse_locations_in_frames[k]);
 
     // Test each channel.
-    for (int32_t chan = 0; chan < tc.output_format.channels(); chan++) {
-      SCOPED_TRACE(testing::Message() << "Channel " << chan);
+    for (auto chan : chans_to_test) {
+      ASSERT_GE(chan, 0);
+      ASSERT_LT(chan, tc.output_format.channels());
+
+      SCOPED_TRACE(testing::Message() << "Seeking an impulse in channel " << chan);
       auto output_chan = AudioBufferSlice<OutputFormat>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
       auto relative_output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
       if (!relative_output_frame) {
-        ADD_FAILURE() << "Could not find impulse " << k << " in ring buffer\n"
+        ADD_FAILURE() << "Could not find impulse #" << k << " in ring buffer\n"
                       << "Expected at ring buffer frame " << expected_output_frame << "\n"
                       << "Ring buffer is:";
         output_chan.Display(search_start_frame, search_end_frame);
@@ -110,7 +124,7 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
         // First impulse decides the offset.
         int64_t offset = output_frame - expected_output_frame;
         EXPECT_LE(std::abs(offset), max_impulse_offset_frames)
-            << "Found impulse " << k << " at an unexpected location: at frame " << output_frame
+            << "Found impulse #" << k << " at an unexpected location: at frame " << output_frame
             << ", expected within " << max_impulse_offset_frames << " frames of "
             << expected_output_frame;
         first_impulse_offset_per_channel[chan] = offset;
@@ -118,7 +132,7 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
         // Other impulses should have the same offset.
         auto expected_offset = first_impulse_offset_per_channel[chan];
         EXPECT_EQ(expected_output_frame + expected_offset, output_frame)
-            << "Found impulse " << k << " at an unexpected location; expected_offset is "
+            << "Found impulse #" << k << " at an unexpected location; expected_offset is "
             << expected_offset;
       }
     }

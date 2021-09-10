@@ -144,8 +144,6 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   zx_status_t ConfigurePipelineForThermal(uint32_t thermal_state);
 
  private:
-
-
   // Ref frequencies, internally translated to values corresponding to a buffer[kFreqTestBufSize].
   std::array<int32_t, kNumReferenceFreqs> translated_ref_freqs_;
 
