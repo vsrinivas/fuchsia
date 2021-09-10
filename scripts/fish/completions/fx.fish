@@ -9,8 +9,13 @@ complete -c fx --condition '__fish_use_subcommand' --arguments "help" --descript
 complete -c fx --condition "__fish_seen_subcommand_from help" -l "no-contrib" --description "Hide contrib commands (see //tools/devshell/README.md)"
 complete -c fx --condition "__fish_seen_subcommand_from help" -l "deprecated" --description "Do not hide deprecated commands"
 
+# Compute vendor directories using set to avoid getting a Fish error if
+# $FUCHSIA_DIR/vendor does not exist.
+# https://fishshell.com/docs/current/language.html?highlight=exceptions#wildcards-globbing
+set -l vendor_devshell_dirs $FUCHSIA_DIR/vendor/*/scripts/devshell/
+
 # Find fx subcommands and their descriptions
-find $FUCHSIA_DIR/tools/devshell/ $FUCHSIA_DIR/vendor/*/scripts/devshell/ \
+find $FUCHSIA_DIR/tools/devshell/ $vendor_devshell_dirs \
 -maxdepth 2 -type f \( -executable -or -name '*.fx' \) \
 | xargs grep -E '^### +' \
 | while read -a -l line -d ':### '
