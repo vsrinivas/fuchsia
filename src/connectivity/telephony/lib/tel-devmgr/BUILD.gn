@@ -7,7 +7,7 @@ import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 isolated_devmgr_component("tel-devmgr") {
   args = [
     "--svc_name=fuchsia.tel.devmgr.IsolatedDevmgr",
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--device_vid_pid_did=11:3:0",
   ]
 
@@ -26,7 +26,7 @@ isolated_devmgr_component("tel-devmgr") {
 isolated_devmgr_component("tel-devmgr-qmi") {
   args = [
     "--svc_name=fuchsia.tel.devmgr.IsolatedDevmgr",
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--device_vid_pid_did=11:f:14",
     "--wait_for=class/qmi-transport/000",
   ]
@@ -41,7 +41,7 @@ isolated_devmgr_component("tel-devmgr-qmi") {
 isolated_devmgr_component("tel-devmgr-at") {
   args = [
     "--svc_name=fuchsia.tel.devmgr.IsolatedDevmgr",
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--device_vid_pid_did=11:f:16",
     "--wait_for=class/at-transport/000",
   ]

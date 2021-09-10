@@ -82,6 +82,7 @@ class IsolatedDevmgr {
   struct SvcLoopState;
   zx_status_t SetupSvcLoop(fidl::ServerEnd<fuchsia_io::Directory> bootsvc_server,
                            fidl::ClientEnd<fuchsia_io::Directory> fshost_outgoing_client,
+                           fidl::ClientEnd<fuchsia_io::Directory> driver_index_outgoing_client,
                            GetBootItemFunction get_boot_item,
                            std::map<std::string, std::string>&& boot_args);
 

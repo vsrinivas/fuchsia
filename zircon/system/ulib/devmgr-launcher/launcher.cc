@@ -28,10 +28,104 @@ namespace {
 
 constexpr const char* kDevmgrPath = "/pkg/bin/driver_manager";
 constexpr const char* kFshostPath = "/pkg/bin/fshost";
+constexpr const char* kDriverIndexPath = "/pkg/bin/driver_index";
 
 }  // namespace
 
 namespace devmgr_launcher {
+
+zx_status_t LaunchDriverIndex(const Args& args, zx::job& job, zx::channel svc_client,
+                              zx::channel outgoing_svc_dir) {
+  zx::job job_copy;
+  zx_status_t status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  const bool clone_stdio = !args.stdio.is_valid();
+
+  std::vector<const char*> argv;
+  argv.push_back(kDriverIndexPath);
+  argv.push_back("--no-base-drivers");
+  argv.push_back(nullptr);
+
+  FdioSpawnActions actions;
+  actions.AddAction(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {.data = "test-driver-index"},
+  });
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_JOB_DEFAULT, 0)},
+      },
+      std::move(job_copy));
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_DIRECTORY_REQUEST, 0)},
+      },
+      std::move(outgoing_svc_dir));
+
+  zx::channel local, remote;
+  status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/boot"},
+      },
+      std::move(local));
+
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/svc"},
+      },
+      std::move(svc_client));
+
+  if (!clone_stdio) {
+    zx_handle_t stdio_clone;
+    status = fdio_fd_clone(args.stdio.get(), &stdio_clone);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    fdio_t* stdio_clone_fdio_t;
+    status = fdio_create(stdio_clone, &stdio_clone_fdio_t);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    int stdio_clone_fd = fdio_bind_to_fd(stdio_clone_fdio_t, -1, 0);
+
+    actions.AddAction(fdio_spawn_action_t{
+        .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+        .fd = {.local_fd = stdio_clone_fd, .target_fd = FDIO_FLAG_USE_FOR_STDIO},
+    });
+  }
+
+  uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
+  if (clone_stdio) {
+    flags |= FDIO_SPAWN_CLONE_STDIO;
+  }
+
+  zx::process new_process;
+  std::vector<fdio_spawn_action_t> spawn_actions = actions.GetActions();
+  status = fdio_spawn_etc(job.get(), flags, kDriverIndexPath, argv.data(), nullptr /* environ */,
+                          spawn_actions.size(), spawn_actions.data(),
+                          new_process.reset_and_get_address(), nullptr /* err_msg */);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
 
 // Launches an fshost process in the given job. Fshost will have devfs_client
 // installed in its namespace as /dev, and svc_client as /svc
@@ -150,6 +244,28 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
 
   std::vector<const char*> argv;
   argv.push_back(kDevmgrPath);
+
+  // Driver-Index setup.
+  if (!args.disable_driver_index) {
+    argv.push_back("--use-driver-index");
+    if (args.sys_device_driver == nullptr) {
+      argv.push_back("--sys-device-driver");
+      argv.push_back("fuchsia-boot:///#driver/platform-bus.so");
+    } else {
+      // If we are using the driver-index and the sys_device_driver is a path,
+      // then we have to specifically load that driver.
+      if (args.sys_device_driver[0] == '/') {
+        argv.push_back("--load-driver");
+        argv.push_back(args.sys_device_driver);
+      }
+      // If we're loading the old platform-bus we have to also load its proxy.
+      if (strcmp(args.sys_device_driver, "/boot/driver/platform-bus.so") == 0) {
+        argv.push_back("--load-driver");
+        argv.push_back("/boot/driver/platform-bus.proxy.so");
+      }
+    }
+  }
+
   for (const char* path : args.load_drivers) {
     argv.push_back("--load-driver");
     argv.push_back(path);
@@ -269,8 +385,8 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
 
 __EXPORT
 zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
-                   zx::channel component_lifecycle_server, zx::job* devmgr_job,
-                   zx::process* devmgr_process, zx::channel* devfs_root,
+                   zx::channel driver_index_outgoing_server, zx::channel component_lifecycle_server,
+                   zx::job* devmgr_job, zx::process* devmgr_process, zx::channel* devfs_root,
                    zx::channel* outgoing_services_root) {
   zx::job job;
   zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -300,6 +416,16 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     status = LaunchDriverManager(
         args, job, std::move(devfs_server), std::move(outgoing_services_server),
         std::move(component_lifecycle_server), std::move(svc_client_for_dm), &new_process);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Launch driver_index.
+  {
+    zx::channel svc_client_for_index(fdio_service_clone(svc_client.get()));
+    status = LaunchDriverIndex(args, job, std::move(svc_client_for_index),
+                               std::move(driver_index_outgoing_server));
     if (status != ZX_OK) {
       return status;
     }

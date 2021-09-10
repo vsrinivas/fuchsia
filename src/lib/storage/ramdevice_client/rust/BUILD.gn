@@ -46,7 +46,7 @@ fuchsia_test_package("ramdevice-client-tests-package") {
 isolated_devmgr_component("ramdisk-isolated-devmgr-component") {
   component_name = "ramdisk-isolated-devmgr"
   args = [
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--svc_name=fuchsia.test.IsolatedDevmgr",
     "--wait_for=sys/platform/00:00:2d/ramctl",
   ]

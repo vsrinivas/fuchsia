@@ -28,6 +28,7 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
   // expensive process.  Ideally we'd do this between every test.
   auto args = IsolatedDevmgr::DefaultArgs();
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
+  args.disable_driver_index = true;
 
   // Rig up a get_boot_item that will send configuration information over to
   // the sysdev driver.

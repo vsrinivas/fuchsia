@@ -157,7 +157,7 @@ isolated_devmgr_component("ethertap-devmgr") {
 
 isolated_devmgr_component("virtual-audio-devmgr") {
   args = [
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--svc_name=fuchsia.example.IsolatedDevmgr",
     "--wait_for=sys/platform/00:00:2f/virtual_audio",
   ]

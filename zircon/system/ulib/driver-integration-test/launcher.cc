@@ -134,7 +134,7 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
   auto cb_args = std::make_unique<Args>(std::move(args->device_list), args->board_name);
 
   devmgr_launcher::Args devmgr_args;
-  devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
+  devmgr_args.disable_driver_index = args->disable_driver_index;
   devmgr_args.load_drivers.swap(args->load_drivers);
   devmgr_args.flat_namespace = std::move(args->flat_namespace);
   devmgr_args.boot_args = std::move(args->boot_args);

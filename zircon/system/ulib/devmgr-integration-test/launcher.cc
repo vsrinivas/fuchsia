@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.exception/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
 #include <fidl/fuchsia.sys2/cpp/wire.h>
@@ -153,6 +154,24 @@ fidl::ClientEnd<fuchsia_io::Directory> CloneDirectory(
   return service::MaybeClone(end);
 }
 
+zx_status_t ConnectToSvcAt(const zx::channel& dir,
+                           fidl::ClientEnd<fuchsia_io::Directory>* out_svc) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (!endpoints.is_ok()) {
+    return endpoints.status_value();
+  }
+  auto [client, server] = *std::move(endpoints);
+
+  zx_status_t status = fdio_open_at(
+      dir.get(), "svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_DIRECTORY,
+      server.TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_svc = std::move(client);
+  return ZX_OK;
+}
+
 }  // namespace
 
 namespace devmgr_integration_test {
@@ -259,6 +278,7 @@ zx_status_t IsolatedDevmgr::SetupExceptionLoop(async_dispatcher_t* dispatcher,
 zx_status_t IsolatedDevmgr::SetupSvcLoop(
     fidl::ServerEnd<fuchsia_io::Directory> bootsvc_server,
     fidl::ClientEnd<fuchsia_io::Directory> fshost_outgoing_client,
+    fidl::ClientEnd<fuchsia_io::Directory> driver_index_outgoing_client,
     GetBootItemFunction get_boot_item, std::map<std::string, std::string>&& boot_args) {
   svc_loop_state_ = std::make_unique<SvcLoopState>();
   svc_loop_state_->get_boot_item = std::move(get_boot_item);
@@ -273,16 +293,15 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
   auto svc_client = *service::OpenServiceRoot();
 
   // Connect to /svc in fshost's outgoing directory
-  auto fshost_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (!fshost_endpoints.is_ok()) {
-    return fshost_endpoints.status_value();
+  fidl::ClientEnd<fuchsia_io::Directory> fshost_svc_client;
+  zx_status_t status = ConnectToSvcAt(fshost_outgoing_client.TakeChannel(), &fshost_svc_client);
+  if (status != ZX_OK) {
+    return status;
   }
-  auto [fshost_svc_client, fshost_svc_server] = *std::move(fshost_endpoints);
 
-  zx_status_t status =
-      fdio_open_at(fshost_outgoing_client.channel().get(), "svc",
-                   ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_DIRECTORY,
-                   fshost_svc_server.TakeChannel().release());
+  // Connect to /svc in driver-index's outgoing directory
+  fidl::ClientEnd<fuchsia_io::Directory> driver_index_svc_client;
+  status = ConnectToSvcAt(driver_index_outgoing_client.TakeChannel(), &driver_index_svc_client);
   if (status != ZX_OK) {
     return status;
   }
@@ -292,6 +311,8 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(
   ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", CloneDirectory(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.boot.RootResource", std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
+  ForwardService(svc_loop_state_->root, "fuchsia.driver.framework.DriverIndex",
+                 std::move(driver_index_svc_client));
 
   boot_args.try_emplace("virtcon.disable", "true");
 
@@ -420,14 +441,21 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
     return component_lifecycle.status_value();
   }
 
+  auto driver_index_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (!driver_index_endpoints.is_ok()) {
+    return driver_index_endpoints.status_value();
+  }
+  auto [driver_index_outgoing_client, driver_index_outgoing_server] =
+      *std::move(driver_index_endpoints);
+
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   fidl::ClientEnd<fuchsia_io::Directory> outgoing_svc_root;
   std::map<std::string, std::string> boot_args = std::move(args.boot_args);
   zx_status_t status = devmgr_launcher::Launch(
       std::move(args), svc_client.TakeChannel(), fshost_outgoing_server.TakeChannel(),
-      component_lifecycle->server.TakeChannel(), &devmgr.job_, &devmgr.process_, &devfs,
-      &outgoing_svc_root.channel());
+      driver_index_outgoing_server.TakeChannel(), component_lifecycle->server.TakeChannel(),
+      &devmgr.job_, &devmgr.process_, &devfs, &outgoing_svc_root.channel());
   if (status != ZX_OK) {
     return status;
   }
@@ -441,7 +469,8 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   }
 
   status = devmgr.SetupSvcLoop(std::move(svc_server), CloneDirectory(fshost_outgoing_client),
-                               std::move(get_boot_item), std::move(boot_args));
+                               std::move(driver_index_outgoing_client), std::move(get_boot_item),
+                               std::move(boot_args));
   if (status != ZX_OK) {
     return status;
   }

@@ -38,6 +38,11 @@ isolated_devmgr_unittest_package("bind-test") {
     "//src/devices/misc/drivers/test",
     "//src/devices/misc/drivers/test-parent",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 driver_bind_rules("bind") {

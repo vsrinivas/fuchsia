@@ -475,6 +475,15 @@ async fn main() -> Result<(), anyhow::Error> {
     let drivers =
         load_boot_drivers(boot).await.context("Failed to load boot drivers").map_err(log_error)?;
 
+    let mut should_load_base_drivers = true;
+
+    for argument in std::env::args() {
+        if argument == "--no-base-drivers" {
+            should_load_base_drivers = false;
+            log::info!("Not loading base drivers");
+        }
+    }
+
     let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![])));
     let (res1, res2, _) = futures::future::join3(
         async {
@@ -484,10 +493,14 @@ async fn main() -> Result<(), anyhow::Error> {
                 .map_err(log_error)
         },
         async {
-            load_base_drivers(index.clone(), resolver)
-                .await
-                .context("Error loading base packages")
-                .map_err(log_error)
+            if should_load_base_drivers {
+                load_base_drivers(index.clone(), resolver)
+                    .await
+                    .context("Error loading base packages")
+                    .map_err(log_error)
+            } else {
+                Ok(())
+            }
         },
         async {
             service_fs

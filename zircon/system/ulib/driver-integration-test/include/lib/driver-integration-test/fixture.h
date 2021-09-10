@@ -41,6 +41,9 @@ class IsolatedDevmgr {
     // If set to true, the block watcher will be disabled.
     bool disable_block_watcher = true;
 
+    // If set to true, driver index won't be responsible for binding.
+    bool disable_driver_index = false;
+
     bool no_exit_after_suspend = true;
   };
 

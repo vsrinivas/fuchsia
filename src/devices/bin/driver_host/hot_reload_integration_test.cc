@@ -32,6 +32,7 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
                       fuchsia::driver::development::DriverDevelopmentSyncPtr* development_) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.device_list.push_back(dev);
+  args.disable_driver_index = true;
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr));
   ASSERT_NE(devmgr->svc_root_dir().channel(), ZX_HANDLE_INVALID);

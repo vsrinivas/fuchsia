@@ -45,6 +45,8 @@ struct Args {
   std::vector<std::pair<const char*, zx::channel>> flat_namespace;
   // If true, the block watcher will be disabled and will not start.
   bool disable_block_watcher = false;
+  // If true, the driver index won't start and DriverManager will do binding.
+  bool disable_driver_index = false;
 
   // The following arguments are for devmgr_integration_test::IsolatedDevmgr only.
   // TODO(fxbug.dev/34365): Clean this up, devmgr-launcher shouldn't define arguments that are
@@ -63,8 +65,8 @@ struct Args {
 // Returns its containing job and a channel to the root of its devfs.
 // To destroy the devmgr, issue |devmgr_job->kill()|.
 zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoing_server,
-                   zx::channel component_lifecycle_server, zx::job* devmgr_job,
-                   zx::process* devmgr_process, zx::channel* devfs_root,
+                   zx::channel driver_index_outgoing_server, zx::channel component_lifecycle_server,
+                   zx::job* devmgr_job, zx::process* devmgr_process, zx::channel* devfs_root,
                    zx::channel* outgoing_svc_root);
 
 }  // namespace devmgr_launcher

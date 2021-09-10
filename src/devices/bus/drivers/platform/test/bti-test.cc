@@ -77,7 +77,7 @@ constexpr char kDevicePath[] = "sys/platform/11:01:1a/test-bti";
 
 TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = "/boot/driver/platform-bus.so";
+  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
   args.get_boot_item = GetBootItem;
 
   IsolatedDevmgr devmgr;

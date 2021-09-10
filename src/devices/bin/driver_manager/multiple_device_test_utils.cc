@@ -199,6 +199,9 @@ void DeviceState::CheckResumeReceivedAndReply(SystemPowerState target_state,
 }
 
 void MultipleDeviceTestCase::SetUp() {
+  // Start the mock server thread.
+  ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
+
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator()));
 
   {
@@ -208,9 +211,6 @@ void MultipleDeviceTestCase::SetUp() {
         fbl::MakeRefCounted<DriverHost>(&coordinator(), std::move(*client_end),
                                         fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   }
-
-  // Start the mock server thread.
-  ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
 
   // Set up the sys device proxy, inside of the driver_host
   ASSERT_OK(coordinator().PrepareProxy(coordinator().sys_device(), driver_host_));

@@ -7,7 +7,7 @@ import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
 isolated_devmgr_component("audio-test-devmgr") {
   args = [
-    "--sys_device=/boot/driver/platform-bus.so",
+    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
     "--svc_name=fuchsia.media.AudioTestDevmgr",
     "--wait_for=sys/platform/00:00:2f/virtual_audio",
   ]
