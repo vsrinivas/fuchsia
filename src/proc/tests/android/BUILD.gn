@@ -91,6 +91,7 @@ template("wayland_test_component") {
 gvisor_tests = [
   "access_test",
   "brk_test",
+  "chdir_test",
   "chmod_test",
   "clock_getres_test",
   "clock_gettime_test",
