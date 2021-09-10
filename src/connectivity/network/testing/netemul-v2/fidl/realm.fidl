@@ -109,7 +109,7 @@ type ChildDef = table {
     3: exposes vector<fuchsia.component.name>:MAX;
     /// Capabilities that this child uses.
     ///
-    /// If not set, interpreted as [`ChildUses.all`].
+    /// If not set, no capabilities will be routed to the component.
     4: uses ChildUses;
     /// Arguments to be passed to the child at runtime. If specified, overrides
     /// any arguments specified in the manifest.
