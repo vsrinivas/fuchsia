@@ -72,6 +72,8 @@ class LogEngineTest : public RealLoopFixture {
         std::make_shared<fuchsia::diagnostics::BatchIteratorPtr>();
     auto res = persistent_context_->svc()->Connect(accessor_.NewRequest(dispatcher()));
     ::fuchsia::diagnostics::StreamParameters params;
+    params.set_client_selector_configuration(
+        fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
     params.set_data_type(fuchsia::diagnostics::DataType::LOGS);
     params.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT_THEN_SUBSCRIBE);
     params.set_format(fuchsia::diagnostics::Format::JSON);

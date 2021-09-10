@@ -209,10 +209,7 @@ impl ArchiveAccessor {
                     Some(ClientSelectorConfiguration::Selectors(selectors)) => {
                         Some(validate_and_parse_log_selectors(selectors)?)
                     }
-                    // TODO(fxbug.dev/83169): this differs from inspect. Inspect requires selectors
-                    // to be set. At the moment, existing clients of ArchiveAccessor don't send
-                    // selectors and select everything. For now, we maintain this property.
-                    None | Some(ClientSelectorConfiguration::SelectAll(_)) => None,
+                    Some(ClientSelectorConfiguration::SelectAll(_)) => None,
                     _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
                 };
                 let logs = pipeline.read().logs(mode, selectors);

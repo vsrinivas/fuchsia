@@ -32,6 +32,8 @@ fpromise::promise<> LogListener::Listen(
   services_->Connect(archive.NewRequest());
 
   // Configure Diagnostics stream for structured logs.
+  stream_parameters_.set_client_selector_configuration(
+      fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
   stream_parameters_.set_data_type(fuchsia::diagnostics::DataType::LOGS);
   stream_parameters_.set_stream_mode(
       fuchsia::diagnostics::StreamMode::SNAPSHOT_THEN_SUBSCRIBE);
