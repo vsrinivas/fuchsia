@@ -22,11 +22,11 @@ namespace scenic_impl::input {
 class A11yLegacyContender final : public GestureContender {
  public:
   A11yLegacyContender(fit::function<void(StreamId, GestureResponse)> respond,
-                      fit::function<void(const InternalPointerEvent& event)> deliver_to_client,
+                      fit::function<void(const InternalTouchEvent& event)> deliver_to_client,
                       GestureContenderInspector& inspector);
   ~A11yLegacyContender();
 
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+  void UpdateStream(StreamId stream_id, const InternalTouchEvent& event, bool is_end_of_stream,
                     view_tree::BoundingBox unused) override;
 
   void EndContest(StreamId stream_id, bool awarded_win) override;
@@ -61,7 +61,7 @@ class A11yLegacyContender final : public GestureContender {
   std::unordered_set<StreamId> won_streams_awaiting_first_message_;
 
   const fit::function<void(StreamId, GestureResponse)> respond_;
-  const fit::function<void(const InternalPointerEvent& event)> deliver_to_client_;
+  const fit::function<void(const InternalTouchEvent& event)> deliver_to_client_;
 
   // Saved by reference since |inspector_| is guaranteed to outlive the contender.
   GestureContenderInspector& inspector_;

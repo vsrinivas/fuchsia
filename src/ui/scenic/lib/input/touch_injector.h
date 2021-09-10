@@ -16,7 +16,7 @@ class TouchInjector : public Injector {
                 fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                 fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                     is_descendant_and_connected,
-                fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
+                fit::function<void(const InternalTouchEvent&, StreamId stream_id)> inject,
                 fit::function<void()> on_channel_closed);
 
  protected:
@@ -27,11 +27,11 @@ class TouchInjector : public Injector {
 
  private:
   // TODO(fxbug.dev/53316): Reduce to a single return event when legacy code goes away.
-  std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvents(
+  std::vector<InternalTouchEvent> PointerInjectorEventToInternalPointerEvents(
       const fuchsia::ui::pointerinjector::Event& event) const;
 
   // Used to inject the event into InputSystem for dispatch to clients.
-  const fit::function<void(const InternalPointerEvent&, StreamId)> inject_;
+  const fit::function<void(const InternalTouchEvent&, StreamId)> inject_;
 };
 
 }  // namespace scenic_impl::input

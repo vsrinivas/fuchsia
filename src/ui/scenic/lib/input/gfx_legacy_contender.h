@@ -21,11 +21,11 @@ class GfxLegacyContender : public GestureContender {
  public:
   GfxLegacyContender(
       zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
-      fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client,
+      fit::function<void(const std::vector<InternalTouchEvent>&)> deliver_events_to_client,
       fit::function<void()> self_destruct, GestureContenderInspector& inspector);
   ~GfxLegacyContender() = default;
 
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+  void UpdateStream(StreamId stream_id, const InternalTouchEvent& event, bool is_end_of_stream,
                     view_tree::BoundingBox unused) override;
 
   void EndContest(StreamId stream_id, bool awarded_win) override;
@@ -33,10 +33,10 @@ class GfxLegacyContender : public GestureContender {
  private:
   bool awarded_win_ = false;
   bool is_end_of_stream_ = false;
-  std::vector<InternalPointerEvent> undelivered_events_;
+  std::vector<InternalTouchEvent> undelivered_events_;
 
   const fit::function<void(GestureResponse)> respond_;
-  const fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client_;
+  const fit::function<void(const std::vector<InternalTouchEvent>&)> deliver_events_to_client_;
   const fit::function<void()> self_destruct_;
 
   // Saved by reference since |inspector_| is guaranteed to outlive the contender.

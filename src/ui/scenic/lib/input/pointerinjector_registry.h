@@ -18,7 +18,7 @@
 
 namespace scenic_impl::input {
 
-using TouchInjectFunc = fit::function<void(const InternalPointerEvent& event, StreamId stream_id)>;
+using TouchInjectFunc = fit::function<void(const InternalTouchEvent& event, StreamId stream_id)>;
 using MouseInjectFunc = fit::function<void(const InternalMouseEvent& event, StreamId stream_id)>;
 
 // Handles the registration and config validation of fuchsia::ui::pointerinjector clients.

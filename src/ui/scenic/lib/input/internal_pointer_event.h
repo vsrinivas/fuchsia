@@ -61,8 +61,7 @@ struct Viewport {
 };
 
 // Pointer event representation to be used internally, uncoupled from FIDL types.
-// TODO(fxbug.dev/79501): Rename to InternalTouchEvent.
-struct InternalPointerEvent {
+struct InternalTouchEvent {
   zx_time_t timestamp = 0;
   // Id of the injection device.
   // TODO(fxbug.dev/53352): This is currently only unique per Injector. Make globally unique.

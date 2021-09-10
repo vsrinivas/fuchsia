@@ -136,7 +136,7 @@ void PointerinjectorRegistry::Register(
             [&inject_func = settings.dispatch_policy ==
                                     fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET
                                 ? inject_touch_exclusive_
-                                : inject_touch_hit_tested_](const InternalPointerEvent& event,
+                                : inject_touch_hit_tested_](const InternalTouchEvent& event,
                                                             StreamId stream_id) {
               inject_func(event, stream_id);
             },

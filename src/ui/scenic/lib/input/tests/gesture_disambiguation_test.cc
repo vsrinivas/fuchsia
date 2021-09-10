@@ -23,7 +23,7 @@ using fup_TouchResponse = fuchsia::ui::pointer::TouchResponse;
 using fup_TouchResponseType = fuchsia::ui::pointer::TouchResponseType;
 using fup_TouchInteractionStatus = fuchsia::ui::pointer::TouchInteractionStatus;
 
-using scenic_impl::input::InternalPointerEvent;
+using scenic_impl::input::InternalTouchEvent;
 using scenic_impl::input::Phase;
 using scenic_impl::input::StreamId;
 using scenic_impl::input::TouchSource;
@@ -37,8 +37,8 @@ constexpr StreamId kStream2Id = 22u;
 
 namespace {
 
-InternalPointerEvent PointerEventTemplate(zx_koid_t target) {
-  InternalPointerEvent event{
+InternalTouchEvent PointerEventTemplate(zx_koid_t target) {
+  InternalTouchEvent event{
       .timestamp = 0,
       .device_id = 1u,
       .pointer_id = 1u,

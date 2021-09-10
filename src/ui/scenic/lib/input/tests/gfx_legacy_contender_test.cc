@@ -12,7 +12,7 @@ namespace {
 using scenic_impl::input::GestureContenderInspector;
 using scenic_impl::input::GestureResponse;
 using scenic_impl::input::GfxLegacyContender;
-using scenic_impl::input::InternalPointerEvent;
+using scenic_impl::input::InternalTouchEvent;
 using scenic_impl::input::StreamId;
 
 constexpr zx_koid_t kViewRefKoid = 1;
@@ -42,12 +42,12 @@ TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
 
 TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
   constexpr StreamId kStreamId = 1;
-  std::vector<InternalPointerEvent> last_delivered_events;
+  std::vector<InternalTouchEvent> last_delivered_events;
   auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/ [](auto) {}, /*deliver_events_to_client*/
-      [&last_delivered_events](const std::vector<InternalPointerEvent>& events) {
+      [&last_delivered_events](const std::vector<InternalTouchEvent>& events) {
         last_delivered_events = events;
       },
       /*self_destruct*/ [] {}, inspector);

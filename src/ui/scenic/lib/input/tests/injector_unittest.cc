@@ -180,7 +180,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
+      [&cancelled_streams](const scenic_impl::input::InternalTouchEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::kCancel)
           cancelled_streams.push_back(event.pointer_id);
       },
@@ -246,7 +246,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
+      [&cancelled_streams](const scenic_impl::input::InternalTouchEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::kCancel)
           cancelled_streams.push_back(event.pointer_id);
       },
@@ -411,7 +411,7 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/
-      [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
+      [&num_cancel_events](const scenic_impl::input::InternalTouchEvent& event, StreamId) {
         num_cancel_events += event.phase == scenic_impl::input::Phase::kCancel ? 1 : 0;
       },
       /*on_channel_closed=*/[] {});

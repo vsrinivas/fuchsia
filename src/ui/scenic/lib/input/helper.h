@@ -25,16 +25,16 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
 fuchsia::ui::input::PointerEventPhase InternalPhaseToGfxPhase(Phase phase);
 Phase GfxPhaseToInternalPhase(fuchsia::ui::input::PointerEventPhase phase);
 
-// Turns a gfx pointer event into an InternalPointerEvent.
-InternalPointerEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
-                                                    zx_koid_t scene_koid, float screen_width,
-                                                    float screen_height,
-                                                    const glm::mat4& context_from_screen_transform);
+// Turns a gfx pointer event into an InternalTouchEvent.
+InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
+                                                  zx_koid_t scene_koid, float screen_width,
+                                                  float screen_height,
+                                                  const glm::mat4& context_from_screen_transform);
 
-// Turns an InternalPointerEvent into a gfx pointer event.
+// Turns an InternalTouchEvent into a gfx pointer event.
 // Does not support HOVER events.
 fuchsia::ui::input::PointerEvent InternalPointerEventToGfxPointerEvent(
-    const InternalPointerEvent& event, const glm::mat4& view_from_context_transform,
+    const InternalTouchEvent& event, const glm::mat4& view_from_context_transform,
     fuchsia::ui::input::PointerEventType type, uint64_t trace_id);
 
 // Converts a glm::mat4 to an array of a mat3 in column major order by shaving off the third row

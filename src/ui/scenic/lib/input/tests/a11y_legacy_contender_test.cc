@@ -12,7 +12,7 @@ namespace {
 
 using scenic_impl::input::A11yLegacyContender;
 using scenic_impl::input::GestureResponse;
-using scenic_impl::input::InternalPointerEvent;
+using scenic_impl::input::InternalTouchEvent;
 using scenic_impl::input::StreamId;
 
 constexpr view_tree::BoundingBox kViewBoundsEmpty{};
@@ -23,13 +23,13 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedAtSweep) {
   constexpr StreamId kId1 = 1;
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
-  std::vector<InternalPointerEvent> events_sent_to_client;
+  std::vector<InternalTouchEvent> events_sent_to_client;
   scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
-      [&events_sent_to_client](const InternalPointerEvent& event) {
+      [&events_sent_to_client](const InternalTouchEvent& event) {
         events_sent_to_client.emplace_back(event);
       },
       inspector);
@@ -67,13 +67,13 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedMidContest) {
   constexpr StreamId kId1 = 1;
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
-  std::vector<InternalPointerEvent> events_sent_to_client;
+  std::vector<InternalTouchEvent> events_sent_to_client;
   scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
-      [&events_sent_to_client](const InternalPointerEvent& event) {
+      [&events_sent_to_client](const InternalTouchEvent& event) {
         events_sent_to_client.emplace_back(event);
       },
       inspector);
@@ -117,13 +117,13 @@ TEST(A11yLegacyContenderTest, SingleStream_Rejected) {
   constexpr StreamId kId1 = 1;
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
-  std::vector<InternalPointerEvent> events_sent_to_client;
+  std::vector<InternalTouchEvent> events_sent_to_client;
   scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
-      [&events_sent_to_client](const InternalPointerEvent& event) {
+      [&events_sent_to_client](const InternalTouchEvent& event) {
         events_sent_to_client.emplace_back(event);
       },
       inspector);
@@ -147,7 +147,7 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
   constexpr StreamId kId1 = 1;
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
-  std::vector<InternalPointerEvent> events_sent_to_client;
+  std::vector<InternalTouchEvent> events_sent_to_client;
   A11yLegacyContender* contender_ptr;
   scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
@@ -157,7 +157,7 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
         contender_ptr->EndContest(id, /*awarded_win*/ true);
       },
       /*deliver_events_to_client*/
-      [&events_sent_to_client](const InternalPointerEvent& event) {
+      [&events_sent_to_client](const InternalTouchEvent& event) {
         events_sent_to_client.emplace_back(event);
       },
       inspector);
@@ -190,13 +190,13 @@ TEST(A11yLegacyContenderTest, MultipleStreams) {
   constexpr StreamId kId1 = 1, kId2 = 2, kId3 = 3;
   constexpr uint32_t kPointerId1 = 4, kPointerId2 = 5, kPointerId3 = 6;
   std::unordered_map<StreamId, std::vector<GestureResponse>> responses;
-  std::vector<InternalPointerEvent> events_sent_to_client;
+  std::vector<InternalTouchEvent> events_sent_to_client;
   scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses[id].push_back(response); },
       /*deliver_events_to_client*/
-      [&events_sent_to_client](const InternalPointerEvent& event) {
+      [&events_sent_to_client](const InternalTouchEvent& event) {
         events_sent_to_client.emplace_back(event);
       },
       inspector);

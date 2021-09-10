@@ -19,7 +19,7 @@ using fuchsia::ui::pointer::TouchResponseType;
 using scenic_impl::input::ContenderId;
 using scenic_impl::input::Extents;
 using scenic_impl::input::GestureResponse;
-using scenic_impl::input::InternalPointerEvent;
+using scenic_impl::input::InternalTouchEvent;
 using scenic_impl::input::Phase;
 using scenic_impl::input::StreamId;
 using scenic_impl::input::TouchSource;
@@ -63,7 +63,7 @@ void ExpectEqual(const fuchsia::ui::pointer::ViewParameters& received_view_param
       testing::ElementsAreArray(expected_viewport.receiver_from_viewport_transform.value()));
 }
 
-InternalPointerEvent IPEventTemplate(Phase phase) {
+InternalTouchEvent IPEventTemplate(Phase phase) {
   return {
       .device_id = kDeviceId,
       .pointer_id = kPointerId,
@@ -745,17 +745,17 @@ TEST_F(TouchSourceTest, TouchDeviceInfo_ShouldBeSent_OncePerDevice) {
 
   // Start three separate streams, two with the kDeviceId1 and one with kDeviceId2.
   {
-    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    InternalTouchEvent event = IPEventTemplate(Phase::kAdd);
     event.device_id = kDeviceId1;
     touch_source_->UpdateStream(/*stream_id*/ 1, event, kStreamOngoing, kEmptyBoundingBox);
   }
   {
-    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    InternalTouchEvent event = IPEventTemplate(Phase::kAdd);
     event.device_id = kDeviceId1;
     touch_source_->UpdateStream(/*stream_id*/ 2, event, kStreamOngoing, kEmptyBoundingBox);
   }
   {
-    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    InternalTouchEvent event = IPEventTemplate(Phase::kAdd);
     event.device_id = kDeviceId2;
     touch_source_->UpdateStream(/*stream_id*/ 3, event, kStreamOngoing, kEmptyBoundingBox);
   }

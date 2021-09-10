@@ -42,7 +42,7 @@ bool IsOutsideViewport(const Viewport& viewport, const glm::vec2& position_in_vi
 
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
-AccessibilityPointerEvent BuildAccessibilityPointerEvent(const InternalPointerEvent& internal_event,
+AccessibilityPointerEvent BuildAccessibilityPointerEvent(const InternalTouchEvent& internal_event,
                                                          const glm::vec2& ndc_point,
                                                          const glm::vec2& local_point,
                                                          uint64_t viewref_koid) {
@@ -60,11 +60,11 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const InternalPointerEv
   return event;
 }
 
-// Takes an InternalPointerEvent and returns a point in (Vulkan) Normalized Device Coordinates,
+// Takes an InternalTouchEvent and returns a point in (Vulkan) Normalized Device Coordinates,
 // in relation to the viewport. Intended for magnification
 // TODO(fxbug.dev/50549): Only here to allow the legacy a11y flow. Remove along with the legacy a11y
 // code.
-glm::vec2 GetViewportNDCPoint(const InternalPointerEvent& internal_event) {
+glm::vec2 GetViewportNDCPoint(const InternalTouchEvent& internal_event) {
   const float width = internal_event.viewport.extents.max.x - internal_event.viewport.extents.min.x;
   const float height =
       internal_event.viewport.extents.max.y - internal_event.viewport.extents.min.y;
@@ -122,7 +122,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
               RecordGestureDisambiguationResponse(stream_id, a11y_contender_id_, {response});
             },
             /*deliver_to_client*/
-            [this](const InternalPointerEvent& event) {
+            [this](const InternalTouchEvent& event) {
               auto a11y_event = CreateAccessibilityEvent(event);
               ChattyA11yLog(a11y_event);
               accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
@@ -151,11 +151,11 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
   pointerinjector_registry_ = std::make_unique<PointerinjectorRegistry>(
       this->context()->app_context(),
       /*inject_touch_exclusive=*/
-      [this](const InternalPointerEvent& event, StreamId stream_id) {
+      [this](const InternalTouchEvent& event, StreamId stream_id) {
         InjectTouchEventExclusive(event, stream_id);
       },
       /*inject_touch_hit_tested=*/
-      [this](const InternalPointerEvent& event, StreamId stream_id) {
+      [this](const InternalTouchEvent& event, StreamId stream_id) {
         InjectTouchEventHitTested(event, stream_id);
       },
       /*inject_mouse_exclusive=*/
@@ -187,7 +187,7 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
 }
 
 fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
-    const InternalPointerEvent& event) {
+    const InternalTouchEvent& event) {
   // Find top-hit target and send it to accessibility.
   const zx_koid_t view_ref_koid = TopHitTest(event, /*semantic_hit_test*/ true);
 
@@ -220,7 +220,7 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
         RecordGestureDisambiguationResponse(stream_id, contender_id, {response});
       },
       /*deliver_events_to_client*/
-      [this, view_ref_koid](const std::vector<InternalPointerEvent>& events) {
+      [this, view_ref_koid](const std::vector<InternalTouchEvent>& events) {
         for (const auto& event : events) {
           ReportPointerEventToPointerCaptureListener(event);
           ReportPointerEventToGfxLegacyView(event, view_ref_koid,
@@ -401,7 +401,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   const glm::mat4 context_from_screen_transform =
       context_from_world_transform.value() * world_from_screen_transform.value();
 
-  InternalPointerEvent internal_event = GfxPointerEventToInternalEvent(
+  InternalTouchEvent internal_event = GfxPointerEventToInternalEvent(
       command.pointer_event, root_koid, screen_width, screen_height, context_from_screen_transform);
 
   switch (command.pointer_event.type) {
@@ -450,7 +450,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   }
 }
 
-void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id) {
+void InputSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id) {
   if (view_tree_snapshot_->view_tree.count(event.target) == 0 &&
       view_tree_snapshot_->unconnected_views.count(event.target) == 0) {
     FX_DCHECK(touch_contenders_.count(event.target) == 0);
@@ -494,7 +494,7 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, S
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id) {
+void InputSystem::InjectTouchEventHitTested(const InternalTouchEvent& event, StreamId stream_id) {
   // New stream. Collect contenders and set up a new arena.
   if (event.phase == Phase::kAdd) {
     std::vector<ContenderId> contenders = CollectContenders(stream_id, event);
@@ -563,7 +563,7 @@ std::vector<zx_koid_t> InputSystem::GetAncestorChainTopToBottom(zx_koid_t bottom
 }
 
 std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
-                                                        const InternalPointerEvent& event) {
+                                                        const InternalTouchEvent& event) {
   FX_DCHECK(event.phase == Phase::kAdd);
   std::vector<ContenderId> contenders;
 
@@ -599,7 +599,7 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
   return contenders;
 }
 
-void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, StreamId stream_id) {
+void InputSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId stream_id) {
   auto arena_it = gesture_arenas_.find(stream_id);
   if (arena_it == gesture_arenas_.end())
     return;  // Contest already ended, with no winner.
@@ -643,7 +643,7 @@ void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, Stream
         // Contest ended -> Need to send an explicit "cancel" event to the contender.
         FX_DCHECK(arena.contenders().size() == 1 && arena.contains(contender_id));
         FX_DCHECK(event.phase != Phase::kAdd);
-        InternalPointerEvent event_copy = event;
+        InternalTouchEvent event_copy = event;
         event_copy.phase = Phase::kCancel;
         contender_ptr->UpdateStream(stream_id, event_copy, /*is_end_of_stream=*/true,
                                     /*bounding_box=*/{});
@@ -723,7 +723,7 @@ void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(fxbug.dev/24288): Enhance trackpad support.
-void InputSystem::LegacyInjectMouseEventHitTested(const InternalPointerEvent& event) {
+void InputSystem::LegacyInjectMouseEventHitTested(const InternalTouchEvent& event) {
   const uint32_t device_id = event.device_id;
   const Phase pointer_phase = event.phase;
 
@@ -868,7 +868,7 @@ void InputSystem::CancelMouseStream(StreamId stream_id) {
 
 // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
 void InputSystem::ReportPointerEventToPointerCaptureListener(
-    const InternalPointerEvent& event) const {
+    const InternalTouchEvent& event) const {
   if (!pointer_capture_listener_)
     return;
 
@@ -889,7 +889,7 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
 
-void InputSystem::ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event,
+void InputSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event,
                                                     zx_koid_t view_ref_koid,
                                                     fuchsia::ui::input::PointerEventType type) {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");

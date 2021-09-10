@@ -100,9 +100,9 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   /// Public for testing ///
 
   // Injects a touch event directly to the View with koid |event.target|.
-  void InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id);
+  void InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id);
   // Injects a touch event by hit testing for appropriate targets.
-  void InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id);
+  void InjectTouchEventHitTested(const InternalTouchEvent& event, StreamId stream_id);
 
   // Injects a mouse event directly to the View with koid |event.target|.
   void InjectMouseEventExclusive(const InternalMouseEvent& event, StreamId stream_id);
@@ -113,7 +113,7 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   void CancelMouseStream(StreamId stream_id);
 
   // Injects a mouse event using the GFX legacy API. Deprecated.
-  void LegacyInjectMouseEventHitTested(const InternalPointerEvent& event);
+  void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
 
  private:
   // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
@@ -136,10 +136,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(const InternalPointerEvent& event) const;
+  void ReportPointerEventToPointerCaptureListener(const InternalTouchEvent& event) const;
 
   // Enqueue the pointer event into the EventReporter of a View.
-  void ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
+  void ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event, zx_koid_t view_ref_koid,
                                          fuchsia::ui::input::PointerEventType type);
 
   // Locates and sends an event to the MouseSource identified by |receiver|, if one exists.
@@ -151,13 +151,13 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   ContenderId AddGfxLegacyContender(StreamId stream_id, zx_koid_t view_ref_koid);
 
   fuchsia::ui::input::accessibility::PointerEvent CreateAccessibilityEvent(
-      const InternalPointerEvent& event);
+      const InternalTouchEvent& event);
 
   // Collects all the GestureContenders for a new touch event stream.
-  std::vector<ContenderId> CollectContenders(StreamId stream_id, const InternalPointerEvent& event);
+  std::vector<ContenderId> CollectContenders(StreamId stream_id, const InternalTouchEvent& event);
 
   // Updates the gesture arena and all contenders for stream |stream_id| with a new event.
-  void UpdateGestureContest(const InternalPointerEvent& event, StreamId stream_id);
+  void UpdateGestureContest(const InternalTouchEvent& event, StreamId stream_id);
 
   // Records a set of responses from a gesture disambiguation contender.
   void RecordGestureDisambiguationResponse(StreamId stream_id, ContenderId contender_id,

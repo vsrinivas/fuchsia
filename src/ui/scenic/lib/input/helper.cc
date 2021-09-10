@@ -69,10 +69,11 @@ PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
   };
 }
 
-InternalPointerEvent GfxPointerEventToInternalEvent(
-    const fuchsia::ui::input::PointerEvent& event, zx_koid_t scene_koid, float screen_width,
-    float screen_height, const glm::mat4& context_from_screen_transform) {
-  InternalPointerEvent internal_event;
+InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
+                                                  zx_koid_t scene_koid, float screen_width,
+                                                  float screen_height,
+                                                  const glm::mat4& context_from_screen_transform) {
+  InternalTouchEvent internal_event;
   internal_event.timestamp = event.event_time;
   internal_event.device_id = event.device_id;
   internal_event.pointer_id = event.pointer_id;
@@ -91,7 +92,7 @@ InternalPointerEvent GfxPointerEventToInternalEvent(
   return internal_event;
 }
 
-GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent& internal_event,
+GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalTouchEvent& internal_event,
                                                       const glm::mat4& view_from_context_transform,
                                                       fuchsia::ui::input::PointerEventType type,
                                                       uint64_t trace_id) {

@@ -59,8 +59,7 @@ fuchsia::ui::pointer::EventPhase ConvertToEventPhase(Phase phase) {
   }
 }
 
-fuchsia::ui::pointer::TouchEvent NewTouchEvent(StreamId stream_id,
-                                               const InternalPointerEvent& event,
+fuchsia::ui::pointer::TouchEvent NewTouchEvent(StreamId stream_id, const InternalTouchEvent& event,
                                                bool is_end_of_stream) {
   fuchsia::ui::pointer::TouchEvent new_event;
   new_event.set_timestamp(event.timestamp);
@@ -158,7 +157,7 @@ TouchSource::~TouchSource() {
   }
 }
 
-void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
+void TouchSource::UpdateStream(StreamId stream_id, const InternalTouchEvent& event,
                                bool is_end_of_stream, view_tree::BoundingBox view_bounds) {
   const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;
   FX_CHECK(is_new_stream == (event.phase == Phase::kAdd)) << "Stream must only start with ADD.";

@@ -25,7 +25,7 @@ using fui_Phase = fuchsia::ui::input::PointerEventPhase;
 using scenic_impl::input::StreamId;
 
 using fuchsia::ui::pointer::TouchInteractionStatus;
-using scenic_impl::input::InternalPointerEvent;
+using scenic_impl::input::InternalTouchEvent;
 
 constexpr float kNdcEpsilon = std::numeric_limits<float>::epsilon();
 
@@ -39,8 +39,8 @@ constexpr StreamId kStream3Id = 33u;
 
 namespace {
 
-InternalPointerEvent PointerEventTemplate(zx_koid_t target, float x, float y, impl_Phase phase) {
-  InternalPointerEvent event{
+InternalTouchEvent PointerEventTemplate(zx_koid_t target, float x, float y, impl_Phase phase) {
+  InternalTouchEvent event{
       .timestamp = 0,
       .device_id = 1u,
       .pointer_id = 1u,

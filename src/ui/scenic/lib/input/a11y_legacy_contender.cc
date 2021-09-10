@@ -13,7 +13,7 @@ namespace input {
 
 A11yLegacyContender::A11yLegacyContender(
     fit::function<void(StreamId, GestureResponse)> respond,
-    fit::function<void(const InternalPointerEvent& event)> deliver_to_client,
+    fit::function<void(const InternalTouchEvent& event)> deliver_to_client,
     GestureContenderInspector& inspector)
     : GestureContender(ZX_KOID_INVALID),
       respond_(std::move(respond)),
@@ -33,7 +33,7 @@ A11yLegacyContender::~A11yLegacyContender() {
   }
 }
 
-void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
+void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalTouchEvent& event,
                                        bool is_end_of_stream, view_tree::BoundingBox) {
   inspector_.OnInjectedEvents(view_ref_koid_, 1);
   deliver_to_client_(event);

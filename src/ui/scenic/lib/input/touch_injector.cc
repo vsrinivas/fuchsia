@@ -12,9 +12,9 @@ using InjectorEventPhase = fuchsia::ui::pointerinjector::EventPhase;
 
 namespace {
 
-InternalPointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,
-                                       zx_koid_t target) {
-  InternalPointerEvent cancel_event;
+InternalTouchEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,
+                                     zx_koid_t target) {
+  InternalTouchEvent cancel_event;
   cancel_event.phase = Phase::kCancel;
   cancel_event.device_id = device_id;
   cancel_event.pointer_id = pointer_id;
@@ -30,7 +30,7 @@ TouchInjector::TouchInjector(inspect::Node inspect_node, InjectorSettings settin
                              fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                              fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                                  is_descendant_and_connected,
-                             fit::function<void(const InternalPointerEvent&, StreamId)> inject,
+                             fit::function<void(const InternalTouchEvent&, StreamId)> inject,
                              fit::function<void()> on_channel_closed)
     : Injector(std::move(inspect_node), settings, std::move(viewport), std::move(device),
                std::move(is_descendant_and_connected), std::move(on_channel_closed)),
@@ -42,7 +42,7 @@ TouchInjector::TouchInjector(inspect::Node inspect_node, InjectorSettings settin
 void TouchInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& event,
                                  StreamId stream_id) {
   // Translate events to internal representation and inject.
-  std::vector<InternalPointerEvent> internal_events =
+  std::vector<InternalTouchEvent> internal_events =
       PointerInjectorEventToInternalPointerEvents(event);
 
   FX_DCHECK(stream_id != kInvalidStreamId);
@@ -51,10 +51,10 @@ void TouchInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& even
   }
 }
 
-std::vector<InternalPointerEvent> TouchInjector::PointerInjectorEventToInternalPointerEvents(
+std::vector<InternalTouchEvent> TouchInjector::PointerInjectorEventToInternalPointerEvents(
     const fuchsia::ui::pointerinjector::Event& event) const {
   const InjectorSettings& settings = Injector::settings();
-  InternalPointerEvent internal_event;
+  InternalTouchEvent internal_event;
   internal_event.timestamp = event.timestamp();
   internal_event.device_id = settings.device_id;
 
@@ -66,11 +66,11 @@ std::vector<InternalPointerEvent> TouchInjector::PointerInjectorEventToInternalP
   internal_event.context = settings.context_koid;
   internal_event.target = settings.target_koid;
 
-  std::vector<InternalPointerEvent> events;
+  std::vector<InternalTouchEvent> events;
   switch (pointer_sample.phase()) {
     case InjectorEventPhase::ADD: {
       // Insert extra event.
-      InternalPointerEvent add_clone = internal_event;
+      InternalTouchEvent add_clone = internal_event;
       add_clone.phase = Phase::kAdd;
       events.emplace_back(std::move(add_clone));
       internal_event.phase = Phase::kDown;
@@ -84,7 +84,7 @@ std::vector<InternalPointerEvent> TouchInjector::PointerInjectorEventToInternalP
     }
     case InjectorEventPhase::REMOVE: {
       // Insert extra event.
-      InternalPointerEvent up_clone = internal_event;
+      InternalTouchEvent up_clone = internal_event;
       up_clone.phase = Phase::kUp;
       events.emplace_back(std::move(up_clone));
       internal_event.phase = Phase::kRemove;

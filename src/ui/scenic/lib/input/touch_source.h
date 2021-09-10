@@ -36,7 +36,7 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   // |GestureContender|
   // For |view_bounds| |event.viewport| new values are only sent to the client when they've changed
   // from their previous seen values.
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+  void UpdateStream(StreamId stream_id, const InternalTouchEvent& event, bool is_end_of_stream,
                     view_tree::BoundingBox view_bounds) override;
 
   // |GestureContender|

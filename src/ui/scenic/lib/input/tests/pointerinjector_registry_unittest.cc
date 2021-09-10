@@ -17,7 +17,6 @@
 using fuchsia::ui::pointerinjector::DeviceType;
 using fuchsia::ui::pointerinjector::DispatchPolicy;
 using fuchsia::ui::views::ViewRef;
-
 // Unit tests for the PointerinjectorRegistry class.
 
 namespace input::test {
