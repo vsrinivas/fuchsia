@@ -462,9 +462,9 @@ impl ComponentInstance {
             }
             // Drop the lock before doing the work to resolve the state.
         }
-        self.resolve()
-            .await
-            .map_err(|err| ComponentInstanceError::resolve_failed(&self.abs_moniker, err))?;
+        self.resolve().await.map_err(|err| {
+            ComponentInstanceError::resolve_failed(self.abs_moniker.to_partial(), err)
+        })?;
         let state = self.state.lock().await;
         if let InstanceState::Purged = *state {
             return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.to_partial()));
@@ -878,11 +878,15 @@ impl ComponentInstance {
     ) -> Result<(), ModelError> {
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
-            return Err(RoutingError::source_instance_stopped(&self.abs_moniker).into());
+            return Err(
+                RoutingError::source_instance_stopped(&self.abs_moniker.to_partial()).into()
+            );
         }
         let runtime = execution.runtime.as_ref().expect("bind_instance_open_outgoing: no runtime");
         let out_dir = &runtime.outgoing_dir.as_ref().ok_or_else(|| {
-            ModelError::from(RoutingError::source_instance_not_executable(&self.abs_moniker))
+            ModelError::from(RoutingError::source_instance_not_executable(
+                &self.abs_moniker.to_partial(),
+            ))
         })?;
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
         let path = io_util::canonicalize_path(path);
@@ -986,15 +990,18 @@ impl ComponentInstanceInterface for ComponentInstance {
     }
 
     fn try_get_policy_checker(&self) -> Result<GlobalPolicyChecker, ComponentInstanceError> {
-        let context = self.try_get_context().map_err(|_| {
-            ComponentInstanceError::PolicyCheckerNotFound { moniker: self.abs_moniker().clone() }
-        })?;
+        let context =
+            self.try_get_context().map_err(|_| ComponentInstanceError::PolicyCheckerNotFound {
+                moniker: self.abs_moniker().to_partial(),
+            })?;
         Ok(context.policy().clone())
     }
 
     fn try_get_component_id_index(&self) -> Result<Arc<ComponentIdIndex>, ComponentInstanceError> {
         let context = self.try_get_context().map_err(|_| {
-            ComponentInstanceError::ComponentIdIndexNotFound { moniker: self.abs_moniker().clone() }
+            ComponentInstanceError::ComponentIdIndexNotFound {
+                moniker: self.abs_moniker().to_partial(),
+            }
         })?;
         Ok(context.component_id_index())
     }

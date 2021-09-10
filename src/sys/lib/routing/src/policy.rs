@@ -14,7 +14,7 @@ use {
     log::{error, warn},
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
-        RelativeMoniker, RelativeMonikerBase,
+        PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     std::sync::{Arc, Weak},
     thiserror::Error,
@@ -27,13 +27,13 @@ pub enum PolicyError {
     PolicyUnavailable,
 
     #[error("feature \"{policy}\" used by \"{moniker}\" is not supported by this instance of component manager")]
-    Unsupported { policy: String, moniker: AbsoluteMoniker },
+    Unsupported { policy: String, moniker: PartialAbsoluteMoniker },
 
     #[error("security policy disallows \"{policy}\" job policy for \"{moniker}\"")]
-    JobPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
+    JobPolicyDisallowed { policy: String, moniker: PartialAbsoluteMoniker },
 
     #[error("security policy disallows \"{policy}\" child policy for \"{moniker}\"")]
-    ChildPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
+    ChildPolicyDisallowed { policy: String, moniker: PartialAbsoluteMoniker },
 
     #[error("security policy was unable to extract the source from the routed capability")]
     InvalidCapabilitySource,
@@ -42,36 +42,39 @@ pub enum PolicyError {
     CapabilityUseDisallowed {
         cap: String,
         source_moniker: ExtendedMoniker,
-        target_moniker: AbsoluteMoniker,
+        target_moniker: PartialAbsoluteMoniker,
     },
 
     #[error("debug security policy disallows \"{cap}\" from \"{source_moniker}\" being routed from environment \"{env_moniker}:{env_name}\" to \"{target_moniker}\"")]
     DebugCapabilityUseDisallowed {
         cap: String,
         source_moniker: ExtendedMoniker,
-        env_moniker: AbsoluteMoniker,
+        env_moniker: PartialAbsoluteMoniker,
         env_name: String,
-        target_moniker: AbsoluteMoniker,
+        target_moniker: PartialAbsoluteMoniker,
     },
 }
 
 impl PolicyError {
-    fn unsupported(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
+    fn unsupported(policy: impl Into<String>, moniker: &PartialAbsoluteMoniker) -> Self {
         PolicyError::Unsupported { policy: policy.into(), moniker: moniker.clone() }
     }
 
-    fn job_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
+    fn job_policy_disallowed(policy: impl Into<String>, moniker: &PartialAbsoluteMoniker) -> Self {
         PolicyError::JobPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
     }
 
-    fn child_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
+    fn child_policy_disallowed(
+        policy: impl Into<String>,
+        moniker: &PartialAbsoluteMoniker,
+    ) -> Self {
         PolicyError::ChildPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
     }
 
     fn capability_use_disallowed(
         cap: impl Into<String>,
         source_moniker: &ExtendedMoniker,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &PartialAbsoluteMoniker,
     ) -> Self {
         PolicyError::CapabilityUseDisallowed {
             cap: cap.into(),
@@ -83,9 +86,9 @@ impl PolicyError {
     fn debug_capability_use_disallowed(
         cap: impl Into<String>,
         source_moniker: &ExtendedMoniker,
-        env_moniker: &AbsoluteMoniker,
+        env_moniker: &PartialAbsoluteMoniker,
         env_name: impl Into<String>,
-        target_moniker: &AbsoluteMoniker,
+        target_moniker: &PartialAbsoluteMoniker,
     ) -> Self {
         PolicyError::DebugCapabilityUseDisallowed {
             cap: cap.into(),
@@ -232,7 +235,7 @@ impl GlobalPolicyChecker {
                     Err(PolicyError::capability_use_disallowed(
                         policy_key.source_name.str(),
                         &policy_key.source_moniker,
-                        &target_moniker,
+                        &target_moniker.to_partial(),
                     ))
                 }
             }
@@ -270,9 +273,9 @@ impl GlobalPolicyChecker {
         Err(PolicyError::debug_capability_use_disallowed(
             policy_key.source_name.str(),
             &policy_key.source_moniker,
-            &env_moniker,
+            &env_moniker.to_partial(),
             env_name,
-            target_moniker,
+            &target_moniker.to_partial(),
         ))
     }
 
@@ -282,7 +285,10 @@ impl GlobalPolicyChecker {
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), PolicyError> {
         if !self.config.reboot_on_terminate_enabled {
-            return Err(PolicyError::unsupported("reboot_on_terminate", target_moniker));
+            return Err(PolicyError::unsupported(
+                "reboot_on_terminate",
+                &target_moniker.to_partial(),
+            ));
         }
         if self
             .config
@@ -294,7 +300,10 @@ impl GlobalPolicyChecker {
         {
             Ok(())
         } else {
-            Err(PolicyError::child_policy_disallowed("reboot_on_terminate", target_moniker))
+            Err(PolicyError::child_policy_disallowed(
+                "reboot_on_terminate",
+                &target_moniker.to_partial(),
+            ))
         }
     }
 }
@@ -362,7 +371,10 @@ impl ScopedPolicyChecker {
         {
             Ok(())
         } else {
-            Err(PolicyError::job_policy_disallowed("ambient_mark_vmo_exec", &self.moniker))
+            Err(PolicyError::job_policy_disallowed(
+                "ambient_mark_vmo_exec",
+                &self.moniker.to_partial(),
+            ))
         }
     }
 
@@ -377,7 +389,10 @@ impl ScopedPolicyChecker {
         {
             Ok(())
         } else {
-            Err(PolicyError::job_policy_disallowed("main_process_critical", &self.moniker))
+            Err(PolicyError::job_policy_disallowed(
+                "main_process_critical",
+                &self.moniker.to_partial(),
+            ))
         }
     }
 
@@ -392,7 +407,10 @@ impl ScopedPolicyChecker {
         {
             Ok(())
         } else {
-            Err(PolicyError::job_policy_disallowed("create_raw_processes", &self.moniker))
+            Err(PolicyError::job_policy_disallowed(
+                "create_raw_processes",
+                &self.moniker.to_partial(),
+            ))
         }
     }
 }

@@ -217,9 +217,11 @@ mod tests {
                             $expected_policy, policy
                         );
                         assert_eq!(
-                            moniker, *TEST_MONIKER,
+                            moniker,
+                            TEST_MONIKER.to_partial(),
                             "moniker for PolicyError doesn't match. Expected {}, got {}",
-                            *TEST_MONIKER, moniker
+                            *TEST_MONIKER,
+                            moniker
                         );
                     }
                     _ => assert!(false, "expected error of type PolicyError::JobPolicyDisallowed"),

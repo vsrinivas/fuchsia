@@ -1155,7 +1155,7 @@ async fn use_runner_from_environment_not_found() {
                 capability_name,
             }
         })
-        if moniker == AbsoluteMoniker::from(vec!["b:0"]) &&
+        if moniker == PartialAbsoluteMoniker::from(vec!["b"]) &&
         capability_type == "runner" &&
         capability_name == CapabilityName("hobbit".to_string()));
 }

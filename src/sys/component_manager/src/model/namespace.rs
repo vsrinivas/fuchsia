@@ -29,6 +29,7 @@ use {
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
+    moniker::AbsoluteMonikerBase,
     std::fmt::Arguments,
     std::{collections::HashMap, path::PathBuf, sync::Arc},
     vfs::{
@@ -597,7 +598,8 @@ fn make_dir_with_not_found_logging(
                         format_args!(
                             "No capability available at path {} for component {}, \
                                 verify the component has the proper `use` declaration.",
-                            requested_path, target.abs_moniker
+                            requested_path,
+                            target.abs_moniker.to_partial()
                         ),
                     );
                 }

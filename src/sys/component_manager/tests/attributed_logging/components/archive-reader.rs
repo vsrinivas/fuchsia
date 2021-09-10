@@ -18,8 +18,8 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "fidl.test.components.Trigger",
-            "target component `/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-parent:0`",
-            "`offer from parent` declaration was found at `/routing-tests:0/offers-to-children-unavailable:0`",
+            "target component `/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent`",
+            "`offer from parent` declaration was found at `/routing-tests/offers-to-children-unavailable`",
             "no matching `offer` declaration was found in the parent",
         ]],
     );
@@ -28,9 +28,9 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
-            "target component `/routing-tests:0/child:0`",
+            "target component `/routing-tests/child`",
             "`use from parent`",
-            "at `/routing-tests:0/child:0`",
+            "at `/routing-tests/child`",
             "no matching `offer` declaration was found in the parent",
         ]],
     );
@@ -39,7 +39,7 @@ async fn main() {
         vec![vec![
             "Failed to route",
             "`fidl.test.components.Trigger`",
-            "target component `/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0`",
+            "target component `/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling`",
             "`offer from #child-that-doesnt-expose` declaration was found",
             "no matching `expose` declaration",
         ]]
@@ -50,7 +50,7 @@ async fn main() {
         vec![vec![
             "No capability available",
             "fidl.test.components.Trigger",
-            "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
+            "/routing-tests/offers-to-children-unavailable/child-open-unrequested",
             "`use` declaration",
         ]],
     );

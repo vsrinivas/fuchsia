@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
     log::warn,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -73,7 +73,7 @@ impl WorkScheduler {
             // use WorkScheduler.
             if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
                 return Err(RoutingError::used_expose_not_found(
-                    &scope_moniker,
+                    &scope_moniker.to_partial(),
                     WORK_SCHEDULER_CAPABILITY_NAME.to_string(),
                 )
                 .into());

@@ -32,7 +32,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
-    moniker::{ExtendedMoniker, RelativeMoniker},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -322,14 +322,14 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
             }
             CapabilitySource::Framework { capability, component } => {
                 return Err(RoutingError::capability_from_framework_not_found(
-                    &component.moniker,
+                    &component.moniker.to_partial(),
                     capability.source_name().to_string(),
                 )
                 .into());
             }
             CapabilitySource::Capability { source_capability, component } => {
                 return Err(RoutingError::capability_from_capability_not_found(
-                    &component.moniker,
+                    &component.moniker.to_partial(),
                     source_capability.to_string(),
                 )
                 .into());
@@ -403,7 +403,7 @@ pub async fn report_routing_failure(
                 "Failed to route {} `{}` with target component `{}`: {}",
                 cap.type_name(),
                 cap.source_id(),
-                &target.abs_moniker,
+                &target.abs_moniker.to_partial(),
                 &err_str
             ),
         )

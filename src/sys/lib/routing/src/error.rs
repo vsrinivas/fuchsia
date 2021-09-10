@@ -7,7 +7,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
-    moniker::{AbsoluteMoniker, PartialAbsoluteMoniker, PartialChildMoniker},
+    moniker::{PartialAbsoluteMoniker, PartialChildMoniker},
     thiserror::Error,
 };
 
@@ -19,12 +19,12 @@ pub enum ComponentInstanceError {
     #[error("component manager instance unavailable")]
     ComponentManagerInstanceUnavailable {},
     #[error("policy checker not found for component instance {}", moniker)]
-    PolicyCheckerNotFound { moniker: AbsoluteMoniker },
+    PolicyCheckerNotFound { moniker: PartialAbsoluteMoniker },
     #[error("component ID index not found for component instance {}", moniker)]
-    ComponentIdIndexNotFound { moniker: AbsoluteMoniker },
+    ComponentIdIndexNotFound { moniker: PartialAbsoluteMoniker },
     #[error("Failed to resolve `{}`: {}", moniker, err)]
     ResolveFailed {
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         #[source]
         err: ClonableError,
     },
@@ -47,8 +47,8 @@ impl ComponentInstanceError {
         ComponentInstanceError::ComponentManagerInstanceUnavailable {}
     }
 
-    pub fn resolve_failed(moniker: &AbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
-        Self::ResolveFailed { moniker: moniker.clone(), err: err.into().into() }
+    pub fn resolve_failed(moniker: PartialAbsoluteMoniker, err: impl Into<anyhow::Error>) -> Self {
+        Self::ResolveFailed { moniker, err: err.into().into() }
     }
 }
 
@@ -56,20 +56,23 @@ impl ComponentInstanceError {
 #[derive(Debug, Error, Clone)]
 pub enum RoutingError {
     #[error("Instance identified as source of capability is not running: `{}`", moniker)]
-    SourceInstanceStopped { moniker: AbsoluteMoniker },
+    SourceInstanceStopped { moniker: PartialAbsoluteMoniker },
 
     #[error(
         "Instance identified as source of capability is a non-executable component: `{}`",
         moniker
     )]
-    SourceInstanceNotExecutable { moniker: AbsoluteMoniker },
+    SourceInstanceNotExecutable { moniker: PartialAbsoluteMoniker },
 
     #[error(
         "Source for directory backing storage from `{}` must be a component or component manager's namespace, but was {}",
         storage_moniker,
         source_type
     )]
-    StorageDirectorySourceInvalid { source_type: &'static str, storage_moniker: AbsoluteMoniker },
+    StorageDirectorySourceInvalid {
+        source_type: &'static str,
+        storage_moniker: PartialAbsoluteMoniker,
+    },
 
     #[error(
         "Source for directory storage from `{}` was a child `{}`, but this child was not found",
@@ -77,7 +80,7 @@ pub enum RoutingError {
         child_moniker
     )]
     StorageDirectorySourceChildNotFound {
-        storage_moniker: AbsoluteMoniker,
+        storage_moniker: PartialAbsoluteMoniker,
         child_moniker: PartialChildMoniker,
     },
 
@@ -90,7 +93,7 @@ pub enum RoutingError {
     )]
     StorageFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -98,7 +101,7 @@ pub enum RoutingError {
         "Component {} is trying to use a storage capability which is restricted to the component ID index.",
         moniker
     )]
-    ComponentNotInIdIndex { moniker: AbsoluteMoniker },
+    ComponentNotInIdIndex { moniker: PartialAbsoluteMoniker },
 
     #[error(
         "A `use from parent` declaration was found at `/` for `{}`, \
@@ -127,7 +130,7 @@ pub enum RoutingError {
         moniker,
         capability_id
     )]
-    UseFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    UseFromParentNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "A `use from child` declaration was found at `{}` for `{}`, but no matching \
@@ -136,7 +139,7 @@ pub enum RoutingError {
         capability_id,
         child
     )]
-    UseFromChildNotFound { moniker: AbsoluteMoniker, capability_id: String, child: String },
+    UseFromChildNotFound { moniker: PartialAbsoluteMoniker, capability_id: String, child: String },
 
     #[error(
         "A `use` declaration was found at `{}` for {} `{}`, but no matching \
@@ -147,7 +150,7 @@ pub enum RoutingError {
         capability_type
     )]
     UseFromEnvironmentNotFound {
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_type: &'static str,
         capability_name: CapabilityName,
     },
@@ -160,7 +163,7 @@ pub enum RoutingError {
         capability_name
     )]
     UseFromRootEnvironmentNotAllowed {
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_type: &'static str,
         capability_name: CapabilityName,
     },
@@ -173,7 +176,7 @@ pub enum RoutingError {
         capability_name
     )]
     EnvironmentFromParentNotFound {
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_type: &'static str,
         capability_name: CapabilityName,
     },
@@ -188,7 +191,7 @@ pub enum RoutingError {
     )]
     EnvironmentFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_type: &'static str,
         capability_name: CapabilityName,
     },
@@ -203,7 +206,7 @@ pub enum RoutingError {
     )]
     EnvironmentFromChildInstanceNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_name: CapabilityName,
         capability_type: &'static str,
     },
@@ -214,7 +217,7 @@ pub enum RoutingError {
         moniker,
         capability_id
     )]
-    OfferFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    OfferFromParentNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "A `storage` declaration with a backing directory from `parent` was found at `{}` for `{}`,
@@ -222,7 +225,7 @@ pub enum RoutingError {
         moniker,
         capability_id
     )]
-    StorageFromParentNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    StorageFromParentNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "An `offer from #{}` declaration was found at `{}` for `{}`, but no matching child was \
@@ -233,7 +236,7 @@ pub enum RoutingError {
     )]
     OfferFromChildInstanceNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -246,7 +249,7 @@ pub enum RoutingError {
     )]
     OfferFromCollectionNotFound {
         collection: String,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability: CapabilityName,
     },
 
@@ -259,7 +262,7 @@ pub enum RoutingError {
     )]
     OfferFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -270,14 +273,14 @@ pub enum RoutingError {
         moniker,
         capability_id
     )]
-    CapabilityFromFrameworkNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    CapabilityFromFrameworkNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "A capability was sourced to a base capability `{}` from `{}`, but this is unsupported",
         capability_id,
         moniker
     )]
-    CapabilityFromCapabilityNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    CapabilityFromCapabilityNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     // TODO: Could this be distinguished by use/offer/expose?
     #[error(
@@ -301,7 +304,7 @@ pub enum RoutingError {
         capability_id,
         moniker
     )]
-    UsedExposeNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    UsedExposeNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "An `expose from #{}` declaration was found at `{}` for `{}`, but no matching child was \
@@ -312,7 +315,7 @@ pub enum RoutingError {
     )]
     ExposeFromChildInstanceNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -325,7 +328,7 @@ pub enum RoutingError {
     )]
     ExposeFromCollectionNotFound {
         collection: String,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability: CapabilityName,
     },
 
@@ -338,7 +341,7 @@ pub enum RoutingError {
     )]
     ExposeFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -348,7 +351,7 @@ pub enum RoutingError {
         moniker,
         capability_id
     )]
-    ExposeFromFrameworkNotFound { moniker: AbsoluteMoniker, capability_id: String },
+    ExposeFromFrameworkNotFound { moniker: PartialAbsoluteMoniker, capability_id: String },
 
     #[error(
         "A `use from #{}` declaration was found at `{}` for `{}`, but no matching \
@@ -359,7 +362,7 @@ pub enum RoutingError {
     )]
     UseFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         capability_id: String,
     },
 
@@ -397,17 +400,17 @@ impl RoutingError {
         }
     }
 
-    pub fn source_instance_stopped(moniker: &AbsoluteMoniker) -> Self {
+    pub fn source_instance_stopped(moniker: &PartialAbsoluteMoniker) -> Self {
         Self::SourceInstanceStopped { moniker: moniker.clone() }
     }
 
-    pub fn source_instance_not_executable(moniker: &AbsoluteMoniker) -> Self {
+    pub fn source_instance_not_executable(moniker: &PartialAbsoluteMoniker) -> Self {
         Self::SourceInstanceNotExecutable { moniker: moniker.clone() }
     }
 
     pub fn storage_directory_source_invalid(
         source_type: &'static str,
-        storage_moniker: &AbsoluteMoniker,
+        storage_moniker: &PartialAbsoluteMoniker,
     ) -> Self {
         Self::StorageDirectorySourceInvalid {
             source_type,
@@ -416,7 +419,7 @@ impl RoutingError {
     }
 
     pub fn storage_directory_source_child_not_found(
-        storage_moniker: &AbsoluteMoniker,
+        storage_moniker: &PartialAbsoluteMoniker,
         child_moniker: &PartialChildMoniker,
     ) -> Self {
         Self::StorageDirectorySourceChildNotFound {
@@ -427,7 +430,7 @@ impl RoutingError {
 
     pub fn storage_from_child_expose_not_found(
         child_moniker: &PartialChildMoniker,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::StorageFromChildExposeNotFound {
@@ -450,7 +453,7 @@ impl RoutingError {
     }
 
     pub fn use_from_parent_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::UseFromParentNotFound {
@@ -460,7 +463,7 @@ impl RoutingError {
     }
 
     pub fn use_from_child_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
         child: String,
     ) -> Self {
@@ -472,7 +475,7 @@ impl RoutingError {
     }
 
     pub fn offer_from_parent_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::OfferFromParentNotFound {
@@ -482,7 +485,7 @@ impl RoutingError {
     }
 
     pub fn storage_from_parent_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::StorageFromParentNotFound {
@@ -493,7 +496,7 @@ impl RoutingError {
 
     pub fn offer_from_child_instance_not_found(
         child_moniker: &PartialChildMoniker,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::OfferFromChildInstanceNotFound {
@@ -505,7 +508,7 @@ impl RoutingError {
 
     pub fn offer_from_child_expose_not_found(
         child_moniker: &PartialChildMoniker,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::OfferFromChildExposeNotFound {
@@ -516,7 +519,7 @@ impl RoutingError {
     }
 
     pub fn used_expose_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::UsedExposeNotFound { moniker: moniker.clone(), capability_id: capability_id.into() }
@@ -524,7 +527,7 @@ impl RoutingError {
 
     pub fn expose_from_child_instance_not_found(
         child_moniker: &PartialChildMoniker,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::ExposeFromChildInstanceNotFound {
@@ -536,7 +539,7 @@ impl RoutingError {
 
     pub fn expose_from_child_expose_not_found(
         child_moniker: &PartialChildMoniker,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::ExposeFromChildExposeNotFound {
@@ -547,7 +550,7 @@ impl RoutingError {
     }
 
     pub fn capability_from_framework_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::CapabilityFromFrameworkNotFound {
@@ -557,7 +560,7 @@ impl RoutingError {
     }
 
     pub fn capability_from_capability_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::CapabilityFromCapabilityNotFound {
@@ -581,7 +584,7 @@ impl RoutingError {
     }
 
     pub fn expose_from_framework_not_found(
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
         Self::ExposeFromFrameworkNotFound {

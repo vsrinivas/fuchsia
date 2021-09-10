@@ -509,7 +509,7 @@ async fn reboot_on_terminate_disabled() {
         err: PolicyError::Unsupported {
             policy, moniker
         }
-    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system:0"]));
+    }) if &policy == "reboot_on_terminate" && moniker == PartialAbsoluteMoniker::from(vec!["system"]));
 }
 
 #[fuchsia::test]
@@ -538,7 +538,7 @@ async fn reboot_on_terminate_disallowed() {
         err: PolicyError::ChildPolicyDisallowed {
             policy, moniker
         }
-    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system:0"]));
+    }) if &policy == "reboot_on_terminate" && moniker == PartialAbsoluteMoniker::from(vec!["system"]));
 }
 
 const REBOOT_PROTOCOL: &str = fstatecontrol::AdminMarker::DEBUG_NAME;

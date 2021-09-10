@@ -712,7 +712,7 @@ mod tests {
                     capability_type,
                     capability_name,
             }))
-                if moniker == b_component.abs_moniker().clone() &&
+                if moniker == b_component.abs_moniker().to_partial() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
         );

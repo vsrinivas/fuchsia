@@ -16,7 +16,7 @@ use {
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{ChildMonikerBase, PartialChildMoniker},
+    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
     std::sync::Arc,
 };
 
@@ -82,7 +82,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: target.abs_moniker().clone(),
+                    moniker: target.abs_moniker().to_partial(),
                     capability_id: self.offer_decl.source_name().clone().into(),
                 })?
         };
@@ -92,7 +92,7 @@ where
             find_matching_expose(self.offer_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     O::error_not_found_in_child(
-                        target.abs_moniker().clone(),
+                        target.abs_moniker().to_partial(),
                         child_moniker,
                         self.offer_decl.source_name().clone(),
                     )
@@ -169,7 +169,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: target.abs_moniker().clone(),
+                    moniker: target.abs_moniker().to_partial(),
                     capability_id: self.expose_decl.source_name().clone().into(),
                 })?
         };
@@ -179,7 +179,7 @@ where
             find_matching_expose(self.expose_decl.source_name(), &child_decl).cloned().ok_or_else(
                 || {
                     E::error_not_found_in_child(
-                        target.abs_moniker().clone(),
+                        target.abs_moniker().to_partial(),
                         child_moniker,
                         self.expose_decl.source_name().clone(),
                     )
