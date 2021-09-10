@@ -40,6 +40,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/log:ffx_log",
       "//src/developer/ffx/plugins/overnet:ffx_overnet_plugin",
       "//src/developer/ffx/plugins/packaging:ffx_packaging",
+      "//src/developer/ffx/plugins/pdk:ffx_pdk",
       "//src/developer/ffx/plugins/platform:ffx_platform",
       "//src/developer/ffx/plugins/profile:ffx_profile",
       "//src/developer/ffx/plugins/repository:ffx_repository",
