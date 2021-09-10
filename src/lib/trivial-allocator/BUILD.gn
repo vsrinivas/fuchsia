@@ -3,12 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("trivial-allocator") {
+  kernel = true
+
   sdk = "source"
   sdk_headers = [
     "lib/trivial-allocator/basic-leaky-allocator.h",
@@ -34,6 +37,56 @@ zx_library("trivial-allocator") {
   }
 }
 
+# This provides no-op `operator delete` and `operator delete[]` functions with
+# the signatures that are usually provided by the standard C++ library to call
+# the libc allocator or the like.  If instead the only allocators available are
+# from the trivial-allocator library, but pointers from the uses of `new` made
+# possible by <lib/trivial-allocator/new.h> can be passed to `delete`, such as
+# via std::unique_ptr or similar "smart pointer" types, then it's necessary to
+# provide no-op deallocation functions.  Unlike those special `new` forms,
+# there is no way to `delete` and indicate a specific allocator object.  So
+# using this library is a catch-all hammer that prevents `delete` from doing
+# any real deallocation regardless of what kind of `new` created the pointer.
+#
+# Note also: even without use of `delete`, C++ classes with virtual functions
+# can produce implicit references in dead code that need to be satisfied.
+#
+# This library has no associated header since <new> already declares all the
+# `operator delete` functions; even without that `delete` is always available.
+# It's only provided to satisfy any link-time references with the no-op calls.
+static_library("stub-delete") {
+  sources = [ "stub-delete.cc" ]
+  public_deps = [ ":suppress-lsan-for-stub-delete" ]
+
+  if (is_kernel) {
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
+# Everything is leaked when `delete` is a no-op.
+sanitizer_extra_options("suppress-lsan-for-stub-delete") {
+  visibility = [ ":*" ]
+  args = [ "detect_leaks=0" ]
+  output_name = "lsan_default_options"
+  tags = [ "lsan" ]
+}
+
+# This is very similar, but instead of no-ops that leak memory when called,
+# each entry point will panic (via ZX_PANIC) if it's ever called at runtime.
+static_library("panic-delete") {
+  sources = [ "panic-delete.cc" ]
+
+  if (is_kernel) {
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
 test("trivial-allocator-unittests") {
   sources = [
     "basic-leaky-allocator-tests.cc",
@@ -50,10 +103,32 @@ fuchsia_unittest_package("trivial-allocator-tests") {
   deps = [ ":trivial-allocator-unittests" ]
 }
 
+# This test is isolated since it no-op's out the `delete` usage done by the
+# test harness itself.  For the same reason it's not really possible to have a
+# test for panic-delete.
+test("stub-delete-unittests") {
+  deps = [
+    ":trivial-allocator",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  if ((is_fuchsia || current_os == "linux") &&
+      toolchain_variant.tags + [ "replaces-allocator" ] -
+      [ "replaces-allocator" ] == toolchain_variant.tags) {
+    sources = [ "delete-tests.cc" ]
+    deps += [ ":stub-delete" ]
+  }
+}
+
+fuchsia_unittest_package("stub-delete-tests") {
+  deps = [ ":stub-delete-unittests" ]
+}
+
 group("tests") {
   testonly = true
 
   deps = [
+    ":stub-delete-tests",
     ":trivial-allocator-tests",
     ":trivial-allocator-unittests($host_toolchain)",
   ]

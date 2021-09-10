@@ -82,7 +82,7 @@ if (current_toolchain == default_toolchain) {
     }
 
     group("phys32_config_deps") {
-      deps = [ "//zircon/kernel/phys:vtable-delete" ]
+      deps = [ "//src/lib/trivial-allocator:panic-delete" ]
     }
 
     # phys32 code is 32-bit (i686) and loaded at a fixed address.

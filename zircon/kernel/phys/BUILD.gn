@@ -76,7 +76,7 @@ if (current_toolchain == default_toolchain) {
   }
 
   group("phys_config_deps") {
-    deps = [ ":vtable-delete" ]
+    deps = [ "//src/lib/trivial-allocator:panic-delete" ]
   }
 }
 
@@ -317,17 +317,6 @@ if (toolchain_environment == "kernel.phys" ||
 
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
-  }
-
-  # This is a little library instead of a source_set() so it can be included
-  # implicitly by the environment without adding bloat to things that don't
-  # need it.
-  static_library("vtable-delete") {
-    sources = [ "vtable-delete.cc" ]
-    deps = [
-      "//zircon/kernel/lib/ktl",
-      "//zircon/kernel/lib/libc",
-    ]
   }
 }
 
