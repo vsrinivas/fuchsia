@@ -11,9 +11,14 @@
 
 #include "predicates.h"
 
+static constexpr int kPollTimeoutMs = 0;
+
 TEST(Pipe, PollInAndCloseWriteEnd) {
   int fds[2];
   ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
 
   struct pollfd polls[] = {{
       .fd = fds[0],
@@ -21,11 +26,17 @@ TEST(Pipe, PollInAndCloseWriteEnd) {
       .revents = 0,
   }};
 
-  EXPECT_EQ(0, poll(polls, 1, 1));
+  int n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
 
-  close(fds[1]);
+  EXPECT_EQ(0, n);
 
-  EXPECT_EQ(1, poll(polls, 1, 1));
+  write_end.reset();
+
+  n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+  EXPECT_EQ(1, n);
 
 #ifdef __Fuchsia__
   // TODO(https://fxbug.dev/47132): This should produce POLLHUP on Fuchsia.
@@ -33,12 +44,14 @@ TEST(Pipe, PollInAndCloseWriteEnd) {
 #else
   EXPECT_EQ(POLLHUP, polls[0].revents);
 #endif
-  close(fds[0]);
 }
 
 TEST(Pipe, PollOutEmptyPipeAndCloseReadEnd) {
   int fds[2];
   ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
 
   struct pollfd polls[] = {{
       .fd = fds[1],
@@ -46,37 +59,45 @@ TEST(Pipe, PollOutEmptyPipeAndCloseReadEnd) {
       .revents = 0,
   }};
 
-  EXPECT_EQ(1, poll(polls, 1, 1));
+  int n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+  EXPECT_EQ(1, n);
 
   EXPECT_EQ(POLLOUT, polls[0].revents);
 
-  close(fds[0]);
+  read_end.reset();
+
+  n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
 
 #ifdef __Fuchsia__
   // TODO(https://fxbug.dev/47132): This should produce one event with POLLOUT | POLLERR on Fuchsia.
-  EXPECT_EQ(0, poll(polls, 1, 1));
+  EXPECT_EQ(0, n);
 #else
-  EXPECT_EQ(1, poll(polls, 1, 1));
+  EXPECT_EQ(1, n);
 
   EXPECT_EQ(POLLOUT | POLLERR, polls[0].revents);
 #endif
-  close(fds[1]);
 }
 
 TEST(Pipe, PollOutFullPipeAndCloseReadEnd) {
   int fds[2];
   ASSERT_SUCCESS(pipe(fds));
-  // TODO(https://fxbug.com/82011): Use pipe2 to set NONBLOCK when fdio implements it.
-  ASSERT_SUCCESS(fcntl(fds[1], F_SETFL, O_NONBLOCK));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_SUCCESS(fcntl(write_end.get(), F_SETFL, O_NONBLOCK));
 
   // Fill pipe with data so POLLOUT is not asserted.
   constexpr size_t kBufSize = 4096;
   char buf[kBufSize] = {};
 
   while (true) {
-    ssize_t rv = write(fds[1], buf, kBufSize);
+    ssize_t rv = write(write_end.get(), buf, kBufSize);
     if (rv == -1) {
-      ASSERT_EQ(errno, EWOULDBLOCK);
+      ASSERT_EQ(errno, EWOULDBLOCK, "%s", strerror(errno));
       break;
     }
     ASSERT_GT(rv, 0);
@@ -88,19 +109,163 @@ TEST(Pipe, PollOutFullPipeAndCloseReadEnd) {
       .revents = 0,
   }};
 
-  EXPECT_EQ(0, poll(polls, 1, 1));
+  int n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
 
-  close(fds[0]);
+  EXPECT_EQ(0, n);
 
+  read_end.reset();
+
+  n = poll(polls, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
 #ifdef __Fuchsia__
   // TODO(https://fxbug.dev/47132): This should produce one event with POLLERR on Fuchsia.
-  EXPECT_EQ(0, poll(polls, 1, 1));
+  EXPECT_EQ(0, n);
 #else
-  EXPECT_EQ(1, poll(polls, 1, 1));
+  EXPECT_EQ(1, n);
 
   EXPECT_EQ(POLLERR, polls[0].revents);
 #endif
-  close(fds[1]);
+}
+
+TEST(Pipe, WriteIntoReadEnd) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_SUCCESS(fcntl(read_end.get(), F_SETFL, O_NONBLOCK));
+
+  constexpr char data = 'a';
+  ssize_t rv = write(read_end.get(), &data, sizeof(data));
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should fail on Fuchsia with EBADF.
+  EXPECT_EQ(rv, 1, "%s", strerror(errno));
+#else
+  EXPECT_EQ(rv, -1);
+  EXPECT_EQ(errno, EBADF, "%s", strerror(errno));
+#endif  //  defined(__Fuchsia__)
+}
+
+TEST(Pipe, PollOutOnReadEnd) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_SUCCESS(fcntl(read_end.get(), F_SETFL, O_NONBLOCK));
+
+  struct pollfd read_end_pollout = {
+      .fd = read_end.get(),
+      .events = POLLOUT,
+      .revents = 0,
+  };
+
+  int n = poll(&read_end_pollout, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should produce no events on Fuchsia.
+  EXPECT_EQ(1, n);
+  EXPECT_EQ(read_end_pollout.revents, POLLOUT);
+  read_end_pollout.revents = 0;
+#else
+  EXPECT_EQ(0, n);
+#endif  //  defined(__Fuchsia__)
+
+  // Having data in the pipe should not change the POLLOUT behavior on the read end.
+  constexpr char data = 'a';
+  EXPECT_EQ(1, write(write_end.get(), &data, sizeof(data)), "%s", strerror(errno));
+
+  n = poll(&read_end_pollout, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should produce no events on Fuchsia.
+  EXPECT_EQ(1, n);
+  EXPECT_EQ(read_end_pollout.revents, POLLOUT);
+  read_end_pollout.revents = 0;
+#else
+  EXPECT_EQ(0, n);
+#endif  //  defined(__Fuchsia__)
+
+  // POLLOUT on the read end of a closed pipe should produce POLLHUP.
+  write_end.reset();
+
+  n = poll(&read_end_pollout, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should produce POLLHUP on Fuchsia.
+  EXPECT_EQ(0, n);
+#else
+  EXPECT_EQ(1, n);
+  EXPECT_EQ(read_end_pollout.revents, POLLHUP);
+#endif  //  defined(__Fuchsia__)
+}
+
+TEST(Pipe, ReadFromWriteEnd) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_SUCCESS(fcntl(write_end.get(), F_SETFL, O_NONBLOCK));
+
+  char buf[1];
+  ssize_t rv = read(write_end.get(), buf, sizeof(buf));
+  EXPECT_EQ(rv, -1);
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should fail on Fuchsia with EBADF.
+  EXPECT_EQ(errno, EWOULDBLOCK, "%s", strerror(errno));
+#else
+  EXPECT_EQ(errno, EBADF, "%s", strerror(errno));
+#endif  //  defined(__Fuchsia__)
+}
+
+TEST(Pipe, PollInOnWriteEnd) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_SUCCESS(fcntl(read_end.get(), F_SETFL, O_NONBLOCK));
+
+  struct pollfd write_end_pollin = {
+      .fd = write_end.get(),
+      .events = POLLIN,
+      .revents = 0,
+  };
+
+  int n = poll(&write_end_pollin, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+  EXPECT_EQ(0, n);
+
+  // Having data in the pipe should not change the POLLIN behavior on the write end.
+  constexpr char data = 'a';
+  EXPECT_EQ(1, write(write_end.get(), &data, sizeof(data)), "%s", strerror(errno));
+
+  n = poll(&write_end_pollin, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+  EXPECT_EQ(0, n);
+
+  // POLLIN on the write end of a closed pipe should produce POLLERR.
+  read_end.reset();
+
+  n = poll(&write_end_pollin, 1, kPollTimeoutMs);
+  ASSERT_GE(n, 0, "%s", strerror(errno));
+
+  EXPECT_EQ(1, n);
+#if defined(__Fuchsia__)
+  // TODO(https://fxbug.dev/84354): This should produce POLLHUP on Fuchsia.
+  EXPECT_EQ(write_end_pollin.revents, POLLIN);
+#else
+  EXPECT_EQ(write_end_pollin.revents, POLLERR);
+#endif  //  defined(__Fuchsia__)
 }
 
 // pipe2() is a Linux extension that Fuchsia supports.
@@ -140,13 +305,13 @@ TEST(Pipe2, Nonblock) {
   // Reading from the read side of an empty pipe should return immediately.
   ssize_t rv = read(read_end.get(), buf, sizeof(buf));
   EXPECT_EQ(-1, rv);
-  EXPECT_EQ(EWOULDBLOCK, errno);
+  EXPECT_EQ(EWOULDBLOCK, errno, "%s", strerror(errno));
 
   // Filling the write side of the pipe should eventually return EWOULDBLOCK.
   while (true) {
     ssize_t rv = write(write_end.get(), buf, kBufSize);
     if (rv == -1) {
-      ASSERT_EQ(EWOULDBLOCK, errno);
+      ASSERT_EQ(EWOULDBLOCK, errno, "%s", strerror(errno));
       break;
     }
     ASSERT_GT(rv, 0);
