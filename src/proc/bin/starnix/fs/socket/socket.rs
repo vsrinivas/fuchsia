@@ -60,11 +60,11 @@ pub struct Socket {
     /// TODO: This should be sent in-band to be able to implement the expected socket semantics.
     control_message: Option<Vec<u8>>,
 
-    /// The pipe that is used to send data from this socket. The `write_pipe` of the socket in
-    /// `connected_node` is used to receive data.
+    /// The pipe that is used to read data for this socket. The `read_pipe` of the socket in
+    /// `connected_node` is used to write data.
     // TODO: Extract the byte-shuffling code from Pipe, and reuse that here. This will allow us to
-    // send `ancillary_data` in-band, support datagrams, etc.
-    write_pipe: Pipe,
+    // send `control_message` in-band, support datagrams, etc.
+    read_pipe: Pipe,
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`. This is used to share sockets
@@ -101,8 +101,8 @@ impl Socket {
         // Make sure not to deadlock in the case where the two references point to the same node.
         if std::ptr::eq(first_node, second_node) {
             first_socket.connected_node = Arc::downgrade(first_node);
-            first_socket.write_pipe.add_reader();
-            first_socket.write_pipe.add_writer();
+            first_socket.read_pipe.add_reader();
+            first_socket.read_pipe.add_writer();
             return Ok(());
         }
 
@@ -116,21 +116,23 @@ impl Socket {
 
         // TODO: This is here to make the Pipe's reading/writing logic match the socket's
         // expectations. Remove once the Pipe byte-sending logic is extracted.
-        first_socket.write_pipe.add_reader();
-        first_socket.write_pipe.add_writer();
-        second_socket.write_pipe.add_reader();
-        second_socket.write_pipe.add_writer();
+        first_socket.read_pipe.add_reader();
+        first_socket.read_pipe.add_writer();
+        second_socket.read_pipe.add_reader();
+        second_socket.read_pipe.add_writer();
 
         Ok(())
     }
 
     /// Disconnects this socket from the socket in the currently connected file node.
     pub fn disconnect(&mut self) -> Option<FsNodeHandle> {
-        self.write_pipe.remove_reader();
-        self.write_pipe.remove_writer();
+        self.read_pipe.remove_reader();
 
         let connected_node = self.connected_node.upgrade();
-        connected_node.as_ref().map(|node| node.observers.notify(FdEvents::POLLHUP));
+        connected_node.as_ref().map(|node| {
+            node.socket().map(|s| s.lock().read_pipe.remove_writer());
+            node.observers.notify(FdEvents::POLLHUP);
+        });
         self.connected_node = Weak::new();
         connected_node
     }
@@ -164,24 +166,17 @@ struct SocketFile {
 impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        // TODO: There may still be data in the pipe at this point, but the connected node might
-        // have been released. Might have to store the pipe separately, with a strong reference,
-        // to deal with this properly.
-        let other_node = match self.socket.lock().connected_node.upgrade() {
-            Some(node) => node,
-            _ => return Ok(0),
-        };
-        let mut socket = match other_node.socket() {
-            Some(socket) => socket.lock(),
-            _ => return Ok(0),
-        };
+    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        let mut socket = self.socket.lock();
+        let pipe = &mut socket.read_pipe;
 
-        let pipe = &mut socket.write_pipe;
         let mut it = UserBufferIterator::new(data);
         let bytes_read = pipe.read(task, &mut it)?;
         if bytes_read > 0 {
-            other_node.observers.notify(FdEvents::POLLOUT);
+            file.node().observers.notify(FdEvents::POLLOUT);
+            socket.connected_node.upgrade().map(|connected_node| {
+                connected_node.observers.notify(FdEvents::POLLOUT);
+            });
         }
 
         Ok(bytes_read)
@@ -194,13 +189,18 @@ impl FileOps for SocketFile {
         file.blocking_op(
             task,
             || {
-                let mut socket = self.socket.lock();
-                actual += match socket.write_pipe.write(task, &mut it) {
+                let connected_node = match self.socket.lock().connected_node.upgrade() {
+                    Some(node) => node,
+                    _ => return Ok(actual),
+                };
+                let mut connected_socket = match connected_node.socket() {
+                    Some(socket) => socket.lock(),
+                    _ => return Ok(actual),
+                };
+                actual += match connected_socket.read_pipe.write(task, &mut it) {
                     Ok(chunk) => {
                         if chunk > 0 {
-                            if let Some(other_node) = socket.connected_node.upgrade() {
-                                other_node.observers.notify(FdEvents::POLLIN);
-                            }
+                            connected_node.observers.notify(FdEvents::POLLIN);
                         }
                         chunk
                     }
