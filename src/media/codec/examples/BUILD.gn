@@ -352,21 +352,17 @@ fuchsia_test_package("vp9_decoder_fuzzer_tests") {
   }
 }
 
-#
-# Tests that don't run on CQ yet.
-#
-
-fuchsia_unittest_package("use_aac_decoder_test") {
-  manifest = "use_media_decoder/meta/use_aac_decoder_test.cmx"
-  deps = [
-    ":adts_audio_resource",
-    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
-  ]
-}
-
 fuchsia_unittest_component("use_vp9_decoder_test") {
   manifest = "use_media_decoder/meta/use_vp9_decoder_test.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test" ]
+}
+
+fuchsia_unittest_component("use_vp9_decoder_test_v2") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_test.cml"
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test",
+  ]
 }
 
 fuchsia_unittest_component("use_vp9_decoder_1280x546_test") {
@@ -374,11 +370,21 @@ fuchsia_unittest_component("use_vp9_decoder_1280x546_test") {
   deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_1280x546_test" ]
 }
 
+fuchsia_unittest_component("use_vp9_decoder_1280x546_test_v2") {
+  manifest = "use_media_decoder/meta/use_vp9_decoder_1280x546_test.cml"
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_1280x546_test",
+  ]
+}
+
 # Test amlogic-video vp9 decode.
 fuchsia_test_package("use_vp9_decoder_tests") {
   test_components = [
     ":use_vp9_decoder_1280x546_test",
+    ":use_vp9_decoder_1280x546_test_v2",
     ":use_vp9_decoder_test",
+    ":use_vp9_decoder_test_v2",
   ]
 
   deps = [
@@ -573,6 +579,18 @@ template("vp9_file_decoder_conformance_test") {
       ]
     }
   }
+}
+
+#
+# Tests that don't run on CQ yet.
+#
+
+fuchsia_unittest_package("use_aac_decoder_test") {
+  manifest = "use_media_decoder/meta/use_aac_decoder_test.cmx"
+  deps = [
+    ":adts_audio_resource",
+    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
+  ]
 }
 
 # Running this binary, the --http=<url> command-line parameter needs to be
