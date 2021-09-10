@@ -47,6 +47,9 @@ config("edition_2015") {
 
 config("opt_level_z") {
   rustflags = [ "-Copt-level=z" ]
+
+  # Fewer codegen units produce smaller code
+  rustflags += [ "-Ccodegen-units=1" ]
 }
 
 config("no_features") {

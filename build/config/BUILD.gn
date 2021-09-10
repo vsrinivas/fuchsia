@@ -338,6 +338,9 @@ config("optimize_size") {
     ]
   }
   rustflags = [ "-Copt-level=z" ]
+
+  # Fewer codegen units produce smaller code
+  rustflags += [ "-Ccodegen-units=1" ]
   configs = [ ":linker_string_merging" ]
 }
 
@@ -349,6 +352,9 @@ config("optimize_speed") {
   # we don't fully understand why -Os is smaller than -Oz.
   rustflags = [ "-Copt-level=s" ]
   configs = [ ":linker_string_merging" ]
+
+  # Fewer codegen units allow for more inlining, therefore faster code
+  rustflags += [ "-Ccodegen-units=1" ]
 }
 
 config("optimize_sanitizer") {
