@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl;
+import 'package:fidl_fuchsia_sys/fidl_async.dart' as fuchsia_sys;
 import 'package:zircon/zircon.dart';
 
 /// The [ServiceProviderImpl] is a concrete implementation of the
 /// [fidl.ServiceProvider] interface.
 //  TODO(fxbug.dev/16108, fxbug.dev/15903): Move to fuchsia_modular and make private
-class ServiceProviderImpl extends fidl.ServiceProvider {
-  final _binding = fidl.ServiceProviderBinding();
+class ServiceProviderImpl extends fuchsia_sys.ServiceProvider {
+  final _binding = fuchsia_sys.ServiceProviderBinding();
 
   final Map<String, void Function(Channel?)> _connectorThunks = {};
 
@@ -25,7 +25,7 @@ class ServiceProviderImpl extends fidl.ServiceProvider {
   }
 
   /// Binds this object to the [interfaceRequest].
-  void bind(InterfaceRequest<fidl.ServiceProvider> interfaceRequest) {
+  void bind(InterfaceRequest<fuchsia_sys.ServiceProvider> interfaceRequest) {
     _binding.bind(this, interfaceRequest);
   }
 
@@ -34,7 +34,7 @@ class ServiceProviderImpl extends fidl.ServiceProvider {
     _binding.close();
   }
 
-  /// See [fidl.ServiceProvider#connectToService].
+  /// See [fuchsia_sys.ServiceProvider#connectToService].
   @override
   Future<void> connectToService(String serviceName, Channel? channel) async {
     final connectorThunk = _connectorThunks[serviceName];
