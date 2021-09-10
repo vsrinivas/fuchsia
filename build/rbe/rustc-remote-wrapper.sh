@@ -367,7 +367,12 @@ function depfile_inputs_by_line() {
 mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
 
 # Rust standard libraries.
-rust_stdlibs="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
+rust_stdlib_dir="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
+# The majority of stdlibs already appear in dep-info and are uploaded as needed.
+# However, libunwind.a is not listed, but is directly needed by code
+# emitted by rustc.  Listing this here works around a missing upload issue,
+# and adheres to the guidance of listing files instead of whole directories.
+extra_rust_stdlibs=("$rust_stdlib_dir"/libunwind.a)
 
 # At this time, the linker we pass is known to be statically linked itself
 # and doesn't need to be accompanied by any shlibs.
@@ -408,7 +413,7 @@ rm -f "$depfile.nolink"
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #   * rust tool shared libraries [$rustc_shlibs]
-#   * rust standard libraries [$rust_stdlibs]
+#   * rust standard libraries [$extra_rust_stdlibs]
 #   * direct source files [$top_source]
 #   * indirect source files [$depfile.nolink]
 #   * direct dependent libraries [$depfile.nolink]
@@ -432,7 +437,7 @@ remote_inputs=(
   "$rustc_relative"
   "${rust_lld[@]}"
   "${rustc_shlibs[@]}"
-  "${rust_stdlibs[@]}"
+  "${extra_rust_stdlibs[@]}"
   "$top_source"
   "${depfile_inputs[@]}"
   "${extern_paths[@]}"
@@ -455,7 +460,7 @@ dump_vars() {
   debug_var "outputs" "${outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
-  debug_var "rust stdlibs" "${rust_stdlibs[@]}"
+  debug_var "rust stdlibs" "${extra_rust_stdlibs[@]}"
   debug_var "rust lld" "${rust_lld[@]}"
   debug_var "source root" "$top_source"
   debug_var "linker" "${linker[@]}"
