@@ -10,6 +10,12 @@ set -uo pipefail
 script="$0"
 script_dir="$(dirname "$script")"
 
+# The project_root must cover all inputs, prebuilt tools, and build outputs.
+# This should point to $FUCHSIA_DIR for the Fuchsia project.
+# ../../ because this script lives in build/rbe.
+# The value is an absolute path.
+project_root="$(readlink -f "$script_dir"/../..)"
+
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
 # location of reclient binaries relative to output directory where build is run
