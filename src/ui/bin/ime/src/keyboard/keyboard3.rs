@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_ui_views as ui_views,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_scenic as scenic,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_debug, fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{future, lock::Mutex, TryStreamExt},
     std::{
@@ -214,6 +214,7 @@ impl KeyboardService {
     /// * `focused_view`: a `ViewRef` of the newly-focused view.
     /// * `event_time`: the timestamp at which the focus change was registered.
     pub(crate) async fn handle_focus_change(&self, focused_view: ViewRef, event_time: zx::Time) {
+        fx_log_debug!("focus change to view: {:?}, at timestamp: {:?}", &focused_view, &event_time);
         self.handle_focus_lost(event_time).await;
         self.update_focused_view(focused_view.clone()).await;
         self.handle_client_focused(focused_view, event_time).await;
