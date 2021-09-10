@@ -1040,15 +1040,15 @@ mod tests {
         }
 
         fn connect_to_protocol<S: DiscoverableProtocolMarker>(&self) -> S::Proxy {
-            let (proxy, server) = zx::Channel::create().expect("failed to create zx::Channel");
+            let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
+                .context(S::PROTOCOL_NAME)
+                .expect("failed to create proxy");
             let () = self
                 .realm
-                .connect_to_protocol(S::PROTOCOL_NAME, None, server)
-                .with_context(|| format!("{}", S::PROTOCOL_NAME))
+                .connect_to_protocol(S::PROTOCOL_NAME, None, server_end.into_channel())
+                .context(S::PROTOCOL_NAME)
                 .expect("failed to connect");
-            let proxy = fasync::Channel::from_channel(proxy)
-                .expect("failed to create fasync::Channel from zx::Channel");
-            S::Proxy::from_channel(proxy)
+            proxy
         }
     }
 
@@ -2013,16 +2013,14 @@ mod tests {
             );
 
             // Expect the device to implement `fuchsia.device/Controller.GetTopologicalPath`.
-            let (controller, server_end) = zx::Channel::create().expect("failed to create channel");
+            let (controller, server_end) =
+                fidl::endpoints::create_proxy::<fdevice::ControllerMarker>()
+                    .expect("failed to create proxy");
             let () = get_device_proxy(&endpoint)
                 .into_proxy()
                 .expect("failed to create device proxy from client end")
-                .serve_device(server_end)
+                .serve_device(server_end.into_channel())
                 .expect("failed to serve device");
-            let controller =
-                fidl::endpoints::ClientEnd::<fdevice::ControllerMarker>::new(controller)
-                    .into_proxy()
-                    .expect("failed to create controller proxy from channel");
             let path = controller
                 .get_topological_path()
                 .await
@@ -2176,20 +2174,18 @@ mod tests {
                 .expect("error adding device");
 
             // Expect the device to implement `fuchsia.device/Controller.GetTopologicalPath`.
-            let (controller, server_end) = zx::Channel::create().expect("failed to create channel");
+            let (controller, server_end) =
+                fidl::endpoints::create_proxy::<fdevice::ControllerMarker>()
+                    .expect("failed to create proxy");
             let () = counter
                 .open_in_namespace(
                     &format!("{}/{}", DEVFS_PATH, name),
                     // TODO(https://fxbug.dev/77059): remove write permissions once they are no
                     // longer required to connect to protocols.
                     fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                    server_end,
+                    server_end.into_channel(),
                 )
                 .expect("failed to connect to device through counter");
-            let controller =
-                fidl::endpoints::ClientEnd::<fdevice::ControllerMarker>::new(controller)
-                    .into_proxy()
-                    .expect("failed to create controller proxy from channel");
             let path = controller
                 .get_topological_path()
                 .await

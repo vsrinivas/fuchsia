@@ -40,11 +40,9 @@ async fn main() -> Result<(), anyhow::Error> {
         .context("create device proxy endpoints")?;
     let () = ep.get_proxy_(req).context("get device proxy")?;
 
-    let (controller, server_end) = zx::Channel::create().context("channel create")?;
-    let () = dev_proxy.serve_device(server_end).context("serve device")?;
-    let controller = fidl::endpoints::ClientEnd::<ControllerMarker>::new(controller)
-        .into_proxy()
-        .context("client end proxy")?;
+    let (controller, server_end) =
+        fidl::endpoints::create_proxy::<ControllerMarker>().context("proxy create")?;
+    let () = dev_proxy.serve_device(server_end.into_channel()).context("serve device")?;
     let path = controller
         .get_topological_path()
         .await

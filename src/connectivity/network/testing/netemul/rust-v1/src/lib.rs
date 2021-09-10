@@ -245,10 +245,10 @@ impl<'a> TestEnvironment<'a> {
     where
         S: fidl::endpoints::DiscoverableProtocolMarker,
     {
-        let (proxy, server) = zx::Channel::create()?;
-        let () = self.environment.connect_to_service(S::PROTOCOL_NAME, server)?;
-        let proxy = fuchsia_async::Channel::from_channel(proxy)?;
-        Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<S>().context(S::PROTOCOL_NAME)?;
+        let () =
+            self.environment.connect_to_service(S::PROTOCOL_NAME, server_end.into_channel())?;
+        Ok(proxy)
     }
 
     /// Gets this environment's launcher.

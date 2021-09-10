@@ -244,16 +244,16 @@ impl<'a> TestRealm<'a> {
     where
         S: fidl::endpoints::DiscoverableProtocolMarker,
     {
-        let get_proxy = || {
-            let (proxy, server) = zx::Channel::create().context("create channel")?;
+        (|| {
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<S>().context("create proxy")?;
             let () = self
                 .realm
-                .connect_to_protocol(S::PROTOCOL_NAME, None, server)
+                .connect_to_protocol(S::PROTOCOL_NAME, None, server_end.into_channel())
                 .context("connect to protocol")?;
-            fuchsia_async::Channel::from_channel(proxy).context("fuchsia_async channel creation")
-        };
-        let proxy = get_proxy().context(S::PROTOCOL_NAME)?;
-        Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
+            Result::Ok(proxy)
+        })()
+        .context(S::PROTOCOL_NAME)
     }
 
     /// Gets the relative moniker of the root of the managed realm.
