@@ -186,10 +186,7 @@ fidl_compatibilty_test_servers = [
   "go",
   "llcpp",
   "rust",
-
-  # TODO(fxbug.dev/82557): dart-server is flaky on NUC.
-  # Re-enable the test after the issue is solved.
-  # "dart",
+  "dart",
 ]
 
 test_component_labels = []
