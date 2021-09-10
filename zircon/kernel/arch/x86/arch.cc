@@ -329,7 +329,7 @@ static int cmd_cpu(int argc, const cmd_args* argv, uint32_t flags) {
     printf("usage:\n");
     printf("%s features\n", argv[0].str);
     printf("%s rdmsr <cpu_id> <msr_id>\n", argv[0].str);
-    printf("%s wdmsr <cpu_id> <msr_id> <value>\n", argv[0].str);
+    printf("%s wrmsr <cpu_id> <msr_id> <value>\n", argv[0].str);
     printf("%s lbr <subcommand>\n", argv[0].str);
     return ZX_ERR_INTERNAL;
   }
