@@ -7,6 +7,7 @@ import("//build/testing/bootfs_test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 source_set("common") {
+  testonly = true
   visibility = [ ":*" ]
 
   sources = [

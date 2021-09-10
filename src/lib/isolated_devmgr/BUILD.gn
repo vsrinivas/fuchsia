@@ -9,6 +9,7 @@ import("//build/drivers/fuchsia_driver_component.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
 source_set("src") {
+  testonly = true
   sources = [
     "isolated_devmgr.cc",
     "isolated_devmgr.h",

@@ -5,6 +5,7 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("driver-integration-test") {
+  testonly = true
   sdk = "shared"
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
 
@@ -29,6 +30,7 @@ zx_library("driver-integration-test") {
 }
 
 zx_library("driver-integration-test-static") {
+  testonly = true
   sdk = "static"
   sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
 

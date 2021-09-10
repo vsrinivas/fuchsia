@@ -5,10 +5,9 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("devmgr-integration-test") {
+  testonly = true
   sdk = "shared"
   sdk_headers = [ "lib/devmgr-integration-test/fixture.h" ]
-
-  # TODO: testonly = true
 
   sources = [
     "dir-watcher.cc",

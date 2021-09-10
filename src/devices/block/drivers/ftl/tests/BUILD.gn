@@ -114,6 +114,7 @@ fuzzers_package("ftl-fuzzers") {
 }
 
 packaged_shared_library("devmgr-integration-test") {
+  testonly = true
   library = "//zircon/system/ulib/devmgr-integration-test"
 }
 
