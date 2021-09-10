@@ -128,7 +128,7 @@ class F2fs : public fs::ManagedVfs {
   // super.cc
   void PutSuper();
   zx_status_t SyncFs(int sync);
-  int SanityCheckRawSuper();
+  zx_status_t SanityCheckRawSuper();
   int SanityCheckCkpt();
   void InitSbInfo();
   zx_status_t FillSuper();

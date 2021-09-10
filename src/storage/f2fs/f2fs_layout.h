@@ -7,11 +7,11 @@
 
 namespace f2fs {
 
-constexpr uint64_t kSuperOffset = 1024;      // byte-size offset
-constexpr uint32_t kLogSectorSize = 9;       // 9 bits for 512 byte
-constexpr uint32_t kLogSectorsPerBlock = 3;  // log2 # of sectors per block
-constexpr uint32_t kBlockSize = 4096;        // F2fs block size in byte
-constexpr int kMaxExtension = 64;            // # of extension entries
+constexpr uint64_t kSuperOffset = 1024;     // byte-size offset
+constexpr uint32_t kMinLogSectorSize = 9;   // 9 bits for 512 byte
+constexpr uint32_t kMaxLogSectorSize = 12;  // 12 bits for 4096 byte
+constexpr uint32_t kBlockSize = 4096;       // F2fs block size in byte
+constexpr int kMaxExtension = 64;           // # of extension entries
 
 constexpr block_t kNullAddr = 0x0U;
 constexpr block_t kNewAddr = -1U;
@@ -20,8 +20,6 @@ constexpr block_t kNewAddr = -1U;
 constexpr size_t kSuperblockStart = 0;
 
 // for mkfs
-constexpr uint32_t kMinVolumeSize = 104857600;
-
 constexpr uint16_t kMajorVersion = 1;
 constexpr uint16_t kMinorVersion = 0;
 

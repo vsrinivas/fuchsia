@@ -16,7 +16,7 @@ static const char* kMediaExtList[] = {"jpg", "gif", "png",  "avi", "divx", "mp4"
 struct MkfsOptions {
   char* label = nullptr;
   bool heap_based_allocation = true;
-  uint32_t overprovision_ratio = 5;
+  uint32_t overprovision_ratio = 0;
   uint32_t segs_per_sec = 1;
   uint32_t secs_per_zone = 1;
   char* extension_list = nullptr;
@@ -46,6 +46,8 @@ class MkfsWorker {
   void ConfigureExtensionList();
 
   zx_status_t WriteToDisk(void* buf, uint64_t offset, size_t length);
+
+  zx_status_t GetCalculatedOp(uint32_t& op);
 
   zx_status_t PrepareSuperBlock();
   zx_status_t InitSitArea();

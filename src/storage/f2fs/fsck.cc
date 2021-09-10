@@ -943,10 +943,12 @@ zx_status_t FsckWorker::SanityCheckRawSuper(const SuperBlock *raw_super) {
   if (kBlockSize != blocksize) {
     return ZX_ERR_BAD_STATE;
   }
-  if (kLogSectorSize != LeToCpu(raw_super->log_sectorsize)) {
+  if (LeToCpu(raw_super->log_sectorsize) > kMaxLogSectorSize ||
+      LeToCpu(raw_super->log_sectorsize) < kMinLogSectorSize) {
     return ZX_ERR_BAD_STATE;
   }
-  if (kLogSectorsPerBlock != LeToCpu(raw_super->log_sectors_per_block)) {
+  if (LeToCpu(raw_super->log_sectors_per_block) + LeToCpu(raw_super->log_sectorsize) !=
+      kMaxLogSectorSize) {
     return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;

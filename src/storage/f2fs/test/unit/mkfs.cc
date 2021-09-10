@@ -10,14 +10,15 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/f2fs/f2fs.h"
+#include "unit_lib.h"
 
 namespace f2fs {
 namespace {
 
 using block_client::FakeBlockDevice;
 
-constexpr uint64_t kBlockCount = 819200;
-constexpr uint32_t kBlockSize = 512;
+constexpr uint64_t kMkfsBlockCount = 819200;
+constexpr uint32_t kMkfsBlockSize = 512;
 
 const MkfsOptions default_option;
 
@@ -171,7 +172,7 @@ void VerifyOP(SuperBlock &sb, Checkpoint &ckp, uint32_t op_ratio) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsLabel) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -205,7 +206,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -239,7 +240,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -274,7 +275,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -316,7 +317,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -352,7 +353,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -364,10 +365,9 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
   ReadSuperblock(bc.get(), &sb);
   Checkpoint ckp = {};
   ReadCheckpoint(bc.get(), sb, &ckp);
-  VerifyOP(sb, ckp, default_option.overprovision_ratio);
 
   // Try with various values
-  const uint32_t overprovision_ratio_list[] = {1, 3, 5};
+  const uint32_t overprovision_ratio_list[] = {3, 5, 7};
   for (uint32_t overprovision_ratio : overprovision_ratio_list) {
     FX_LOGS(INFO) << "overprovision_ratio = " << overprovision_ratio;
     argv.clear();
@@ -389,7 +389,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
 #if 0  //[TODO] fix errors with core.arm64-release
       // https://ci.chromium.org/ui/p/fuchsia/builders/try/core.arm64-release/b8837818659754240433/overview
 TEST(FormatFilesystemTest, MkfsOptionsMixed) {
-  auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
   std::unique_ptr<Bcache> bc;
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
@@ -399,7 +399,7 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
   const uint32_t secs_per_zone_list[] = {2, 4};
   const char *ext_list[] = {"foo", "foo,bar"};
   const uint32_t heap_based_list[] = {0};
-  const uint32_t overprovision_list[] = {1, 3};
+  const uint32_t overprovision_list[] = {7, 9};
 
   for (const char *label : label_list) {
     for (const uint32_t segs_per_sec : segs_per_sec_list) {
@@ -446,6 +446,83 @@ TEST(FormatFilesystemTest, MkfsOptionsMixed) {
   }
 }
 #endif
+
+TEST(FormatFilesystemTest, BlockSize) {
+  uint32_t block_size_array[] = {256, 512, 1024, 2048, 4096, 8192};
+  uint32_t total_size = 104'857'600;
+
+  for (uint32_t block_size : block_size_array) {
+    uint64_t block_count = total_size / block_size;
+    std::unique_ptr<Bcache> bc;
+    auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+        .block_count = block_count, .block_size = block_size, .supports_trim = true});
+    bool readonly_device = false;
+
+    if (block_size > (1 << kMaxLogSectorSize)) {
+      ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_ERR_BAD_STATE);
+    } else if (block_size < (1 << kMinLogSectorSize)) {
+      ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+      MkfsWorker mkfs(bc.get());
+      ASSERT_EQ(mkfs.DoMkfs(), ZX_ERR_INVALID_ARGS);
+      bc.reset();
+    } else {
+      ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+      MkfsWorker mkfs(bc.get());
+      ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
+
+      std::unique_ptr<F2fs> fs;
+      MountOptions options{};
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+      unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+      fbl::RefPtr<VnodeF2fs> root;
+      unittest_lib::CreateRoot(fs.get(), &root);
+      fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+      SuperBlock &fsb = fs->RawSb();
+      ASSERT_EQ(1 << fsb.log_sectorsize, static_cast<const int32_t>(block_size));
+      SbInfo &sbi = fs->GetSbInfo();
+      ASSERT_EQ(1 << sbi.log_sectors_per_block,
+                static_cast<const int32_t>((1 << kMaxLogSectorSize) / block_size));
+
+      ASSERT_EQ(root_dir->Close(), ZX_OK);
+      root_dir.reset();
+
+      unittest_lib::Unmount(std::move(fs), &bc);
+      EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
+    }
+  }
+}
+
+TEST(FormatFilesystemTest, MkfsSmallVolume) {
+  uint32_t volume_size_array[] = {40, 50, 60, 70, 80, 90, 100};
+  uint32_t block_size = 4096;
+
+  for (uint32_t volume_size : volume_size_array) {
+    uint64_t block_count = volume_size * 1024 * 1024 / block_size;
+
+    std::unique_ptr<Bcache> bc;
+    auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+        .block_count = block_count, .block_size = block_size, .supports_trim = true});
+    bool readonly_device = false;
+    ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+    MkfsWorker mkfs(bc.get());
+    ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
+
+    std::unique_ptr<F2fs> fs;
+    MountOptions options{};
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    SuperBlock &fsb = fs->RawSb();
+    ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
+
+    unittest_lib::Unmount(std::move(fs), &bc);
+  }
+}
 
 }  // namespace
 }  // namespace f2fs

@@ -132,7 +132,7 @@ void MkfsWorker::InitGlobalParameters() {
   params_.sector_size = kDefaultSectorSize;
   params_.sectors_per_blk = kDefaultSectorsPerBlock;
   params_.blks_per_seg = kDefaultBlocksPerSegment;
-  params_.reserved_segments = 20; /* calculated by overprovision ratio */
+  params_.reserved_segments = 0;
   params_.overprovision = mkfs_options_.overprovision_ratio;
   params_.segs_per_sec = mkfs_options_.segs_per_sec;
   params_.secs_per_zone = mkfs_options_.secs_per_zone;
@@ -158,16 +158,14 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
 
   bc_->device()->BlockGetInfo(&info);
 
-  ZX_ASSERT(info.block_size == kDefaultSectorSize);
-
-  params_.sector_size = kDefaultSectorSize;
-  params_.sectors_per_blk = kBlockSize / kDefaultSectorSize;
+  params_.sector_size = info.block_size;
+  params_.sectors_per_blk = kBlockSize / info.block_size;
   params_.total_sectors = info.block_count;
   params_.start_sector = kSuperblockStart;
 
-  if (params_.total_sectors < (kMinVolumeSize / kDefaultSectorSize)) {
-    fprintf(stderr, "Error: Min volume size supported is %d\n", kMinVolumeSize);
-    return ZX_ERR_NO_RESOURCES;
+  if (info.block_size < kDefaultSectorSize || info.block_size > kBlockSize) {
+    fprintf(stderr, "Error: Block size %d is not supported\n", info.block_size);
+    return ZX_ERR_INVALID_ARGS;
   }
 
   return ZX_OK;
@@ -238,6 +236,33 @@ zx_status_t MkfsWorker::WriteToDisk(void *buf, uint64_t offset, size_t length) {
   return status;
 }
 
+zx_status_t MkfsWorker::GetCalculatedOp(uint32_t &op) {
+  uint32_t max_op = 0;
+  uint32_t max_user_segments = 0;
+
+  if (op < 100 && op > 0)
+    return ZX_OK;
+
+  for (uint32_t calc_op = 1; calc_op < 100; calc_op++) {
+    uint32_t reserved_segments =
+        (2 * (100 / calc_op + 1) + kNrCursegType) * super_block_.segs_per_sec;
+    uint32_t user_segments =
+        super_block_.segment_count_main -
+        ((super_block_.segment_count_main - reserved_segments) * calc_op / 100) - reserved_segments;
+
+    if (user_segments > max_user_segments &&
+        (super_block_.segment_count_main - 2) >= reserved_segments) {
+      max_user_segments = user_segments;
+      max_op = calc_op;
+    }
+  }
+  op = max_op;
+
+  if (max_op == 0)
+    return ZX_ERR_INVALID_ARGS;
+  return ZX_OK;
+}
+
 zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.magic = CpuToLe(uint32_t{kF2fsSuperMagic});
   super_block_.major_ver = CpuToLe(kMajorVersion);
@@ -281,21 +306,22 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 
   super_block_.checksum_offset = 0;
 
-  super_block_.block_count = CpuToLe((params_.total_sectors * kDefaultSectorSize) / blk_size_bytes);
+  super_block_.block_count =
+      CpuToLe((params_.total_sectors * params_.sector_size) / blk_size_bytes);
 
   uint64_t zone_align_start_offset =
-      (params_.start_sector * kDefaultSectorSize + 2 * kBlockSize + zone_size_bytes - 1) /
+      (params_.start_sector * params_.sector_size + 2 * kBlockSize + zone_size_bytes - 1) /
           zone_size_bytes * zone_size_bytes -
-      params_.start_sector * kDefaultSectorSize;
+      params_.start_sector * params_.sector_size;
 
-  if (params_.start_sector % kDefaultSectorsPerBlock) {
+  if (params_.start_sector % params_.sectors_per_blk) {
     printf("WARN: Align start sector number in a unit of pages\n");
     printf("\ti.e., start sector: %d, ofs:%d (sectors per page: %d)\n", params_.start_sector,
-           params_.start_sector % kDefaultSectorsPerBlock, kDefaultSectorsPerBlock);
+           params_.start_sector % params_.sectors_per_blk, params_.sectors_per_blk);
   }
 
   super_block_.segment_count = static_cast<uint32_t>(
-      CpuToLe(((params_.total_sectors * kDefaultSectorSize) - zone_align_start_offset) /
+      CpuToLe(((params_.total_sectors * params_.sector_size) - zone_align_start_offset) /
               segment_size_bytes));
 
   super_block_.segment0_blkaddr =
@@ -383,6 +409,21 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 
   super_block_.segment_count_main =
       CpuToLe(LeToCpu(super_block_.section_count) * params_.segs_per_sec);
+
+  if (zx_status_t status = GetCalculatedOp(params_.overprovision); status != ZX_OK) {
+    FX_LOGS(WARNING) << "Error: Device size is not sufficient for F2FS volume";
+    return ZX_ERR_NO_SPACE;
+  }
+
+  // The number of reserved_segments depends on the OP value. Assuming OP is 20%, 20% of a dirty
+  // segment is invalid. That is, running GC on 5 dirty segments can obtain one free segment.
+  // Therefore, the required reserved_segments can be obtained with 100 / OP.
+  // If the data page is moved to another segment due to GC, the dnode that refers to it should be
+  // modified. This requires twice the reserved_segments.
+  // Current active segments have the next segment in advance, of which require 6 additional
+  // segments.
+  params_.reserved_segments =
+      (2 * (100 / params_.overprovision + 1) + kNrCursegType) * params_.segs_per_sec;
 
   if ((LeToCpu(super_block_.segment_count_main) - 2) < params_.reserved_segments) {
     printf("Error: Device size is not sufficient for F2FS volume, more segment needed =%u",

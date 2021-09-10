@@ -194,21 +194,23 @@ loff_t F2fs::MaxFileSize(unsigned bits) {
   return result;
 }
 
-int F2fs::SanityCheckRawSuper() {
+zx_status_t F2fs::SanityCheckRawSuper() {
   unsigned int blocksize;
 
   if (kF2fsSuperMagic != LeToCpu(raw_sb_->magic))
     return 1;
 
-  /* Currently, support only 4KB block size */
+  // Currently, support 512/1024/2048/4096 block size
   blocksize = 1 << LeToCpu(raw_sb_->log_blocksize);
   if (blocksize != kPageCacheSize)
-    return 1;
-  if (LeToCpu(raw_sb_->log_sectorsize) != kLogSectorSize)
-    return 1;
-  if (LeToCpu(raw_sb_->log_sectors_per_block) != kLogSectorsPerBlock)
-    return 1;
-  return 0;
+    return ZX_ERR_INVALID_ARGS;
+  if (LeToCpu(raw_sb_->log_sectorsize) > kMaxLogSectorSize ||
+      LeToCpu(raw_sb_->log_sectorsize) < kMinLogSectorSize)
+    return ZX_ERR_INVALID_ARGS;
+  if ((LeToCpu(raw_sb_->log_sectors_per_block) + LeToCpu(raw_sb_->log_sectorsize)) !=
+      kMaxLogSectorSize)
+    return ZX_ERR_INVALID_ARGS;
+  return ZX_OK;
 }
 
 int F2fs::SanityCheckCkpt() {
@@ -271,9 +273,10 @@ zx_status_t F2fs::FillSuper() {
 
   ParseOptions();
 
-  /* sanity checking of raw super */
-  if (SanityCheckRawSuper())
+  // sanity checking of raw super
+  if (SanityCheckRawSuper() != ZX_OK) {
     goto free_sb_buf;
+  }
 
 #if 0  // porting needed
   // sb->s_maxbytes = MaxFileSize(RawSb().log_blocksize);

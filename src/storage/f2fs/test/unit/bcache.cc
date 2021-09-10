@@ -11,6 +11,8 @@ namespace f2fs {
 namespace {
 
 using block_client::FakeBlockDevice;
+
+constexpr uint32_t kMinVolumeSize = 104'857'600;
 constexpr uint32_t kNumBlocks = kMinVolumeSize / kDefaultSectorSize;
 
 TEST(BCacheTest, TrimTest) {
@@ -21,7 +23,10 @@ TEST(BCacheTest, TrimTest) {
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
     ASSERT_TRUE(device);
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-    block_t end_blk = static_cast<block_t>(bc->Maxblk() >> kLogSectorsPerBlock);
+
+    fuchsia_hardware_block_BlockInfo info;
+    bc->device()->BlockGetInfo(&info);
+    block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
   }
   {
@@ -31,7 +36,10 @@ TEST(BCacheTest, TrimTest) {
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = true});
     ASSERT_TRUE(device);
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-    block_t end_blk = static_cast<block_t>(bc->Maxblk() >> kLogSectorsPerBlock);
+
+    fuchsia_hardware_block_BlockInfo info;
+    bc->device()->BlockGetInfo(&info);
+    block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc->Trim(0, end_blk), ZX_OK);
   }
 }

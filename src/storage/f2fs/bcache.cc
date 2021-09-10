@@ -151,8 +151,8 @@ zx_status_t Bcache::VerifyDeviceInfo() {
   }
 
   if (BlockSize() % info_.block_size != 0) {
-    FX_LOGS(ERROR) << "f2fs block size cannot be multiple of underlying block size: "
-                   << info_.block_size;
+    FX_LOGS(WARNING) << "f2fs block size cannot be multiple of underlying block size: "
+                     << info_.block_size;
     return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
