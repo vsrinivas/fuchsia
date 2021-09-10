@@ -18,6 +18,9 @@ type MyStruct = struct {
 };
 )FIDL");
   ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("MyStruct");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 1);
 }
 
 TEST(StructsTests, GoodPrimitiveDefaultValueConstReference) {

@@ -446,4 +446,83 @@ type Foo = resource struct {
   ASSERT_COMPILED(library);
 }
 
+TEST(ProtocolTests, BadMethodNamedParameterList) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct{};
+protocol MyProtocol {
+  MyMethod(S);
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNamedParameterListTypesNotYetSupported);
+}
+
+TEST(ProtocolTests, BadMethodEnumLayout) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(enum {
+    FOO = 1;
+  });
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
+}
+
+TEST(ProtocolTests, BadMethodTableLayout) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(table {
+    1: foo bool;
+  });
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table");
+}
+
+TEST(ProtocolTests, BadMethodUnionLayout) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(union {
+    1: foo bool;
+  });
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "union");
+}
+
+TEST(ProtocolTests, BadMethodEmptyResponseWithError) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod() -> () error uint32;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+}
+
+// TODO(fxbug.dev/76349): using empty structs as request/response payloads is
+//  only supported in the new syntax. Until this is supported, we throw a user
+//  facing error instead.
+TEST(NewSyntaxTests, BadProtocolMethodEmptyRequestStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(struct {}) -> ();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
 }  // namespace

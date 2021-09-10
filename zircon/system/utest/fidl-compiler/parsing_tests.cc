@@ -780,6 +780,17 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
+TEST(ParsingTests, BadTypeDeclWithConstraintsModifiers) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type t1 = union { 1: foo uint8; };
+type t2 = strict t1;
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+}
+
 TEST(ParsingTests, BadIdentifierAttributes) {
   TestLibrary library(R"FIDL(
 library example;
@@ -802,6 +813,17 @@ type Foo = struct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributeToIdentifier);
+}
+
+TEST(ParsingTests, BadTypeDeclOfEnumLayoutWithInvalidSubtype) {
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = enum : "123" {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidWrappedType);
 }
 
 }  // namespace

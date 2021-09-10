@@ -19,6 +19,10 @@ type Fruit = bits : uint64 {
 };
 )FIDL");
   ASSERT_COMPILED(library);
+  auto type_decl = library.LookupBits("Fruit");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 3);
+  EXPECT_EQ(type_decl->subtype_ctor->name.decl_name(), "uint64");
 }
 
 TEST(BitsTests, BadBitsTestSigned) {

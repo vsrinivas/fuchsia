@@ -26,6 +26,22 @@ alias alias_of_int16 = int16;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
+TEST(AliasTests, GoodAliasOfStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = struct {
+    field1 uint16;
+    field2 uint16;
+};
+alias AliasOfDecl = TypeDecl;
+)FIDL");
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+  ASSERT_NOT_NULL(library.LookupTypeAlias("AliasOfDecl"));
+}
+
 TEST(AliasTests, GoodPrimitive) {
   TestLibrary library(R"FIDL(library example;
 

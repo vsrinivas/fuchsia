@@ -65,13 +65,26 @@ protocol Example {
 }
 
 TEST(ErrorsTests, GoodErrorEmptyStructAsSuccess) {
-  TestLibrary library(R"FIDL(library example;
+  TestLibrary library(R"FIDL(
+library example;
 
-protocol Example {
-    Method() -> (struct {}) error uint32;
+protocol MyProtocol {
+  MyMethod() -> (struct {}) error uint32;
 };
 )FIDL");
   ASSERT_COMPILED(library);
+  auto protocol = library.LookupProtocol("MyProtocol");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+
+  auto& method = protocol->methods[0];
+  EXPECT_TRUE(method.has_request);
+  EXPECT_NULL(method.maybe_request_payload);
+  ASSERT_TRUE(method.has_response && method.maybe_response_payload);
+
+  auto response = method.maybe_response_payload;
+  EXPECT_TRUE(response->kind == fidl::flat::Decl::Kind::kStruct);
+  ASSERT_EQ(response->members.size(), 1);
 }
 
 TEST(ErrorsTests, GoodErrorEnum) {

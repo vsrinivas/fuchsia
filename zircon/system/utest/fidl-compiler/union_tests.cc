@@ -30,6 +30,9 @@ type Foo = strict union {
 };
 )FIDL");
   ASSERT_COMPILED(library);
+  auto type_decl = library.LookupUnion("Foo");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 5);
 }
 
 TEST(UnionTests, GoodRecursiveUnion) {

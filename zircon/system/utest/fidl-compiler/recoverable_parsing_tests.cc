@@ -302,4 +302,48 @@ extra_token // Second error
                                       fidl::ErrExpectedDeclaration);
 }
 
+// This test ensures that recoverable parsing works as intended for constraints,
+// and returns useful and actionable information back to users.
+TEST(ReecoverableParsingTests, BadConstraintsRecoverability) {
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = struct {
+    // errors[0]: no constraints specified
+    f0 vector<uint16>:;
+    // errors[1]: no constraints specified
+    f1 vector<uint16>:<>;
+    // errors[2]: leading comma
+    f2 vector<uint16>:<,16,optional>;
+    // errors[3]: trailing comma
+    f3 vector<uint16>:<16,optional,>;
+    // errors[4]: double comma
+    f4 vector<uint16>:<16,,optional>;
+    // errors[5]: missing comma, errors[6], errors[7]: consume > and ; trying
+    // to get to next member
+    f5 vector<uint16>:<16 optional>;
+    // errors[8] missing close bracket
+    f7 vector<uint16>:<16;
+    // errors[10]: invalid constant
+    f8 vector<uint16>:1~6,optional;
+    // errors[11]: unexpected token
+    f9 vector<uint16>:,16,,optional,;
+};
+)FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 11);
+  EXPECT_ERR(errors[0], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[1], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[2], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[3], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[4], fidl::ErrUnexpectedToken);
+  EXPECT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[7], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[8], fidl::ErrUnexpectedTokenOfKind);
+  EXPECT_ERR(errors[9], fidl::ErrInvalidCharacter);
+  EXPECT_ERR(errors[10], fidl::ErrUnexpectedToken);
+}
+
 }  // namespace
