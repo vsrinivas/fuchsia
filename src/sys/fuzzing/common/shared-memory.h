@@ -52,70 +52,97 @@ class SharedMemory final {
   ~SharedMemory();
 
   const zx::vmo& vmo() const { return vmo_; }
-  zx_vaddr_t addr() const { return addr_; }
-  size_t capacity() const { return capacity_; }
-  bool is_mapped() const { return addr_ != 0; }
+  zx_vaddr_t addr() const { return mapped_addr_; }
+  size_t capacity() const { return mapped_size_ - (header_ ? sizeof(InlineHeader) : 0); }
+  bool is_mapped() const { return mapped_addr_ != 0; }
+  uint8_t* data() { return data_; }
+  size_t size();
 
-  // Describes the memory region, e.g. like inline 8-bit counters (uint8_t) for
-  // __sanitizer_cov_inline_8bit_counters_init or PC tables (uintptr_t) for
-  // __sanitizer_cov_pc_tables_init.
-  template <typename T = void>
-  T* begin() const {
-    return reinterpret_cast<T*>(Begin());
-  }
-  template <typename T = void>
-  T* end() const {
-    return reinterpret_cast<T*>(End());
-  }
+  // Resets this object, then creates a VMO of at least |capacity| bytes, maps it. The size of the
+  // shared memory is recorded in the buffer itself, making it compatible with |Resize| and |Write|.
+  void Reserve(size_t capacity);
 
-  // Describes the memory region like a fuzzer test input, e.g. for LLVMFuzzerTestOneInput.
-  uint8_t* data() const { return begin<uint8_t>(); }
-  size_t size() const { return GetSize(); }
+  // Resets and configures the object so subsequent calls to |Update| copy the region of memory
+  // described by |data| and |size|. This region of memory MUST remain valid until this object is
+  // destroyed or reset. The primary use of this method is to share compiler-provided
+  // instrumentation across processes.
+  void Mirror(void* data, size_t size);
 
-  // Resets this object, then creates a VMO of at least |capacity| bytes, maps it, and returns a
-  // duplicate handle in |out|. If |inline_size| is true, this object can be used to send or receive
-  // variable-length data as described in the class description.
-  void Create(size_t capacity, Buffer* out, bool inline_size = false);
+  // Returns a buffer containing a duplicate of the VMO backing this memory region, suitable for
+  // sending to another process.
+  Buffer Share();
 
-  // Like |Create|, but determines the capacity and initial contents automatically from the memory
-  // region described by |begin| and |end|. |begin| MUST be less than |end|, i.e. the region must be
-  // valid and non-empty. This method cannot be used to send variable-length data. The pointers are
-  // saved and used by |Update|; they MUST remain valid until |Reset| is called.
-  void Share(const void* begin, const void* end, Buffer* out);
+  // Resets this object, then takes ownership of the VMO handle in |buffer| and maps it. The buffer
+  // must have been |Share|d from an object that was |Reserve|d.
+  void LinkReserved(Buffer&& buffer);
 
-  // Resets this object, then takes ownership of the VMO handle in |buffer| and maps it. If
-  // |inline_size| is true, this object can be used to send or receive variable-length data as
-  // described in the class description.
-  void Link(Buffer buffer, bool inline_size = false);
+  // Resets this object, then takes ownership of the VMO handle in |buffer| and maps it. The buffer
+  // must have been |Share|d from an object that was |Mirror|ed.
+  void LinkMirrored(Buffer&& buffer);
 
-  // Writes data to the VMO. If unmapped, returns ZX_ERR_BAD_STATE. If the data is truncated due to
-  // insufficient remaining capacity, writes as much as it can and returns ZX_ERR_BUFFER_TOO_SMALL.
-  zx_status_t Write(const void* src, size_t len);
+  // If |enable|d and AddressSanitizer is available, the object will poison the mapped memory beyond
+  // |end()| whenever |size()| changes. If AddressSanitizer is not available, this method has no
+  // effect. See also https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning.
+  void SetPoisoning(bool enable);
 
-  // If this object was |Share|d, copies the data from the original memory region to this objects
-  // shared memory; otherwise, does nothing.
+  // Modifies the amount of the buffer considered valid. Must only be called on objects that have
+  // been |Reserve|d or |LinkReserved|.
+  void Resize(size_t size);
+
+  // Appends data to the VMO.
+  void Write(uint8_t one_byte);
+  void Write(const void* data, size_t size);
+
+  // Copies data from the mirrored memory region into this object. Must only be called on an object
+  // that was |Mirror|ed.
   void Update();
 
-  // Sets the amount valid date to 0.
+  // Resizes |Reserve|d objects to 0, and zeros |Mirror|ed objects' mirrored memory.
   void Clear();
 
-  // Unmaps and resets the VMO if mapped.
+ private:
+  // If |Create| is called with |inline_size = true|, buffer starts with an inline header.
+  struct InlineHeader {
+    char magic[8];
+    uint64_t size;
+  };
+
+  // Unmaps the VMO (if mapped) and closes the VMO handle.
   void Reset();
 
- private:
-  // Manages the (possibly inlined) size.
-  size_t GetSize() const;
-  void SetSize(size_t size);
+  // If AddressSanitizer is available and the caller chose to |SetPoisoning|, ensures that the first
+  // |size| bytes are not poisoned. Bytes following the next ASAN alignment boundary (typically 8
+  // bytes) after |size| will be poisoned. If |size| is greater than or equal to the capacity, the
+  // entire buffer will be unpoisoned.
+  void PoisonAfter(size_t size);
 
-  // Gets memory region pointers, accounting for the possibly inlined header.
-  void* Begin() const;
-  void* End() const;
+  // Creates a new VMO with at least the given capacity.
+  void Create(size_t capacity);
 
+  // Maps the current VMO into this process' address space. Must not be currently mapped.
+  void Map();
+
+  // Takes ownership of the buffer's VMO and maps it.
+  void Map(Buffer&& buffer);
+
+  // The mapped VMO backing this object.
   zx::vmo vmo_;
-  zx_vaddr_t addr_ = 0;
-  size_t capacity_ = 0;
-  const void* source_ = nullptr;
+  zx_vaddr_t mapped_addr_ = 0;
+  size_t mapped_size_ = 0;
+
+  // Describes the accessible shared memory.
+  uint8_t* data_ = 0;
   size_t size_ = 0;
+
+  // Inline header for |Reserve|d objects.
+  InlineHeader* header_ = nullptr;
+
+  // Memory region published by |Mirror|ed objects.
+  void* mirror_ = nullptr;
+
+  // Tracks poisoned memory. See |SetPoisoning|.
+  bool poisoning_ = false;
+  size_t unpoisoned_size_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SharedMemory);
 };
