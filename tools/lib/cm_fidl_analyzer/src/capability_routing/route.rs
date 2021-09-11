@@ -4,7 +4,8 @@
 
 use {
     crate::component_tree::NodePath,
-    cm_rust::{CapabilityDecl, ExposeDecl, OfferDecl, UseDecl},
+    cm_rust::{CapabilityDecl, CapabilityName, ExposeDecl, OfferDecl, UseDecl},
+    routing::RegistrationDecl,
     serde::{Deserialize, Serialize},
 };
 
@@ -43,9 +44,34 @@ pub enum RouteSegment {
         capability: CapabilityDecl,
     },
 
-    /// The final source of the capability is the component framework.
-    RouteFromFramework,
+    RegisterBy {
+        /// The `NodePath` of the `ComponentNode` that registered the capability.
+        node_path: NodePath,
+        /// The registration declaration. For runner and resolver registrations, this
+        /// appears directly in the `ComponentNode`'s manifest. For storage-backing
+        /// directories, this is derived from the storage capability's `StorageDecl`.
+        capability: RegistrationDecl,
+    },
 
-    /// The final source of the capability is the parent of the root component.
+    /// The source of the capability is the component framework.
+    ProvideFromFramework {
+        capability: CapabilityName,
+    },
+
+    /// The capability is provided by component manager as a built-in capability.
+    ProvideAsBuiltin {
+        /// The capability declaration from the `RuntimeConfig`.
+        capability: CapabilityDecl,
+    },
+
+    /// The capability is provided by component manager from its namespace.
+    ProvideFromNamespace {
+        /// The capability declaration from the `RuntimeConfig`.
+        capability: CapabilityDecl,
+    },
+
+    // Deprecated. Use `ProvideFromFramework` instead.
+    RouteFromFramework,
+    // Deprecated. Use one of `ProvideAsBuiltin` or `ProvideFromNamespace` instead.
     RouteFromRootParent,
 }

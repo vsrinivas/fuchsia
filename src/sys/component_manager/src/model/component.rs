@@ -38,6 +38,7 @@ use {
         },
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
+        DebugRouteMapper,
     },
     anyhow::format_err,
     async_trait::async_trait,
@@ -977,9 +978,20 @@ impl ComponentInstance {
     }
 }
 
+// A unit struct that implements `DebugRouteMapper` without recording any capability routes.
+#[derive(Debug, Clone)]
+pub struct NoopRouteMapper;
+
+impl DebugRouteMapper for NoopRouteMapper {
+    type RouteMap = ();
+
+    fn get_route(self) -> () {}
+}
+
 #[async_trait]
 impl ComponentInstanceInterface for ComponentInstance {
     type TopInstance = ComponentManagerInstance;
+    type DebugRouteMapper = NoopRouteMapper;
 
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
@@ -1029,6 +1041,10 @@ impl ComponentInstanceInterface for ComponentInstance {
     ) -> Result<Vec<(PartialChildMoniker, Arc<ComponentInstance>)>, ComponentInstanceError> {
         let state = self.lock_resolved_state().await?;
         Ok(state.live_children_in_collection(collection))
+    }
+
+    fn new_route_mapper() -> NoopRouteMapper {
+        NoopRouteMapper
     }
 }
 

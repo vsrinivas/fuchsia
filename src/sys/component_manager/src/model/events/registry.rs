@@ -379,7 +379,8 @@ impl EventRegistry {
         event_decl: UseEventDecl,
         component: &Arc<ComponentInstance>,
     ) -> Result<(CapabilityName, ExtendedMoniker), ModelError> {
-        let route_source = route_capability(RouteRequest::UseEvent(event_decl), component).await?;
+        let (route_source, _route) =
+            route_capability(RouteRequest::UseEvent(event_decl), component).await?;
         match route_source {
             RouteSource::Event(CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),

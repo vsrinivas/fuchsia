@@ -16,6 +16,9 @@ use {
     std::collections::HashMap,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A trait providing data from a component instance's environment.
 pub trait EnvironmentInterface<C>
 where
@@ -146,6 +149,7 @@ pub struct DebugRegistry {
     pub debug_capabilities: HashMap<CapabilityName, DebugRegistration>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DebugRegistration {
     pub source: RegistrationSource,

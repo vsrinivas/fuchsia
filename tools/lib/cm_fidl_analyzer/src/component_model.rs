@@ -3,9 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
+    crate::{
+        capability_routing::route::RouteSegment,
+        component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
+    },
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, ProgramDecl, UseDecl},
+    cm_rust::{
+        CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, OfferDecl,
+        ProgramDecl, UseDecl,
+    },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{
@@ -25,7 +31,8 @@ use {
         environment::{DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry},
         error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
-        route_capability, route_storage_and_backing_directory, RouteRequest, RouteSource,
+        route_capability, route_storage_and_backing_directory, DebugRouteMapper, RegistrationDecl,
+        RouteRequest, RouteSource,
     },
     std::{
         collections::HashMap,
@@ -189,10 +196,13 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         use_decl: &UseDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<(), AnalyzerModelError> {
-        let source = match use_decl.clone() {
+    ) -> Result<Vec<RouteMap>, AnalyzerModelError> {
+        let (source, routes) = match use_decl.clone() {
             UseDecl::Directory(use_directory_decl) => {
-                route_capability(RouteRequest::UseDirectory(use_directory_decl), target).await?
+                let (source, route) =
+                    route_capability(RouteRequest::UseDirectory(use_directory_decl), target)
+                        .await?;
+                (source, vec![route])
             }
             UseDecl::Event(use_event_decl) => {
                 if !self.uses_event_source_protocol(&target.decl().await?) {
@@ -200,22 +210,32 @@ impl ComponentModelForAnalyzer {
                         use_event_decl.target_name.to_string(),
                     ));
                 }
-                route_capability(RouteRequest::UseEvent(use_event_decl), target).await?
+                let (source, route) =
+                    route_capability(RouteRequest::UseEvent(use_event_decl), target).await?;
+                (source, vec![route])
             }
             UseDecl::Protocol(use_protocol_decl) => {
-                route_capability(RouteRequest::UseProtocol(use_protocol_decl), target).await?
+                let (source, route) =
+                    route_capability(RouteRequest::UseProtocol(use_protocol_decl), target).await?;
+                (source, vec![route])
             }
             UseDecl::Service(use_service_decl) => {
-                route_capability(RouteRequest::UseService(use_service_decl), target).await?
+                let (source, route) =
+                    route_capability(RouteRequest::UseService(use_service_decl), target).await?;
+                (source, vec![route])
             }
             UseDecl::Storage(use_storage_decl) => {
-                let (storage_source, _) =
+                let (storage_source, _relative_moniker, storage_route, dir_route) =
                     route_storage_and_backing_directory(use_storage_decl, target).await?;
-                RouteSource::StorageBackingDirectory(storage_source)
+                (
+                    RouteSource::StorageBackingDirectory(storage_source),
+                    vec![storage_route, dir_route],
+                )
             }
             _ => unimplemented![],
         };
-        self.check_use_source(&source).await
+        self.check_use_source(&source).await?;
+        Ok(routes)
     }
 
     /// Given a `ExposeDecl` for a capability at an instance `target`, checks whether the capability
@@ -225,14 +245,15 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         expose_decl: &ExposeDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<(), AnalyzerModelError> {
+    ) -> Result<Option<RouteMap>, AnalyzerModelError> {
         match self.request_from_expose(expose_decl) {
             Some(request) => {
-                let source =
+                let (source, route) =
                     route_capability::<ComponentInstanceForAnalyzer>(request, target).await?;
-                self.check_use_source(&source).await
+                self.check_use_source(&source).await?;
+                Ok(Some(route))
             }
-            None => Ok(()),
+            None => Ok(None),
         }
     }
 
@@ -242,7 +263,7 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         program_decl: &ProgramDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
-    ) -> Result<(), AnalyzerModelError> {
+    ) -> Result<Option<RouteMap>, AnalyzerModelError> {
         match program_decl.runner {
             Some(ref runner_name) => {
                 match route_capability::<ComponentInstanceForAnalyzer>(
@@ -251,11 +272,11 @@ impl ComponentModelForAnalyzer {
                 )
                 .await
                 {
-                    Ok(_) => Ok(()),
+                    Ok((_source, route)) => Ok(Some(route)),
                     Err(err) => Err(AnalyzerModelError::RoutingError(err)),
                 }
             }
-            None => Ok(()),
+            None => Ok(None),
         }
     }
 
@@ -433,9 +454,98 @@ pub struct TopInstanceForAnalyzer {
     builtin_capabilities: BuiltinCapabilities,
 }
 
+/// A representation of a capability route.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RouteMap(Vec<RouteSegment>);
+
+impl RouteMap {
+    pub fn new() -> Self {
+        RouteMap(Vec::new())
+    }
+
+    pub fn from_segments(segments: Vec<RouteSegment>) -> Self {
+        RouteMap(segments)
+    }
+
+    pub fn push(&mut self, segment: RouteSegment) {
+        self.0.push(segment)
+    }
+}
+
+/// A struct implementing `DebugRouteMapper` that records a `RouteMap` as the router
+/// walks a capability route.
+#[derive(Clone, Debug)]
+pub struct RouteMapper {
+    route: RouteMap,
+}
+
+impl DebugRouteMapper for RouteMapper {
+    type RouteMap = RouteMap;
+
+    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {
+        self.route.push(RouteSegment::UseBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: use_decl,
+        })
+    }
+
+    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {
+        self.route.push(RouteSegment::OfferBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: offer_decl,
+        })
+    }
+
+    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {
+        self.route.push(RouteSegment::ExposeBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: expose_decl,
+        })
+    }
+
+    fn add_registration(
+        &mut self,
+        abs_moniker: AbsoluteMoniker,
+        registration_decl: RegistrationDecl,
+    ) {
+        self.route.push(RouteSegment::RegisterBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: registration_decl,
+        })
+    }
+
+    fn add_component_capability(
+        &mut self,
+        abs_moniker: AbsoluteMoniker,
+        capability_decl: CapabilityDecl,
+    ) {
+        self.route.push(RouteSegment::DeclareBy {
+            node_path: NodePath::from(abs_moniker),
+            capability: capability_decl,
+        })
+    }
+
+    fn add_framework_capability(&mut self, capability_name: CapabilityName) {
+        self.route.push(RouteSegment::ProvideFromFramework { capability: capability_name })
+    }
+
+    fn add_builtin_capability(&mut self, capability_decl: CapabilityDecl) {
+        self.route.push(RouteSegment::ProvideAsBuiltin { capability: capability_decl })
+    }
+
+    fn add_namespace_capability(&mut self, capability_decl: CapabilityDecl) {
+        self.route.push(RouteSegment::ProvideFromNamespace { capability: capability_decl })
+    }
+
+    fn get_route(self) -> RouteMap {
+        self.route
+    }
+}
+
 #[async_trait]
 impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
     type TopInstance = TopInstanceForAnalyzer;
+    type DebugRouteMapper = RouteMapper;
 
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
@@ -477,6 +587,10 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         _collection: &'a str,
     ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError> {
         Ok(vec![])
+    }
+
+    fn new_route_mapper() -> RouteMapper {
+        RouteMapper { route: RouteMap::new() }
     }
 }
 

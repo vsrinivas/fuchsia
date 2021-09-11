@@ -757,6 +757,7 @@ pub struct EnvironmentDecl {
     pub stop_timeout_ms: Option<u32>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::RunnerRegistration")]
 pub struct RunnerRegistration {
@@ -779,6 +780,7 @@ impl RegistrationDeclCommon for RunnerRegistration {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::ResolverRegistration")]
 pub struct ResolverRegistration {
@@ -1386,6 +1388,7 @@ impl NativeIntoFidl<fsys::Ref> for StorageDirectorySource {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
     Parent,

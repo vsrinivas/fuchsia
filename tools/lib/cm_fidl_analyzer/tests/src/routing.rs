@@ -6,19 +6,26 @@ use {
     anyhow::anyhow,
     async_trait::async_trait,
     cm_fidl_analyzer::{
+        capability_routing::route::RouteSegment,
         component_model::{
             AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
-            ModelBuilderForAnalyzer,
+            ModelBuilderForAnalyzer, RouteMap,
         },
         component_tree::{ComponentTreeBuilder, NodePath},
     },
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, DependencyType, ExposeDecl,
-        ExposeDeclCommon, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferServiceDecl, OfferSource, OfferTarget, RegistrationSource, RunnerDecl,
-        RunnerRegistration, ServiceDecl, UseDecl, UseServiceDecl, UseSource,
+        CapabilityDecl, CapabilityName, CapabilityPath, ChildRef, ComponentDecl, DependencyType,
+        ExposeDecl, ExposeDeclCommon, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl,
+        ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        OfferProtocolDecl, OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget,
+        ProtocolDecl, RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource, UseStorageDecl,
     },
-    cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
+    cm_rust_testing::{
+        ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
+        ProtocolDeclBuilder,
+    },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
@@ -27,6 +34,8 @@ use {
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
         error::RoutingError,
+        rights::{READ_RIGHTS, WRITE_RIGHTS},
+        RegistrationDecl,
     },
     routing_test_helpers::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
     std::{
@@ -284,7 +293,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                     }
                     ExpectedResult::ErrWithNoEpitaph => {}
                 },
-                Ok(()) => match expected {
+                Ok(_) => match expected {
                     ExpectedResult::Ok => {}
                     _ => panic!("capability use succeeded, expected failure"),
                 },
@@ -321,7 +330,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                         }
                         _ => unimplemented![],
                     },
-                    Ok(()) => match expected {
+                    Ok(_) => match expected {
                         ExpectedResult::Ok => {}
                         _ => panic!("capability use succeeded, expected failure"),
                     },
@@ -715,6 +724,600 @@ mod tests {
                 if moniker == b_component.abs_moniker().to_partial() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
+        );
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: offers protocol /svc/foo from self as /svc/bar
+    /// b: uses protocol /svc/bar as /svc/hippo
+    #[fuchsia::test]
+    async fn map_route_use_from_parent() {
+        let use_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Parent,
+            source_name: "bar_svc".into(),
+            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            dependency_type: DependencyType::Strong,
+        });
+        let offer_decl = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Self_,
+            source_name: "foo_svc".into(),
+            target_name: "bar_svc".into(),
+            target: OfferTarget::Child(ChildRef { name: "b".to_string(), collection: None }),
+            dependency_type: DependencyType::Strong,
+        });
+        let protocol_decl = ProtocolDeclBuilder::new("foo_svc").build();
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .protocol(protocol_decl.clone())
+                    .offer(offer_decl.clone())
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone()).build()),
+        ];
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_decl, &b_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: use_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: offer_decl
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: CapabilityDecl::Protocol(protocol_decl)
+                }
+            ])]
+        )
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: uses protocol /svc/bar from b as /svc/hippo
+    /// b: exposes protocol /svc/foo from self as /svc/bar
+    #[fuchsia::test]
+    async fn map_route_use_from_child() {
+        let use_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Child("b".to_string()),
+            source_name: "bar_svc".into(),
+            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            dependency_type: DependencyType::Strong,
+        });
+        let expose_decl = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Self_,
+            source_name: "foo_svc".into(),
+            target_name: "bar_svc".into(),
+            target: ExposeTarget::Parent,
+        });
+        let protocol_decl = ProtocolDeclBuilder::new("foo_svc").build();
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().use_(use_decl.clone()).add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .protocol(protocol_decl.clone())
+                    .expose(expose_decl.clone())
+                    .build(),
+            ),
+        ];
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_decl, &a_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: use_decl
+                },
+                RouteSegment::ExposeBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: expose_decl
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: CapabilityDecl::Protocol(protocol_decl)
+                }
+            ])]
+        )
+    }
+
+    /// a: uses protocol /svc/hippo from self
+    #[fuchsia::test]
+    async fn map_route_use_from_self() {
+        let use_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Self_,
+            source_name: "hippo".into(),
+            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            dependency_type: DependencyType::Strong,
+        });
+        let protocol_decl = ProtocolDeclBuilder::new("hippo").build();
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(protocol_decl.clone())
+                .use_(use_decl.clone())
+                .build(),
+        )];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_decl, &a_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: use_decl
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: CapabilityDecl::Protocol(protocol_decl)
+                }
+            ])]
+        )
+    }
+
+    ///     a
+    ///    / \
+    ///   b   c
+    ///  /
+    /// d
+    ///
+    /// d: exposes directory /data/foo from self as /data/bar
+    /// b: exposes directory /data/bar from d as /data/baz
+    /// a: offers directory /data/baz from b as /data/foobar to c
+    /// c: uses /data/foobar as /data/hippo
+    #[fuchsia::test]
+    async fn map_route_use_from_niece() {
+        let use_decl = UseDecl::Directory(UseDirectoryDecl {
+            source: UseSource::Parent,
+            source_name: "foobar_data".into(),
+            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+            rights: *READ_RIGHTS,
+            subdir: None,
+            dependency_type: DependencyType::Strong,
+        });
+        let a_offer_decl = OfferDecl::Directory(OfferDirectoryDecl {
+            source: OfferSource::static_child("b".to_string()),
+            source_name: "baz_data".into(),
+            target_name: "foobar_data".into(),
+            target: OfferTarget::static_child("c".to_string()),
+            rights: Some(*READ_RIGHTS),
+            subdir: None,
+            dependency_type: DependencyType::Strong,
+        });
+        let b_expose_decl = ExposeDecl::Directory(ExposeDirectoryDecl {
+            source: ExposeSource::Child("d".to_string()),
+            source_name: "bar_data".into(),
+            target_name: "baz_data".into(),
+            target: ExposeTarget::Parent,
+            rights: Some(*READ_RIGHTS),
+            subdir: None,
+        });
+        let d_expose_decl = ExposeDecl::Directory(ExposeDirectoryDecl {
+            source: ExposeSource::Self_,
+            source_name: "foo_data".into(),
+            target_name: "bar_data".into(),
+            target: ExposeTarget::Parent,
+            rights: Some(*READ_RIGHTS),
+            subdir: None,
+        });
+        let directory_decl = DirectoryDeclBuilder::new("foo_data").build();
+
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(a_offer_decl.clone())
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(b_expose_decl.clone())
+                    .add_lazy_child("d")
+                    .build(),
+            ),
+            ("c", ComponentDeclBuilder::new().use_(use_decl.clone()).build()),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .directory(directory_decl.clone())
+                    .expose(d_expose_decl.clone())
+                    .build(),
+            ),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let c_component = test.look_up_instance(&vec!["c:0"].into()).await.expect("c instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_decl, &c_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["c:0"]),
+                    capability: use_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: a_offer_decl
+                },
+                RouteSegment::ExposeBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: b_expose_decl
+                },
+                RouteSegment::ExposeBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0", "d:0"]),
+                    capability: d_expose_decl
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0", "d:0"]),
+                    capability: CapabilityDecl::Directory(directory_decl),
+                }
+            ])]
+        )
+    }
+
+    ///  a
+    ///   \
+    ///    b
+    ///
+    /// a: declares runner "elf" with service "/svc/runner" from "self".
+    /// a: registers runner "elf" from self in environment as "hobbit".
+    /// b: refers to runner "hobbit" in its `ProgramDecl`.
+    #[fuchsia::test]
+    async fn map_route_for_program_runner() {
+        let runner_reg = RunnerRegistration {
+            source_name: "elf".into(),
+            source: RegistrationSource::Self_,
+            target_name: "hobbit".into(),
+        };
+        let runner_decl = RunnerDecl {
+            name: "elf".into(),
+            source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
+        };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("b").environment("env").build())
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env")
+                            .extends(fsys::EnvironmentExtends::Realm)
+                            .add_runner(runner_reg.clone())
+                            .build(),
+                    )
+                    .runner(runner_decl.clone())
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new_empty_component().add_program("hobbit").build()),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let route_map = test
+            .model
+            .check_program_runner(
+                &b_component
+                    .decl()
+                    .await
+                    .expect("expected ComponentDecl for b")
+                    .program
+                    .expect("expected ProgramDecl for b"),
+                &b_component,
+            )
+            .await
+            .expect("expected OK route")
+            .expect("expected program runner route");
+
+        assert_eq!(
+            route_map,
+            RouteMap::from_segments(vec![
+                RouteSegment::RegisterBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: RegistrationDecl::Runner(runner_reg)
+                },
+                RouteSegment::DeclareBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: CapabilityDecl::Runner(runner_decl)
+                },
+            ])
+        )
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: has storage decl with name "cache" with a source of self at path /data
+    /// a: offers cache storage to b from "mystorage"
+    /// b: uses cache storage as /storage
+    ///
+    /// We expect 2 route maps: one for the storage capability and one for the backing
+    /// directory.
+    #[fuchsia::test]
+    async fn map_route_storage_and_dir_from_parent() {
+        let directory_decl = DirectoryDeclBuilder::new("data")
+            .path("/data")
+            .rights(*READ_RIGHTS | *WRITE_RIGHTS)
+            .build();
+        let storage_decl = StorageDecl {
+            name: "cache".into(),
+            backing_dir: "data".try_into().unwrap(),
+            source: StorageDirectorySource::Self_,
+            subdir: None,
+            storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+        };
+        let offer_storage_decl = OfferDecl::Storage(OfferStorageDecl {
+            source: OfferSource::Self_,
+            target: OfferTarget::static_child("b".to_string()),
+            source_name: "cache".into(),
+            target_name: "cache".into(),
+        });
+        let use_storage_decl = UseDecl::Storage(UseStorageDecl {
+            source_name: "cache".into(),
+            target_path: "/storage".try_into().unwrap(),
+        });
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .storage(storage_decl.clone())
+                    .directory(directory_decl.clone())
+                    .offer(offer_storage_decl.clone())
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_storage_decl.clone()).build()),
+        ];
+
+        let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_storage_decl, &b_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![
+                RouteMap::from_segments(vec![
+                    RouteSegment::UseBy {
+                        node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                        capability: use_storage_decl
+                    },
+                    RouteSegment::OfferBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: offer_storage_decl
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: CapabilityDecl::Storage(storage_decl.clone())
+                    }
+                ]),
+                RouteMap::from_segments(vec![
+                    RouteSegment::RegisterBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: RegistrationDecl::Storage(storage_decl.into())
+                    },
+                    RouteSegment::DeclareBy {
+                        node_path: NodePath::absolute_from_vec(vec![]),
+                        capability: CapabilityDecl::Directory(directory_decl)
+                    }
+                ])
+            ]
+        )
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: offers framework event "started" to b as "started_on_a"
+    /// a: offers built-in protocol "fuchsia.sys2.EventSource" to b
+    /// b: uses "started_on_a" as "started"
+    /// b: uses protocol "fuchsia.sys2.EventSource"
+    #[fuchsia::test]
+    async fn route_map_use_from_framework_and_builtin() {
+        let offer_event_decl = OfferDecl::Event(OfferEventDecl {
+            source: OfferSource::Framework,
+            source_name: "started".into(),
+            target_name: "started_on_a".into(),
+            target: OfferTarget::static_child("b".to_string()),
+            filter: None,
+            mode: cm_rust::EventMode::Sync,
+        });
+        let use_event_decl = UseDecl::Event(UseEventDecl {
+            source: UseSource::Parent,
+            source_name: "started_on_a".into(),
+            target_name: "started".into(),
+            filter: None,
+            mode: cm_rust::EventMode::Sync,
+            dependency_type: DependencyType::Strong,
+        });
+
+        let offer_event_source_decl = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Parent,
+            source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+            target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+            target: OfferTarget::static_child("b".to_string()),
+            dependency_type: DependencyType::Strong,
+        });
+        let use_event_source_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Parent,
+            source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+            target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+            dependency_type: DependencyType::Strong,
+        });
+        let event_source_decl = CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        });
+
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(offer_event_decl.clone())
+                    .offer(offer_event_source_decl.clone())
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(use_event_source_decl.clone())
+                    .use_(use_event_decl.clone())
+                    .build(),
+            ),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![event_source_decl.clone()]);
+        let test = builder.build().await;
+
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let event_route_map = test
+            .model
+            .check_use_capability(&use_event_decl, &b_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            event_route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: use_event_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: offer_event_decl
+                },
+                RouteSegment::ProvideFromFramework { capability: "started".into() }
+            ])]
+        );
+
+        let event_source_route_map = test
+            .model
+            .check_use_capability(&use_event_source_decl, &b_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            event_source_route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: use_event_source_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: offer_event_source_decl
+                },
+                RouteSegment::ProvideAsBuiltin { capability: event_source_decl }
+            ])]
+        )
+    }
+
+    ///  component manager's namespace
+    ///   |
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: offers protocol /offer_from_cm_namespace/svc/foo from component manager's
+    ///    namespace as bar_svc
+    /// b: uses protocol bar_svc as /svc/hippo
+    #[fuchsia::test]
+    async fn route_map_offer_from_component_manager_namespace() {
+        let offer_decl = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Parent,
+            source_name: "foo_svc".into(),
+            target_name: "bar_svc".into(),
+            target: OfferTarget::static_child("b".to_string()),
+            dependency_type: DependencyType::Strong,
+        });
+        let use_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Parent,
+            source_name: "bar_svc".into(),
+            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            dependency_type: DependencyType::Strong,
+        });
+        let capability_decl = CapabilityDecl::Protocol(
+            ProtocolDeclBuilder::new("foo_svc").path("/offer_from_cm_namespace/svc/foo").build(),
+        );
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new().offer(offer_decl.clone()).add_lazy_child("b").build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone()).build()),
+        ];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_namespace_capabilities(vec![capability_decl.clone()]);
+        let test = builder.build().await;
+        test.install_namespace_directory("/offer_from_cm_namespace");
+
+        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let route_map = test
+            .model
+            .check_use_capability(&use_decl, &b_component)
+            .await
+            .expect("expected OK route");
+
+        assert_eq!(
+            route_map,
+            vec![RouteMap::from_segments(vec![
+                RouteSegment::UseBy {
+                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    capability: use_decl
+                },
+                RouteSegment::OfferBy {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    capability: offer_decl
+                },
+                RouteSegment::ProvideFromNamespace { capability: capability_decl }
+            ])]
         );
     }
 }

@@ -9,6 +9,7 @@ use {
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
         policy::GlobalPolicyChecker,
+        DebugRouteMapper,
     },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
@@ -21,10 +22,10 @@ use {
 };
 
 /// A trait providing a representation of a component instance.
-// TODO(https://fxbug.dev/71901): Add methods providing all the data needed for capability routing.
 #[async_trait]
 pub trait ComponentInstanceInterface: Sized + Send + Sync {
     type TopInstance: TopInstanceInterface;
+    type DebugRouteMapper: DebugRouteMapper;
 
     /// Returns a new `WeakComponentInstanceInterface<Self>` pointing to `self`.
     fn as_weak(self: &Arc<Self>) -> WeakComponentInstanceInterface<Self> {
@@ -65,6 +66,9 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
         self: &'a Arc<Self>,
         collection: &'a str,
     ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError>;
+
+    /// Returns a new mapper for recording a capability route during routing.
+    fn new_route_mapper() -> Self::DebugRouteMapper;
 }
 
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the

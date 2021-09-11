@@ -7,7 +7,7 @@ use {
         capability::ComponentCapability,
         constants::PKG_PATH,
         model::{
-            component::{BindReason, Package, Runtime, WeakComponentInstance},
+            component::{BindReason, ComponentInstance, Package, Runtime, WeakComponentInstance},
             error::ModelError,
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
             rights::Rights,
@@ -17,7 +17,10 @@ use {
             },
         },
     },
-    ::routing::{route_to_storage_decl, verify_instance_in_component_id_index, RouteRequest},
+    ::routing::{
+        component_instance::ComponentInstanceInterface, route_to_storage_decl,
+        verify_instance_in_component_id_index, RouteRequest,
+    },
     anyhow::{Context, Error},
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ProtocolMarker, Proxy, ServerEnd},
@@ -326,7 +329,10 @@ impl IncomingNamespace {
                 // TODO(dgonyeo): Eventually combine this logic with the general-purpose startup
                 // capability check.
                 let instance = component.upgrade()?;
-                if let Ok(source) = route_to_storage_decl(use_storage_decl.clone(), &instance).await
+                let mut noop_mapper = ComponentInstance::new_route_mapper();
+                if let Ok(source) =
+                    route_to_storage_decl(use_storage_decl.clone(), &instance, &mut noop_mapper)
+                        .await
                 {
                     verify_instance_in_component_id_index(&source, &instance).await?;
                 }

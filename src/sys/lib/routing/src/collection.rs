@@ -11,6 +11,7 @@ use {
             find_matching_expose, CapabilityVisitor, ErrorNotFoundFromParent, ErrorNotFoundInChild,
             Expose, ExposeVisitor, Offer, OfferVisitor, RoutingStrategy, Sources,
         },
+        DebugRouteMapper,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
@@ -22,19 +23,20 @@ use {
 
 /// Routes an offer declaration to its sources within a collection.
 #[derive(Derivative)]
-#[derivative(Clone(bound = "O: Clone, S: Clone, V: Clone"))]
-pub(super) struct RouteOfferFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
+#[derivative(Clone(bound = "O: Clone, S: Clone, V: Clone, M: Clone"))]
+pub(super) struct RouteOfferFromCollection<C: ComponentInstanceInterface, B, O, E, S, V, M> {
     pub router: RoutingStrategy<B, Offer<O>, Expose<E>>,
     pub collection_component: WeakComponentInstanceInterface<C>,
     pub collection_name: String,
     pub offer_decl: O,
     pub sources: S,
     pub visitor: V,
+    pub mapper: M,
 }
 
 #[async_trait]
-impl<C, B, O, E, S, V> CollectionCapabilityProvider<C>
-    for RouteOfferFromCollection<C, B, O, E, S, V>
+impl<C, B, O, E, S, V, M> CollectionCapabilityProvider<C>
+    for RouteOfferFromCollection<C, B, O, E, S, V, M>
 where
     C: ComponentInstanceInterface + 'static,
     B: Send + Sync + 'static,
@@ -56,6 +58,7 @@ where
     V: ExposeVisitor<ExposeDecl = E>,
     V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
     V: Clone + Send + Sync + 'static,
+    M: DebugRouteMapper + Send + Sync + Clone + 'static,
 {
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
         list_instances_impl::<C, E>(
@@ -105,6 +108,7 @@ where
                 child_component,
                 self.sources.clone(),
                 &mut self.visitor.clone(),
+                &mut self.mapper.clone(),
             )
             .await
     }
@@ -116,19 +120,20 @@ where
 
 /// Routes an expose declaration to its sources within a collection.
 #[derive(Derivative)]
-#[derivative(Clone(bound = "E: Clone, S: Clone, V: Clone"))]
-pub(super) struct RouteExposeFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
+#[derivative(Clone(bound = "E: Clone, S: Clone, V: Clone, M: Clone"))]
+pub(super) struct RouteExposeFromCollection<C: ComponentInstanceInterface, B, O, E, S, V, M> {
     pub router: RoutingStrategy<B, O, Expose<E>>,
     pub collection_component: WeakComponentInstanceInterface<C>,
     pub collection_name: String,
     pub expose_decl: E,
     pub sources: S,
     pub visitor: V,
+    pub mapper: M,
 }
 
 #[async_trait]
-impl<C, B, O, E, S, V> CollectionCapabilityProvider<C>
-    for RouteExposeFromCollection<C, B, O, E, S, V>
+impl<C, B, O, E, S, V, M> CollectionCapabilityProvider<C>
+    for RouteExposeFromCollection<C, B, O, E, S, V, M>
 where
     C: ComponentInstanceInterface + 'static,
     B: Send + Sync + 'static,
@@ -143,6 +148,7 @@ where
     V: ExposeVisitor<ExposeDecl = E>,
     V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
     V: Clone + Send + Sync + 'static,
+    M: DebugRouteMapper + Send + Sync + Clone + 'static,
 {
     async fn list_instances(&self) -> Result<Vec<String>, RoutingError> {
         list_instances_impl::<C, E>(
@@ -192,6 +198,7 @@ where
                 child_component,
                 self.sources.clone(),
                 &mut self.visitor.clone(),
+                &mut self.mapper.clone(),
             )
             .await
     }

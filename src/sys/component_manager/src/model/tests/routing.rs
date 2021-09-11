@@ -1839,11 +1839,11 @@ async fn route_protocol_from_expose() {
     let expected_source_moniker = AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
     assert_matches!(
     route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
-        Ok(RouteSource::Protocol(
+        Ok((RouteSource::Protocol(
             CapabilitySource::Component {
                 capability: ComponentCapability::Protocol(protocol_decl),
                 component,
-            })
+            }), ())
         ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
     );
 }
@@ -1877,7 +1877,7 @@ async fn route_service_from_parent_collection() {
     let b_component = test.model.look_up(&vec!["b"].into()).await.expect("b instance");
     let a_component =
         test.model.look_up(&PartialAbsoluteMoniker::root()).await.expect("root instance");
-    let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
+    let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &b_component)
         .await
         .expect("failed to route service");
     match source {
@@ -1980,7 +1980,7 @@ async fn list_service_instances_from_collection() {
 
     let client_component =
         test.model.look_up(&vec!["client"].into()).await.expect("client instance");
-    let source = route_capability(RouteRequest::UseService(use_decl), &client_component)
+    let (source, _route) = route_capability(RouteRequest::UseService(use_decl), &client_component)
         .await
         .expect("failed to route service");
     let capability_provider = match source {

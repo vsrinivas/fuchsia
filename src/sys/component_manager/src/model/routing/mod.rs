@@ -54,13 +54,13 @@ pub(super) async fn route_and_open_capability(
 ) -> Result<(), ModelError> {
     match route_request {
         RouteRequest::UseStorage(use_storage_decl) => {
-            let (storage_source_info, relative_moniker) =
+            let (storage_source_info, relative_moniker, _storage_route, _dir_route) =
                 route_storage_and_backing_directory(use_storage_decl, target).await?;
             open_storage_capability(storage_source_info, relative_moniker, target, open_options)
                 .await
         }
         _ => {
-            let route_source = route_capability(route_request, target).await?;
+            let (route_source, _route) = route_capability(route_request, target).await?;
             open_capability_at_source(OpenRequest::new(route_source, target, open_options)).await
         }
     }
@@ -371,7 +371,7 @@ pub(super) async fn route_and_delete_storage(
     use_storage_decl: UseStorageDecl,
     target: &Arc<ComponentInstance>,
 ) -> Result<(), ModelError> {
-    let (storage_source_info, relative_moniker) =
+    let (storage_source_info, relative_moniker, _storage_route, _dir_route) =
         route_storage_and_backing_directory(use_storage_decl, target).await?;
 
     storage::delete_isolated_storage(

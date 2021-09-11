@@ -182,7 +182,7 @@ impl StorageAdmin {
             match route_capability(RouteRequest::StorageBackingDirectory(storage_decl), &component)
                 .await?
             {
-                RouteSource::StorageBackingDirectory(storage_source) => storage_source,
+                (RouteSource::StorageBackingDirectory(storage_source), ()) => storage_source,
                 _ => unreachable!("expected RouteSource::StorageBackingDirectory"),
             }
         };

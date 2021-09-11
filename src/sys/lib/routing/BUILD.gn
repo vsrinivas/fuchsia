@@ -67,6 +67,17 @@ rustc_library("routing") {
     "testing:routing_test_helpers",
     "//src/lib/fuchsia",
   ]
+
+  # Some host tools use serde to serialize/deserialize types defined in
+  # this crate. This dependency is guarded in code via #[cfg(feature = "serde")]
+  # and #[cfg_attr(feature = "serde", ...)] to prevent serde dependencies in
+  # non-host builds.
+  features = []
+  if (is_host) {
+    features += [ "serde" ]
+    deps += [ "//third_party/rust_crates:serde" ]
+    test_deps += [ "//third_party/rust_crates:serde_json" ]
+  }
 }
 
 fuchsia_unittest_package("fuchsia-routing-tests") {
