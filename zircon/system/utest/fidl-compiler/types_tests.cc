@@ -4,6 +4,7 @@
 
 #include <fidl/flat_ast.h>
 #include <fidl/types.h>
+#include <fidl/virtual_source_file.h>
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -30,7 +31,8 @@ void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name
                         types::PrimitiveSubtype subtype) {
   ASSERT_NOT_NULL(typespace);
 
-  auto the_type_name = Name::CreateDerived(library, SourceSpan(), std::string(name));
+  VirtualSourceFile placeholder{"placeholder"};
+  auto the_type_name = Name::CreateSourced(library, placeholder.AddLine(name));
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
   const Type* the_type;

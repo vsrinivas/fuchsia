@@ -242,10 +242,6 @@ class Name final {
     return Name(library, SourcedNameContext(span), member_name);
   }
 
-  static Name CreateDerived(const Library* library, SourceSpan span, std::string name) {
-    return Name(library, DerivedNameContext(std::move(name), span), std::nullopt);
-  }
-
   static Name CreateAnonymous(const Library* library, SourceSpan span,
                               std::shared_ptr<NamingContext> context) {
     return Name(library, AnonymousNameContext(std::move(context), span), std::nullopt);
@@ -300,8 +296,6 @@ class Name final {
           using T = std::decay_t<decltype(name_context)>;
           if constexpr (std::is_same_v<T, SourcedNameContext>) {
             return std::optional(name_context.span);
-          } else if constexpr (std::is_same_v<T, DerivedNameContext>) {
-            return std::optional(name_context.span);
           } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
             return std::optional(name_context.span);
           } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
@@ -319,8 +313,6 @@ class Name final {
           using T = std::decay_t<decltype(name_context)>;
           if constexpr (std::is_same_v<T, SourcedNameContext>) {
             return name_context.span.data();
-          } else if constexpr (std::is_same_v<T, DerivedNameContext>) {
-            return std::string_view(name_context.name);
           } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
             // since decl_name() is used in Name::Key, using the flattened name
             // here ensures that the flattened name will cause conflicts if not
@@ -367,17 +359,6 @@ class Name final {
     SourceSpan span;
   };
 
-  struct DerivedNameContext {
-    explicit DerivedNameContext(std::string name, SourceSpan span)
-        : name(std::move(name)), span(span) {}
-
-    // The derived name.
-    std::string name;
-
-    // The span from which the name was derived.
-    SourceSpan span;
-  };
-
   struct AnonymousNameContext {
     explicit AnonymousNameContext(std::shared_ptr<NamingContext> context, SourceSpan span)
         : flattened_name(context->FlattenedName()), context(std::move(context)), span(span) {}
@@ -402,12 +383,6 @@ class Name final {
         name_context_(std::move(name_context)),
         member_name_(std::move(member_name)) {}
 
-  Name(const Library* library, DerivedNameContext name_context,
-       std::optional<std::string> member_name)
-      : library_(library),
-        name_context_(std::move(name_context)),
-        member_name_(std::move(member_name)) {}
-
   Name(const Library* library, AnonymousNameContext name_context,
        std::optional<std::string> member_name)
       : library_(library),
@@ -421,7 +396,7 @@ class Name final {
         member_name_(std::move(member_name)) {}
 
   const Library* library_;
-  std::variant<std::monostate, SourcedNameContext, DerivedNameContext, AnonymousNameContext,
+  std::variant<std::monostate, SourcedNameContext, AnonymousNameContext,
                IntrinsicNameContext>
       name_context_;
   std::optional<std::string> member_name_;
