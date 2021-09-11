@@ -698,6 +698,9 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1280_546) {
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionUndefined) {
   ASSERT_TRUE(Initialize());
+  // Fuchsia emulator (gfxstream) doesn't support any tiled constraints.
+  if (UseVirtualGpu())
+    GTEST_SKIP();
 
   fuchsia::sysmem::ImageFormatConstraints bgra_image_constraints =
       GetDefaultSysmemImageFormatConstraints();
