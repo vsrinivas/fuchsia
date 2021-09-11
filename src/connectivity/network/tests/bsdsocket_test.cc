@@ -4311,7 +4311,23 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
 
   // Test sending to an address that is different from what we're connected to.
-  addr.sin_port = htons(ntohs(addr.sin_port) + 1);
+  //
+  // We connect to a port that was emphemerally assigned which may fall anywhere
+  // in [16000, UINT16_MAX] on gVisor's netstack-based platforms[1] or
+  // [32768, 60999] on Linux platforms[2]. Adding 1 to UINT16_MAX will overflow
+  // and result in a new port value of 0 so we always subtract by 1 as both
+  // platforms that this test runs on will assign a port that will not
+  // "underflow" when subtracting by 1 (as the port is always at least 1).
+  // Previously, we added by 1 and this resulted in a test flake on Fuchsia
+  // (gVisor netstack-based). See https://fxbug.dev/84431 for more details.
+  //
+  // [1]:
+  // https://github.com/google/gvisor/blob/570ca571805d6939c4c24b6a88660eefaf558ae7/pkg/tcpip/ports/ports.go#L242
+  //
+  // [2]: default ip_local_port_range setting, as per
+  //      https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
+  const uint16_t orig_sin_port = addr.sin_port;
+  addr.sin_port = htons(ntohs(orig_sin_port) - 1);
   switch (ioMethod.Op()) {
     case IOMethod::Op::SENDTO: {
       EXPECT_EQ(sendto(sendfd.get(), msg.data(), msg.size(), 0,
@@ -4331,7 +4347,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   }
   // Expect blocked receiver and try to recover it by sending a packet to the
   // original connected sockaddr.
-  addr.sin_port = htons(ntohs(addr.sin_port) - 1);
+  addr.sin_port = orig_sin_port;
   // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
   // successful recv.
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
