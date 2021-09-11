@@ -259,10 +259,10 @@ impl FsNode {
         match mode & FileMode::IFMT {
             FileMode::IFCHR => open_character_device(rdev),
             FileMode::IFBLK => open_block_device(rdev),
-            FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
+            FileMode::IFIFO => Ok(Pipe::open(self, self.fifo.as_ref().unwrap(), flags)),
             // UNIX domain sockets can't be opened.
             FileMode::IFSOCK => error!(ENXIO),
-            _ => self.ops().open(&self, flags),
+            _ => self.ops().open(self, flags),
         }
     }
 

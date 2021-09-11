@@ -40,8 +40,14 @@ pub struct Pipe {
     /// The number of open readers.
     reader_count: usize,
 
+    /// Whether the pipe has ever had a reader.
+    had_reader: bool,
+
     /// The number of open writers.
     writer_count: usize,
+
+    /// Whether the pipe has ever had a writer.
+    had_writer: bool,
 }
 
 impl Default for Pipe {
@@ -54,7 +60,9 @@ impl Default for Pipe {
             used: 0,
             buffers: VecDeque::new(),
             reader_count: 0,
+            had_reader: false,
             writer_count: 0,
+            had_writer: false,
         }
     }
 }
@@ -66,15 +74,26 @@ impl Pipe {
         Arc::new(Mutex::new(Pipe::default()))
     }
 
-    pub fn open(pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {
-        {
+    pub fn open(node: &FsNode, pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {
+        let events = {
+            let mut events = FdEvents::empty();
             let mut pipe = pipe.lock();
             if flags.can_read() {
-                pipe.reader_count += 1;
+                if !pipe.had_reader {
+                    events |= FdEvents::POLLOUT;
+                }
+                pipe.add_reader();
             }
             if flags.can_write() {
-                pipe.writer_count += 1;
+                if !pipe.had_writer {
+                    events |= FdEvents::POLLIN;
+                }
+                pipe.add_writer();
             }
+            events
+        };
+        if events != FdEvents::empty() {
+            node.observers.notify(events);
         }
         Box::new(PipeFileObject { pipe: Arc::clone(pipe) })
     }
@@ -84,6 +103,7 @@ impl Pipe {
     // that without the pipe semantics.
     pub fn add_reader(&mut self) {
         self.reader_count += 1;
+        self.had_reader = true;
     }
 
     /// Increments the writer count for this pipe by 1.
@@ -91,6 +111,7 @@ impl Pipe {
     // that without the pipe semantics.
     pub fn add_writer(&mut self) {
         self.writer_count += 1;
+        self.had_writer = true;
     }
 
     /// Decrements the reader count for this pipe by 1.
@@ -156,7 +177,7 @@ impl Pipe {
         // Otherwise, we'll fall through the rest of this function and
         // return that we have read zero bytes, which will let the caller
         // know that they're done reading the pipe.
-        if self.used == 0 && self.writer_count > 0 {
+        if self.used == 0 && (self.writer_count > 0 || !self.had_writer) {
             return error!(EAGAIN);
         }
 
@@ -230,6 +251,10 @@ impl Pipe {
     }
 
     pub fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
+        if !self.had_reader {
+            return error!(EAGAIN);
+        }
+
         if self.reader_count == 0 {
             send_checked_signal(task, Signal::SIGPIPE);
             return error!(EPIPE);
