@@ -273,7 +273,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			break
 		}
 
-		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir)
+		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr, outDir, perTestTimeout)
 		if err != nil {
 			finalError = err
 			break
@@ -328,7 +328,7 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string) ([]*testrunner.TestResult, error) {
+func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string, timeout time.Duration) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
 
 	var stopRepeatingTime time.Time
@@ -339,7 +339,7 @@ func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outp
 
 	for i := 0; i < test.Runs; i++ {
 		outDir := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
-		result, err := runTestOnce(ctx, test, t, collectiveStdout, collectiveStderr, outDir)
+		result, err := runTestOnce(ctx, test, t, collectiveStdout, collectiveStderr, outDir, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -369,6 +369,7 @@ func runTestOnce(
 	collectiveStdout io.Writer,
 	collectiveStderr io.Writer,
 	outDir string,
+	timeout time.Duration,
 ) (*testrunner.TestResult, error) {
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
@@ -391,7 +392,45 @@ func runTestOnce(
 
 	result := runtests.TestSuccess
 	startTime := clock.Now(ctx)
-	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
+	// Run the test in a goroutine so that we don't block in case the tester fails
+	// to respect the timeout.
+	type testResult struct {
+		dataSinks runtests.DataSinkReference
+		err       error
+	}
+	ch := make(chan testResult, 1)
+	go func() {
+		dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
+		ch <- testResult{dataSinks, err}
+	}()
+
+	// Set the outer timeout to a slightly higher value in order to give the tester
+	// time to handle the timeout itself.  Other steps such as retrying tests over
+	// serial or fetching data sink references may also cause the Test() method to
+	// exceed the perTestTimeout, so we give enough time for the tester to complete
+	// those steps as well.
+	outerTestTimeout := timeout + 30*time.Second
+	var dataSinks runtests.DataSinkReference
+	var err error
+	for {
+		select {
+		case res := <-ch:
+			dataSinks = res.dataSinks
+			err = res.err
+			break
+		case <-clock.After(ctx, outerTestTimeout):
+			if timeout > 0 {
+				err = &timeoutError{outerTestTimeout}
+			} else {
+				// If the timeout is not set, keep looping until
+				// we get a result from t.Test().
+				continue
+			}
+		}
+		// Break out of the loop for any other case other than the one
+		// above where we continue looping.
+		break
+	}
 	if err != nil {
 		if ctx.Err() != nil {
 			// testrunner is shutting down, give up running tests and don't

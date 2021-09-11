@@ -486,7 +486,7 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 	// We set the socket IO timeout to a slightly longer timeout than the test
 	// timeout so that runtests has time to enforce its own timeout. The IO timeout
 	// will then act as a fallback timeout in case the serial socket hangs.
-	socket, err := serial.NewSocketWithIOTimeout(ctx, serialSocketPath, perTestTimeout+30*time.Second)
+	socket, err := serial.NewSocketWithIOTimeout(ctx, serialSocketPath, perTestTimeout+10*time.Second)
 	if err != nil {
 		return nil, err
 	}

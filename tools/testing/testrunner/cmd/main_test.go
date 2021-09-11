@@ -69,6 +69,30 @@ func (t *fakeTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
+type hangForeverTester struct {
+	called   chan struct{}
+	waitChan chan struct{}
+}
+
+func (t *hangForeverTester) Test(_ context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+	t.called <- struct{}{}
+	<-t.waitChan
+	return runtests.DataSinkReference{}, nil
+}
+
+func (t *hangForeverTester) Close() error {
+	close(t.waitChan)
+	return nil
+}
+
+func (t *hangForeverTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *testOutputs) error {
+	return nil
+}
+
+func (t *hangForeverTester) RunSnapshot(_ context.Context, _ string) error {
+	return nil
+}
+
 func TestValidateTest(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -409,7 +433,7 @@ func TestRunAndOutputTest(t *testing.T) {
 			if c.runs == 0 {
 				c.runs = 1
 			}
-			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir")
+			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir", 0)
 
 			if err != c.expectedErr {
 				t.Fatalf("got error: %q, expected: %q", err, c.expectedErr)
@@ -487,12 +511,61 @@ func TestRunAndOutputTest(t *testing.T) {
 			},
 		}
 
-		results, err := runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir())
+		results, err := runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir(), 0)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(results) != test.StopRepeatingAfterSecs {
 			t.Fatalf("Expected %d test results but got %d", test.StopRepeatingAfterSecs, len(results))
+		}
+	})
+
+	t.Run("enforces test timeout when tester hangs", func(t *testing.T) {
+		test := testsharder.Test{
+			Test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			RunAlgorithm: testsharder.StopOnFailure,
+			Runs:         2,
+		}
+
+		o, err := createTestOutputs(tap.NewProducer(io.Discard), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer o.Close()
+
+		fakeClock := clock.NewFakeClock()
+		ctx := clock.NewContext(context.Background(), fakeClock)
+
+		tester := hangForeverTester{
+			called:   make(chan struct{}),
+			waitChan: make(chan struct{}),
+		}
+		timeout := time.Minute
+		errs := make(chan error)
+		var results []*testrunner.TestResult
+		go func() {
+			var runErr error
+			results, runErr = runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir(), timeout)
+			errs <- runErr
+		}()
+		// Wait for Test() to be called before timing out.
+		<-tester.called
+		fakeClock.Advance(timeout + 40*time.Second)
+
+		// A timeout should result in a nil err and a failed test result.
+		if err := <-errs; err != nil {
+			t.Errorf("expected nil, got: %s", err)
+		}
+		close(tester.waitChan)
+		if len(results) > 1 {
+			t.Errorf("expected 1 result, got: %d", len(results))
+		}
+		if results[0].Result != runtests.TestFailure {
+			t.Errorf("expected test failure, got: %s", results[0].Result)
 		}
 	})
 }

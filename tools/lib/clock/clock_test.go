@@ -10,6 +10,18 @@ import (
 	"time"
 )
 
+func testAfter(t *testing.T, ctx context.Context, timeout time.Duration, sleepFunc func(), expectSuccess bool) {
+	// Get After() channel to start timer.
+	after := After(ctx, timeout)
+	sleepFunc()
+	if expectSuccess {
+		// Wait for after to return.
+		<-after
+	} else if len(after) > 0 {
+		t.Errorf("Expected to not reach timeout, but did")
+	}
+}
+
 func TestClock(t *testing.T) {
 	// We use this function to guarantee that the real time.Now() function will
 	// return a different time before and after a call. (In practice it's
@@ -33,6 +45,8 @@ func TestClock(t *testing.T) {
 		if !now.After(startTime) {
 			t.Errorf("Expected clock.Now() to return the real time (later than %q) but got %q", startTime, now)
 		}
+
+		testAfter(t, ctx, 5*time.Nanosecond, sleep, true)
 	})
 
 	t.Run("faked time", func(t *testing.T) {
@@ -48,6 +62,8 @@ func TestClock(t *testing.T) {
 			t.Fatalf("Wrong time from clock.Now(): expected %q, got %q", startTime, now)
 		}
 
+		testAfter(t, ctx, 5*time.Nanosecond, sleep, false)
+
 		// But the time SHOULD be later after advancing the fake clock.
 		diff := time.Minute
 		fakeClock.Advance(diff)
@@ -56,5 +72,6 @@ func TestClock(t *testing.T) {
 		if !now.Equal(expectedNow) {
 			t.Fatalf("Wrong time from clock.Now(): expected %q, got %q", now, expectedNow)
 		}
+		testAfter(t, ctx, diff, func() { fakeClock.Advance(diff + time.Second) }, true)
 	})
 }
