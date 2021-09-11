@@ -18,7 +18,8 @@ group("tests") {
   testonly = true
   deps = [
     ":magma-info-test",
-    "mali-performance-counters:mali-performance-counters-test",
+    # Disabled due to flakiness. TODO(fxbug.dev/84449): Re-enable.
+    # "mali-performance-counters:mali-performance-counters-test",
   ]
 }
 

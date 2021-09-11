@@ -31,6 +31,8 @@ group("hw_tests") {
     "../examples/vkproto/cmd-buf-benchmark",
     "../examples/vkproto/driver-tests",
     "../examples/vkproto/test",
+
+    # Disabled due to flakiness. TODO(fxbug.dev/83455): Re-enable.
     "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "vkvalidation",
