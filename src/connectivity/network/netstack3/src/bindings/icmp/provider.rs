@@ -24,7 +24,7 @@ use super::{
     echo::EchoSocketWorker, EchoSocket, IcmpEchoSockets, IcmpStackContext, IpExt, RX_BUFFER_SIZE,
 };
 
-use crate::bindings::{context::InnerValue, util::TryIntoCore, LockedStackContext, StackContext};
+use crate::bindings::{util::TryIntoCore, LockedStackContext, StackContext};
 
 pub(crate) struct IcmpProviderWorker<C: StackContext> {
     ctx: C,
@@ -33,7 +33,7 @@ pub(crate) struct IcmpProviderWorker<C: StackContext> {
 impl<C> IcmpProviderWorker<C>
 where
     C: IcmpStackContext,
-    C::Dispatcher: InnerValue<IcmpEchoSockets>,
+    C::Dispatcher: AsMut<IcmpEchoSockets>,
 {
     fn new(ctx: C) -> Self {
         Self { ctx }

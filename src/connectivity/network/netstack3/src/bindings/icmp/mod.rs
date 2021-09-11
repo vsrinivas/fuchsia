@@ -12,7 +12,7 @@ mod provider;
 
 pub(crate) use provider::IcmpProviderWorker;
 
-use super::{InnerValue, LockedStackContext, StackContext};
+use super::{LockedStackContext, StackContext};
 use fidl_fuchsia_net_icmp as fidl_icmp;
 use net_types::{
     ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
@@ -61,18 +61,9 @@ impl<I: IpExt> From<IcmpConnId<I>> for InnerIcmpConnId {
     }
 }
 
-pub(crate) trait IcmpStackContext: StackContext
-where
-    <Self as StackContext>::Dispatcher: InnerValue<IcmpEchoSockets>,
-{
-}
+pub(crate) trait IcmpStackContext: StackContext {}
 
-impl<C> IcmpStackContext for C
-where
-    C: StackContext,
-    C::Dispatcher: InnerValue<IcmpEchoSockets>,
-{
-}
+impl<C> IcmpStackContext for C where C: StackContext {}
 
 /// An `Ip` extension trait that lets us write more generic code.
 ///
@@ -80,7 +71,7 @@ where
 /// implementations, allowing most code to be written agnostic to IP version.
 pub(crate) trait IpExt: Ip + IcmpIpExt {
     /// Get the map of ICMP echo sockets.
-    fn get_icmp_echo_sockets<D: InnerValue<IcmpEchoSockets>>(
+    fn get_icmp_echo_sockets<D: AsMut<IcmpEchoSockets>>(
         disp: &mut D,
     ) -> &mut HashMap<IcmpConnId<Self>, EchoSocket>;
 
@@ -95,7 +86,7 @@ pub(crate) trait IpExt: Ip + IcmpIpExt {
         icmp_id: u16,
     ) -> Result<IcmpConnId<Self>, SocketError>
     where
-        C::Dispatcher: InnerValue<IcmpEchoSockets>;
+        C::Dispatcher: AsMut<IcmpEchoSockets>;
 
     /// Convert a statically-typed ICMP connection ID to a dynamically-typed
     /// one.
@@ -106,10 +97,10 @@ pub(crate) trait IpExt: Ip + IcmpIpExt {
 }
 
 impl IpExt for Ipv4 {
-    fn get_icmp_echo_sockets<D: InnerValue<IcmpEchoSockets>>(
+    fn get_icmp_echo_sockets<D: AsMut<IcmpEchoSockets>>(
         disp: &mut D,
     ) -> &mut HashMap<IcmpConnId<Ipv4>, EchoSocket> {
-        &mut disp.inner_mut().v4
+        &mut disp.as_mut().v4
     }
 
     fn new_icmp_connection<C: IcmpStackContext>(
@@ -119,7 +110,7 @@ impl IpExt for Ipv4 {
         icmp_id: u16,
     ) -> Result<IcmpConnId<Ipv4>, SocketError>
     where
-        C::Dispatcher: InnerValue<IcmpEchoSockets>,
+        C::Dispatcher: AsMut<IcmpEchoSockets>,
     {
         core_icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
     }
@@ -130,10 +121,10 @@ impl IpExt for Ipv4 {
 }
 
 impl IpExt for Ipv6 {
-    fn get_icmp_echo_sockets<D: InnerValue<IcmpEchoSockets>>(
+    fn get_icmp_echo_sockets<D: AsMut<IcmpEchoSockets>>(
         disp: &mut D,
     ) -> &mut HashMap<IcmpConnId<Ipv6>, EchoSocket> {
-        &mut disp.inner_mut().v6
+        &mut disp.as_mut().v6
     }
 
     fn new_icmp_connection<C: IcmpStackContext>(
@@ -143,7 +134,7 @@ impl IpExt for Ipv6 {
         icmp_id: u16,
     ) -> Result<IcmpConnId<Ipv6>, SocketError>
     where
-        C::Dispatcher: InnerValue<IcmpEchoSockets>,
+        C::Dispatcher: AsMut<IcmpEchoSockets>,
     {
         core_icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
     }

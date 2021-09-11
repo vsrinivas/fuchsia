@@ -31,7 +31,7 @@ use netstack3_core::{
 use packet::serialize::Buf;
 use std::collections::VecDeque;
 
-use crate::bindings::{context::InnerValue, BindingsDispatcher, LockedStackContext};
+use crate::bindings::{BindingsDispatcher, LockedStackContext};
 
 use super::{
     IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, StackContext,
@@ -69,39 +69,39 @@ impl<I: Ip> UdpSocketCollectionInner<I> {
 
 /// Extension trait for [`Ip`] for UDP sockets operations.
 pub(crate) trait UdpSocketIpExt: IpSockAddrExt + IpExt {
-    fn get_collection<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection<D: AsRef<UdpSocketCollection>>(
         dispatcher: &D,
     ) -> &UdpSocketCollectionInner<Self>;
-    fn get_collection_mut<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
         dispatcher: &mut D,
     ) -> &mut UdpSocketCollectionInner<Self>;
 }
 
 impl UdpSocketIpExt for Ipv4 {
-    fn get_collection<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection<D: AsRef<UdpSocketCollection>>(
         dispatcher: &D,
     ) -> &UdpSocketCollectionInner<Self> {
-        &dispatcher.inner().v4
+        &dispatcher.as_ref().v4
     }
 
-    fn get_collection_mut<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
         dispatcher: &mut D,
     ) -> &mut UdpSocketCollectionInner<Self> {
-        &mut dispatcher.inner_mut().v4
+        &mut dispatcher.as_mut().v4
     }
 }
 
 impl UdpSocketIpExt for Ipv6 {
-    fn get_collection<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection<D: AsRef<UdpSocketCollection>>(
         dispatcher: &D,
     ) -> &UdpSocketCollectionInner<Self> {
-        &dispatcher.inner().v6
+        &dispatcher.as_ref().v6
     }
 
-    fn get_collection_mut<D: InnerValue<UdpSocketCollection>>(
+    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
         dispatcher: &mut D,
     ) -> &mut UdpSocketCollectionInner<Self> {
-        &mut dispatcher.inner_mut().v6
+        &mut dispatcher.as_mut().v6
     }
 }
 
@@ -207,7 +207,7 @@ impl<I: Ip> SocketState<I> {
 
 pub(crate) trait UdpStackContext<I: UdpSocketIpExt>: StackContext
 where
-    <Self as StackContext>::Dispatcher: UdpEventDispatcher<I> + InnerValue<UdpSocketCollection>,
+    <Self as StackContext>::Dispatcher: UdpEventDispatcher<I>,
 {
 }
 
@@ -215,7 +215,7 @@ impl<T, I> UdpStackContext<I> for T
 where
     I: UdpSocketIpExt,
     T: StackContext,
-    T::Dispatcher: UdpEventDispatcher<I> + InnerValue<UdpSocketCollection>,
+    T::Dispatcher: UdpEventDispatcher<I>,
 {
 }
 
@@ -227,8 +227,10 @@ pub(super) fn spawn_worker<C>(
 ) -> Result<(), Errno>
 where
     C: UdpStackContext<Ipv4> + UdpStackContext<Ipv6>,
-    C::Dispatcher:
-        InnerValue<UdpSocketCollection> + UdpEventDispatcher<Ipv4> + UdpEventDispatcher<Ipv6>,
+    C::Dispatcher: AsRef<UdpSocketCollection>
+        + AsMut<UdpSocketCollection>
+        + UdpEventDispatcher<Ipv4>
+        + UdpEventDispatcher<Ipv6>,
 {
     match version {
         IpVersion::V4 => UdpSocketWorker::<Ipv4, C>::spawn(ctx, properties, events),
@@ -238,7 +240,8 @@ where
 
 impl<I: UdpSocketIpExt, C: UdpStackContext<I>> UdpSocketWorker<I, C>
 where
-    <C as StackContext>::Dispatcher: InnerValue<UdpSocketCollection> + UdpEventDispatcher<I>,
+    <C as StackContext>::Dispatcher:
+        AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + UdpEventDispatcher<I>,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -888,7 +891,7 @@ impl<'a, I, C> RequestHandler<'a, I, C>
 where
     I: UdpSocketIpExt,
     C: UdpStackContext<I>,
-    C::Dispatcher: InnerValue<UdpSocketCollection> + UdpEventDispatcher<I>,
+    C::Dispatcher: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + UdpEventDispatcher<I>,
 {
     fn describe(&self) -> Option<fidl_fuchsia_io::NodeInfo> {
         self.get_state()
@@ -1833,9 +1836,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                     let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                        UdpSocketIpExt::get_collection(disp);
+                        UdpSocketIpExt::get_collection(ctx.dispatcher());
                     assert_eq!(udpsocks.binding_data.iter().count(), 1);
                     assert_eq!(udpsocks.listeners.iter().count(), 1);
                     assert!(udpsocks.conns.is_empty());
@@ -1860,9 +1862,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                     let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                        UdpSocketIpExt::get_collection(disp);
+                        UdpSocketIpExt::get_collection(ctx.dispatcher());
                     assert!(udpsocks.binding_data.is_empty());
                     assert!(udpsocks.listeners.is_empty());
                     assert!(udpsocks.conns.is_empty());
@@ -1906,9 +1907,8 @@ mod tests {
         // empty
         test_stack
             .with_ctx(|ctx| {
-                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                 let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(disp);
+                    UdpSocketIpExt::get_collection(ctx.dispatcher());
                 assert!(!udpsocks.binding_data.is_empty());
             })
             .await;
@@ -1921,9 +1921,8 @@ mod tests {
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
-                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                 let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(disp);
+                    UdpSocketIpExt::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -1960,9 +1959,8 @@ mod tests {
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
-                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                 let udpsocks: &UdpSocketCollectionInner<<A::AddrType as IpAddress>::Version> =
-                    UdpSocketIpExt::get_collection(disp);
+                    UdpSocketIpExt::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2015,9 +2013,8 @@ mod tests {
         // make sure we don't leak anything.
         test_stack
             .with_ctx(|ctx| {
-                let disp: &BindingsDispatcher = ctx.dispatcher().inner();
                 let udpsocks: &UdpSocketCollectionInner<net_types::ip::Ipv4> =
-                    UdpSocketIpExt::get_collection(disp);
+                    UdpSocketIpExt::get_collection(ctx.dispatcher());
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;

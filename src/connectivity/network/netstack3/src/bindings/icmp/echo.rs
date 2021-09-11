@@ -25,8 +25,8 @@ use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
 use netstack3_core::{BufferDispatcher, Context};
 use packet::{Buf, BufferMut};
 
-use super::{IcmpEchoSockets, IcmpStackContext, InnerIcmpConnId, RX_BUFFER_SIZE};
-use crate::bindings::{context::InnerValue, StackContext};
+use super::{IcmpStackContext, InnerIcmpConnId, RX_BUFFER_SIZE};
+use crate::bindings::StackContext;
 
 /// Worker for handling requests from a
 /// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
@@ -39,7 +39,6 @@ pub(crate) struct EchoSocketWorker<C: StackContext> {
 impl<C> EchoSocketWorker<C>
 where
     C: IcmpStackContext,
-    C::Dispatcher: InnerValue<IcmpEchoSockets>,
 {
     /// Create a new EchoSocketWorker, a wrapper around a background worker that
     /// handles requests from a
@@ -170,7 +169,6 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnI
     /// sending ICMP echo requests and receiving ICMP echo replies.
     async fn handle_request<C>(&mut self, ctx: &C, req: EchoSocketRequest)
     where
-        C::Dispatcher: InnerValue<IcmpEchoSockets>,
         C: IcmpStackContext,
     {
         match req {

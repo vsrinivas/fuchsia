@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use super::{
-    context::MultiInnerValue,
     devices::{CommonInfo, Devices},
     ethernet_worker,
     util::{IntoFidl, TryFromFidlWithContext, TryIntoCore, TryIntoFidl, TryIntoFidlWithContext},
-    LockedStackContext, StackContext, StackDispatcher,
+    ContextExt as _, LockedStackContext, StackContext, StackDispatcher,
 };
 
 use fidl_fuchsia_net as fidl_net;
@@ -194,11 +193,12 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             online,
         );
 
+        let devices: &mut Devices = disp.as_mut();
         let id = if online {
             let eth_id = state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
-            disp.get_inner_mut::<Devices>().add_active_device(eth_id, comm_info)
+            devices.add_active_device(eth_id, comm_info)
         } else {
-            Some(disp.get_inner_mut::<Devices>().add_device(comm_info))
+            Some(devices.add_device(comm_info))
         };
         match id {
             Some(id) => {
@@ -207,8 +207,8 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
                 // If we have a core_id associated with id, that means the
                 // device was added in the active state, so we must initialize
                 // it using the new core_id.
-                if let Some(core_id) = self.ctx.dispatcher().get_inner::<Devices>().get_core_id(id)
-                {
+                let devices: &Devices = self.ctx.dispatcher().as_ref();
+                if let Some(core_id) = devices.get_core_id(id) {
                     initialize_device(&mut self.ctx, core_id);
                 }
                 Ok(id)
@@ -221,7 +221,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
     }
 
     fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.ctx.dispatcher_mut().get_inner_mut::<Devices>().remove_device(id) {
+        match AsMut::<Devices>::as_mut(self.ctx.dispatcher_mut()).remove_device(id) {
             Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
@@ -235,7 +235,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
 
     fn fidl_list_interfaces(self) -> Vec<fidl_net_stack::InterfaceInfo> {
         let mut devices = Vec::new();
-        for device in self.ctx.dispatcher().get_inner::<Devices>().iter_devices() {
+        for device in AsRef::<Devices>::as_ref(self.ctx.dispatcher()).iter_devices() {
             let mut addresses = Vec::new();
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {

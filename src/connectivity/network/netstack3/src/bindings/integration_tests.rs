@@ -37,7 +37,7 @@ use netstack3_core::{
 use packet::{Buf, BufferMut, Serializer};
 
 use crate::bindings::{
-    context::{FromOuterValue, GuardContext, InnerValue, LockableContext},
+    context::Lockable,
     devices::DeviceInfo,
     icmp::InnerIcmpConnId,
     util::{ConversionContext, IntoFidl, TryFromFidlWithContext, TryIntoFidl},
@@ -112,16 +112,21 @@ impl StackDispatcher for TestDispatcher {
     }
 }
 
-impl<T> InnerValue<T> for TestDispatcher
+impl<T> AsRef<T> for TestDispatcher
 where
-    T: FromOuterValue<BindingsDispatcher>,
+    BindingsDispatcher: AsRef<T>,
 {
-    fn inner(&self) -> &T {
-        T::from_outer(&self.disp)
+    fn as_ref(&self) -> &T {
+        self.disp.as_ref()
     }
+}
 
-    fn inner_mut(&mut self) -> &mut T {
-        T::from_outer_mut(&mut self.disp)
+impl<T> AsMut<T> for TestDispatcher
+where
+    BindingsDispatcher: AsMut<T>,
+{
+    fn as_mut(&mut self) -> &mut T {
+        self.disp.as_mut()
     }
 }
 
@@ -253,13 +258,11 @@ impl Clone for TestContext {
     }
 }
 
-impl GuardContext<Context<TestDispatcher>> for TestContext {
-    type Guard = Context<TestDispatcher>;
-}
-
-impl AsRef<Mutex<Context<TestDispatcher>>> for TestContext {
-    fn as_ref(&self) -> &Mutex<Context<TestDispatcher>> {
-        self.ctx.as_ref()
+impl<'a> Lockable<'a, Context<TestDispatcher>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Context<TestDispatcher>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Context<TestDispatcher>>;
+    fn lock(&'a self) -> Self::Fut {
+        self.ctx.lock()
     }
 }
 

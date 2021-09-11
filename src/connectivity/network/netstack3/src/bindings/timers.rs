@@ -16,7 +16,7 @@ use futures::{
 };
 use log::debug;
 
-use super::{context::LockableContext, StackTime};
+use super::{context::Lockable, StackTime};
 
 /// A possible timer event that may be fulfilled by calling
 /// [`TimerDispatcher::commit_timer`].
@@ -36,7 +36,7 @@ struct TimerInfo {
 /// A context for specified for a timer type `T` that provides asynchronous
 /// locking to a [`TimerHandler`].
 pub(crate) trait TimerContext<T: Hash + Eq>:
-    Send + Sync + 'static + for<'a> LockableContext<'a, <Self as TimerContext<T>>::Handler> + Clone
+    Send + Sync + 'static + for<'a> Lockable<'a, <Self as TimerContext<T>>::Handler> + Clone
 {
     type Handler: TimerHandler<T>;
 }
@@ -309,28 +309,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bindings::{
-        context::{GuardContext, InnerValue},
-        integration_tests::set_logger_for_test,
-    };
+    use crate::bindings::{context::Lockable, integration_tests::set_logger_for_test};
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{channel::mpsc, lock::Mutex, task::Poll, Future, StreamExt};
     use matches::assert_matches;
     use std::sync::Arc;
 
+    type TestDispatcher = TimerDispatcher<usize>;
+
     struct TimerData {
         dispatcher: TestDispatcher,
         fired: mpsc::UnboundedSender<usize>,
-    }
-
-    impl InnerValue<TestDispatcher> for TimerData {
-        fn inner(&self) -> &TimerDispatcher<usize> {
-            &self.dispatcher
-        }
-
-        fn inner_mut(&mut self) -> &mut TimerDispatcher<usize> {
-            &mut self.dispatcher
-        }
     }
 
     impl TimerHandler<usize> for TimerData {
@@ -360,21 +349,18 @@ mod tests {
         }
     }
 
-    impl AsRef<Mutex<TimerData>> for TestContext {
-        fn as_ref(&self) -> &Mutex<TimerData> {
-            &self.0
+    impl<'a> Lockable<'a, TimerData> for TestContext {
+        type Guard = futures::lock::MutexGuard<'a, TimerData>;
+        type Fut = futures::lock::MutexLockFuture<'a, TimerData>;
+        fn lock(&'a self) -> Self::Fut {
+            let Self(arc) = self;
+            arc.lock()
         }
-    }
-
-    impl GuardContext<TimerData> for TestContext {
-        type Guard = TimerData;
     }
 
     impl TimerContext<usize> for TestContext {
         type Handler = TimerData;
     }
-
-    type TestDispatcher = TimerDispatcher<usize>;
 
     fn nanos_from_now(nanos: i64) -> StackTime {
         StackTime(fasync::Time::after(zx::Duration::from_nanos(nanos)))

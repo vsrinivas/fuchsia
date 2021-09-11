@@ -23,7 +23,7 @@ use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
 };
 
-use super::{context::InnerValue, StackContext};
+use super::StackContext;
 use crate::bindings::util::{IntoCore, IntoFidl};
 
 // Socket constants defined in FDIO in
@@ -66,13 +66,16 @@ impl TryFrom<psocket::StreamSocketProtocol> for TransProto {
 struct SocketWorkerProperties {}
 
 pub(crate) trait SocketStackDispatcher:
-    InnerValue<udp::UdpSocketCollection>
+    AsRef<udp::UdpSocketCollection>
+    + AsMut<udp::UdpSocketCollection>
     + netstack3_core::UdpEventDispatcher<Ipv4>
     + netstack3_core::UdpEventDispatcher<Ipv6>
 {
 }
+
 impl<T> SocketStackDispatcher for T where
-    T: InnerValue<udp::UdpSocketCollection>
+    T: AsRef<udp::UdpSocketCollection>
+        + AsMut<udp::UdpSocketCollection>
         + netstack3_core::UdpEventDispatcher<Ipv4>
         + netstack3_core::UdpEventDispatcher<Ipv6>
 {

@@ -16,9 +16,8 @@ use packet::serialize::Buf;
 use std::ops::DerefMut;
 
 use super::{
-    context::MultiInnerValue,
     devices::{BindingId, Devices},
-    StackContext, StackDispatcher,
+    ContextExt as _, StackContext, StackDispatcher,
 };
 
 pub async fn setup_ethernet(
@@ -71,7 +70,7 @@ impl<C: StackContext> EthernetWorker<C> {
         let len = rx.read(buf);
         let mut ctx = self.ctx.lock().await;
 
-        if let Some(id) = ctx.dispatcher().get_inner::<Devices>().get_core_id(self.id) {
+        if let Some(id) = AsRef::<Devices>::as_ref(ctx.dispatcher()).get_core_id(self.id) {
             receive_frame::<Buf<&mut [u8]>, _>(ctx.deref_mut(), id, Buf::new(&mut buf[..len], ..));
         } else {
             debug!("Received ethernet frame on disabled device: {}", self.id);

@@ -22,7 +22,6 @@ mod timers;
 mod util;
 
 use std::convert::TryFrom;
-use std::ops::DerefMut;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -38,9 +37,7 @@ use packet::{BufferMut, Serializer};
 use rand::rngs::OsRng;
 use util::ConversionContext;
 
-use context::{
-    GuardContext, InnerValue, LockableContext, LockedContext, LockedGuardContext, MultiInnerValue,
-};
+use context::Lockable;
 use devices::{DeviceInfo, Devices, ToggleError};
 use icmp::IcmpEchoSockets;
 use socket::udp::UdpSocketCollection;
@@ -57,9 +54,10 @@ use netstack3_core::{
 };
 
 /// A shorthand definition for the rather gnarly type signature of the lock
-/// obtained by the [`LockableContext`] trait bound on [`StackContext`] that
-/// provides a [`Context`].
-type LockedStackContext<'a, C> = LockedContext<'a, C, Context<<C as StackContext>::Dispatcher>>;
+/// obtained by the [`Lockable`] trait bound on [`StackContext`] that provides a
+/// [`Context`].
+type LockedStackContext<'a, C> =
+    <C as Lockable<'a, Context<<C as StackContext>::Dispatcher>>>::Guard;
 
 /// A StackContext that provides an asynchronous lock to a specified `Context`
 /// to be used in calls into core.
@@ -69,11 +67,7 @@ type LockedStackContext<'a, C> = LockedContext<'a, C, Context<<C as StackContext
 // that we reduce the time that the core context needs to be locked to a
 // minimum, until it eventually becomes slow path only.
 pub(crate) trait StackContext:
-    Send
-    + Sync
-    + 'static
-    + Clone
-    + for<'a> LockableContext<'a, Context<<Self as StackContext>::Dispatcher>>
+    Send + Sync + 'static + Clone + for<'a> Lockable<'a, Context<<Self as StackContext>::Dispatcher>>
 {
     /// The [`EventDispatcher`] used by this `StackContext`.
     type Dispatcher: StackDispatcher;
@@ -91,15 +85,16 @@ pub(crate) trait StackDispatcher:
     + ConversionContext
     + Sync
     + Send
-    + InnerValue<Devices>
-    + InnerValue<timers::TimerDispatcher<TimerId>>
-    + MultiInnerValue
+    + AsRef<Devices>
+    + AsMut<Devices>
+    + AsRef<timers::TimerDispatcher<TimerId>>
+    + AsMut<timers::TimerDispatcher<TimerId>>
     + 'static
 {
     /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
     /// identifier.
     fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
-        <Self as MultiInnerValue>::get_inner::<Devices>(self).get_device(id)
+        AsRef::<Devices>::as_ref(self).get_device(id)
     }
 
     /// A notification that the state of the device with binding Id `id`
@@ -145,22 +140,26 @@ impl BindingsDispatcher {
     }
 }
 
-impl InnerValue<Devices> for BindingsDispatcher {
-    fn inner(&self) -> &Devices {
+impl AsRef<Devices> for BindingsDispatcher {
+    fn as_ref(&self) -> &Devices {
         &self.devices
     }
+}
 
-    fn inner_mut(&mut self) -> &mut Devices {
+impl AsMut<Devices> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut Devices {
         &mut self.devices
     }
 }
 
-impl InnerValue<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
-    fn inner(&self) -> &TimerDispatcher<TimerId> {
+impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
+    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
         &self.timers
     }
+}
 
-    fn inner_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
+impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
         &mut self.timers
     }
 }
@@ -172,32 +171,28 @@ impl StackDispatcher for BindingsDispatcher {
     }
 }
 
-impl AsRef<Mutex<Context<BindingsDispatcher>>> for Netstack {
-    fn as_ref(&self) -> &Mutex<Context<BindingsDispatcher>> {
-        &self.ctx
+impl<'a> Lockable<'a, Context<BindingsDispatcher>> for Netstack {
+    type Guard = futures::lock::MutexGuard<'a, Context<BindingsDispatcher>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Context<BindingsDispatcher>>;
+    fn lock(&'a self) -> Self::Fut {
+        self.ctx.lock()
     }
 }
 
-impl GuardContext<Context<BindingsDispatcher>> for Netstack {
-    type Guard = Context<BindingsDispatcher>;
-}
-
-impl InnerValue<UdpSocketCollection> for BindingsDispatcher {
-    fn inner(&self) -> &UdpSocketCollection {
+impl AsRef<UdpSocketCollection> for BindingsDispatcher {
+    fn as_ref(&self) -> &UdpSocketCollection {
         &self.udp_sockets
     }
+}
 
-    fn inner_mut(&mut self) -> &mut UdpSocketCollection {
+impl AsMut<UdpSocketCollection> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut UdpSocketCollection {
         &mut self.udp_sockets
     }
 }
 
-impl InnerValue<IcmpEchoSockets> for BindingsDispatcher {
-    fn inner(&self) -> &IcmpEchoSockets {
-        &self.icmp_echo_sockets
-    }
-
-    fn inner_mut(&mut self) -> &mut IcmpEchoSockets {
+impl AsMut<IcmpEchoSockets> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut IcmpEchoSockets {
         &mut self.icmp_echo_sockets
     }
 }
@@ -211,7 +206,7 @@ where
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
-        self.dispatcher_mut().get_inner_mut()
+        self.dispatcher_mut().as_mut()
     }
 }
 
@@ -227,11 +222,11 @@ where
     D: StackDispatcher,
 {
     fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
-        self.get_inner::<Devices>().get_core_id(binding_id)
+        AsRef::<Devices>::as_ref(self).get_core_id(binding_id)
     }
 
     fn get_binding_id(&self, core_id: DeviceId) -> Option<u64> {
-        self.get_inner::<Devices>().get_binding_id(core_id)
+        AsRef::<Devices>::as_ref(self).get_binding_id(core_id)
     }
 }
 
@@ -365,20 +360,34 @@ impl<I: icmp::IpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsD
 impl<B: BufferMut> IpLayerEventDispatcher<B> for BindingsDispatcher {}
 
 /// Utility operations that can be performed on a locked `Context<D>`.
-impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G, Context<D>> {
+trait ContextExt {
     /// Invoke a function on the state associated with the device `id`.
+    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
+
+    /// Enables an interface, adding it to the core if it is not currently
+    /// enabled.
+    ///
+    /// Both `admin_enabled` and `phy_up` must be true for the interface to be
+    /// enabled.
+    fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
+
+    /// Disables an interface, removing it from the core if it is currently
+    /// enabled.
+    ///
+    /// Either an Admin (fidl) or Phy change can disable an interface.
+    fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
+}
+
+impl<D: StackDispatcher> ContextExt for Context<D> {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
         if let Some(device_info) =
-            self.dispatcher_mut().get_inner_mut::<Devices>().get_device_mut(id)
+            AsMut::<Devices>::as_mut(self.dispatcher_mut()).get_device_mut(id)
         {
             f(device_info);
             self.dispatcher_mut().device_status_changed(id)
         }
     }
 
-    /// Enables an interface, adding it to the core if it is not currently
-    /// enabled. Both `admin_enabled` and `phy_up` must be true for the
-    /// interface to be enabled.
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         let (state, disp) = self.state_and_dispatcher();
         let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
@@ -391,13 +400,13 @@ impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G
             let generate_core_id = |info: &DeviceInfo| {
                 state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
             };
-            match disp.get_inner_mut::<Devices>().activate_device(id, generate_core_id) {
+            match AsMut::<Devices>::as_mut(disp).activate_device(id, generate_core_id) {
                 Ok(device_info) => {
                     // we can unwrap core_id here because activate_device just
                     // succeeded.
                     let core_id = device_info.core_id().unwrap();
                     // don't forget to initialize the device in core!
-                    initialize_device(self.deref_mut(), core_id);
+                    initialize_device(self, core_id);
                     Ok(())
                 }
                 Err(toggle_error) => {
@@ -413,17 +422,15 @@ impl<'a, G: InnerValue<Context<D>>, D: StackDispatcher> LockedGuardContext<'a, G
         }
     }
 
-    /// Disables an interface, removing it from the core if it is currently
-    /// enabled. Either an Admin (fidl) or Phy change can disable an interface.
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.dispatcher_mut().get_inner_mut::<Devices>().deactivate_device(id) {
+        match AsMut::<Devices>::as_mut(self.dispatcher_mut()).deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 // Sanity check that there is a reason that the device is
                 // disabled.
                 assert!(!device_info.admin_enabled() || !device_info.phy_up());
                 // Disabling the interface deactivates it in the bindings, and
                 // will remove it completely from the core.
-                match remove_device(self.deref_mut(), core_id) {
+                match remove_device(self, core_id) {
                     // TODO(rheacock): schedule and send the received frames
                     Some(_) => Ok(()),
                     None => Ok(()),
