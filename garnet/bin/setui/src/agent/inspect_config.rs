@@ -5,8 +5,8 @@
 use crate::agent::Payload;
 use crate::agent::{Context as AgentContext, Lifespan};
 use crate::blueprint_definition;
-use crate::clock;
 use crate::config;
+use crate::config::inspect_logger::{InspectConfigLogger, InspectConfigLoggerHandle};
 use crate::event;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::{role, MessageEvent, MessengerType};
@@ -15,42 +15,21 @@ use crate::service;
 use crate::Role;
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
+use futures::lock::Mutex;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
-use std::collections::HashMap;
-
-const CONFIG_INSPECT_NODE_NAME: &str = "config_loads";
+use std::sync::Arc;
 
 blueprint_definition!("inspect_config_agent", InspectConfigAgent::create);
 
+// TODO(fxbug.dev/84416): Migrate usages of the InspectConfigAgent and remove in favor
+// of the new InspectLogger.
 pub(crate) struct InspectConfigAgent {
     /// The factory for creating a messenger to receive messages.
     delegate: service::message::Delegate,
 
-    /// The saved inspect node for the config loads.
-    inspect_node: inspect::Node,
-
-    /// The saved information about each load.
-    config_load_values: HashMap<String, ConfigInspectInfo>,
-}
-
-/// Information about a config file load to be written to inspect.
-///
-/// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
-/// out of scope.
-struct ConfigInspectInfo {
-    /// Node of this info.
-    _node: inspect::Node,
-
-    /// Nanoseconds since boot that this config was loaded.
-    timestamp: inspect::StringProperty,
-
-    /// Number of times the config was loaded.
-    count: inspect::IntProperty,
-
-    /// Debug string representation of the value of this config load info.
-    value: inspect::StringProperty,
+    /// The inspect logger with which to write to inspect.
+    inspect_logger: Arc<Mutex<InspectConfigLogger>>,
 }
 
 impl DeviceStorageAccess for InspectConfigAgent {
@@ -59,16 +38,15 @@ impl DeviceStorageAccess for InspectConfigAgent {
 
 impl InspectConfigAgent {
     async fn create(context: AgentContext) {
-        let inspect_node = component::inspector().root().create_child(CONFIG_INSPECT_NODE_NAME);
-        InspectConfigAgent::create_with_node(context, inspect_node).await;
+        InspectConfigAgent::create_with_logger(context, InspectConfigLoggerHandle::new().logger)
+            .await;
     }
 
-    async fn create_with_node(context: AgentContext, inspect_node: inspect::Node) {
-        let mut agent = InspectConfigAgent {
-            delegate: context.delegate,
-            inspect_node,
-            config_load_values: HashMap::new(),
-        };
+    async fn create_with_logger(
+        context: AgentContext,
+        inspect_logger: Arc<Mutex<InspectConfigLogger>>,
+    ) {
+        let mut agent = InspectConfigAgent { delegate: context.delegate, inspect_logger };
 
         // Using FuturesUnordered to manage events helps avoid lifetime and ownership issues.
         let unordered = FuturesUnordered::new();
@@ -114,7 +92,7 @@ impl InspectConfigAgent {
                     client.reply(service::Payload::Agent(Payload::Complete(Ok(())))).send();
                 }
                 MessageEvent::Message(
-                    service::Payload::Event(event::Payload::Event(event)),
+                    service::Payload::Event(event::Payload::Event(event::Event::ConfigLoad(event))),
                     message_client,
                 ) => {
                     self.handle_event(event, message_client).await;
@@ -130,50 +108,12 @@ impl InspectConfigAgent {
 
     async fn handle_event(
         &mut self,
-        payload: event::Event,
+        payload: config::base::Event,
         mut message_client: service::message::MessageClient,
     ) {
-        if let event::Event::ConfigLoad(config::base::Event::Load(config::base::ConfigLoadInfo {
-            path,
-            status,
-            contents,
-        })) = payload
-        {
-            let timestamp = clock::inspect_format_now();
-            match self.config_load_values.get_mut(&path) {
-                Some(config_inspect_info) => {
-                    config_inspect_info.timestamp.set(&timestamp);
-                    config_inspect_info.value.set(&format!(
-                        "{:#?}",
-                        config::base::ConfigLoadInfo { path, status, contents }
-                    ));
-                    config_inspect_info.count.set(config_inspect_info.count.get().unwrap_or(0) + 1);
-                }
-                None => {
-                    // Config file not loaded before, add new entry in table.
-                    let node = self.inspect_node.create_child(path.clone());
-                    let value_prop = node.create_string(
-                        "value",
-                        format!(
-                            "{:#?}",
-                            config::base::ConfigLoadInfo { path: path.clone(), status, contents }
-                        ),
-                    );
-                    let timestamp_prop = node.create_string("timestamp", timestamp.clone());
-                    let count_prop = node.create_int("count", 1);
-                    self.config_load_values.insert(
-                        path,
-                        ConfigInspectInfo {
-                            _node: node,
-                            value: value_prop,
-                            timestamp: timestamp_prop,
-                            count: count_prop,
-                        },
-                    );
-                }
-            }
-            message_client.acknowledge().await;
-        }
+        let config::base::Event::Load(config_load_info) = payload;
+        self.inspect_logger.lock().await.write_config_load_to_inspect(config_load_info);
+        message_client.acknowledge().await;
     }
 }
 
@@ -182,6 +122,7 @@ mod tests {
     use super::*;
 
     use crate::agent::Context;
+    use crate::clock;
     use crate::event;
     use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
     use crate::message::MessageHubUtil;
@@ -218,12 +159,11 @@ mod tests {
         // Create a sender to send out the config load event.
         let (messenger, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
-        // Create the inspect node.
-        let inspector = inspect::Inspector::new();
-        let inspect_node = inspector.root().create_child(CONFIG_INSPECT_NODE_NAME);
+        // Create the inspect config logger.
+        let inspect_config_logger = InspectConfigLoggerHandle::new().logger;
 
         // Create the inspect agent.
-        InspectConfigAgent::create_with_node(context, inspect_node).await;
+        InspectConfigAgent::create_with_logger(context, inspect_config_logger.clone()).await;
 
         let message = "unable to open file, using defaults: \
             Os { code: 2, kind: NotFound, message: \"No such file or directory\""
@@ -248,7 +188,7 @@ mod tests {
         assert_eq!(reply, Some(MessageEvent::Status(Status::Acknowledged)));
 
         // Ensure the load is logged to the inspect node.
-        assert_inspect_tree!(inspector, root: {
+        assert_inspect_tree!(inspect_config_logger.lock().await.inspector, root: {
             config_loads: {
                 "/config/data/input_device_config.json": {
                     "count": 1i64,

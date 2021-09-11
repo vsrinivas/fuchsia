@@ -3,14 +3,19 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
+use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
+use futures::lock::Mutex;
 use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::config;
 use crate::config::base::ConfigLoadInfo;
+use crate::config::inspect_logger::InspectConfigLogger;
 use crate::event;
 use crate::message::base::{role, Audience};
 use crate::service::{message::Messenger, Role};
@@ -23,6 +28,7 @@ where
     default_value: Option<T>,
     config_file_path: P,
     cached_value: Option<Option<T>>,
+    config_inspect_logger: Option<Arc<Mutex<InspectConfigLogger>>>,
 }
 
 impl<T, P> DefaultSetting<T, P>
@@ -30,8 +36,17 @@ where
     T: DeserializeOwned + Clone + std::fmt::Debug,
     P: AsRef<Path> + Display,
 {
-    pub fn new(default_value: Option<T>, config_file_path: P) -> Self {
-        DefaultSetting { default_value, config_file_path, cached_value: None }
+    pub fn new(
+        default_value: Option<T>,
+        config_file_path: P,
+        config_inspect_logger: Option<Arc<Mutex<InspectConfigLogger>>>,
+    ) -> Self {
+        DefaultSetting {
+            default_value,
+            config_file_path,
+            cached_value: None,
+            config_inspect_logger,
+        }
     }
 
     /// Returns the value of this setting. Loads the value from storage if it hasn't been loaded
@@ -47,7 +62,6 @@ where
     /// Loads the value of this setting from storage.
     ///
     /// If the value isn't present, returns the default value.
-    // TODO(fxbug.dev/80754): Remove this method once all config loads can be reported.
     pub fn load_default_value(&mut self) -> Result<Option<T>, Error> {
         Ok(self.load_default_settings(None)?)
     }
@@ -68,16 +82,16 @@ where
     /// only be None if the default_value was provided as None.
     ///
     /// If a messenger is provided, the result of the load will be reported.
-    fn load_default_settings(&self, messenger: Option<&Messenger>) -> Result<Option<T>, Error> {
+    fn load_default_settings(&mut self, messenger: Option<&Messenger>) -> Result<Option<T>, Error> {
         let config_load_info: Option<ConfigLoadInfo>;
-        let path = messenger.map(|_| self.config_file_path.to_string());
+        let path = self.config_file_path.to_string();
         let load_result = match File::open(self.config_file_path.as_ref()) {
             Ok(file) => {
                 match serde_json::from_reader(BufReader::new(file)) {
                     Ok(config) => {
                         // Success path.
-                        config_load_info = messenger.map(|_| ConfigLoadInfo {
-                            path: path.unwrap(),
+                        config_load_info = Some(ConfigLoadInfo {
+                            path: path.clone(),
                             status: config::base::ConfigLoadStatus::Success,
                             contents: if let Some(ref payload) = config {
                                 Some(format!("{:?}", payload))
@@ -90,8 +104,8 @@ where
                     Err(e) => {
                         // Found file, but failed to parse.
                         let err_msg = format!("unable to parse config: {:?}", e);
-                        config_load_info = messenger.map(|_| ConfigLoadInfo {
-                            path: path.unwrap(),
+                        config_load_info = Some(ConfigLoadInfo {
+                            path: path.clone(),
                             status: config::base::ConfigLoadStatus::ParseFailure(err_msg.clone()),
                             contents: None,
                         });
@@ -99,10 +113,10 @@ where
                     }
                 }
             }
-            Err(_) => {
+            Err(..) => {
                 // No file found.
-                config_load_info = messenger.map(|_| ConfigLoadInfo {
-                    path: path.unwrap(),
+                config_load_info = Some(ConfigLoadInfo {
+                    path: path.clone(),
                     status: config::base::ConfigLoadStatus::UsingDefaults(
                         "File not found, using defaults".to_string(),
                     ),
@@ -111,9 +125,17 @@ where
                 Ok(self.default_value.clone())
             }
         };
-        if let (Some(messenger), Some(config_load_info)) = (messenger, config_load_info) {
-            self.report_config_load(messenger, config::base::Event::Load(config_load_info));
+        if let Some(config_load_info) = config_load_info {
+            if let Some(messenger) = messenger {
+                self.report_config_load(messenger, config::base::Event::Load(config_load_info));
+            } else {
+                // No messenger provided, attempt to write directly to inspect.
+                self.write_config_load_to_inspect(config_load_info);
+            }
+        } else {
+            fx_log_err!("Could not load config for {:?}", path);
         }
+
         load_result
     }
 
@@ -127,6 +149,21 @@ where
             )
             .send()
             .ack();
+    }
+
+    /// Attempts to write the config load to inspect. Requires a provided `config_inspect_logger`
+    /// when calling new().
+    fn write_config_load_to_inspect(&mut self, config_load_info: config::base::ConfigLoadInfo) {
+        if let Some(inspect_logger) = self.config_inspect_logger.clone() {
+            fasync::Task::spawn(async move {
+                inspect_logger.lock().await.write_config_load_to_inspect(config_load_info);
+            })
+            .detach();
+        } else {
+            fx_log_err!(
+                "Attempted to write config to inspect without a provided InspectConfigLogger"
+            );
+        }
     }
 }
 
@@ -168,6 +205,7 @@ pub(crate) mod testing {
         let mut setting = DefaultSetting::new(
             Some(TestConfigData { value: 3 }),
             "/config/data/fake_config_data.json",
+            None,
         );
 
         assert_eq!(
@@ -181,13 +219,14 @@ pub(crate) mod testing {
         let mut setting = DefaultSetting::new(
             Some(TestConfigData { value: 3 }),
             "/config/data/fake_invalid_config_data.json",
+            None,
         );
         assert!(setting.load_default_value().is_err());
     }
 
     #[test]
     fn test_load_invalid_config_file_path() {
-        let mut setting = DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch");
+        let mut setting = DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch", None);
 
         assert_eq!(
             setting.load_default_value().expect("Failed to get default value").unwrap().value,
@@ -197,14 +236,14 @@ pub(crate) mod testing {
 
     #[test]
     fn test_load_default_none() {
-        let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch");
+        let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch", None);
 
         assert!(setting.load_default_value().expect("Failed to get default value").is_none());
     }
 
     #[test]
     fn test_no_inspect_write() {
-        let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch");
+        let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch", None);
 
         assert!(setting.load_default_value().expect("Failed to get default value").is_none());
     }
@@ -224,7 +263,7 @@ pub(crate) mod testing {
 
         let (messenger, _) = context.delegate.create(MessengerType::Unbound).await.unwrap();
 
-        let mut setting = DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch");
+        let mut setting = DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch", None);
         let _ = setting.load_default_value_and_report(&messenger);
 
         verify_payload(

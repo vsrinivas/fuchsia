@@ -7,6 +7,7 @@ use crate::audio::types::{
 };
 use crate::base::SettingInfo;
 use crate::config::default_settings::DefaultSetting;
+use crate::config::inspect_logger::InspectConfigLoggerHandle;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -43,6 +44,7 @@ lazy_static! {
         Mutex::new(DefaultSetting::new(
             Some(DEFAULT_AUDIO_INFO),
             "/config/data/audio_config_data.json",
+            Some(InspectConfigLoggerHandle::new().logger),
         ));
 }
 
@@ -180,8 +182,8 @@ mod tests {
         modified_counters: None,
     };
 
-    #[test]
-    fn test_audio_config() {
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_audio_config() {
         let settings = default_audio_info();
         assert_eq!(CONFIG_AUDIO_INFO, settings);
     }

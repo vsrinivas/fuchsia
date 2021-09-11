@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call;
 use crate::config::default_settings::DefaultSetting;
+use crate::config::inspect_logger::InspectConfigLoggerHandle;
 use crate::display::display_configuration::{
     ConfigurationThemeMode, ConfigurationThemeType, DisplayConfiguration,
 };
@@ -45,7 +46,11 @@ lazy_static! {
 lazy_static! {
     /// Reference to a display configuration.
     pub(crate) static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
-        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json"));
+        Mutex::new(DefaultSetting::new(
+            None,
+            "/config/data/display_configuration.json",
+            Some(InspectConfigLoggerHandle::new().logger),
+        ));
 }
 
 /// Returns a default display [`DisplayInfo`] that is derived from
@@ -56,7 +61,6 @@ lazy_static! {
 pub(crate) fn default_display_info() -> DisplayInfo {
     let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
-    // TODO(fxbug.dev/80754): Report the result of this load.
     if let Ok(Some(display_configuration)) =
         DISPLAY_CONFIGURATION.lock().unwrap().get_cached_value()
     {

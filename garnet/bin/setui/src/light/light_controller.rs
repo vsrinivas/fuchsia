@@ -66,6 +66,7 @@ impl data_controller::Create for LightController {
         let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
             None,
             "/config/data/light_hardware_config.json",
+            None,
         )
         .load_default_value_and_report(client.messenger())
         .map_err(|_| {

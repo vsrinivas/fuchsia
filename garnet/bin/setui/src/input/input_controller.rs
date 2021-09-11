@@ -396,6 +396,7 @@ impl data_controller::Create for InputController {
         if let Ok(Some(config)) = DefaultSetting::<InputConfiguration, &str>::new(
             None,
             "/config/data/input_device_config.json",
+            None,
         )
         .load_default_value_and_report(client.messenger())
         {

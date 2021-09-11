@@ -10,6 +10,7 @@ use settings::agent::BlueprintHandle as AgentBlueprintHandle;
 use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};
 use settings::config::default_settings::DefaultSetting;
+use settings::config::inspect_logger::InspectConfigLoggerHandle;
 use settings::handler::device_storage::StashDeviceStorageFactory;
 use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
@@ -36,11 +37,12 @@ fn main() -> Result<(), Error> {
     let default_enabled_policy_configuration =
         EnabledPoliciesConfiguration::with_policies(HashSet::default());
 
-    // TODO(fxbug.dev/80754): Report the results of the config loads in this file.
+    let config_inspect_logger = InspectConfigLoggerHandle::new().logger;
 
     let enabled_interface_configuration = DefaultSetting::new(
         Some(default_enabled_interfaces_configuration),
         "/config/data/interface_configuration.json",
+        Some(config_inspect_logger.clone()),
     )
     .load_default_value()
     .expect("invalid default enabled interface configuration")
@@ -49,16 +51,20 @@ fn main() -> Result<(), Error> {
     let enabled_policy_configuration = DefaultSetting::new(
         Some(default_enabled_policy_configuration),
         "/config/data/policy_configuration.json",
+        Some(config_inspect_logger.clone()),
     )
     .load_default_value()
     .expect("invalid default enabled policy configuration")
     .expect("no default enabled policy configuration");
 
-    let flags =
-        DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
-            .load_default_value()
-            .expect("invalid service flag configuration")
-            .expect("no default service flags");
+    let flags = DefaultSetting::new(
+        Some(ServiceFlags::default()),
+        "/config/data/service_flags.json",
+        Some(config_inspect_logger.clone()),
+    )
+    .load_default_value()
+    .expect("invalid service flag configuration")
+    .expect("no default service flags");
 
     // Temporary solution for FEMU to have an agent config without camera agent.
     let agent_config = "/config/data/agent_configuration.json";
@@ -69,6 +75,7 @@ fn main() -> Result<(), Error> {
     let agent_types = DefaultSetting::new(
         Some(AgentConfiguration { agent_types: get_default_agent_types() }),
         agent_configuration_file_path,
+        Some(config_inspect_logger.clone()),
     )
     .load_default_value()
     .expect("invalid default agent configuration")

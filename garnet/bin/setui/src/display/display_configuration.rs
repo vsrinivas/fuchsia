@@ -47,6 +47,7 @@ mod test {
         let default_value = DefaultSetting::<DisplayConfiguration, &str>::new(
             None,
             "/config/data/display_configuration.json",
+            None,
         )
         .load_default_value()
         .expect("Invalid display configuration")

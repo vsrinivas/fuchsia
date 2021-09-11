@@ -426,8 +426,8 @@ async fn test_bringup_without_audio_core() {
     );
 }
 
-#[test]
-fn test_audio_info_copy() {
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_audio_info_copy() {
     let audio_info = default_audio_info();
     let copy_audio_info = audio_info.clone();
     assert_eq!(audio_info, copy_audio_info);
