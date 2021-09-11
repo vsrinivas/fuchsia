@@ -7,6 +7,7 @@ group("tools") {
 
   public_deps = [
     "//tools/sdk-tools/fconfig:fconfig-host",
+    "//tools/sdk-tools/fgsutil:fgsutil-host",
     "//tools/sdk-tools/fpublish:fpublish-host",
     "//tools/sdk-tools/fserve:fserve-host",
     "//tools/sdk-tools/fssh:fssh-host",
@@ -18,6 +19,7 @@ group("tests") {
 
   deps = [
     "//tools/sdk-tools/fconfig:fconfig-test($host_toolchain)",
+    "//tools/sdk-tools/fgsutil:fgsutil-test($host_toolchain)",
     "//tools/sdk-tools/fpublish:fpublish-test($host_toolchain)",
     "//tools/sdk-tools/fserve:fserve-test($host_toolchain)",
     "//tools/sdk-tools/fssh:fssh-test($host_toolchain)",

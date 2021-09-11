@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (is_host) {
+  import("//build/rust/rustc_binary.gni")
+
+  rustc_binary("fgsutil-host") {
+    testonly = true
+    name = "fgsutil"
+    with_unit_tests = true
+    sources = [
+      "src/args.rs",
+      "src/main.rs",
+    ]
+
+    deps = [
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-hyper:fuchsia-hyper",
+      "//src/lib/gcs",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:hyper",
+      "//third_party/rust_crates:nix",
+    ]
+  }
+}
+
+group("fgsutil") {
+  testonly = true
+
+  deps = [
+    ":fgsutil-host($host_toolchain)",
+    ":fgsutil-test",
+  ]
+}
+
+group("fgsutil-test") {
+  testonly = true
+
+  deps = [ ":fgsutil-host_test($host_toolchain)" ]
+}
