@@ -1,0 +1,11 @@
+{
+    "sandbox": {
+        "features": [
+            "isolated-temp",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

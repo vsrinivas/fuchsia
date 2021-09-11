@@ -52,7 +52,7 @@ template("fuzzer_component") {
 
   group(meta_target_name) {
     testonly = true
-    deps = invoker.deps + [ "//build/fuzzing:fuzzer_includes" ]
+    deps = invoker.deps + [ "//build/fuzzing:includes_cmx" ]
 
     metadata = {
       test_component_manifest_cmx = [
