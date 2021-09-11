@@ -14,7 +14,8 @@ type BuildInfo = table {
     1: product_config string:MAX_STRING_LENGTH;
 
     /// A description of the board configuration used at build time, determined by
-    /// the value passed as BOARD in 'fx set'.
+    /// the value passed as BOARD in 'fx set'. See `fx list-boards` for a list of
+    /// possible values.
     2: board_config string:MAX_STRING_LENGTH;
 
     /// A description of the version of the build. Defaults to the same string as
