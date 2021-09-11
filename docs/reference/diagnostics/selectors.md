@@ -45,6 +45,42 @@ INSPECT|LOG|LIFECYCLE:<component_selector>:<hierarchy_path_selector>:<property_s
 Each of these parts of the syntax are described in detail below.
 
 
+### As Files
+
+#### Comments
+
+Diagnostics selectors can be written into cfg files in a flat directory. Within these
+files, comments can be written using `//`. For example,
+
+```
+// a comment
+core/sessions/foo
+
+core2/session:foo  // inline comment
+```
+
+#### Whitespace
+
+Significant trailing whitespace needs to be enclosed in quotes.
+For example, the following selectors are not equivalent:
+
+```
+a:b:c  // one
+"a:b:c  "  // two
+```
+
+`one` is processed as `a:b:c`. `two` is processed as <code>a:b:c &nbsp;&nbsp;</code>.
+
+Quotes do not have to be balanced, per component selector syntax rules. Therefore,
+the rightmost quote outside of a comment will always be considered the closing quote
+whenever there is a leading quote. 
+
+```
+"a:b"c"  // equivalent to `a:b"c`
+```
+
+Note: Quotes are not [legal moniker values][instance_and_collection_names], and the first portion of a valid selector is always a moniker.
+
 ## Component selector {#component-selector}
 
 ### Syntax {#syntax}

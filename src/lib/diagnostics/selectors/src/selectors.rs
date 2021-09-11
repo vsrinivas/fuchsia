@@ -412,26 +412,57 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
     }
 }
 
+/// Slice off the end of the input, starting with the first '/' in "//".
+fn remove_comments(line: &str) -> Option<&str> {
+    const COMMENT: char = '/';
+
+    let mut it = line.chars().enumerate().peekable();
+    loop {
+        match (it.next(), it.peek()) {
+            (Some((start_idx, COMMENT)), Some((_, COMMENT))) => {
+                return line.get(0..start_idx);
+            }
+            (None, _) => return Some(line),
+            _ => continue,
+        }
+    }
+}
+
+/// If `line`'s first non-whitespace character is a `"`, then return the substring
+/// enclosed by the first " up to the rightmost closing ". If there is no leading ",
+/// return `line` unchange. If there is no closing ", return None.
+fn remove_quotes(line: &str) -> Option<&str> {
+    const QUOTE: char = '"';
+    if !line.trim().starts_with(QUOTE) {
+        return Some(line);
+    }
+
+    line.trim().get(1..line.rfind(QUOTE)?)
+}
+
+fn preprocess_line_for_file(line: &str) -> Option<&str> {
+    remove_comments(line).map(|line| line.trim()).and_then(remove_quotes)
+}
+
+/// Remove any comments process a quoted line.
 pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error> {
+    let err = || format_err!("Failed to read line of selector file at configured path.",);
     let selector_file = match fs::File::open(selector_file) {
         Ok(file) => file,
-        Err(_) => return Err(format_err!("Failed to open selector file at configured path.",)),
+        Err(_) => return Err(format_err!("Failed to open selector file at configured path.")),
     };
     let mut selector_vec = Vec::new();
     let reader = BufReader::new(selector_file);
     for line in reader.lines() {
         match line {
             Ok(line) => {
+                let line = preprocess_line_for_file(&line).ok_or(err())?;
                 if line.is_empty() {
                     continue;
                 }
                 selector_vec.push(parse_selector(&line)?);
             }
-            Err(_) => {
-                return Err(
-                    format_err!("Failed to read line of selector file at configured path.",),
-                )
-            }
+            Err(_) => return Err(err()),
         }
     }
     Ok(selector_vec)
@@ -912,6 +943,75 @@ mod tests {
     }
 
     #[test]
+    fn try_remove_comments() {
+        let test_cases = vec![
+            (Some(r"a:\/\/b:\/c"), r"a:\/\/b:\/c"),
+            (Some(r"a/b/c"), r"a/b/c"),
+            (Some(""), "// a comment"),
+            (Some("a:b:c "), "a:b:c // inline comment"),
+            (Some("   "), "   // leading whitespace is not trimmed"),
+            (Some("\t\t "), "\t\t // including tabs"),
+        ];
+
+        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
+            assert_eq!(
+                expected,
+                remove_comments(actual_input),
+                "test case number: {}, raw data: <{}>",
+                case,
+                actual_input
+            );
+        }
+    }
+
+    #[test]
+    fn try_remove_quotes() {
+        let test_cases = vec![
+            (Some("a:b:c"), r#""a:b:c""#),
+            (None, r#""a:b:c"#),
+            (Some(r#"a:b":c"#), r#"a:b":c"#),
+            (Some("a:b:c  "), r#""a:b:c  ""#),
+            (Some(r#"a:"b":"c "#), r##""a:"b":"c ""##),
+            (Some("a:b:c"), "a:b:c"),
+            (Some("  a:b:c  "), "  a:b:c  "),
+            (Some("a: b:c "), "a: b:c "),
+        ];
+
+        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
+            assert_eq!(
+                expected,
+                remove_quotes(actual_input),
+                "test case number: {}, raw data: <{}>",
+                case,
+                actual_input
+            );
+        }
+    }
+
+    #[test]
+    fn try_preprocess_file_lines() {
+        let test_cases = vec![
+            (Some("a/b/c"), "a/b/c"),
+            (Some("a/b/c"), "a/b/c // a comment"),
+            (Some("  hello:world/a/b  "), r#""  hello:world/a/b  ""#),
+            (Some(r#"a:/b"c"#), r#"a:/b"c"#),
+            (Some(r#"a:b"c:d"#), r#""a:b"c:d"  // a comment"#),
+            (Some(""), "//"),
+            (None, r#"""#),
+        ];
+
+        for (case, (expected, actual_input)) in test_cases.into_iter().enumerate() {
+            assert_eq!(
+                expected,
+                preprocess_line_for_file(actual_input),
+                "test case number: {}, raw data: <{}>",
+                case,
+                actual_input
+            );
+        }
+    }
+
+    #[test]
     fn missing_path_component_selector_test() {
         let component_selector_string = "c";
         let component_selector =
@@ -1056,6 +1156,15 @@ mod tests {
             .write_all(b"a*/b:c/d/*:*")
             .expect("writing test file");
 
+        File::create(tempdir.path().join("c.txt"))
+            .expect("create file")
+            .write_all(
+                b"// this is a comment
+a:b:c
+",
+            )
+            .expect("writing test file");
+
         assert!(parse_selectors(tempdir.path()).is_ok());
     }
 
@@ -1069,22 +1178,6 @@ mod tests {
         File::create(tempdir.path().join("b.txt"))
             .expect("create file")
             .write_all(b"**:**:**")
-            .expect("writing test file");
-
-        assert!(parse_selectors(tempdir.path()).is_err());
-    }
-
-    #[test]
-    fn unsuccessful_selector_parsing_line_with_only_whitespace() {
-        let tempdir = TempDir::new().expect("failed to create tmp dir");
-        // Hard to tell, but the "empty" line contains whitespace, which is invalid.
-        File::create(tempdir.path().join("a.txt"))
-            .expect("create file")
-            .write_all(
-                b"a:b:c
-    
-",
-            )
             .expect("writing test file");
 
         assert!(parse_selectors(tempdir.path()).is_err());
