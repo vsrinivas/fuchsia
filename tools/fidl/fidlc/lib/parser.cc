@@ -1040,7 +1040,9 @@ std::unique_ptr<raw::LayoutParameterList> Parser::MaybeParseLayoutParameterList(
       break;
   }
 
-  ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
+  if (!ConsumeToken(OfKind(Token::Kind::kRightAngle)))
+    return Fail();
+
   return std::make_unique<raw::LayoutParameterList>(scope.GetSourceElement(), std::move(params));
 }
 

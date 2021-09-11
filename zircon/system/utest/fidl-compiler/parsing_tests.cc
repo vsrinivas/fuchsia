@@ -826,4 +826,16 @@ type TypeDecl = enum : "123" {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidWrappedType);
 }
 
+TEST(ParsingTests, BadMissingComma) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+  data array<uint8 5>;
+};
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
 }  // namespace
