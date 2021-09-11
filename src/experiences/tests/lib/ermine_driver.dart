@@ -106,6 +106,22 @@ class ErmineDriver {
     return running;
   }
 
+  /// Launch a component given its name from the App Launcher.
+  Future<void> launchFromAppLauncher(String title) async {
+    // Bring up the App Launcher overlay.
+    await driver.requestData('launcher');
+    await driver.waitUntilNoTransientCallbacks();
+    await waitForOverlays();
+
+    final titleFinder = find.descendant(
+      of: find.byType('AppLauncher'),
+      matching: find.text(title),
+    );
+
+    await driver.tap(titleFinder);
+    await driver.waitUntilNoTransientCallbacks();
+  }
+
   /// Returns true if a component is running.
   Future<bool> isRunning(String componentUrl,
       {Duration timeout = waitForTimeout}) async {

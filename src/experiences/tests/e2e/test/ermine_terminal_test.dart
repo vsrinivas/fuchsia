@@ -99,8 +99,8 @@ void main() {
 
   test('Launch and close two terminal instances', () async {
     // Launch two instances of component.
-    await ermine.launch(componentUrl);
-    await ermine.launch(componentUrl);
+    await ermine.launchFromAppLauncher('Terminal');
+    await ermine.launchFromAppLauncher('Terminal');
     await _waitForViews(componentUrl, 2, testForFocus: true);
 
     print('Launched 2 terminal instances');
@@ -123,7 +123,7 @@ void main() {
 
   test('Ping localhost', () async {
     // Launch three instances of component.
-    await ermine.launch(componentUrl);
+    await ermine.launchFromAppLauncher('Terminal');
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -138,7 +138,7 @@ void main() {
 
   test('ls /hub', () async {
     // Launch three instances of component.
-    await ermine.launch(componentUrl);
+    await ermine.launchFromAppLauncher('Terminal');
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -152,7 +152,7 @@ void main() {
 
   test('Navigate filesystem: ls, cd, pwd', () async {
     // Launch three instances of component.
-    await ermine.launch(componentUrl);
+    await ermine.launchFromAppLauncher('Terminal');
     await _waitForViews(componentUrl, 1, testForFocus: true);
     await waitForPrompt();
 
@@ -174,22 +174,23 @@ void main() {
     expect(result, contains('/pkg'));
   });
 
-  test('dm reboot', () async {
-    // Launch three instances of component.
-    await ermine.launch(componentUrl);
-    await _waitForViews(componentUrl, 1, testForFocus: true);
-    await waitForPrompt();
+  // TODO(https://fxbug.dev/84377): Uncomment once session restart is fixed.
+  // test('dm reboot', () async {
+  //   // Launch three instances of component.
+  //   await ermine.launchFromAppLauncher('Terminal');
+  //   await _waitForViews(componentUrl, 1, testForFocus: true);
+  //   await waitForPrompt();
 
-    // Inject 'dm reboot' + ENTER
-    await inject('dm reboot');
+  //   // Inject 'dm reboot' + ENTER
+  //   await inject('dm reboot');
 
-    // Now we wait for the sytem to reboot and reconnect. This logic is taken
-    // from `sl4f.reboot()`.
-    await sl4f.stopServer();
-    await Future.delayed(Duration(seconds: 3));
+  //   // Now we wait for the sytem to reboot and reconnect. This logic is taken
+  //   // from `sl4f.reboot()`.
+  //   await sl4f.stopServer();
+  //   await Future.delayed(Duration(seconds: 3));
 
-    // Try to restart SL4F
-    await sl4f.startServer();
-    expect(await sl4f.isRunning(), isTrue);
-  }, timeout: Timeout(Duration(minutes: 2)));
+  //   // Try to restart SL4F
+  //   await sl4f.startServer();
+  //   expect(await sl4f.isRunning(), isTrue);
+  // }, timeout: Timeout(Duration(minutes: 2)));
 }
