@@ -178,6 +178,16 @@ const CLONE_FLAG_SAME_RIGHTS uint32 = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
 protocol Node {
+    /// This message should never be sent or received.
+    ///
+    /// This declaration exists to let keep the Rust bindings compiling as we add and remove
+    /// transitional elements from the fuchsia.io protocols. Without this declaration, the
+    /// users of the Rust bindings fail to compile when there aren't any transitional protocol
+    /// elements.
+    @transitional
+    @deprecated
+    IoToIo2Placeholder();
+
     /// Create another connection to the same remote object.
     ///
     /// `flags` may be any of:

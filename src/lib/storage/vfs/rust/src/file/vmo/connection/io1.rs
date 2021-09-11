@@ -459,6 +459,7 @@ impl VmoFileConnection {
             FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok(ConnectionState::Alive)
     }

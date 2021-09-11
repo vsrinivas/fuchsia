@@ -7,6 +7,7 @@ protocol/member fuchsia.hardware.pty/Device.GetAttr() -> (int32 s,fuchsia.io/Nod
 protocol/member fuchsia.hardware.pty/Device.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
 protocol/member fuchsia.hardware.pty/Device.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.pty/Device.GetWindowSize() -> (int32 status,fuchsia.hardware.pty/WindowSize size)
+protocol/member fuchsia.hardware.pty/Device.IoToIo2Placeholder()
 protocol/member fuchsia.hardware.pty/Device.MakeActive(uint32 client_pty_id) -> (int32 status)
 protocol/member fuchsia.hardware.pty/Device.NodeGetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.pty/Device.NodeSetFlags(uint32 flags) -> (int32 s)

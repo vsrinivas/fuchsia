@@ -843,6 +843,7 @@ where
                         DatagramSocketRequest::BaseSocketGetIpPacketInfo { responder } => {
                             responder_send!(responder, &mut Err(Errno::Eopnotsupp));
                         }
+                        _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
                     }
                 }
                 Err(err) => {

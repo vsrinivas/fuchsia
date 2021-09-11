@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build fuchsia
-// +build !build_with_native_toolchain
+//go:build fuchsia && !build_with_native_toolchain
+// +build fuchsia,!build_with_native_toolchain
 
 package rpc
 
@@ -103,7 +103,7 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 }
 
 type directoryWrapper struct {
-	io.DirectoryWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
+	io.DirectoryWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	vfs                                 *ThinVFS
 	token                               key
 	cancel                              context.CancelFunc
@@ -447,7 +447,7 @@ func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
 }
 
 type fileWrapper struct {
-	io.FileWithCtxTransitionalBase // TODO(fuchsia.io2): Remove once transitions are complete.
+	io.FileWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	vfs                            *ThinVFS
 	cancel                         context.CancelFunc
 	file                           fs.File
