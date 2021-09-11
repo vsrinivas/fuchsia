@@ -85,5 +85,7 @@ func (c *FakeClock) After(d time.Duration) <-chan time.Time {
 func (c *FakeClock) Advance(d time.Duration) {
 	c.now = c.now.Add(d)
 	// Notify timer that the time has changed
-	c.timer.advanceTo(c.now)
+	if c.timer != nil {
+		c.timer.advanceTo(c.now)
+	}
 }

@@ -62,8 +62,6 @@ func TestClock(t *testing.T) {
 			t.Fatalf("Wrong time from clock.Now(): expected %q, got %q", startTime, now)
 		}
 
-		testAfter(t, ctx, 5*time.Nanosecond, sleep, false)
-
 		// But the time SHOULD be later after advancing the fake clock.
 		diff := time.Minute
 		fakeClock.Advance(diff)
@@ -72,6 +70,11 @@ func TestClock(t *testing.T) {
 		if !now.Equal(expectedNow) {
 			t.Fatalf("Wrong time from clock.Now(): expected %q, got %q", now, expectedNow)
 		}
+
+		// After sleeping, we should NOT expect to receive anything on the After() channel,
+		// meaning the timeout was not reached.
+		testAfter(t, ctx, 5*time.Nanosecond, sleep, false)
+		// But we SHOULD reach the timeout after advancing the fake clock.
 		testAfter(t, ctx, diff, func() { fakeClock.Advance(diff + time.Second) }, true)
 	})
 }
