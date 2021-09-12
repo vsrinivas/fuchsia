@@ -8,76 +8,80 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-declare_args() {
-  # Set this to false to enable new wayland bridge code with Flatland API support
-  use_legacy_wayland_bridge = true
-}
+bin_deps = [
+  "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+  "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+  "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+  "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+  "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
+  "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+  "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+  "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+  "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+  "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+  "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+  "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
+  "//src/lib/async-utils",
+  "//src/lib/fdio/rust:fdio",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-component",
+  "//src/lib/trace/rust:trace",
+  "//src/lib/trace/rust:trace-provider",
+  "//src/lib/ui/fuchsia-scenic",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//src/virtualization/bin/wayland/core",
+  "//src/virtualization/bin/wayland/protocols:wayland",
+  "//src/virtualization/bin/wayland/protocols:wp_viewporter",
+  "//src/virtualization/bin/wayland/protocols:zaura_shell",
+  "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
+  "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
+  "//src/virtualization/bin/wayland/protocols:zwp_linux_dmabuf_v1",
+  "//src/virtualization/bin/wayland/protocols:zxdg_shell_v6",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:parking_lot",
+  "//third_party/rust_crates:thiserror",
+]
+
+bin_sources = [
+  "src/alpha_compositing.rs",
+  "src/aura_shell.rs",
+  "src/buffer.rs",
+  "src/client.rs",
+  "src/compositor.rs",
+  "src/data_device_manager.rs",
+  "src/display.rs",
+  "src/linux_dmabuf.rs",
+  "src/main.rs",
+  "src/object.rs",
+  "src/output.rs",
+  "src/registry.rs",
+  "src/scenic.rs",
+  "src/seat.rs",
+  "src/secure_output.rs",
+  "src/shm.rs",
+  "src/subcompositor.rs",
+  "src/test_protocol.rs",
+  "src/viewporter.rs",
+  "src/xdg_shell.rs",
+]
 
 rustc_binary("bin") {
   output_name = "wayland_bridge"
   edition = "2018"
   with_unit_tests = true
-  deps = [
-    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
-    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
-    "//sdk/fidl/fuchsia.wayland:fuchsia.wayland-rustc",
-    "//src/lib/async-utils",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/virtualization/bin/wayland/core",
-    "//src/virtualization/bin/wayland/protocols:wayland",
-    "//src/virtualization/bin/wayland/protocols:wp_viewporter",
-    "//src/virtualization/bin/wayland/protocols:zaura_shell",
-    "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
-    "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
-    "//src/virtualization/bin/wayland/protocols:zwp_linux_dmabuf_v1",
-    "//src/virtualization/bin/wayland/protocols:zxdg_shell_v6",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = bin_deps
+  sources = bin_sources
+  features = [ "flatland" ]
+}
 
-  sources = [
-    "src/alpha_compositing.rs",
-    "src/aura_shell.rs",
-    "src/buffer.rs",
-    "src/client.rs",
-    "src/compositor.rs",
-    "src/data_device_manager.rs",
-    "src/display.rs",
-    "src/linux_dmabuf.rs",
-    "src/main.rs",
-    "src/object.rs",
-    "src/output.rs",
-    "src/registry.rs",
-    "src/scenic.rs",
-    "src/seat.rs",
-    "src/secure_output.rs",
-    "src/shm.rs",
-    "src/subcompositor.rs",
-    "src/test_protocol.rs",
-    "src/viewporter.rs",
-    "src/xdg_shell.rs",
-  ]
-  if (!use_legacy_wayland_bridge) {
-    features = [ "flatland" ]
-  }
+rustc_binary("legacy_bin") {
+  output_name = "legacy_wayland_bridge"
+  edition = "2018"
+  with_unit_tests = true
+  deps = bin_deps
+  sources = bin_sources
 }
 
 resource("keymap") {
@@ -85,9 +89,7 @@ resource("keymap") {
   outputs = [ "data/keymap.xkb" ]
 }
 
-fuchsia_package_with_single_component("bridge") {
-  package_name = "wayland_bridge"
-  component_name = "wayland_bridge"
+fuchsia_component("wayland_bridge") {
   manifest = "meta/wayland_bridge.cmx"
   deps = [
     ":bin",
@@ -95,40 +97,72 @@ fuchsia_package_with_single_component("bridge") {
   ]
 }
 
+fuchsia_component("legacy_wayland_bridge") {
+  manifest = "meta/legacy_wayland_bridge.cmx"
+  deps = [
+    ":keymap",
+    ":legacy_bin",
+  ]
+}
+
+fuchsia_package("bridge") {
+  package_name = "wayland_bridge"
+  deps = [
+    ":legacy_wayland_bridge",
+    ":wayland_bridge",
+  ]
+}
+
+integration_test_deps = [
+  "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-component",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//src/virtualization/bin/wayland/core",
+  "//src/virtualization/bin/wayland/protocols:wayland",
+  "//src/virtualization/bin/wayland/protocols:wp_viewporter",
+  "//src/virtualization/bin/wayland/protocols:zaura_shell",
+  "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
+  "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
+  "//src/virtualization/bin/wayland/protocols:zwp_linux_dmabuf_v1",
+  "//src/virtualization/bin/wayland/protocols:zxdg_shell_v6",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:thiserror",
+]
+
 rustc_test("integration_test") {
   output_name = "wayland_bridge_integration_test"
   edition = "2018"
-  deps = [
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/virtualization/bin/wayland/core",
-    "//src/virtualization/bin/wayland/protocols:wayland",
-    "//src/virtualization/bin/wayland/protocols:wp_viewporter",
-    "//src/virtualization/bin/wayland/protocols:zaura_shell",
-    "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
-    "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
-    "//src/virtualization/bin/wayland/protocols:zwp_linux_dmabuf_v1",
-    "//src/virtualization/bin/wayland/protocols:zxdg_shell_v6",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = integration_test_deps
   source_root = "tests/integration_test.rs"
+  sources = [ "tests/integration_test.rs" ]
+  features = [ "flatland" ]
+}
 
+rustc_test("legacy_integration_test") {
+  output_name = "legacy_wayland_bridge_integration_test"
+  edition = "2018"
+  deps = integration_test_deps
+  source_root = "tests/integration_test.rs"
   sources = [ "tests/integration_test.rs" ]
 }
 
 fuchsia_unittest_component("wayland_bridge_integration_tests") {
   manifest = "meta/wayland_bridge_integration_tests.cmx"
-  deps = [ ":integration_test" ]
+  deps = [
+    ":integration_test",
+    ":legacy_integration_test",
+  ]
 }
 
 fuchsia_unittest_component("wayland_bridge_unit_tests") {
   manifest = "meta/wayland_bridge_unit_tests.cmx"
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    ":legacy_bin_test",
+  ]
 }
 
 fuchsia_test_package("wayland_bridge_tests") {

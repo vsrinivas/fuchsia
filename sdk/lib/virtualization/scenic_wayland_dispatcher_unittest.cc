@@ -15,7 +15,11 @@
 namespace guest {
 
 static constexpr const char* kWaylandDispatcherUrl =
+#ifdef USE_LEGACY_WAYLAND_BRIDGE
+    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
+#else
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
+#endif
 
 class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
                        public fuchsia::wayland::ViewProducer {

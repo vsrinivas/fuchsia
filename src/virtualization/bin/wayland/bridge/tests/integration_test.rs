@@ -50,7 +50,10 @@ mod test {
         let launcher = fuchsia_component::client::launcher()?;
         let app = fuchsia_component::client::launch(
             &launcher,
+            #[cfg(feature = "flatland")]
             "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx".to_string(),
+            #[cfg(not(feature = "flatland"))]
+            "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx".to_string(),
             None,
         )?;
         let bridge_proxy = app.connect_to_protocol::<WaylandDispatcherMarker>()?;

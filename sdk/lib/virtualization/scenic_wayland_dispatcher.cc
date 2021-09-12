@@ -8,7 +8,11 @@
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
 
 static constexpr char kWaylandDispatcherPackage[] =
+#ifdef USE_LEGACY_WAYLAND_BRIDGE
+    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
+#else
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
+#endif
 
 namespace guest {
 

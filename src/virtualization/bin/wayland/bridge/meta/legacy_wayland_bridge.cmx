@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/legacy_wayland_bridge"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.input3.Keyboard",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.virtualization.Manager"
+        ]
+    }
+}

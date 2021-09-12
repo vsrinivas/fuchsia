@@ -4,6 +4,11 @@
 
 import("//build/components.gni")
 
+declare_args() {
+  # Set this to false to enable new wayland bridge code with Flatland API support
+  use_legacy_wayland_bridge = true
+}
+
 source_set("virtualization") {
   sources = [
     "scenic_wayland_dispatcher.cc",
@@ -17,6 +22,10 @@ source_set("virtualization") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
+  defines = []
+  if (use_legacy_wayland_bridge) {
+    defines += [ "USE_LEGACY_WAYLAND_BRIDGE" ]
+  }
 }
 
 executable("virtualization_lib_unittests") {
@@ -31,6 +40,10 @@ executable("virtualization_lib_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
   ]
+  defines = []
+  if (use_legacy_wayland_bridge) {
+    defines += [ "USE_LEGACY_WAYLAND_BRIDGE" ]
+  }
 }
 
 fuchsia_unittest_package("virtualization_lib_tests") {
