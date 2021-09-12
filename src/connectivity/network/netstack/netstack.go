@@ -816,7 +816,9 @@ func (ns *Netstack) addLoopback() error {
 		func(tcpip.NICID) string {
 			return "lo"
 		},
-		loopback.New(),
+		// To match linux behaviour, as per
+		// https://github.com/torvalds/linux/blob/5bfc75d92efd494db37f5c4c173d3639d4772966/drivers/net/loopback.c#L162.
+		ethernet.New(loopback.New()),
 		nil, /* controller */
 		nil, /* observer */
 		defaultInterfaceMetric,

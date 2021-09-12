@@ -210,6 +210,7 @@ async fn inspect_nic() -> Result {
             NICID: loopback_props.id.to_string(),
             Running: "true",
             "DHCP enabled": "false",
+            LinkAddress: "00:00:00:00:00:00",
             ProtocolAddress0: loopback_addrs.clone(),
             ProtocolAddress1: loopback_addrs.clone(),
             Stats: {
