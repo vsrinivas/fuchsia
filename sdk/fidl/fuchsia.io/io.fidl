@@ -654,6 +654,8 @@ protocol Directory {
     /// The number of dirents in a directory may be very large: akin to
     /// calling read multiple times on a file, directories have a seek
     /// offset which is updated on subsequent calls to ReadDirents.
+    /// Each call to ReadDirents will only return whole dirent structures,
+    /// they will not get split across ReadDirent calls.
     ///
     /// These dirents are of the form:
     /// ```
