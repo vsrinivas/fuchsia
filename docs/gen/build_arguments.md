@@ -3890,7 +3890,7 @@ Set this to false to enable new wayland bridge code with Flatland API support
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/wayland/bridge/BUILD.gn:13
+From //sdk/lib/virtualization/BUILD.gn:9
 
 ### use_lto
 Use link time optimization (LTO).
