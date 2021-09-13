@@ -74,8 +74,9 @@ zx_status_t GetBootItem(const zbi_platform_id_t* platform_id, uint32_t type, uin
 
 TEST(PbusTest, Enumeration) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = "/boot/driver/platform-bus.so";
-  args.disable_driver_index = true;
+  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
+  args.load_drivers.push_back("/boot/driver/fragment.so");
+  args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
 
   args.get_boot_item = [](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
     zbi_platform_id_t kPlatformId = []() {
