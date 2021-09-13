@@ -283,12 +283,37 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 }
 
 #[derive(Clone)]
+/// Defines the daemon object. This is used by "ffx daemon start".
+///
+/// Typical usage is:
+///   let mut daemon = ffx_daemon::Daemon::new();
+///   daemon.start().await
 pub struct Daemon {
+    // The event queue is a collection of subscriptions to which DaemonEvents will be published.
     event_queue: events::Queue<DaemonEvent>,
+    // All the targets currently known to the daemon.
+    // This may include targets the daemon has no access to.
     target_collection: Rc<TargetCollection>,
+    // ascendd is the overnet daemon running on the Linux host. It manages the mesh and the
+    // connections to the devices and other peers (for example, a connection to the frontend).
+    // With ffx, ascendd is embedded within the ffx daemon (when ffx daemon is launched, we don’t
+    // need an extra process for ascendd).
     ascendd: Rc<Cell<Option<Ascendd>>>,
+    // An online cache of configured target entries (the non-discoverable targets represented in the
+    // ffx configuration).
+    // The cache can be updated by calls to AddTarget and RemoveTarget.
+    // With manual_targets, we have access to the targets.manual field of the configuration (a
+    // vector of strings). Each target is defined by an IP address and a port.
     manual_targets: Rc<dyn manual_targets::ManualTargets>,
+    // Handles the registered FIDL services and associated handles. This is initialized with the
+    // list of services defined in src/developer/ffx/daemon/services/BUILD.gn (the deps field in
+    // ffx_service) using the macro generate_service_map in
+    // src/developer/ffx/build/templates/services_macro.md.
     service_register: ServiceRegister,
+    // All the persistent long running tasks spawned by the daemon. The tasks are standalone. That
+    // means that they execute by themselves without any intervention from the daemon.
+    // The purpose of this vector is to keep the reference strong count positive until the daemon is
+    // dropped.
     tasks: Vec<Rc<Task<()>>>,
 }
 
