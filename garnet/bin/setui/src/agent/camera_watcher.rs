@@ -155,25 +155,23 @@ mod tests {
     use super::*;
     use crate::event;
     use crate::message::base::{MessageEvent, MessengerType};
+    use crate::message::receptor::Receptor;
     use crate::message::MessageHubUtil;
+    use crate::service::{Address, Payload, Role};
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
+    use crate::tests::helpers::{
+        create_messenger_and_publisher, create_messenger_and_publisher_from_hub,
+        create_receptor_for_setting_type,
+    };
     use futures::StreamExt;
     use matches::assert_matches;
-
-    // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
 
     // Tests that the initialization lifespan is not handled.
     #[fuchsia_async::run_until_stalled(test)]
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
-
-        let (messenger, _) = service_message_hub
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Unable to create messenger");
+        let (messenger, publisher) = create_messenger_and_publisher().await;
 
         // Construct the agent.
         let mut agent =
@@ -194,13 +192,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn when_camera3_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
-
-        let (messenger, _) = service_message_hub
-            .create(MessengerType::Unbound)
-            .await
-            .expect("Unable to create messenger");
+        let (messenger, publisher) = create_messenger_and_publisher().await;
 
         // Construct the agent.
         let mut agent =
@@ -222,6 +214,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
         let service_message_hub = service::MessageHub::create_hub();
+        let (messenger, publisher) =
+            create_messenger_and_publisher_from_hub(&service_message_hub).await;
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
@@ -229,25 +223,16 @@ mod tests {
         // receptor.
         let event_receptor = service::build_event_listener(&service_message_hub).await;
 
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
-
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let handler_receptor = service_message_hub
-            .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
-            .await
-            .expect("Unable to create receptor")
-            .1;
+        let handler_receptor: Receptor<Payload, Address, Role> =
+            create_receptor_for_setting_type(&service_message_hub, SettingType::Unknown).await;
 
         let mut event_handler = EventHandler {
             publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("Unable to create messenger")
-                .0,
+            messenger,
             recipient_settings: vec![SettingType::Unknown].into_iter().collect(),
             sw_muted: false,
         };
@@ -307,7 +292,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
         let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
+        let (messenger, publisher) =
+            create_messenger_and_publisher_from_hub(&service_message_hub).await;
         let handler_address = service::Address::Handler(SettingType::Unknown);
         let verification_request = Request::Get;
 
@@ -315,7 +301,7 @@ mod tests {
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let mut handler_receptor = service_message_hub
+        let mut handler_receptor: Receptor<Payload, Address, Role> = service_message_hub
             .create(MessengerType::Addressable(handler_address))
             .await
             .expect("Unable to create handler receptor")
@@ -324,11 +310,7 @@ mod tests {
         // Declare all settings as unavailable so that no events are sent.
         let mut event_handler = EventHandler {
             publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("Unable to create messenger")
-                .0,
+            messenger,
             recipient_settings: HashSet::new(),
             sw_muted: false,
         };

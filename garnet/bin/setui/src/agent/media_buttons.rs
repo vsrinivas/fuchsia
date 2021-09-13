@@ -171,31 +171,27 @@ mod tests {
     use crate::event;
     use crate::input::common::MediaButtonsEventBuilder;
     use crate::input::MediaButtons;
-    use crate::message::base::{MessageEvent, MessengerType};
+    use crate::message::base::MessageEvent;
+    use crate::message::receptor::Receptor;
     use crate::message::MessageHubUtil;
     use crate::service;
+    use crate::service::{Address, Payload, Role};
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
-
-    // TODO(fxbug.dev/62860): Refactor tests, could use a common setup helper.
+    use crate::tests::helpers::{
+        create_messenger_and_publisher, create_messenger_and_publisher_from_hub,
+        create_receptor_for_setting_type,
+    };
 
     // Tests that the initialization lifespan is not handled.
     #[fuchsia_async::run_until_stalled(test)]
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
+        let (messenger, publisher) = create_messenger_and_publisher().await;
 
         // Construct the agent.
-        let mut agent = MediaButtonsAgent {
-            publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("should create messenger")
-                .0,
-            recipient_settings: HashSet::new(),
-        };
+        let mut agent =
+            MediaButtonsAgent { publisher, messenger, recipient_settings: HashSet::new() };
 
         // Try to initiatate the initialization lifespan.
         let result = agent
@@ -212,19 +208,11 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn when_media_buttons_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
+        let (messenger, publisher) = create_messenger_and_publisher().await;
 
         // Construct the agent.
-        let mut agent = MediaButtonsAgent {
-            publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("should create messenger")
-                .0,
-            recipient_settings: HashSet::new(),
-        };
+        let mut agent =
+            MediaButtonsAgent { publisher, messenger, recipient_settings: HashSet::new() };
 
         let service_context = Arc::new(ServiceContext::new(
             // Create a service registry without a media buttons interface.
@@ -242,6 +230,9 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
         let service_message_hub = service::MessageHub::create_hub();
+
+        let (messenger, publisher) =
+            create_messenger_and_publisher_from_hub(&service_message_hub).await;
         let target_setting_type = SettingType::Unknown;
 
         // Get the messenger's signature and the receptor for agents. We need
@@ -250,23 +241,14 @@ mod tests {
         // receptor.
         let event_receptor = service::build_event_listener(&service_message_hub).await;
 
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
-
         // Create receptor representing handler endpoint.
-        let handler_receptor = service_message_hub
-            .create(MessengerType::Addressable(service::Address::Handler(target_setting_type)))
-            .await
-            .expect("Unable to create receptor")
-            .1;
+        let handler_receptor: Receptor<Payload, Address, Role> =
+            create_receptor_for_setting_type(&service_message_hub, target_setting_type).await;
 
         // Make all setting types available.
         let event_handler = EventHandler {
             publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("should create messenger")
-                .0,
+            messenger,
             recipient_settings: vec![target_setting_type].into_iter().collect(),
         };
 
@@ -342,25 +324,16 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
         let service_message_hub = service::MessageHub::create_hub();
-        let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
+        let (messenger, publisher) =
+            create_messenger_and_publisher_from_hub(&service_message_hub).await;
 
         // Create messenger to represent unavailable setting handler.
-        let mut handler_receptor = service_message_hub
-            .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
-            .await
-            .expect("Unable to create receptor")
-            .1;
+        let mut handler_receptor: Receptor<Payload, Address, Role> =
+            create_receptor_for_setting_type(&service_message_hub, SettingType::Unknown).await;
 
         // Declare all settings as unavailable so that no events are sent.
-        let event_handler = EventHandler {
-            publisher,
-            messenger: service_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("should create messenger")
-                .0,
-            recipient_settings: HashSet::new(),
-        };
+        let event_handler =
+            EventHandler { publisher, messenger, recipient_settings: HashSet::new() };
 
         // Send the events
         event_handler.handle_event(
