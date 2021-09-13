@@ -27,6 +27,8 @@
             "wlan",
             "--allow-log-tag",
             "fxfs",
+            "--allow-log-tag",
+            "sshd-host",
 
             // LogListener has a maxmimum number of tags that can be filtered, so adding
             // more here may not work.

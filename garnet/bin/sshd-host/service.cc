@@ -147,6 +147,7 @@ Service::Service(uint16_t port) : port_(port) {
     exit(1);
   }
 
+  FX_SLOG(INFO, "listen() for inbound SSH connections", "tag", "sshd-host", "port", (int)port_);
   if (listen(sock_, 10) < 0) {
     FX_LOGS(ERROR) << "Failed to listen: " << strerror(errno);
     exit(1);
@@ -177,6 +178,7 @@ void Service::Wait() {
       [this](zx_status_t /*success*/, uint32_t /*events*/) {
         struct sockaddr_in6 peer_addr {};
         socklen_t peer_addr_len = sizeof(peer_addr);
+        FX_SLOG(INFO, "Waiting for next connection", "tag", "sshd-host");
         int conn = accept(sock_, reinterpret_cast<struct sockaddr*>(&peer_addr), &peer_addr_len);
         if (conn < 0) {
           if (errno == EPIPE) {
@@ -203,6 +205,7 @@ void Service::Wait() {
 }
 
 void Service::Launch(int conn, const std::string& peer_name) {
+  FX_SLOG(INFO, "accepted connection", "tag", "sshd-host", "remote", peer_name.c_str());
   // Create a new job to run the child in.
   zx::job child_job;
 

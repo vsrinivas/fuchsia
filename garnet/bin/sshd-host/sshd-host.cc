@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
@@ -27,6 +28,9 @@ int main(int /*argc*/, const char** /*argv*/) {
   { zx::handle((zx_take_startup_handle(PA_DIRECTORY_REQUEST))); }
 
   auto service_directory = sys::ComponentContext::Create()->svc();
+
+  FX_SLOG(INFO, "sshd-host starting up", "tag", "sshd-host");
+
   // Ignore errors while provisioning authorized_keys.
   sshd_host::provision_authorized_keys_from_bootloader_file(service_directory);
 
