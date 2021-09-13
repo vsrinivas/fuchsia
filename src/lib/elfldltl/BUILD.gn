@@ -16,6 +16,7 @@ zx_library("elfldltl") {
   sdk_headers = [
     "lib/elfldltl/constants.h",
     "lib/elfldltl/field.h",
+    "lib/elfldltl/fuzzer.h",
     "lib/elfldltl/layout.h",
     "lib/elfldltl/note.h",
     "lib/elfldltl/self.h",
