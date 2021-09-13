@@ -24,32 +24,6 @@ const MAX_DYNAMIC_OFFER_COUNT uint32 = 128;
 /// `fuchsia.sys2.Realm`.
 @discoverable
 protocol Realm {
-    /// Binds to a child component instance, causing it to start running if it
-    /// is not already. When this function successfully returns, `child` is
-    /// running and `exposed_dir` is bound to a directory that contains the
-    /// capabilities which the child exposed to its realm via
-    /// `ComponentDecl.exposes` (specified via "expose" declarations in the
-    /// component's manifest).
-    ///
-    /// `exposed_dir` is a valid channel as long as `child` is running. `child`
-    /// will remain running until it either stops on its own, or `DestroyChild`
-    /// causes the child instance to be destroyed.
-    ///
-    /// For example, if the child exposes a protocol named `example.Echo` then
-    /// `exposed_dir` will contain that protocol at `/example.Echo`.
-    ///
-    /// Errors:
-    /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.  -
-    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
-    /// - `INSTANCE_CANNOT_START`: `child` was not running and there was an error
-    ///   starting it.
-    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
-    /// - `INSTANCE_DIED`: This realm no longer exists.
-    BindChild(resource struct {
-        child ChildRef;
-        exposed_dir server_end:fuchsia.io.Directory;
-    }) -> (struct {}) error fuchsia.component.Error;
-
     /// Opens the exposed directory of a child component instance. When this
     /// function successfully returns, `exposed_dir` is bound to a directory
     /// that contains the capabilities which the child exposed to its realm

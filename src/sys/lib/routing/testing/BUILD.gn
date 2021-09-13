@@ -18,6 +18,7 @@ rustc_library("routing_test_helpers") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

@@ -23,7 +23,9 @@ use {
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
         ProtocolDeclBuilder, TEST_RUNNER_NAME,
     },
-    fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx,
+    fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon_status as zx,
     maplit::hashmap,
     matches::assert_matches,
     moniker::{
@@ -72,6 +74,23 @@ pub fn component_decl_with_test_runner() -> ComponentDecl {
             runner: Some(TEST_RUNNER_NAME.into()),
             info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
         }),
+        ..Default::default()
+    }
+}
+
+/// Same as above but with the component also exposing Binder protocol.
+pub fn component_decl_with_exposed_binder() -> ComponentDecl {
+    ComponentDecl {
+        program: Some(ProgramDecl {
+            runner: Some(TEST_RUNNER_NAME.into()),
+            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
+        }),
+        exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Framework,
+            source_name: CapabilityName(fcomponent::BinderMarker::DEBUG_NAME.to_owned()),
+            target: ExposeTarget::Parent,
+            target_name: CapabilityName(fcomponent::BinderMarker::DEBUG_NAME.to_owned()),
+        })],
         ..Default::default()
     }
 }

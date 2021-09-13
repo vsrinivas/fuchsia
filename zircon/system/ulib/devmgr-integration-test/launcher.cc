@@ -52,11 +52,6 @@ using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 // TODO(http://fxbug.dev/33183): Replace this with a test component_manager.
 class FakeRealm : public fidl::WireServer<fuchsia_sys2::Realm> {
  public:
-  void BindChild(BindChildRequestView request, BindChildCompleter::Sync& completer) override {
-    exposed_dir_ = std::move(request->exposed_dir);
-    completer.ReplySuccess();
-  }
-
   void CreateChild(CreateChildRequestView request, CreateChildCompleter::Sync& completer) override {
     completer.ReplySuccess();
   }
@@ -68,7 +63,10 @@ class FakeRealm : public fidl::WireServer<fuchsia_sys2::Realm> {
                     ListChildrenCompleter::Sync& completer) override {}
 
   void OpenExposedDir(OpenExposedDirRequestView request,
-                      OpenExposedDirCompleter::Sync& completer) override {}
+                      OpenExposedDirCompleter::Sync& completer) override {
+    exposed_dir_ = std::move(request->exposed_dir);
+    completer.ReplySuccess();
+  }
 
  private:
   fidl::ServerEnd<fuchsia_io::Directory> exposed_dir_;

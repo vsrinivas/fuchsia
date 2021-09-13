@@ -127,10 +127,6 @@ impl RealmCapabilityHost {
                 let mut res = Self::create_child(component, collection, decl, args).await;
                 responder.send(&mut res)?;
             }
-            fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
-                let mut res = Self::bind_child(component, child, exposed_dir).await;
-                responder.send(&mut res)?;
-            }
             fsys::RealmRequest::DestroyChild { responder, child } => {
                 let mut res = Self::destroy_child(component, child).await;
                 responder.send(&mut res)?;
@@ -449,13 +445,15 @@ mod tests {
         },
         cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},
-        fidl_fidl_examples_echo as echo,
+        fidl_fidl_examples_echo as echo, fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
+        fuchsia_component::client,
         futures::{lock::Mutex, poll, task::Poll},
         io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         matches::assert_matches,
         moniker::PartialAbsoluteMoniker,
+        routing_test_helpers::component_decl_with_exposed_binder,
         std::collections::HashSet,
         std::convert::TryFrom,
         std::path::PathBuf,
@@ -538,6 +536,17 @@ mod tests {
             )
             .await
         }
+    }
+
+    fn child_decl(name: &str) -> fsys::ChildDecl {
+        ChildDecl {
+            name: name.to_string(),
+            url: format!("test:///{}", name),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        }
+        .native_into_fidl()
     }
 
     #[fuchsia::test]
@@ -765,8 +774,8 @@ mod tests {
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
-                ("a", component_decl_with_test_runner()),
-                ("b", component_decl_with_test_runner()),
+                ("a", component_decl_with_exposed_binder()),
+                ("b", component_decl_with_exposed_binder()),
             ],
             vec!["system"].into(),
         )
@@ -795,11 +804,16 @@ mod tests {
                 .unwrap_or_else(|_| panic!("failed to create child {}", name));
             let mut child_ref =
                 fsys::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
-            let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let res = test.realm_proxy.bind_child(&mut child_ref, server_end).await;
-            let _ = res
-                .unwrap_or_else(|_| panic!("failed to bind to child {}", name))
-                .unwrap_or_else(|_| panic!("failed to bind to child {}", name));
+            let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let () = test
+                .realm_proxy
+                .open_exposed_dir(&mut child_ref, server_end)
+                .await
+                .expect("OpenExposedDir FIDL")
+                .expect("OpenExposedDir Error");
+            let _: fcomponent::BinderProxy =
+                client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
+                    .expect("Connection to fuchsia.component.Binder");
         }
 
         let child = get_live_child(test.component(), "coll:a").await;
@@ -949,116 +963,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn bind_static_child() {
-        // Create a hierarchy of three components, the last with eager startup. The middle
-        // component hosts and exposes the "hippo" service.
-        let test = RealmCapabilityTest::new(
-            vec![
-                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
-                (
-                    "system",
-                    ComponentDeclBuilder::new()
-                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
-                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                            source: ExposeSource::Self_,
-                            source_name: "foo".into(),
-                            target_name: "hippo".into(),
-                            target: ExposeTarget::Parent,
-                        }))
-                        .add_eager_child("eager")
-                        .build(),
-                ),
-                ("eager", component_decl_with_test_runner()),
-            ],
-            vec![].into(),
-        )
-        .await;
-        let mut out_dir = OutDir::new();
-        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
-        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-
-        // Bind to child and use exposed service.
-        let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
-        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let res = test.realm_proxy.bind_child(&mut child_ref, server_end).await;
-        let _ = res.expect("failed to bind to system").expect("failed to bind to system");
-        let node_proxy = io_util::open_node(
-            &dir_proxy,
-            &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
-        )
-        .expect("failed to open echo service");
-        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-        let res = echo_proxy.echo_string(Some("hippos")).await;
-        assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
-
-        // Verify that the bindings happened (including the eager binding) and the component
-        // topology matches expectations.
-        let expected_urls =
-            &["test:///root_resolved", "test:///system_resolved", "test:///eager_resolved"];
-        test.mock_runner.wait_for_urls(expected_urls).await;
-        assert_eq!("(system(eager))", test.hook.print());
-    }
-
-    #[fuchsia::test]
-    async fn bind_dynamic_child() {
-        // Create a root component with a collection and define a component that exposes a service.
-        let mut out_dir = OutDir::new();
-        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
-        let test = RealmCapabilityTest::new(
-            vec![
-                ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
-                (
-                    "system",
-                    ComponentDeclBuilder::new()
-                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
-                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                            source: ExposeSource::Self_,
-                            source_name: "foo".into(),
-                            target_name: "hippo".into(),
-                            target: ExposeTarget::Parent,
-                        }))
-                        .build(),
-                ),
-            ],
-            vec![].into(),
-        )
-        .await;
-        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-
-        // Add "system" to collection.
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test
-            .realm_proxy
-            .create_child(&mut collection_ref, child_decl("system"), fsys::CreateChildArgs::EMPTY)
-            .await;
-        let _ = res.expect("failed to create child system").expect("failed to create child system");
-
-        // Bind to child and use exposed service.
-        let mut child_ref =
-            fsys::ChildRef { name: "system".to_string(), collection: Some("coll".to_string()) };
-        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        let res = test.realm_proxy.bind_child(&mut child_ref, server_end).await;
-        let _ = res.expect("failed to bind to system").expect("failed to bind to system");
-        let node_proxy = io_util::open_node(
-            &dir_proxy,
-            &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
-        )
-        .expect("failed to open echo service");
-        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-        let res = echo_proxy.echo_string(Some("hippos")).await;
-        assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
-
-        // Verify that the binding happened and the component topology matches expectations.
-        let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
-        test.mock_runner.wait_for_urls(expected_urls).await;
-        assert_eq!("(coll:system)", test.hook.print());
-    }
-
-    #[fuchsia::test]
     async fn dynamic_single_run_child() {
         // Set up model and realm service.
         let test = RealmCapabilityTest::new(
@@ -1115,178 +1019,6 @@ mod tests {
         let actual_children = get_live_children(test.component()).await;
         let expected_children: HashSet<PartialChildMoniker> = HashSet::new();
         assert_eq!(actual_children, expected_children);
-    }
-
-    #[fuchsia::test]
-    async fn bind_child_errors() {
-        let mut test = RealmCapabilityTest::new(
-            vec![
-                (
-                    "root",
-                    ComponentDeclBuilder::new()
-                        .add_lazy_child("system")
-                        .add_lazy_child("unresolvable")
-                        .add_lazy_child("unrunnable")
-                        .build(),
-                ),
-                ("system", component_decl_with_test_runner()),
-                ("unrunnable", component_decl_with_test_runner()),
-            ],
-            vec![].into(),
-        )
-        .await;
-        test.mock_runner.cause_failure("unrunnable");
-
-        // Instance not found.
-        {
-            let mut child_ref = fsys::ChildRef { name: "missing".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = test
-                .realm_proxy
-                .bind_child(&mut child_ref, server_end)
-                .await
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fcomponent::Error::InstanceNotFound);
-        }
-
-        // Instance cannot resolve.
-        {
-            let mut child_ref =
-                fsys::ChildRef { name: "unresolvable".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = test
-                .realm_proxy
-                .bind_child(&mut child_ref, server_end)
-                .await
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fcomponent::Error::InstanceCannotResolve);
-        }
-
-        // Instance died.
-        {
-            test.drop_component();
-            let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = test
-                .realm_proxy
-                .bind_child(&mut child_ref, server_end)
-                .await
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fcomponent::Error::InstanceDied);
-        }
-    }
-
-    // If a runner fails to launch a child, the error should not occur at `bind_child`.
-    #[fuchsia::test]
-    async fn bind_child_runner_failure() {
-        let test = RealmCapabilityTest::new(
-            vec![
-                ("root", ComponentDeclBuilder::new().add_lazy_child("unrunnable").build()),
-                ("unrunnable", component_decl_with_test_runner()),
-            ],
-            vec![].into(),
-        )
-        .await;
-        test.mock_runner.cause_failure("unrunnable");
-
-        let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
-        let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        test.realm_proxy
-            .bind_child(&mut child_ref, server_end)
-            .await
-            .expect("fidl call failed")
-            .expect("bind failed");
-        // TODO(fxbug.dev/46913): Assert that `server_end` closes once instance death is monitored.
-    }
-
-    fn child_decl(name: &str) -> fsys::ChildDecl {
-        ChildDecl {
-            name: name.to_string(),
-            url: format!("test:///{}", name),
-            startup: fsys::StartupMode::Lazy,
-            environment: None,
-            on_terminate: None,
-        }
-        .native_into_fidl()
-    }
-
-    #[fuchsia::test]
-    async fn list_children() {
-        // Create a root component with collections and a static child.
-        let test = RealmCapabilityTest::new(
-            vec![
-                (
-                    "root",
-                    ComponentDeclBuilder::new()
-                        .add_lazy_child("static")
-                        .add_transient_collection("coll")
-                        .add_transient_collection("coll2")
-                        .build(),
-                ),
-                ("static", component_decl_with_test_runner()),
-            ],
-            vec![].into(),
-        )
-        .await;
-
-        // Create children "a" and "b" in collection 1, "c" in collection 2.
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test
-            .realm_proxy
-            .create_child(&mut collection_ref, child_decl("a"), fsys::CreateChildArgs::EMPTY)
-            .await;
-        let _ = res.expect("failed to create child a").expect("failed to create child a");
-
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test
-            .realm_proxy
-            .create_child(&mut collection_ref, child_decl("b"), fsys::CreateChildArgs::EMPTY)
-            .await;
-        let _ = res.expect("failed to create child b").expect("failed to create child b");
-
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test
-            .realm_proxy
-            .create_child(&mut collection_ref, child_decl("c"), fsys::CreateChildArgs::EMPTY)
-            .await;
-        let _ = res.expect("failed to create child c").expect("failed to create child c");
-
-        let mut collection_ref = fsys::CollectionRef { name: "coll2".to_string() };
-        let res = test
-            .realm_proxy
-            .create_child(&mut collection_ref, child_decl("d"), fsys::CreateChildArgs::EMPTY)
-            .await;
-        let _ = res.expect("failed to create child d").expect("failed to create child d");
-
-        // Verify that we see the expected children when listing the collection.
-        let (iterator_proxy, server_end) = endpoints::create_proxy().unwrap();
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test.realm_proxy.list_children(&mut collection_ref, server_end).await;
-        let _ = res.expect("failed to list children").expect("failed to list children");
-
-        let res = iterator_proxy.next().await;
-        let children = res.expect("failed to iterate over children");
-        assert_eq!(
-            children,
-            vec![
-                fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) },
-                fsys::ChildRef { name: "b".to_string(), collection: Some("coll".to_string()) },
-            ]
-        );
-
-        let res = iterator_proxy.next().await;
-        let children = res.expect("failed to iterate over children");
-        assert_eq!(
-            children,
-            vec![fsys::ChildRef { name: "c".to_string(), collection: Some("coll".to_string()) },]
-        );
-
-        let res = iterator_proxy.next().await;
-        let children = res.expect("failed to iterate over children");
-        assert_eq!(children, vec![]);
     }
 
     #[fuchsia::test]
@@ -1393,6 +1125,87 @@ mod tests {
         let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
         test.mock_runner.wait_for_urls(expected_urls).await;
         assert_eq!("(system)", test.hook.print());
+    }
+
+    #[fuchsia::test]
+    async fn open_exposed_dir_dynamic_child() {
+        let test = RealmCapabilityTest::new(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
+                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: ExposeSource::Self_,
+                            source_name: "foo".into(),
+                            target_name: "hippo".into(),
+                            target: ExposeTarget::Parent,
+                        }))
+                        .build(),
+                ),
+            ],
+            vec![].into(),
+        )
+        .await;
+
+        let (_event_source, mut event_stream) = test
+            .new_event_stream(
+                vec![EventType::Resolved.into(), EventType::Started.into()],
+                EventMode::Async,
+            )
+            .await;
+        let mut out_dir = OutDir::new();
+        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
+        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
+
+        // Add "system" to collection.
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let res = test
+            .realm_proxy
+            .create_child(&mut collection_ref, child_decl("system"), fsys::CreateChildArgs::EMPTY)
+            .await;
+        let _ = res.expect("failed to create child system").expect("failed to create child system");
+
+        // Open exposed directory of child.
+        let mut child_ref =
+            fsys::ChildRef { name: "system".to_string(), collection: Some("coll".to_owned()) };
+        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
+        let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+
+        // Assert that child was resolved.
+        let event =
+            event_stream.wait_until(EventType::Resolved, vec!["coll:system:1"].into()).await;
+        assert!(event.is_some());
+
+        // Assert that event stream doesn't have any outstanding messages.
+        // This ensures that EventType::Started for "system:0" has not been
+        // registered.
+        let event = event_stream
+            .wait_until(EventType::Started, vec!["coll:system:1"].into())
+            .now_or_never();
+        assert!(event.is_none());
+
+        // Now that it was asserted that "system:0" has yet to start,
+        // assert that it starts after making connection below.
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &PathBuf::from("hippo"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open hippo service");
+        let event = event_stream.wait_until(EventType::Started, vec!["coll:system:1"].into()).await;
+        assert!(event.is_some());
+        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+        let res = echo_proxy.echo_string(Some("hippos")).await;
+        assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
+
+        // Verify topology matches expectations.
+        let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
+        test.mock_runner.wait_for_urls(expected_urls).await;
+        assert_eq!("(coll:system)", test.hook.print());
     }
 
     #[fuchsia::test]
