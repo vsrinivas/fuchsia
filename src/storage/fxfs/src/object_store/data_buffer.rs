@@ -12,13 +12,114 @@ use {
     async_trait::async_trait,
     async_utils::event::Event,
     either::Either::{Left, Right},
-    futures::{stream::futures_unordered::FuturesUnordered, try_join, TryStreamExt},
+    futures::{pin_mut, stream::futures_unordered::FuturesUnordered, try_join, TryStreamExt},
+    pin_project::{pin_project, pinned_drop},
     slab::Slab,
     std::{
         cell::UnsafeCell, cmp::Ordering, collections::BTreeSet, convert::TryInto, ops::Range,
-        sync::Mutex,
+        pin::Pin, sync::Mutex,
     },
 };
+
+// StackList holds a doubly linked list of structures on the stack.  After pushing nodes onto the
+// list, the caller *must* call erase_node before or as the node is dropped.
+struct StackListNodePtr<T>(*const T);
+
+impl<T> Copy for StackListNodePtr<T> {}
+
+impl<T> Clone for StackListNodePtr<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Default for StackListNodePtr<T> {
+    fn default() -> Self {
+        Self(std::ptr::null())
+    }
+}
+
+unsafe impl<T> Send for StackListNodePtr<T> {}
+
+struct StackListChain<T> {
+    // Access to previous and next is safe provided we have mutable access to the list.
+    prev: UnsafeCell<StackListNodePtr<T>>,
+    next: UnsafeCell<StackListNodePtr<T>>,
+}
+
+impl<T> Default for StackListChain<T> {
+    fn default() -> Self {
+        Self {
+            prev: UnsafeCell::new(StackListNodePtr::default()),
+            next: UnsafeCell::new(StackListNodePtr::default()),
+        }
+    }
+}
+
+// The list contains just the head pointer.
+struct StackList<T>(StackListNodePtr<T>);
+
+impl<T: AsRef<StackListChain<T>>> StackList<T> {
+    fn new() -> Self {
+        Self(StackListNodePtr::default())
+    }
+
+    // Pushes node onto the list. After doing this, erase_node *must* be called before the node
+    // is dropped (which is why this is unsafe).
+    unsafe fn push_front(&mut self, node: Pin<&mut T>) {
+        let node_ptr = StackListNodePtr(&*node);
+        let chain = (*node_ptr.0).as_ref();
+        *chain.next.get() = std::mem::replace(&mut self.0, node_ptr);
+        if let Some(next) = (*chain.next.get()).0.as_ref() {
+            *next.as_ref().prev.get() = node_ptr;
+        }
+    }
+
+    fn erase_node(&mut self, node: &T) {
+        unsafe {
+            let chain = node.as_ref();
+            let prev = std::mem::take(&mut *chain.prev.get());
+            if let Some(next) = (*chain.next.get()).0.as_ref() {
+                *next.as_ref().prev.get() = prev;
+            }
+            let next = std::mem::take(&mut *chain.next.get());
+            if let Some(prev) = prev.0.as_ref() {
+                *prev.as_ref().next.get() = next;
+            } else if self.0 .0 == node {
+                self.0 = next;
+            }
+        }
+    }
+
+    fn iter(&self) -> StackListIter<'_, T> {
+        StackListIter { list: self, last_node: None }
+    }
+}
+
+impl<T> Drop for StackList<T> {
+    fn drop(&mut self) {
+        assert!(self.0 .0.is_null());
+    }
+}
+
+struct StackListIter<'a, T: AsRef<StackListChain<T>>> {
+    list: &'a StackList<T>,
+    last_node: Option<&'a T>,
+}
+
+impl<'a, T: AsRef<StackListChain<T>>> Iterator for StackListIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        unsafe {
+            match self.last_node {
+                None => self.last_node = self.list.0 .0.as_ref(),
+                Some(node) => self.last_node = (*node.as_ref().next.get()).0.as_ref(),
+            }
+            self.last_node
+        }
+    }
+}
 
 /// A readable, writable memory buffer that is not necessarily mapped into memory.
 /// Mainly serves as a portable abstraction over a VMO (see VmoDataBuffer).
@@ -65,6 +166,11 @@ struct Inner {
 
     // In-flight readers.
     readers: Slab<ReadContext>,
+
+    // Each read has an associated ReadKeys instance which is stored on the stack.  So that we can
+    // correctly handle truncation we need to be able to get to the ReadKeys instances, so they're
+    // added to a doubly linked list here.
+    read_keys_list: StackList<ReadKeys>,
 }
 
 impl Inner {
@@ -116,6 +222,15 @@ impl Inner {
             }
         } else {
             self.mark_present(old_size..aligned_size as u64);
+        }
+        for read_keys in self.read_keys_list.iter() {
+            let end_offset = read_keys.end_offset.get();
+            // Safe because we have &mut self.
+            unsafe {
+                if *end_offset > size {
+                    *end_offset = size;
+                }
+            }
         }
     }
 }
@@ -232,9 +347,11 @@ impl MemDataBuffer {
             pages: BTreeSet::new(),
             readers: Slab::new(),
             size,
+            read_keys_list: StackList::new(),
         }))
     }
 
+    // Reads from the source starting at the provided offset.
     async fn read_some(
         &self,
         offset: u64,
@@ -261,7 +378,13 @@ impl MemDataBuffer {
             }
             read_buf = &read_buf[PAGE_SIZE as usize..];
         }
-        out_buf.copy_from_slice(&buf[offset as usize..offset as usize + out_buf.len()]);
+        // Whilst we were reading, it's possible the buffer was truncated; only copy out what we
+        // can.  The read function will make sure that the correct value for the amount read is
+        // returned.
+        if offset < buf.len() as u64 {
+            let range = offset as usize..std::cmp::min(offset as usize + out_buf.len(), buf.len());
+            out_buf.copy_from_slice(&buf[range]);
+        }
         readers.get(read_key).unwrap().wait_event.as_ref().map(|e| e.signal());
         Ok(())
     }
@@ -271,12 +394,17 @@ impl MemDataBuffer {
         offset: u64,
         buf: &mut [u8],
         source: &dyn ReadObjectHandle,
+        keys: ReadKeysPtr,
     ) -> Result<(), Error> {
         let aligned_offset = round_down(offset, PAGE_SIZE);
         loop {
-            let mut read_keys = ReadKeys::new(self);
             let result = {
-                let mut inner = self.0.lock().unwrap();
+                let mut inner_lock = self.0.lock().unwrap();
+                let inner = &mut *inner_lock; // So that we can split the borrow.
+                let mut read_keys = keys.get(&mut inner.read_keys_list);
+                if *read_keys.as_mut().project().end_offset.get_mut() <= offset {
+                    return Ok(());
+                }
                 match inner.pages.get(&aligned_offset) {
                     None => {
                         // In this case, the page might have been pending a read but the
@@ -285,15 +413,14 @@ impl MemDataBuffer {
                         // be as efficient as the usual path because it is only issuing
                         // a read for a single page, but it should be rare enough that
                         // it doesn't matter.
-                        let mut new_pages = Vec::new();
+                        let pages = &mut inner.pages;
                         let read_key = read_keys.new_read(
                             offset..offset + PAGE_SIZE,
                             &mut inner.readers,
-                            &mut new_pages,
+                            |p| {
+                                pages.insert(p);
+                            },
                         );
-                        for page in new_pages {
-                            inner.pages.insert(page);
-                        }
                         Left(read_key)
                     }
                     Some(page) => {
@@ -392,24 +519,10 @@ impl DataBuffer for MemDataBuffer {
 
     async fn read(
         &self,
-        mut offset: u64,
+        offset: u64,
         mut read_buf: &mut [u8],
         source: &dyn ReadObjectHandle,
     ) -> Result<usize, Error> {
-        let content_size = self.size();
-        if offset >= content_size {
-            return Ok(0);
-        }
-        let aligned_size = round_up(self.size(), PAGE_SIZE).unwrap();
-        let done = if content_size - offset < read_buf.len() as u64 {
-            if aligned_size - offset < read_buf.len() as u64 {
-                read_buf = &mut read_buf[0..(aligned_size - offset) as usize];
-            }
-            (content_size - offset) as usize
-        } else {
-            read_buf.len()
-        };
-
         // A list of all the futures for any required reads.
         let reads = FuturesUnordered::new();
 
@@ -419,12 +532,33 @@ impl DataBuffer for MemDataBuffer {
         // New pages that we might need.
         let mut new_pages = Vec::new();
 
-        // Keep track of the keys for any reads we schedule.
-        let mut read_keys = ReadKeys::new(self);
+        // Keep track of the keys for any reads we schedule.  After read_keys has been inserted into
+        // read_keys_list, care must be taken to only access read_keys whilst holding the lock on
+        // inner.
+        let read_keys = ReadKeys::new(self);
+        pin_mut!(read_keys);
 
         {
             let mut inner = self.0.lock().unwrap();
+
+            let content_size = inner.size;
+            if offset >= content_size {
+                return Ok(0);
+            }
+            let aligned_size = round_up(content_size, PAGE_SIZE).unwrap();
+            let end_offset = if content_size - offset < read_buf.len() as u64 {
+                if aligned_size - offset < read_buf.len() as u64 {
+                    read_buf = &mut read_buf[0..(aligned_size - offset) as usize];
+                }
+                content_size
+            } else {
+                offset + read_buf.len() as u64
+            };
+
+            read_keys.as_mut().add_to_list(&mut inner.read_keys_list, end_offset);
+
             let Inner { pages, readers, buf, .. } = &mut *inner;
+            let mut offset = offset;
             for page in pages.range(round_down(offset, PAGE_SIZE)..offset + read_buf.len() as u64) {
                 let page = unsafe { page.page_mut() };
 
@@ -432,12 +566,16 @@ impl DataBuffer for MemDataBuffer {
                 if page.offset() > offset {
                     // Schedule a read for the gap.
                     let (head, tail) = read_buf.split_at_mut((page.offset() - offset) as usize);
-                    reads.push(self.read_some(
-                        offset,
-                        head,
-                        source,
-                        read_keys.new_read(offset..page.offset(), readers, &mut new_pages),
-                    ));
+                    reads.push(
+                        self.read_some(
+                            offset,
+                            head,
+                            source,
+                            read_keys
+                                .as_mut()
+                                .new_read(offset..page.offset(), readers, |p| new_pages.push(p)),
+                        ),
+                    );
                     read_buf = tail;
                     offset = page.offset();
                 }
@@ -446,13 +584,18 @@ impl DataBuffer for MemDataBuffer {
                     read_buf.split_at_mut(std::cmp::min(PAGE_SIZE as usize, read_buf.len()));
 
                 if page.is_reading() {
-                    pending_reads.push(self.wait_for_pending_read(offset, head, source));
+                    pending_reads.push(self.wait_for_pending_read(
+                        offset,
+                        head,
+                        source,
+                        read_keys.as_mut().get_ptr(),
+                    ));
                 } else {
                     head.copy_from_slice(&buf[offset as usize..offset as usize + head.len()]);
                 }
 
                 read_buf = tail;
-                offset = page.offset() + PAGE_SIZE;
+                offset += PAGE_SIZE;
             }
             // Handle the tail.
             if !read_buf.is_empty() {
@@ -460,11 +603,7 @@ impl DataBuffer for MemDataBuffer {
                     offset,
                     read_buf,
                     source,
-                    read_keys.new_read(
-                        offset..offset + read_buf.len() as u64,
-                        readers,
-                        &mut new_pages,
-                    ),
+                    read_keys.as_mut().new_read(offset..end_offset, readers, |p| new_pages.push(p)),
                 ));
             }
 
@@ -484,43 +623,107 @@ impl DataBuffer for MemDataBuffer {
             }
         )?;
 
-        Ok(done)
+        let _inner = self.0.lock().unwrap();
+        // Safe because we have taken the lock.
+        let end_offset = unsafe { *read_keys.end_offset.get() };
+        if end_offset > offset {
+            Ok((end_offset - offset) as usize)
+        } else {
+            Ok(0)
+        }
     }
 }
 
 // ReadKeys is a structure that tracks in-flight reads and cleans them up if dropped.
-struct ReadKeys<'a> {
-    buf: &'a MemDataBuffer,
+#[pin_project(PinnedDrop, !Unpin)]
+struct ReadKeys {
+    // Any reads that are taking place are chained together in a doubly linked list. The nodes
+    // are pinned to the stack. The chain field holds the previous and next pointers.
+    chain: StackListChain<ReadKeys>,
+
+    // Store a pointer back to MemDataBuffer so that we can tidy up when we are dropped.  This is a
+    // pointer rather than a reference so that we don't have to transmute away the lifetimes when we
+    // insert and remove from the stack list.  It's safe because ReadKeys is always created on the
+    // stack when we have a reference to MemDataBuffer so the reference will outlive ReadKeys and it
+    // will be pinned.
+    buf: *const MemDataBuffer,
+
+    // A vector of keys which refer to elements in the readers slab.
     keys: Vec<usize>,
+
+    // We record the end offset of the read so that if the buffer is truncated whilst we are issuing
+    // reads, we can detect this and truncate the read result.  It is safe to modify this field so
+    // long as the lock that guards Inner is held.
+    end_offset: UnsafeCell<u64>,
 }
 
-impl<'a> ReadKeys<'a> {
-    fn new(buf: &'a MemDataBuffer) -> Self {
-        ReadKeys { buf, keys: Vec::new() }
+unsafe impl Send for ReadKeys {}
+
+impl ReadKeys {
+    fn new(buf: &MemDataBuffer) -> Self {
+        ReadKeys {
+            chain: Default::default(),
+            buf,
+            keys: Vec::new(),
+            end_offset: UnsafeCell::new(0),
+        }
     }
 
     // Returns a new read key for a read for `range`.  It will append new pages for the read that
     // will get properly cleaned up if dropped.
     fn new_read(
-        &mut self,
+        self: Pin<&mut Self>,
         range: Range<u64>,
         readers: &mut Slab<ReadContext>,
-        new_pages: &mut Vec<BoxedPage>,
+        mut new_page_fn: impl FnMut(BoxedPage),
     ) -> usize {
         let range = round_down(range.start, PAGE_SIZE)..round_up(range.end, PAGE_SIZE).unwrap();
         let read_key = readers.insert(ReadContext { range: range.clone(), wait_event: None });
-        self.keys.push(read_key);
+        self.project().keys.push(read_key);
         for offset in range.step_by(PAGE_SIZE as usize) {
-            new_pages
-                .push(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(offset, read_key))))));
+            new_page_fn(BoxedPage(Box::new(PageCell(UnsafeCell::new(Page::new(
+                offset, read_key,
+            ))))));
         }
         read_key
     }
+
+    fn add_to_list(mut self: Pin<&mut Self>, list: &mut StackList<ReadKeys>, end_offset: u64) {
+        *self.as_mut().project().end_offset.get_mut() = end_offset;
+        // This is safe because we remove ourselves from the list in drop.
+        unsafe {
+            list.push_front(self);
+        }
+    }
+
+    fn get_ptr(self: Pin<&mut Self>) -> ReadKeysPtr {
+        // This is safe because we only use this pointer via the get method below.
+        ReadKeysPtr(unsafe { self.get_unchecked_mut() })
+    }
 }
 
-impl Drop for ReadKeys<'_> {
-    fn drop(&mut self) {
-        let mut inner = self.buf.0.lock().unwrap();
+// Holds a reference to a ReadKeys instance which can be dereferenced with a mutable borrow of the
+// list.
+struct ReadKeysPtr(*mut ReadKeys);
+
+unsafe impl Send for ReadKeysPtr {}
+
+impl ReadKeysPtr {
+    // Allow a dereference provided we have a mutable borrow for the list which ensures exclusive
+    // access.
+    fn get<'b>(&self, _list: &'b mut StackList<ReadKeys>) -> Pin<&'b mut ReadKeys> {
+        // Safe because we are taking a mutable borrow on the list.
+        unsafe { Pin::new_unchecked(&mut *self.0) }
+    }
+}
+
+#[pinned_drop]
+impl PinnedDrop for ReadKeys {
+    fn drop(self: Pin<&mut Self>) {
+        // This is safe because ReadKeys is kept on the stack and we always have &MemDataBuffer when
+        // we create ReadKeys.
+        let buf = unsafe { &*self.buf };
+        let mut inner = buf.0.lock().unwrap();
         for read_key in &self.keys {
             let range = inner.readers.remove(*read_key).range;
             let mut to_remove = Vec::new();
@@ -534,6 +737,13 @@ impl Drop for ReadKeys<'_> {
                 inner.pages.remove(&offset);
             }
         }
+        inner.read_keys_list.erase_node(&self);
+    }
+}
+
+impl AsRef<StackListChain<ReadKeys>> for ReadKeys {
+    fn as_ref(&self) -> &StackListChain<ReadKeys> {
+        &self.chain
     }
 }
 
@@ -758,5 +968,45 @@ mod tests {
 
         assert!(FxfsError::TooBig
             .matches(&data_buf.write(u64::MAX, &buf, &source).await.expect_err("write succeeded")));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_and_truncate() {
+        let data_buf = MemDataBuffer::new(100 * PAGE_SIZE);
+        let device = Arc::new(FakeDevice::new(100, PAGE_SIZE as u32));
+        let source = FakeSource::new(device.clone());
+        let mut buf = [0; PAGE_SIZE as usize];
+        let mut buf2 = [0; PAGE_SIZE as usize * 2];
+        let mut buf3 = [0; PAGE_SIZE as usize * 2];
+        let mut read_fut = data_buf.read(0, buf.as_mut(), &source);
+        let mut read_fut2 = data_buf.read(0, buf2.as_mut(), &source);
+        let mut read_fut3 = data_buf.read(PAGE_SIZE, buf3.as_mut(), &source);
+
+        // Poll the futures once.
+        poll_fn(|ctx| {
+            assert!(matches!(read_fut.poll_unpin(ctx), Poll::Pending));
+            assert!(matches!(read_fut2.poll_unpin(ctx), Poll::Pending));
+            assert!(matches!(read_fut3.poll_unpin(ctx), Poll::Pending));
+            Poll::Ready(())
+        })
+        .await;
+
+        // Truncate the buffer.
+        data_buf.resize(20).await;
+        data_buf.resize(PAGE_SIZE + 10).await;
+
+        // Let the reads continue.
+        source.go.signal();
+
+        // All should return the truncated size.
+        assert_eq!(read_fut.await.expect("read failed"), 20);
+        assert_eq!(read_fut2.await.expect("read failed"), 20);
+        assert_eq!(read_fut3.await.expect("read failed"), 0);
+
+        // Another read should return the current size.
+        assert_eq!(
+            data_buf.read(PAGE_SIZE - 1, buf.as_mut(), &source).await.expect("read failed"),
+            11
+        );
     }
 }
