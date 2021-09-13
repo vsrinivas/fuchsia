@@ -23,6 +23,13 @@ rustc_binary("bin") {
   # Can't dynamically link libstd and libtest for ZBI binaries
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
+  # TODO(fxbug.dev/80514): Remove the below
+  if (is_debug) {
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
+
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",

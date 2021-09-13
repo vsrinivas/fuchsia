@@ -25,6 +25,13 @@ rustc_binary("bin") {
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 
+  # TODO(fxbug.dev/80514): Remove the below
+  if (is_debug) {
+    configs += [ "//build/config/lto:thinlto" ]
+    configs -= [ "//build/config/lto:thinlto" ]
+    configs += [ "//build/config/lto:thinlto" ]
+  }
+
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
