@@ -82,6 +82,51 @@ driver_bind_rules("sherlock-display-bind") {
   ]
 }
 
+driver_bind_rules("sherlock-mali-bind") {
+  rules = "bind/sherlock-mali.bind"
+  header_output = "sherlock-mali-bind.h"
+  bind_output = "sherlock-mali-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("sherlock-spi-bind") {
+  rules = "bind/sherlock-spi.bind"
+  header_output = "sherlock-spi-bind.h"
+  bind_output = "sherlock-spi-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("sherlock-tee-bind") {
+  rules = "bind/sherlock-tee.bind"
+  header_output = "sherlock-tee-bind.h"
+  bind_output = "sherlock-tee-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.rpmb",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("sherlock-bluetooth-bind") {
+  rules = "bind/sherlock-bluetooth.bind"
+  header_output = "sherlock-bluetooth-bind.h"
+  bind_output = "sherlock-bluetooth-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -140,9 +185,13 @@ template("sherlock_driver") {
 
     deps = [
       ":sherlock-backlight-bind_header",
+      ":sherlock-bluetooth-bind_header",
       ":sherlock-buttons-bind_header",
       ":sherlock-display-bind_header",
+      ":sherlock-mali-bind_header",
       ":sherlock-pwm-bind_header",
+      ":sherlock-spi-bind_header",
+      ":sherlock-tee-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",

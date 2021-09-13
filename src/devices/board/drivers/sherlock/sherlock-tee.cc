@@ -12,6 +12,7 @@
 #include <fbl/algorithm.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-tee-bind.h"
 
 namespace sherlock {
 // The Sherlock Secure OS memory region is defined within the bootloader image. The ZBI provided to
@@ -57,28 +58,11 @@ static pbus_dev_t tee_dev = []() {
   return tee_dev;
 }();
 
-constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr zx_bind_inst_t rpmb_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
-};
-constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-constexpr device_fragment_part_t rpmb_fragment[] = {
-    {countof(rpmb_match), rpmb_match},
-};
-constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"rpmb", countof(rpmb_fragment), rpmb_fragment},
-};
-
 zx_status_t Sherlock::TeeInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(&tee_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&tee_dev, reinterpret_cast<uint64_t>(tee_fragments),
+                                          countof(tee_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

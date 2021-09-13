@@ -15,6 +15,7 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-spi-bind.h"
 #include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
@@ -61,20 +62,6 @@ static pbus_dev_t spi_dev = []() {
   dev.mmio_count = countof(spi_mmios);
   return dev;
 }();
-
-// composite binding rules
-
-static constexpr zx_bind_inst_t gpio_spicc0_ss0_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SPICC0_SS0),
-};
-static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
-    {std::size(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
-};
-
-static constexpr device_fragment_t fragments[] = {
-    {"gpio-cs-0", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
-};
 
 zx_status_t Sherlock::SpiInit() {
   // setup pinmux for the SPI bus
@@ -127,8 +114,8 @@ zx_status_t Sherlock::SpiInit() {
                  HHI_SPICC_CLK_CNTL);
   }
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
-                                                std::size(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&spi_dev, reinterpret_cast<uint64_t>(spi_0_fragments),
+                                          std::size(spi_0_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

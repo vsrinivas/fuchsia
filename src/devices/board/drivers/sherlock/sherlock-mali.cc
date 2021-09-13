@@ -12,6 +12,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-mali-bind.h"
 
 namespace sherlock {
 static const pbus_mmio_t mali_mmios[] = {
@@ -47,17 +48,6 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t mali_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
-
 zx_status_t Sherlock::MaliInit() {
   pbus_dev_t mali_dev = {};
   mali_dev.name = "mali";
@@ -90,10 +80,10 @@ zx_status_t Sherlock::MaliInit() {
   };
   mali_dev.metadata_list = mali_metadata_list;
   mali_dev.metadata_count = countof(mali_metadata_list);
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(mali_fragments),
+                                          countof(mali_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
+    zxlogf(ERROR, "Sherlock::MaliInit: AddComposite failed: %d", status);
     return status;
   }
   return status;

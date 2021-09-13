@@ -19,6 +19,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-bluetooth-bind.h"
 
 namespace sherlock {
 
@@ -74,17 +75,6 @@ static const pbus_dev_t bt_uart_dev = []() {
   return dev;
 }();
 
-// Composite binding rules for bluetooth.
-constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
-};
-constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {countof(pwm_e_match), pwm_e_match},
-};
-constexpr device_fragment_t bt_uart_fragments[] = {
-    {"pwm", countof(pwm_e_fragment), pwm_e_fragment},
-};
-
 zx_status_t Sherlock::BluetoothInit() {
   zx_status_t status;
 
@@ -110,10 +100,10 @@ zx_status_t Sherlock::BluetoothInit() {
   }
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
-                                    countof(bt_uart_fragments), nullptr);
+  status = pbus_.AddComposite(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
+                              countof(bt_uart_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
     return status;
   }
 
