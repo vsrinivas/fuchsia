@@ -207,6 +207,11 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         &name_etht1, "etht1",
         "second interface from network manager should use a temporary name"
     );
+
+    // Block on destruction of the test realm before we allow test interfaces to be cleaned up.
+    // This avoids test interfaces being removed out from under components still using them, which
+    // can cause spurious errors.
+    let () = realm.shutdown().await.context("failed to shutdown realm")?;
     Ok(())
 }
 

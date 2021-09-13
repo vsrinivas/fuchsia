@@ -218,4 +218,11 @@ protocol ManagedRealm {
     StopChildComponent(struct {
         child_name fuchsia.component.name;
     }) -> (struct {}) error zx.status;
+    /// Request that the managed realm shut down.
+    ///
+    /// The realm will send an `OnShutdown` event when shutdown is complete and
+    /// before closing the channel.
+    Shutdown();
+    /// Signals that shutdown is complete and the channel will be closed.
+    -> OnShutdown();
 };

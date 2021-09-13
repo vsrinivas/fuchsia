@@ -668,6 +668,13 @@ impl ManagedRealm {
                         .send(&mut response.map_err(zx::Status::into_raw))
                         .context("responding to StopChildComponent request")?;
                 }
+                ManagedRealmRequest::Shutdown { control_handle } => {
+                    let () = realm.destroy().await.context("destroy realm")?;
+                    let () = control_handle
+                        .send_on_shutdown()
+                        .unwrap_or_else(|e| error!("failed to send OnShutdown event: {:?}", e));
+                    break;
+                }
             }
         }
         Ok(())
@@ -1160,6 +1167,41 @@ mod tests {
             .await,
             Ok(zx::Signals::CHANNEL_PEER_CLOSED),
             "`CounterProxy` should be closed when `ManagedRealmProxy` is dropped",
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn shutdown_realm_destroys_children(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_protocol::<CounterMarker>();
+        assert_eq!(
+            counter.increment().await.expect("fuchsia.netemul.test/Counter.increment call failed"),
+            1,
+        );
+        let TestRealm { realm } = realm;
+        let () = realm.shutdown().expect("failed to call shutdown");
+        let events = realm
+            .take_event_stream()
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("error on realm event stream");
+        // Ensure there are no more events sent on the event stream after `OnShutdown`.
+        matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
+        assert_eq!(
+            fasync::OnSignals::new(
+                &counter.into_channel().expect("failed to convert proxy into async channel"),
+                zx::Signals::CHANNEL_PEER_CLOSED,
+            )
+            .await,
+            Ok(zx::Signals::CHANNEL_PEER_CLOSED),
+            "counter proxy should be closed when managed realm is shut down",
         );
     }
 

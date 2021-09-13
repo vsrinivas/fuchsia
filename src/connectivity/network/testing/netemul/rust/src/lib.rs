@@ -24,7 +24,10 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use fidl::endpoints::Proxy as _;
-use futures::future::{FutureExt as _, TryFutureExt as _};
+use futures::{
+    future::{FutureExt as _, TryFutureExt as _},
+    TryStreamExt as _,
+};
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
@@ -425,6 +428,20 @@ impl<'a> TestRealm<'a> {
             .context("failed to create socket")?;
 
         Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
+    }
+
+    /// Shuts down the realm.
+    pub async fn shutdown(&self) -> Result {
+        let () = self.realm.shutdown().context("call shutdown")?;
+        let events = self
+            .realm
+            .take_event_stream()
+            .try_collect::<Vec<_>>()
+            .await
+            .context("error on realm event stream")?;
+        // Ensure there are no more events sent on the event stream after `OnShutdown`.
+        matches::assert_matches!(events[..], [fnetemul::ManagedRealmEvent::OnShutdown {}]);
+        Ok(())
     }
 }
 
