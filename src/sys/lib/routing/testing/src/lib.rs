@@ -294,6 +294,7 @@ macro_rules! instantiate_common_routing_tests {
             test_use_offer_source_not_exposed,
             test_use_offer_source_not_offered,
             test_use_from_expose,
+            test_route_protocol_from_expose,
             test_use_from_expose_to_framework,
             test_offer_from_non_executable,
             test_use_directory_with_subdir_from_grandparent,
@@ -306,6 +307,7 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_partial_chain_allowed_by_capability_policy,
             test_use_protocol_component_provided_capability_policy,
             test_use_from_component_manager_namespace_denied_by_policy,
+            test_use_event_from_framework_denied_by_capability_policy,
             test_use_protocol_component_provided_debug_capability_policy_at_root_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_child,
@@ -1669,6 +1671,61 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 },
             )
             .await;
+    }
+
+    /// a
+    ///  \
+    ///   b
+    ///
+    /// a: exposes "foo" to parent from child
+    /// b: exposes "foo" to parent from self
+    pub async fn test_route_protocol_from_expose(&self) {
+        let expose_decl = ExposeProtocolDecl {
+            source: ExposeSource::Child("b".into()),
+            source_name: "foo".into(),
+            target_name: "foo".into(),
+            target: ExposeTarget::Parent,
+        };
+        let expected_protocol_decl =
+            ProtocolDecl { name: "foo".into(), source_path: Some("/svc/foo".parse().unwrap()) };
+
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Protocol(expose_decl.clone()))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .protocol(expected_protocol_decl.clone())
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        let root_instance = model.look_up_instance(&vec![].into()).await.expect("root instance");
+        let expected_source_moniker =
+            AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
+
+        assert_matches!(
+        route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
+            Ok((RouteSource::Protocol(
+                CapabilitySourceInterface::<
+                    <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C
+                    >::Component {
+                        capability: ComponentCapability::Protocol(protocol_decl),
+                        component,
+                    }), _route)
+            ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
+        );
     }
 
     ///   a
@@ -3598,6 +3655,130 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 },
             )
             .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// b: uses framework events "started", and "capability_requested".
+    /// Capability policy denies the route from being allowed for started but
+    /// not for capability_requested.
+    pub async fn test_use_event_from_framework_denied_by_capability_policy(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Parent,
+                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                        target: OfferTarget::static_child("b".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Parent,
+                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
+                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                    }))
+                    .use_(UseDecl::Event(UseEventDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "capability_requested".into(),
+                        target_name: "capability_requested".into(),
+                        filter: None,
+                        mode: cm_rust::EventMode::Async,
+                    }))
+                    .use_(UseDecl::Event(UseEventDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "started".into(),
+                        target_name: "started".into(),
+                        filter: None,
+                        mode: cm_rust::EventMode::Async,
+                    }))
+                    .use_(UseDecl::Event(UseEventDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Framework,
+                        source_name: "resolved".into(),
+                        target_name: "resolved".into(),
+                        filter: None,
+                        mode: cm_rust::EventMode::Sync,
+                    }))
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
+                        subscriptions: vec![cm_rust::EventSubscription {
+                            event_name: "resolved".into(),
+                            mode: cm_rust::EventMode::Sync,
+                        }],
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut allowlist = HashSet::new();
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
+            name: "fuchsia.sys2.EventSource".into(),
+            source_path: None,
+        })]);
+        builder.add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0",
+                ])),
+                source_name: CapabilityName::from("started"),
+                source: CapabilityAllowlistSource::Framework,
+                capability: CapabilityTypeName::Event,
+            },
+            HashSet::new(),
+        );
+        builder.add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0",
+                ])),
+                source_name: CapabilityName::from("capability_requested"),
+                source: CapabilityAllowlistSource::Framework,
+                capability: CapabilityTypeName::Event,
+            },
+            allowlist,
+        );
+        let model = builder.build().await;
+
+        model
+            .check_use(
+                vec!["b:0"].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new(
+                        "capability_requested".into(),
+                        EventMode::Async,
+                    ),
+                    start_component_tree: false,
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+
+        model
+            .check_use(
+                vec!["b:0"].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new("started".into(), EventMode::Async),
+                    start_component_tree: true,
+                    expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+                },
+            )
+            .await
     }
 
     ///   a
