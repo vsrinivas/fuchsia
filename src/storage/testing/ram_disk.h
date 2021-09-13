@@ -17,9 +17,7 @@
 
 namespace storage {
 
-constexpr zx::duration kDefaultWaitTime = zx::sec(30);
-
-zx::status<> WaitForRamctl(zx::duration time = kDefaultWaitTime);
+zx::status<> WaitForRamctl(zx::duration time = zx::duration::infinite());
 
 // A thin wrapper around the ram-disk C API. Strictly speaking, this isn't specific to
 // isolated-devmgr.
