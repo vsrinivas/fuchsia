@@ -4,7 +4,7 @@
 
 declare_args() {
   # Set to use legacy virtcon implementation.
-  use_legacy_virtcon = true
+  use_legacy_virtcon = false
 }
 
 # This target contains elements that are present on the boot partition of all
