@@ -28,9 +28,9 @@ pub const LEGACY_URL_KEY: &'static str = "legacy_url";
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MockId(String);
 
-impl MockId {
-    pub(crate) fn as_str(&self) -> &str {
-        self.0.as_str()
+impl From<MockId> for String {
+    fn from(mock_id: MockId) -> Self {
+        mock_id.0
     }
 }
 

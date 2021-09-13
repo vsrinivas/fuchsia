@@ -31,8 +31,6 @@ namespace {
 
 constexpr char kCollectionName[] = "fuchsia_component_test_collection";
 constexpr char kFrameworkIntermediaryChildName[] = "fuchsia_component_test_framework_intermediary";
-constexpr char kMockRunnerName[] = "realm_builder";
-constexpr char kMockIdKey[] = "mock_id";
 
 void PanicIfMonikerBad(Moniker& moniker) {
   if (!moniker.path.empty()) {
@@ -90,22 +88,6 @@ fuchsia::realm::builder::Component ConvertToFidl(Source source) {
   ZX_PANIC("ConvertToFidl(Source) reached unreachable block!");
 }
 
-fuchsia::realm::builder::Component CreateMockComponentFidl(std::string mock_id) {
-  fuchsia::sys2::ComponentDecl component_decl;
-  fuchsia::sys2::ProgramDecl program_decl;
-  program_decl.set_runner(kMockRunnerName);
-  fuchsia::data::Dictionary dictionary;
-  fuchsia::data::DictionaryEntry entry;
-  entry.key = kMockIdKey;
-  auto value = fuchsia::data::DictionaryValue::New();
-  value->set_str(std::move(mock_id));
-  entry.value = std::move(value);
-  dictionary.mutable_entries()->push_back(std::move(entry));
-  program_decl.set_info(std::move(dictionary));
-  component_decl.set_program(std::move(program_decl));
-  return fuchsia::realm::builder::Component::WithDecl(std::move(component_decl));
-}
-
 fuchsia::realm::builder::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
   fuchsia::realm::builder::CapabilityRoute result;
   result.set_capability(ConvertToFidl(route.capability));
@@ -160,16 +142,12 @@ Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component componen
     }
   }
   if (auto mock = std::get_if<Mock>(&component.source)) {
-    std::string mock_id;
-    ASSERT_STATUS_OK("FrameworkIntermediary/NewMockId",
-                     framework_intermediary_proxy_->NewMockId(&mock_id));
-    fuchsia::realm::builder::FrameworkIntermediary_SetComponent_Result result;
+    fuchsia::realm::builder::FrameworkIntermediary_SetMockComponent_Result result;
     ASSERT_STATUS_AND_RESULT_OK(
-        "FrameworkIntemediary/SetComponent",
-        framework_intermediary_proxy_->SetComponent(std::string(moniker.path),
-                                                    CreateMockComponentFidl(mock_id), &result),
+        "FrameworkIntemediary/SetMockComponent",
+        framework_intermediary_proxy_->SetMockComponent(std::string(moniker.path), &result),
         result);
-    mock_runner_->Register(mock_id, mock->impl);
+    mock_runner_->Register(result.response().mock_id, mock->impl);
   } else {
     fuchsia::realm::builder::FrameworkIntermediary_SetComponent_Result result;
     ASSERT_STATUS_AND_RESULT_OK(

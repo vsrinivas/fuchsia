@@ -19,10 +19,7 @@ use {
     futures::{FutureExt, TryFutureExt},
     log::*,
     rand::Rng,
-    std::{
-        convert::TryInto,
-        fmt::{self, Display},
-    },
+    std::fmt::{self, Display},
 };
 
 /// The default name of the child component collection that contains built topologies.
@@ -393,24 +390,12 @@ impl Realm {
     ) -> Result<(), Error> {
         let mock_id = self
             .framework_intermediary_proxy
-            .new_mock_id()
+            .set_mock_component(&moniker.to_string())
             .await
-            .map_err(RealmError::FailedToUseFrameworkIntermediary)?;
-        self.mocks_runner.register_mock(mock_id.clone(), mock).await;
-        let decl = cm_rust::ComponentDecl {
-            program: Some(cm_rust::ProgramDecl {
-                runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
-                info: fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: mock::MOCK_ID_KEY.to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str(mock_id))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
-                },
-            }),
-            ..cm_rust::ComponentDecl::default()
-        };
-        self.set_component(&moniker, decl).await
+            .map_err(RealmError::FailedToUseFrameworkIntermediary)?
+            .map_err(|s| RealmError::FailedToSetMock(moniker.clone(), s))?;
+        self.mocks_runner.register_mock(mock_id, mock).await;
+        Ok(())
     }
 
     // TODO: new comment

@@ -106,6 +106,19 @@ async fn handle_framework_intermediary_stream(
                     }
                 }
             }
+            frealmbuilder::FrameworkIntermediaryRequest::SetMockComponent {
+                moniker,
+                responder,
+            } => {
+                let mock_id = runner.register_mock(stream.control_handle()).await;
+                match realm_tree.set_mock_component(moniker.clone().into(), mock_id.clone()).await {
+                    Ok(()) => responder.send(&mut Ok(mock_id.into()))?,
+                    Err(e) => {
+                        warn!("error occurred when setting mock component {:?}: {:?}", moniker, e);
+                        responder.send(&mut Err(e.log_and_convert()))?;
+                    }
+                }
+            }
             frealmbuilder::FrameworkIntermediaryRequest::GetComponentDecl {
                 moniker,
                 responder,
@@ -149,10 +162,6 @@ async fn handle_framework_intermediary_stream(
                         responder.send(&mut Err(e.log_and_convert()))?;
                     }
                 }
-            }
-            frealmbuilder::FrameworkIntermediaryRequest::NewMockId { responder } => {
-                let mock_id = runner.register_mock(stream.control_handle()).await;
-                responder.send(mock_id.as_str())?;
             }
         }
     }
@@ -455,6 +464,43 @@ impl RealmNode {
             }
             _ => return Err(Error::BadFidl),
         }
+        Ok(())
+    }
+
+    /// Sets the component to be a mock component. A new ComponentDecl is generated for the
+    /// component, and assigned a new mock id.
+    async fn set_mock_component(
+        &mut self,
+        moniker: Moniker,
+        mock_id: runner::MockId,
+    ) -> Result<(), Error> {
+        if let Some(parent_moniker) = moniker.parent() {
+            let parent_node = self.get_node_mut(&parent_moniker, GetBehavior::CreateIfMissing)?;
+            let child_name = moniker.child_name().unwrap().to_string();
+            parent_node.decl.children = parent_node
+                .decl
+                .children
+                .iter()
+                .filter(|c| c.name != child_name)
+                .cloned()
+                .collect();
+        }
+        let decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::MOCK_ID_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(mock_id.into()))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        };
+        let node = self.get_node_mut(&moniker, GetBehavior::CreateIfMissing)?;
+        node.decl = decl;
+        node.validate(&moniker)?;
         Ok(())
     }
 

@@ -192,6 +192,16 @@ protocol FrameworkIntermediary {
         component Component;
     }) -> (struct {}) error RealmBuilderError;
 
+    /// Sets the component to be a mock component. A new ComponentDecl is
+    /// generated for the component, and assigned a new mock id. This id is
+    /// returned by this function, and when the mock component should start
+    /// running a new OnMockRunRequest is issued with this same id.
+    SetMockComponent(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {
+        mock_id string:MAX_MOCK_ID_LENGTH;
+    }) error RealmBuilderError;
+
     /// Returns the current value of a component decl in the realm being
     /// constructed. Note that this cannot retrieve decls through external
     /// URLs, so for example if `SetComponent` is called with `Component::url`
@@ -233,13 +243,6 @@ protocol FrameworkIntermediary {
     Commit() -> (struct {
         root_component_url string:fuchsia.component.types.MAX_URL_LENGTH;
     }) error RealmBuilderError;
-
-    /// Registers a new mock component. When a mock component with the returned
-    /// ID in its program.mock_id field is run, `OnMockRunRequest` is called
-    /// over the same channel that the mock was registered on.
-    NewMockId() -> (struct {
-        mock_id string:MAX_MOCK_ID_LENGTH;
-    });
 
     /// The component framework is requesting that a mock component start
     /// running
