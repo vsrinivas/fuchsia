@@ -174,19 +174,16 @@ dart_test("experiences_ermine_smoke_e2e_test") {
       dimensions = {
         device_type = "AEMU"
       }
-      tags = [ "e2e-fyi" ]
     },
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
-      tags = [ "e2e-fyi" ]
     },
     {
       dimensions = {
         device_type = "Atlas"
       }
-      tags = [ "e2e-fyi" ]
     },
   ]
 }
