@@ -1423,7 +1423,7 @@
   title: 'Reboot for termination of critical components'
   short_description: 'v2 component feature providing parity with v1 critical_components'
   authors: ['geb@google.com']
-  file: 'NNNN_reboot_for_critical_components.md'
+  file: '0110_reboot_for_critical_components.md'
   area: ['Component Framework']
   issue: ['']
   gerrit_change_id: ['535167']
