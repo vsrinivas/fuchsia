@@ -53,6 +53,7 @@
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs_private.h"
+#include "src/storage/minfs/space_dumper.h"
 
 namespace minfs {
 namespace {
@@ -663,6 +664,9 @@ Minfs::Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
       limits_(sb_->Info()),
       mount_options_(mount_options) {
   zx::event::create(0, &fs_id_);
+
+  // TODO(b/198638128) REMOVE THIS TEST CODE WHEN ISSUE IS FOUND.
+  SpaceDumper::SetMinfs(this);
 }
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
@@ -677,7 +681,12 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
       mount_options_(mount_options) {}
 #endif
 
-Minfs::~Minfs() { vnode_hash_.clear(); }
+Minfs::~Minfs() {
+  // TODO(b/198638128) REMOVE THIS TEST CODE WHEN ISSUE IS FOUND.
+  SpaceDumper::ClearMinfs();
+
+  vnode_hash_.clear();
+}
 
 #ifdef __Fuchsia__
 zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const {
