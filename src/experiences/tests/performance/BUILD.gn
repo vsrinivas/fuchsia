@@ -88,7 +88,8 @@ group("test") {
   if (is_host && is_linux) {
     # Chromedriver prebuilt is only available for linux-x64
     deps = [
-      ":experiences_ermine_session_shell_performance_test($host_toolchain)",
+      # TODO(fxb/71419): Uncomment once performance tests are working.
+      # ":experiences_ermine_session_shell_performance_test($host_toolchain)",
     ]
   }
 }
