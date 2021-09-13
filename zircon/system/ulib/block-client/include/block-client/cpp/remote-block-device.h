@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
+#define BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -31,7 +32,7 @@ class RemoteBlockDevice final : public BlockDevice {
 
   zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const final;
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const final;
+  zx::status<std::string> GetDevicePath() const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const final;
@@ -49,3 +50,5 @@ class RemoteBlockDevice final : public BlockDevice {
 };
 
 }  // namespace block_client
+
+#endif  // BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_

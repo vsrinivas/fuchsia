@@ -8,6 +8,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
@@ -28,7 +29,7 @@ class BlockDevice : public storage::VmoidRegistry {
   virtual zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) = 0;
 
   // Controller IPC.
-  virtual zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const = 0;
+  virtual zx::status<std::string> GetDevicePath() const = 0;
 
   // Block IPC.
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;

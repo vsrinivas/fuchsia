@@ -1103,9 +1103,7 @@ TEST_P(BlobfsIntegrationTest, QueryDevicePath) {
   ASSERT_EQ(DirectoryAdminGetDevicePath(std::move(root_fd), &path), ZX_OK);
   ASSERT_FALSE(path.empty());
 
-  // TODO(fxbug.dev/63405): The NULL terminator probably shouldn't be here.
-  ASSERT_EQ(storage::GetTopologicalPath(fs().DevicePath().value()).value() + std::string(1, '\0'),
-            path);
+  ASSERT_EQ(path, storage::GetTopologicalPath(fs().DevicePath().value()).value());
   printf("device_path %s\n", fs().DevicePath()->c_str());
 
   root_fd.reset(open(fs().mount_path().c_str(), O_RDONLY));

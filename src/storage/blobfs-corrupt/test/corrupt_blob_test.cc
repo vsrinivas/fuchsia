@@ -34,9 +34,7 @@ class ProxyBlockDevice : public BlockDevice {
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) {
     return inner_->FifoTransaction(requests, count);
   }
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const {
-    return inner_->GetDevicePath(buffer_len, out_name, out_len);
-  }
+  zx::status<std::string> GetDevicePath() const { return inner_->GetDevicePath(); }
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {
     return inner_->BlockGetInfo(out_info);
   }

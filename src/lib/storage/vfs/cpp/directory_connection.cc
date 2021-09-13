@@ -487,10 +487,11 @@ void DirectoryConnection::GetDevicePath(GetDevicePathRequestView request,
     return;
   }
 
-  char name[fio::wire::kMaxPath];
-  size_t actual = 0;
-  zx_status_t status = vnode()->GetDevicePath(sizeof(name), name, &actual);
-  completer.Reply(status, fidl::StringView(name, actual));
+  if (auto device_path_or = vnode()->GetDevicePath(); device_path_or.is_error()) {
+    completer.Reply(device_path_or.error_value(), {});
+  } else {
+    completer.Reply(ZX_OK, fidl::StringView::FromExternal(device_path_or.value()));
+  }
 }
 
 void DirectoryConnection::AdvisoryLock(AdvisoryLockRequestView request,

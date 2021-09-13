@@ -74,9 +74,7 @@ class FakeBlockDevice : public block_client::BlockDevice {
     return ZX_OK;
   }
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const final {
-    return ZX_OK;
-  }
+  zx::status<std::string> GetDevicePath() const final { return zx::ok(std::string()); }
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final { return ZX_OK; }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final { return ZX_OK; }
 

@@ -36,6 +36,9 @@ zx_library("block-client") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+
+    # <block-client/cpp/block-device.h> has #include <lib/zx/status.h>
+    "//zircon/public/lib/zxc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

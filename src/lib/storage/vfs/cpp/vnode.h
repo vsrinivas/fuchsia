@@ -37,6 +37,7 @@
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/file-lock/file-lock.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
 
@@ -364,7 +365,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out);
 
   // Returns the name of the device backing the filesystem, if one exists.
-  virtual zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
+  virtual zx::status<std::string> GetDevicePath() const;
 
   // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
   virtual zx_status_t AttachRemote(MountChannel h);

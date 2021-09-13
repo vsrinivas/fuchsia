@@ -13,8 +13,7 @@ namespace block_client {
 // the device.
 class PassThroughReadOnlyBlockDevice : public BlockDevice {
  public:
-  PassThroughReadOnlyBlockDevice(block_client::BlockDevice* device)
-      : device_(*device) {}
+  explicit PassThroughReadOnlyBlockDevice(block_client::BlockDevice* device) : device_(*device) {}
 
   zx_status_t ReadBlock(uint64_t block_num, uint64_t block_size, void* block) const override {
     return device_.ReadBlock(block_num, block_size, block);
@@ -25,9 +24,7 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
     return device_.FifoTransaction(requests, count);
   }
 
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const override {
-    return device_.GetDevicePath(buffer_len, out_name, out_len);
-  }
+  zx::status<std::string> GetDevicePath() const override { return device_.GetDevicePath(); }
 
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
     return device_.BlockGetInfo(out_info);
@@ -47,13 +44,9 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
     return device_.VolumeQuerySlices(slices, slices_count, out_ranges, out_ranges_count);
   }
 
-  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) override {
-    ZX_ASSERT(false);
-  }
+  zx_status_t VolumeExtend(uint64_t offset, uint64_t length) override { ZX_ASSERT(false); }
 
-  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) override {
-    ZX_ASSERT(false);
-  }
+  zx_status_t VolumeShrink(uint64_t offset, uint64_t length) override { ZX_ASSERT(false); }
 
  private:
   block_client::BlockDevice& device_;

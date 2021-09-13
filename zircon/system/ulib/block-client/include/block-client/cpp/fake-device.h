@@ -86,9 +86,7 @@ class FakeBlockDevice : public BlockDevice {
 
   // BlockDevice interface
 
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zx::status<std::string> GetDevicePath() const override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const override {
     return ZX_ERR_NOT_SUPPORTED;

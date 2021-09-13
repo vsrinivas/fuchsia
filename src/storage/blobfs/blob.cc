@@ -1001,9 +1001,7 @@ zx_status_t Blob::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   return ZX_OK;
 }
 
-zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-  return blobfs_->Device()->GetDevicePath(buffer_len, out_name, out_len);
-}
+zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
 zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);

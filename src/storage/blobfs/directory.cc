@@ -125,8 +125,8 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   return ZX_OK;
 }
 
-zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-  return blobfs_->Device()->GetDevicePath(buffer_len, out_name, out_len);
+zx::status<std::string> Directory::GetDevicePath() const {
+  return blobfs_->Device()->GetDevicePath();
 }
 
 #endif  // __Fuchsia__

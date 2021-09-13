@@ -59,38 +59,14 @@ zx_status_t RemoteBlockDevice::FifoTransaction(block_fifo_request_t* requests, s
   return fifo_client_.Transaction(requests, count);
 }
 
-zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
-                                             size_t* out_len) const {
-  if (buffer_len == 0) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  zx_status_t status, io_status;
-
+zx::status<std::string> RemoteBlockDevice::GetDevicePath() const {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device_.get()))
                   .GetTopologicalPath();
-
-  io_status = resp.status();
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-
-  if (resp->result.is_err()) {
-    status = resp->result.err();
-  } else {
-    auto& r = resp->result.response();
-    *out_len = r.path.size();
-    memcpy(out_name, r.path.data(), r.path.size());
-    status = ZX_OK;
-  }
-
-  if (status != ZX_OK) {
-    return status;
-  }
-  // Ensure null-terminated
-  out_name[*out_len] = 0;
-  // Account for the null byte in the length, since callers expect it.
-  (*out_len)++;
-  return ZX_OK;
+  if (auto fidl_error = resp.status(); fidl_error != ZX_OK)
+    return zx::error(fidl_error);
+  if (resp->result.is_err())
+    return zx::error(resp->result.err());
+  return zx::ok(std::string(resp->result.response().path.get()));
 }
 
 zx_status_t RemoteBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const {

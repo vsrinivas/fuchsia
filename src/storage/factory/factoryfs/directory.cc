@@ -92,8 +92,8 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   return ZX_OK;
 }
 
-zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-  return factoryfs_.Device().GetDevicePath(buffer_len, out_name, out_len);
+zx::status<std::string> Directory::GetDevicePath() const {
+  return factoryfs_.Device().GetDevicePath();
 }
 #endif
 zx_status_t Directory::Unlink(std::string_view path, bool is_dir) { return ZX_ERR_NOT_SUPPORTED; }

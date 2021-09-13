@@ -71,19 +71,15 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
     filesystem_info.set_name(allocator, std::move(name));
   }
 
-  char name_buf[fuchsia_io2::wire::kMaxPathLength];
+  std::string device_path;
   if (request->query & FilesystemInfoQuery::kDevicePath) {
-    size_t name_len;
-    zx_status_t status =
-        factoryfs_->Device().GetDevicePath(fuchsia_io2::wire::kMaxPathLength, name_buf, &name_len);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
+    if (auto device_path_or = factoryfs_->Device().GetDevicePath(); device_path_or.is_error()) {
+      completer.ReplyError(device_path_or.error_value());
       return;
+    } else {
+      device_path = std::move(device_path_or).value();
     }
-    // It appears that the |name_len| returned by |GetDevicePath| includes a trailing NUL.
-    ZX_ASSERT(name_buf[name_len - 1] == '\0');
-    fidl::StringView device_path(name_buf, name_len - 1);
-    filesystem_info.set_device_path(allocator, std::move(device_path));
+    filesystem_info.set_device_path(allocator, fidl::StringView::FromExternal(device_path));
   }
 
   completer.ReplySuccess(std::move(filesystem_info));

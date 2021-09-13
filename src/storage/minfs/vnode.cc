@@ -707,8 +707,8 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) 
   return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
-  return fs_->bc_->device()->GetDevicePath(buffer_len, out_name, out_len);
+zx::status<std::string> VnodeMinfs::GetDevicePath() const {
+  return fs_->bc_->device()->GetDevicePath();
 }
 
 void VnodeMinfs::GetMetrics(GetMetricsRequestView request, GetMetricsCompleter::Sync& completer) {
