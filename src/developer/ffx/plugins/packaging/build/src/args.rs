@@ -4,6 +4,7 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
+use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug, Default)]
@@ -11,25 +12,23 @@ use ffx_core::ffx_command;
     subcommand,
     name = "build",
     description = "Builds a package.
-
-Entries may be specified as:
-- <dst>=<src>: Place the file at path <src> into the package at path <dst>.
-- @<manifest-file>: Read each line of this file as an entry. This is not recursive; you can't put another @<manifest-file>
 "
 )]
 pub struct BuildCommand {
-    #[argh(positional, description = "package entries")]
-    pub entries: Vec<String>,
+    #[argh(option, description = "path to the build manifest file")]
+    pub build_manifest_path: PathBuf,
+
+    #[argh(option, description = "write package manifest to this path")]
+    pub package_manifest_path: Option<PathBuf>,
+
     #[argh(
         option,
-        short = 's',
-        description = "base directory for the <src> part of entries; defaults to the current directory"
+        short = 'o',
+        default = "PathBuf::from(\"./out\")",
+        description = "directory to save package artifacts"
     )]
-    pub source_dir: Option<String>,
+    pub out: PathBuf,
 
-    #[argh(option, description = "write the package hash to this file instead of stdout")]
-    pub hash_out: Option<String>,
-
-    #[argh(option, description = "name of the package to put in the output package manifest")]
+    #[argh(option, description = "name of the package")]
     pub published_name: String,
 }
