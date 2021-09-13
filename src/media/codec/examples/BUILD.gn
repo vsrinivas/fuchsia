@@ -67,13 +67,28 @@ resource("test-25fps.vp9") {
 
 # Test amlogic-video h264 decode.  Can also work in QEMU using SW decode, but
 # when decode HW is present we'll use that to decode.
-fuchsia_unittest_package("use_h264_decoder_test") {
+fuchsia_unittest_component("use_h264_decoder_test") {
   manifest = "use_media_decoder/meta/use_h264_decoder_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test",
   ]
+}
 
+fuchsia_test_component("use_h264_decoder_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_decoder_tests") {
+  test_components = [
+    ":use_h264_decoder_test",
+    ":use_h264_decoder_test_v2",
+  ]
   test_specs = {
     environments = [
       astro_env,
@@ -88,13 +103,28 @@ fuchsia_unittest_package("use_h264_decoder_test") {
 # Gaps in frame_num are often handled specially.  We need to at least verify this doesn't get stuck
 # or crash.  At the moment we also verify that the decoder outputs at least a few output frames
 # beyond the first missing input frame.
-fuchsia_unittest_package("use-h264-decoder-frame-num-gaps-test") {
+fuchsia_unittest_component("use_h264_decoder_frame_num_gaps_test") {
   manifest = "use_media_decoder/meta/use_h264_decoder_frame_num_gaps_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_decoder_frame_num_gaps_test",
   ]
+}
 
+fuchsia_unittest_component("use_h264_decoder_frame_num_gaps_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_frame_num_gaps_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_frame_num_gaps_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
+  test_components = [
+    ":use_h264_decoder_frame_num_gaps_test",
+    ":use_h264_decoder_frame_num_gaps_test_v2",
+  ]
   test_specs = {
     environments = [
       astro_env,
@@ -107,11 +137,27 @@ fuchsia_unittest_package("use-h264-decoder-frame-num-gaps-test") {
 }
 
 # Force SW decode.  Only run in environments where we include a SW h264 decoder.
-fuchsia_unittest_package("use-h264-sw-decoder-test") {
+fuchsia_unittest_component("use_h264_sw_decoder_test") {
   manifest = "use_media_decoder/meta/use_h264_sw_decoder_test.cmx"
   deps = [
     ":1080p_10_frames_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_sw_decoder_test",
+  ]
+}
+
+fuchsia_test_component("use_h264_sw_decoder_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_sw_decoder_test.cml"
+  deps = [
+    ":1080p_10_frames_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_sw_decoder_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_sw_decoder_tests") {
+  test_components = [
+    ":use_h264_sw_decoder_test",
+    ":use_h264_sw_decoder_test_v2",
   ]
 
   test_specs = {
