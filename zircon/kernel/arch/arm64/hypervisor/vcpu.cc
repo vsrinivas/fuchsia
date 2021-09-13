@@ -242,15 +242,15 @@ Vcpu::~Vcpu() {
 void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   switch (stage) {
     case Thread::MigrateStage::Before:
+      last_cpu_.store(INVALID_CPU);
       break;
     case Thread::MigrateStage::After:
       // After thread migration, update the |last_cpu_| for Vcpu::Interrupt().
+      DEBUG_ASSERT(last_cpu_.load() == INVALID_CPU);
       last_cpu_.store(thread->LastCpuLocked());
       break;
     case Thread::MigrateStage::Exiting:
-      // When the thread is exiting, set |last_cpu_| to INVALID_CPU and
-      // |thread_| to nullptr.
-      last_cpu_.store(INVALID_CPU);
+      // The |thread_| is exiting and so we must clear our reference to it.
       thread_.store(nullptr);
       break;
   }
