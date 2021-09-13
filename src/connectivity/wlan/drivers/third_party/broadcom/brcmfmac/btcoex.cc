@@ -474,13 +474,24 @@ zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btc
 void brcmf_btcoex_log_active_bt_tasks(brcmf_if* ifp) {
   uint32_t bt_tasks_low, bt_tasks_high, wlan_preempt_count;
 
-  // btc_params 116 and 117 indicate BT tasks that are active (it is cumulative)
+  // BT tasks are represented by a bit map, where the bit to task mapping is as follows:
+  // BT_TASK_UNKNOWN = 0, BT_TASK_ACL = 1, BT_TASK_SCO = 2, BT_TASK_ESCO = 3, BT_TASK_A2DP = 4,
+  // BT_TASK_SNIFF = 5, BT_TASK_PSCAN = 6, BT_TASK_ISCAN = 7, BT_TASK_PAGE = 8, BT_TASK_INQUIRY = 9,
+  // BT_TASK_MSS = 10, BT_TASK_PARK = 11, BT_TASK_RSSISCAN = 12, BT_TASK_ISCAN_SCO = 13,
+  // BT_TASK_PSCAN_SCO = 14, BT_TASK_TPOLL = 15, BT_TASK_SACQ = 16, BT_TASK_SDATA = 17,
+  // BT_TASK_RS_LISTEN = 18, BT_TASK_RS_BURST = 19, BT_TASK_BLE_ADV = 20, BT_TASK_BLE_SCAN = 21,
+  // BT_TASK_BLE_INIT = 22, BT_TASK_BLE_CONN = 23, BT_TASK_LMP = 24, BT_TASK_ESCO_RETRAN = 25,
+  // BT_TASK_PRED_SNIFF = 26, BT_TASK_PRED_LE_CONN = 27, BT_TASK_PRED_AON = 28, BT_TASK_PRED = 29,
+  // BT_TASK_MULTIHID = 30.
+  //
+  // btc_params 116 and 117 retuns the lower and higher order 16bits of the active tasks bitmap.
+  // btc_params 39 returns a counter of the number of times wlan was preempted for BT operation.
   brcmf_btcoex_params_read(ifp, 116, &bt_tasks_low);
   brcmf_btcoex_params_read(ifp, 117, &bt_tasks_high);
   // btc_param 39 indicates the # of times wlan was preempted for BT
   brcmf_btcoex_params_read(ifp, 39, &wlan_preempt_count);
-  BRCMF_INFO("BTCoex Params #116: 0x%x #117: 0x%x #39: 0x%x", bt_tasks_low, bt_tasks_high,
-         wlan_preempt_count);
+  BRCMF_INFO("BTCoex: Active_BT_tasks: 0x%04x%04x WlanPreemptCnt: %u", bt_tasks_low, bt_tasks_high,
+             wlan_preempt_count);
 
   // Reset the values as this is called periodically (so we get an indication of the
   // interim activity).
