@@ -45,7 +45,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     devmgr_launcher::Args args;
     IsolatedDevmgr::ExtraArgs extra_args;
     args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-    args.disable_driver_index = true;
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.disable_block_watcher = true;
@@ -57,7 +56,6 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     auto device_list_ptr = std::unique_ptr<fbl::Vector<board_test::DeviceEntry>>(
         new fbl::Vector<board_test::DeviceEntry>());
     args.sys_device_driver = kPlatformDriver;
-    args.disable_driver_index = true;
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.disable_block_watcher = true;

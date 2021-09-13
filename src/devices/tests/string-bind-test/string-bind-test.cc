@@ -15,8 +15,8 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-const std::string kDriverTestDir = "/boot/driver";
-const std::string kStringBindDriverLibPath = kDriverTestDir + "/string-bind-child.so";
+const std::string kDriverBaseUrl = "fuchsia-boot:///#driver";
+const std::string kStringBindDriverLibPath = kDriverBaseUrl + "/string-bind-child.so";
 const std::string kChildDevicePath = "sys/test/parent";
 
 using devmgr_integration_test::IsolatedDevmgr;
@@ -27,7 +27,6 @@ class StringBindTest : public testing::Test {
     auto args = IsolatedDevmgr::DefaultArgs();
 
     args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-    args.disable_driver_index = true;
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);

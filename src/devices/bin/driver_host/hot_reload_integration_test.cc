@@ -28,11 +28,17 @@ namespace {
 using driver_integration_test::IsolatedDevmgr;
 using fuchsia_device_restarttest::TestDevice;
 
+constexpr std::string_view kDriverRestartUrl =
+    "fuchsia-boot:///#driver/driver-host-restart-driver.so";
+constexpr std::string_view kTestDriverRestartUrl =
+    "fuchsia-boot:///#driver/driver-host-test-driver.so";
+constexpr std::string_view kChildDriverRestartUrl =
+    "fuchsia-boot:///#driver/driver-host-test-child-driver.so";
+
 void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::IsolatedDevmgr* devmgr,
                       fuchsia::driver::development::DriverDevelopmentSyncPtr* development_) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.device_list.push_back(dev);
-  args.disable_driver_index = true;
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr));
   ASSERT_NE(devmgr->svc_root_dir().channel(), ZX_HANDLE_INVALID);
@@ -96,8 +102,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
 
   // Restart the driver host of the test driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
-  auto resp =
-      development_->RestartDriverHosts("/boot/driver/driver-host-restart-driver.so", &result);
+  auto resp = development_->RestartDriverHosts(kDriverRestartUrl.data(), &result);
   ASSERT_OK(resp);
 
   // Make sure device has shut so that it isnt opened before it is restarted.
@@ -174,7 +179,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
 
   // Restart the driver host of the parent driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
-  auto resp = development_->RestartDriverHosts("/boot/driver/driver-host-test-driver.so", &result);
+  auto resp = development_->RestartDriverHosts(kTestDriverRestartUrl.data(), &result);
   ASSERT_OK(resp);
 
   // Make sure device has shut so that it isn't opened before it is restarted.
@@ -263,8 +268,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
 
   // Restart the driver host of the child driver.
   fuchsia::driver::development::DriverDevelopment_RestartDriverHosts_Result result;
-  auto resp =
-      development_->RestartDriverHosts("/boot/driver/driver-host-test-child-driver.so", &result);
+  auto resp = development_->RestartDriverHosts(kChildDriverRestartUrl.data(), &result);
   ASSERT_OK(resp);
 
   // Make sure device has shut so that it isn't opened before it is restarted.
