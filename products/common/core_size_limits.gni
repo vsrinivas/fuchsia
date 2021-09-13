@@ -7,6 +7,8 @@
 # NOTE: The limits are set arbitrarily high at the moment to ensure size_checker
 # passes. We will gradually tune the set of components and sizes tracked here.
 
+blobfs_capacity = "10485760000"  # 10000 MiB
+
 size_checker_input = {
   icu_data = [ "icudtl.dat" ]
   icu_data_limit = 104857600  # 100 MiB
