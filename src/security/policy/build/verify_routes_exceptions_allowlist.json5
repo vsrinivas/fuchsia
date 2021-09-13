@@ -93,6 +93,18 @@
                     },
                 },
                 {
+                    capability: "fuchsia.bluetooth.hfp.Hfp",
+                    using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.bluetooth.hfp.Hfp",
+                            ],
+                        },
+                    },
+                },
+                {
                     capability: "fuchsia.device.Controller",
                     using_node: "/core/temperature-logger",
                     error: {
