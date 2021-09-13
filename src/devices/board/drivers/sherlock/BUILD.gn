@@ -57,6 +57,31 @@ driver_bind_rules("sherlock-pwm-bind") {
   ]
 }
 
+driver_bind_rules("sherlock-backlight-bind") {
+  rules = "bind/sherlock-backlight.bind"
+  header_output = "sherlock-backlight-bind.h"
+  bind_output = "sherlock-backlight-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.texasinstruments.platform",
+  ]
+}
+
+driver_bind_rules("sherlock-display-bind") {
+  rules = "bind/sherlock-display.bind"
+  header_output = "sherlock-display-bind.h"
+  bind_output = "sherlock-display_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.dsi",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -114,7 +139,9 @@ template("sherlock_driver") {
     ]
 
     deps = [
+      ":sherlock-backlight-bind_header",
       ":sherlock-buttons-bind_header",
+      ":sherlock-display-bind_header",
       ":sherlock-pwm-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
