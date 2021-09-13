@@ -103,6 +103,8 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   static zx_status_t Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent);
 
   void DdkUnbind(ddk::UnbindTxn txn);
+  // Public for testing
+  zx_status_t Shutdown();
 
   void DdkRelease() { delete this; }
 

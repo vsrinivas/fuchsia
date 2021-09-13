@@ -13,6 +13,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include "lib/sync/completion.h"
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
 namespace usb_hub {
@@ -199,12 +200,16 @@ void UsbHubDevice::InterruptCallback() {
   zx_status_t data_status = ZX_OK;
   size_t data_length;
   auto handleCallback = [&](CallbackRequest cr) mutable {
-    if (shutting_down_ || cr.request()->response.status != ZX_OK) {
+    if (shutting_down_) {
       sync_completion_signal(&xfer_done_);
       return;
     }
     data_status = cr.request()->response.status;
     data_length = cr.request()->response.actual;
+    if (data_status != ZX_OK) {
+      sync_completion_signal(&xfer_done_);
+      return;
+    }
     if (data_length > hub_bit_count) {
       data_status = ZX_ERR_BAD_STATE;
       zxlogf(ERROR, "Data received from request is more than number of ports");
@@ -230,7 +235,7 @@ void UsbHubDevice::InterruptCallback() {
     sync_completion_reset(&xfer_done_);
 
     if (shutting_down_ || data_status != ZX_OK) {
-      return;
+      break;
     }
 
     // bit zero is hub status
@@ -254,6 +259,19 @@ void UsbHubDevice::InterruptCallback() {
         port_status_[PortNumberToIndex(port_number).value()].status = port_status.w_port_status;
         HandlePortStatusChanged(port_number);
       }
+    }
+  }
+
+  // At this point, we are no longer handling interrupts (either because there was an error during a
+  // transaction or because the device is being unbound).
+  // Tell the rest of the system that any devices connected to this hub are no longer present.
+  for (uint8_t port = 1; port <= hub_descriptor_.b_nbr_ports; port++) {
+    auto index = PortNumberToIndex(PortNumber(port)).value();
+    fbl::AutoLock l(&async_execution_context_);
+    if (port_status_[index].connected) {
+      port_status_[index].connected = false;
+      port_status_[index].status &= ~USB_C_PORT_CONNECTION;
+      HandleDeviceDisconnected(PortNumber(port));
     }
   }
 }
@@ -414,16 +432,10 @@ zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
 }
 
 void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
-  shutting_down_ = true;
-  zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
+  zx_status_t status = Shutdown();
   if (status != ZX_OK) {
-    // Fatal -- unable to shut down properly
-    zxlogf(ERROR, "Error %s during CancelAll for interrupt endpoint\n",
-           zx_status_get_string(status));
     return;
   }
-  // TODO(fxbug.dev/82530): Cancel Control endpoint when supported
-  sync_completion_signal(&xfer_done_);
   thrd_join(callback_thread_, &status);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not join interrupt thread");
@@ -431,6 +443,19 @@ void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
   }
 
   txn.Reply();
+}
+
+zx_status_t UsbHubDevice::Shutdown() {
+  shutting_down_ = true;
+  zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
+  if (status != ZX_OK) {
+    // Fatal -- unable to shut down properly
+    zxlogf(ERROR, "CancelAll() error: %s", zx_status_get_string(status));
+    return status;
+  }
+  // TODO(fxbug.dev/82530): Cancel Control endpoint when supported
+  sync_completion_signal(&xfer_done_);
+  return ZX_OK;
 }
 
 zx_status_t UsbHubDevice::Bind(std::unique_ptr<fpromise::executor> executor, zx_device_t* parent) {

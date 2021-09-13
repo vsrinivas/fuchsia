@@ -300,6 +300,48 @@ TEST_F(UnbrandedHarness, Usb3Hub) {
   ASSERT_TRUE(ResetPending(1));
 }
 
+TEST_F(UnbrandedHarness, UnbindHubDisconnects) {
+  auto dispatcher = StartDispatching();
+  sync_completion_t enum_complete;
+  sync_completion_reset(&enum_complete);
+  uint8_t port_bitmask = 7;
+  SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
+    if (speed != USB_SPEED_SUPER) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!(port_bitmask & (1 << (port - 1)))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    port_bitmask &= ~(1 << (port - 1));
+    if (!port_bitmask) {
+      sync_completion_signal(&enum_complete);
+    }
+    return ZX_OK;
+  });
+
+  ConnectDevice(0, USB_SPEED_SUPER);
+  ConnectDevice(1, USB_SPEED_SUPER);
+  ConnectDevice(2, USB_SPEED_SUPER);
+  Interrupt();
+  sync_completion_wait(&enum_complete, ZX_TIME_INFINITE);
+  sync_completion_t disconnect_complete;
+  // Disconnect ordering doesn't matter (can happen in any order).
+  uint8_t port_remove_bitmask = 7;
+  SetConnectCallback([&](uint32_t port, usb_speed_t speed) {
+    if ((speed != static_cast<usb_speed_t>(-1))) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    port_remove_bitmask &= ~(1 << (port - 1));
+    if (port_remove_bitmask == 0) {
+      sync_completion_signal(&disconnect_complete);
+    }
+    return ZX_OK;
+  });
+
+  ASSERT_OK(device()->Shutdown());
+  sync_completion_wait(&disconnect_complete, ZX_TIME_INFINITE);
+}
+
 TEST_F(SyntheticHarness, SetFeature) {
   auto dev = device();
   bool ran = false;
