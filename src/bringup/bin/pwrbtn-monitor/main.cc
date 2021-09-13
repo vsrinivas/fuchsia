@@ -228,11 +228,8 @@ int main(int argc, char** argv) {
           return;
         }
 
-        // Re-queue the task.
-        pwrbtn_waiter.Begin(loop.dispatcher());
-        const fidl::VectorView<uint8_t>& report = result->data;
-
         // Ignore reports from different report IDs
+        const fidl::VectorView<uint8_t>& report = result->data;
         if (info.has_report_id_byte && report[0] != info.report_id) {
           printf("pwrbtn-monitor: input-watcher: wrong id\n");
           return;
@@ -247,6 +244,9 @@ int main(int argc, char** argv) {
             return;
           }
         }
+
+        // Re-queue the task.
+        pwrbtn_waiter.Begin(loop.dispatcher());
       });
 
   pwrbtn_waiter.Begin(loop.dispatcher());
