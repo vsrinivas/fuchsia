@@ -2,32 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
-    fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequest,
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        detachable_map::DetachableMap,
-        types::{Channel, PeerId},
-    },
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::{AttachError, Inspect},
-    futures::{lock::Mutex, FutureExt},
-    std::{
-        collections::{HashMap, HashSet},
-        convert::TryFrom,
-        sync::Arc,
-    },
-    tracing::{info, trace, warn},
-};
+use anyhow::{format_err, Error};
+use bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel};
+use fidl_fuchsia_bluetooth::ErrorCode;
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequest;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::detachable_map::DetachableMap;
+use fuchsia_bluetooth::types::{Channel, PeerId};
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::{AttachError, Inspect};
+use futures::{lock::Mutex, FutureExt};
+use std::collections::{HashMap, HashSet};
+use std::{convert::TryFrom, sync::Arc};
+use tracing::{info, trace, warn};
 
-use crate::rfcomm::{
-    session::Session,
-    types::{status_to_rls_error, SignaledTask},
-};
+use crate::rfcomm::session::Session;
+use crate::rfcomm::types::{status_to_rls_error, SignaledTask};
 
 /// An RFCOMM client that is registered with the RFCOMM server.
 struct RegisteredClient {
@@ -296,21 +287,18 @@ impl RfcommServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        async_utils::PollExt,
-        bt_rfcomm::{frame::mux_commands::*, frame::*, Role, DLCI},
-        fidl::{
-            encoding::Decodable,
-            endpoints::{create_proxy, create_proxy_and_stream},
-        },
-        fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker,
-        fuchsia_async as fasync,
-        fuchsia_bluetooth::types::Channel,
-        fuchsia_inspect::assert_data_tree,
-        fuchsia_inspect_derive::WithInspect,
-        futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt},
-        matches::assert_matches,
-    };
+
+    use async_utils::PollExt;
+    use bt_rfcomm::{frame::mux_commands::*, frame::*, Role, DLCI};
+    use fidl::encoding::Decodable;
+    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_bluetooth_bredr::ConnectionReceiverMarker;
+    use fuchsia_async as fasync;
+    use fuchsia_bluetooth::types::Channel;
+    use fuchsia_inspect::assert_data_tree;
+    use fuchsia_inspect_derive::WithInspect;
+    use futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt};
+    use matches::assert_matches;
 
     use crate::rfcomm::test_util::{expect_frame_received_by_peer, send_peer_frame};
 

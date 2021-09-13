@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bt_rfcomm::{Role, DLCI},
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::inspect::DataStreamInspect,
-    fuchsia_inspect::{self as inspect, Property},
-    fuchsia_inspect_derive::{AttachError, IValue, Inspect},
-};
+use bt_rfcomm::{Role, DLCI};
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::inspect::DataStreamInspect;
+use fuchsia_inspect::{self as inspect, Property};
+use fuchsia_inspect_derive::{AttachError, IValue, Inspect};
 
 use crate::rfcomm::session::{channel::FlowControlMode, multiplexer::SessionParameters};
 

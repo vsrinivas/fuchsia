@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bt_rfcomm::{frame::mux_commands::RlsError, RfcommError, DLCI},
-    fidl_fuchsia_bluetooth_rfcomm_test::Status,
-    futures::future::BoxFuture,
-    thiserror::Error,
-};
+use bt_rfcomm::{frame::mux_commands::RlsError, RfcommError, DLCI};
+use fidl_fuchsia_bluetooth_rfcomm_test::Status;
+use futures::future::BoxFuture;
+use thiserror::Error;
 
 /// Errors that occur during the usage of the RFCOMM component.
 #[derive(Error, Debug)]

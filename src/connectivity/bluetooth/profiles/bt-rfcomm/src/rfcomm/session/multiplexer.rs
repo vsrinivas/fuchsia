@@ -2,21 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bt_rfcomm::{frame::Frame, RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
-    fuchsia_bluetooth::types::Channel,
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::Inspect,
-    futures::channel::mpsc,
-    std::collections::HashMap,
-    tracing::{trace, warn},
-};
+use bt_rfcomm::{frame::Frame, RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE};
+use fuchsia_bluetooth::types::Channel;
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::Inspect;
+use futures::channel::mpsc;
+use std::collections::HashMap;
+use tracing::{trace, warn};
 
-use crate::rfcomm::{
-    inspect::SessionMultiplexerInspect,
-    session::channel::{FlowControlMode, FlowControlledData, SessionChannel},
-    types::Error,
-};
+use crate::rfcomm::inspect::SessionMultiplexerInspect;
+use crate::rfcomm::session::channel::{FlowControlMode, FlowControlledData, SessionChannel};
+use crate::rfcomm::types::Error;
 
 /// The parameters associated with this Session.
 #[derive(Clone, Copy, Debug, PartialEq)]

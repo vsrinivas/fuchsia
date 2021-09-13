@@ -2,29 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    async_utils::stream::{StreamItem, StreamWithEpitaph, WithEpitaph},
-    bt_rfcomm::ServerChannel,
-    fidl::endpoints::{create_request_stream, ClientEnd},
-    fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        profile::{psm_from_protocol, ChannelParameters, Psm, ServiceDefinition},
-        types::PeerId,
-        util::CollectExt,
-    },
-    fuchsia_inspect_derive::Inspect,
-    futures::{
-        self, channel::mpsc, future::BoxFuture, select, sink::SinkExt, stream::StreamExt, Future,
-        FutureExt,
-    },
-    std::{
-        collections::HashSet,
-        convert::{TryFrom, TryInto},
-    },
-    tracing::{info, trace, warn},
+use anyhow::{format_err, Error};
+use async_utils::stream::{StreamItem, StreamWithEpitaph, WithEpitaph};
+use bt_rfcomm::ServerChannel;
+use fidl::endpoints::{create_request_stream, ClientEnd};
+use fidl_fuchsia_bluetooth::ErrorCode;
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::profile::{psm_from_protocol, ChannelParameters, Psm, ServiceDefinition};
+use fuchsia_bluetooth::{types::PeerId, util::CollectExt};
+use fuchsia_inspect_derive::Inspect;
+use futures::{
+    self, channel::mpsc, future::BoxFuture, select, sink::SinkExt, stream::StreamExt, Future,
+    FutureExt,
 };
+use std::collections::HashSet;
+use std::convert::{TryFrom, TryInto};
+use tracing::{info, trace, warn};
 
 use crate::fidl_service::Service;
 use crate::profile::*;
@@ -551,10 +545,8 @@ mod tests {
     use async_utils::PollExt;
     use fidl::encoding::Decodable;
     use fidl::endpoints::create_proxy_and_stream;
-    use futures::{
-        pin_mut,
-        task::{Context, Poll},
-    };
+    use futures::pin_mut;
+    use futures::task::{Context, Poll};
     use futures_test::task::new_count_waker;
 
     /// Returns true if the provided `service` has an assigned Server Channel.

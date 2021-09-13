@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context, Error},
-    fidl_fuchsia_bluetooth_bredr::ProfileRequestStream,
-    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequestStream,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
-    futures::{channel::mpsc, Future, SinkExt, StreamExt},
-    tracing::info,
-};
+use anyhow::{Context, Error};
+use fidl_fuchsia_bluetooth_bredr::ProfileRequestStream;
+use fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequestStream;
+use fuchsia_component::server::{ServiceFs, ServiceObj};
+use futures::{channel::mpsc, Future, SinkExt, StreamExt};
+use tracing::info;
 
 /// The maximum number of FIDL service client connections that will be serviced concurrently.
 const MAX_CONCURRENT_CONNECTIONS: usize = 10;

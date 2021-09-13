@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    bt_rfcomm::{
-        profile::{build_rfcomm_protocol, is_rfcomm_protocol, server_channel_from_protocol},
-        ServerChannel,
-    },
-    fuchsia_bluetooth::profile::{Psm, ServiceDefinition},
-    std::collections::HashSet,
-};
+use anyhow::{format_err, Error};
+use bt_rfcomm::profile::{build_rfcomm_protocol, is_rfcomm_protocol, server_channel_from_protocol};
+use bt_rfcomm::ServerChannel;
+use fuchsia_bluetooth::profile::{Psm, ServiceDefinition};
+use std::collections::HashSet;
 
 /// Updates the provided `service` with the assigned `server_channel` if
 /// the service is requesting RFCOMM.
@@ -65,10 +61,9 @@ pub fn psms_from_service_definitions(services: &Vec<ServiceDefinition>) -> HashS
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_bluetooth::profile::ProtocolDescriptor,
-        std::convert::TryFrom,
-    };
+    use fidl_fuchsia_bluetooth_bredr as bredr;
+    use fuchsia_bluetooth::profile::ProtocolDescriptor;
+    use std::convert::TryFrom;
 
     use crate::types::tests::rfcomm_protocol_descriptor_list;
 

@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Error,
-    bt_rfcomm::ServerChannel,
-    fidl_fuchsia_bluetooth::PeerId,
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::profile::{
-        combine_channel_parameters, ChannelParameters, Psm, ServiceDefinition,
-    },
-    slab::Slab,
-    std::collections::HashSet,
+use anyhow::Error;
+use bt_rfcomm::ServerChannel;
+use fidl_fuchsia_bluetooth::PeerId;
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_bluetooth::profile::{
+    combine_channel_parameters, ChannelParameters, Psm, ServiceDefinition,
 };
+use slab::Slab;
+use std::collections::HashSet;
 
 use crate::profile::{psms_from_service_definitions, server_channels_from_service_definitions};
 
@@ -188,20 +186,16 @@ impl Drop for ServiceGroup {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use {
-        fidl::{encoding::Decodable, endpoints::create_proxy_and_stream},
-        fidl_fuchsia_bluetooth_bredr::{
-            Channel, ProfileDescriptor, ProtocolIdentifier, ServiceClassProfileIdentifier,
-        },
-        fuchsia_async as fasync,
-        fuchsia_bluetooth::{
-            profile::{DataElement, ProtocolDescriptor},
-            types::{PeerId, Uuid},
-        },
-        futures::{stream::StreamExt, task::Poll},
-        matches::assert_matches,
-        std::convert::TryFrom,
+    use fidl::{encoding::Decodable, endpoints::create_proxy_and_stream};
+    use fidl_fuchsia_bluetooth_bredr::{
+        Channel, ProfileDescriptor, ProtocolIdentifier, ServiceClassProfileIdentifier,
     };
+    use fuchsia_async as fasync;
+    use fuchsia_bluetooth::profile::{DataElement, ProtocolDescriptor};
+    use fuchsia_bluetooth::types::{PeerId, Uuid};
+    use futures::{stream::StreamExt, task::Poll};
+    use matches::assert_matches;
+    use std::convert::TryFrom;
 
     /// Defines a Protocol requesting RFCOMM with the provided server `channel`.
     pub fn rfcomm_protocol_descriptor_list(

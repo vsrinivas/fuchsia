@@ -2,29 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    async_trait::async_trait,
-    bt_rfcomm::{
-        frame::{Frame, UserData},
-        Role, DLCI,
-    },
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::types::Channel,
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::{AttachError, IValue, Inspect},
-    futures::{
-        channel::{mpsc, oneshot},
-        future::{BoxFuture, Shared},
-        select, FutureExt, SinkExt, StreamExt,
-    },
-    std::convert::TryInto,
-    tracing::{error, info, trace},
-};
+use async_trait::async_trait;
+use bt_rfcomm::frame::{Frame, UserData};
+use bt_rfcomm::{Role, DLCI};
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::types::Channel;
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::{AttachError, IValue, Inspect};
+use futures::channel::{mpsc, oneshot};
+use futures::future::{BoxFuture, Shared};
+use futures::{select, FutureExt, SinkExt, StreamExt};
+use std::convert::TryInto;
+use tracing::{error, info, trace};
 
-use crate::rfcomm::{
-    inspect::{DuplexDataStreamInspect, SessionChannelInspect, FLOW_CONTROLLER},
-    types::{Error, SignaledTask},
-};
+use crate::rfcomm::inspect::{DuplexDataStreamInspect, SessionChannelInspect, FLOW_CONTROLLER};
+use crate::rfcomm::types::{Error, SignaledTask};
 
 /// Upper bound for the number of credits we allow a remote device to have.
 /// This is used to determine the number of credits to include in frames sent to the peer
@@ -517,16 +509,15 @@ impl SignaledTask for SessionChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        async_utils::PollExt,
-        bt_rfcomm::frame::FrameData,
-        fuchsia_async::DurationExt,
-        fuchsia_inspect_derive::WithInspect,
-        fuchsia_zircon::DurationNum,
-        futures::{channel::mpsc, pin_mut, task::Poll},
-        matches::assert_matches,
-        std::convert::TryFrom,
-    };
+
+    use async_utils::PollExt;
+    use bt_rfcomm::frame::FrameData;
+    use fuchsia_async::DurationExt;
+    use fuchsia_inspect_derive::WithInspect;
+    use fuchsia_zircon::DurationNum;
+    use futures::{channel::mpsc, pin_mut, task::Poll};
+    use matches::assert_matches;
+    use std::convert::TryFrom;
 
     use crate::rfcomm::test_util::{expect_frame, expect_user_data_frame, poll_stream};
 

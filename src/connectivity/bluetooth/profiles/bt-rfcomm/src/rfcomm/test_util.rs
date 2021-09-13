@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bt_rfcomm::{
-        frame::{mux_commands::MuxCommandMarker, Frame, FrameData, UIHData, UserData},
-        DLCI,
-    },
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::types::Channel,
-    futures::{channel::mpsc, stream::Stream, task::Poll, StreamExt},
-    packet_encoding::Encodable,
-    std::marker::Unpin,
-};
+use bt_rfcomm::frame::{mux_commands::MuxCommandMarker, Frame, FrameData, UIHData, UserData};
+use bt_rfcomm::DLCI;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::types::Channel;
+use futures::{channel::mpsc, stream::Stream, task::Poll, StreamExt};
+use packet_encoding::Encodable;
+use std::marker::Unpin;
 
 /// Simulates the peer sending an RFCOMM frame over the L2CAP `remote` socket.
 #[track_caller]

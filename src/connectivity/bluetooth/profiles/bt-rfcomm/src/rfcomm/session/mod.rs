@@ -2,33 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::format_err,
-    bt_rfcomm::{
-        frame::{
-            mux_commands::*, CommandResponse, Frame, FrameData, FrameParseError, UIHData, UserData,
-        },
-        Role, ServerChannel, DLCI,
-    },
-    fidl_fuchsia_bluetooth::ErrorCode,
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::types::{Channel, PeerId},
-    fuchsia_inspect as inspect,
-    fuchsia_inspect_derive::{AttachError, Inspect},
-    futures::{
-        channel::{mpsc, oneshot},
-        future::{BoxFuture, Shared},
-        lock::Mutex,
-        select, FutureExt, SinkExt, StreamExt,
-    },
-    packet_encoding::Encodable,
-    std::{
-        collections::{hash_map::Entry, HashMap},
-        convert::TryInto,
-        sync::Arc,
-    },
-    tracing::{error, info, trace, warn},
-};
+use anyhow::format_err;
+use bt_rfcomm::frame::mux_commands::*;
+use bt_rfcomm::frame::{CommandResponse, Frame, FrameData, FrameParseError, UIHData, UserData};
+use bt_rfcomm::{Role, ServerChannel, DLCI};
+use fidl_fuchsia_bluetooth::ErrorCode;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::types::{Channel, PeerId};
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_derive::{AttachError, Inspect};
+use futures::channel::{mpsc, oneshot};
+use futures::future::{BoxFuture, Shared};
+use futures::lock::Mutex;
+use futures::{select, FutureExt, SinkExt, StreamExt};
+use packet_encoding::Encodable;
+use std::collections::{hash_map::Entry, HashMap};
+use std::{convert::TryInto, sync::Arc};
+use tracing::{error, info, trace, warn};
 
 /// RFCOMM channels used to communicate with profile clients.
 pub mod channel;
@@ -1079,13 +1069,12 @@ impl SignaledTask for Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        async_utils::PollExt,
-        fuchsia_async as fasync,
-        futures::{pin_mut, task::Poll, Future},
-        matches::assert_matches,
-        std::convert::TryFrom,
-    };
+
+    use async_utils::PollExt;
+    use fuchsia_async as fasync;
+    use futures::{pin_mut, task::Poll, Future};
+    use matches::assert_matches;
+    use std::convert::TryFrom;
 
     use crate::{rfcomm::session::multiplexer::ParameterNegotiationState, rfcomm::test_util::*};
 
