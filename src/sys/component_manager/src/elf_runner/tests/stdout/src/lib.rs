@@ -172,7 +172,7 @@ async fn start_child_component(realm: &fsys::RealmProxy, component: &Component) 
         .open_exposed_dir(&mut child_ref, server_end)
         .await
         .expect("failed to make FIDL call")
-        .expect("failed to bind child");
+        .expect("failed to open exposed dir of child");
 
     let _ =
         client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();

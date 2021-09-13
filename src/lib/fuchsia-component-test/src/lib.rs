@@ -682,8 +682,8 @@ impl ScopedInstanceFactory {
         let () = realm
             .open_exposed_dir(&mut child_ref, server)
             .await
-            .context("BindChild FIDL failed.")?
-            .map_err(|e| format_err!("Failed to bind to child: {:?}", e))?;
+            .context("OpenExposedDir FIDL failed.")?
+            .map_err(|e| format_err!("Failed to open exposed dir of child: {:?}", e))?;
         Ok(ScopedInstance {
             realm,
             child_name,

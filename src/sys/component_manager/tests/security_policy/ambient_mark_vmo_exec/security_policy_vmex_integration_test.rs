@@ -68,11 +68,9 @@ async fn verify_ambient_vmex_denied() -> Result<(), Error> {
         start_policy_test(CM_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     // This security policy is enforced inside the ELF runner. The component will fail to launch
-    // because of the denial, but BindChild will return success because the runtime successfully
-    // asks the runner to start the component. We watch for the exposed_dir to get dropped to detect
-    // the launch failure.
-    // N.B. We could alternatively look for a Started and then a Stopped event to verify that the
-    // component failed to launch, but fxbug.dev/53414 prevented that at the time this was written.
+    // because of the denial, but the connection to fuchsia.component/Binder
+    // will be successful because it's async. We watch for the Started & Stopped
+    // event to detect launch failure.
     let child_name = "policy_denied";
     let exposed_dir =
         open_exposed_dir(&realm, child_name).await.expect("open_exposed_dir should succeed");

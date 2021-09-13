@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_sys2::{ChildRef, RealmMarker},
     fidl_test_ping::PingMarker,
     fuchsia_async as fasync,
-    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_protocol},
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -18,8 +18,8 @@ async fn base_resolver_test() {
     realm
         .open_exposed_dir(&mut ChildRef { name: "component".into(), collection: None }, server_end)
         .await
-        .expect("failed to call bind child FIDL")
-        .expect("failed to bind child");
+        .expect("failed to call open_exposed_dir FIDL")
+        .expect("failed to open exposed dir of child");
     let ping = connect_to_protocol_at_dir_root::<PingMarker>(&exposed_dir)
         .expect("failed to connect to Ping protocol");
     assert_eq!(ping.ping("ping").await.expect("Ping FIDL call failed"), "ping pong");

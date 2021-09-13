@@ -289,7 +289,7 @@ mod tests {
         // Since this is a fake capability (of any arbitrary type), it should fail.
         assert!(client_end.rewind().await.is_err());
 
-        // Calls to Realm::BindChild and Directory::Open should have happened.
+        // Calls to Realm::OpenExposedDir and Directory::Open should have happened.
         assert_eq!(CALL_COUNT.get(), 2);
     }
 
