@@ -173,8 +173,7 @@ gvisor_tests = [
   # "time_test",
   "timerfd_test",
   "uidgid_test",
-
-  # "unlink_test",
+  "unlink_test",
   "wait_test",
 ]
 
