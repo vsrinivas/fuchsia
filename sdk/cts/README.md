@@ -96,131 +96,18 @@ C = Someone who wants to make sure that an SDK is backwards compatible with an
 older API level.  The Fuchsia organization provides this kind of guarantee to
 customers whose code targets older SDKs.
 
+## Contributing tests
 
-## Writing tests
+See the [CTS Contributing Guide].
 
-This section provides guidelines on how to author CTS tests.
+## Running example tests
 
-### Testing Guidelines
+To run example tests:
 
-CTS tests are intended to provide coverage for the platform surface area,
-including ABI, API, and tooling exposed through the SDK.  We have a variety of
-guidelines to encourage this; rules are provided in boldface text below.
-Subsequent sections add more detail to these rules.
-
-#### Where to Put Tests
-
-**CTS tests must be stored in `//sdk/cts` unless specific permission is given
-from the CTS team for the test to be stored elsewhere.** There is no such
-restriction for test infrastructure (e.g., the `zxtest` library), but we
-encourage discussion with the team if you have questions.
-
-#### What to Test
-
-**CTS tests typically target elements of the platform surface area directly. If
-one fails, it should be clear which parts of the platform surface area were
-triggered, and what the changed outcome is.** As a result of this rule,
-typically, the amount of application logic in a test is small.
-
-**CTS tests should target all of the testable assertions presented in the
-documentation for elements of the platform surface area under test.** For
-example, if we have a class `fit::basic_string_view`, and it has a method `size`
-that is documented to return the size of the string_view, we would have a test
-that creates a string_view, calls the `size` method, and asserts that the return
-value is correct.
-
-#### How to Write Tests
-
-**CTS tests developed in `fuchsia.git` must conform to all requirements for code
-checked into `fuchsia.git`, including code review, style, language level, and so
-on.**
-
-**CTS tests may rely on anything in an SDK**.  We also accept non-test code
-submissions that only use platform surface area elements exposed via an SDK;
-test libraries such as `zxtest` fall under this rule.  We expect developers to
-be aware that relying on anything other than the surface area under test makes a
-CTS test more subject to unrelated failure, and to write code accordingly.  For
-example, the `zxtest` library does not rely on synchronization, so failures in
-synchronization mechanisms cannot cause all zxtest-based tests to fail.
-
-**Tests should reflect best practices about the usage of a given API.**
-Informally, if an end developer were to see the test, and copy its usage of the
-API, the test author would believe that developer would be using the API
-correctly. Tests should, to the extent possible, not depend on undocumented,
-application-specific invariants.  In the future, in the case of widespread use
-of undocumented usages outside of the Fuchsia tree, we may need to support use
-cases that do not follow recommended usages.
-
-**CTS tests must restore the state of the system under test when the test has
-completed.** For example, a test might make a system-wide change to set the
-foreground and background color of text to the same color. The colors should be
-reset at the end of the test.  We will likely relax this restriction as we get
-better at writing test infrastructure; please reach out to us with concerns.
-Tests should not depend on the behavior of previous tests.
-
-**CTS tests must not have timeouts.** Instead, timeouts should be enforced by
-the test infrastructure.
-
-**CTS tests should not sleep.** Sleeps are common causes of flakiness in tests,
-as timing can vary wildly between runs depending on target hardware and system
-load.  We recommend that developers structure code so that an explicit signal is
-sent when a given condition is met, rather than having part of a test wait an
-arbitrary amount of time for other code to finish.
-
-**CTS tests may not depend on infrastructure outside the tests, the test
-harness, and the system under test.** For example, they should not make requests
-to known servers on the Internet or look for files in known locations on host
-operating systems.
-
-**CTS tests should avoid creating test doubles (e.g., mocks and fakes) for the
-internal state of the target device.** The intent of the CTS is to make sure the
-entire device behaves correctly, not to make sure that a particular component
-behaves correctly in isolation.
-
-**CTS tests should exercise boundary conditions (e.g., values of 0 and MAXINT
-for integers, and null pointers for pointer values) as well as typical
-elements.** This is simply to provide for better testing.
-
-We do not encourage developers to submit stress tests or performance tests to
-the CTS. Such tests will be examined closely for coverage value.
-
-### Directory structure
-
-The structure of the `//sdk/cts` directory mirrors the structure of SDK
-artifacts.  Tests should go in the same directory as the interface under test is
-found in an SDK.  For example:
-
-  * Tests for host tools should go in `//sdk/cts/tests/tools`.
-  * Tests for FIDL interfaces should go in the appropriate subdirectory of
-    `//sdk/cts/tests/fidl`.  For example, tests for `fuchsia.sysmem` should go
-    in `//sdk/cts/tests/fidl/fuchsia.sysmem`.
-  * Tests for libraries should go in the appropriate subdirectory of
-    `//sdk/cts/tests/pkg`.  For example, tests for `async-loop` should go in
-    `//sdk/cts/tests/pkg/async-loop`.
-
-### Build support
-
-CTS tests target API and ABI available through externally-available SDKs.  Build
-support ensures that tests only depend on API elements that are available via an
-SDK, or allowlisted for use within the CTS.  All build targets must use the
-`cts_` rule variants found in `//sdk/cts/build` instead of the standard
-fuchsia.git rules (i.e., use `cts_fuchsia_component`, `cts_executable`, and so
-on).
-
-The allowlist for non-SDK code can be found in
-`//sdk/cts/build/allowed_cts_deps.gni`.  Test authors who believe they need an
-additional inclusion should file a bug in the [CTS bug component].
-
-### Running example tests
-
-To run example tests, append `--with //sdk/cts` to `fx set`
-eg, `fx set core.qemu-64 --with //sdk/cts`
-
-Next, run `fx test //sdk/cts/examples/`
-
-### Writing tests
-
-For example tests, see `//sdk/cts/examples`.
+```
+fx set core.qemu-64 --with //sdk/cts/examples/
+fx test //sdk/cts/examples/
+```
 
 #### Language
 
@@ -350,6 +237,7 @@ I added a CTS test. How long until it is running in CQ?
 For questions and clarification on this document, please reach out to this
 directory's owners or file a bug in the [CTS bug component].
 
+[CTS Contributing Guide]: /docs/development/testing/cts/contributing_tests.md
 [Fuchsia language policy]: https://fuchsia.dev/fuchsia-src/contribute/governance/policy/programming_languages
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [//sdk/cts/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/
