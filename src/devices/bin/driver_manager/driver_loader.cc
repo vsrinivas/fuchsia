@@ -89,8 +89,16 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
       [this, callback = std::move(callback)](
           fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>&& result) mutable {
         if (!result.ok()) {
-          LOGF(ERROR, "Failed to connect to DriverIndex: %s",
-               result.error().FormatDescription().c_str());
+          // Since IsolatedDevmgr doesn't use the ComponentFramework, DriverIndex can be
+          // closed before DriverManager during tests, which would mean we would see
+          // a ZX_ERR_PEER_CLOSED.
+          if (result.status() == ZX_ERR_PEER_CLOSED) {
+            LOGF(WARNING, "Connection to DriverIndex closed during WaitForBaseDrivers.");
+          } else {
+            LOGF(ERROR, "Failed to connect to DriverIndex: %s",
+                 result.error().FormatDescription().c_str());
+          }
+
           return;
         }
         include_fallback_drivers_ = true;
