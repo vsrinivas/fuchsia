@@ -243,13 +243,34 @@ impl DirEntry {
         Ok(())
     }
 
-    pub fn unlink(self: &DirEntryHandle, name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(self: &DirEntryHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         let mut state = self.state.write();
         let child = state.children.get(name).ok_or(errno!(ENOENT))?.upgrade().unwrap();
-        // TODO: Check _kind against the child's mode.
+        let child_state = child.state.read();
+
+        match kind {
+            UnlinkKind::Directory => {
+                if !child.node.is_dir() {
+                    return error!(ENOTDIR);
+                }
+                // This check only covers whether the cache is non-empty.
+                // We actually need to check whether the underlying directory is
+                // empty by asking the node via remove below.
+                if !child_state.children.is_empty() {
+                    return error!(ENOTEMPTY);
+                }
+            }
+            UnlinkKind::NonDirectory => {
+                if child.node.is_dir() {
+                    return error!(EISDIR);
+                }
+            }
+        }
+
         self.node.unlink(name, &child.node)?;
         state.children.remove(name);
 
+        std::mem::drop(child_state);
         // We drop the state lock before we drop the child so that we do
         // not trigger a deadlock in the Drop trait for FsNode, which attempts
         // to remove the FsNode from its parent's child list.
