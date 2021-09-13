@@ -34,8 +34,12 @@ constexpr char kObservationStorePath[] = "/data/observation_store";
 constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
 constexpr char kLocalAggregationPath[] = "/data/local_aggregate_storage";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
-constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
 constexpr char kLocalLogFilePath[] = "/data/cobalt_observations.pb";
+
+// Used for caching system data fields in fuchsia.
+constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
+// Used for caching the SystemData history in cobalt internally.
+constexpr char kSystemDataCachePath[] = "/data/system_data_history";
 
 const size_t kClearcutMaxRetries = 5;
 
@@ -97,6 +101,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .obs_history_proto_store_path = kObsHistoryProtoStorePath,
       .local_aggregate_store_dir = kLocalAggregationPath,
       .local_aggregate_store_strategy = StorageStrategy::Delayed,
+
+      .system_data_cache_path = kSystemDataCachePath,
 
       .upload_schedule_cfg = upload_schedule_cfg,
 
