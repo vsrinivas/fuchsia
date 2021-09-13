@@ -938,10 +938,12 @@ group("rbe_config.metadata") {
   }
 }
 
+# Check that all of the drivers included in the image and packages.
+# are components and in the all-drivers-list
 check_included_drivers("drivers-check") {
   testonly = true
   deps = [
-    "//build:tests",
+    "//build/images:default-images",
     "//build/images:packages",
   ]
 }
@@ -965,6 +967,7 @@ group("default") {
   if (bootfs_only || base_package_labels + cache_package_labels +
                      universe_package_labels != []) {
     deps += [ "//build/images:default-images" ]
+    deps += [ "//:drivers-check" ]
   }
 }
 
