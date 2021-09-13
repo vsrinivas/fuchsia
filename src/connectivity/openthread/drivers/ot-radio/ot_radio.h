@@ -159,6 +159,7 @@ class OtRadioDevice : public DeviceType {
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
   bool interrupt_is_asserted_ = false;
+  bool inbound_frame_available_ = false;
 };
 
 }  // namespace ot

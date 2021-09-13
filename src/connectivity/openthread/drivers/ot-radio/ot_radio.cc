@@ -32,6 +32,7 @@
 namespace ot {
 namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
+constexpr uint8_t kRcpBusyPollingDelayMs = 10;
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
 
@@ -247,6 +248,9 @@ zx_status_t OtRadioDevice::ReadRadioPacket() {
       // Signal to driver test, waiting for a response
       sync_completion_signal(&spi_rx_complete_);
     }
+    inbound_frame_available_ = true;
+  } else {
+    inbound_frame_available_ = false;
   }
   return ZX_OK;
 }
@@ -376,6 +380,11 @@ zx_status_t OtRadioDevice::RadioThread() {
       do {
         spinel_framer_->HandleInterrupt();
         ReadRadioPacket();
+
+        if (!inbound_frame_available_) {
+          zxlogf(DEBUG, "ot-radio: new packet unavailable, sleeping");
+          zx::nanosleep(zx::deadline_after(zx::msec(kRcpBusyPollingDelayMs)));
+        }
 
         interrupt_is_asserted_ = IsInterruptAsserted();
       } while (interrupt_is_asserted_ && inbound_allowance_ != 0);
