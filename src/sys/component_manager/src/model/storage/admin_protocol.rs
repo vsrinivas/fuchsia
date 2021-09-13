@@ -205,7 +205,7 @@ impl StorageAdmin {
                         AbsoluteMoniker::from_relative(&component.abs_moniker, &relative_moniker)?;
                     let instance_id = component
                         .try_get_component_id_index()?
-                        .look_up_moniker(&abs_moniker)
+                        .look_up_moniker(&abs_moniker.to_partial())
                         .cloned();
 
                     let dir_proxy = storage::open_isolated_storage(
@@ -237,7 +237,7 @@ impl StorageAdmin {
                             )?;
                             let instance_id = component
                                 .try_get_component_id_index()?
-                                .look_up_moniker(&abs_moniker)
+                                .look_up_moniker(&abs_moniker.to_partial())
                                 .cloned();
                             let res = storage::delete_isolated_storage(
                                 storage_capability_source_info.clone(),

@@ -12,7 +12,8 @@ use {
     component_id_index::gen_instance_id,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker,
+        RelativeMoniker, RelativeMonikerBase,
     },
     routing::{
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
@@ -1246,7 +1247,9 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: b_instance_id.clone(),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/b").unwrap()),
+                moniker: Some(
+                    PartialAbsoluteMoniker::parse_string_without_instances("/b").unwrap(),
+                ),
             }],
             ..component_id_index::Index::default()
         })

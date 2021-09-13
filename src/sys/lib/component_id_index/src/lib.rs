@@ -7,7 +7,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     fidl_fuchsia_component_internal as fcomponent_internal,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
     std::collections::HashMap,
     std::convert::TryFrom,
@@ -34,24 +34,25 @@ pub struct InstanceIdEntry {
         deserialize_with = "str_to_abs_moniker",
         serialize_with = "abs_moniker_to_str"
     )]
-    pub moniker: Option<AbsoluteMoniker>,
+    pub moniker: Option<PartialAbsoluteMoniker>,
 }
 
-fn str_to_abs_moniker<'de, D>(deserializer: D) -> Result<Option<AbsoluteMoniker>, D::Error>
+fn str_to_abs_moniker<'de, D>(deserializer: D) -> Result<Option<PartialAbsoluteMoniker>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let moniker_str: Option<String> = Option::deserialize(deserializer)?;
     match &moniker_str {
         Some(m) => Ok(Some(
-            AbsoluteMoniker::parse_string_without_instances(m).map_err(serde::de::Error::custom)?,
+            PartialAbsoluteMoniker::parse_string_without_instances(m)
+                .map_err(serde::de::Error::custom)?,
         )),
         None => Ok(None),
     }
 }
 
 fn abs_moniker_to_str<S>(
-    abs_moniker: &Option<AbsoluteMoniker>,
+    abs_moniker: &Option<PartialAbsoluteMoniker>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
@@ -344,7 +345,7 @@ mod tests {
         // this entry has both an `appmgr_moniker` *and* a `moniker`.
         assert!(index.instances[0].appmgr_moniker.is_some());
         index.instances[0].moniker =
-            Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
+            Some(PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
 
         let mut ctx = MergeContext::new();
         let merge_result: Result<(), ValidationError> = ctx.merge("/a/b/c", &index);
@@ -404,11 +405,11 @@ mod tests {
     fn serialize_deserialize_valid_absolute_moniker() -> Result<()> {
         let mut expected_index = gen_index(3);
         expected_index.instances[0].moniker =
-            Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
+            Some(PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap());
         expected_index.instances[1].moniker =
-            Some(AbsoluteMoniker::parse_string_without_instances("/a/b:b/c/b:b").unwrap());
+            Some(PartialAbsoluteMoniker::parse_string_without_instances("/a/b:b/c/b:b").unwrap());
         expected_index.instances[2].moniker =
-            Some(AbsoluteMoniker::parse_string_without_instances("/").unwrap());
+            Some(PartialAbsoluteMoniker::parse_string_without_instances("/").unwrap());
 
         let json_index = serde_json::to_string(&expected_index)?;
         let actual_index = serde_json::from_str(&json_index)?;
@@ -422,7 +423,7 @@ mod tests {
         let mut expected_index = gen_index(1);
         let valid_moniker = "/a/b:b/c/b:b";
         expected_index.instances[0].moniker =
-            Some(AbsoluteMoniker::parse_string_without_instances(&valid_moniker).unwrap());
+            Some(PartialAbsoluteMoniker::parse_string_without_instances(&valid_moniker).unwrap());
 
         let valid_json = serde_json::to_string(&expected_index).unwrap();
         let invalid_json = valid_json.replace(&valid_moniker, "an invalid moniker!");

@@ -37,22 +37,7 @@ pub trait AbsoluteMonikerBase:
     /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
     /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
     /// "/name1:collection1".
-    // TODO(fxbug.dev/49968): Remove instance ID 0 assumption when removing instance IDs from
-    // AbsoluteMonikerBase/ChildMoniker (and rename to parse_str + add From<&str> impl).
-    fn parse_string_without_instances(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
-        if input.chars().nth(0) != Some('/') {
-            return Err(MonikerError::invalid_moniker(input));
-        }
-        if input == "/" {
-            return Ok(AbsoluteMoniker::root());
-        }
-        let path = input[1..]
-            .split('/')
-            .map(PartialChildMoniker::parse)
-            .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
-            .collect::<Result<_, MonikerError>>()?;
-        Ok(AbsoluteMoniker::new(path))
-    }
+    fn parse_string_without_instances(input: &str) -> Result<Self, MonikerError>;
 
     // Serializes absolute moniker into its string format, omitting instance ids.
     //
@@ -214,6 +199,23 @@ impl AbsoluteMonikerBase for AbsoluteMoniker {
     fn path(&self) -> &Vec<Self::Part> {
         &self.path
     }
+
+    // TODO(fxbug.dev/49968): Remove instance ID 0 assumption when removing instance IDs from
+    // AbsoluteMonikerBase/ChildMoniker (and rename to parse_str + add From<&str> impl).
+    fn parse_string_without_instances(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
+        if input.chars().nth(0) != Some('/') {
+            return Err(MonikerError::invalid_moniker(input));
+        }
+        if input == "/" {
+            return Ok(AbsoluteMoniker::root());
+        }
+        let path = input[1..]
+            .split('/')
+            .map(PartialChildMoniker::parse)
+            .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+            .collect::<Result<_, MonikerError>>()?;
+        Ok(AbsoluteMoniker::new(path))
+    }
 }
 impl From<Vec<&str>> for AbsoluteMoniker {
     fn from(rep: Vec<&str>) -> Self {
@@ -257,6 +259,20 @@ impl AbsoluteMonikerBase for PartialAbsoluteMoniker {
 
     fn path(&self) -> &Vec<Self::Part> {
         &self.path
+    }
+
+    fn parse_string_without_instances(input: &str) -> Result<PartialAbsoluteMoniker, MonikerError> {
+        if input.chars().nth(0) != Some('/') {
+            return Err(MonikerError::invalid_moniker(input));
+        }
+        if input == "/" {
+            return Ok(PartialAbsoluteMoniker::root());
+        }
+        let path = input[1..]
+            .split('/')
+            .map(PartialChildMoniker::parse)
+            .collect::<Result<_, MonikerError>>()?;
+        Ok(PartialAbsoluteMoniker::new(path))
     }
 }
 

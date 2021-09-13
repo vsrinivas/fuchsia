@@ -12,7 +12,10 @@ mod tests {
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
         fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+        moniker::{
+            AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker,
+            RelativeMonikerBase,
+        },
         routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
         routing_test_helpers::{
             component_id_index::make_index_file, storage::CommonStorageTest, CheckUse,
@@ -160,7 +163,8 @@ mod tests {
                 instance_id: parent_consumer_instance_id.clone(),
                 appmgr_moniker: None,
                 moniker: Some(
-                    AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
+                    PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer")
+                        .unwrap(),
                 ),
             }],
             ..component_id_index::Index::default()

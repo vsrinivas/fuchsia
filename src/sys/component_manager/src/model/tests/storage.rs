@@ -17,7 +17,10 @@ use {
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker,
+        RelativeMonikerBase,
+    },
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };
@@ -487,7 +490,7 @@ async fn use_restricted_storage_start_failure() {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
             moniker: Some(
-                AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
+                PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
             ),
         }],
         ..component_id_index::Index::default()
@@ -583,8 +586,10 @@ async fn use_restricted_storage_open_failure() {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
             moniker: Some(
-                AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
-                    .unwrap(),
+                PartialAbsoluteMoniker::parse_string_without_instances(
+                    "/parent_consumer/child_consumer",
+                )
+                .unwrap(),
             ),
         }],
         ..component_id_index::Index::default()

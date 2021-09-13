@@ -8,7 +8,7 @@ use {
     component_id_index, fidl,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal as fcomponent_internal,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, MonikerError},
+    moniker::{MonikerError, PartialAbsoluteMoniker},
     std::collections::HashMap,
     thiserror::Error,
 };
@@ -48,7 +48,7 @@ pub struct ComponentIdIndex {
     ///
     /// The moniker does not contain instances, i.e. all of the ChildMonikers in the
     /// path have the (moniker, not index) instance ID set to zero.
-    _moniker_to_instance_id: HashMap<AbsoluteMoniker, ComponentInstanceId>,
+    _moniker_to_instance_id: HashMap<PartialAbsoluteMoniker, ComponentInstanceId>,
 }
 
 impl ComponentIdIndex {
@@ -62,7 +62,8 @@ impl ComponentIdIndex {
 
         let index = component_id_index::Index::from_fidl(fidl_index)?;
 
-        let mut moniker_to_instance_id = HashMap::<AbsoluteMoniker, ComponentInstanceId>::new();
+        let mut moniker_to_instance_id =
+            HashMap::<PartialAbsoluteMoniker, ComponentInstanceId>::new();
         for entry in &index.instances {
             if let Some(absolute_moniker) = &entry.moniker {
                 moniker_to_instance_id.insert(
@@ -86,28 +87,18 @@ impl ComponentIdIndex {
         Ok(Self { _moniker_to_instance_id: moniker_to_instance_id })
     }
 
-    pub fn look_up_moniker(&self, moniker: &AbsoluteMoniker) -> Option<&ComponentInstanceId> {
-        // Set all instance IDs in the incoming moniker to zero
-        let moniker_without_instances = AbsoluteMoniker::new(
-            moniker
-                .path()
-                .iter()
-                .map(|child| {
-                    ChildMoniker::new(
-                        child.name().to_string(),
-                        child.collection().map(|s| s.to_string()),
-                        0,
-                    )
-                })
-                .collect(),
-        );
-        self._moniker_to_instance_id.get(&moniker_without_instances)
+    pub fn look_up_moniker(
+        &self,
+        moniker: &PartialAbsoluteMoniker,
+    ) -> Option<&ComponentInstanceId> {
+        self._moniker_to_instance_id.get(&moniker)
     }
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use moniker::{AbsoluteMonikerBase, PartialChildMoniker};
     use routing_test_helpers::component_id_index::make_index_file;
 
     #[fuchsia::test]
@@ -115,7 +106,9 @@ pub mod tests {
         let index_file = make_index_file(component_id_index::Index::default()).unwrap();
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
         assert!(index
-            .look_up_moniker(&AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap())
+            .look_up_moniker(
+                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+            )
             .is_none());
     }
 
@@ -126,7 +119,9 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
+                moniker: Some(
+                    PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                ),
             }],
             ..component_id_index::Index::default()
         })
@@ -135,7 +130,7 @@ pub mod tests {
         assert_eq!(
             Some(&iid),
             index.look_up_moniker(
-                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
+                &PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
             )
         );
     }
@@ -148,7 +143,7 @@ pub mod tests {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
                 moniker: Some(
-                    AbsoluteMoniker::parse_string_without_instances("/a/coll:name").unwrap(),
+                    PartialAbsoluteMoniker::parse_string_without_instances("/a/coll:name").unwrap(),
                 ),
             }],
             ..component_id_index::Index::default()
@@ -157,9 +152,9 @@ pub mod tests {
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
         assert_eq!(
             Some(&iid),
-            index.look_up_moniker(&AbsoluteMoniker::new(vec![
-                ChildMoniker::new("a".to_string(), None, 0),
-                ChildMoniker::new("name".to_string(), Some("coll".to_string()), 2),
+            index.look_up_moniker(&PartialAbsoluteMoniker::new(vec![
+                PartialChildMoniker::new("a".to_string(), None),
+                PartialChildMoniker::new("name".to_string(), Some("coll".to_string())),
             ]))
         );
     }

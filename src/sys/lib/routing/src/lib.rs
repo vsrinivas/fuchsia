@@ -607,7 +607,10 @@ where
     };
 
     if storage_decl.storage_id == fsys::StorageId::StaticInstanceId
-        && instance.try_get_component_id_index()?.look_up_moniker(&instance.abs_moniker()) == None
+        && instance
+            .try_get_component_id_index()?
+            .look_up_moniker(&instance.abs_moniker().to_partial())
+            == None
     {
         return Err(RoutingError::ComponentNotInIdIndex {
             moniker: instance.abs_moniker().to_partial(),

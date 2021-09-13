@@ -688,7 +688,7 @@ impl RoutingTestModel for RoutingTest {
                     .root()
                     .try_get_component_id_index()
                     .unwrap()
-                    .look_up_moniker(&moniker)
+                    .look_up_moniker(&moniker.to_partial())
                     .cloned();
 
                 if let Some(relative_moniker) = storage_relation {
@@ -746,7 +746,7 @@ impl RoutingTestModel for RoutingTest {
                     .root()
                     .try_get_component_id_index()
                     .unwrap()
-                    .look_up_moniker(&component_abs_moniker)
+                    .look_up_moniker(&component_abs_moniker.to_partial())
                     .cloned();
                 storage_admin_proxy
                     .open_component_storage(

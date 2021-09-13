@@ -108,7 +108,7 @@ fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moniker::{AbsoluteMoniker, AbsoluteMonikerBase};
+    use moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker};
     use pretty_assertions::assert_eq;
     use regex;
     use std::io::Write;
@@ -129,7 +129,7 @@ mod tests {
                         transitional_realm_paths: None,
                     }),
                     moniker: Some(
-                        AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                        PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
                     ),
                 })
                 .collect(),

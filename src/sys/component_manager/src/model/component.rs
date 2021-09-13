@@ -946,7 +946,9 @@ impl ComponentInstance {
 
     pub fn instance_id(self: &Arc<Self>) -> Option<ComponentInstanceId> {
         self.try_get_context()
-            .map(|ctx| ctx.component_id_index().look_up_moniker(&self.abs_moniker).cloned())
+            .map(|ctx| {
+                ctx.component_id_index().look_up_moniker(&self.abs_moniker.to_partial()).cloned()
+            })
             .unwrap_or(None)
     }
 
@@ -2344,7 +2346,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: instance_id.clone(),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::root()),
+                moniker: Some(PartialAbsoluteMoniker::root()),
             }],
             ..component_id_index::Index::default()
         })

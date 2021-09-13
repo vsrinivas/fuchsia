@@ -4,7 +4,7 @@
 
 use crate::{AppmgrMoniker, Index, InstanceIdEntry};
 use fidl_fuchsia_component_internal as fcomponent_internal;
-use moniker::{AbsoluteMoniker, AbsoluteMonikerBase, MonikerError};
+use moniker::{AbsoluteMonikerBase, MonikerError, PartialAbsoluteMoniker};
 use std::convert::TryFrom;
 use thiserror::Error;
 
@@ -54,7 +54,7 @@ impl TryFrom<fcomponent_internal::ComponentIdIndex> for Index {
                 moniker: entry
                     .moniker
                     .map(|moniker_str| {
-                        AbsoluteMoniker::parse_string_without_instances(&moniker_str)
+                        PartialAbsoluteMoniker::parse_string_without_instances(&moniker_str)
                     })
                     .transpose()?,
             });
@@ -134,7 +134,9 @@ mod tests {
                         "path".to_string(),
                     ]]),
                 }),
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
+                moniker: Some(
+                    PartialAbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
+                ),
             }],
         };
 
