@@ -54,7 +54,7 @@ resource("data") {
 
 fuchsia_component("weavestack-unittests") {
   testonly = true
-  manifest = "meta/weavestack_unittests.cmx"
+  manifest = "meta/weavestack_unittests.cml"
   deps = [
     ":config",
     ":data",
@@ -65,7 +65,10 @@ fuchsia_component("weavestack-unittests") {
 fuchsia_test_package("package-test") {
   package_name = "weavestack-unittests"
   test_components = [ ":weavestack-unittests" ]
-  deps = [ "//src/connectivity/network/netstack:component-debug" ]
+  deps = [
+    "//src/connectivity/network/netstack:component-debug-v2",
+    "//src/connectivity/network/tun/network-tun:component-v2",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

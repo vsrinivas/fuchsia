@@ -1,0 +1,60 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/weavestack_unittests",
+    },
+    children: [
+        {
+            name: "netstack-debug",
+            url: "#meta/netstack-debug.cm",
+        },
+        {
+            name: "network-tun",
+            url: "#meta/network-tun.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.weave.FactoryDataManager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#netstack-debug",
+        },
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#network-tun",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "weavestack-unittests",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#netstack-debug",
+                "#network-tun",
+            ],
+        },
+    ],
+}
