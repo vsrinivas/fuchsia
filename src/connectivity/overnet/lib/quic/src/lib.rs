@@ -424,6 +424,7 @@ impl AsyncQuicStreamWriter {
                 let n = io
                     .conn
                     .stream_send(id, &bytes[sent..], fin)
+                    .or_else(|e| if quiche::Error::Done == e { Ok(0) } else { Err(e) })
                     .with_context(|| format!("sending on stream {}", id))?;
                 io.conn_send.ready();
                 sent += n;
