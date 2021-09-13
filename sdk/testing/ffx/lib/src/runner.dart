@@ -8,8 +8,13 @@ import 'exceptions.dart';
 
 /// A helper that runs the ffx binary and returns its output.
 class FfxRunner {
+  /// Path to the ffx executable.
+  final String ffxPath;
+
+  FfxRunner([this.ffxPath = 'ffx']);
+
   Future<Process> run(List<String> args) async {
-    final process = await Process.start('ffx', args,
+    final process = await Process.start(ffxPath, args,
         runInShell: true, mode: ProcessStartMode.normal);
     final exitCode = await process.exitCode;
     if (exitCode != 0) {
