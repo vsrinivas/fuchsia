@@ -6,6 +6,7 @@
 
 #include "helper/platform_device_helper.h"
 #include "msd_intel_device.h"
+#include "src/graphics/drivers/msd-intel-gen/include/magma_intel_gen_defs.h"
 #include "test_command_buffer.h"
 
 class ContextRelease {
@@ -18,7 +19,9 @@ class ContextRelease {
   std::shared_ptr<ClientContext> context_;
 };
 
-class TestExec {
+using CommandBufferFlags = uint64_t;
+
+class TestExec : public testing::TestWithParam<CommandBufferFlags> {
  public:
   void GlobalGttReuseGpuAddress() { ExecReuseGpuAddress(true); }
 
@@ -27,6 +30,8 @@ class TestExec {
   // Submits a few command buffers through the full connection-context flow.
   // Uses per process gtt unless |kUseGlobalGtt| is specified.
   void ExecReuseGpuAddress(const bool kUseGlobalGtt) {
+    const uint32_t flags = GetParam();
+
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
@@ -85,7 +90,7 @@ class TestExec {
       cmd_buf->resource_count = 1;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
-      cmd_buf->flags = 0;
+      cmd_buf->flags = flags;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
@@ -159,7 +164,7 @@ class TestExec {
       cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
-      cmd_buf->flags = 0;
+      cmd_buf->flags = flags;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
@@ -229,7 +234,7 @@ class TestExec {
       cmd_buf->resource_count = 2;
       cmd_buf->wait_semaphore_count = 0;
       cmd_buf->signal_semaphore_count = 1;
-      cmd_buf->flags = 0;
+      cmd_buf->flags = flags;
       auto semaphores = reinterpret_cast<uint64_t*>(cmd_buf + 1);
       semaphores[0] = semaphore->id();
       // Batch buffer
@@ -256,6 +261,20 @@ class TestExec {
   }
 };
 
-TEST(Exec, GlobalGttReuseGpuAddress) { TestExec().GlobalGttReuseGpuAddress(); }
+TEST_P(TestExec, GlobalGttReuseGpuAddress) { GlobalGttReuseGpuAddress(); }
 
-TEST(Exec, PerProcessGttReuseGpuAddress) { TestExec().PerProcessGttReuseGpuAddress(); }
+TEST_P(TestExec, PerProcessGttReuseGpuAddress) { PerProcessGttReuseGpuAddress(); }
+
+INSTANTIATE_TEST_SUITE_P(TestExec, TestExec,
+                         testing::Values(kMagmaIntelGenCommandBufferForRender,
+                                         kMagmaIntelGenCommandBufferForVideo),
+                         [](const testing::TestParamInfo<TestExec::ParamType>& info) {
+                           switch (info.param) {
+                             case kMagmaIntelGenCommandBufferForRender:
+                               return "Render";
+                             case kMagmaIntelGenCommandBufferForVideo:
+                               return "Video";
+                             default:
+                               return "Unknown flags";
+                           }
+                         });

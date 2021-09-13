@@ -77,6 +77,9 @@ class MiLoadDataImmediate {
 // intel-gfx-prm-osrc-kbl-vol02a-commandreference-instructions.pdf p.996
 // "HW implicitly detects the Data size to be Qword or Dword to be
 // written to memory based on the command dword length programmed"
+// Note: TLB invalidations are implicit on every flush sync since Skylake
+// (GFX_MODE bit 13 "Flush TLB invalidation Mode", from Broadwell spec, removed).
+// This is also validated empirically (test_hw_exec.cc)
 class MiFlush {
  public:
   static constexpr uint32_t kDwordCount = 5;
@@ -99,8 +102,9 @@ class MiFlush {
 };
 
 // intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057
-// Note: Tlb invalidations are implicit on every flush sync since Skylake
+// Note: TLB invalidations are implicit on every flush sync since Skylake
 // (GFX_MODE bit 13 "Flush TLB invalidation Mode", from Broadwell spec, removed).
+// This is also validated empirically (test_hw_exec.cc)
 class MiPipeControl {
  public:
   static constexpr uint32_t kDwordCount = 6;
