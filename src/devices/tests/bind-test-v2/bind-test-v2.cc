@@ -16,7 +16,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 const std::string kDevPrefix = "/dev/";
-const std::string kDriverTestDir = "/boot/driver";
+const std::string kDriverUrl = "fuchsia-boot:///#driver/bind-test-v2-driver.so";
 const std::string kDriverLibname = "bind-test-v2-driver.so";
 const std::string kChildDeviceName = "child";
 
@@ -27,8 +27,7 @@ class BindCompilerV2Test : public testing::Test {
   void SetUp() override {
     auto args = IsolatedDevmgr::DefaultArgs();
 
-    args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-    args.disable_driver_index = true;
+    args.sys_device_driver = "fuchsia-boot:///#driver/test-parent-sys.so";
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
@@ -63,9 +62,8 @@ class BindCompilerV2Test : public testing::Test {
                                         result->path.size() - kDevPrefix.size());
 
     // Bind the test driver to the new device.
-    driver_libpath_ = kDriverTestDir + "/" + kDriverLibname;
     auto response =
-        fidl::WireCall(endpoints->client).Bind(::fidl::StringView::FromExternal(driver_libpath_));
+        fidl::WireCall(endpoints->client).Bind(::fidl::StringView::FromExternal(kDriverLibname));
     status = response.status();
     if (status == ZX_OK) {
       if (response->result.is_err()) {
@@ -89,7 +87,6 @@ class BindCompilerV2Test : public testing::Test {
 
   IsolatedDevmgr devmgr_;
   fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
-  std::string driver_libpath_;
   std::string relative_device_path_;
 };
 
@@ -104,7 +101,7 @@ TEST_F(BindCompilerV2Test, InvalidDriver) {
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(BindCompilerV2Test, ValidDriver) {
   fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
-  ASSERT_EQ(driver_dev_->GetDriverInfo({driver_libpath_}, &result), ZX_OK);
+  ASSERT_EQ(driver_dev_->GetDriverInfo({kDriverUrl}, &result), ZX_OK);
   ASSERT_TRUE(result.is_response());
   ASSERT_EQ(result.response().drivers.size(), 1u);
   auto bytecode = result.response().drivers[0].bind_rules().bytecode_v2();

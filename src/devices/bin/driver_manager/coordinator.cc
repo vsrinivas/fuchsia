@@ -1722,12 +1722,12 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   } else {
     for (const auto& d : request->driver_filter) {
       std::string_view driver_path(d.data(), d.size());
-      const Driver* driver = LibnameToDriver(driver_path);
-      if (driver == nullptr) {
-        completer.ReplyError(ZX_ERR_NOT_FOUND);
-        return;
+      for (const auto& drv : drivers()) {
+        if (driver_path.compare(drv.libname) == 0) {
+          driver_list.push_back(&drv);
+          break;
+        }
       }
-      driver_list.push_back(driver);
     }
   }
 
@@ -1743,6 +1743,14 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
           driver_list.push_back(driver);
         }
       }
+    }
+  }
+
+  // If we have driver filters check that we found one driver per filter.
+  if (!request->driver_filter.empty()) {
+    if (driver_list.size() != request->driver_filter.count()) {
+      completer.ReplyError(ZX_ERR_NOT_FOUND);
+      return;
     }
   }
 
