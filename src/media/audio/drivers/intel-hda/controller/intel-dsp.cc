@@ -128,14 +128,15 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   }
   LOG(DEBUG, "parse success, found %zu formats", nhlt_->configs().size());
 
-  // Perform hardware initialization in a thread.
-  state_ = State::INITIALIZING;
-  int c11_res = thrd_create(
-      &init_thread_, [](void* ctx) { return static_cast<IntelDsp*>(ctx)->InitThread(); }, this);
-  if (c11_res < 0) {
-    state_ = State::ERROR;
-    return Status(ZX_ERR_INTERNAL,
-                  fbl::StringPrintf("Failed to create init thread (res = %d)", c11_res));
+  result = InitializeDsp();
+  if (!result.ok()) {
+    return PrependMessage("Error initializing DSP", result);
+  }
+
+  result = CreateAndStartStreams();
+  if (!result.ok()) {
+    DeviceShutdown();
+    return PrependMessage("Error creating and publishing streams", result);
   }
 
   return OkStatus();
@@ -494,7 +495,7 @@ zx_status_t IntelDsp::Suspend(uint8_t requested_state, bool enable_wake, uint8_t
   }
 }
 
-int IntelDsp::InitThread() {
+Status IntelDsp::InitializeDsp() {
   auto cleanup = fit::defer([this]() { DeviceShutdown(); });
 
   // Enable Audio DSP
@@ -505,7 +506,7 @@ int IntelDsp::InitThread() {
   zx_status_t st = Boot();
   if (st != ZX_OK) {
     LOG(ERROR, "Error in DSP boot (err %d)", st);
-    return -1;
+    return Status(st);
   }
 
   // Wait for ROM initialization done
@@ -515,7 +516,7 @@ int IntelDsp::InitThread() {
   });
   if (st != ZX_OK) {
     LOG(ERROR, "Error waiting for DSP ROM init (err %d)", st);
-    return -1;
+    return Status(st);
   }
 
   state_ = State::OPERATING;
@@ -525,21 +526,13 @@ int IntelDsp::InitThread() {
   st = LoadFirmware();
   if (st != ZX_OK) {
     LOG(ERROR, "Error loading firmware (err %d)", st);
-    return -1;
+    return Status(st);
   }
 
   // DSP Firmware is now ready.
   LOG(INFO, "DSP firmware ready");
-
-  // Create and publish streams.
-  st = CreateAndStartStreams();
-  if (st != ZX_OK) {
-    LOG(ERROR, "Error starting DSP streams");
-    return -1;
-  }
-
   cleanup.cancel();
-  return 0;
+  return OkStatus();
 }
 
 zx_status_t IntelDsp::Boot() {

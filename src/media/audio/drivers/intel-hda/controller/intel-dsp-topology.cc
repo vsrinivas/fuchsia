@@ -369,7 +369,7 @@ Status IntelDsp::PausePipeline(DspPipeline pipeline) {
   return OkStatus();
 }
 
-zx_status_t IntelDsp::CreateAndStartStreams() {
+Status IntelDsp::CreateAndStartStreams() {
   zx_status_t res = ZX_OK;
 
   // Setup the pipelines.
@@ -377,7 +377,7 @@ zx_status_t IntelDsp::CreateAndStartStreams() {
       SetUpPixelbookEvePipelines(*nhlt_, module_controller_.get());
   if (!pipelines.ok()) {
     LOG(ERROR, "Failed to set up DSP pipelines: %s", pipelines.status().ToString().c_str());
-    return pipelines.status().code();
+    return pipelines.status();
   }
 
   // Create and publish the streams we will use.
@@ -423,11 +423,11 @@ zx_status_t IntelDsp::CreateAndStartStreams() {
     if (res != ZX_OK) {
       LOG(ERROR, "Failed to activate %s stream id #%u (res %d)!",
           stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
-      return res;
+      return Status(res);
     }
   }
 
-  return ZX_OK;
+  return OkStatus();
 }
 
 }  // namespace intel_hda

@@ -72,9 +72,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   MMIO_PTR adsp_fw_registers_t* fw_regs() const;
 
   Status SetupDspDevice();
+  Status InitializeDsp();
   Status ParseNhlt();
-
-  int InitThread();
 
   zx_status_t Boot();
   zx_status_t StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout);
@@ -109,7 +108,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
                                   zx::handle rxed_handle);
 
-  zx_status_t CreateAndStartStreams();
+  Status CreateAndStartStreams();
 
   // Receive a notification from the DSP.
   void DspNotificationReceived(NotificationType type);
