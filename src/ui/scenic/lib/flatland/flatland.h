@@ -111,6 +111,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void SetOrientation(TransformId transform_id,
                       fuchsia::ui::composition::Orientation orientation) override;
   // |fuchsia::ui::composition::Flatland|
+  void SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) override;
+  // |fuchsia::ui::composition::Flatland|
   void AddChild(TransformId parent_transform_id, TransformId child_transform_id) override;
   // |fuchsia::ui::composition::Flatland|
   void RemoveChild(TransformId parent_transform_id, TransformId child_transform_id) override;
@@ -340,6 +342,10 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // [0.f,1.f). 0.f is completely transparent and 1.f, which is completely opaque, is stored
   // implicitly as a transform handle with no entry in this map will default to 1.0.
   std::unordered_map<TransformHandle, float> opacity_values_;
+
+  // A map of transform handles to clip regions, where each clip region is a rect to which
+  // all child nodes of the transform handle have their rectangular views clipped to.
+  std::unordered_map<TransformHandle, TransformClipRegion> clip_regions_;
 
   // A map of content (image) transform handles to ImageSampleRegion structs which are used
   // to determine the portion of an image that is actually used for rendering.

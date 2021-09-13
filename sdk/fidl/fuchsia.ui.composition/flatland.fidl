@@ -417,6 +417,7 @@ protocol Flatland {
     /// Geometric attributes are applied in the following order:
     /// 1. Translation (relative to the parent's coordinate space)
     /// 2. Orientation (around the new origin as defined by the translation)
+    /// 3. Clipping (performed in pixel space to constrain the transform's render region)
     ///
     /// Sets the translation on a Transform. The order of geometric attribute application is
     /// addressed above.
@@ -430,6 +431,17 @@ protocol Flatland {
     SetOrientation(struct {
         transform_id TransformId;
         orientation Orientation;
+    });
+
+    /// This sets the bounds in pixel space that the renderables can be rendered in. If the area
+    /// of a renderable exceeds the clip bounds, the area outside the bounds will not be
+    /// rendered. These bounds are valid for all children of this transform node as well. The
+    /// default state is for a transform to be unclipped, meaning it will not have any bounds
+    /// placed on its render region. The clip width/height must be positive. The only exception
+    /// is that setting the clip rect to {-1, -1, -1, -1} will remove the clip bounds altogether.
+    SetClipBounds(struct {
+        transform_id TransformId;
+        rect fuchsia.math.Rect;
     });
 
     // ***** Transform management *****

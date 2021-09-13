@@ -28,8 +28,20 @@ namespace {
 escher::Rectangle2D GetRectangleForMatrix(const glm::mat3& matrix) {
   // Compute the global rectangle vector and return the first entry.
   allocation::ImageMetadata image = {.width = 1, .height = 1};
+  const auto rectangles = ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}},
+                                                  {kUnclippedRegion}, {image});
+  EXPECT_EQ(rectangles.size(), 1ul);
+  return rectangles[0];
+}
+
+// Helper function to generate an escher::Rectangle2D from a glm::mat3 for tests that are strictly
+// testing the conversion math.
+escher::Rectangle2D GetRectangleForMatrixAndClip(const glm::mat3& matrix,
+                                                 const TransformClipRegion& clip) {
+  // Compute the global rectangle vector and return the first entry.
+  allocation::ImageMetadata image = {.width = 1, .height = 1};
   const auto rectangles =
-      ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}}, {image});
+      ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}}, {clip}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
   return rectangles[0];
 }
@@ -146,6 +158,76 @@ TEST(GlobalMatrixDataTest, GlobalMatricesMultipleUberStructs) {
 
   auto global_matrices = ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
   EXPECT_THAT(global_matrices, ::testing::ElementsAreArray(expected_matrices));
+}
+
+// The following tests ensure that different clip boundaries affect rectangles in the proper manner.
+
+// Test that if a clip region is completely larger than the rectangle, it has no effect on the
+// rectangle.
+TEST(Rectangle2DTest, ParentCompletelyBiggerThanChildClipTest) {
+  const glm::vec2 extent(100.f, 50.f);
+  auto matrix = glm::scale(glm::mat3(), extent);
+
+  TransformClipRegion clip = {0, 0, 120, 60};
+
+  const escher::Rectangle2D expected_rectangle(
+      glm::vec2(0, 0), extent,
+      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// Test that if the child is completely bigger on all sides than the clip, that it gets clamped
+// exactly to the clip region.
+TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipTest) {
+  const glm::vec2 extent(100.f, 90.f);
+  auto matrix = glm::scale(glm::mat3(), extent);
+
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
+                                               glm::vec2(clip.width, clip.height),
+                                               {glm::vec2(.2, .3333), glm::vec2(.55, 0.333333),
+                                                glm::vec2(.55, 0.777777), glm::vec2(.2, 0.777777)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// Test that if the child doesn't overlap the clip region at all, that the
+// rectangle has zero size.
+TEST(Rectangle2DTest, RectangleAndClipNoOverlap) {
+  const glm::vec2 offset(5, 10);
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::translate(glm::mat3(), offset);
+  matrix = glm::scale(matrix, extent);
+
+  TransformClipRegion clip = {0, 0, 2, 2};
+
+  const escher::Rectangle2D expected_rectangle(
+      glm::vec2(0, 0), glm::vec2(0, 0),
+      {glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// Test that clipping works in the case of partial overlap.
+TEST(Rectangle2DTest, RectangleAndClipPartialOverlap) {
+  const glm::vec2 offset(20, 30);
+  const glm::vec2 extent(100.f, 50.f);
+  glm::mat3 matrix = glm::translate(glm::mat3(), offset);
+  matrix = glm::scale(matrix, extent);
+
+  TransformClipRegion clip = {10, 30, 80, 40};
+
+  const escher::Rectangle2D expected_rectangle(
+      glm::vec2(20, 30), glm::vec2(70, 40),
+      {glm::vec2(0, 0), glm::vec2(0.7, 0), glm::vec2(0.7, 0.8), glm::vec2(0, 0.8)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // The following tests ensure that different geometric attributes (translation, rotation, scale)
@@ -525,6 +607,129 @@ TEST(GlobalImageDataTest, ComplicatedGraphImageSampleRegions) {
     EXPECT_EQ(expected_sample_regions[i].y, global_sample_regions[i].y);
     EXPECT_EQ(expected_sample_regions[i].width, global_sample_regions[i].width);
     EXPECT_EQ(expected_sample_regions[i].height, global_sample_regions[i].height);
+  }
+}
+
+// The following tests test for transform clip regions
+
+// Test that an empty uber struct returns empty clip regions.
+TEST(GlobalTransformClipTest, EmptyTopologyReturnsEmptyClipRegions) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::TopologyVector topology_vector;
+  GlobalTopologyData::ParentIndexVector parent_indices;
+
+  auto global_clip_regions =
+      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_TRUE(global_clip_regions.empty());
+}
+
+// Check that if there are no clip regions provided, they default to
+// non-clipped regions.
+TEST(GlobalTransformClipTest, EmptyClipRegionsAreInvalid) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+
+  // The UberStruct for instance ID 1 must exist, but it contains no local opacity values.
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {kUnclippedRegion, kUnclippedRegion};
+
+  auto global_clip_regions =
+      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(expected_clip_regions.size(), global_clip_regions.size());
+  for (uint32_t i = 0; i < global_clip_regions.size(); i++) {
+    EXPECT_EQ(expected_clip_regions[i].x, global_clip_regions[i].x);
+    EXPECT_EQ(expected_clip_regions[i].y, global_clip_regions[i].y);
+    EXPECT_EQ(expected_clip_regions[i].width, global_clip_regions[i].width);
+    EXPECT_EQ(expected_clip_regions[i].height, global_clip_regions[i].height);
+  }
+}
+
+// The parent and child regions do not overlap, so the child region should
+// be completely empty.
+TEST(GlobalTransformClipTest, NoOverlapClipRegions) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  // The two regions do not overlap.
+  GlobalTransformClipRegionVector clip_regions = {{0, 0, 100, 200}, {200, 300, 100, 200}};
+
+  uber_struct->local_clip_regions[{1, 0}] = clip_regions[0];
+  uber_struct->local_clip_regions[{1, 1}] = clip_regions[1];
+
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {clip_regions[0], {0, 0, 0, 0}};
+
+  auto global_clip_regions =
+      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  for (uint64_t i = 0; i < global_clip_regions.size(); i++) {
+    const auto& a = global_clip_regions[i];
+    const auto& b = expected_clip_regions[i];
+    EXPECT_FLOAT_EQ(a.x, b.x);
+    EXPECT_FLOAT_EQ(a.y, b.y);
+    EXPECT_FLOAT_EQ(a.width, b.width);
+    EXPECT_FLOAT_EQ(a.height, b.height);
+  }
+}
+
+// Test a more complicated scenario with multiple transforms, each with its own
+// clip region set, and make sure that they all get calculated correctly.
+TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1 - 1:2
+  //     \
+  //       1:3 - 1:4
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 1, 0, 3};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  GlobalTransformClipRegionVector clip_regions = {
+      {5, 10, 100, 200}, kUnclippedRegion, {20, 30, 110, 300}, {0, 0, 300, 400}, {-10, -20, 20, 30},
+  };
+
+  uber_struct->local_clip_regions[{1, 0}] = clip_regions[0];
+
+  uber_struct->local_clip_regions[{1, 1}] = clip_regions[1];
+  uber_struct->local_clip_regions[{1, 2}] = clip_regions[2];
+
+  uber_struct->local_clip_regions[{1, 3}] = clip_regions[3];
+  uber_struct->local_clip_regions[{1, 4}] = clip_regions[4];
+
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {
+      clip_regions[0], clip_regions[0], {20, 30, 85, 180}, {5, 10, 100, 200}, {5, 10, 5, 0},
+  };
+
+  auto global_clip_regions =
+      ComputeGlobalTransformClipRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  for (uint64_t i = 0; i < global_clip_regions.size(); i++) {
+    const auto& a = global_clip_regions[i];
+    const auto& b = expected_clip_regions[i];
+    EXPECT_FLOAT_EQ(a.x, b.x);
+    EXPECT_FLOAT_EQ(a.y, b.y);
+    EXPECT_FLOAT_EQ(a.width, b.width);
+    EXPECT_FLOAT_EQ(a.height, b.height);
   }
 }
 

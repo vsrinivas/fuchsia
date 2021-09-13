@@ -24,6 +24,9 @@ namespace flatland {
 // The sample region to use for an image when texturing a rectangle.
 using ImageSampleRegion = fuchsia::math::RectF;
 
+// The clip region for a transform to bound its children.
+using TransformClipRegion = fuchsia::math::Rect;
+
 // TODO(fxbug.dev/45932): find the appropriate name for this struct.
 //
 // A collection of data local to a particular Flatland instance representing the most recent commit
@@ -52,6 +55,9 @@ struct UberStruct {
 
   // Map of the regions of images used to texture renderables. These are set per-image.
   std::unordered_map<TransformHandle, ImageSampleRegion> local_image_sample_regions;
+
+  // Map of the regions of transforms that clip child content.
+  std::unordered_map<TransformHandle, TransformClipRegion> local_clip_regions;
 
   // The images associated with each TransformHandle.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> images;

@@ -20,7 +20,11 @@ using GlobalMatrixVector = std::vector<glm::mat3>;
 // The list of global image sample regions for a particular global topology.
 using GlobalImageSampleRegionVector = std::vector<ImageSampleRegion>;
 
+// The list of global transform clip regions for a particular global topology.
+using GlobalTransformClipRegionVector = std::vector<TransformClipRegion>;
+
 const extern ImageSampleRegion kInvalidSampleRegion;
+const extern TransformClipRegion kUnclippedRegion;
 
 // Computes the global transform matrix for each transform in |global_topology| using the local
 // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
@@ -40,6 +44,14 @@ GlobalImageSampleRegionVector ComputeGlobalImageSampleRegions(
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const UberStruct::InstanceMap& uber_structs);
 
+// Gathers the image sample regions for each transform in |global_topology| using the local
+// image sample regions in the |uber_structs|. If a transform doesn't have image sample
+// regions present in the appropriate UberStruct, this function assumes the region is null.
+GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
+    const GlobalTopologyData::TopologyVector& global_topology,
+    const GlobalTopologyData::ParentIndexVector& parent_indices,
+    const UberStruct::InstanceMap& uber_structs);
+
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding
 // position of the |matrices| supplied to ComputeGlobalRectangles().
@@ -48,6 +60,7 @@ using GlobalRectangleVector = std::vector<escher::Rectangle2D>;
 // Computes the global rectangle for each matrix in |matrices|.
 GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices,
                                               const GlobalImageSampleRegionVector& sample_regions,
+                                              const GlobalTransformClipRegionVector& clip_regions,
                                               const std::vector<allocation::ImageMetadata>& images);
 
 // Templatized function to retrieve a vector of attributes that correspond to the provided

@@ -233,6 +233,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
     uber_struct->local_image_sample_regions[handle] = sample_region;
   }
 
+  for (const auto& [handle, clip_region] : clip_regions_) {
+    uber_struct->local_clip_regions[handle] = clip_region;
+  }
+
   for (const auto& [handle, opacity_value] : opacity_values_) {
     uber_struct->local_opacity_values[handle] = opacity_value;
   }
@@ -496,6 +500,40 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
   }
 
   matrices_[transform_kv->second].SetOrientation(orientation);
+}
+
+void Flatland::SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) {
+  if (transform_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetClipBounds called with transform_id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto transform_kv = transforms_.find(transform_id.value);
+
+  if (transform_kv == transforms_.end()) {
+    error_reporter_->ERROR() << "SetClipBounds failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
+    return;
+  }
+
+  // If we have a special clip bound of {-1,-1,-1,-1} we remove the bounds altogether.
+  if (bounds.x == -1 && bounds.y == -1 && bounds.width == -1 && bounds.height == -1) {
+    clip_regions_.erase(transform_kv->second);
+    return;
+  }
+
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    error_reporter_->ERROR() << "SetClipBounds failed, width/height must both be positive "
+                             << "(" << bounds.width << ", " << bounds.height << ")";
+  }
+
+  if (bounds.x + bounds.width < 0 || bounds.y + bounds.height < 0) {
+    error_reporter_->ERROR() << "SetClipBounds failed, integer overflow.";
+  }
+
+  clip_regions_[transform_kv->second] = bounds;
 }
 
 void Flatland::AddChild(TransformId parent_transform_id, TransformId child_transform_id) {
