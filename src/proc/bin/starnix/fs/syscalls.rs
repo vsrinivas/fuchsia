@@ -600,6 +600,26 @@ pub fn sys_fchmodat(
     Ok(SUCCESS)
 }
 
+fn maybe_uid(id: u32) -> Option<uid_t> {
+    if id == u32::MAX {
+        None
+    } else {
+        Some(id)
+    }
+}
+
+pub fn sys_fchown(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    owner: u32,
+    group: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    // TODO(security): Needs permission check
+    file.name.entry.node.chown(maybe_uid(owner), maybe_uid(group));
+    Ok(SUCCESS)
+}
+
 pub fn sys_fchownat(
     _ctx: &SyscallContext<'_>,
     _dir_fd: FdNumber,

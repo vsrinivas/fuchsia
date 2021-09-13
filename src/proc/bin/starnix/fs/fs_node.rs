@@ -327,6 +327,17 @@ impl FsNode {
         info.mode = (info.mode & !FileMode::PERMISSIONS) | (mode & FileMode::PERMISSIONS);
     }
 
+    /// Sets the owner and/or group on this FsNode.
+    pub fn chown(&self, owner: Option<uid_t>, group: Option<gid_t>) {
+        let mut info = self.info_write();
+        if let Some(owner) = owner {
+            info.uid = owner;
+        }
+        if let Some(group) = group {
+            info.gid = group;
+        }
+    }
+
     /// Whether this node is a directory.
     pub fn is_dir(&self) -> bool {
         self.info().mode.is_dir()
