@@ -119,7 +119,8 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
     otInstanceFinalize(static_cast<otInstance*>(app_.ot_instance_ptr_.value()));
     app_.ot_instance_ptr_.reset();
     otSysDeinit();
-    this->app_.InitOpenThreadLibrary(true);
+    app_.RadioAllowanceInit();
+    this->app_.InitOpenThreadLibrary(false);
   });
 
   app_.ClientAllowanceInit();
