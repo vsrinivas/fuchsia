@@ -57,6 +57,9 @@ Run the system recovery unit tests:
 $ fx test -s 5 system_recovery_tests
 ```
 
+Note that test_ui requires display access, so using a product other than "core"
+will likely cause these tests to fail.
+
 ### Integration
 
 Run the recovery integration test:
