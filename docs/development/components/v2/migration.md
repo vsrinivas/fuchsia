@@ -1743,6 +1743,10 @@ These features are supported in v2 components using
 For more details using data files, see
 [product-specific configuration with `config_data()`][config-data].
 
+Consider [packaging your data files hermetically with `resource()`][resource-data]
+if your component doesn't need to accept data files from arbitrary parts of the
+source tree. Using `resource()` is simpler and more efficient.
+
 #### Declare the required directory capabilities
 
 When [migrating your component manifest](#create-component-manifest), add the
@@ -2086,6 +2090,7 @@ described in the [Vulkan documentation][vulkan].
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[resource-data]: /docs/development/components/data.md#hermetic_data_files_with_resource
 [rust-lifecycle]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
