@@ -74,6 +74,7 @@ fn read_runtime_object(
 pub struct File {
     backboard: Object<Backboard>,
     artboards: Vec<Object<Artboard>>,
+    #[allow(unused)]
     objects: Vec<Rc<dyn Core>>,
 }
 

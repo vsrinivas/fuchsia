@@ -29,10 +29,12 @@ enum Opt {
     Tree {
         // Output only cmx/cml/running/stopped components depending on the flag.
         #[structopt(short = "o", long = "only")]
+        #[allow(unused)]
         only: Option<String>,
         // whether or not to display a column showing component type and a column
         // showing running/stopped.
         #[structopt(short = "v", long = "verbose")]
+        #[allow(unused)]
         verbose: bool,
     },
 
@@ -42,6 +44,7 @@ enum Opt {
     Info {
         /// Print information for any component whose URL/name matches this substring.
         #[structopt(short = "f", long = "filter", default_value = "")]
+        #[allow(unused)]
         filter: String,
     },
 
@@ -51,6 +54,7 @@ enum Opt {
     Select {
         /// The capability to search for.
         #[structopt(short = "c", long = "capability", default_value = "")]
+        #[allow(unused)]
         capability: String,
     },
 

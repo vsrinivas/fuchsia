@@ -73,6 +73,7 @@ pub struct Node {
 #[derive(Debug, Clone)]
 pub struct Property {
     name: String,
+    #[allow(unused)]
     id: u32,
     parent: u32,
     payload: Payload,

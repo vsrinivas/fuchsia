@@ -165,6 +165,7 @@ pub struct AckSent<P: ControlProtocol> {
 #[derive(Clone, Debug)]
 pub struct Opened<P: ControlProtocol> {
     local_options: Vec<<P as ControlProtocol>::Option>,
+    #[allow(unused)]
     remote_options: Vec<<P as ControlProtocol>::Option>,
     sent_identifier: u8,
 }

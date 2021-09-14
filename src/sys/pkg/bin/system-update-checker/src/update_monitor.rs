@@ -24,6 +24,7 @@ where
     temporary_queue: ControlHandle<N>,
     update_state: InspectableDebugString<Option<State>>,
     version_available: InspectableDebugString<Option<String>>,
+    #[allow(unused)]
     inspect_node: fuchsia_inspect::Node,
 }
 

@@ -279,7 +279,9 @@ struct ClientInner {
     pool: Mutex<buffer::BufferPool>,
     rx_fifo: fasync::Fifo<buffer::FifoEntry>,
     tx_fifo: fasync::Fifo<buffer::FifoEntry>,
+    #[allow(unused)]
     rx_depth: u32,
+    #[allow(unused)]
     tx_depth: u32,
     tx_pending: Mutex<(Vec<buffer::FifoEntry>, Option<Waker>)>,
     signals: Mutex<fasync::OnSignals<'static>>,

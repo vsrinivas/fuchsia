@@ -170,7 +170,11 @@ mod tests {
     #[derive(Debug)]
     enum Foo {
         A(u8),
-        B { named: u8, bar: u16 },
+        B {
+            named: u8,
+            #[allow(unused)]
+            bar: u16,
+        },
         C,
     }
 

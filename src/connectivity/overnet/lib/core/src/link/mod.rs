@@ -187,7 +187,9 @@ impl std::fmt::Debug for OutputQueue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[derive(Debug)]
         struct OutputFrameView {
+            #[allow(unused)]
             target: RoutingTarget,
+            #[allow(unused)]
             length: usize,
         }
         let mut frames = Vec::new();

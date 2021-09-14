@@ -30,6 +30,7 @@ pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
 /// creating a TcpStream to a particular destination.
 #[derive(Clone)]
 pub struct HyperConnector {
+    #[allow(unused)]
     tcp_options: TcpOptions,
 }
 

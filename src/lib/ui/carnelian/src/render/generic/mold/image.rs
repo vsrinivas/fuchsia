@@ -16,9 +16,12 @@ pub struct MoldImage(pub(crate) usize);
 
 #[derive(Debug)]
 pub(crate) struct VmoImage {
+    #[allow(unused)]
     vmo: zx::Vmo,
     width: u32,
+    #[allow(unused)]
     height: u32,
+    #[allow(unused)]
     len_bytes: u64,
     mapping: Arc<Mapping>,
     stride: usize,

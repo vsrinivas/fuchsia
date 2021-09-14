@@ -137,6 +137,7 @@ pub struct ImageInCollection {
 
 #[derive(Debug)]
 pub struct FrameSet {
+    #[allow(unused)]
     collection_id: CollectionId,
     image_count: usize,
     available: BTreeSet<ImageId>,

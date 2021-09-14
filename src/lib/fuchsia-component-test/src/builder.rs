@@ -238,7 +238,9 @@ impl fmt::Debug for ComponentSource {
 
 #[derive(Clone)]
 struct Component {
+    #[allow(unused)]
     source: ComponentSource,
+    #[allow(unused)]
     eager: bool,
 }
 

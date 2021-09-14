@@ -90,10 +90,15 @@ impl From<icu::Error> for Error {
 /// remains in scope, the ICU data will not be unloaded.
 #[derive(Debug, Clone)]
 pub struct Loader {
+    #[allow(unused)]
     refs: Arc<udata::UDataMemory>,
+    #[allow(unused)]
     vmo_size_bytes: usize,
+    #[allow(unused)]
     file_size_bytes: usize,
+    #[allow(unused)]
     icu_tzdata_dir_path: Option<String>,
+    #[allow(unused)]
     icu_data_path: String,
 }
 // Loader is OK to be sent to threads.

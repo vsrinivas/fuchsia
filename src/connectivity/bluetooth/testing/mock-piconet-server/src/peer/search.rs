@@ -18,6 +18,7 @@ use crate::types::{RegisteredServiceId, ServiceRecord};
 struct SearchInfo {
     service_uuid: ServiceClassProfileIdentifier,
 
+    #[allow(unused)]
     attr_ids: Vec<u16>,
 
     proxy: SearchResultsProxy,

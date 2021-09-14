@@ -260,7 +260,12 @@ fn add_all_toolchain_suffices(target: &str, targets: &mut Vec<String>) {
 #[derive(Debug)]
 enum OwnersSource {
     /// file is computed from reverse deps and they are listed here
-    ReverseDependencies { targets: Vec<String>, deps: BTreeSet<String> },
+    ReverseDependencies {
+        #[allow(unused)]
+        targets: Vec<String>,
+        #[allow(unused)]
+        deps: BTreeSet<String>,
+    },
     /// file is computed from overrides in //third_party/rust_crates/owners.toml
     Override,
 }
@@ -273,6 +278,7 @@ impl OwnersSource {
 
 #[derive(Debug)]
 struct OwnersFile {
+    #[allow(unused)]
     path: PathBuf,
     includes: BTreeSet<PathBuf>,
     source: OwnersSource,

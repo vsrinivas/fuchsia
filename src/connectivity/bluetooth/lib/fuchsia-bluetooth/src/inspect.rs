@@ -280,7 +280,9 @@ mod tests {
     fn debug_string() {
         #[derive(Debug)]
         struct Foo {
+            #[allow(unused)]
             bar: u8,
+            #[allow(unused)]
             baz: &'static str,
         }
         let foo = Foo { bar: 1, baz: "baz value" };

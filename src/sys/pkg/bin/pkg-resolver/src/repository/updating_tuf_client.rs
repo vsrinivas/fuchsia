@@ -111,9 +111,13 @@ pub enum UpdateResult {
 
 #[derive(Debug)]
 pub struct RepoVersions {
+    #[allow(unused)]
     root: u32,
+    #[allow(unused)]
     timestamp: Option<u32>,
+    #[allow(unused)]
     snapshot: Option<u32>,
+    #[allow(unused)]
     targets: Option<u32>,
 }
 

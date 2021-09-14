@@ -48,7 +48,9 @@ pub(crate) struct GroupEntry {
 
 #[derive(Debug)]
 pub(crate) struct Group {
+    #[allow(unused)]
     pub id: GroupId,
+    #[allow(unused)]
     pub label: String,
     pub members: Vec<GroupEntry>,
     pub arranger: Option<ArrangerPtr>,

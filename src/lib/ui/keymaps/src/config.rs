@@ -13,12 +13,14 @@ use fidl_fuchsia_ui_input3 as input3; // Experimenting with really short aliases
 #[derive(Debug, Clone)]
 pub struct Model {
     /// Auxiliary information for this model.
+    #[allow(unused)]
     metadata: Metadata,
 
     /// Mapping of hardware keyboard symbol sequences to key meanings.
     ///
     /// Symbol mappings are tried in the sequence they appear in this vector, and the first one
     /// that is satisfied will be applied.
+    #[allow(unused)]
     symbol_mappings: Vec<SymbolMapping>,
 }
 
@@ -39,14 +41,17 @@ pub struct Metadata {
 pub struct SymbolMapping {
     /// The set of keys that *must* be actuated for this symbol mapping to take
     /// effect.
+    #[allow(unused)]
     modifiers_armed: Vec<input::Key>,
 
     /// The set of keys that *may* be actuated while `modifiers_armed` are actuated,
     /// for this symbol mapping to take effect.
+    #[allow(unused)]
     modifiers_optional: Vec<input::Key>,
 
     /// When all `modifers_armed` are actuated, and any subset of `modifiers_optional` are
     /// actuated, `mappings` shows how each additional key press maps to a `KeyMeaning`.
+    #[allow(unused)]
     mappings: Vec<SymbolMappingElem>,
 }
 
@@ -56,8 +61,10 @@ pub struct SymbolMapping {
 #[derive(Debug, Clone)]
 pub struct SymbolMappingElem {
     /// The physical key that was pressed.
+    #[allow(unused)]
     key: input::Key,
 
     /// The translation of `key` into a key meaning.
+    #[allow(unused)]
     key_meaning: input3::KeyMeaning,
 }

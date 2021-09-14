@@ -85,8 +85,11 @@ pub struct HostDeviceState {
 /// path, the host address and the host id.
 #[derive(Clone, Debug)]
 pub struct HostDebugIdentifiers {
+    #[allow(unused)]
     id: HostId,
+    #[allow(unused)]
     address: Address,
+    #[allow(unused)]
     path: PathBuf,
 }
 

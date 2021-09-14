@@ -52,6 +52,7 @@ use {
 /// ```
 #[derive(Debug)]
 pub struct BoundedNode<V> {
+    #[allow(unused)]
     node: Node,
     children_node: Node,
     capacity: usize,

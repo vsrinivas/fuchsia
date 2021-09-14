@@ -24,7 +24,9 @@ use crate::service;
 /// surrounding monitoring, such as the resource monitors.
 #[derive(Clone)]
 pub struct Actor {
+    #[allow(unused)]
     delegate: service::message::Delegate,
+    #[allow(unused)]
     monitors: Vec<base_monitor::Generate>,
 }
 

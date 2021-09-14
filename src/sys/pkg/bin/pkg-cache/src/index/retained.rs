@@ -25,6 +25,7 @@ pub struct RetainedIndex {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct RetainedIndexInspect {
     /// Inspect node for the index.
+    #[allow(unused)]
     inspect_node: finspect::Node,
 
     /// Inspect node for the inspect packages collection.

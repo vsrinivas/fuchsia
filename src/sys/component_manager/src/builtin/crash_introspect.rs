@@ -52,6 +52,7 @@ pub(crate) struct Record {
 #[derive(Clone)]
 pub struct CrashRecords {
     records: Arc<Mutex<Vec<Record>>>,
+    #[allow(unused)]
     cleanup_task: Arc<fasync::Task<()>>,
 }
 

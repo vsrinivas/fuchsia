@@ -41,10 +41,12 @@ struct Opt {
 
     /// has no effect.
     #[argh(switch, long = "quiet")]
+    #[allow(unused)]
     quiet: bool,
 
     #[argh(switch, long = "verbose")]
     /// has no effect.
+    #[allow(unused)]
     verbose: bool,
 
     #[argh(switch, long = "version", short = 'v')]

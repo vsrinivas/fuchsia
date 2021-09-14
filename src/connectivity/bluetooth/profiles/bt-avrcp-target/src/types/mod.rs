@@ -26,6 +26,7 @@ pub(crate) struct NotificationData {
     /// The current value of the notification when the client subscribed.
     current_value: Notification,
     /// The position change interval of the notification, for `TRACK_POS_CHANGED`.
+    #[allow(unused)]
     pos_change_interval: u32,
     /// The time when we expect to reply automatically to the responder.
     expected_response_time: Option<fasync::Time>,

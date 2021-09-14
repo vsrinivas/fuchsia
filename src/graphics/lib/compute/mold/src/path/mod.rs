@@ -24,6 +24,7 @@ pub(crate) enum PathCommand {
 #[derive(Clone, Debug, Default)]
 pub struct Path {
     commands: Vec<PathCommand>,
+    #[allow(unused)]
     transform: Option<Transform>,
 }
 
