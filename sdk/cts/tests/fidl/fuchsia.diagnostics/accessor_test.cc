@@ -30,7 +30,7 @@ using namespace sys::testing;
 const char EXPECTED_DATA[] = R"JSON({
     "data_source": "Inspect",
     "metadata": {
-        "component_url": "realm-builder://0",
+        "component_url": "COMPONENT_URL",
         "errors": null,
         "filename": "fuchsia.inspect.Tree",
         "timestamp": TIMESTAMP
@@ -295,6 +295,8 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   auto& data = actual_result.value()[0];
   data.Sort();
   std::string actual = data.PrettyJson();
+  actual = std::regex_replace(actual, std::regex("\"component_url\": \".+\""),
+                              "\"component_url\": \"COMPONENT_URL\"");
 
   std::smatch timestamp_m;
   EXPECT_TRUE(std::regex_search(actual, timestamp_m, std::regex("\"timestamp\": (\\d+)")));
