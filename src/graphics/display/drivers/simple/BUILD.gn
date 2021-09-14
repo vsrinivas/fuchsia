@@ -9,7 +9,7 @@ import("//build/drivers/fuchsia_driver_component.gni")
 source_set("shared") {
   visibility = [ ":*" ]
   sources = [ "simple-display.cc" ]
-  deps = [
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
@@ -56,7 +56,7 @@ foreach(driver, simple_drivers) {
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
     configs += [ "//build/unification/config:zircon-migrated" ]
-    sources = [ "simple-$driver.c" ]
+    sources = [ "simple-$driver.cc" ]
     deps = [
       ":shared",
       ":simple-$driver-bind",

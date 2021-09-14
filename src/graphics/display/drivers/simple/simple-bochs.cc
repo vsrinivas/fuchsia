@@ -19,8 +19,15 @@
 #define DISPLAY_HEIGHT 768
 #define DISPLAY_FORMAT ZX_PIXEL_FORMAT_RGB_x888
 
-#define bochs_vbe_dispi_read(base, reg) MmioRead16(base + (0x500 + (reg << 1)))
-#define bochs_vbe_dispi_write(base, reg, val) MmioWrite16(val, base + (0x500 + (reg << 1)))
+inline uint16_t bochs_vbe_dispi_read(MMIO_PTR void* base, uint32_t reg) {
+  return MmioRead16(reinterpret_cast<MMIO_PTR uint16_t*>(reinterpret_cast<MMIO_PTR uint8_t*>(base) +
+                                                         (0x500 + (reg << 1))));
+}
+
+inline void bochs_vbe_dispi_write(MMIO_PTR void* base, uint32_t reg, uint16_t val) {
+  MmioWrite16(val, reinterpret_cast<MMIO_PTR uint16_t*>(reinterpret_cast<MMIO_PTR uint8_t*>(base) +
+                                                        (0x500 + (reg << 1))));
+}
 
 #define BOCHS_VBE_DISPI_ID 0x0
 #define BOCHS_VBE_DISPI_XRES 0x1
