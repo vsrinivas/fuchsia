@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::mock_component,
     fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerProxy},
     fidl_fuchsia_bluetooth_avrcp_test::{PeerManagerExtMarker, PeerManagerExtProxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
@@ -14,6 +13,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
+    realmbuilder_mock_helpers::mock_component,
     tracing::info,
 };
 

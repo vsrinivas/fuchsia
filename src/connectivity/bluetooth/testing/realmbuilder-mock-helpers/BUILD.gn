@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("realmbuilder-mock-helpers") {
+  name = "realmbuilder_mock_helpers"
+  testonly = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}

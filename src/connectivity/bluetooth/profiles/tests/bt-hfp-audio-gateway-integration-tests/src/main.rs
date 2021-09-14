@@ -6,7 +6,6 @@ use {
     anyhow::format_err,
     at_commands::{self as at, SerDe},
     bitflags::bitflags,
-    bt_manifest_integration_lib::{mock_component, mock_dev},
     fidl::{encoding::Decodable, endpoints::DiscoverableProtocolMarker},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
@@ -24,6 +23,7 @@ use {
     fuchsia_zircon::Duration,
     futures::{channel::mpsc, stream::StreamExt, TryFutureExt},
     mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    realmbuilder_mock_helpers::{mock_component, mock_dev},
     std::convert::TryInto,
     test_call_manager::TestCallManager,
 };

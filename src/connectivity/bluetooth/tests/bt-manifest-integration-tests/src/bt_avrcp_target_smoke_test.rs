@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::mock_component,
     fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerRequest, TargetHandlerProxy},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleProxy, LifecycleState},
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
@@ -15,6 +14,7 @@ use {
     },
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, SinkExt, StreamExt},
+    realmbuilder_mock_helpers::mock_component,
     std::{collections::HashSet, iter::FromIterator},
     tracing::info,
 };

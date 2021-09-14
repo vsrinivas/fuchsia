@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::{add_fidl_service_handler, mock_component, mock_dev},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fidl_fuchsia_bluetooth_hfp::{HfpMarker, HfpProxy},
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
@@ -17,6 +16,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
+    realmbuilder_mock_helpers::{add_fidl_service_handler, mock_component, mock_dev},
     tracing::info,
 };
 

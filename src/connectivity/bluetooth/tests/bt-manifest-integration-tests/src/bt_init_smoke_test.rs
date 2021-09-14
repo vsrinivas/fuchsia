@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::{add_fidl_service_handler, mock_dev},
     fdio,
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
@@ -22,6 +21,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
+    realmbuilder_mock_helpers::{add_fidl_service_handler, mock_dev},
     std::sync::Arc,
     tracing::{error, info},
     vfs::{directory::entry::DirectoryEntry, pseudo_directory},

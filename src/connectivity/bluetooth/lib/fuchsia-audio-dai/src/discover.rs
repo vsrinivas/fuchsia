@@ -34,13 +34,13 @@ async fn find_devices_internal(
 mod tests {
     use {
         anyhow::Error,
-        bt_manifest_integration_lib::mock_dev,
         fidl_fuchsia_io2 as fio2, fuchsia,
         fuchsia_component_test::{
             builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
             mock::{Mock, MockHandles},
         },
         futures::{channel::mpsc, SinkExt, StreamExt},
+        realmbuilder_mock_helpers::mock_dev,
     };
 
     use super::*;

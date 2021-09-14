@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::add_fidl_service_handler,
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_a2dp as fidl_a2dp, fidl_fuchsia_bluetooth_avdtp as fidl_avdtp,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
@@ -29,6 +28,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
+    realmbuilder_mock_helpers::add_fidl_service_handler,
     std::{collections::HashSet, iter::FromIterator},
     tracing::info,
 };
