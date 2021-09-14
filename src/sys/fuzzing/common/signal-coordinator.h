@@ -15,24 +15,27 @@
 
 namespace fuzzing {
 
+constexpr zx_signals_t kStartSignal = ZX_USER_SIGNAL_0;
+constexpr zx_signals_t kFinishSignal = ZX_USER_SIGNAL_1;
+constexpr zx_signals_t kLeakSignal = ZX_USER_SIGNAL_2;
+
 // This enum renames some Zircon user signals to associate them with certain actions performed by
-// the libFuzzer engine.
+// the engine.
 enum Signal : zx_signals_t {
-  // Corresponds to the start of a fuzzing iteration, as in |fuzzer::Fuzzer::ExecuteCallback|.
-  kExecuteCallback = ZX_USER_SIGNAL_0,
+  // Sent by the engine to the targets at the start of a fuzzing run, and echoed by the targets back
+  // to the engine as acknowledgement.
+  kStart = kStartSignal,
 
-  // Corresponds to the end of a fuzzing iteration, similar to the call to libFuzzer's
-  // |fuzzer::TracePC::CollectFeatures| in |fuzzer::Fuzzer::RunOne|.
-  kCollectCoverage = ZX_USER_SIGNAL_1,
+  // Sent by the engine to the targets at the end of a fuzzing run. Targets will echo with the same
+  // or with |kFinishWithLeaks|, depending on whether they suspect a memory leak.
+  kFinish = kFinishSignal,
 
-  // Instructs the remote process to perform an iteration checking for leaks.
-  kTryDetectingALeak = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_2,
+  // Sent by the engine to the targets at the start of a fuzzing run in which leak detection should
+  // be enabled. Targets will acknowledge with |kStart|.
+  kStartLeakCheck = kStartSignal | kLeakSignal,
 
-  // Suggests to the fuzzer engine that a leak is likely in the previous iteration.
-  kLeakDetected = ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_2,
-
-  // Indicates the fuzzer is shutting done and end-of-process leak detection should be performed.
-  kDetectLeaksAtExit = ZX_USER_SIGNAL_2,
+  // Sent by the targets to acknowledge receiving |kFinish| when a memory leak is suspected.
+  kFinishWithLeaks = kFinishSignal | kLeakSignal,
 };
 
 // This class wraps an eventpair and thread to present a simple way for one process to signal
@@ -42,6 +45,8 @@ class SignalCoordinator final {
  public:
   SignalCoordinator() = default;
   ~SignalCoordinator();
+
+  bool is_valid() const;
 
   // Both |Create| and |Pair| take an |on_signal| parameter, which should be callable with the
   // signature: bool on_signal(zx_signals_t signals);
@@ -59,8 +64,8 @@ class SignalCoordinator final {
   // was previously created or linked, it is first reset. See the above note on |on_signal|.
   void Pair(zx::eventpair paired, SignalHandler on_signal);
 
-  // Send one or more Zircon user signals to the other end of the eventpair. Returns true if the
-  // signal was sent, or false if the other end disconnected/reset.
+  // Sends a signal to the other end of the eventpair. Returns true if the signal was sent, or false
+  // if the other end disconnected/reset.
   bool SignalPeer(Signal signal);
 
   // Blocks and joins the wait loop thread. This method does not reset the eventpair, so it should

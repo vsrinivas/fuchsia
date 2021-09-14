@@ -54,7 +54,10 @@ TEST(SignalCoordinatorTest, WaitLoop) {
 
   // Can send all signals, both ways.
   std::vector<Signal> signals = {
-      kExecuteCallback, kCollectCoverage, kTryDetectingALeak, kLeakDetected, kDetectLeaksAtExit,
+      kStart,
+      kFinish,
+      kStartLeakCheck,
+      kFinishWithLeaks,
   };
   std::thread t;
   for (auto signal : signals) {
@@ -75,14 +78,14 @@ TEST(SignalCoordinatorTest, PeerClosed) {
   std::thread t([&]() {
     auto observed = coordinator2.AwaitSignal();
     // Signals may arrive separately or combined.
-    if (observed == kExecuteCallback) {
+    if (observed == kStart) {
       EXPECT_EQ(coordinator2.AwaitSignal(), ZX_EVENTPAIR_PEER_CLOSED);
     } else {
       EXPECT_NE(observed & ZX_EVENTPAIR_PEER_CLOSED, 0U);
     }
   });
 
-  EXPECT_TRUE(coordinator1.SignalPeer(kExecuteCallback));
+  EXPECT_TRUE(coordinator1.SignalPeer(kStart));
   coordinator1.Reset();
   t.join();
 
@@ -90,7 +93,7 @@ TEST(SignalCoordinatorTest, PeerClosed) {
   coordinator2.Join();
 
   // Once stopped, can't send more signals.
-  EXPECT_FALSE(coordinator1.SignalPeer(kExecuteCallback));
+  EXPECT_FALSE(coordinator1.SignalPeer(kStart));
 }
 
 }  // namespace

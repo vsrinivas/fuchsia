@@ -13,6 +13,11 @@ namespace fuzzing {
 
 SignalCoordinator::~SignalCoordinator() { Reset(); }
 
+bool SignalCoordinator::is_valid() const {
+  return paired_.is_valid() && paired_.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(),
+                                                nullptr) == ZX_ERR_TIMED_OUT;
+}
+
 zx::eventpair SignalCoordinator::Create(SignalHandler on_signal) {
   Reset();
   zx::eventpair paired;
@@ -70,9 +75,8 @@ void SignalCoordinator::WaitLoop() {
 }
 
 bool SignalCoordinator::SignalPeer(Signal signal) {
-  // Check if another thread reset |paired_| before the call to |signal_peer|, or if the other end
-  // reset the connection.
-  zx_status_t status = paired_.signal_peer(0, signal);
+  auto status = paired_.signal_peer(0, signal);
+  // Check if another thread reset |paired_| or if the other end reset the connection.
   if (status == ZX_ERR_BAD_HANDLE || status == ZX_ERR_PEER_CLOSED) {
     return false;
   }
