@@ -8,6 +8,7 @@
 namespace f2fs {
 
 class VnodeF2fs;
+class NatEntry;
 
 // For checkpoint manager
 enum class MetaBitmap { kNatBitmap, kSitBitmap };
@@ -100,8 +101,14 @@ struct NmInfo {
   // NAT cache management
   fs::SharedMutex nat_tree_lock;  // protect nat_tree_lock
   uint32_t nat_cnt = 0;           // the # of cached nat entries
-  list_node_t nat_entries;        // cached nat entry list (clean)
-  list_node_t dirty_nat_entries;  // cached nat entry list (dirty)
+
+  using NatTreeTraits = fbl::DefaultKeyedObjectTraits<nid_t, NatEntry>;
+  using NatTree = fbl::WAVLTree<nid_t, std::unique_ptr<NatEntry>, NatTreeTraits>;
+  using NatList = fbl::DoublyLinkedList<NatEntry *>;
+
+  NatTree nat_cache __TA_GUARDED(nat_tree_lock);       // cached nat entries
+  NatList clean_nat_list __TA_GUARDED(nat_tree_lock);  // a list for cached clean nats
+  NatList dirty_nat_list __TA_GUARDED(nat_tree_lock);  // a list for cached dirty nats
 
   // free node ids management
   list_node_t free_nid_list;           // a list for free nids

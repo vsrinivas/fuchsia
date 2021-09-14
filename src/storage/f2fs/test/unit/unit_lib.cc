@@ -298,37 +298,16 @@ void CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is
   }
 }
 
-template <typename T, typename F>
-T *LookupList(list_node_t &entries, uint32_t value, F cond) {
-  list_node_t *cur, *next;
-  list_for_every_safe(&entries, cur, next) {
-    T *e = containerof(cur, T, list);
-
-    if (cond(*e, value)) {
-      return e;
-    }
-  }
-  return nullptr;
-}
-
 bool IsCachedNat(NmInfo *nm_i, nid_t n) {
-  auto is_same_nid = [](NatEntry &e, nid_t nid) { return e.ni.nid == nid; };
-
-  if (LookupList<NatEntry>(nm_i->dirty_nat_entries, n, is_same_nid)) {
-    return true;
-  }
-  if (LookupList<NatEntry>(nm_i->nat_entries, n, is_same_nid)) {
-    return true;
-  }
-  return false;
+  auto ne = nm_i->nat_cache.find(n);
+  return ne != nm_i->nat_cache.end();
 }
 
 void RemoveTruncatedNode(NmInfo *nm_i, std::vector<nid_t> &nids) {
-  auto is_same_nid = [](NatEntry &e, nid_t nid) { return e.ni.nid == nid; };
-
   for (auto iter = nids.begin(); iter != nids.end();) {
-    if (NatEntry *ne = LookupList<NatEntry>(nm_i->dirty_nat_entries, *iter, is_same_nid)) {
-      if (NatGetBlkaddr(ne) == kNullAddr) {
+    auto ne = nm_i->nat_cache.find(*iter);
+    if (ne != nm_i->nat_cache.end()) {
+      if (NatGetBlkaddr(&(*ne)) == kNullAddr) {
         iter = nids.erase(iter);
       } else {
         iter++;

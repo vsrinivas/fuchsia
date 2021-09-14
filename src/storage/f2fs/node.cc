@@ -6,12 +6,16 @@
 
 namespace f2fs {
 
-inline void SetNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
-  list_move_tail(&nm_i->dirty_nat_entries, &ne->list);
+inline void NodeMgr::SetNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
+  ZX_ASSERT(ne != nullptr);
+  ZX_ASSERT(nm_i->clean_nat_list.erase(*ne) != nullptr);
+  nm_i->dirty_nat_list.push_back(ne);
 }
 
-inline void ClearNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
-  list_move_tail(&nm_i->nat_entries, &ne->list);
+inline void NodeMgr::ClearNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
+  ZX_ASSERT(ne != nullptr);
+  ZX_ASSERT(nm_i->dirty_nat_list.erase(*ne) != nullptr);
+  nm_i->clean_nat_list.push_back(ne);
 }
 
 inline void NodeMgr::NodeInfoFromRawNat(NodeInfo *ni, RawNatEntry *raw_ne) {
@@ -249,7 +253,7 @@ int NodeMgr::IsColdData(Page *page) {
 }
 
 #if 0  // porting needed
-inline void NodeMgr::SetColdData(Page *page) {
+inline void NodeMgr::SetColdData(Page &page) {
   // SetPageChecked(page);
 }
 #endif
@@ -428,99 +432,61 @@ void NodeMgr::RaNatPages(nid_t nid) {
 }
 
 NatEntry *NodeMgr::LookupNatCache(NmInfo *nm_i, nid_t n) {
-  // TODO: IMPL
-
-  // TODO: need to be modified to use radix tree
-  list_node_t *cur, *next;
-  list_for_every_safe(&nm_i->dirty_nat_entries, cur, next) {
-    NatEntry *e = containerof(cur, NatEntry, list);
-
-    if (NatGetNid(e) == n) {
-      return e;
-    }
+  if (auto nat_entry = nm_i->nat_cache.find(n); nat_entry != nm_i->nat_cache.end()) {
+    return &(*nat_entry);
   }
-
-  list_for_every_safe(&nm_i->nat_entries, cur, next) {
-    NatEntry *e = containerof(cur, NatEntry, list);
-
-    if (NatGetNid(e) == n) {
-      return e;
-    }
-  }
-#if 0  // porting needed
-  // return radix_tree_lookup(&nm_i->nat_root, n);
-#endif
   return nullptr;
 }
 
-uint32_t NodeMgr::GangLookupNatCache(NmInfo *nm_i, nid_t start, uint32_t nr, NatEntry **ep) {
-  // TODO: IMPL
-
-  // TODO: need to be modified to use radix tree
+uint32_t NodeMgr::GangLookupNatCache(NmInfo *nm_i, uint32_t nr, NatEntry **out) {
   uint32_t ret = 0;
-
-  for (uint32_t i = 0; i < nr; i++) {
-    nid_t cur_nid = start + i;
-    ep[ret] = LookupNatCache(nm_i, cur_nid);
-    if (ep[ret]) {
-      if (++ret == nr) {
-        break;
-      }
-    }
+  for (auto iter = nm_i->nat_cache.begin(); iter != nm_i->nat_cache.end(); ++iter) {
+    if (ret == nr)
+      break;
+    out[ret] = &(*iter);
+    ZX_ASSERT(out[ret] != nullptr);
+    ret++;
   }
-
   return ret;
-#if 0  // porting needed
-  //	return radix_tree_gang_lookup(&nm_i->nat_root, (void **)ep, start, nr);
-  //   return 0;
-#endif
 }
 
-void NodeMgr::DelFromNatCache(NmInfo *nm_i, NatEntry *e) {
-#if 0  // porting needed
-  // radix_tree_delete(&nm_i->nat_root, NatGetNid(e));
-#endif
-  list_delete(&e->list);
+void NodeMgr::DelFromNatCache(NmInfo *nm_i, NatEntry *ne) {
+  ZX_ASSERT(ne != nullptr);
+  ZX_ASSERT_MSG(nm_i->clean_nat_list.erase(*ne) != nullptr, "Cannot find NAT in list(nid = %u)",
+                ne->ni.nid);
+  auto deleted = nm_i->nat_cache.erase(*ne);
+  ZX_ASSERT_MSG(deleted != nullptr, "Cannot find NAT in cache(nid = %u)", ne->ni.nid);
   nm_i->nat_cnt--;
-#if 0  // porting needed
-  // kmem_cache_free(NatEntry_slab, e);
-#endif
-  delete e;
+  deleted.reset();
 }
 
 int NodeMgr::IsCheckpointedNode(nid_t nid) {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
-  NatEntry *e;
+  NatEntry *ne;
   int is_cp = 1;
 
   fs::SharedLock nat_lock(nm_i->nat_tree_lock);
-  e = LookupNatCache(nm_i, nid);
-  if (e && !e->checkpointed)
+  ne = LookupNatCache(nm_i, nid);
+  if (ne && !ne->checkpointed)
     is_cp = 0;
   return is_cp;
 }
 
 NatEntry *NodeMgr::GrabNatEntry(NmInfo *nm_i, nid_t nid) {
-  NatEntry *new_entry;
+  auto new_entry = std::make_unique<NatEntry>();
 
-#if 0  // porting needed (kmem_cache_alloc)
-  // new_entry = kmem_cache_alloc(NatEntry_slab, GFP_ATOMIC);
-#endif
-  new_entry = new NatEntry;
   if (!new_entry)
     return nullptr;
-#if 0  // porting needed
-  // if (radix_tree_insert(&nm_i->nat_root, nid, new_entry)) {
-  // delete new_entry;
-  // 	return NULL;
-  // }
-#endif
-  memset(new_entry, 0, sizeof(NatEntry));
-  NatSetNid(new_entry, nid);
-  list_add_tail(&nm_i->nat_entries, &new_entry->list);
+
+  auto raw_ptr = new_entry.get();
+  memset(raw_ptr, 0, sizeof(NatEntry));
+  NatSetNid(raw_ptr, nid);
+
+  nm_i->clean_nat_list.push_back(raw_ptr);
+  nm_i->nat_cache.insert(std::move(new_entry));
   nm_i->nat_cnt++;
-  return new_entry;
+  return raw_ptr;
 }
 
 void NodeMgr::CacheNatEntry(NmInfo *nm_i, nid_t nid, RawNatEntry *ne) {
@@ -594,11 +560,8 @@ int NodeMgr::TryToFreeNats(int nr_shrink) {
     return 0;
 
   std::lock_guard nat_lock(nm_i->nat_tree_lock);
-  while (nr_shrink && !list_is_empty(&nm_i->nat_entries)) {
-    NatEntry *ne;
-    // ne = list_first_entry(&nm_i->nat_entries,
-    //			NatEntry, list);
-    ne = containerof((&nm_i->nat_entries)->next, NatEntry, list);
+  while (nr_shrink && !nm_i->clean_nat_list.is_empty()) {
+    NatEntry *ne = &nm_i->clean_nat_list.front();
     DelFromNatCache(nm_i, ne);
     nr_shrink--;
   }
@@ -1657,7 +1620,7 @@ void NodeMgr::BuildFreeNids() {
   list_for_every_entry_safe (&nm_i->free_nid_list, fnid, next_fnid, FreeNid, list) {
     NatEntry *ne;
 
-    fs::SharedLock lock(nm_i->nat_tree_lock);
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
     ne = LookupNatCache(nm_i, fnid->nid);
     if (ne && NatGetBlkaddr(ne) != kNullAddr)
       RemoveFreeNid(nm_i, fnid->nid);
@@ -1844,7 +1807,7 @@ bool NodeMgr::FlushNatsInJournal() {
 
   {
     fs::SharedLock nat_lock(nm_i->nat_tree_lock);
-    size_t dirty_nat_cnt = list_length(&nm_i->dirty_nat_entries);
+    size_t dirty_nat_cnt = nm_i->dirty_nat_list.size_slow();
     if ((NatsInCursum(sum) + dirty_nat_cnt) <= kNatJournalEntries) {
       return false;
     }
@@ -1882,7 +1845,6 @@ void NodeMgr::FlushNatEntries() {
   NmInfo *nm_i = GetNmInfo(&sbi);
   CursegInfo *curseg = fs_->Segmgr().CURSEG_I(&sbi, CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
-  list_node_t *cur, *n;
   Page *page = nullptr;
   NatBlock *nat_blk = nullptr;
   nid_t start_nid = 0, end_nid = 0;
@@ -1896,76 +1858,75 @@ void NodeMgr::FlushNatEntries() {
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
 
   // 1) flush dirty nat caches
-  list_for_every_safe(&nm_i->dirty_nat_entries, cur, n) {
-    NatEntry *ne;
-    nid_t nid;
-    RawNatEntry raw_ne;
-    int offset = -1;
-    __UNUSED block_t old_blkaddr, new_blkaddr;
+  {
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    for (auto iter = nm_i->dirty_nat_list.begin(); iter != nm_i->dirty_nat_list.end();) {
+      nid_t nid;
+      RawNatEntry raw_ne;
+      int offset = -1;
+      __UNUSED block_t old_blkaddr, new_blkaddr;
 
-    ne = containerof(cur, NatEntry, list);
-    nid = NatGetNid(ne);
+      NatEntry *ne = iter.CopyPointer();
+      iter++;
 
-    if (NatGetBlkaddr(ne) == kNewAddr)
-      continue;
+      nid = NatGetNid(ne);
 
-    if (!flushed) {
-      // if there is room for nat enries in curseg->sumpage
-      offset = fs_->Segmgr().LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 1);
-    }
+      if (NatGetBlkaddr(ne) == kNewAddr)
+        continue;
 
-    if (offset >= 0) {  // flush to journal
-      raw_ne = NatInJournal(sum, offset);
-      old_blkaddr = LeToCpu(raw_ne.block_addr);
-    } else {  // flush to NAT block
-      if (!page || (start_nid > nid || nid > end_nid)) {
-        if (page) {
+      if (!flushed) {
+        // if there is room for nat enries in curseg->sumpage
+        offset = fs_->Segmgr().LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 1);
+      }
+
+      if (offset >= 0) {  // flush to journal
+        raw_ne = NatInJournal(sum, offset);
+        old_blkaddr = LeToCpu(raw_ne.block_addr);
+      } else {  // flush to NAT block
+        if (!page || (start_nid > nid || nid > end_nid)) {
+          if (page) {
 #if 0  // porting needed
        // set_page_dirty(page, fs_);
 #endif
-          FlushDirtyMetaPage(fs_, page);
-          F2fsPutPage(page, 1);
-          page = nullptr;
+            FlushDirtyMetaPage(fs_, page);
+            F2fsPutPage(page, 1);
+            page = nullptr;
+          }
+          start_nid = StartNid(nid);
+          end_nid = start_nid + kNatEntryPerBlock - 1;
+
+          // get nat block with dirty flag, increased reference
+          // count, mapped and lock
+          page = GetNextNatPage(start_nid);
+          nat_blk = static_cast<NatBlock *>(PageAddress(page));
         }
-        start_nid = StartNid(nid);
-        end_nid = start_nid + kNatEntryPerBlock - 1;
 
-        // get nat block with dirty flag, increased reference
-        // count, mapped and lock
-        page = GetNextNatPage(start_nid);
-        nat_blk = static_cast<NatBlock *>(PageAddress(page));
+        ZX_ASSERT(nat_blk);
+        raw_ne = nat_blk->entries[nid - start_nid];
+        old_blkaddr = LeToCpu(raw_ne.block_addr);
       }
 
-      ZX_ASSERT(nat_blk);
-      raw_ne = nat_blk->entries[nid - start_nid];
-      old_blkaddr = LeToCpu(raw_ne.block_addr);
-    }
+      new_blkaddr = NatGetBlkaddr(ne);
 
-    new_blkaddr = NatGetBlkaddr(ne);
+      raw_ne.ino = CpuToLe(NatGetIno(ne));
+      raw_ne.block_addr = CpuToLe(new_blkaddr);
+      raw_ne.version = NatGetVersion(ne);
 
-    raw_ne.ino = CpuToLe(NatGetIno(ne));
-    raw_ne.block_addr = CpuToLe(new_blkaddr);
-    raw_ne.version = NatGetVersion(ne);
+      if (offset < 0) {
+        nat_blk->entries[nid - start_nid] = raw_ne;
+      } else {
+        SetNatInJournal(sum, offset, raw_ne);
+        SetNidInJournal(sum, offset, CpuToLe(nid));
+      }
 
-    if (offset < 0) {
-      nat_blk->entries[nid - start_nid] = raw_ne;
-    } else {
-      SetNatInJournal(sum, offset, raw_ne);
-      SetNidInJournal(sum, offset, CpuToLe(nid));
-    }
-
-    if (NatGetBlkaddr(ne) == kNullAddr) {
-      {
-        std::lock_guard nat_lock(nm_i->nat_tree_lock);
+      if (NatGetBlkaddr(ne) == kNullAddr) {
         DelFromNatCache(nm_i, ne);
+        // We can reuse this freed nid at this point
+        AddFreeNid(GetNmInfo(&sbi), nid);
+      } else {
+        ClearNatCacheDirty(nm_i, ne);
+        ne->checkpointed = true;
       }
-
-      // We can reuse this freed nid at this point
-      AddFreeNid(GetNmInfo(&sbi), nid);
-    } else {
-      std::lock_guard nat_lock(nm_i->nat_tree_lock);
-      ClearNatCacheDirty(nm_i, ne);
-      ne->checkpointed = true;
     }
   }
 #if 0  // porting needed
@@ -1998,11 +1959,6 @@ zx_status_t NodeMgr::InitNodeManager() {
   nm_i->nat_cnt = 0;
 
   list_initialize(&nm_i->free_nid_list);
-#if 0  // porting needed (belows are of no use currently)
-  // INIT_RADIX_TREE(&nm_i->nat_root, GFP_ATOMIC);
-#endif
-  list_initialize(&nm_i->nat_entries);
-  list_initialize(&nm_i->dirty_nat_entries);
 
   nm_i->bitmap_size = BitmapSize(&sbi, MetaBitmap::kNatBitmap);
   nm_i->init_scan_nid = LeToCpu(sbi.ckpt->next_free_nid);
@@ -2045,6 +2001,8 @@ void NodeMgr::DestroyNodeManager() {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
   FreeNid *i, *next_i;
+  NatEntry *natvec[kNatvecSize];
+  uint32_t found;
 
   if (!nm_i)
     return;
@@ -2063,19 +2021,18 @@ void NodeMgr::DestroyNodeManager() {
   {
     // destroy nat cache
     std::lock_guard nat_lock(nm_i->nat_tree_lock);
-    list_node_t *cur, *next;
-    list_for_every_safe(&nm_i->dirty_nat_entries, cur, next) {
-      NatEntry *e = containerof(cur, NatEntry, list);
-      DelFromNatCache(nm_i, e);
+    while ((found = GangLookupNatCache(nm_i, kNatvecSize, natvec))) {
+      uint32_t idx;
+      for (idx = 0; idx < found; idx++) {
+        NatEntry *e = natvec[idx];
+        DelFromNatCache(nm_i, e);
+      }
     }
-
-    list_for_every_safe(&nm_i->nat_entries, cur, next) {
-      NatEntry *e = containerof(cur, NatEntry, list);
-      DelFromNatCache(nm_i, e);
-    }
+    ZX_ASSERT(!nm_i->nat_cnt);
+    ZX_ASSERT(nm_i->clean_nat_list.is_empty());
+    ZX_ASSERT(nm_i->dirty_nat_list.is_empty());
+    ZX_ASSERT(nm_i->nat_cache.is_empty());
   }
-
-  ZX_ASSERT(!nm_i->nat_cnt);
 
   delete[] nm_i->nat_bitmap;
   delete[] nm_i->nat_prev_bitmap;

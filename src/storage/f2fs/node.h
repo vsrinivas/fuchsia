@@ -7,41 +7,45 @@
 
 namespace f2fs {
 
-/* start node id of a node block dedicated to the given node id */
+// start node id of a node block dedicated to the given node id
 inline uint32_t StartNid(uint32_t nid) { return (nid / kNatEntryPerBlock) * kNatEntryPerBlock; }
 
-/* node block offset on the NAT area dedicated to the given start node id */
+// node block offset on the NAT area dedicated to the given start node id
 inline uint64_t NatBlockOffset(uint32_t start_nid) { return start_nid / kNatEntryPerBlock; }
 
-/* # of pages to perform readahead before building free nids */
+// # of pages to perform readahead before building free nids
 constexpr int kFreeNidPages = 4;
 
-/* maximum # of free node ids to produce during build_free_nids */
+// maximum # of free node ids to produce during build_free_nids
 constexpr int kMaxFreeNids = kNatEntryPerBlock * kFreeNidPages;
 
-/* maximum readahead size for node during getting data blocks */
+// maximum readahead size for node during getting data blocks
 constexpr int kMaxRaNode = 128;
 
-/* maximum cached nat entries to manage memory footprint */
+// maximum cached nat entries to manage memory footprint
 constexpr uint32_t kNmWoutThreshold = 64 * kNatEntryPerBlock;
 
-/* vector size for gang look-up from nat cache that consists of radix tree */
+// vector size for gang look-up from nat cache that consists of radix tree
 constexpr uint32_t kNatvecSize = 64;
 
-/*
- * For node information
- */
+// For node information
 struct NodeInfo {
-  nid_t nid = 0;        /* node id */
-  nid_t ino = 0;        /* inode number of the node's owner */
-  block_t blk_addr = 0; /* block address of the node */
-  uint8_t version = 0;  /* version of the node */
+  nid_t nid = 0;         // node id
+  nid_t ino = 0;         // inode number of the node's owner
+  block_t blk_addr = 0;  // block address of the node
+  uint8_t version = 0;   // version of the node
 };
 
-struct NatEntry {
-  list_node_t list;          /* for clean or dirty nat list */
-  bool checkpointed = false; /* whether it is checkpointed or not */
-  NodeInfo ni;               /* in-memory node information */
+class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
+                 public fbl::DoublyLinkedListable<NatEntry *> {
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(NatEntry);
+  NatEntry() = default;
+  ~NatEntry() = default;
+  bool checkpointed = false;  // whether it is checkpointed or not
+  NodeInfo ni;                // in-memory node information
+
+  ino_t GetKey() const { return ni.nid; }
 };
 
 inline uint32_t NatGetNid(NatEntry *nat) { return nat->ni.nid; }
@@ -55,18 +59,16 @@ inline void NatSetVersion(NatEntry *nat, uint8_t v) { nat->ni.version = v; }
 
 inline uint8_t IncNodeVersion(uint8_t version) { return ++version; }
 
-/*
- * For free nid mangement
- */
+// For free nid mangement
 enum class NidState {
-  kNidNew = 0, /* newly added to free nid list */
-  kNidAlloc,   /* it is allocated */
+  kNidNew = 0,  // newly added to free nid list
+  kNidAlloc,    // it is allocated
 };
 
 struct FreeNid {
-  list_node_t list; /* for free node id list */
-  nid_t nid = 0;    /* node id */
-  int state = 0;    /* in use or not: kNidNew or kNidAlloc */
+  list_node_t list;  // for free node id list
+  nid_t nid = 0;     // node id
+  int state = 0;     // in use or not: kNidNew or kNidAlloc
 };
 
 class NodeMgr {
@@ -154,6 +156,9 @@ class NodeMgr {
   // See NodeMgt::IS_DNODE().
   block_t StartBidxOfNode(Page *node_page);
 
+  void SetNatCacheDirty(NmInfo *nm_i, NatEntry *ne) __TA_REQUIRES(nm_i->nat_tree_lock);
+  void ClearNatCacheDirty(NmInfo *nm_i, NatEntry *ne) __TA_REQUIRES(nm_i->nat_tree_lock);
+
  private:
   F2fs *fs_;
 
@@ -168,20 +173,17 @@ class NodeMgr {
   void SetNid(Page *p, int off, nid_t nid, bool i);
   nid_t GetNid(Page *p, int off, bool i);
 
-#if 0  // porting needed
-  void SetColdData(Page *page);
-#endif
-
   // Functions
   void ClearNodePageDirty(Page *page);
   Page *GetCurrentNatPage(nid_t nid);
   Page *GetNextNatPage(nid_t nid);
   void RaNatPages(nid_t nid);
-  NatEntry *LookupNatCache(NmInfo *nm_i, nid_t n);
-  uint32_t GangLookupNatCache(NmInfo *nm_i, nid_t start, uint32_t nr, NatEntry **ep);
-  void DelFromNatCache(NmInfo *nm_i, NatEntry *e);
 
-  NatEntry *GrabNatEntry(NmInfo *nm_i, nid_t nid);
+  NatEntry *LookupNatCache(NmInfo *nm_i, nid_t n) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
+  uint32_t GangLookupNatCache(NmInfo *nm_i, uint32_t nr, NatEntry **ep)
+      __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
+  void DelFromNatCache(NmInfo *nm_i, NatEntry *e) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
+  NatEntry *GrabNatEntry(NmInfo *nm_i, nid_t nid) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
   void CacheNatEntry(NmInfo *nm_i, nid_t nid, RawNatEntry *ne);
   void SetNodeAddr(NodeInfo *ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
@@ -193,12 +195,12 @@ class NodeMgr {
   zx_status_t TruncatePartialNodes(DnodeOfData *dn, Inode *ri, int *offset, int depth);
 
   zx_status_t NewNodePage(DnodeOfData *dn, uint32_t ofs, Page **out);
-#if 0  // porting needed
-  void RaNodePage(nid_t nid);
-#endif
   Page *GetNodePageRa(Page *parent, int start);
 
 #if 0  // porting needed
+  void SetColdData(Page &page);
+  void RaNodePage(nid_t nid);
+
   int F2fsWriteNodePages(address_space *mapping,
             WritebackControl *wbc);
   int F2fsSetNodePageDirty(Page *page);

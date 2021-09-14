@@ -35,15 +35,18 @@ TEST(NodeMgrTest, NatCache) {
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+  NatEntry *e = nullptr;
 
   // 1. Check NAT cache is empty
-  // TODO(jaeyoon): Change list NAT cache to tree NAT cache when tree NAT cache is enabled
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(1));  // root inode
-  ASSERT_TRUE(list_is_empty(&nm_i->dirty_nat_entries));
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(1));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(1));  // root inode
+    ASSERT_TRUE(nm_i->dirty_nat_list.is_empty());
 
-  list_node_t *next_node, *node = list_next(&nm_i->nat_entries, &nm_i->nat_entries);
-  NatEntry *e = containerof(node, NatEntry, list);
-  ASSERT_EQ(e->ni.nid, static_cast<nid_t>(3));  // root inode
+    e = &nm_i->clean_nat_list.front();
+    ASSERT_EQ(e->ni.nid, static_cast<nid_t>(3));  // root inode
+  }
 
   // 2. Check NAT entry is cached in dirty NAT entries list
   std::vector<fbl::RefPtr<VnodeF2fs>> vnodes;
@@ -54,14 +57,21 @@ TEST(NodeMgrTest, NatCache) {
   ASSERT_EQ(vnodes.size(), kMaxNodeCnt);
   ASSERT_EQ(inos.size(), kMaxNodeCnt);
 
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(list_length(&nm_i->dirty_nat_entries), static_cast<size_t>(kMaxNodeCnt + 1));
-  ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(kMaxNodeCnt + 1));
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(kMaxNodeCnt + 1));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->dirty_nat_list.size_slow(), static_cast<size_t>(kMaxNodeCnt + 1));
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(kMaxNodeCnt + 1));
+  }
 
   // Lookup NAT cache
   for (auto ino : inos) {
     NodeInfo ni;
-    ASSERT_TRUE(unittest_lib::IsCachedNat(nm_i, ino));
+    {
+      fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+      ASSERT_TRUE(unittest_lib::IsCachedNat(nm_i, ino));
+    }
     fs->Nodemgr().GetNodeInfo(ino, &ni);
     ASSERT_EQ(ni.nid, ino);
   }
@@ -70,39 +80,56 @@ TEST(NodeMgrTest, NatCache) {
   fs->Nodemgr().FlushNatEntries();
 
   // 3. Check NAT entry is cached in clean NAT entries list
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(kMaxNodeCnt + 1));
-  ASSERT_EQ(list_length(&nm_i->dirty_nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(kMaxNodeCnt + 1));
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(kMaxNodeCnt + 1));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(kMaxNodeCnt + 1));
+    ASSERT_EQ(nm_i->dirty_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(kMaxNodeCnt + 1));
+  }
 
   // Lookup NAT cache
   for (auto ino : inos) {
     NodeInfo ni;
-    ASSERT_TRUE(unittest_lib::IsCachedNat(nm_i, ino));
+    {
+      fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+      ASSERT_TRUE(unittest_lib::IsCachedNat(nm_i, ino));
+    }
     fs->Nodemgr().GetNodeInfo(ino, &ni);
     ASSERT_EQ(ni.nid, ino);
   }
 
   // 4. Check NAT entry is in the summary journal, not in the NAT Cache
   // Flush NAT cache
-  list_for_every_safe(&nm_i->nat_entries, node, next_node) {
-    e = containerof(node, NatEntry, list);
-    list_delete(&e->list);
-    nm_i->nat_cnt--;
-    delete e;
+  {
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    while (!nm_i->nat_cache.is_empty()) {
+      e = &nm_i->nat_cache.front();
+      nm_i->clean_nat_list.erase(*e);
+      nm_i->nat_cache.erase(*e);
+      nm_i->nat_cnt--;
+    }
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
   }
-  ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
 
   CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegHotData);  // NAT Journal
   SummaryBlock *sum = curseg->sum_blk;
 
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(list_length(&nm_i->dirty_nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(NatsInCursum(sum), static_cast<int>(kMaxNodeCnt + 1));
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->dirty_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(NatsInCursum(sum), static_cast<int>(kMaxNodeCnt + 1));
+  }
 
   // Lookup NAT journal
   for (auto ino : inos) {
     NodeInfo ni;
-    ASSERT_FALSE(unittest_lib::IsCachedNat(nm_i, ino));
+    {
+      fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+      ASSERT_FALSE(unittest_lib::IsCachedNat(nm_i, ino));
+    }
     fs->Nodemgr().GetNodeInfo(ino, &ni);
     ASSERT_EQ(ni.nid, ino);
   }
@@ -132,30 +159,45 @@ TEST(NodeMgrTest, NatCache) {
   ASSERT_EQ(NatsInCursum(sum), static_cast<int>(0));
 
   // Flush NAT cache
-  list_for_every_safe(&nm_i->nat_entries, node, next_node) {
-    e = containerof(node, NatEntry, list);
-    list_delete(&e->list);
-    nm_i->nat_cnt--;
-    delete e;
+  {
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    while (!nm_i->nat_cache.is_empty()) {
+      e = &nm_i->nat_cache.front();
+      nm_i->clean_nat_list.erase(*e);
+      nm_i->nat_cache.erase(*e);
+      nm_i->nat_cnt--;
+    }
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
   }
 
   // Check NAT cache empty
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(list_length(&nm_i->dirty_nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->dirty_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
+  }
 
   // Read NAT block
   for (auto ino : inos) {
     NodeInfo ni;
-    ASSERT_FALSE(unittest_lib::IsCachedNat(nm_i, ino));
+    {
+      fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+      ASSERT_FALSE(unittest_lib::IsCachedNat(nm_i, ino));
+    }
     fs->Nodemgr().GetNodeInfo(ino, &ni);
     ASSERT_EQ(ni.nid, ino);
   }
 
-  // Check NAT cache
-  ASSERT_EQ(list_length(&nm_i->nat_entries), static_cast<size_t>(10));
-  ASSERT_EQ(list_length(&nm_i->dirty_nat_entries), static_cast<size_t>(0));
-  ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(10));
+  {
+    // Check NAT cache
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    ASSERT_EQ(nm_i->nat_cache.size(), static_cast<size_t>(10));
+    ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(10));
+    ASSERT_EQ(nm_i->dirty_nat_list.size_slow(), static_cast<size_t>(0));
+    ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(10));
+  }
 
   for (auto &vnode_refptr : vnodes) {
     ASSERT_EQ(vnode_refptr->Close(), ZX_OK);
@@ -394,7 +436,10 @@ TEST(NodeMgrTest, TruncateDoubleIndirect) {
   node_cnt = inode_cnt;
   ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
 
-  unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  }
   ASSERT_EQ(nids.size(), 0UL);
 
   ASSERT_EQ(nm_i->fcnt, initial_free_nid_cnt - alloc_node_cnt);
@@ -474,7 +519,10 @@ TEST(NodeMgrTest, TruncateIndirect) {
   node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
   ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
 
-  unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  }
   ASSERT_EQ(nids.size(), direct_node_cnt);
 
   // Truncate direct nodes
@@ -483,7 +531,10 @@ TEST(NodeMgrTest, TruncateIndirect) {
   node_cnt = inode_cnt + direct_node_cnt + indirect_node_cnt;
   ASSERT_EQ(sbi.total_valid_node_count, node_cnt);
 
-  unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  {
+    fs::SharedLock nat_lock(nm_i->nat_tree_lock);
+    unittest_lib::RemoveTruncatedNode(nm_i, nids);
+  }
   ASSERT_EQ(nids.size(), direct_node_cnt);
 
   ASSERT_EQ(sbi.total_valid_inode_count, inode_cnt);

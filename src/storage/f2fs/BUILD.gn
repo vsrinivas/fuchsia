@@ -59,7 +59,6 @@ static_library("f2fs") {
     "mkfs.h",
     "mount.h",
     "node.h",
-    "node.h",
     "query.h",
     "segment.h",
     "vnode.h",

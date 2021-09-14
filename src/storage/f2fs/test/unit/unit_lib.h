@@ -51,9 +51,11 @@ void CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs);
 
 void CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode);
 
-void RemoveTruncatedNode(NmInfo *nm_i, std::vector<nid_t> &nids);
+void RemoveTruncatedNode(NmInfo *nm_i, std::vector<nid_t> &nids)
+    __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
 
-bool IsCachedNat(NmInfo *nm_i, nid_t n);
+bool IsCachedNat(NmInfo *nm_i, nid_t n) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
+
 }  // namespace unittest_lib
 }  // namespace f2fs
 

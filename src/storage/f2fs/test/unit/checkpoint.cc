@@ -191,17 +191,28 @@ void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_se
 void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version) {
   SbInfo &sbi = fs->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
-  NatEntry *ne = new NatEntry;
+  std::unique_ptr<NatEntry> nat_entry = std::make_unique<NatEntry>();
+  auto ne = nat_entry.get();
 
   memset(ne, 0, sizeof(NatEntry));
   NatSetNid(ne, nid);
-  list_add_tail(&nm_i->nat_entries, &ne->list);
+
+  ZX_ASSERT(!(*ne).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
+
+  std::lock_guard nat_lock(nm_i->nat_tree_lock);
+  nm_i->nat_cache.insert(std::move(nat_entry));
+
+  ZX_ASSERT(!(*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list.push_back(ne);
   nm_i->nat_cnt++;
 
   ne->checkpointed = false;
   NatSetBlkaddr(ne, blkaddr);
   NatSetVersion(ne, version);
-  list_move_tail(&nm_i->dirty_nat_entries, &ne->list);
+  ZX_ASSERT((*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list.erase(*ne);
+  ZX_ASSERT(!(*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->dirty_nat_list.push_back(ne);
 }
 
 bool IsRootInode(CursegType curseg_type, uint32_t offset) {
@@ -866,19 +877,21 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     // Clear NAT journal
     if (NatsInCursum(curseg->sum_blk) >= static_cast<int>(kNatJournalEntries)) {
       // Add dummy dirty NAT entries
-      DoWriteNat(fs, kNatJournalEntries, kNatJournalEntries,
+      DoWriteNat(fs, kNatJournalEntries + RootIno(&sbi) + 1, kNatJournalEntries,
                  static_cast<uint8_t>(cp->checkpoint_ver));
 
       // Move journal sentries to dirty sentries
       ASSERT_TRUE(fs->Nodemgr().FlushNatsInJournal());
 
       // Clear dirty sentries
-      list_node_t *cur, *n;
-      list_for_every_safe(&nm_i->dirty_nat_entries, cur, n) {
-        NatEntry *ne = containerof(cur, NatEntry, list);
-        list_delete(&ne->list);
-        nm_i->nat_cnt--;
-        delete ne;
+      {
+        std::lock_guard nat_lock(nm_i->nat_tree_lock);
+        while (!nm_i->dirty_nat_list.is_empty()) {
+          NatEntry *ne = &nm_i->dirty_nat_list.front();
+          nm_i->dirty_nat_list.erase(*ne);
+          nm_i->nat_cnt--;
+          delete ne;
+        }
       }
 
 #ifdef F2FS_BU_DEBUG
@@ -892,12 +905,27 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   nids.shrink_to_fit();
 
   // Fill NAT journal
-  for (uint32_t i = 0; i < kNatJournalEntries; i++) {
+  for (uint32_t i = RootIno(&sbi) + 1; i < kNatJournalEntries + RootIno(&sbi) + 1; i++) {
     DoWriteNat(fs, i, i, static_cast<uint8_t>(cp->checkpoint_ver));
     nids.push_back(i);
   }
   ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);
 
+  // Flush NAT cache
+  {
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    while (!nm_i->nat_cache.is_empty()) {
+      auto ne = &nm_i->nat_cache.front();
+
+      ZX_ASSERT((*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+      nm_i->clean_nat_list.erase(*ne);
+
+      ZX_ASSERT((*ne).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
+      auto nat_entry = nm_i->nat_cache.erase(*ne);
+      nm_i->nat_cnt--;
+      nat_entry.reset();
+    }
+  }
   F2fsPutPage(cp_page, 1);
 }
 
