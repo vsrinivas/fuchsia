@@ -14,20 +14,11 @@
 #include <zircon/types.h>
 
 #include "src/camera/bin/device/messages.h"
+#include "src/camera/bin/device/size_util.h"
 #include "src/camera/bin/device/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {
-namespace {
-
-static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) {
-  ZX_DEBUG_ASSERT(format.coded_width < std::numeric_limits<int32_t>::max());
-  ZX_DEBUG_ASSERT(format.coded_height < std::numeric_limits<int32_t>::max());
-  return {.width = static_cast<int32_t>(format.coded_width),
-          .height = static_cast<int32_t>(format.coded_height)};
-}
-
-}  // namespace
 
 StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRecord& record,
                        const fuchsia::camera3::StreamProperties2& properties,

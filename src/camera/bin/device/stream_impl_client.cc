@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "src/camera/bin/device/messages.h"
+#include "src/camera/bin/device/size_util.h"
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -20,9 +21,7 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
     : stream_(stream),
       id_(id),
       binding_(this, std::move(request)),
-      resolution_([](fuchsia::math::Size a, fuchsia::math::Size b) {
-        return (a.width == b.width) && (a.height == b.height);
-      }) {
+      resolution_(SizeEqual) {
   FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
 }

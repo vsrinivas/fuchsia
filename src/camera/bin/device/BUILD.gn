@@ -21,6 +21,8 @@ source_set("lib") {
     "device_impl_client.cc",
     "metrics_reporter.cc",
     "metrics_reporter.h",
+    "size_util.cc",
+    "size_util.h",
     "stream_impl.cc",
     "stream_impl.h",
     "stream_impl_client.cc",
