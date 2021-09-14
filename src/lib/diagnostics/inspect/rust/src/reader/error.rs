@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error;
+use crate::writer::Error as WriterError;
 use diagnostics_hierarchy::Error as HierarchyError;
 use fuchsia_zircon as zx;
 use inspect_format::{BlockType, Error as FormatError};
@@ -68,7 +68,7 @@ pub enum ReaderError {
     FailedToLoadTree(String),
 
     #[error("Failed to lock inspector state")]
-    FailedToLockState(#[source] error::Error),
+    FailedToLockState(#[source] WriterError),
 }
 
 impl From<FormatError> for ReaderError {

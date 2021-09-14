@@ -127,7 +127,7 @@ mod tests {
     use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
     use crate::message::MessageHubUtil;
 
-    use fuchsia_inspect::assert_inspect_tree;
+    use fuchsia_inspect::assert_data_tree;
     use fuchsia_zircon::Time;
     use std::collections::HashSet;
 
@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(reply, Some(MessageEvent::Status(Status::Acknowledged)));
 
         // Ensure the load is logged to the inspect node.
-        assert_inspect_tree!(inspect_config_logger.lock().await.inspector, root: {
+        assert_data_tree!(inspect_config_logger.lock().await.inspector, root: {
             config_loads: {
                 "/config/data/input_device_config.json": {
                     "count": 1i64,

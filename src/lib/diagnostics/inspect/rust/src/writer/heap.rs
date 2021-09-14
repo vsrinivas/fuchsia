@@ -6,13 +6,11 @@
 //!
 //! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
 
-use {
-    crate::error::Error,
-    inspect_format::{constants, utils, Block, BlockType},
-    mapped_vmo::Mapping,
-    num_traits::ToPrimitive,
-    std::{cmp::min, sync::Arc},
-};
+use crate::writer::Error;
+use inspect_format::{constants, utils, Block, BlockType};
+use mapped_vmo::Mapping;
+use num_traits::ToPrimitive;
+use std::{cmp::min, sync::Arc};
 
 /// The inspect heap.
 #[derive(Debug)]

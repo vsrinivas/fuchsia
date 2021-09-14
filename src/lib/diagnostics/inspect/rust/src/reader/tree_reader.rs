@@ -5,18 +5,16 @@
 //!
 
 use {
-    crate::{
-        reader::{
-            error::ReaderError, DiagnosticsHierarchy, MissingValueReason, PartialNodeHierarchy,
-            ReadableTree, Snapshot,
-        },
-        LinkNodeDisposition,
+    crate::reader::{
+        error::ReaderError, DiagnosticsHierarchy, MissingValueReason, PartialNodeHierarchy,
+        ReadableTree, Snapshot,
     },
     fidl_fuchsia_inspect::TreeProxy,
     futures::{
         future::{self, BoxFuture},
         prelude::*,
     },
+    inspect_format::LinkNodeDisposition,
     std::{
         collections::BTreeMap,
         convert::{TryFrom, TryInto},

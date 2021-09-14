@@ -64,7 +64,7 @@ mod tests {
     use fdio;
     use fuchsia_component::server::ServiceObj;
     use fuchsia_component_test::ScopedInstance;
-    use fuchsia_inspect::{assert_inspect_tree, reader, Inspector};
+    use fuchsia_inspect::{reader, testing::assert_data_tree, Inspector};
 
     const TEST_COMPONENT_URL: &str =
         "fuchsia-pkg://fuchsia.com/inspect-runtime-tests#meta/inspect_test_component.cm";
@@ -113,7 +113,7 @@ mod tests {
             .expect("failed to connect to service");
 
         let hierarchy = reader::read(&tree).await?;
-        assert_inspect_tree!(hierarchy, root: {
+        assert_data_tree!(hierarchy, root: {
             int: 3i64,
             "lazy-node": {
                 a: "test",

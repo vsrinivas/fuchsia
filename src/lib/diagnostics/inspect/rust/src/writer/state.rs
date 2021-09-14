@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::Error, heap::Heap, Inspector, StringReference},
+    crate::writer::{error::Error, heap::Heap, Inspector, StringReference},
     anyhow,
     derivative::Derivative,
     futures::future::BoxFuture,
@@ -906,16 +906,15 @@ impl InnerState {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{
-            assert_data_tree,
-            reader::{snapshot::Snapshot, PartialNodeHierarchy},
-            Inspector,
-        },
-        futures::prelude::*,
-        std::convert::TryFrom,
+    use super::*;
+    use crate::{
+        assert_data_tree,
+        reader::{snapshot::Snapshot, PartialNodeHierarchy},
+        writer::testing_utils::get_state,
+        Inspector,
     };
+    use futures::prelude::*;
+    use std::convert::TryFrom;
 
     #[test]
     fn test_create() {
@@ -1792,11 +1791,5 @@ mod tests {
         assert!(state.header.check_locked(true).is_ok());
         assert_eq!(state.header.header_generation_count().unwrap(), 3);
         assert_eq!(lock_guard2.inner_lock.transaction_count, 0);
-    }
-
-    fn get_state(size: usize) -> State {
-        let (mapping, _) = Mapping::allocate(size).unwrap();
-        let heap = Heap::new(Arc::new(mapping)).unwrap();
-        State::create(heap).unwrap()
     }
 }
