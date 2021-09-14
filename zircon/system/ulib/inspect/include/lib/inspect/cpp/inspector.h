@@ -52,6 +52,9 @@ struct InspectStats final {
 
   // The number of blocks deallocated over the lifetime of the inspector.
   size_t deallocated_blocks;
+
+  // The number of failed allocations over the lifetime of the inspector.
+  size_t failed_allocations;
 };
 
 // The entry point into the Inspection API.
@@ -71,7 +74,7 @@ class Inspector final {
   //
   // The VMO must support ZX_RIGHT_WRITE, ZX_VM_CAN_MAP_WRITE, and ZX_VM_CAN_MAP_READ permissions.
   //
-  // If an invalid VMO is passed all Node operations will will have no effect.
+  // If an invalid VMO is passed all Node operations will have no effect.
   explicit Inspector(zx::vmo vmo);
 
   // Returns a duplicated read-only version of the VMO backing this inspector.

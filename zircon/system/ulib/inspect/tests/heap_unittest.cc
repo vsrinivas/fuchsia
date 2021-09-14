@@ -243,6 +243,7 @@ TEST(Heap, Extend) {
   EXPECT_EQ(384u, b);
   EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(512u, b);
+  EXPECT_EQ(0u, heap.TotalFailedAllocations());
 
   heap.Free(0);
   heap.Free(128);
@@ -281,6 +282,7 @@ TEST(Heap, ExtendFailure) {
   EXPECT_OK(heap.Allocate(2048, &b));
   EXPECT_EQ(640u, b);
   EXPECT_EQ(ZX_ERR_NO_MEMORY, heap.Allocate(2048, &b));
+  EXPECT_EQ(1u, heap.TotalFailedAllocations());
 
   MatchDebugBlockVectors({{0, BlockType::kReserved, 7},
                           {128, BlockType::kReserved, 7},

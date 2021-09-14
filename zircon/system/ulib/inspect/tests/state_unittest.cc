@@ -12,6 +12,8 @@
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/string_view.h>
 #include <threads.h>
+#include <zircon/errors.h>
+#include <zircon/rights.h>
 
 #include <cstdint>
 #include <iostream>
@@ -1393,6 +1395,39 @@ TEST(State, LinkContentsAllocationFailure) {
                     ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
                 "\0\0\0\0\0\0\0\0"));
   CompareBlock(blocks.find(2)->block, MakeInlinedStringReferenceBlock("root"));
+}
+
+TEST(State, GetStatsTest) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
+
+  inspect::InspectStats stats = state->GetStats();
+  EXPECT_EQ(0u, stats.dynamic_child_count);
+  EXPECT_EQ(4096u, stats.maximum_size);
+  EXPECT_EQ(4096u, stats.size);
+  EXPECT_EQ(1u, stats.allocated_blocks);
+  EXPECT_EQ(0u, stats.deallocated_blocks);
+  EXPECT_EQ(0u, stats.failed_allocations);
+}
+
+TEST(State, GetStatsWithFailedAllocationTest) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != NULL);
+
+  BlockIndex idx;
+  std::string data(5000, '.');
+  auto sr = inspect::StringReference(data.c_str());
+  ASSERT_EQ(ZX_ERR_NO_MEMORY, state->CreateAndIncrementStringReference(sr, &idx));
+
+  inspect::InspectStats stats = state->GetStats();
+  EXPECT_EQ(0u, stats.dynamic_child_count);
+  EXPECT_EQ(4096u, stats.maximum_size);
+  EXPECT_EQ(4096u, stats.size);
+  EXPECT_EQ(2u, stats.allocated_blocks);
+  EXPECT_EQ(0u, stats.deallocated_blocks);
+  EXPECT_EQ(1u, stats.failed_allocations);
+
+  state->ReleaseStringReference(idx);
 }
 
 constexpr size_t kThreadTimes = 1024 * 10;
