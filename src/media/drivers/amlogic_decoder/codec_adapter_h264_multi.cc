@@ -363,7 +363,6 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
   // eliminates any dirty cache lines that might otherwise get flushed after HW has written to the
   // buffer.
   buffer->CacheFlush(0, buffer->size());
-
   all_output_buffers_.push_back(buffer);
 }
 

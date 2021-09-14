@@ -165,13 +165,28 @@ fuchsia_test_package("use_h264_sw_decoder_tests") {
   }
 }
 
-fuchsia_unittest_package("use-h264-multi-decoder-test") {
+fuchsia_unittest_component("use_h264_multi_decoder_test") {
   manifest = "use_media_decoder/meta/use_h264_multi_decoder_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_test",
   ]
+}
 
+fuchsia_test_component("use_h264_multi_decoder_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_multi_decoder_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_multi_decoder_tests") {
+  test_components = [
+    ":use_h264_multi_decoder_test",
+    ":use_h264_multi_decoder_test_v2",
+  ]
   test_specs = {
     # Only works on amlogic hardware.
     environments = [
@@ -183,14 +198,30 @@ fuchsia_unittest_package("use-h264-multi-decoder-test") {
   }
 }
 
-fuchsia_unittest_package("use-h264-multi-decoder-flake-repro-test") {
+fuchsia_unittest_component("use_h264_multi_decoder_flake_repro_test") {
   manifest =
       "use_media_decoder/meta/use_h264_multi_decoder_flake_repro_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_flake_repro_test",
   ]
+}
 
+fuchsia_test_component("use_h264_multi_decoder_flake_repro_test_v2") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_flake_repro_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_flake_repro_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_multi_decoder_flake_repro_tests") {
+  test_components = [
+    ":use_h264_multi_decoder_flake_repro_test",
+    ":use_h264_multi_decoder_flake_repro_test_v2",
+  ]
   test_specs = {
     # Only works on amlogic hardware.
     environments = [
@@ -204,13 +235,27 @@ fuchsia_unittest_package("use-h264-multi-decoder-flake-repro-test") {
 
 # Test amlogic-video h264 decode with stream switching.  Can also work in QEMU
 # using SW decode, but when decode HW is present we'll use that to decode.
-fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
+fuchsia_unittest_component("use_h264_decoder_stream_switching_test") {
   manifest = "use_media_decoder/meta/use_h264_decoder_stream_switching_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_decoder_stream_switching_test",
   ]
+}
+fuchsia_unittest_component("use_h264_decoder_stream_switching_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_stream_switching_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_stream_switching_test",
+  ]
+}
 
+fuchsia_test_package("use_h264_decoder_stream_switching_tests") {
+  test_components = [
+    ":use_h264_decoder_stream_switching_test",
+    ":use_h264_decoder_stream_switching_test_v2",
+  ]
   test_specs = {
     # Should pass when run on VIM2, sherlock, or QEMU.
 
@@ -227,14 +272,30 @@ fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
 }
 
 # Test amlogic-video multi-instance h264 decode with stream switching.
-fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
+fuchsia_unittest_component("use_h264_multi_decoder_stream_switching_test") {
   manifest =
       "use_media_decoder/meta/use_h264_multi_decoder_stream_switching_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_stream_switching_test",
   ]
+}
 
+fuchsia_test_component("use_h264_multi_decoder_stream_switching_test_v2") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_stream_switching_test.cml"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_stream_switching_test",
+  ]
+}
+
+fuchsia_test_package("use_h264_multi_decoder_stream_switching_tests") {
+  test_components = [
+    ":use_h264_multi_decoder_stream_switching_test",
+    ":use_h264_multi_decoder_stream_switching_test_v2",
+  ]
   test_specs = {
     # Should pass when run on VIM2, sherlock, or QEMU.
 
@@ -248,14 +309,31 @@ fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
 }
 
 # Test amlogic-video multi-instance h264 decode with stream switching.
-fuchsia_unittest_package(
-    "use-h264-multi-decoder-concurrent-stream-switching-test") {
+fuchsia_unittest_component(
+    "use_h264_multi_decoder_concurrent_stream_switching_test") {
   manifest = "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
   deps = [
     ":bear_h264",
     "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_concurrent_stream_switching_test",
   ]
+}
 
+fuchsia_test_component(
+    "use_h264_multi_decoder_concurrent_stream_switching_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
+  deps = [
+    ":bear_h264",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_concurrent_stream_switching_test",
+  ]
+}
+
+fuchsia_test_package(
+    "use_h264_multi_decoder_concurrent_stream_switching_tests") {
+  test_components = [
+    ":use_h264_multi_decoder_concurrent_stream_switching_test",
+    ":use_h264_multi_decoder_concurrent_stream_switching_test_v2",
+  ]
   test_specs = {
     # Should pass when run on VIM2, astro, sherlock, or QEMU.
 
@@ -272,17 +350,34 @@ fuchsia_unittest_component("use_h264_decoder_secure_output_test") {
   manifest = "use_media_decoder/meta/use_h264_decoder_secure_output_test.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test" ]
 }
+fuchsia_unittest_component("use_h264_decoder_secure_output_test_v2") {
+  manifest = "use_media_decoder/meta/use_h264_decoder_secure_output_test.cml"
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test",
+  ]
+}
 
 fuchsia_unittest_component("use_h264_multi_decoder_secure_output_test") {
   manifest =
       "use_media_decoder/meta/use_h264_multi_decoder_secure_output_test.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_secure_output_test" ]
 }
+fuchsia_unittest_component("use_h264_multi_decoder_secure_output_test_v2") {
+  manifest =
+      "use_media_decoder/meta/use_h264_multi_decoder_secure_output_test.cml"
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_multi_decoder_secure_output_test",
+  ]
+}
 
 fuchsia_test_package("use_h264_decoder_secure_output_tests") {
   test_components = [
     ":use_h264_decoder_secure_output_test",
+    ":use_h264_decoder_secure_output_test_v2",
     ":use_h264_multi_decoder_secure_output_test",
+    ":use_h264_multi_decoder_secure_output_test_v2",
   ]
 
   deps = [ ":bear_h264" ]
