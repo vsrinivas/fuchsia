@@ -76,6 +76,11 @@ impl Config {
         }
     }
 
+    /// Runs a command with a custom runtime configuration.
+    pub fn run_command_with_runtime(command: String, runtime: RuntimeConfig) -> Config {
+        Config { launch: LaunchConfig { command: Some(command), script_path: None }, runtime }
+    }
+
     /// Configures Scrutiny to run with a single script in a minimal runtime
     /// environment. This is a helper utility configuration to simplify
     /// common configurations.
@@ -229,7 +234,10 @@ pub struct ModelConfig {
     pub update_package_url: String,
     /// The URL of the Fuchsia config-data package.
     pub config_data_package_url: String,
-    /// The path to the device manager configuration.
+    /// Path to ZBI (zircon boot image) file.
+    pub zbi_path: String,
+    /// The path to the device manager configuration inside bootfs inside the
+    /// ZBI.
     pub devmgr_config_path: String,
 }
 
@@ -248,6 +256,7 @@ impl ModelConfig {
             repository_blobs_path,
             update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
+            zbi_path: "fuchsia.zbi".to_string(),
             devmgr_config_path: "config/devmgr".to_string(),
         }
     }
@@ -277,6 +286,10 @@ impl ModelConfig {
     /// The Fuchsia package url of the config data package.
     pub fn config_data_package_url(&self) -> String {
         self.config_data_package_url.clone()
+    }
+    /// The path to the ZBI (zircon boot image).
+    pub fn zbi_path(&self) -> String {
+        self.zbi_path.clone()
     }
     /// The path to the device manager configuration file in bootfs.
     pub fn devmgr_config_path(&self) -> String {

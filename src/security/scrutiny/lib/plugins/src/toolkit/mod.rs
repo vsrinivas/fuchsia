@@ -8,7 +8,7 @@ use {
     crate::toolkit::controller::{
         blobfs::BlobFsExtractController, far::FarMetaExtractController, fvm::FvmExtractController,
         zbi::ZbiExtractController, zbi_bootfs::ZbiListBootfsController,
-        zbi_cmdline::ZbiExtractCmdlineController, zbi_devmgr::ZbiExtractDevmgrConfigController,
+        zbi_cmdline::ZbiExtractCmdlineController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -24,7 +24,6 @@ plugin!(
             "/tool/fvm/extract" => FvmExtractController::default(),
             "/tool/zbi/extract" => ZbiExtractController::default(),
             "/tool/zbi/extract/cmdline" => ZbiExtractCmdlineController::default(),
-            "/tool/zbi/extract/devmgr" => ZbiExtractDevmgrConfigController::default(),
             "/tool/zbi/list/bootfs" => ZbiListBootfsController::default(),
         }
     ),

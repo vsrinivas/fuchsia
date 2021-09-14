@@ -7,8 +7,8 @@ use {
     anyhow::Result,
     scrutiny_config::Config,
     scrutiny_plugins::{
-        core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, sys::SysRealmPlugin,
-        toolkit::ToolkitPlugin, verify::VerifyPlugin,
+        core::CorePlugin, devmgr_config::DevmgrConfigPlugin, engine::EnginePlugin,
+        search::SearchPlugin, sys::SysRealmPlugin, toolkit::ToolkitPlugin, verify::VerifyPlugin,
     },
 };
 
@@ -26,6 +26,7 @@ pub fn launch_from_config(config: Config) -> Result<String> {
     scrutiny.plugin(ToolkitPlugin::new())?;
     scrutiny.plugin(VerifyPlugin::new())?;
     scrutiny.plugin(SysRealmPlugin::new())?;
+    scrutiny.plugin(DevmgrConfigPlugin::new())?;
     scrutiny.run()
 }
 

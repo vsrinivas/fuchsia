@@ -8,4 +8,3 @@ pub mod fvm;
 pub mod zbi;
 pub mod zbi_bootfs;
 pub mod zbi_cmdline;
-pub mod zbi_devmgr;
