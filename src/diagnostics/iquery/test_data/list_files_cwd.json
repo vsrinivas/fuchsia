@@ -1,7 +1,3 @@
 [
-  "./c/archivist-for-embedding.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
-  "./c/archivist-for-embedding.cmx/INSTANCE_ID/system_diagnostics/fuchsia.inspect.Tree",
-  "./c/iquery-bin-test.cmx/INSTANCE_ID/system_diagnostics/fuchsia.inspect.Tree",
-  "./r/list-file-test-1/INSTANCE_ID/c/basic_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree",
-  "./r/list-file-test-1/INSTANCE_ID/c/basic_component.cmx/INSTANCE_ID/system_diagnostics/fuchsia.inspect.Tree"
+    "./children/fuchsia_component_test_collection:CHILD_NAME/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree"
 ]

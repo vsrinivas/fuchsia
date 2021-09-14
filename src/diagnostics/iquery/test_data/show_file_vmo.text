@@ -1,4 +1,4 @@
-/hub/r/show-file-vmo-2/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/root.inspect:
+/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect:
   root:
     array:0xd = [1, 10, -3]
     array:0xe = [1, 10, 2]

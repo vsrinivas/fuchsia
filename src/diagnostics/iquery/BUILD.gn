@@ -44,7 +44,6 @@ if (is_fuchsia) {
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/diagnostics/testing/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -126,17 +125,19 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-rustc_test("bin_test") {
-  output_name = "iquery_bin_test"
+rustc_test("iquery_test") {
+  output_name = "iquery_test"
   source_root = "src/main.rs"
 
   deps = iquery_deps
-  deps += [ ":lib" ]
+  deps += [
+    ":lib",
+    "//src/lib/fuchsia-component-test",
+  ]
 
   sources = [
     "src/main.rs",
     "src/tests/commands.rs",
-    "src/tests/macros.rs",
     "src/tests/mod.rs",
     "src/tests/utils.rs",
   ]
@@ -183,18 +184,20 @@ rustc_test("bin_test") {
   ]
 }
 
-fuchsia_component("iquery-bin-test") {
+fuchsia_component("iquery-test") {
   testonly = true
-  manifest = "meta/iquery-bin-test.cmx"
-  deps = [
-    ":bin_test",
-    "test/basic_component",
-    "test/test_component:test_component_v1",
-  ]
+  manifest = "meta/iquery-test.cml"
+  deps = [ ":iquery_test" ]
 }
 
 fuchsia_test_package("iquery-tests") {
-  test_components = [ ":iquery-bin-test" ]
+  test_components = [ ":iquery-test" ]
+  deps = [
+    "test/basic_component",
+    "test/basic_component:basic_component_with_logs",
+    "test/test_component",
+    "test_data:goldens",
+  ]
 }
 
 group("tests") {

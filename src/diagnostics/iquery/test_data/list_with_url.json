@@ -1,14 +1,14 @@
 [
-  {
-    "moniker": "archivist-for-embedding.cmx",
-    "component_url": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
-  },
-  {
-    "moniker": "list-url-test/basic_component.cmx",
-    "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx"
-  },
-  {
-    "moniker": "list-url-test2/test_component.cmx",
-    "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cmx"
-  }
+    {
+        "component_url": "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm",
+        "moniker": "archivist"
+    },
+    {
+        "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm",
+        "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/basic"
+    },
+    {
+        "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cm",
+        "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/test"
+    }
 ]

@@ -1,7 +1,7 @@
-show-filter-no-selectors/basic_component.cmx:
+fuchsia_component_test_collection\:CHILD_NAME/basic:
   metadata:
     filename = fuchsia.inspect.Tree
-    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm
     timestamp = TIMESTAMP
   payload:
     root:

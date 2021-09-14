@@ -47,9 +47,14 @@ impl Command for ListFilesCommand {
             for locations_result in join_all(location_futs).await {
                 let locations =
                     locations_result.map_err(|e| Error::ListLocations(query_path.clone(), e))?;
-                let paths = locations
-                    .into_iter()
-                    .map(|location| location.path.to_string_lossy().to_string());
+                let paths = locations.into_iter().map(|location| {
+                    let path = location.path.to_string_lossy().to_string();
+                    if path.starts_with("./") || path.starts_with("/") {
+                        path
+                    } else {
+                        format!("./{}", path)
+                    }
+                });
                 result.extend(paths);
             }
         }

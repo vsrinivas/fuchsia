@@ -1,4 +1,4 @@
 [
-  "selectors-filter/basic_component.cmx:root/fuchsia.inspect.Health:start_timestamp_nanos",
-  "selectors-filter/basic_component.cmx:root/fuchsia.inspect.Health:status"
+    "fuchsia_component_test_collection\\:CHILD_NAME/basic:root/fuchsia.inspect.Health:start_timestamp_nanos",
+    "fuchsia_component_test_collection\\:CHILD_NAME/basic:root/fuchsia.inspect.Health:status"
 ]

@@ -1,29 +1,57 @@
 [
-  {
-    "data_source": "Logs",
-    "metadata": {
-      "errors": null,
-      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
-      "timestamp": "TIMESTAMP",
-      "severity": "INFO",
-      "size_bytes": 74,
-      "tags": [
-        "iquery_basic_component"
-      ],
-      "pid": "PID",
-      "tid": "TID",
-      "file": null,
-      "line": null,
-      "dropped": 0
+    {
+        "data_source": "Logs",
+        "metadata": {
+            "component_url": "fuchsia-pkg://fuchsia.com/fuchsia-component-test#meta/framework-intermediary.cm",
+            "dropped": 0,
+            "errors": null,
+            "file": null,
+            "line": null,
+            "pid": "PID",
+            "severity": "INFO",
+            "size_bytes": 132,
+            "tags": [
+                "fuchsia_component_test_framework_intermediary",
+                "fuchsia_component_test_framework_intermediary"
+            ],
+            "tid": "TID",
+            "timestamp": "TIMESTAMP"
+        },
+        "moniker": "fuchsia_component_test_framework_intermediary",
+        "payload": {
+            "root": {
+                "message": {
+                    "value": "started"
+                }
+            }
+        },
+        "version": 1
     },
-    "moniker": "log-test/basic_component.cmx",
-    "payload": {
-      "root": {
-        "message": {
-          "value": "Is great to have! "
-        }
-      }
-    },
-    "version": 1
-  }
+    {
+        "data_source": "Logs",
+        "metadata": {
+            "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component_with_logs.cm",
+            "dropped": 0,
+            "errors": null,
+            "file": null,
+            "line": null,
+            "pid": "PID",
+            "severity": "INFO",
+            "size_bytes": 74,
+            "tags": [
+                "iquery_basic_component"
+            ],
+            "tid": "TID",
+            "timestamp": "TIMESTAMP"
+        },
+        "moniker": "fuchsia_component_test_collection:CHILD_NAME/basic",
+        "payload": {
+            "root": {
+                "message": {
+                    "value": "Is great to have! "
+                }
+            }
+        },
+        "version": 1
+    }
 ]

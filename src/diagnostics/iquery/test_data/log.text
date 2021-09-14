@@ -1,1 +1,2 @@
-[TIMESTAMP][PID][TID][log-test/basic_component.cmx][iquery_basic_component] INFO: Is great to have!
+[TIMESTAMP][PID][TID][fuchsia_component_test_framework_intermediary][fuchsia_component_test_framework_intermediary,fuchsia_component_test_framework_intermediary] INFO: started
+[TIMESTAMP][PID][TID][fuchsia_component_test_collection:CHILD_NAME/basic][iquery_basic_component] INFO: Is great to have!

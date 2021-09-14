@@ -1,10 +1,10 @@
-/hub/r/show-file-test-1/INSTANCE_ID/c/basic_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree:
+/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree:
   root:
     iquery = rocks
     fuchsia.inspect.Health:
       start_timestamp_nanos = TIMESTAMP
       status = OK
-/hub/r/show-file-test-2/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.Tree:
+/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.Tree:
   root:
     array:0xd = [1, 10, -3]
     array:0xe = [1, 10, 2]
@@ -61,7 +61,7 @@
           double_value = 100.000000
           name = (2,2)
           value = 4
-/hub/r/show-file-test-2/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/fuchsia.inspect.deprecated.Inspect:
+/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.deprecated.Inspect:
   root:
     table:0x0:
       binary_data = Binary:
@@ -106,7 +106,7 @@
           double_value = 100.000000
           name = (2,2)
           value = 4
-/hub/r/show-file-test-2/INSTANCE_ID/c/test_component.cmx/INSTANCE_ID/out/diagnostics/root.inspect:
+/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect:
   root:
     array:0xd = [1, 10, -3]
     array:0xe = [1, 10, 2]

@@ -5,10 +5,6 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/iquery_test_component",
-        args: [
-            "--rows=3",
-            "--columns=3",
-        ],
+        binary: "bin/iquery_basic_component",
     },
 }

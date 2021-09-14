@@ -1,21 +1,21 @@
 [
-  {
-    "data_source": "Inspect",
-    "metadata": {
-      "errors": null,
-      "filename": "fuchsia.inspect.Tree",
-      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
-      "timestamp": "TIMESTAMP"
-    },
-    "moniker": "show-filter/basic_component.cmx",
-    "payload": {
-      "root": {
-        "fuchsia.inspect.Health": {
-          "start_timestamp_nanos": "TIMESTAMP",
-          "status": "OK"
-        }
-      }
-    },
-    "version": 1
-  }
+    {
+        "data_source": "Inspect",
+        "metadata": {
+            "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm",
+            "errors": null,
+            "filename": "fuchsia.inspect.Tree",
+            "timestamp": "TIMESTAMP"
+        },
+        "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/basic",
+        "payload": {
+            "root": {
+                "fuchsia.inspect.Health": {
+                    "start_timestamp_nanos": "TIMESTAMP",
+                    "status": "OK"
+                }
+            }
+        },
+        "version": 1
+    }
 ]

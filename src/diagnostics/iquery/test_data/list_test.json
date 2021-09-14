@@ -1,5 +1,5 @@
 [
-  "archivist-for-embedding.cmx",
-  "list-test/basic_component.cmx",
-  "list-test2/basic_component.cmx"
+    "archivist",
+    "fuchsia_component_test_collection\\:CHILD_NAME/basic-1",
+    "fuchsia_component_test_collection\\:CHILD_NAME/basic-2"
 ]

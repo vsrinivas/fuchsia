@@ -1,2 +1,2 @@
-archivist-for-embedding.cmx
-basic_component.cmx
+archivist
+fuchsia_component_test_collection\:CHILD_NAME/basic

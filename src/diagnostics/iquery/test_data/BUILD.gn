@@ -1,0 +1,50 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+test_names = [
+  "list_accessors",
+  "list_archive",
+  "list_files_cwd",
+  "list_files_test",
+  "list_filter_manifest",
+  "list_no_dups",
+  "list_test",
+  "list_with_url",
+  "log",
+  "selectors_archive",
+  "selectors_filter_test",
+  "selectors_test",
+  "show_all_test",
+  "show_archive",
+  "show_file_test",
+  "show_file_vmo",
+  "show_filter_no_selectors_test",
+  "show_filter_test",
+  "show_test",
+]
+
+formats = [
+  "json",
+  "text",
+]
+
+golden_deps = []
+foreach(test_name, test_names) {
+  foreach(format, formats) {
+    golden_name = test_name + "." + format
+
+    resource(golden_name + "_golden") {
+      sources = [ golden_name ]
+      outputs = [ "data/goldens/" + golden_name ]
+    }
+
+    golden_deps += [ ":" + golden_name + "_golden" ]
+  }
+}
+
+group("goldens") {
+  deps = golden_deps
+}

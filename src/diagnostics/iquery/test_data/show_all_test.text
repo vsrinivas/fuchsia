@@ -1,7 +1,7 @@
-show-all-test/basic_component.cmx:
+fuchsia_component_test_collection\:CHILD_NAME/basic-1:
   metadata:
     filename = fuchsia.inspect.Tree
-    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm
     timestamp = TIMESTAMP
   payload:
     root:
@@ -9,10 +9,10 @@ show-all-test/basic_component.cmx:
       fuchsia.inspect.Health:
         start_timestamp_nanos = TIMESTAMP
         status = OK
-show-all-test2/basic_component.cmx:
+fuchsia_component_test_collection\:CHILD_NAME/basic-2:
   metadata:
     filename = fuchsia.inspect.Tree
-    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm
     timestamp = TIMESTAMP
   payload:
     root:

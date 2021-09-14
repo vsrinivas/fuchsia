@@ -1,4 +1,1 @@
-/hub/c/archivist-for-embedding.cmx/INSTANCE_ID/out/svc/fuchsia.diagnostics.ArchiveAccessor
-/hub/c/archivist-for-embedding.cmx/INSTANCE_ID/out/svc/fuchsia.diagnostics.FeedbackArchiveAccessor
-/hub/c/archivist-for-embedding.cmx/INSTANCE_ID/out/svc/fuchsia.diagnostics.LegacyMetricsArchiveAccessor
-/hub/c/iquery-bin-test.cmx/INSTANCE_ID/in/svc/fuchsia.diagnostics.ArchiveAccessor
+/svc/fuchsia.diagnostics.ArchiveAccessor

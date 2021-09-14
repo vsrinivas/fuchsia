@@ -10,22 +10,22 @@
         "moniker": "test_component",
         "payload": {
             "root": {
-                "array:0x15": [
+                "array:0xd": [
                     1,
                     10,
                     -3
                 ],
-                "array:0x16": [
+                "array:0xe": [
                     1,
                     10,
                     2
                 ],
-                "array:0x17": [
+                "array:0xf": [
                     0.25,
                     1.25,
                     -0.75
                 ],
-                "histogram:0x18": {
+                "histogram:0x10": {
                     "buckets": [
                         {
                             "ceiling": -10,
@@ -54,7 +54,7 @@
                         }
                     ]
                 },
-                "histogram:0x19": {
+                "histogram:0x11": {
                     "buckets": [
                         {
                             "ceiling": 5,
@@ -83,7 +83,7 @@
                         }
                     ]
                 },
-                "histogram:0x1a": {
+                "histogram:0x12": {
                     "buckets": [
                         {
                             "ceiling": 0.0,
@@ -112,7 +112,7 @@
                         }
                     ]
                 },
-                "histogram:0x1b": {
+                "histogram:0x13": {
                     "buckets": [
                         {
                             "ceiling": -10,
@@ -141,7 +141,7 @@
                         }
                     ]
                 },
-                "histogram:0x1c": {
+                "histogram:0x14": {
                     "buckets": [
                         {
                             "ceiling": 0,
@@ -170,7 +170,7 @@
                         }
                     ]
                 },
-                "histogram:0x1d": {
+                "histogram:0x15": {
                     "buckets": [
                         {
                             "ceiling": 0.0,
@@ -205,90 +205,56 @@
                 },
                 "table:0x0": {
                     "binary_data": "b64:IAAREgU=",
-                    "object_name": "ExampleTable",
+                    "object_name": "Example Table",
                     "row:0x1": {
                         "cell:0x2": {
-                            "double_value": 6.666666666666667,
+                            "double_value": 11.11111111111111,
                             "name": "(0,0)",
                             "value": 0
                         },
                         "cell:0x3": {
-                            "double_value": 13.333333333333334,
+                            "double_value": 22.22222222222222,
                             "name": "(0,1)",
                             "value": 0
                         },
                         "cell:0x4": {
-                            "double_value": 20.0,
+                            "double_value": 33.333333333333336,
                             "name": "(0,2)",
                             "value": 0
                         }
                     },
-                    "row:0x11": {
-                        "cell:0x12": {
-                            "double_value": 86.66666666666667,
-                            "name": "(4,0)",
-                            "value": 0
-                        },
-                        "cell:0x13": {
-                            "double_value": 93.33333333333331,
-                            "name": "(4,1)",
-                            "value": 4
-                        },
-                        "cell:0x14": {
-                            "double_value": 100.0,
-                            "name": "(4,2)",
-                            "value": 8
-                        }
-                    },
                     "row:0x5": {
                         "cell:0x6": {
-                            "double_value": 26.666666666666668,
+                            "double_value": 44.44444444444444,
                             "name": "(1,0)",
                             "value": 0
                         },
                         "cell:0x7": {
-                            "double_value": 33.333333333333336,
+                            "double_value": 55.55555555555556,
                             "name": "(1,1)",
                             "value": 1
                         },
                         "cell:0x8": {
-                            "double_value": 40.0,
+                            "double_value": 66.66666666666667,
                             "name": "(1,2)",
                             "value": 2
                         }
                     },
                     "row:0x9": {
                         "cell:0xa": {
-                            "double_value": 46.666666666666664,
+                            "double_value": 77.77777777777777,
                             "name": "(2,0)",
                             "value": 0
                         },
                         "cell:0xb": {
-                            "double_value": 53.333333333333336,
+                            "double_value": 88.88888888888889,
                             "name": "(2,1)",
                             "value": 2
                         },
                         "cell:0xc": {
-                            "double_value": 60.0,
+                            "double_value": 100.0,
                             "name": "(2,2)",
                             "value": 4
-                        }
-                    },
-                    "row:0xd": {
-                        "cell:0x10": {
-                            "double_value": 80.0,
-                            "name": "(3,2)",
-                            "value": 6
-                        },
-                        "cell:0xe": {
-                            "double_value": 66.66666666666667,
-                            "name": "(3,0)",
-                            "value": 0
-                        },
-                        "cell:0xf": {
-                            "double_value": 73.33333333333333,
-                            "name": "(3,1)",
-                            "value": 3
                         }
                     }
                 }
@@ -309,90 +275,56 @@
             "root": {
                 "table:0x0": {
                     "binary_data": "b64:IAAREgU=",
-                    "object_name": "ExampleTable",
+                    "object_name": "Example Table",
                     "row:0x1": {
                         "cell:0x2": {
-                            "double_value": 6.666666666666667,
+                            "double_value": 11.11111111111111,
                             "name": "(0,0)",
                             "value": 0
                         },
                         "cell:0x3": {
-                            "double_value": 13.333333333333334,
+                            "double_value": 22.22222222222222,
                             "name": "(0,1)",
                             "value": 0
                         },
                         "cell:0x4": {
-                            "double_value": 20.0,
+                            "double_value": 33.333333333333336,
                             "name": "(0,2)",
                             "value": 0
                         }
                     },
-                    "row:0x11": {
-                        "cell:0x12": {
-                            "double_value": 86.66666666666667,
-                            "name": "(4,0)",
-                            "value": 0
-                        },
-                        "cell:0x13": {
-                            "double_value": 93.33333333333331,
-                            "name": "(4,1)",
-                            "value": 4
-                        },
-                        "cell:0x14": {
-                            "double_value": 100.0,
-                            "name": "(4,2)",
-                            "value": 8
-                        }
-                    },
                     "row:0x5": {
                         "cell:0x6": {
-                            "double_value": 26.666666666666668,
+                            "double_value": 44.44444444444444,
                             "name": "(1,0)",
                             "value": 0
                         },
                         "cell:0x7": {
-                            "double_value": 33.333333333333336,
+                            "double_value": 55.55555555555556,
                             "name": "(1,1)",
                             "value": 1
                         },
                         "cell:0x8": {
-                            "double_value": 40.0,
+                            "double_value": 66.66666666666667,
                             "name": "(1,2)",
                             "value": 2
                         }
                     },
                     "row:0x9": {
                         "cell:0xa": {
-                            "double_value": 46.666666666666664,
+                            "double_value": 77.77777777777777,
                             "name": "(2,0)",
                             "value": 0
                         },
                         "cell:0xb": {
-                            "double_value": 53.333333333333336,
+                            "double_value": 88.88888888888889,
                             "name": "(2,1)",
                             "value": 2
                         },
                         "cell:0xc": {
-                            "double_value": 60.0,
+                            "double_value": 100.0,
                             "name": "(2,2)",
                             "value": 4
-                        }
-                    },
-                    "row:0xd": {
-                        "cell:0x10": {
-                            "double_value": 80.0,
-                            "name": "(3,2)",
-                            "value": 6
-                        },
-                        "cell:0xe": {
-                            "double_value": 66.66666666666667,
-                            "name": "(3,0)",
-                            "value": 0
-                        },
-                        "cell:0xf": {
-                            "double_value": 73.33333333333333,
-                            "name": "(3,1)",
-                            "value": 3
                         }
                     }
                 }
@@ -411,22 +343,22 @@
         "moniker": "test_component",
         "payload": {
             "root": {
-                "array:0x15": [
+                "array:0xd": [
                     1,
                     10,
                     -3
                 ],
-                "array:0x16": [
+                "array:0xe": [
                     1,
                     10,
                     2
                 ],
-                "array:0x17": [
+                "array:0xf": [
                     0.25,
                     1.25,
                     -0.75
                 ],
-                "histogram:0x18": {
+                "histogram:0x10": {
                     "buckets": [
                         {
                             "ceiling": -10,
@@ -455,7 +387,7 @@
                         }
                     ]
                 },
-                "histogram:0x19": {
+                "histogram:0x11": {
                     "buckets": [
                         {
                             "ceiling": 5,
@@ -484,7 +416,7 @@
                         }
                     ]
                 },
-                "histogram:0x1a": {
+                "histogram:0x12": {
                     "buckets": [
                         {
                             "ceiling": 0.0,
@@ -513,7 +445,7 @@
                         }
                     ]
                 },
-                "histogram:0x1b": {
+                "histogram:0x13": {
                     "buckets": [
                         {
                             "ceiling": -10,
@@ -542,7 +474,7 @@
                         }
                     ]
                 },
-                "histogram:0x1c": {
+                "histogram:0x14": {
                     "buckets": [
                         {
                             "ceiling": 0,
@@ -571,7 +503,7 @@
                         }
                     ]
                 },
-                "histogram:0x1d": {
+                "histogram:0x15": {
                     "buckets": [
                         {
                             "ceiling": 0.0,
@@ -602,90 +534,56 @@
                 },
                 "table:0x0": {
                     "binary_data": "b64:IAAREgU=",
-                    "object_name": "ExampleTable",
+                    "object_name": "Example Table",
                     "row:0x1": {
                         "cell:0x2": {
-                            "double_value": 6.666666666666667,
+                            "double_value": 11.11111111111111,
                             "name": "(0,0)",
                             "value": 0
                         },
                         "cell:0x3": {
-                            "double_value": 13.333333333333334,
+                            "double_value": 22.22222222222222,
                             "name": "(0,1)",
                             "value": 0
                         },
                         "cell:0x4": {
-                            "double_value": 20.0,
+                            "double_value": 33.333333333333336,
                             "name": "(0,2)",
                             "value": 0
                         }
                     },
-                    "row:0x11": {
-                        "cell:0x12": {
-                            "double_value": 86.66666666666667,
-                            "name": "(4,0)",
-                            "value": 0
-                        },
-                        "cell:0x13": {
-                            "double_value": 93.33333333333331,
-                            "name": "(4,1)",
-                            "value": 4
-                        },
-                        "cell:0x14": {
-                            "double_value": 100.0,
-                            "name": "(4,2)",
-                            "value": 8
-                        }
-                    },
                     "row:0x5": {
                         "cell:0x6": {
-                            "double_value": 26.666666666666668,
+                            "double_value": 44.44444444444444,
                             "name": "(1,0)",
                             "value": 0
                         },
                         "cell:0x7": {
-                            "double_value": 33.333333333333336,
+                            "double_value": 55.55555555555556,
                             "name": "(1,1)",
                             "value": 1
                         },
                         "cell:0x8": {
-                            "double_value": 40.0,
+                            "double_value": 66.66666666666667,
                             "name": "(1,2)",
                             "value": 2
                         }
                     },
                     "row:0x9": {
                         "cell:0xa": {
-                            "double_value": 46.666666666666664,
+                            "double_value": 77.77777777777777,
                             "name": "(2,0)",
                             "value": 0
                         },
                         "cell:0xb": {
-                            "double_value": 53.333333333333336,
+                            "double_value": 88.88888888888889,
                             "name": "(2,1)",
                             "value": 2
                         },
                         "cell:0xc": {
-                            "double_value": 60.0,
+                            "double_value": 100.0,
                             "name": "(2,2)",
                             "value": 4
-                        }
-                    },
-                    "row:0xd": {
-                        "cell:0x10": {
-                            "double_value": 80.0,
-                            "name": "(3,2)",
-                            "value": 6
-                        },
-                        "cell:0xe": {
-                            "double_value": 66.66666666666667,
-                            "name": "(3,0)",
-                            "value": 0
-                        },
-                        "cell:0xf": {
-                            "double_value": 73.33333333333333,
-                            "name": "(3,1)",
-                            "value": 3
                         }
                     }
                 }

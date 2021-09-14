@@ -4,134 +4,146 @@
 
 #![cfg(test)]
 
-use {
-    crate::{assert_command, tests::utils},
-    diagnostics_testing::{EnvWithDiagnostics, Launched},
-    iquery::{commands::expand_paths, types::Error},
-    matches::assert_matches,
-    std::path::Path,
-    tempfile::tempdir,
-};
+use crate::tests::utils::{self, AssertionOption, AssertionParameters, IqueryCommand, TestBuilder};
+use iquery::types::Error;
+use matches::assert_matches;
+use std::path::Path;
+use tempfile::tempdir;
 
 // List command
 
 #[fuchsia::test]
 async fn test_list() {
-    let (_env, app) = utils::start_basic_component("list-test").await.expect("create comp 1");
-    let (_env2, app2) = utils::start_basic_component("list-test2").await.expect("create comp 2");
-    assert_command!(
-        command: "list",
-        golden_basename: list_test,
-        args: [],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::List,
+        golden_basename: "list_test",
+        iquery_args: vec![],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn test_list_no_duplicates() {
-    let (_env, app) = utils::start_test_component("list-dup-test").await.expect("create comp 1");
-    assert_command!(
-        command: "list",
-        golden_basename: list_no_dups,
-        args: [],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
+    let test = TestBuilder::new().await.add_test_component("test").await.start().await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::List,
+        golden_basename: "list_no_dups",
+        iquery_args: vec![],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn test_list_filter_manifest() {
-    let (_env, app) =
-        utils::start_basic_component("list-filter-test").await.expect("create comp 1");
-    let (_env, app2) =
-        utils::start_test_component("list-filter-test2").await.expect("create comp 2");
-    assert_command!(
-        command: "list",
-        golden_basename: list_filter_manifest,
-        args: [ "--manifest", "basic_component.cmx" ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::List,
+        golden_basename: "list_filter_manifest",
+        iquery_args: vec!["--manifest", "basic_component.cm"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn test_list_with_urls() {
-    let (_env, app) = utils::start_basic_component("list-url-test").await.expect("create comp 1");
-    let (_env, app2) = utils::start_test_component("list-url-test2").await.expect("create comp 2");
-    assert_command!(
-        command: "list",
-        golden_basename: list_with_url,
-        args: [ "--with-url" ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::List,
+        golden_basename: "list_with_url",
+        iquery_args: vec!["--with-url"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn list_archive() {
-    let test_env = EnvWithDiagnostics::new().await;
-    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
-    assert_command!(
-        command: "list",
-        golden_basename: list_archive,
-        args: [
-            "--accessor-path",
-            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
-        ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
+    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::List,
+        golden_basename: "list_archive",
+        iquery_args: vec!["--accessor-path", "/svc/fuchsia.diagnostics.ArchiveAccessor"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 // List files command
 
 #[fuchsia::test]
 async fn list_files_empty_path_uses_cwd() {
+    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
     std::env::set_current_dir(Path::new("/hub")).expect("change dir");
-    let (_env, app) =
-        utils::start_basic_component("list-file-test-1").await.expect("create comp 1");
-    assert_command!(
-        command: "list-files",
-        golden_basename: list_files_cwd,
-        args: []
-    );
-    utils::wait_for_terminated(app).await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ListFiles,
+        golden_basename: "list_files_cwd",
+        iquery_args: vec![&format!(
+            "children/fuchsia_component_test_collection:{}/",
+            test.instance_child_name()
+        )],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn list_files() {
-    let (_env, app) =
-        utils::start_basic_component("list-file-test-2").await.expect("create comp 1");
-    let (_env2, app2) =
-        utils::start_test_component("list-file-test-3").await.expect("create comp 2");
-    assert_command!(
-        command: "list-files",
-        golden_basename: list_files_test,
-        args: [
-            "/hub/c/archivist-for-embedding.cmx/",
-            "/hub/r/list-file-test-*/*/c/*/*/out/diagnostics/"
-        ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ListFiles,
+        golden_basename: "list_files_test",
+        iquery_args: vec![&format!(
+            "/hub/children/fuchsia_component_test_collection:{}/children/test/",
+            test.instance_child_name()
+        )],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn log() {
-    let (_env, app) =
-        utils::start_basic_component_with_logs("log-test").await.expect("create comp 1");
+    let test = TestBuilder::new().await.add_basic_component_with_logs("basic").await.start().await;
 
-    assert_command!(
-        command: "logs",
-        golden_basename: log,
-        args: [],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Logs,
+        golden_basename: "log",
+        iquery_args: vec![],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 // Selectors command
@@ -144,61 +156,64 @@ async fn test_selectors_empty() {
 
 #[fuchsia::test]
 async fn test_selectors() {
-    let (_env, app) = utils::start_basic_component("selectors-test").await.expect("create comp 1");
-    let (_env2, app2) =
-        utils::start_basic_component("selectors-test2").await.expect("create comp 2");
-    let (_env3, app3) =
-        utils::start_test_component("selectors-test3").await.expect("create comp 3");
-    assert_command!(
-        command: "selectors",
-        golden_basename: selectors_test,
-        args: [
-            "selectors-test/basic_component.cmx:root/fuchsia.inspect.Health",
-            "selectors-test2/basic_component.cmx:root",
-            "selectors-test3/test_component.cmx"
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Selectors,
+        golden_basename: "selectors_test",
+        iquery_args: vec![
+            &format!("{}/basic-1:root/fuchsia.inspect.Health", prefix),
+            &format!("{}/basic-2:root", prefix),
+            &format!("{}/test", prefix),
         ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
-    utils::wait_for_terminated(app3).await;
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn test_selectors_filter() {
-    let (_env, app) =
-        utils::start_basic_component("selectors-filter").await.expect("create comp 1");
-    let (_env, app2) =
-        utils::start_test_component("selectors-filter2").await.expect("create comp 2");
-    assert_command!(
-        command: "selectors",
-        golden_basename: selectors_filter_test,
-        args: [
-            "--manifest",
-            "basic_component.cmx",
-            "root/fuchsia.inspect.Health"
-        ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Selectors,
+        golden_basename: "selectors_filter_test",
+        iquery_args: vec!["--manifest", "basic_component.cm", "root/fuchsia.inspect.Health"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn selectors_archive() {
-    let test_env = EnvWithDiagnostics::new().await;
-    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
-    assert_command!(
-        command: "selectors",
-        golden_basename: selectors_archive,
-        args: [
-            "basic_component.cmx:root",
+    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
+    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Selectors,
+        golden_basename: "selectors_archive",
+        iquery_args: vec![
+            &format!("{}/basic:root", prefix),
             "--accessor-path",
-            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
+            "/svc/fuchsia.diagnostics.ArchiveAccessor",
         ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 // Show file
@@ -219,159 +234,167 @@ async fn test_invalid_location() {
 
 #[fuchsia::test]
 async fn show_file_test() {
-    let (_env, app) =
-        utils::start_basic_component("show-file-test-1").await.expect("create comp 1");
-    let (_env2, app2) =
-        utils::start_test_component("show-file-test-2").await.expect("create comp 2");
-    assert_command!(
-        command: "show-file",
-        golden_basename: show_file_test,
-        args: [
-            "/hub/r/show-file-test-1/*/c/basic_component.cmx/*/out/diagnostics/fuchsia.inspect.Tree",
-            "/hub/r/show-file-test-2/*/c/test_component.cmx/*/out/diagnostics/*"
-        ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ShowFile,
+        golden_basename: "show_file_test",
+        iquery_args: vec![
+            &format!("/hub/children/fuchsia_component_test_collection:{}/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
+                test.instance_child_name()),
+            &format!("/hub/children/fuchsia_component_test_collection:{}/children/test/exec/out/diagnostics/*",
+                test.instance_child_name()),
+        ],
+        opts: vec![AssertionOption::Retry],
+    }).await;
 }
 
 #[fuchsia::test]
 async fn inspect_vmo_file_directly() {
-    let (_env, app) = utils::start_test_component("show-file-vmo-2").await.expect("create comp 2");
-    let paths = expand_paths(&[
-        "/hub/r/show-file-vmo-2/*/c/test_component.cmx/*/out/diagnostics/*".to_string(),
-    ])
-    .expect("got paths");
-
-    // Pass only the path to the vmo file. Without the workaround in `get_paths` comments this
-    // wouldn't work and the `result` would be an emtpy list.
-    let path =
-        paths.into_iter().find(|p| p.ends_with("root.inspect")).expect("found root.inspect path");
-    assert_command!(
-        command: "show-file",
-        golden_basename: show_file_vmo,
-        args: [ &path ]
-    );
-    utils::wait_for_terminated(app).await;
+    let test = TestBuilder::new().await.add_test_component("test").await.start().await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ShowFile,
+        golden_basename: "show_file_vmo",
+        iquery_args: vec![
+            &format!("/hub/children/fuchsia_component_test_collection:{}/children/test/exec/out/diagnostics/root.inspect",
+                test.instance_child_name()),
+        ],
+        opts: vec![AssertionOption::Retry],
+    }).await;
 }
 
 // Show
 
 #[fuchsia::test]
 async fn test_no_selectors() {
-    let (_env, app) = utils::start_basic_component("show-all-test").await.expect("create comp 1");
-    let (_env2, app2) =
-        utils::start_basic_component("show-all-test2").await.expect("create comp 2");
-    assert_command!(
-        command: "show",
-        golden_basename: show_all_test,
-        args: [],
-        test_opts: [ "with_retries", "remove_observer" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_all_test",
+        iquery_args: vec![],
+        opts: vec![AssertionOption::Retry, AssertionOption::RemoveArchivist],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn show_test() {
-    let (_env, app) = utils::start_basic_component("show-test").await.expect("create comp 1");
-    let (_env2, app2) = utils::start_basic_component("show-test2").await.expect("create comp 2");
-    let (_env3, app3) = utils::start_basic_component("show-test3").await.expect("create comp 3");
-    let (_env4, app4) =
-        utils::start_basic_component("show-test4:with_colon").await.expect("create comp 4");
-    assert_command!(
-        command: "show",
-        golden_basename: show_test,
-        args: [
-            "show-test/basic_component.cmx:root/fuchsia.inspect.Health",
-            "show-test2/basic_component.cmx:root:iquery",
-            "show-test3/basic_component.cmx",
-            r#"show-test4\:with_colon/basic_component.cmx"#
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .add_basic_component("basic-3")
+        .await
+        .start()
+        .await;
+    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_test",
+        iquery_args: vec![
+            &format!("{}/basic-1:root/fuchsia.inspect.Health", prefix),
+            &format!("{}/basic-2:root:iquery", prefix),
+            &format!("{}/basic-3", prefix),
         ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
-    utils::wait_for_terminated(app3).await;
-    utils::wait_for_terminated(app4).await;
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn empty_result_on_null_payload() {
-    let (_env, app) = utils::start_basic_component("show-test-empty").await.expect("create comp 1");
+    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
+    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
     let result =
-        utils::execute_command(&["show", "show-test-empty/basic_component.cmx:root/nothing:here"])
-            .await;
+        utils::execute_command(&["show", &format!("{}/basic:root/nothing:here", prefix)]).await;
     assert_matches!(result, Ok(res) if res == "" || res.contains("payload: null"));
-    utils::wait_for_terminated(app).await;
 }
 
 #[fuchsia::test]
 async fn show_component_doesnt_exist() {
-    let result = utils::execute_command(&["show", "doesnt_exist.cmx"]).await;
+    let result = utils::execute_command(&["show", "doesnt_exist"]).await;
     assert_matches!(result, Ok(res) if res == "");
 }
 
 #[fuchsia::test]
 async fn show_filter_manifest() {
-    let (_env, app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
-    let (_env, app2) = utils::start_test_component("show-filter2").await.expect("create comp 2");
-    assert_command!(
-        command: "show",
-        golden_basename: show_filter_test,
-        args: [
-            "--manifest",
-            "basic_component.cmx",
-            "root/fuchsia.inspect.Health"
-        ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_filter_test",
+        iquery_args: vec!["--manifest", "basic_component.cm", "root/fuchsia.inspect.Health"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn show_filter_manifest_no_selectors() {
-    let (_env, app) =
-        utils::start_basic_component("show-filter-no-selectors").await.expect("create comp 1");
-    let (_env, app2) =
-        utils::start_test_component("show-filter-no-selectors2").await.expect("create comp 2");
-    assert_command!(
-        command: "show",
-        golden_basename: show_filter_no_selectors_test,
-        args: [
-            "--manifest",
-            "basic_component.cmx"
-        ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
-    utils::wait_for_terminated(app2).await;
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_filter_no_selectors_test",
+        iquery_args: vec!["--manifest", "basic_component.cm"],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn show_archive() {
-    let test_env = EnvWithDiagnostics::new().await;
-    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
-    assert_command!(
-        command: "show",
-        golden_basename: show_archive,
-        args: [
-            "basic_component.cmx:root",
+    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
+    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_archive",
+        iquery_args: vec![
+            &format!("{}/basic:root", prefix),
             "--accessor-path",
-            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
+            "/svc/fuchsia.diagnostics.ArchiveAccessor",
         ],
-        test_opts: [ "with_retries" ]
-    );
-    utils::wait_for_terminated(app).await;
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
 }
 
 #[fuchsia::test]
 async fn list_accessors() {
-    std::env::set_current_dir(Path::new("/hub/c")).expect("change dir");
-    assert_command!(
-        command: "list-accessors",
-        golden_basename: list_accessors,
-        args: []
-    );
+    let test = TestBuilder::new().await.start().await;
+    std::env::set_current_dir(Path::new(&format!("/svc"))).expect("change dir");
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ListAccessors,
+        golden_basename: "list_accessors",
+        iquery_args: vec![],
+        opts: vec![],
+    })
+    .await;
 }

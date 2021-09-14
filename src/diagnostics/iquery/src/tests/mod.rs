@@ -4,6 +4,3 @@
 
 mod commands;
 mod utils;
-
-#[macro_use]
-mod macros;
