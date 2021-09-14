@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
+use crate::{input, utils};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{
     DeviceState, DeviceStateSource, DeviceType, InputDevice, InputDeviceSettings, InputMarker,
@@ -12,9 +13,8 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::{input, utils};
 
-pub(crate) async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
+async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
     let env = create_service!(Services::Input,
         InputRequest::Set { settings, responder } => {
             if let Some(Microphone { muted, .. }) = settings.microphone {
@@ -106,7 +106,7 @@ fn u64_to_state(num: u64) -> DeviceState {
     DeviceState { toggle_flags: ToggleStateFlags::from_bits(num), ..DeviceState::EMPTY }
 }
 
-pub(crate) async fn validate_input2_watch() -> Result<(), Error> {
+async fn validate_input2_watch() -> Result<(), Error> {
     let env = create_service!(Services::Input,
         InputRequest::Watch2 { responder } => {
             responder.send(InputSettings {
@@ -136,7 +136,7 @@ pub(crate) async fn validate_input2_watch() -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) async fn validate_input2_set(
+async fn validate_input2_set(
     device_type: DeviceType,
     device_name: &'static str,
     device_state: u64,
@@ -167,5 +167,26 @@ pub(crate) async fn validate_input2_set(
     assert!(output.contains(&format!("{:?}", device_type)));
     assert!(output.contains(&format!("{:?}", device_name)));
     assert!(output.contains(expected_state_string));
+    Ok(())
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_input() -> Result<(), Error> {
+    println!("input service tests");
+    println!("  client calls input watch");
+    validate_input(None).await?;
+
+    println!("  client calls set input");
+    validate_input(Some(false)).await?;
+
+    println!("input2 service tests");
+    println!("  client calls input watch2");
+    validate_input2_watch().await?;
+
+    println!("  client calls set input with microphone");
+    validate_input2_set(DeviceType::Microphone, "microphone", 3, "Available | Active").await?;
+    println!("  client calls set input with camera");
+    validate_input2_set(DeviceType::Camera, "camera", 3, "Available | Active").await?;
+
     Ok(())
 }

@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
+use crate::{
+    accessibility, AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
+};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{
     AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, CaptionFontFamily,
@@ -12,11 +15,9 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::{
-    accessibility, AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
-};
 
-pub(crate) async fn validate_accessibility_set() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_accessibility_set() -> Result<(), Error> {
     const TEST_COLOR: fidl_fuchsia_ui_types::ColorRgba =
         fidl_fuchsia_ui_types::ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
     let expected_options: AccessibilityOptions = AccessibilityOptions {
@@ -84,7 +85,8 @@ pub(crate) async fn validate_accessibility_set() -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) async fn validate_accessibility_watch() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_accessibility_watch() -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility,
         AccessibilityRequest::Watch { responder } => {

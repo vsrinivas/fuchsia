@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::factory_reset;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{FactoryResetMarker, FactoryResetRequest, FactoryResetSettings};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::factory_reset;
 
 // Validates the set and watch for factory reset.
-pub(crate) async fn validate_factory_reset(
-    expected_local_reset_allowed: bool,
-) -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_factory_reset() -> Result<(), Error> {
+    // Test client calls set local reset allowed.
+    let expected_local_reset_allowed = true;
     let env = create_service!(
         Services::FactoryReset, FactoryResetRequest::Set { settings, responder, } => {
             if let (Some(local_reset_allowed), expected_local_reset_allowed) =

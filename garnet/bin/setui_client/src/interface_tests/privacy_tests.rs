@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::privacy;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{PrivacyMarker, PrivacyRequest, PrivacySettings};
-use setui_client_lib::privacy;
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
 
-pub(crate) async fn validate_privacy(
-    expected_user_data_sharing_consent: Option<bool>,
-) -> Result<(), Error> {
+async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> Result<(), Error> {
     let env = create_service!(
         Services::Privacy, PrivacyRequest::Set { settings, responder, } => {
             if let (Some(user_data_sharing_consent), Some(expected_user_data_sharing_consent_value)) =
@@ -41,7 +39,7 @@ pub(crate) async fn validate_privacy(
     Ok(())
 }
 
-pub(crate) async fn validate_privacy_set_output(
+async fn validate_privacy_set_output(
     expected_user_data_sharing_consent: bool,
 ) -> Result<(), Error> {
     let env = create_service!(
@@ -72,7 +70,7 @@ pub(crate) async fn validate_privacy_set_output(
     Ok(())
 }
 
-pub(crate) async fn validate_privacy_watch_output(
+async fn validate_privacy_watch_output(
     expected_user_data_sharing_consent: Option<bool>,
 ) -> Result<(), Error> {
     let env = create_service!(
@@ -102,5 +100,26 @@ pub(crate) async fn validate_privacy_watch_output(
             }
         )
     );
+    Ok(())
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_privacy() -> Result<(), Error> {
+    println!("privacy service tests");
+    println!("  client calls privacy watch");
+    validate_privacy(None).await?;
+
+    println!("  client calls set user_data_sharing_consent");
+    validate_privacy(Some(true)).await?;
+
+    println!("  set() output");
+    validate_privacy_set_output(true).await?;
+    validate_privacy_set_output(false).await?;
+
+    println!("  watch() output");
+    validate_privacy_watch_output(None).await?;
+    validate_privacy_watch_output(Some(true)).await?;
+    validate_privacy_watch_output(Some(false)).await?;
+
     Ok(())
 }

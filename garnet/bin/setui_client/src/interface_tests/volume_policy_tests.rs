@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
+use crate::{volume_policy, VolumePolicyCommands, VolumePolicyOptions};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings_policy::{
@@ -13,10 +14,10 @@ use fidl_fuchsia_settings_policy::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::{volume_policy, VolumePolicyCommands, VolumePolicyOptions};
 
 // Verifies that invoking a volume policy command with no arguments fetches the policy properties.
-pub(crate) async fn validate_volume_policy_get() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_volume_policy_get() -> Result<(), Error> {
     // Create a fake volume policy service that responds to GetProperties with a single property.
     // Any other calls will cause the test to fail.
     let env = create_service!(
@@ -45,7 +46,8 @@ pub(crate) async fn validate_volume_policy_get() -> Result<(), Error> {
 }
 
 // Verifies that adding a new policy works and prints out the resulting policy ID.
-pub(crate) async fn validate_volume_policy_add() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_volume_policy_add() -> Result<(), Error> {
     let expected_target = AudioRenderUsage::Background;
     let expected_volume: f32 = 1.0;
     let expected_policy_id = 42;
@@ -86,7 +88,8 @@ pub(crate) async fn validate_volume_policy_add() -> Result<(), Error> {
 }
 
 // Verifies that removing a policy sends the proper call to the volume policy API.
-pub(crate) async fn validate_volume_policy_remove() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_volume_policy_remove() -> Result<(), Error> {
     let expected_policy_id = 42;
     // Create a fake volume policy service that verifies the removed policy ID matches the expected
     // value. Any other calls will cause the

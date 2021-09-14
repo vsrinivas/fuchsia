@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::display;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{
     DisplayMarker, DisplayRequest, DisplaySettings, LightSensorData, LowLightMode, Theme, ThemeType,
@@ -11,13 +12,12 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::display;
 
 use parking_lot::RwLock;
 use std::sync::Arc;
 
 // Can only check one mutate option at once.
-pub(crate) async fn validate_display(
+async fn validate_display(
     expected_brightness: Option<f32>,
     expected_auto_brightness: Option<bool>,
     expected_auto_brightness_value: Option<f32>,
@@ -87,7 +87,7 @@ pub(crate) async fn validate_display(
 }
 
 // Can only check one mutate option at once
-pub(crate) async fn validate_light_sensor() -> Result<(), Error> {
+async fn validate_light_sensor() -> Result<(), Error> {
     let watch_called = Arc::new(RwLock::new(false));
 
     let watch_called_clone = watch_called.clone();
@@ -120,5 +120,38 @@ pub(crate) async fn validate_light_sensor() -> Result<(), Error> {
 
     assert_watch!(display::command(display_service, None, None, None, true, None, None, None));
     assert_eq!(*watch_called.read(), true);
+    Ok(())
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_display() -> Result<(), Error> {
+    println!("display service tests");
+    println!("  client calls display watch");
+    validate_display(None, None, None, None, None, None).await?;
+
+    println!("  client calls set brightness");
+    validate_display(Some(0.5), None, None, None, None, None).await?;
+
+    println!("  client calls set auto brightness");
+    validate_display(None, Some(true), None, None, None, None).await?;
+
+    println!("  client calls set auto brightness value");
+    validate_display(None, None, Some(0.5), None, None, None).await?;
+
+    println!("  client calls set low light mode");
+    validate_display(None, None, None, Some(LowLightMode::Enable), None, None).await?;
+
+    println!("  client calls set theme");
+    validate_display(None, None, None, None, Some(ThemeType::Dark), None).await?;
+
+    println!("  client calls set screen enabled");
+    validate_display(None, None, None, None, Some(ThemeType::Dark), Some(false)).await?;
+
+    println!("  client can modify multiple settings");
+    validate_display(Some(0.3), Some(false), Some(0.8), None, Some(ThemeType::Light), Some(true))
+        .await?;
+
+    println!("  client calls watch light sensor");
+    validate_light_sensor().await?;
     Ok(())
 }

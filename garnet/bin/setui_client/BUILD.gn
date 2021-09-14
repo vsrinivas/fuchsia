@@ -36,6 +36,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -54,6 +55,19 @@ rustc_library("lib") {
     "src/do_not_disturb.rs",
     "src/factory_reset.rs",
     "src/input.rs",
+    "src/interface_tests.rs",
+    "src/interface_tests/accessibility_tests.rs",
+    "src/interface_tests/audio_tests.rs",
+    "src/interface_tests/display_tests.rs",
+    "src/interface_tests/do_not_disturb_tests.rs",
+    "src/interface_tests/factory_reset_tests.rs",
+    "src/interface_tests/input_tests.rs",
+    "src/interface_tests/intl_tests.rs",
+    "src/interface_tests/light_tests.rs",
+    "src/interface_tests/night_mode_tests.rs",
+    "src/interface_tests/privacy_tests.rs",
+    "src/interface_tests/setup_tests.rs",
+    "src/interface_tests/volume_policy_tests.rs",
     "src/intl.rs",
     "src/lib.rs",
     "src/light.rs",
@@ -71,53 +85,8 @@ fuchsia_package_with_single_component("setui_client") {
 }
 
 fuchsia_unittest_package("setui_client_tests") {
+  manifest = "meta/setui_client_test.cml"
   deps = [ ":lib_test" ]
-}
-
-rustc_binary("setui_client_interface_test_bin") {
-  name = "setui_client_interface_test"
-  edition = "2018"
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy-rustc",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
-  ]
-  source_root = "src/tests/interface_tests.rs"
-
-  sources = [
-    "src/tests/accessibility_tests.rs",
-    "src/tests/audio_tests.rs",
-    "src/tests/display_tests.rs",
-    "src/tests/do_not_disturb_tests.rs",
-    "src/tests/factory_reset_tests.rs",
-    "src/tests/input_tests.rs",
-    "src/tests/interface_tests.rs",
-    "src/tests/intl_tests.rs",
-    "src/tests/light_tests.rs",
-    "src/tests/night_mode_tests.rs",
-    "src/tests/privacy_tests.rs",
-    "src/tests/setup_tests.rs",
-    "src/tests/volume_policy_tests.rs",
-  ]
-}
-
-fuchsia_component("setui_client_interface_test") {
-  manifest = "meta/setui_client_interface_test.cmx"
-  deps = [ ":setui_client_interface_test_bin" ]
-}
-
-fuchsia_test_package("setui_client_interface_tests") {
-  test_components = [ ":setui_client_interface_test" ]
 }
 
 rustc_test("setui_client_integration_test") {
@@ -146,7 +115,6 @@ group("tests") {
   testonly = true
   deps = [
     ":setui-client-integration-tests",
-    ":setui_client_interface_tests",
     ":setui_client_tests",
   ]
 }

@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
+use crate::intl;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId};
 use fidl_fuchsia_settings::{IntlMarker, IntlRequest, IntlSettings};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::intl;
 
-pub(crate) async fn validate_intl_set() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_intl_set() -> Result<(), Error> {
     const TEST_TIME_ZONE: &str = "GMT";
     const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
     const TEST_LOCALE: &str = "blah";
@@ -41,7 +42,8 @@ pub(crate) async fn validate_intl_set() -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) async fn validate_intl_watch() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_intl_watch() -> Result<(), Error> {
     const TEST_TIME_ZONE: &str = "GMT";
     const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
     const TEST_LOCALE: &str = "blah";

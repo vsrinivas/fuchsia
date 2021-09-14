@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
+use crate::light;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{
     LightGroup, LightMarker, LightRequest, LightState, LightType, LightValue,
@@ -11,9 +12,9 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::light;
 
-pub(crate) async fn validate_light_set() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_light_set() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
     const LIGHT_VAL_1: f64 = 0.2;
     const LIGHT_VAL_2: f64 = 0.42;
@@ -32,7 +33,7 @@ pub(crate) async fn validate_light_set() -> Result<(), Error> {
 
     assert_set!(light::command(
         light_service,
-        setui_client_lib::LightGroup {
+        crate::LightGroup {
             name: Some(TEST_NAME.to_string()),
             simple: vec![],
             brightness: vec![LIGHT_VAL_1, LIGHT_VAL_2],
@@ -42,7 +43,8 @@ pub(crate) async fn validate_light_set() -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) async fn validate_light_watch() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_light_watch() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
     const ENABLED: bool = false;
     const LIGHT_TYPE: LightType = LightType::Simple;
@@ -71,12 +73,7 @@ pub(crate) async fn validate_light_watch() -> Result<(), Error> {
 
     let output = assert_watch!(light::command(
         light_service,
-        setui_client_lib::LightGroup {
-            name: None,
-            simple: vec![],
-            brightness: vec![],
-            rgb: vec![],
-        },
+        crate::LightGroup { name: None, simple: vec![], brightness: vec![], rgb: vec![] },
     ));
     assert_eq!(
         output,
@@ -103,7 +100,8 @@ pub(crate) async fn validate_light_watch() -> Result<(), Error> {
     Ok(())
 }
 
-pub(crate) async fn validate_light_watch_individual() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_light_watch_individual() -> Result<(), Error> {
     const TEST_NAME: &str = "test_name";
     const ENABLED: bool = false;
     const LIGHT_TYPE: LightType = LightType::Simple;
@@ -130,7 +128,7 @@ pub(crate) async fn validate_light_watch_individual() -> Result<(), Error> {
 
     let output = assert_watch!(light::command(
         light_service,
-        setui_client_lib::LightGroup {
+        crate::LightGroup {
             name: Some(TEST_NAME.to_string()),
             simple: vec![],
             brightness: vec![],

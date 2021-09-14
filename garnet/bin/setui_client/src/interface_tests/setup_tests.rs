@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::setup;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_settings::{ConfigurationInterfaces, SetupMarker, SetupRequest, SetupSettings};
-use setui_client_lib::setup;
 
-use crate::Services;
-use crate::ENV_NAME;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
@@ -19,7 +19,8 @@ fn create_setup_setting(interfaces: ConfigurationInterfaces) -> SetupSettings {
     settings
 }
 
-pub(crate) async fn validate_setup() -> Result<(), Error> {
+#[fuchsia_async::run_until_stalled(test)]
+async fn validate_setup() -> Result<(), Error> {
     let expected_set_interfaces = ConfigurationInterfaces::Ethernet;
     let expected_watch_interfaces =
         ConfigurationInterfaces::Wifi | ConfigurationInterfaces::Ethernet;

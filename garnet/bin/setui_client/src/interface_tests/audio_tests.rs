@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ExpectedStreamSettingsStruct;
-use crate::Services;
-use crate::ENV_NAME;
+use crate::audio;
+use crate::interface_tests::ExpectedStreamSettingsStruct;
+use crate::interface_tests::Services;
+use crate::interface_tests::ENV_NAME;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
@@ -13,7 +14,6 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::prelude::*;
-use setui_client_lib::audio;
 
 fn verify_streams(
     streams: Vec<AudioStreamSettings>,
@@ -42,9 +42,7 @@ fn verify_streams(
     }
 }
 
-pub(crate) async fn validate_audio(
-    expected: &'static ExpectedStreamSettingsStruct,
-) -> Result<(), Error> {
+async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Result<(), Error> {
     let env = create_service!(Services::Audio,
         AudioRequest::Set { settings, responder } => {
             if let Some(streams) = settings.streams {
@@ -90,5 +88,81 @@ pub(crate) async fn validate_audio(
         expected.volume_muted,
         expected.input_muted,
     ));
+    Ok(())
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_audio() -> Result<(), Error> {
+    println!("audio service tests");
+    println!("  client calls audio watch");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: None,
+        source: None,
+        level: None,
+        volume_muted: None,
+        input_muted: None,
+    })
+    .await?;
+
+    println!("  client calls set audio input - stream");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: Some(AudioRenderUsage::Background),
+        source: None,
+        level: None,
+        volume_muted: None,
+        input_muted: None,
+    })
+    .await?;
+
+    println!("  client calls set audio input - source");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: None,
+        source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::System),
+        level: None,
+        volume_muted: None,
+        input_muted: None,
+    })
+    .await?;
+
+    println!("  client calls set audio input - level");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: None,
+        source: None,
+        level: Some(0.3),
+        volume_muted: None,
+        input_muted: None,
+    })
+    .await?;
+
+    println!("  client calls set audio input - volume_muted");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: None,
+        source: None,
+        level: None,
+        volume_muted: Some(true),
+        input_muted: None,
+    })
+    .await?;
+
+    println!("  client calls set audio input - input_muted");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: None,
+        source: None,
+        level: None,
+        volume_muted: None,
+        input_muted: Some(false),
+    })
+    .await?;
+
+    println!("  client calls set audio input - multiple");
+    validate_audio(&ExpectedStreamSettingsStruct {
+        stream: Some(AudioRenderUsage::Media),
+        source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
+        level: Some(0.6),
+        volume_muted: Some(false),
+        input_muted: Some(true),
+    })
+    .await?;
+
     Ok(())
 }
