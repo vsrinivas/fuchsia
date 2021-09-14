@@ -9,6 +9,7 @@ use fuchsia_zircon::{self as zx, HandleBased};
 pub mod zxio;
 
 pub use zxio::zxio_node_attributes_t;
+pub use zxio::zxio_signals_t;
 
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
@@ -51,6 +52,22 @@ impl Zxio {
         Ok(zxio)
     }
 
+    pub fn read(&self, data: &mut [u8]) -> Result<usize, zx::Status> {
+        let flags = zxio::zxio_flags_t::default();
+        let mut actual = 0usize;
+        let status = unsafe {
+            zxio::zxio_read(
+                self.as_ptr(),
+                data.as_ptr() as *mut ::std::os::raw::c_void,
+                data.len(),
+                flags,
+                &mut actual,
+            )
+        };
+        zx::ok(status)?;
+        Ok(actual)
+    }
+
     pub fn read_at(&self, offset: u64, data: &mut [u8]) -> Result<usize, zx::Status> {
         let flags = zxio::zxio_flags_t::default();
         let mut actual = 0usize;
@@ -59,6 +76,22 @@ impl Zxio {
                 self.as_ptr(),
                 offset,
                 data.as_ptr() as *mut ::std::os::raw::c_void,
+                data.len(),
+                flags,
+                &mut actual,
+            )
+        };
+        zx::ok(status)?;
+        Ok(actual)
+    }
+
+    pub fn write(&self, data: &[u8]) -> Result<usize, zx::Status> {
+        let flags = zxio::zxio_flags_t::default();
+        let mut actual = 0;
+        let status = unsafe {
+            zxio::zxio_write(
+                self.as_ptr(),
+                data.as_ptr() as *const ::std::os::raw::c_void,
                 data.len(),
                 flags,
                 &mut actual,
@@ -107,9 +140,25 @@ impl Zxio {
         zx::ok(status)?;
         Ok(attributes)
     }
+
+    pub fn wait_begin(
+        &self,
+        zxio_signals: zxio_signals_t,
+    ) -> (zx::Unowned<'_, zx::Handle>, zx::Signals) {
+        let mut handle = zx::sys::ZX_HANDLE_INVALID;
+        let mut zx_signals = zx::sys::ZX_SIGNAL_NONE;
+        unsafe { zxio::zxio_wait_begin(self.as_ptr(), zxio_signals, &mut handle, &mut zx_signals) };
+        let handle = unsafe { zx::Unowned::<zx::Handle>::from_raw_handle(handle) };
+        let signals = zx::Signals::from_bits_truncate(zx_signals);
+        (handle, signals)
+    }
 }
 
-// let storage = zxio::zxio_storage_t::default();
+impl Drop for Zxio {
+    fn drop(&mut self) {
+        unsafe { zxio::zxio_close(self.as_ptr()) };
+    }
+}
 
 /// A fuchsia.io.Node along with its NodeInfo.
 ///

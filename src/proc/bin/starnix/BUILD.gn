@@ -89,7 +89,6 @@ if (target_cpu == "x64") {
       "fs/fs_context.rs",
       "fs/fs_node.rs",
       "fs/fuchsia/mod.rs",
-      "fs/fuchsia/pipe.rs",
       "fs/fuchsia/remote.rs",
       "fs/fuchsia/syslog.rs",
       "fs/fuchsia/timer.rs",

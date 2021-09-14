@@ -126,7 +126,7 @@ impl Waiter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fs::fuchsia::FuchsiaPipe;
+    use crate::fs::fuchsia::*;
     use crate::fs::FdEvents;
     use crate::syscalls::SyscallContext;
     use fuchsia_async as fasync;
@@ -144,7 +144,7 @@ mod tests {
         let task = &task_owner.task;
         let ctx = SyscallContext::new(&task_owner.task);
         let (local_socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let pipe = FuchsiaPipe::from_socket(&kernel, remote_socket).unwrap();
+        let pipe = create_fuchsia_pipe(&kernel, remote_socket).unwrap();
 
         const MEM_SIZE: usize = 1024;
         let proc_mem = map_memory(&ctx, UserAddress::default(), MEM_SIZE as u64);

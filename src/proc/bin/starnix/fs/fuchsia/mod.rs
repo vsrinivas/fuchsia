@@ -4,28 +4,27 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 
+use crate::errno;
+use crate::error;
+use crate::from_status_like_fdio;
 use crate::fs::FileHandle;
 use crate::task::Kernel;
+use crate::types::*;
 
-mod pipe;
 mod remote;
 mod syslog;
 mod timer;
 
-pub use pipe::*;
 pub use remote::*;
 pub use syslog::*;
 pub use timer::*;
 
 /// Create a FileHandle from a zx::Handle.
-pub fn create_file_from_handle(
-    kern: &Kernel,
-    handle: zx::Handle,
-) -> Result<FileHandle, zx::Status> {
-    let info = handle.basic_info()?;
+pub fn create_file_from_handle(kern: &Kernel, handle: zx::Handle) -> Result<FileHandle, Errno> {
+    let info = handle.basic_info().map_err(|status| from_status_like_fdio!(status))?;
     match info.object_type {
-        zx::ObjectType::SOCKET => FuchsiaPipe::from_socket(kern, zx::Socket::from_handle(handle)),
-        _ => Err(zx::Status::NOT_SUPPORTED),
+        zx::ObjectType::SOCKET => create_fuchsia_pipe(kern, zx::Socket::from_handle(handle)),
+        _ => error!(ENOSYS),
     }
 }
 

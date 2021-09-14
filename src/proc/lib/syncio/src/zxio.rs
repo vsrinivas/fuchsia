@@ -14,6 +14,18 @@ pub type __int64_t = ::std::os::raw::c_long;
 pub type __uint64_t = ::std::os::raw::c_ulong;
 pub type zxio_flags_t = u32;
 pub type zxio_signals_t = u32;
+
+pub const ZXIO_SIGNAL_NONE: zxio_signals_t = 0;
+pub const ZXIO_SIGNAL_READABLE: zxio_signals_t = 1 << 0;
+pub const ZXIO_SIGNAL_WRITABLE: zxio_signals_t = 1 << 1;
+pub const ZXIO_SIGNAL_READ_DISABLED: zxio_signals_t = 1 << 2;
+pub const ZXIO_SIGNAL_WRITE_DISABLED: zxio_signals_t = 1 << 3;
+pub const ZXIO_SIGNAL_READ_THRESHOLD: zxio_signals_t = 1 << 4;
+pub const ZXIO_SIGNAL_WRITE_THRESHOLD: zxio_signals_t = 1 << 5;
+pub const ZXIO_SIGNAL_OUT_OF_BAND: zxio_signals_t = 1 << 6;
+pub const ZXIO_SIGNAL_ERROR: zxio_signals_t = 1 << 7;
+pub const ZXIO_SIGNAL_PEER_CLOSED: zxio_signals_t = 1 << 8;
+
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zxio_tag {
