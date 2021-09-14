@@ -44,8 +44,8 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "my-component-v2-rust"
-  manifest = "meta/my-component-v2-rust.cml"
+  component_name = "my_component_v2_rust"
+  manifest = "meta/my_component_v2_rust.cml"
   deps = [ ":bin" ]
 }
 

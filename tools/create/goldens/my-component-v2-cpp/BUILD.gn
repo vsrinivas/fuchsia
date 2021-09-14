@@ -49,8 +49,8 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "my-component-v2-cpp"
-  manifest = "meta/my-component-v2-cpp.cml"
+  component_name = "my_component_v2_cpp"
+  manifest = "meta/my_component_v2_cpp.cml"
   deps = [ ":bin" ]
 }
 
@@ -77,6 +77,5 @@ executable("unittests") {
 
 # Run with `fx test my-component-v2-cpp-unittests`.
 fuchsia_unittest_package("my-component-v2-cpp-unittests") {
-  manifest = "meta/my-component-v2-cpp-unittests.cml"
   deps = [ ":unittests" ]
 }

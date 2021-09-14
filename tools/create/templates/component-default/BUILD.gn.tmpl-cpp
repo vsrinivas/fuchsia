@@ -45,8 +45,8 @@ executable("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "{{PROJECT_NAME}}"
-  manifest = "meta/{{PROJECT_NAME}}.cml"
+  component_name = "{{snake_case PROJECT_NAME}}"
+  manifest = "meta/{{snake_case PROJECT_NAME}}.cml"
   deps = [ ":bin" ]
 }
 
@@ -73,6 +73,5 @@ executable("unittests") {
 
 # Run with `fx test {{PROJECT_NAME}}-unittests`.
 fuchsia_unittest_package("{{PROJECT_NAME}}-unittests") {
-  manifest = "meta/{{PROJECT_NAME}}-unittests.cml"
   deps = [ ":unittests" ]
 }

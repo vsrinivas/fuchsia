@@ -13,7 +13,7 @@
 
     // Information about the program to run.
     program: {
-        // Use the built-in ELF runner to run native binaries.
+        // Use the built-in ELF runner.
         runner: "elf",
 
         // The binary to run for this component.

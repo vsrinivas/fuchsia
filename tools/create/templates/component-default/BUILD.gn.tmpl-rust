@@ -40,8 +40,8 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "{{PROJECT_NAME}}"
-  manifest = "meta/{{PROJECT_NAME}}.cml"
+  component_name = "{{snake_case PROJECT_NAME}}"
+  manifest = "meta/{{snake_case PROJECT_NAME}}.cml"
   deps = [ ":bin" ]
 }
 

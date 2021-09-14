@@ -82,8 +82,7 @@ golden_test("my-component-v2-cpp") {
   golden_files = [
     "my-component-v2-cpp/BUILD.gn",
     "my-component-v2-cpp/main.cc",
-    "my-component-v2-cpp/meta/my-component-v2-cpp.cml",
-    "my-component-v2-cpp/meta/my-component-v2-cpp-unittests.cml",
+    "my-component-v2-cpp/meta/my_component_v2_cpp.cml",
     "my-component-v2-cpp/my_component_v2_cpp.cc",
     "my-component-v2-cpp/my_component_v2_cpp.h",
     "my-component-v2-cpp/my_component_v2_cpp_unittest.cc",
@@ -98,7 +97,7 @@ golden_test("my-component-v2-rust") {
   language = "rust"
   golden_files = [
     "my-component-v2-rust/BUILD.gn",
-    "my-component-v2-rust/meta/my-component-v2-rust.cml",
+    "my-component-v2-rust/meta/my_component_v2_rust.cml",
     "my-component-v2-rust/README.md",
     "my-component-v2-rust/src/main.rs",
   ]
@@ -112,7 +111,7 @@ golden_test("my-component-test-cpp") {
   language = "cpp"
   golden_files = [
     "my-component-test-cpp/BUILD.gn",
-    "my-component-test-cpp/meta/my-component-test-cpp.cml",
+    "my-component-test-cpp/meta/my_component_test_cpp.cml",
     "my-component-test-cpp/README.md",
     "my-component-test-cpp/my_component_test_cpp.cc",
   ]
@@ -126,7 +125,7 @@ golden_test("my-component-test-rust") {
   language = "rust"
   golden_files = [
     "my-component-test-rust/BUILD.gn",
-    "my-component-test-rust/meta/my-component-test-rust.cml",
+    "my-component-test-rust/meta/my_component_test_rust.cml",
     "my-component-test-rust/README.md",
     "my-component-test-rust/src/lib.rs",
   ]

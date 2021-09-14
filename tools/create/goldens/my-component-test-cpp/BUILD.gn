@@ -36,8 +36,8 @@ test("bin") {
 
 fuchsia_component("component") {
   testonly = true
-  component_name = "my-component-test-cpp"
-  manifest = "meta/my-component-test-cpp.cml"
+  component_name = "my_component_test_cpp"
+  manifest = "meta/my_component_test_cpp.cml"
   deps = [ ":bin" ]
 }
 

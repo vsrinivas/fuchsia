@@ -35,8 +35,8 @@ rustc_test("bin") {
 
 fuchsia_component("component") {
   testonly = true
-  component_name = "my-component-test-rust"
-  manifest = "meta/my-component-test-rust.cml"
+  component_name = "my_component_test_rust"
+  manifest = "meta/my_component_test_rust.cml"
   deps = [ ":bin" ]
 }
 
