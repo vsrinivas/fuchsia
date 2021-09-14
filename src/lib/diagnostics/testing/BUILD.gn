@@ -2,16 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 group("testing") {
-  deps = [
-    "fake-archive-accessor",
-    "rust",
-  ]
+  deps = [ "fake-archive-accessor" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    "fake-archive-accessor:tests",
-    "rust:tests",
-  ]
+  deps = [ "fake-archive-accessor:tests" ]
 }
