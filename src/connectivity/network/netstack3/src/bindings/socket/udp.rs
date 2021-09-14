@@ -21,7 +21,7 @@ use fidl_fuchsia_posix_socket::{
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
 use futures::{StreamExt as _, TryFutureExt as _};
-use log::{debug, error, trace};
+use log::{error, trace};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
