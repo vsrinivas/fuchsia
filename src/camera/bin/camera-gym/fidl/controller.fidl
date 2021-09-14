@@ -39,11 +39,17 @@ type SetResolutionCommand = struct {
     async bool; // Do not wait until operation completes before returning
 };
 
+/// "set-description" command shall turn on or off the text description on displayed streams
+type SetDescriptionCommand = struct {
+    enable bool;
+};
+
 type Command = strict union {
     1: set_config SetConfigCommand;
     2: add_stream AddStreamCommand;
     3: set_crop SetCropCommand;
     4: set_resolution SetResolutionCommand;
+    5: set_description SetDescriptionCommand;
 };
 
 @discoverable
