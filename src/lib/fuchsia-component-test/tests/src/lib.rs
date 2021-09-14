@@ -360,10 +360,8 @@ async fn altered_echo_client_args() -> Result<(), Error> {
     let mut echo_client_decl = realm.get_decl(&"echo_client".into()).await?;
     for entry in echo_client_decl.program.as_mut().unwrap().info.entries.as_mut().unwrap() {
         if entry.key.as_str() == "args" {
-            entry.value = Some(Box::new(fdata::DictionaryValue::StrVec(vec![
-                "Whales".to_string(),
-                "rule!".to_string(),
-            ])));
+            entry.value =
+                Some(Box::new(fdata::DictionaryValue::StrVec(vec!["Whales rule!".to_string()])));
         }
     }
     realm.set_component(&"echo_client".into(), echo_client_decl).await?;

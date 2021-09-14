@@ -4,8 +4,7 @@
     ],
     "program": {
         "args": [
-            "Hello",
-            "Fuchsia!"
+            "Hello Fuchsia!"
         ],
         "binary": "bin/echo_client"
     },

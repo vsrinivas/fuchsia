@@ -10,6 +10,7 @@
         "syslog/client.shard.cml",
     ],
 
+    // [START program_args]
     // Information about the program to run.
     program: {
         // Use the built-in ELF runner.
@@ -19,11 +20,10 @@
         binary: "bin/echo_client",
 
         // Program arguments
-        args: [
-            "Hello",
-            "Fuchsia!",
-        ],
+        args: [ "Hello Fuchsia!" ],
     },
+
+    // [END program_args]
 
     // [END_EXCLUDE]
 

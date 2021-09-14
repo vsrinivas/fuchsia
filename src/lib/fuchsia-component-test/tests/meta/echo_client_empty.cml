@@ -9,10 +9,7 @@
     program: {
         runner: "elf",
         binary: "bin/echo_client",
-        args: [
-            "Hello",
-            "Fuchsia!",
-        ],
+        args: [ "Hello Fuchsia!" ],
     },
     use: [
         { protocol: "fidl.examples.routing.echo.Echo" },
