@@ -25,6 +25,8 @@ common_files = [
   "physical_device.h",
   "graphics_pipeline.cc",
   "graphics_pipeline.h",
+  "readback.cc",
+  "readback.h",
   "render_pass.cc",
   "render_pass.h",
   "shader.cc",

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <endian.h>
 #include <unistd.h>
 
 #include <cassert>
@@ -16,6 +17,7 @@
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
+#include "src/graphics/examples/vkproto/common/readback.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #ifdef __Fuchsia__
 #include "src/graphics/examples/vkproto/fuchsia/surface.h"
@@ -38,8 +40,6 @@ static bool DrawFrame(const vkp::Device& vkp_device, const vkp::Swapchain& swap_
 
 static bool DrawOffscreenFrame(const vkp::Device& vkp_device,
                                const vkp::CommandBuffers& command_buffers, const vk::Fence& fence);
-
-static bool Readback(const vkp::Device& vkp_device, const vkp::ImageView& image_view);
 
 void glfwErrorCallback(int error, const char* description) {
   fprintf(stderr, "glfwErrorCallback: %d : %s\n", error, description);
@@ -173,7 +173,15 @@ int main(int argc, char* argv[]) {
   device->waitIdle();
 
   if (offscreen) {
-    Readback(vkp_device, *vkp_offscreen_image_view);
+    // READBACK
+    std::vector<uint32_t> output_pixels(1);
+    vkp::ReadPixels(physical_device, *device, *(vkp_offscreen_image_view->image()), extent,
+                    vkp_command_pool->get(), vkp_device.queue(), vk::Extent2D{1, 1}, vk::Offset2D{},
+                    &output_pixels);
+    uint32_t output_pixel = htole32(output_pixels[0]);
+    printf("Clear Color Read: %02x,%02x,%02x,%02x\n", (uint8_t)(output_pixel >> 0) & 0xFF,
+           (uint8_t)(output_pixel >> 8) & 0xFF, (uint8_t)(output_pixel >> 16) & 0xFF,
+           (uint8_t)(output_pixel >> 24) & 0xFF);
   }
 
 #if USE_GLFW
@@ -258,19 +266,5 @@ bool DrawOffscreenFrame(const vkp::Device& vkp_device,
 
   RTN_IF_VKH_ERR(false, vkp_device.queue().submit(1, &submit_info, fence),
                  "Failed to offscreen submit command buffer.\n");
-  return true;
-}
-
-bool Readback(const vkp::Device& vkp_device, const vkp::ImageView& vkp_image_view) {
-  const vk::Device& device = vkp_device.get();
-  vk::DeviceMemory device_memory = *(vkp_image_view.image_memory());
-  auto rv = device.mapMemory(device_memory, 0 /* offset */, VK_WHOLE_SIZE,
-                             static_cast<vk::MemoryMapFlags>(0));
-  RTN_IF_VKH_ERR(false, rv.result, "Memory map failed.\n");
-  uint8_t* image_buffer = static_cast<uint8_t*>(rv.value);
-  printf("Clear Color Read Back: (%02x,%02x,%02x,%02x)\n", *(image_buffer + 0), *(image_buffer + 1),
-         *(image_buffer + 2), *(image_buffer + 3));
-  device.unmapMemory(device_memory);
-
   return true;
 }

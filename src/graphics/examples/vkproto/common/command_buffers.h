@@ -19,7 +19,7 @@ namespace vkp {
 
 class CommandBuffers {
  public:
-  static constexpr std::array<float, 4> magenta_s = {0.5f, 0.0f, 0.5f, 1.0f};
+  static constexpr std::array<float, 4> magenta_s = {0.2f, 0.0f, 0.5f, 1.0f};
   CommandBuffers(std::shared_ptr<vk::Device> device, std::shared_ptr<CommandPool> vkp_command_pool,
                  const std::vector<vk::UniqueFramebuffer> &framebuffers,
                  const vk::Pipeline &graphics_pipeline, const vk::RenderPass &render_pass,

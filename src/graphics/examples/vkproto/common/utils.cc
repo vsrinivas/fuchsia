@@ -158,19 +158,22 @@ bool FindQueueFamilyIndex(vk::PhysicalDevice physical_device, VkSurfaceKHR surfa
   RTN_MSG(false, "No matching queue family index found.\n");
 }
 
-int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
-                    const vk::MemoryPropertyFlags &memory_prop_flags) {
+vk::Result FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
+                           const vk::MemoryPropertyFlags &memory_prop_flags,
+                           uint32_t *memory_type_index) {
   vk::PhysicalDeviceMemoryProperties memory_props;
   phys_dev.getMemoryProperties(&memory_props);
 
   for (uint32_t i = 0; i < memory_props.memoryTypeCount; i++) {
     if ((memory_type_bits & (1 << i)) &&
         (memory_props.memoryTypes[i].propertyFlags & memory_prop_flags) == memory_prop_flags) {
-      return i;
+      *memory_type_index = i;
+      return vk::Result::eSuccess;
     }
   }
 
-  RTN_MSG(-1, "Error: Unable to find memory property index.");
+  RTN_MSG(vk::Result::eErrorFormatNotSupported,
+          "Error: Unable to find memory property index for format.");
 }
 
 void LogMemoryProperties(const vk::PhysicalDevice &phys_dev) {

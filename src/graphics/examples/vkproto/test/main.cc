@@ -5,16 +5,16 @@
 #include <gtest/gtest.h>
 
 #include "src/graphics/examples/vkproto/common/command_buffers.h"
+#include "src/graphics/examples/vkproto/common/command_pool.h"
 #include "src/graphics/examples/vkproto/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
+#include "src/graphics/examples/vkproto/common/readback.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #include "src/graphics/examples/vkproto/common/swapchain.h"
 #include "src/graphics/examples/vkproto/common/utils.h"
-
-#include <vulkan/vulkan.hpp>
 
 std::shared_ptr<vk::Device> MakeSharedDevice(const vk::PhysicalDevice& physical_device,
                                              uint32_t* queue_family_index) {
@@ -36,20 +36,8 @@ bool DrawOffscreenFrame(const vk::Device& device, const vk::Queue& queue,
   device.resetFences(1, &fence);
 
   EXPECT_EQ(vk::Result::eSuccess, queue.submit(1, &submit_info, fence))
-      << "Failed to offscreen submit command buffer.\n";
+      << "Failed to submit command buffer for offscreen draw.\n";
   return true;
-}
-
-void Readback(const vk::Device& device, const vk::DeviceMemory& device_memory) {
-  auto [r_mapped_memory, mapped_memory] =
-      device.mapMemory(device_memory, 0 /* offset */, VK_WHOLE_SIZE, vk::MemoryMapFlags{});
-  ASSERT_EQ(r_mapped_memory, vk::Result::eSuccess) << "Memory map failed.\n";
-  uint8_t* image_buffer = static_cast<uint8_t*>(mapped_memory);
-  EXPECT_EQ(0x80, *(image_buffer + 0));
-  EXPECT_EQ(0x00, *(image_buffer + 1));
-  EXPECT_EQ(0x80, *(image_buffer + 2));
-  EXPECT_EQ(0xff, *(image_buffer + 3));
-  device.unmapMemory(device_memory);
 }
 
 void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::Device> device,
@@ -94,7 +82,18 @@ void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::D
   vk::Queue queue = device->getQueue(queue_family_index, 0);
   DrawOffscreenFrame(*device, queue, command_buffer, fence.get());
   device->waitIdle();
-  Readback(*device, *(vkp_image_view.image_memory()));
+
+  // READBACK
+  std::vector<uint8_t> clear_color = {0x7f, 0x00, 0x33, 0xff};
+  std::vector<uint32_t> output_pixels(1);
+  vkp::ReadPixels(physical_device, *device, *(vkp_image_view.image()), extent,
+                  vkp_command_pool->get(), queue, vk::Extent2D{1, 1}, vk::Offset2D{},
+                  &output_pixels);
+  uint32_t output_pixel = htole32(output_pixels[0]);
+  EXPECT_NEAR(clear_color[0], (uint8_t)((output_pixel >> 0) & 0xFF), 1);
+  EXPECT_NEAR(clear_color[1], (uint8_t)((output_pixel >> 8) & 0xFF), 1);
+  EXPECT_NEAR(clear_color[2], (uint8_t)((output_pixel >> 16) & 0xFF), 1);
+  EXPECT_NEAR(clear_color[3], (uint8_t)((output_pixel >> 24) & 0xFF), 1);
 }
 
 // Test to verify that destruction of vkp::Device container doesn't affect

@@ -25,7 +25,7 @@ bool ImageView::Init() {
   image_info.format = format_;
   image_info.imageType = vk::ImageType::e2D;
   image_info.initialLayout = vk::ImageLayout::eUndefined;
-  image_info.tiling = vk::ImageTiling::eLinear;
+  image_info.tiling = vk::ImageTiling::eOptimal;
   image_info.mipLevels = 1;
   image_info.samples = vk::SampleCountFlagBits::e1;
   image_info.sharingMode = vk::SharingMode::eExclusive;
@@ -39,9 +39,11 @@ bool ImageView::Init() {
   auto image_memory_requirements = device_->getImageMemoryRequirements(*image_);
   vk::MemoryAllocateInfo alloc_info;
   alloc_info.allocationSize = image_memory_requirements.size;
-  alloc_info.memoryTypeIndex = FindMemoryIndex(
-      physical_device_, image_memory_requirements.memoryTypeBits,
-      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+  RTN_IF_VKH_ERR(
+      false,
+      FindMemoryIndex(physical_device_, image_memory_requirements.memoryTypeBits,
+                      vk::MemoryPropertyFlagBits::eDeviceLocal, &alloc_info.memoryTypeIndex),
+      "Failed to find matching memory index.");
   auto [r_image_memory, image_memory] = device_->allocateMemoryUnique(alloc_info);
   RTN_IF_VKH_ERR(false, r_image_memory, "Failed to allocate device memory for image.\n");
   image_memory_ = std::move(image_memory);

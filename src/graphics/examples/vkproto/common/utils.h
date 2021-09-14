@@ -82,9 +82,11 @@ bool FindQueueFamilyIndex(vk::PhysicalDevice phys_device, VkSurfaceKHR surface =
                           vk::QueueFlags queue_flags = vk::QueueFlagBits::eGraphics,
                           uint32_t *queue_family_index = nullptr);
 
-// Find physical device memory property index for |properties|.
-int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, uint32_t memory_type_bits,
-                    const vk::MemoryPropertyFlags &memory_prop_flags);
+// Find physical device memory property index for |properties|.  Returns
+// vk::Result::eErrorFormatNotSupported if a matching memory type is not found.
+vk::Result FindMemoryIndex(const vk::PhysicalDevice &phys_dev, uint32_t memory_type_bits,
+                           const vk::MemoryPropertyFlags &memory_prop_flags,
+                           uint32_t *memory_type_index);
 
 // Log physical device memory properties.
 void LogMemoryProperties(const vk::PhysicalDevice &phys_dev);
