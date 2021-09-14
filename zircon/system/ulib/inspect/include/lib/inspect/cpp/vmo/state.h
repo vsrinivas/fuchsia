@@ -14,6 +14,7 @@
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
 #include <zircon/types.h>
 
@@ -111,7 +112,7 @@ class State final {
   // Create a new |ByteVectorProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   ByteVectorProperty CreateByteVectorProperty(BorrowedStringValue name, BlockIndex parent,
-                                              const std::vector<uint8_t>& value);
+                                              cpp20::span<const uint8_t> value);
 
   // Create a new [Link] in the Inspect VMO. The returned node releases the link when destroyed.
   //
@@ -152,7 +153,7 @@ class State final {
   void SetUintArray(UintArray* array, size_t index, uint64_t value);
   void SetDoubleArray(DoubleArray* array, size_t index, double value);
   void SetStringProperty(StringProperty* property, const std::string& value);
-  void SetByteVectorProperty(ByteVectorProperty* property, const std::vector<uint8_t>& value);
+  void SetByteVectorProperty(ByteVectorProperty* property, cpp20::span<const uint8_t> value);
 
   // Adders for various property types
   void AddIntProperty(IntProperty* property, int64_t value);

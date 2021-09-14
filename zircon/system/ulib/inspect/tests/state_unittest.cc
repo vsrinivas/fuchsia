@@ -1062,7 +1062,13 @@ TEST(State, SetSmallBinaryProperty) {
   auto state = InitState(4096);
   ASSERT_TRUE(state != NULL);
 
-  ByteVectorProperty a = state->CreateByteVectorProperty("a", 0, {'a', 'b', 'c', 'd'});
+  const uint8_t binary[] = {
+      'a',
+      'b',
+      'c',
+      'd',
+  };
+  ByteVectorProperty a = state->CreateByteVectorProperty("a", 0, binary);
 
   a.Set({'a', 'a', 'a', 'a'});
 

@@ -360,7 +360,7 @@ StringProperty Node::CreateString(BorrowedStringValue name, const std::string& v
 }
 
 ByteVectorProperty Node::CreateByteVector(BorrowedStringValue name,
-                                          const std::vector<uint8_t>& value) {
+                                          cpp20::span<const uint8_t> value) {
   if (state_) {
     return state_->CreateByteVectorProperty(name, value_index_, value);
   }

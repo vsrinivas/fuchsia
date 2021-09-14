@@ -9,6 +9,7 @@
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
@@ -525,14 +526,14 @@ class Node final {
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
   ByteVectorProperty CreateByteVector(BorrowedStringValue name,
-                                      const std::vector<uint8_t>& value) __WARN_UNUSED_RESULT;
+                                      cpp20::span<const uint8_t> value) __WARN_UNUSED_RESULT;
 
   // Same as CreateByteVector, but emplaces the value in the given container.
   //
   // The type of |list| must have method emplace(ByteVectorProperty).
   // inspect::ValueList is recommended for most use cases.
   template <typename T>
-  void CreateByteVector(BorrowedStringValue name, const std::vector<uint8_t>& value, T* list) {
+  void CreateByteVector(BorrowedStringValue name, cpp20::span<const uint8_t> value, T* list) {
     list->emplace(CreateByteVector(name, value));
   }
 

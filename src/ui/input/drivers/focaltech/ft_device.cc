@@ -334,7 +334,7 @@ void FtDevice::LogRegisterValue(uint8_t addr, const char* name) {
   uint8_t value;
   zx_status_t status = Read(addr, &value, sizeof(value));
   if (status == ZX_OK) {
-    node_.CreateByteVector(name, {value}, &values_);
+    node_.CreateByteVector(name, {&value, sizeof(value)}, &values_);
     zxlogf(INFO, "  %-16s: 0x%02x", name, value);
   } else {
     node_.CreateString(name, "error", &values_);

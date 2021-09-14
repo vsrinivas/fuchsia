@@ -75,7 +75,7 @@ void Gt92xxDevice::LogFirmwareStatus() {
   uint8_t config_version;
   zx_status_t status = Read(GT_REG_CONFIG_DATA, &config_version, sizeof(config_version));
   if (status == ZX_OK) {
-    node_.CreateByteVector("CONFIG_VERSION", {config_version}, &values_);
+    node_.CreateByteVector("CONFIG_VERSION", {&config_version, sizeof(config_version)}, &values_);
     zxlogf(INFO, "  CONFIG_VERSION: 0x%02x", config_version);
   } else {
     node_.CreateString("CONFIG_VERSION", "error", &values_);
@@ -88,7 +88,8 @@ void Gt92xxDevice::LogFirmwareStatus() {
   };
   status = Read(GT_REG_FW_VERSION, fw_buffer, sizeof(fw_buffer));
   if (status == ZX_OK) {
-    node_.CreateByteVector("FW_VERSION", {fw_buffer[1], fw_buffer[0]}, &values_);
+    const uint8_t fw_buffer_rev[] = { fw_buffer[1], fw_buffer[0] };
+    node_.CreateByteVector("FW_VERSION", fw_buffer_rev, &values_);
     fw_version = le16toh(fw_version);
     zxlogf(INFO, "  FW_VERSION: 0x%04x", fw_version);
   } else {

@@ -346,8 +346,8 @@ StringProperty State::CreateStringProperty(BorrowedStringValue name, BlockIndex 
 }
 
 ByteVectorProperty State::CreateByteVectorProperty(BorrowedStringValue name, BlockIndex parent,
-                                                   const std::vector<uint8_t>& value) {
-  return InnerCreateProperty<ByteVectorProperty, std::vector<uint8_t>>(
+                                                   cpp20::span<const uint8_t> value) {
+  return InnerCreateProperty<ByteVectorProperty, cpp20::span<const uint8_t>>(
       name, parent, reinterpret_cast<const char*>(value.data()), value.size(),
       PropertyBlockFormat::kBinary);
 }
@@ -618,7 +618,7 @@ void State::SetStringProperty(StringProperty* property, const std::string& value
   InnerSetProperty(property, value.data(), value.size());
 }
 
-void State::SetByteVectorProperty(ByteVectorProperty* property, const std::vector<uint8_t>& value) {
+void State::SetByteVectorProperty(ByteVectorProperty* property, cpp20::span<const uint8_t> value) {
   InnerSetProperty(property, reinterpret_cast<const char*>(value.data()), value.size());
 }
 
