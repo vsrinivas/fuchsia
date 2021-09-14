@@ -228,8 +228,8 @@ pub struct ModelConfig {
     pub build_path: PathBuf,
     /// Path to the local Fuchsia package repository.
     pub repository_path: PathBuf,
-    /// Path to the local Fuchsia package repository blobs.
-    pub repository_blobs_path: PathBuf,
+    /// Path to the local Fuchsia blob manifest file.
+    pub blob_manifest_path: PathBuf,
     /// The URL of the Fuchsia update package.
     pub update_package_url: String,
     /// The URL of the Fuchsia config-data package.
@@ -248,12 +248,13 @@ impl ModelConfig {
     pub fn default() -> ModelConfig {
         let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
         let repository_path = build_path.join("amber-files/repository");
-        let repository_blobs_path = build_path.join("amber-files/blobs");
+        let blob_manifest_path =
+            build_path.join("obj/build/images/fuchsia/fuchsia/gen/blob.manifest");
         ModelConfig {
             uri: "{memory}".to_string(),
             build_path,
             repository_path,
-            repository_blobs_path,
+            blob_manifest_path,
             update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
             zbi_path: "fuchsia.zbi".to_string(),
@@ -275,9 +276,9 @@ impl ModelConfig {
     pub fn repository_path(&self) -> PathBuf {
         self.repository_path.clone()
     }
-    /// The Fuchsia repository blobs path.
-    pub fn repository_blobs_path(&self) -> PathBuf {
-        self.repository_blobs_path.clone()
+    /// Path to the local Fuchsia blob manifest file.
+    pub fn blob_manifest_path(&self) -> PathBuf {
+        self.blob_manifest_path.clone()
     }
     /// The Fuchsia package url of the update package.
     pub fn update_package_url(&self) -> String {

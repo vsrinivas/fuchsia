@@ -10,11 +10,14 @@ use {
 /// Creates a simple fake model configuration that uses an in memory uri and
 /// tempdata() directories for the required build locations.
 pub fn fake_model_config() -> ModelConfig {
+    let dir_path = tempdir().unwrap().into_path();
+    let mut blob_manifest_path = dir_path.clone();
+    blob_manifest_path.push("blob.manifest");
     ModelConfig {
         uri: "{memory}".to_string(),
-        build_path: tempdir().unwrap().into_path(),
-        repository_path: tempdir().unwrap().into_path(),
-        repository_blobs_path: tempdir().unwrap().into_path(),
+        build_path: dir_path.clone(),
+        repository_path: dir_path.clone(),
+        blob_manifest_path,
         update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
         config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
         zbi_path: "fuchsia.zbi".to_string(),

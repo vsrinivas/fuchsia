@@ -4,21 +4,21 @@
 
 use {
     crate::core::collection::Packages,
-    anyhow::anyhow,
-    anyhow::Result,
+    anyhow::{anyhow, Context, Result},
     fuchsia_archive::Reader as FarReader,
     scrutiny::{
         model::controller::{ConnectionMode, DataController, HintDataType},
-        model::model::*,
+        model::model::DataModel,
     },
-    scrutiny_utils::usage::*,
+    scrutiny_utils::{key_value::parse_key_value, usage::UsageBuilder},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::fs::{self, File},
-    std::io::prelude::*,
-    std::io::Cursor,
-    std::path::PathBuf,
-    std::sync::Arc,
+    std::{
+        fs::{self, File},
+        io::{Cursor, Read, Write},
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
 };
 
 #[derive(Deserialize, Serialize)]
@@ -29,23 +29,93 @@ pub struct PackageExtractRequest {
     pub output: String,
 }
 
+fn read_file_to_string<P>(path: &P) -> Result<String>
+where
+    P: AsRef<Path>,
+{
+    fs::read_to_string(path).map_err(|err| {
+        anyhow!("Failed to read file from {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
+fn create_dir_all<P: AsRef<Path> + ?Sized>(path: &P) -> Result<()> {
+    fs::create_dir_all(path).map_err(|err| {
+        anyhow!("Failed to create directory {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
+fn open_file<P>(path: &P) -> Result<fs::File>
+where
+    P: AsRef<Path>,
+{
+    File::open(path).map_err(|err| {
+        anyhow!("Failed to open file at {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
+fn read_file_to_end<P>(path: &P, file: &mut fs::File, buf: &mut Vec<u8>) -> Result<usize>
+where
+    P: AsRef<Path>,
+{
+    file.read_to_end(buf).map_err(|err| {
+        anyhow!("Failed to read file at {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
+fn create_file<P>(path: &P) -> Result<fs::File>
+where
+    P: AsRef<Path>,
+{
+    File::create(path).map_err(|err| {
+        anyhow!("Failed to create file at {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
+fn write_file<P>(path: &P, file: &mut fs::File, buf: &mut [u8]) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    file.write_all(buf).map_err(|err| {
+        anyhow!("Failed to write file at {}: {}", path.as_ref().display(), err.to_string())
+    })
+}
+
 #[derive(Default)]
 pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let blob_dir = model.config().repository_blobs_path();
+        let blob_manifest_path = model.config().blob_manifest_path();
+        let blob_manifest = parse_key_value(
+            read_file_to_string(&blob_manifest_path).context("Failed to read blob manifest")?,
+        )
+        .context("Failed to parse blob manifest")?;
+
+        // Paths in blob manifest are relative to manifest file's directory.
+        let mut blob_dir = blob_manifest_path.clone();
+        blob_dir.pop();
+
         let request: PackageExtractRequest = serde_json::from_value(query)?;
         let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {
             if package.url == request.url {
                 let output_path = PathBuf::from(request.output);
-                fs::create_dir_all(&output_path)?;
+                create_dir_all(&output_path).context("Failed to create output directory")?;
 
-                let pkg_path = blob_dir.clone().join(package.merkle.clone());
-                let mut pkg_file = File::open(pkg_path)?;
+                let pkg_path = blob_manifest.get(&package.merkle);
+                if pkg_path.is_none() {
+                    return Err(anyhow!(
+                        "Failed to locate blob ID {} in blob manifest at {}",
+                        &package.merkle,
+                        blob_manifest_path.as_path().display()
+                    ));
+                }
+
+                let pkg_path = blob_dir.clone().join(pkg_path.unwrap());
+                let mut pkg_file = open_file(&pkg_path).context("Failed to open package")?;
                 let mut pkg_buffer = Vec::new();
-                pkg_file.read_to_end(&mut pkg_buffer)?;
+                read_file_to_end(&pkg_path, &mut pkg_file, &mut pkg_buffer)
+                    .context("Failed to read package")?;
 
                 let mut cursor = Cursor::new(pkg_buffer);
                 let mut far = FarReader::new(&mut cursor)?;
@@ -53,34 +123,50 @@ impl DataController for PackageExtractController {
                 let pkg_files: Vec<String> = far.list().map(|e| e.path().to_string()).collect();
                 // Extract all the far meta files.
                 for file_name in pkg_files.iter() {
-                    let data = far.read_file(file_name)?;
+                    let mut data = far.read_file(file_name)?;
                     let file_path = output_path.clone().join(file_name);
                     if let Some(parent_dir) = file_path.as_path().parent() {
-                        fs::create_dir_all(parent_dir)?;
+                        create_dir_all(parent_dir)
+                            .context("Failed to create far meta directory")?;
                     }
-                    let mut package_file = File::create(file_path)?;
-                    package_file.write_all(&data)?;
+                    let mut package_file =
+                        create_file(&file_path).context("Failed to create package file")?;
+                    write_file(&file_path, &mut package_file, &mut data)
+                        .context("Failed to write to package file")?;
                 }
 
                 // Extract all the contents of the package.
                 for (file_name, blob) in package.contents.iter() {
-                    let file_path = output_path.clone().join(file_name);
+                    let blob_path = blob_manifest.get(blob);
+                    if blob_path.is_none() {
+                        return Err(anyhow!(
+                            "Failed to locate blob ID {} in blob manifest at {}",
+                            blob,
+                            blob_manifest_path.as_path().display()
+                        ));
+                    }
 
-                    let blob_path = blob_dir.clone().join(blob);
-                    let mut blob_file = File::open(blob_path)?;
+                    let blob_path = blob_dir.clone().join(blob_path.unwrap());
+                    let file_path = output_path.clone().join(file_name);
+                    let mut blob_file =
+                        open_file(&blob_path).context("Failed to open package contents blob")?;
                     let mut blob_buffer = Vec::new();
-                    blob_file.read_to_end(&mut blob_buffer)?;
+                    read_file_to_end(&blob_path, &mut blob_file, &mut blob_buffer)
+                        .context("Failed to read package contents blob")?;
 
                     if let Some(parent_dir) = file_path.as_path().parent() {
-                        fs::create_dir_all(parent_dir)?;
+                        create_dir_all(parent_dir)
+                            .context("Failed to create directory for package contents file")?;
                     }
-                    let mut package_file = File::create(file_path)?;
-                    package_file.write_all(&blob_buffer)?;
+                    let mut packaged_file = create_file(&file_path)
+                        .context("Failed to create package contents file")?;
+                    write_file(&file_path, &mut packaged_file, &mut blob_buffer)
+                        .context("Failed to write package contents file")?;
                 }
                 return Ok(json!({"status": "ok"}));
             }
         }
-        Err(anyhow!("Unable to find package url"))
+        Err(anyhow!("Unable to find package with url {}", request.url))
     }
 
     fn description(&self) -> String {
