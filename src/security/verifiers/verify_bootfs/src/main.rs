@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     clap::{App, Arg},
-    scrutiny_config::Config,
+    scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
@@ -35,11 +35,15 @@ impl VerifyBootfs {
     /// Extracts the bootfs files from the provided zbi_path and compares
     /// it against the golden file.
     pub fn verify(&self) -> Result<()> {
-        let config = Config::run_command_with_plugins(
+        let config = Config::run_command_with_runtime(
             CommandBuilder::new("tool.zbi.list.bootfs")
                 .param("input", self.zbi_path.clone())
                 .build(),
-            vec!["ToolkitPlugin"],
+            RuntimeConfig {
+                logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+                plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+                ..RuntimeConfig::minimal()
+            },
         );
         let bootfs_files: Vec<String> = serde_json::from_str(
             &launcher::launch_from_config(config).context("failed to launch scrutiny")?,
