@@ -6,3 +6,6 @@
 name = "libm"
 version = "0.2.1"
 authors = ["The Fuchsia Authors <rust-fuchsia@fuchsia.com>"]
+
+[dependencies]
+static_assertions = "^1.1"

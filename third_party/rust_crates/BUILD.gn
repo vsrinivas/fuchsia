@@ -4774,6 +4774,7 @@ rust_library("libm-v0_2_1") {
   ]
 
   deps = []
+  deps += [ ":static_assertions-v1_1_0" ]
 
   rustenv = []
 
