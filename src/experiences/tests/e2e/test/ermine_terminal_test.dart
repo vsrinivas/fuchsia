@@ -100,6 +100,7 @@ void main() {
   test('Launch and close two terminal instances', () async {
     // Launch two instances of component.
     await ermine.launchFromAppLauncher('Terminal');
+    await _waitForViews(componentUrl, 1, testForFocus: true);
     await ermine.launchFromAppLauncher('Terminal');
     await _waitForViews(componentUrl, 2, testForFocus: true);
 
