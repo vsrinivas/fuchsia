@@ -104,7 +104,7 @@ rustc_test("setui_client_integration_test") {
 fuchsia_component("setui-client-integration-test") {
   testonly = true
   deps = [ ":setui_client_integration_test" ]
-  manifest = "meta/setui_client_integration_test.cmx"
+  manifest = "meta/setui_client_integration_test.cml"
 }
 
 fuchsia_test_package("setui-client-integration-tests") {
