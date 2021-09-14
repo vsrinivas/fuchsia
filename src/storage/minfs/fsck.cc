@@ -18,8 +18,11 @@
 #include <optional>
 #include <utility>
 
+#include <safemath/checked_math.h>
+
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
+#include "zircon/errors.h"
 #ifdef __Fuchsia__
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -151,7 +154,7 @@ class MinfsChecker {
 
   uint32_t alloc_inodes_ = 0;
   uint32_t alloc_blocks_ = 0;
-  fbl::Array<int32_t> links_;
+  fbl::Array<int64_t> links_;
 
   blk_t cached_doubly_indirect_;
   blk_t cached_indirect_;
@@ -567,14 +570,20 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
     return ZX_ERR_BAD_STATE;
   }
 
-  links_[ino - 1] += 1;
+  if (!safemath::CheckAdd(links_[ino - 1], 1).AssignIfValid(&links_[ino - 1])) {
+    FX_LOGS(ERROR) << "Ino " << ino << " overflowed int64_t.";
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
   if (prev_checked) {
     // we've been here before
     return ZX_OK;
   }
 
-  links_[ino - 1] -= inode.link_count;
+  if (!safemath::CheckSub(links_[ino - 1], inode.link_count).AssignIfValid(&links_[ino - 1])) {
+    FX_LOGS(ERROR) << "Ino " << ino << " underflowed int64_t.";
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   checked_inodes_.Set(ino, ino + 1);
   max_inode_ = std::max(ino, max_inode_);
   alloc_inodes_++;
@@ -806,7 +815,7 @@ zx_status_t MinfsChecker::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<
   const Superblock& info = fs->Info();
 
   auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker(fsck_options));
-  checker->links_.reset(new int32_t[info.inode_count]{0}, info.inode_count);
+  checker->links_.reset(new int64_t[info.inode_count]{0}, info.inode_count);
   checker->links_[0] = -1;
   checker->cached_doubly_indirect_ = 0;
   checker->cached_indirect_ = 0;
