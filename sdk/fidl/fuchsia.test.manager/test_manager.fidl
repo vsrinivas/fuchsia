@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 library fuchsia.test.manager;
 
+using fuchsia.component;
 using fuchsia.developer.remotecontrol;
 using fuchsia.diagnostics;
+using fuchsia.io;
 using fuchsia.url;
 using zx;
 
@@ -330,6 +332,7 @@ type Artifact = flexible resource union {
     1: stdout zx.handle:SOCKET;
     2: stderr zx.handle:SOCKET;
     3: log Syslog;
+    4: custom CustomArtifact;
 };
 
 type Stdout = resource struct {
@@ -345,6 +348,26 @@ type Syslog = flexible resource union {
     1: archive client_end:fuchsia.developer.remotecontrol.ArchiveIterator;
     /// Client end of the iterator, when this protocol is used by Fuchsia clients.
     2: batch client_end:fuchsia.diagnostics.BatchIterator;
+};
+
+/// Arbitrary artifacts produced by a test.
+type CustomArtifact = resource table {
+    /// The moniker of the component that produced the directory, relative to
+    /// the root of the test realm.
+    1: component_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+
+    /// A handle to a directory containing arbitrary artifacts produced by a test.
+    2: directory_and_token DirectoryAndToken;
+};
+
+/// A handle to a directory and a token used to indicate when the client has
+/// completed inspecting the directory. The server end will retain all resources,
+/// such as subdirectories and files, within |directory| while |token| is open.
+/// |token| is used instead of observing the |directory| channel directly as it
+/// is possible to clone and open new channels to the same directory.
+type DirectoryAndToken = resource struct {
+    directory client_end:fuchsia.io.Directory;
+    token zx.handle:EVENTPAIR;
 };
 
 type CaseArtifact = resource struct {
