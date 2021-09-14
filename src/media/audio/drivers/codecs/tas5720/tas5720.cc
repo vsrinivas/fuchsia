@@ -242,14 +242,16 @@ zx::status<CodecFormatInfo> Tas5720::SetDaiFormat(const DaiFormat& format) {
   CodecFormatInfo state = {};
   // Turn on delay is tACTIVE (25ms) + tVRAMP (ramp time from -100dB to 0dB).
   if (rate_ >= 96'000) {
-    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(16.7).get());
+    state.set_turn_on_delay(zx::msec(25).get() + zx::usec(16'700).get());
   } else if (rate_ >= 88'200) {
-    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(18.1).get());
+    state.set_turn_on_delay(zx::msec(25).get() + zx::usec(18'100).get());
   } else if (rate_ >= 48'000) {
-    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(33.3).get());
+    state.set_turn_on_delay(zx::msec(25).get() + zx::usec(33'300).get());
   } else {
-    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(36.3).get());
+    state.set_turn_on_delay(zx::msec(25).get() + zx::usec(36'300).get());
   }
+  // Same time to turn on or off.
+  state.set_turn_off_delay(state.turn_on_delay());
   return zx::ok(std::move(state));
 }
 

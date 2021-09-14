@@ -78,6 +78,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
   uint32_t frame_rate_ = 0;
   int64_t codecs_turn_on_delay_nsec_ = 0;
+  int64_t codecs_turn_off_delay_nsec_ = 0;
   bool hardware_configured_ = false;
 
   async::TaskClosureMethod<AmlG12TdmStream, &AmlG12TdmStream::ProcessRingNotification> notify_timer_

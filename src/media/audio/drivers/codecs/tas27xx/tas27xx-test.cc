@@ -408,7 +408,10 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
     format.frame_rate = 48'000;
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::usec(5'300).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::usec(4'700).get(), codec_format_info->turn_off_delay());
   }
 
   {
@@ -417,7 +420,10 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
     format.channels_to_use_bitmask = 2;  // Use one channel (left) in this mono codec.
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::usec(5'300).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::usec(4'700).get(), codec_format_info->turn_off_delay());
   }
 
   {

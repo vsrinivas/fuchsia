@@ -247,7 +247,8 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
     zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
     ASSERT_OK(codec_format_info.status_value());
-    EXPECT_EQ(zx::msec(25).get() + zx::msec(33.3).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(33'300).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(33'300).get(), codec_format_info->turn_off_delay());
   }
 
   {
@@ -257,7 +258,8 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
     zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
     ASSERT_OK(codec_format_info.status_value());
-    EXPECT_EQ(zx::msec(25).get() + zx::msec(16.7).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(16'700).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(16'700).get(), codec_format_info->turn_off_delay());
   }
 
   {

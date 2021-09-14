@@ -477,7 +477,18 @@ zx::status<CodecFormatInfo> Tas27xx::SetDaiFormatInternal(const DaiFormat& forma
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(CodecFormatInfo{});
+  CodecFormatInfo info = {};
+
+  // Datasheet states "Turn on time from release of SW shutdown" with "Volume Ramping" as "5.3ms".
+  constexpr int64_t turn_on_delay_usec = 5'300;
+  info.set_turn_on_delay(zx::usec(turn_on_delay_usec).get());
+
+  // Datasheet states "Turn off time from assertion of SW shutdown to amp Hi-Z" with
+  // "Volume Ramping" as "4.7ms".
+  constexpr int64_t turn_off_delay_usec = 4'700;
+  info.set_turn_off_delay(zx::usec(turn_off_delay_usec).get());
+
+  return zx::ok(std::move(info));
 }
 
 zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
