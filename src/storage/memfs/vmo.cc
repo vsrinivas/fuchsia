@@ -130,6 +130,12 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
     }
   }
 
+  // If an exact copy is explicitly requested, but we created a local clone, e.g. because offset_
+  // is non-zero, the request should fail as per io.fidl since it cannot be satisfied.
+  if (have_local_clone_ && (flags & fuchsia_io::wire::kVmoFlagExact)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Let clients map their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
   rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
