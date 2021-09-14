@@ -19,14 +19,19 @@ $ fx build
 
 ## Running
 
-`ffx` can be used to run the `echo_realm` example:
+Use `ffx component create` to create the component instances inside a restricted
+realm for development purposes:
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_realm.cm
+$ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_realm.cm
 ```
 
-Make sure you have `fx serve` running in another terminal so your component can
-be installed!
+Start the client component instance by passing its moniker to
+`ffx component bind`:
+
+```bash
+$ ffx component bind /core/ffx-laboratory:echo_realm/echo_client
+```
 
 To see component manager's log of the failed capability routing, run:
 

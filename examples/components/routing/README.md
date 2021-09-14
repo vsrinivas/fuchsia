@@ -9,18 +9,25 @@ in [Component Framework](/docs/concepts/components/introduction.md).
 If these components are not present in your build, they can be added by
 appending `--with //examples` to your `fx set` command. For example:
 
-```
+```bash
 $ fx set core.x64 --with //examples --with //examples:tests
 $ fx build
 ```
 
 ## Running
 
-Use `ffx component run` to launch the components into a restricted realm
-for development purposes:
+Use `ffx component create` to create the component instances inside a restricted
+realm for development purposes:
 
+```bash
+$ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example#meta/echo_realm.cm
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/components-routing-example#meta/echo_realm.cm
+
+Start the client component instance by passing its moniker to
+`ffx component bind`:
+
+```bash
+$ ffx component bind /core/ffx-laboratory:echo_realm/echo_client
 ```
 
 When the above command is run, you can see the following output with `fx log`:
@@ -34,7 +41,7 @@ When the above command is run, you can see the following output with `fx log`:
 Integration tests for echo server are available in the `echo_integration_test`
 package. Use the `ffx test run` command to run the tests on a target device:
 
-```
+```bash
 $ ffx test run fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test.cm
 ```
 

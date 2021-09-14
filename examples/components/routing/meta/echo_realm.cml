@@ -1,7 +1,6 @@
 // Example realm that provisions an Echo client and service and eagerly runs the client.
 {
-    // Two children: a server and client. "echo_client" has "eager" startup so it
-    // will be started along with the realm.
+    // Two children: a server and client.
     children: [
         {
             name: "echo_server",
@@ -10,7 +9,6 @@
         {
             name: "echo_client",
             url: "#meta/echo_client.cm",
-            startup: "eager",
         },
     ],
 

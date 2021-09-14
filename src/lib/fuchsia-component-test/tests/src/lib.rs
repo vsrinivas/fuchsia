@@ -352,6 +352,9 @@ async fn altered_echo_client_args() -> Result<(), Error> {
                 .force(),
         )
         .await?;
+    // Mark echo_client as eager so it starts automatically when we bind to
+    // the realm component.
+    realm.mark_as_eager(&"echo_client".into()).await?;
 
     // Change the program.args section of the manifest, to alter the string it will try to echo
     let mut echo_client_decl = realm.get_decl(&"echo_client".into()).await?;

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Example realm that provisions an Echo client and service and eagerly runs the client. There is an
-// "intended" capability route between the client and server, but it is broken.
+// Example realm that provisions an Echo client and service and eagerly runs the client.
+// There is an "intended" capability route between the client and server, but it is broken.
 {
-    // Two children: a server and client. "echo_client" has "eager" startup so it
-    // will be started along with the realm.
     children: [
         {
             name: "echo_server",
@@ -19,7 +17,6 @@
         {
             name: "echo_client",
             url: "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_client.cm",
-            startup: "eager",
         },
     ],
     offer: [
