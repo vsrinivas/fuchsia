@@ -384,7 +384,7 @@ func TestSSHTester(t *testing.T) {
 // Creates pair of ReadWriteClosers that mimics the relationship between serial
 // and socket i/o. Implemented with in-memory pipes, the input of one can
 // synchronously by read as the output of the other.
-func serialAndSocket() (io.ReadWriteCloser, io.ReadWriteCloser) {
+func serialAndSocket() (socketConn, socketConn) {
 	rSerial, wSocket := io.Pipe()
 	rSocket, wSerial := io.Pipe()
 	serial := &joinedPipeEnds{rSerial, wSerial}
@@ -860,6 +860,9 @@ func (pe *joinedPipeEnds) Read(p []byte) (int, error) {
 
 func (pe *joinedPipeEnds) Write(p []byte) (int, error) {
 	return pe.w.Write(p)
+}
+
+func (pe *joinedPipeEnds) SetIOTimeout(_ time.Duration) {
 }
 
 func (pe *joinedPipeEnds) Close() error {

@@ -66,6 +66,8 @@ const (
 	llvmProfileEnvKey    = "LLVM_PROFILE_FILE"
 	llvmProfileExtension = ".profraw"
 	llvmProfileSinkType  = "llvm-profile"
+
+	testStartedTimeout = 5 * time.Second
 )
 
 // fatalError is a thin wrapper around another error. If returned by a tester's
@@ -475,9 +477,15 @@ func (t *fuchsiaSSHTester) Close() error {
 	return t.copier.Close()
 }
 
+// for testability
+type socketConn interface {
+	io.ReadWriteCloser
+	SetIOTimeout(timeout time.Duration)
+}
+
 // FuchsiaSerialTester executes fuchsia tests over serial.
 type fuchsiaSerialTester struct {
-	socket         io.ReadWriteCloser
+	socket         socketConn
 	perTestTimeout time.Duration
 	localOutputDir string
 }
@@ -499,7 +507,7 @@ func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTes
 
 // Exposed for testability.
 var newTestStartedContext = func(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, 5*time.Second)
+	return context.WithTimeout(ctx, testStartedTimeout)
 }
 
 // lastWriteSaver is an io.Writer that saves the bytes written in the last Write().
@@ -663,6 +671,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	// that indicate the test completed, then the startedReader will consume the bytes needed for detecting
 	// completion. Thus we save the last read from the socket and replay it when searching for completion.
 	lastWrite := &lastWriteSaver{}
+	t.socket.SetIOTimeout(testStartedTimeout)
 	startedReader := iomisc.NewMatchingReader(io.TeeReader(t.socket, lastWrite), [][]byte{[]byte(runtests.StartedSignature + test.Name)})
 	commandStarted := false
 	var readErr error
@@ -690,6 +699,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		return sinks, fatalError{err}
 	}
 
+	t.socket.SetIOTimeout(t.perTestTimeout + 30*time.Second)
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
 		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},

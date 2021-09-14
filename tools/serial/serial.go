@@ -62,6 +62,11 @@ func (s *SerialSocket) Write(p []byte) (int, error) {
 	return s.Conn.Write(p)
 }
 
+// SetIOTimeout sets the timeout for a single Read() or Write().
+func (s *SerialSocket) SetIOTimeout(timeout time.Duration) {
+	s.ioTimeout = timeout
+}
+
 // Open opens a new serial port using defaults.
 func Open(name string) (io.ReadWriteCloser, error) {
 	return OpenWithOptions(name, defaultBaudRate)

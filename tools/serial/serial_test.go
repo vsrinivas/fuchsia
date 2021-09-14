@@ -76,6 +76,17 @@ func TestRunCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSocket() failed: %v", err)
 	}
+
+	// Test that SetIOTimeout causes the socket to return from Read() even
+	// if there is nothing to read.
+	clientSocket.SetIOTimeout(time.Nanosecond)
+	buf := make([]byte, 10)
+	_, err = clientSocket.Read(buf)
+	if err == nil {
+		t.Errorf("expected Read() to get an error, got nil")
+	}
+	clientSocket.SetIOTimeout(defaultSocketIOTimeout)
+
 	diagnosticCmds = []Command{
 		{
 			Cmd: []string{"foo"},
