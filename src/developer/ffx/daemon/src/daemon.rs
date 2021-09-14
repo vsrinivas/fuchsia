@@ -422,6 +422,12 @@ impl Daemon {
                 match target_collection.upgrade() {
                     Some(target_collection) => {
                         for target in target_collection.targets() {
+                            // Manually-added remote targets will not be discovered by mDNS,
+                            // and as a result will not have host-pipe triggered automatically
+                            // by the mDNS event handler.
+                            if target.is_manual() {
+                                target.run_host_pipe();
+                            }
                             target.expire_state();
                         }
                     }
