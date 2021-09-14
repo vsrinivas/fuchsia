@@ -2,38 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errno;
+use super::*;
+
 use crate::error;
-use crate::fd_impl_nonseekable;
 use crate::fs::pipe::*;
 use crate::fs::*;
-use crate::mm::PAGE_SIZE;
 use crate::mode;
 use crate::task::Kernel;
-use crate::task::Task;
 use crate::types::locking::*;
 use crate::types::*;
 
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
-
-/// `SocketFs` is the file system where anonymous socket nodes are created, for example in
-/// `sys_socket`.
-pub struct SocketFs {}
-impl FileSystemOps for SocketFs {
-    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        let mut stat = statfs::default();
-        stat.f_type = SOCKFS_MAGIC as i64;
-        stat.f_bsize = *PAGE_SIZE;
-        stat.f_namelen = NAME_MAX as i64;
-        Ok(stat)
-    }
-}
-
-/// Returns a handle to the `SocketFs` instance in `kernel`, initializing it if needed.
-pub fn socket_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.socket_fs.get_or_init(|| FileSystem::new(SocketFs {}))
-}
 
 /// Creates a `FileHandle` where the associated `FsNode` contains a socket.
 ///
@@ -47,7 +27,7 @@ pub fn new_socket(kernel: &Kernel, open_flags: OpenFlags) -> FileHandle {
     let node = fs.create_node(Box::new(Anon), mode);
     node.set_socket(socket.clone());
 
-    FileObject::new_anonymous(Box::new(SocketFile { socket }), Arc::clone(&node), open_flags)
+    FileObject::new_anonymous(SocketFile::new(socket), Arc::clone(&node), open_flags)
 }
 
 #[derive(Default)]
@@ -153,66 +133,15 @@ impl Socket {
         self.control_message = Some(message);
     }
 
+    pub fn connected_node(&self) -> Option<FsNodeHandle> {
+        self.connected_node.upgrade()
+    }
+
     pub fn connected_socket(&self) -> Option<SocketHandle> {
         self.connected_node.upgrade().and_then(|node| node.socket().map(|s| s.clone()))
     }
-}
 
-struct SocketFile {
-    /// The socket associated with this file, used to read and write data.
-    socket: SocketHandle,
-}
-
-impl FileOps for SocketFile {
-    fd_impl_nonseekable!();
-
-    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        let mut socket = self.socket.lock();
-        let pipe = &mut socket.read_pipe;
-
-        let mut it = UserBufferIterator::new(data);
-        let bytes_read = pipe.read(task, &mut it)?;
-        if bytes_read > 0 {
-            file.node().observers.notify(FdEvents::POLLOUT);
-            socket.connected_node.upgrade().map(|connected_node| {
-                connected_node.observers.notify(FdEvents::POLLOUT);
-            });
-        }
-
-        Ok(bytes_read)
-    }
-
-    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        let requested = UserBuffer::get_total_length(data);
-        let mut actual = 0;
-        let mut it = UserBufferIterator::new(data);
-        file.blocking_op(
-            task,
-            || {
-                let connected_node = match self.socket.lock().connected_node.upgrade() {
-                    Some(node) => node,
-                    _ => return Ok(actual),
-                };
-                let mut connected_socket = match connected_node.socket() {
-                    Some(socket) => socket.lock(),
-                    _ => return Ok(actual),
-                };
-                actual += match connected_socket.read_pipe.write(task, &mut it) {
-                    Ok(chunk) => {
-                        if chunk > 0 {
-                            connected_node.observers.notify(FdEvents::POLLIN);
-                        }
-                        chunk
-                    }
-                    Err(errno) if errno == EPIPE && actual > 0 => return Ok(actual),
-                    Err(errno) => return Err(errno),
-                };
-                if actual < requested {
-                    return error!(EAGAIN);
-                }
-                Ok(actual)
-            },
-            FdEvents::POLLOUT,
-        )
+    pub fn pipe(&mut self) -> &mut Pipe {
+        &mut self.read_pipe
     }
 }
