@@ -12,6 +12,7 @@
 #include <zircon/compiler.h>
 
 #include <cstdint>
+#include <cstring>
 #include <ostream>
 
 #include <fbl/macros.h>
@@ -48,12 +49,18 @@ class Nhlt {
   // Get parsed I2S configs.
   const fbl::Vector<EndPointConfig>& configs() const { return configs_; }
 
+  bool IsOemMatch(std::string_view oem_id, std::string_view oem_table_id) const {
+    return oem_id == oem_id_ && oem_table_id == oem_table_id_;
+  }
+
   // Log debugging information about the NHLT to console.
   static void DumpNhlt(const uint8_t* data, size_t length);
   void Dump() const;
 
  private:
   fbl::Vector<EndPointConfig> configs_;
+  std::string oem_id_;
+  std::string oem_table_id_;
 };
 
 }  // namespace audio::intel_hda

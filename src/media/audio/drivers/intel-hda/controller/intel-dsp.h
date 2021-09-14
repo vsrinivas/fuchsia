@@ -56,8 +56,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   void ProcessIrq();
 
   // Start and stop DSP pipelines.
-  Status StartPipeline(DspPipeline pipeline);
-  Status PausePipeline(DspPipeline pipeline);
+  Status StartPipeline(DspPipelineId id);
+  Status PausePipeline(DspPipelineId id);
 
   void DeviceShutdown();
   zx_status_t Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,

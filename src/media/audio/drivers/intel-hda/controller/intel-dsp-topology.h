@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_TOPOLOGY_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_TOPOLOGY_H_
 
+#include <zircon/device/audio.h>
+
 #include <cstdint>
 
 #include "intel-dsp-modules.h"
@@ -13,9 +15,14 @@
 namespace audio {
 namespace intel_hda {
 
-// Represents a pipeline backing an audio stream.
-struct DspPipeline {
+// Represents an audio stream including a pipeline.
+struct DspStream {
   DspPipelineId id;
+  AudioDataFormat host_format;
+  uint32_t stream_id;
+  bool is_input;
+  audio_stream_unique_id_t uid;
+  std::string name;
 };
 
 zx_status_t GetNhltBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction, uint8_t type,

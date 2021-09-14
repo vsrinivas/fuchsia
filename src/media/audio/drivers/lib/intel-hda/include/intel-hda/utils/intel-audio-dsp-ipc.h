@@ -586,11 +586,17 @@ constexpr uint32_t NODE_ID_DMA_TYPE_MASK = 0x1F;
 constexpr uint32_t NODE_ID_DMA_TYPE_SHIFT = 8;
 constexpr uint32_t NODE_ID_I2S_INSTANCE_MASK = 0xF;
 constexpr uint32_t NODE_ID_I2S_INSTANCE_SHIFT = 4;
-constexpr uint32_t NODE_ID_TIME_SLOT_MASK = 0xF;
+constexpr uint32_t NODE_ID_I2S_TIME_SLOT_MASK = 0xF;
+constexpr uint32_t NODE_ID_I2S_TIME_SLOT_SHIFT = 0;
+constexpr uint32_t NODE_ID_DMIC_INSTANCE_MASK = 0x7;
+constexpr uint32_t NODE_ID_DMIC_INSTANCE_SHIFT = 5;
+constexpr uint32_t NODE_ID_DMIC_TIME_SLOT_MASK = 0x3;
+constexpr uint32_t NODE_ID_DMIC_TIME_SLOT_SHIFT = 3;
 constexpr uint32_t NODE_ID_DMA_ID_MASK = 0xFF;
 
 constexpr uint8_t DMA_TYPE_HDA_HOST_OUTPUT = 0;
 constexpr uint8_t DMA_TYPE_HDA_HOST_INPUT = 1;
+constexpr uint8_t DMA_TYPE_DMIC_LINK_INPUT = 11;
 constexpr uint8_t DMA_TYPE_I2S_LINK_OUTPUT = 12;
 constexpr uint8_t DMA_TYPE_I2S_LINK_INPUT = 13;
 
@@ -615,7 +621,13 @@ static inline constexpr uint32_t I2S_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8
                                                          uint8_t time_slot) {
   return ((dma_type & NODE_ID_DMA_TYPE_MASK) << NODE_ID_DMA_TYPE_SHIFT) |
          ((i2s_instance & NODE_ID_I2S_INSTANCE_MASK) << NODE_ID_I2S_INSTANCE_SHIFT) |
-         (time_slot & NODE_ID_TIME_SLOT_MASK);
+         ((time_slot & NODE_ID_I2S_TIME_SLOT_MASK) << NODE_ID_I2S_TIME_SLOT_SHIFT);
+}
+static inline constexpr uint32_t DMIC_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t dmic_instance,
+                                                          uint8_t time_slot) {
+  return ((dma_type & NODE_ID_DMA_TYPE_MASK) << NODE_ID_DMA_TYPE_SHIFT) |
+         ((dmic_instance & NODE_ID_DMIC_INSTANCE_MASK) << NODE_ID_DMIC_INSTANCE_SHIFT) |
+         ((time_slot & NODE_ID_DMIC_TIME_SLOT_MASK) << NODE_ID_DMIC_TIME_SLOT_SHIFT);
 }
 
 struct CopierCfg {

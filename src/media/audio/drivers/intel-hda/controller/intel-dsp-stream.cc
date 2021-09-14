@@ -20,26 +20,12 @@ namespace audio_fidl = fuchsia_hardware_audio;
 namespace audio {
 namespace intel_hda {
 
-IntelDspStream::IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline,
-                               fbl::String name, const audio_stream_unique_id_t* unique_id)
-    : IntelHDAStreamBase(id, is_input), name_(std::move(name)), pipeline_(pipeline) {
-  snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", is_input ? 'I' : 'O', id);
+IntelDspStream::IntelDspStream(const DspStream& stream)
+    : IntelHDAStreamBase(stream.stream_id, stream.is_input), stream_(stream) {
+  snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", stream.is_input ? 'I' : 'O',
+           stream.stream_id);
 
-  if (unique_id) {
-    SetPersistentUniqueId(*unique_id);
-  } else {
-    const audio_stream_unique_id_t uid = {'I',
-                                          'D',
-                                          'S',
-                                          'P',
-                                          static_cast<uint8_t>(id >> 24),
-                                          static_cast<uint8_t>(id >> 16),
-                                          static_cast<uint8_t>(id >> 8),
-                                          static_cast<uint8_t>(id),
-                                          static_cast<uint8_t>(is_input),
-                                          0};
-    SetPersistentUniqueId(uid);
-  }
+  SetPersistentUniqueId(stream.uid);
 }
 
 void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::Format format,
@@ -102,7 +88,7 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
   }
 
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  Status status = dsp->StartPipeline(pipeline_);
+  Status status = dsp->StartPipeline(stream_.id);
   if (!status.ok()) {
     LOG(ERROR, "Error on pipeline start res = %s", status.ToString().c_str());
     completer.Close(status.code());
@@ -115,7 +101,7 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
 void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  Status status = dsp->PausePipeline(pipeline_);
+  Status status = dsp->PausePipeline(stream_.id);
   if (!status.ok()) {
     LOG(ERROR, "Error on pipeline pause res = %s", status.ToString().c_str());
     completer.Close(status.code());
@@ -147,7 +133,7 @@ zx_status_t IntelDspStream::OnActivateLocked() {
   audio_stream_format_range_t fmt;
   fmt.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   fmt.min_frames_per_second = fmt.max_frames_per_second = 48000;
-  fmt.min_channels = fmt.max_channels = 2;
+  fmt.min_channels = fmt.max_channels = stream_.host_format.number_of_channels;
   fmt.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
   fbl::Vector<audio_proto::FormatRange> supported_formats;

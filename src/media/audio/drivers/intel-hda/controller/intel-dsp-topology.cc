@@ -4,8 +4,6 @@
 
 #include "intel-dsp-topology.h"
 
-#include <zircon/device/audio.h>
-
 #include <memory>
 
 #include <fbl/string_printf.h>
@@ -16,8 +14,6 @@
 
 namespace audio {
 namespace intel_hda {
-
-// Module config parameters extracted from kbl_i2s_chrome.conf
 
 // To route audio from the system memory to the audio codecs, we must
 // set up an appropriate _topology_ inside the DSP. Topologies consist
@@ -58,8 +54,8 @@ namespace intel_hda {
 constexpr uint8_t I2S0_BUS = 0;
 constexpr uint8_t I2S1_BUS = 1;
 
-// Use 48khz 16-bit stereo for host input/output.
-constexpr AudioDataFormat kHostFormat = {
+// Use 48khz 16-bit stereo for host I2S input/output.
+constexpr AudioDataFormat kHostI2sFormat = {
     .sampling_frequency = SamplingFrequency::FS_48000HZ,
     .bit_depth = BitDepth::DEPTH_16BIT,
     .channel_map = 0xFFFFFF10,
@@ -71,8 +67,19 @@ constexpr AudioDataFormat kHostFormat = {
     .reserved = 0,
 };
 
-// Format used by the Eve's Max98927 speaker codecs, and onboard mic,
-// which are both on the I2S-0 bus.
+// Format used for intermediate DSP operations in I2S input/output.
+const AudioDataFormat kDspI2sFormat = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_32BIT,
+    .channel_map = 0xFFFFFF10,
+    .channel_config = ChannelConfig::CONFIG_STEREO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 2,
+    .valid_bit_depth = 32,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
+};
+// Format used for I2S0 bus input/output.
 constexpr AudioDataFormat kFormatI2S0Bus = {
     .sampling_frequency = SamplingFrequency::FS_48000HZ,
     .bit_depth = BitDepth::DEPTH_32BIT,
@@ -81,34 +88,6 @@ constexpr AudioDataFormat kFormatI2S0Bus = {
     .interleaving_style = InterleavingStyle::PER_CHANNEL,
     .number_of_channels = 2,
     .valid_bit_depth = 16,
-    .sample_type = SampleType::INT_MSB,
-    .reserved = 0,
-};
-constexpr AudioDataFormat kFormatMax98927 = kFormatI2S0Bus;
-constexpr AudioDataFormat kFormatDmic = kFormatI2S0Bus;
-
-// Format used by the Eve's ALC5663 headphone codec.
-constexpr AudioDataFormat kFormatAlc5663 = {
-    .sampling_frequency = SamplingFrequency::FS_48000HZ,
-    .bit_depth = BitDepth::DEPTH_32BIT,
-    .channel_map = 0xFFFFFF10,
-    .channel_config = ChannelConfig::CONFIG_STEREO,
-    .interleaving_style = InterleavingStyle::PER_CHANNEL,
-    .number_of_channels = 2,
-    .valid_bit_depth = 24,
-    .sample_type = SampleType::INT_MSB,
-    .reserved = 0,
-};
-
-// Format used for intermediate DSP operations.
-const AudioDataFormat kDspFormat = {
-    .sampling_frequency = SamplingFrequency::FS_48000HZ,
-    .bit_depth = BitDepth::DEPTH_32BIT,
-    .channel_map = 0xFFFFFF10,
-    .channel_config = ChannelConfig::CONFIG_STEREO,
-    .interleaving_style = InterleavingStyle::PER_CHANNEL,
-    .number_of_channels = 2,
-    .valid_bit_depth = 32,
     .sample_type = SampleType::INT_MSB,
     .reserved = 0,
 };
@@ -229,8 +208,9 @@ StatusOr<DspPipelineId> ConnectHostToI2S(const Nhlt& nhlt, DspModuleController* 
                                          uint16_t copier_module_id, uint32_t host_gateway_id,
                                          uint32_t i2s_gateway_id, uint8_t i2s_bus,
                                          const AudioDataFormat& i2s_format) {
-  CopierCfg host_out_copier = CreateGatewayCopierCfg(kHostFormat, kDspFormat, host_gateway_id);
-  CopierCfg i2s_out_copier = CreateGatewayCopierCfg(kDspFormat, i2s_format, i2s_gateway_id);
+  CopierCfg host_out_copier =
+      CreateGatewayCopierCfg(kHostI2sFormat, kDspI2sFormat, host_gateway_id);
+  CopierCfg i2s_out_copier = CreateGatewayCopierCfg(kDspI2sFormat, i2s_format, i2s_gateway_id);
   StatusOr<std::vector<uint8_t>> i2s_out_gateway_cfg =
       GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
   if (!i2s_out_gateway_cfg.ok()) {
@@ -253,8 +233,8 @@ StatusOr<DspPipelineId> ConnectI2SToHost(const Nhlt& nhlt, DspModuleController* 
                                          uint16_t copier_module_id, uint32_t i2s_gateway_id,
                                          uint8_t i2s_bus, uint32_t host_gateway_id,
                                          const AudioDataFormat& i2s_format) {
-  CopierCfg i2s_in_copier = CreateGatewayCopierCfg(i2s_format, kDspFormat, i2s_gateway_id);
-  CopierCfg host_in_copier = CreateGatewayCopierCfg(kDspFormat, kHostFormat, host_gateway_id);
+  CopierCfg i2s_in_copier = CreateGatewayCopierCfg(i2s_format, kDspI2sFormat, i2s_gateway_id);
+  CopierCfg host_in_copier = CreateGatewayCopierCfg(kDspI2sFormat, kHostI2sFormat, host_gateway_id);
   StatusOr<std::vector<uint8_t>> i2s_in_gateway_cfg =
       GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_SSP, i2s_in_copier);
   if (!i2s_in_gateway_cfg.ok()) {
@@ -289,14 +269,23 @@ StatusOr<uint16_t> GetModuleId(DspModuleController* controller, const char* name
   return copier_it->second->module_id;
 }
 
-// Set up the DSP to handle the Pixelbook Eve's topology.
-struct PixelbookEvePipelines {
-  DspPipelineId speakers;
-  DspPipelineId inbuilt_microphone;
-  DspPipelineId headphone;
+// Eve module config parameters extracted from kbl_i2s_chrome.conf
+
+// Format used by the Eve's ALC5663 headphone codec.
+constexpr AudioDataFormat kEveFormatAlc5663 = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_32BIT,
+    .channel_map = 0xFFFFFF10,
+    .channel_config = ChannelConfig::CONFIG_STEREO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 2,
+    .valid_bit_depth = 24,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
 };
-StatusOr<PixelbookEvePipelines> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
-                                                           DspModuleController* controller) {
+
+StatusOr<std::vector<DspStream>> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
+                                                            DspModuleController* controller) {
   // Get the ID of the "COPIER" module.
   StatusOr<uint16_t> copier_module_id_or_err = GetModuleId(controller, "COPIER");
   if (!copier_module_id_or_err.ok()) {
@@ -305,48 +294,164 @@ StatusOr<PixelbookEvePipelines> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
   uint16_t copier_module_id = copier_module_id_or_err.ValueOrDie();
 
   // Create output pipeline to MAX98927 codec.
-  StatusOr<DspPipelineId> speakers = ConnectHostToI2S(
+  constexpr AudioDataFormat kFormatMax98927 = kFormatI2S0Bus;
+  StatusOr<DspPipelineId> speakers_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 0),
       I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S0_BUS, 0), I2S0_BUS, kFormatMax98927);
-  if (!speakers.ok()) {
-    return PrependMessage("Could not set up route to MAX98927 codec", speakers.status());
+  if (!speakers_id.ok()) {
+    return PrependMessage("Could not set up route to MAX98927 codec", speakers_id.status());
   }
 
   // Create output pipeline to ALC5663 codec.
-  StatusOr<DspPipelineId> headphones = ConnectHostToI2S(
+  StatusOr<DspPipelineId> headphones_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 1),
-      I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S1_BUS, 0), I2S1_BUS, kFormatAlc5663);
-  if (!headphones.ok()) {
-    return PrependMessage("Could not set up route to ALC5663 codec", headphones.status());
+      I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S1_BUS, 0), I2S1_BUS, kEveFormatAlc5663);
+  if (!headphones_id.ok()) {
+    return PrependMessage("Could not set up route to ALC5663 codec", headphones_id.status());
   }
 
   // Create input pipeline from DMIC.
-  StatusOr<DspPipelineId> inbuilt_microphone =
+  constexpr AudioDataFormat kFormatDmics = kFormatI2S0Bus;
+  StatusOr<DspPipelineId> microphones_id =
       ConnectI2SToHost(nhlt, controller, copier_module_id,
                        I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_INPUT, I2S0_BUS, 0), I2S0_BUS,
-                       HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 0), kFormatDmic);
-  if (!inbuilt_microphone.ok()) {
-    return PrependMessage("Could not set up route from DMIC", inbuilt_microphone.status());
+                       HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 0), kFormatDmics);
+  if (!microphones_id.ok()) {
+    return PrependMessage("Could not set up route from DMIC", microphones_id.status());
   }
 
-  PixelbookEvePipelines result = {};
-  result.inbuilt_microphone = inbuilt_microphone.ValueOrDie();
-  result.speakers = speakers.ValueOrDie();
-  result.headphone = headphones.ValueOrDie();
-  return result;
+  std::vector<DspStream> pipelines;
+  pipelines.push_back({.id = speakers_id.ValueOrDie(),
+                       .host_format = kHostI2sFormat,
+                       .stream_id = 1,
+                       .is_input = false,
+                       .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
+                       .name = "Builtin Speakers"});
+  pipelines.push_back({.id = microphones_id.ValueOrDie(),
+                       .host_format = kFormatDmics,
+                       .stream_id = 2,
+                       .is_input = true,
+                       .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
+                       .name = "Builtin Microphones"});
+  pipelines.push_back({.id = headphones_id.ValueOrDie(),
+                       .host_format = kHostI2sFormat,
+                       .stream_id = 3,
+                       .is_input = false,
+                       .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+                       .name = "Builtin Headphone Jack"});
+  return pipelines;
 }
 
-Status IntelDsp::StartPipeline(DspPipeline pipeline) {
+constexpr AudioDataFormat kAtlasFormatDmics = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_16BIT,
+    .channel_map = 0xFFFF3210,
+    .channel_config = ChannelConfig::CONFIG_QUATRO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 4,
+    .valid_bit_depth = 16,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
+};
+const AudioDataFormat kAtlasDspFormatInput = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_16BIT,
+    .channel_map = 0xFFFF3210,
+    .channel_config = ChannelConfig::CONFIG_QUATRO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 4,
+    .valid_bit_depth = 16,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
+};
+constexpr AudioDataFormat kAtlasHostFormatInput = {
+    .sampling_frequency = SamplingFrequency::FS_48000HZ,
+    .bit_depth = BitDepth::DEPTH_16BIT,
+    .channel_map = 0xFFFF3210,
+    .channel_config = ChannelConfig::CONFIG_QUATRO,
+    .interleaving_style = InterleavingStyle::PER_CHANNEL,
+    .number_of_channels = 4,
+    .valid_bit_depth = 16,
+    .sample_type = SampleType::INT_MSB,
+    .reserved = 0,
+};
+
+StatusOr<DspPipelineId> ConnectAtlasDmicToHost(const Nhlt& nhlt, DspModuleController* controller,
+                                               uint16_t copier_module_id, uint32_t host_gateway_id,
+                                               uint32_t dmic_gateway_id, uint8_t dmic_bus) {
+  CopierCfg dmic_in_copier =
+      CreateGatewayCopierCfg(kAtlasFormatDmics, kAtlasDspFormatInput, dmic_gateway_id);
+  CopierCfg host_in_copier =
+      CreateGatewayCopierCfg(kAtlasDspFormatInput, kAtlasHostFormatInput, host_gateway_id);
+  StatusOr<std::vector<uint8_t>> dmic_in_gateway_cfg =
+      GetModuleConfig(nhlt, dmic_bus, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_PDM, dmic_in_copier);
+  if (!dmic_in_gateway_cfg.ok()) {
+    return dmic_in_gateway_cfg.status();
+  }
+
+  return CreateSimplePipeline(controller,
+                              {
+                                  // Copy from DMIC.
+                                  {copier_module_id, dmic_in_gateway_cfg.ConsumeValueOrDie()},
+                                  // Copy to host DMA.
+                                  {copier_module_id, RawBytesOf(&host_in_copier)},
+                              });
+}
+
+StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
+                                                              DspModuleController* controller) {
+  // Get the ID of the "COPIER" module.
+  StatusOr<uint16_t> copier_module_id_or_err = GetModuleId(controller, "COPIER");
+  if (!copier_module_id_or_err.ok()) {
+    return copier_module_id_or_err.status();
+  }
+  uint16_t copier_module_id = copier_module_id_or_err.ValueOrDie();
+
+  // Create output pipeline to Maxim98373 codec.
+  constexpr AudioDataFormat kFormatMax98373 = kFormatI2S0Bus;
+  StatusOr<DspPipelineId> speakers_id = ConnectHostToI2S(
+      nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 0),
+      I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S0_BUS, 0), I2S0_BUS, kFormatMax98373);
+  if (!speakers_id.ok()) {
+    return PrependMessage("Could not set up route to Max98373 codec", speakers_id.status());
+  }
+
+  // Create input pipeline from DMICs.
+  // PDM bus must be zero, only one PDM link from SW/FW point of view.
+  constexpr uint8_t kDmicBus = 0;
+  StatusOr<DspPipelineId> microphones_id = ConnectAtlasDmicToHost(
+      nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 0),
+      DMIC_GATEWAY_CFG_NODE_ID(DMA_TYPE_DMIC_LINK_INPUT, kDmicBus, 0), kDmicBus);
+  if (!microphones_id.ok()) {
+    printf("Could not set up route from DMICs");
+    return PrependMessage("Could not set up route from DMICs", microphones_id.status());
+  }
+
+  std::vector<DspStream> streams;
+  streams.push_back({.id = speakers_id.ValueOrDie(),
+                     .host_format = kHostI2sFormat,
+                     .stream_id = 1,
+                     .is_input = false,
+                     .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
+                     .name = "Builtin Speakers"});
+  streams.push_back({.id = microphones_id.ValueOrDie(),
+                     .host_format = kAtlasHostFormatInput,
+                     .stream_id = 2,
+                     .is_input = true,
+                     .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
+                     .name = "Builtin Microphones"});
+  return streams;
+}
+
+Status IntelDsp::StartPipeline(DspPipelineId id) {
   // Pipeline must be paused before starting.
-  if (Status status =
-          module_controller_->SetPipelineState(pipeline.id, PipelineState::PAUSED, true);
+  if (Status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
       !status.ok()) {
     return status;
   }
 
   // Start the pipeline.
-  if (Status status =
-          module_controller_->SetPipelineState(pipeline.id, PipelineState::RUNNING, true);
+  if (Status status = module_controller_->SetPipelineState(id, PipelineState::RUNNING, true);
       !status.ok()) {
     return status;
   }
@@ -354,14 +459,13 @@ Status IntelDsp::StartPipeline(DspPipeline pipeline) {
   return OkStatus();
 }
 
-Status IntelDsp::PausePipeline(DspPipeline pipeline) {
-  if (Status status =
-          module_controller_->SetPipelineState(pipeline.id, PipelineState::PAUSED, true);
+Status IntelDsp::PausePipeline(DspPipelineId id) {
+  if (Status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
       !status.ok()) {
     return status;
   }
 
-  if (Status status = module_controller_->SetPipelineState(pipeline.id, PipelineState::RESET, true);
+  if (Status status = module_controller_->SetPipelineState(id, PipelineState::RESET, true);
       !status.ok()) {
     return status;
   }
@@ -373,51 +477,26 @@ Status IntelDsp::CreateAndStartStreams() {
   zx_status_t res = ZX_OK;
 
   // Setup the pipelines.
-  StatusOr<PixelbookEvePipelines> pipelines =
-      SetUpPixelbookEvePipelines(*nhlt_, module_controller_.get());
-  if (!pipelines.ok()) {
-    LOG(ERROR, "Failed to set up DSP pipelines: %s", pipelines.status().ToString().c_str());
-    return pipelines.status();
+  StatusOr<std::vector<DspStream>> streams;
+  // TODO(fxbug.dev/84323): Remove this hardcoded topology decisions for Atlas or Eve and add a
+  // topology loading infrastructure that would render this unnecessary.
+  if (nhlt_->IsOemMatch("GOOGLE", "ATLASMAX")) {
+    streams = SetUpPixelbookAtlasPipelines(*nhlt_, module_controller_.get());
+    if (!streams.ok()) {
+      LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status().ToString().c_str());
+      return streams.status();
+    }
+  } else if (nhlt_->IsOemMatch("GOOGLE", "EVEMAX")) {
+    streams = SetUpPixelbookEvePipelines(*nhlt_, module_controller_.get());
+    if (!streams.ok()) {
+      LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status().ToString().c_str());
+      return streams.status();
+    }
+  } else {
+    LOG(ERROR, "Board not supported to set up DSP pipelines");
   }
-
-  // Create and publish the streams we will use.
-  static struct {
-    uint32_t stream_id;
-    bool is_input;
-    DspPipeline pipeline;
-    audio_stream_unique_id_t uid;
-    fbl::String name;
-  } STREAMS[] = {
-      // Speakers
-      {
-          .stream_id = 1,
-          .is_input = false,
-          .pipeline = {pipelines.ValueOrDie().speakers},
-          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
-          .name = "Builtin Speakers",
-      },
-      // DMIC
-      {
-          .stream_id = 2,
-          .is_input = true,
-          .pipeline = {pipelines.ValueOrDie().inbuilt_microphone},
-          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
-          .name = "Builtin Microphone",
-      },
-      // Headphones
-      {
-          .stream_id = 3,
-          .is_input = false,
-          .pipeline = {pipelines.ValueOrDie().headphone},
-          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
-          .name = "Builtin Headphone Jack",
-      },
-  };
-
-  for (const auto& stream_def : STREAMS) {
-    auto stream =
-        fbl::AdoptRef(new IntelDspStream(stream_def.stream_id, stream_def.is_input,
-                                         stream_def.pipeline, stream_def.name, &stream_def.uid));
+  for (const auto& stream_def : streams.ValueOrDie()) {
+    auto stream = fbl::AdoptRef(new IntelDspStream(stream_def));
 
     res = ActivateStream(stream);
     if (res != ZX_OK) {

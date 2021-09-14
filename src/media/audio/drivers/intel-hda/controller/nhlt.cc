@@ -131,6 +131,10 @@ StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer
   }
   auto nhlt = maybe_nhlt.ValueOrDie();
   static_assert(sizeof(nhlt.header.signature) >= ACPI_NAME_SIZE);
+  result->oem_id_ = std::string(nhlt.header.oem_id, strnlen(nhlt.header.oem_id, ACPI_OEM_ID_SIZE));
+  result->oem_table_id_ = std::string(nhlt.header.oem_table_id,
+                                      strnlen(nhlt.header.oem_table_id, ACPI_OEM_TABLE_ID_SIZE));
+
   static_assert(std::char_traits<char>::length(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE);
   if (memcmp(nhlt.header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
     return Status(ZX_ERR_INTERNAL, "Invalid NHLT signature");

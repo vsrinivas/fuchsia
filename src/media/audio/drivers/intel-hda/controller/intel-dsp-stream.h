@@ -19,8 +19,7 @@ namespace intel_hda {
 class IntelDspStream : public codecs::IntelHDAStreamBase,
                        public fidl::WireServer<fuchsia_hardware_audio::RingBuffer> {
  public:
-  IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline, fbl::String name,
-                 const audio_stream_unique_id_t* unique_id = nullptr);
+  explicit IntelDspStream(const DspStream& stream);
 
   const char* log_prefix() const { return log_prefix_; }
 
@@ -71,7 +70,7 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
 
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
-  const DspPipeline pipeline_;
+  const DspStream stream_;
   fidl::ClientEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer_;
 };
 

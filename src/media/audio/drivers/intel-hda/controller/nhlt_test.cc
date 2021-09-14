@@ -87,8 +87,37 @@ std::vector<uint8_t> SampleNHLT() {
           /*length=*/static_cast<uint32_t>(sizeof(nhlt_table_t) + endpoint.size()),
           /*revision=*/5,
           /*checksum=*/0,  // Invalid, but we don't check.
-          /*oem_id=*/{'O', 'E', 'M'},
-          /*oem_table_id=*/{'T', 'A', 'B', 'L', 'E'},
+          /*oem_id=*/{'O', 'E', 'M', 'M', 'Y'},
+          /*oem_table_id=*/{'O', 'E', 'M', 'T', 'A', 'B', 'L', 'E'},
+          /*oem_revision=*/0,
+          /*asl_compiler_id=*/{'C', 'O', 'M', 'P'},
+          /*asl_compiler_revision=*/0,
+      },
+      /*endpoint_desc_count=*/1,
+  };
+  PushBytes(&data, &nhlt);
+
+  // Append endpoint.
+  std::copy(endpoint.begin(), endpoint.end(), std::back_inserter(data));
+
+  return data;
+}
+
+std::vector<uint8_t> SampleNHLT2() {
+  std::vector<uint8_t> data;
+
+  // Create endpoint.
+  std::vector<uint8_t> endpoint = SampleEndpoint();
+
+  // Write out header.
+  nhlt_table_t nhlt = {
+      /*header=*/{
+          /*signature=*/{'N', 'H', 'L', 'T'},
+          /*length=*/static_cast<uint32_t>(sizeof(nhlt_table_t) + endpoint.size()),
+          /*revision=*/5,
+          /*checksum=*/0,  // Invalid, but we don't check.
+          /*oem_id=*/{'G', 'O', 'O', 'G', 'L', 'E'},
+          /*oem_table_id=*/{'E', 'V', 'E', 'M', 'A', 'X'},
           /*oem_revision=*/0,
           /*asl_compiler_id=*/{'C', 'O', 'M', 'P'},
           /*asl_compiler_revision=*/0,
@@ -133,6 +162,28 @@ TEST(Nhlt, ParseTruncated) {
     StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
     ASSERT_FALSE(nhlt.ok());
   } while (!data.empty());
+}
+
+TEST(Nhlt, ParseOemStrings) {
+  std::vector<uint8_t> data = SampleNHLT();
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  ASSERT_OK(nhlt.status().code());
+
+  // Ensure the data looks reasonable.
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("OMM", "OEMTABLE"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("OEMMY", "TABLESSSS"));
+  ASSERT_TRUE(nhlt.ValueOrDie()->IsOemMatch("OEMMY", "OEMTABLE"));
+}
+
+TEST(Nhlt, ParseOemStrings2) {
+  std::vector<uint8_t> data = SampleNHLT2();
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  ASSERT_OK(nhlt.status().code());
+
+  // Ensure the data looks reasonable.
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("GOOGLW", "EVEMAX"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("GOOGLE", "EVEMAXXX"));
+  ASSERT_TRUE(nhlt.ValueOrDie()->IsOemMatch("GOOGLE", "EVEMAX"));
 }
 
 }  // namespace
