@@ -289,6 +289,12 @@ class NodeValue final {
   // Construct a NodeValue with a name and properties.
   NodeValue(std::string name, std::vector<PropertyValue> properties);
 
+  // Allow moving, disallow copying.
+  NodeValue(const NodeValue&) = delete;
+  NodeValue(NodeValue&&) = default;
+  NodeValue& operator=(const NodeValue&) = delete;
+  NodeValue& operator=(NodeValue&&) = default;
+
   // Obtains reference to name.
   const std::string& name() const { return name_; }
 
