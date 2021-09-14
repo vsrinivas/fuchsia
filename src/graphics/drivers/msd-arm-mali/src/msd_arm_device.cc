@@ -248,6 +248,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
 
   power_manager_ = std::make_unique<PowerManager>(register_io_.get());
   perf_counters_ = std::make_unique<PerformanceCounters>(this);
+  perf_counters_->SetGpuFeatures(gpu_features_);
   scheduler_ = std::make_unique<JobScheduler>(this, 3);
   address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
@@ -348,8 +349,8 @@ void MsdArmDevice::PeriodicCriticalMemoryPressureCallback(bool force_instant) {
     connection_list_copy = connection_list_;
     level = current_memory_pressure_level_;
   }
-  // connection_list_mutex_ must be unlocked here because PeriodicMemoryPressureCallback might acquire
-  // it again.
+  // connection_list_mutex_ must be unlocked here because PeriodicMemoryPressureCallback might
+  // acquire it again.
   size_t released_size = 0;
   for (auto& connection : connection_list_copy) {
     auto locked = connection.lock();

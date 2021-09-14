@@ -15,6 +15,25 @@ constexpr uint32_t kPerfBufferSize = PAGE_SIZE * 4;
 constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
 }  // namespace
 
+void PerformanceCounters::SetGpuFeatures(const GpuFeatures& gpu_features) {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
+  uint32_t core_count = 1;
+  // Determine the index of the highest set bit to determine the core count.  With discontiguous
+  // cores, bits that aren't set take space in the output but aren't filled in.
+  if (gpu_features.shader_present) {
+    core_count = 32 - __builtin_clz(gpu_features.shader_present);
+  }
+  constexpr uint32_t kJmBlockCount = 1;
+  uint32_t kTilerBlockCount = 1;
+  auto mem_features = gpu_features.mem_features;
+  uint32_t memsys_block_count = mem_features.num_l2_slices_minus1() + 1;
+  uint32_t shader_block_count = core_count;
+  uint32_t total_block_count =
+      kJmBlockCount + kTilerBlockCount + memsys_block_count + shader_block_count;
+  constexpr uint32_t kBlockSize = 0x100;
+  perf_counter_size_ = kBlockSize * total_block_count;
+}
+
 bool PerformanceCounters::Enable() {
   std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
   if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
@@ -103,6 +122,7 @@ bool PerformanceCounters::TriggerRead() {
   if (counter_state_ != PerformanceCounterState::kEnabled) {
     MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d",
               static_cast<int>(counter_state_));
+    TriggerCanceledClients();
     return false;
   }
   last_perf_base_ =
@@ -121,12 +141,15 @@ void PerformanceCounters::ReadCompleted() {
     config.address_space().set(address_mapping_->slot_number());
     config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
     config.WriteTo(owner_->register_io());
+    TriggerCanceledClients();
     counter_state_ = PerformanceCounterState::kDisabled;
     return;
   }
 
   if (counter_state_ != PerformanceCounterState::kTriggered) {
-    DLOG("Can't trigger performance counters from state %d", static_cast<int>(counter_state_));
+    DLOG("Can't complete read of performance counters from state %d",
+         static_cast<int>(counter_state_));
+    TriggerCanceledClients();
     return;
   }
   uint64_t new_base =
@@ -226,5 +249,22 @@ void PerformanceCounters::Update() {
   } else if (!should_be_enabled && (counter_state_ == PerformanceCounterState::kEnabled ||
                                     counter_state_ == PerformanceCounterState::kTriggered)) {
     Disable();
+  }
+}
+
+void PerformanceCounters::ForceDisable() {
+  std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
+  force_disabled_ = true;
+  for (Client* client : clients_)
+    client->OnPerfCountersCanceled(perf_counter_size_);
+  counter_state_ = PerformanceCounterState::kDisabled;
+  address_mapping_.reset();
+}
+
+void PerformanceCounters::TriggerCanceledClients() {
+  if (!force_disabled_)
+    return;
+  for (Client* client : clients_) {
+    client->OnPerfCountersCanceled(perf_counter_size_);
   }
 }

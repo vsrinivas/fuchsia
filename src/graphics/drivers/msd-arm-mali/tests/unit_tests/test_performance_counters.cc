@@ -135,7 +135,7 @@ class PerformanceCounterTest {
     registers::PerformanceCounterBase::Get().FromValue(4096 + 1024).WriteTo(mmio.get());
     struct TestClient : public PerformanceCounters::Client {
       void OnPerfCountDump(const std::vector<uint32_t>& dumped) override { dump_ = dumped; }
-      void OnForceDisabled() override { EXPECT_TRUE(false); }
+      void OnPerfCountersCanceled(size_t perf_counter_size) override { EXPECT_TRUE(false); }
 
       std::vector<uint32_t> dump_;
     };
@@ -153,6 +153,11 @@ class PerformanceCounterTest {
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
     TestManager manager;
+    GpuFeatures gpu_features;
+    // 7 shader cores present, 1 through 7 (inclusive)
+    gpu_features.shader_present = ((1 << 8) - 1) & ~1;
+    gpu_features.mem_features.set_num_l2_slices_minus1(1);
+    perf_counters.SetGpuFeatures(gpu_features);
     perf_counters.SetDeviceThreadId(std::this_thread::get_id());
     std::lock_guard lock(*perf_counters.device_thread_checker_);
 
@@ -168,7 +173,11 @@ class PerformanceCounterTest {
     registers::PerformanceCounterBase::Get().FromValue(4096 + 1024).WriteTo(mmio.get());
     struct TestClient : public PerformanceCounters::Client {
       void OnPerfCountDump(const std::vector<uint32_t>& dumped) override { dump_ = dumped; }
-      void OnForceDisabled() override { force_disable_count_++; }
+      void OnPerfCountersCanceled(size_t perf_counter_size) override {
+        // 1 JM + 1 tiler + 2 l2 slices + 8 shader cores.
+        EXPECT_EQ(0x100u * (1 + 1 + 2 + 8), perf_counter_size);
+        force_disable_count_++;
+      }
 
       std::vector<uint32_t> dump_;
       uint32_t force_disable_count_ = 0;
@@ -182,6 +191,7 @@ class PerformanceCounterTest {
     EXPECT_EQ(1u, client.force_disable_count_);
     // Could happen if the interrupt was delayed.
     perf_counters.ReadCompleted();
+    EXPECT_EQ(2u, client.force_disable_count_);
     perf_counters.Update();
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
@@ -190,6 +200,56 @@ class PerformanceCounterTest {
 
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kEnabled, perf_counters.counter_state_);
   }
+
+  static void TestTriggerWhileDisabled() {
+    auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    TestCounterOwner owner(mmio.get());
+    PerformanceCounters perf_counters(&owner);
+    TestManager manager;
+    GpuFeatures gpu_features;
+    // 7 shader cores present, 1 through 7 (inclusive)
+    gpu_features.shader_present = ((1 << 8) - 1) & ~1;
+    gpu_features.mem_features.set_num_l2_slices_minus1(1);
+    perf_counters.SetGpuFeatures(gpu_features);
+    perf_counters.SetDeviceThreadId(std::this_thread::get_id());
+    std::lock_guard lock(*perf_counters.device_thread_checker_);
+
+    perf_counters.AddManager(&manager);
+
+    EXPECT_EQ(nullptr, owner.address_manager()->GetMappingForSlot(0).get());
+
+    registers::PerformanceCounterBase::Get().FromValue(4096 + 1024).WriteTo(mmio.get());
+    struct TestClient : public PerformanceCounters::Client {
+      void OnPerfCountDump(const std::vector<uint32_t>& dumped) override { dump_ = dumped; }
+      void OnPerfCountersCanceled(size_t perf_counter_size) override {
+        // 1 JM + 1 tiler + 2 l2 slices + 8 shader cores.
+        EXPECT_EQ(0x100u * (1 + 1 + 2 + 8), perf_counter_size);
+        force_disable_count_++;
+      }
+
+      std::vector<uint32_t> dump_;
+      uint32_t force_disable_count_ = 0;
+    };
+    TestClient client;
+    perf_counters.AddClient(&client);
+    perf_counters.ForceDisable();
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
+              perf_counters.counter_state_);
+
+    EXPECT_EQ(1u, client.force_disable_count_);
+    manager.set_enabled(true);
+    perf_counters.Update();
+    EXPECT_FALSE(perf_counters.TriggerRead());
+    EXPECT_EQ(2u, client.force_disable_count_);
+
+    perf_counters.RemoveForceDisable();
+    perf_counters.Update();
+
+    EXPECT_EQ(2u, client.force_disable_count_);
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kEnabled, perf_counters.counter_state_);
+    EXPECT_NE(nullptr, perf_counters.address_mapping_.get());
+    EXPECT_EQ(perf_counters.address_mapping_, owner.address_manager()->GetMappingForSlot(0));
+  }
 };
 
 TEST(PerfCounters, StateChange) { PerformanceCounterTest::TestStateChange(); }
@@ -197,3 +257,5 @@ TEST(PerfCounters, StateChange) { PerformanceCounterTest::TestStateChange(); }
 TEST(PerfCounters, Enabled) { PerformanceCounterTest::TestEnabled(); }
 
 TEST(PerfCounters, ForceDisable) { PerformanceCounterTest::TestForceDisable(); }
+
+TEST(PerfCounters, TriggerWhileDisabled) { PerformanceCounterTest::TestTriggerWhileDisabled(); }

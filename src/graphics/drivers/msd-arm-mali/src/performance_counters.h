@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include "address_manager.h"
+#include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "msd_arm_buffer.h"
 #include "performance_counters_manager.h"
@@ -33,13 +34,17 @@ class PerformanceCounters {
   class Client {
    public:
     virtual void OnPerfCountDump(const std::vector<uint32_t>& dumped) = 0;
-    virtual void OnForceDisabled() = 0;
+    // Called if the performance counters are cleared or become temporarily unavailable. Can happen
+    // due to switching into protected mode.
+    virtual void OnPerfCountersCanceled(size_t perf_counter_size) = 0;
   };
 
   explicit PerformanceCounters(Owner* owner) : owner_(owner) {
     // Until the device thread starts its safe to modify this data from the initial thread.
     SetDeviceThreadId(std::this_thread::get_id());
   }
+
+  void SetGpuFeatures(const GpuFeatures& gpu_features);
 
   void SetDeviceThreadId(std::thread::id device_thread_id) {
     device_thread_checker_.emplace(device_thread_id);
@@ -56,14 +61,8 @@ class PerformanceCounters {
   bool TriggerRead();
   void ReadCompleted();
 
-  void ForceDisable() {
-    std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
-    force_disabled_ = true;
-    for (Client* client : clients_)
-      client->OnForceDisabled();
-    counter_state_ = PerformanceCounterState::kDisabled;
-    address_mapping_.reset();
-  }
+  void ForceDisable();
+  void TriggerCanceledClients() MAGMA_REQUIRES(*device_thread_checker_);
 
   bool running() const {
     std::lock_guard<fit::thread_checker> lock(*device_thread_checker_);
@@ -95,6 +94,8 @@ class PerformanceCounters {
   bool Disable();
 
   Owner* owner_;
+  // Size of the performance counter block in bytes.
+  MAGMA_GUARDED(*device_thread_checker_) size_t perf_counter_size_ = 0;
   mutable std::optional<fit::thread_checker> device_thread_checker_;
   MAGMA_GUARDED(*device_thread_checker_)
   PerformanceCounterState counter_state_ = PerformanceCounterState::kDisabled;

@@ -33,7 +33,7 @@ class MsdArmPerfCountPool : public PerformanceCounters::Client {
 
   // PerformanceCounters::Client implementation.
   void OnPerfCountDump(const std::vector<uint32_t>& dumped) override;
-  void OnForceDisabled() override;
+  void OnPerfCountersCanceled(size_t perf_count_size) override;
 
   void AddBuffer(std::shared_ptr<MsdArmBuffer> buffer, uint64_t buffer_id, uint64_t offset,
                  uint64_t size);
@@ -41,6 +41,9 @@ class MsdArmPerfCountPool : public PerformanceCounters::Client {
   void AddTriggerId(uint32_t trigger_id);
 
  private:
+  void OnPerfCountDumpLocked(const std::vector<uint32_t>& dumped)
+      MAGMA_REQUIRES(device_thread_checker_);
+
   fit::thread_checker device_thread_checker_;
 
   struct BufferOffset {

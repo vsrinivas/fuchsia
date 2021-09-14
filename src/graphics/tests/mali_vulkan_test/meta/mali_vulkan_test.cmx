@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "include": [
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/mali_vulkan_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/gpu",
+            "class/gpu-performance-counters"
+        ]
+    }
+}

@@ -8,6 +8,10 @@
 
 void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
   std::lock_guard lock(device_thread_checker_);
+  OnPerfCountDumpLocked(dumped);
+}
+
+void MsdArmPerfCountPool::OnPerfCountDumpLocked(const std::vector<uint32_t>& dumped) {
   if (!valid_)
     return;
 
@@ -59,9 +63,10 @@ void MsdArmPerfCountPool::OnPerfCountDump(const std::vector<uint32_t>& dumped) {
   }
 }
 
-void MsdArmPerfCountPool::OnForceDisabled() {
+void MsdArmPerfCountPool::OnPerfCountersCanceled(size_t perf_count_size) {
   std::lock_guard lock(device_thread_checker_);
   discontinuous_ = true;
+  OnPerfCountDumpLocked(std::vector<uint32_t>(perf_count_size / sizeof(uint32_t)));
 }
 
 void MsdArmPerfCountPool::AddBuffer(std::shared_ptr<MsdArmBuffer> buffer, uint64_t buffer_id,

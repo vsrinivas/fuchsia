@@ -179,7 +179,14 @@ bool VulkanContext::InitDevice() {
             vk::to_string(rv_device.result).data());
   }
   device_ = std::move(rv_device.value);
-  queue_ = device_->getQueue(queue_family_index_, 0);
+  const auto &queue_create_info = device_info_.pQueueCreateInfos[0];
+  if (queue_create_info.flags) {
+    queue_ = device_->getQueue2(vk::DeviceQueueInfo2()
+                                    .setFlags(queue_create_info.flags)
+                                    .setQueueFamilyIndex(queue_family_index_));
+  } else {
+    queue_ = device_->getQueue(queue_family_index_, 0);
+  }
   device_initialized_ = true;
   return true;
 }
