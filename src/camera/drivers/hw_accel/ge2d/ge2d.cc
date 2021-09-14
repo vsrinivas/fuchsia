@@ -329,7 +329,7 @@ void Ge2dDevice::ProcessChangeResolution(TaskInfo& info) {
   frame_available_info f_info;
   f_info.frame_status = FRAME_STATUS_OK;
   f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-  f_info.metadata.image_format_index = task->output_format_index();
+  f_info.metadata.image_format_index = info.index;
   return task->ResolutionChangeCallback(&f_info);
 }
 
