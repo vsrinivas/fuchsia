@@ -85,7 +85,7 @@ group("tests") {
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client",
   ]
 }
@@ -100,7 +100,7 @@ group("tests-product-webengine") {
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client",
   ]
 }

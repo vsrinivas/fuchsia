@@ -10,7 +10,7 @@ using fuchsia.ui.views;
 /// # Roles
 /// This protocol will typically be:
 /// * Implemented by platform components implementing the keyboard
-///   subsystem. For example, `ime_service.cmx`.
+///   subsystem. For example, `text_manager.cmx`.
 /// * Consumed by platform components which control UI policy.
 ///   E.g. Root Presenter, or the Workstation Session.
 ///

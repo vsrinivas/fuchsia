@@ -86,7 +86,7 @@ There are a number of FIDL protocols used by input methods and text input on Fuc
     - Holds the `TextField` protocol, and other related v2 input method protocols and structs.
 - `sdk/fidl/fuchsia.ui.text.testing`
     - Holds the `TextFieldTestSuite` protocol and related structs.
-- `src/ui/bin/ime`
+- `src/ui/bin/text`
     - The IME Service is the central organizer of text input on Fuchsia. It vends the discoverable `ImeService`, `ImeVisibilityService`, and `TextInputContext` interfaces. It also contains a legacy IME module that serves the `TextField` and `InputMethodEditor` interfaces. When a text field is focused through `ImeService.GetInputMethodEditor()`, the InputMethodEditor/InputMethodEditorClient pair is passed to a new instance of the legacy IME using `bind_ime()`. The legacy IME is then able to send state updates to the client either in response to key events with `inject_input()` (using an internal default input method) or in response to edits from a connected v2-style input method, which connects to `TextInputContext` and makes changes through the `TextField` interface.
 - `src/ui/lib/text/tests`
     - The component that serves the `TextFieldTestSuite` interface.

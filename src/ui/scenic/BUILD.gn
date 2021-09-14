@@ -18,9 +18,13 @@ group("runtime") {
     "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
     "//src/sys/activity",
-    "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/root_presenter:configs",
+
+    # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
+    # text_manager.
+    "//src/ui/bin/text:ime_service",
+    "//src/ui/bin/text:text_manager",
   ]
 }
 

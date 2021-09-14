@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/text_manager.cmx",
+                "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/text_manager.cmx",
+                "fuchsia.ui.input3.KeyEventInjector": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/text_manager.cmx",
+                "fuchsia.ui.input3.Keyboard": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/text_manager.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "bin/text_manager_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.input3.KeyEventInjector",
+            "fuchsia.ui.input3.Keyboard"
+        ]
+    }
+}

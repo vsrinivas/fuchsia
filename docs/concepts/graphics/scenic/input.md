@@ -137,7 +137,7 @@ For an overview of pointer coordinate mapping, see [Ray Casting and Hit Testing]
 
 ## Keyboard subsystem
 
-The Keyboard Subsystem, implemented in [ime_service.cmx](/src/ui/bin/ime/src/main.rs), receives [`KeyEvent`s](/sdk/fidl/fuchsia.ui.input3/events.fidl), and routes them to UI clients.
+The Keyboard Subsystem, implemented in [text_manager.cmx](/src/ui/bin/text/src/main.rs), receives [`KeyEvent`s](/sdk/fidl/fuchsia.ui.input3/events.fidl), and routes them to UI clients.
 
 The Keyboard Subsystem routes key events based on which client(s) have requested
 such events, and whether or not those clients have received focus.

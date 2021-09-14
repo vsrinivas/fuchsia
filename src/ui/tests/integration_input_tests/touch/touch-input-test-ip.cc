@@ -651,7 +651,7 @@ class WebEngineTest_IP : public TouchInputBase {
  private:
   static constexpr char kFontsProvider[] = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
   static constexpr char kImeService[] =
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx";
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
   static constexpr char kIntl[] =
       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
   static constexpr char kMemoryPressureProvider[] =

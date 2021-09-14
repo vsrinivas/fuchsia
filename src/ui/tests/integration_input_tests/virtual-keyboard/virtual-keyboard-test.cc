@@ -90,11 +90,11 @@ std::map<std::string, std::string> LocalServices() {
        "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/scenic.cmx"},
       // IME protocols.
       {fuchsia::ui::input::ImeService::Name_,
-       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},
+       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
       {fuchsia::ui::input::ImeVisibilityService::Name_,
-       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},
+       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
       {fuchsia::ui::input3::Keyboard::Name_,
-       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"},
+       "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
       // Netstack protocols.
       {fuchsia::netstack::Netstack::Name_, "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"},
       {fuchsia::net::interfaces::State::Name_,

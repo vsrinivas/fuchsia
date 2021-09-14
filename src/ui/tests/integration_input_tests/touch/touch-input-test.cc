@@ -532,14 +532,14 @@ class WebEngineTest : public TouchInputBase {
   WebEngineTest()
       : TouchInputBase({
             {.url = kFontsProvider, .name = fuchsia::fonts::Provider::Name_},
-            {.url = kImeService, .name = fuchsia::ui::input::ImeService::Name_},
-            {.url = kImeService, .name = fuchsia::ui::input::ImeVisibilityService::Name_},
             {.url = kIntl, .name = fuchsia::intl::PropertyProvider::Name_},
             {.url = kMemoryPressureProvider, .name = fuchsia::memorypressure::Provider::Name_},
             {.url = kNetstack, .name = fuchsia::netstack::Netstack::Name_},
             {.url = kNetstack, .name = fuchsia::net::interfaces::State::Name_},
             {.url = kSemanticsManager,
              .name = fuchsia::accessibility::semantics::SemanticsManager::Name_},
+            {.url = kTextManager, .name = fuchsia::ui::input::ImeService::Name_},
+            {.url = kTextManager, .name = fuchsia::ui::input::ImeVisibilityService::Name_},
             {.url = kWebContextProvider, .name = fuchsia::web::ContextProvider::Name_},
         }) {}
 
@@ -614,17 +614,17 @@ class WebEngineTest : public TouchInputBase {
 
  private:
   static constexpr char kFontsProvider[] = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
-  static constexpr char kImeService[] =
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx";
   static constexpr char kIntl[] =
       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
   static constexpr char kMemoryPressureProvider[] =
       "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
   static constexpr char kNetstack[] = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
-  static constexpr char kWebContextProvider[] =
-      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
   static constexpr char kSemanticsManager[] =
       "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
+  static constexpr char kTextManager[] =
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
+  static constexpr char kWebContextProvider[] =
+      "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being

@@ -6,10 +6,10 @@ group("bin") {
   deps = [
     "brightness_manager",
     "default_hardware_ime",
-    "ime:ime_service",
     "input-pipeline",
     "root_presenter",
     "shortcut",
+    "text:text_manager",
   ]
 }
 
@@ -20,10 +20,10 @@ group("tests") {
     "brightness_manager:brightness_manager_tests",
     "default_hardware_ime:tests",
     "hardware_display_controller_provider:tests",
-    "ime:tests",
     "input-pipeline:tests",
     "root_presenter:tests",
     "shortcut:tests",
     "terminal:tests",
+    "text:tests",
   ]
 }

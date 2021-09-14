@@ -20,8 +20,8 @@ template("generate_web_runner_tests") {
       "//src/graphics/bin/vulkan_loader",
 
       # TODO(fxbug.dev/24643): Remove keyboard dispatch from Scenic
-      "//src/ui/bin/ime:ime_service",
       "//src/ui/bin/root_presenter",
+      "//src/ui/bin/text:text_manager",
       "//src/ui/scenic",
 
       # This dependency is used to provide a fake `fuchsia.intl.PropertyProvider`.

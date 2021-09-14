@@ -60,10 +60,10 @@ constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> 
       "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
     }, {
       "fuchsia.ui.input.ImeService",
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"
     }, {
       "fuchsia.ui.input.ImeVisibilityService",
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"
     },
     // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
     {

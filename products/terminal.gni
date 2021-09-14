@@ -18,7 +18,11 @@ base_package_labels += [
   "//src/intl/intl_services:config",
   "//src/intl/intl_services:pkg",
   "//src/ui/a11y",
-  "//src/ui/bin/ime:ime_service",
+
+  # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
+  # text_manager.
+  "//src/ui/bin/text:ime_service",
+  "//src/ui/bin/text:text_manager",
 ]
 base_package_labels -= [ "//src/intl/intl_services:small" ]
 
