@@ -281,8 +281,8 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
   }
 }
 
-void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
-  TRACE_DURATION("camera", "GdcDevice::ChangeOutputResoultion");
+void GdcDevice::ChangeOutputResolution(TaskInfo& info) {
+  TRACE_DURATION("camera", "GdcDevice::ChangeOutputResolution");
 
   auto task = info.task;
   task->set_output_format_index(info.index);
@@ -321,7 +321,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
       return ProcessFrame(info);
     }
     case GDC_OP_SETOUTPUTRES: {
-      return ChangeOutputResoultion(info);
+      return ChangeOutputResolution(info);
     }
     case GDC_OP_REMOVE_TASK: {
       return RemoveTask(info);

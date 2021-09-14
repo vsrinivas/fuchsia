@@ -119,7 +119,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   void Stop() const;
 
   void ProcessTask(TaskInfo& info);
-  void ChangeOutputResoultion(TaskInfo& info);
+  void ChangeOutputResolution(TaskInfo& info);
   void ProcessFrame(TaskInfo& info);
   void RemoveTask(TaskInfo& info);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
