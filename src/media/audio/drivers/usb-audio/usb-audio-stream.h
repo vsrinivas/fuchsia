@@ -71,6 +71,23 @@ class UsbAudioStream : public UsbAudioStreamBase,
    private:
     friend class fbl::RefPtr<Channel>;
   };
+
+  struct RingBufferChannel : public Channel {
+    void UnbindServer() {
+      if (binding_ref_.has_value()) {
+        binding_ref_->Unbind();
+      }
+    }
+
+    void BindServer(
+        std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::RingBuffer>> binding_ref) {
+      binding_ref_ = std::move(binding_ref);
+    }
+
+   private:
+    std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::RingBuffer>> binding_ref_;
+  };
+
   // StreamChannel (thread compatible) implements fidl::WireServer<StreamConfig> so the server
   // for a StreamConfig channel is a StreamChannel instead of a UsbAudioStream (as is the case for
   // Device and RingBuffer channels), this way we can track which StreamConfig channel for gain
@@ -89,6 +106,16 @@ class UsbAudioStream : public UsbAudioStreamBase,
       last_reported_gain_state_.cur_gain = kInvalidGain;
     }
     ~StreamChannel() = default;
+
+    void BindServer(
+        std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::StreamConfig>> binding_ref) {
+      binding_ref_ = std::move(binding_ref);
+    }
+    void UnbindServer() {
+      if (binding_ref_.has_value()) {
+        binding_ref_->Unbind();
+      }
+    }
 
     // fuchsia hardware audio Stream Interface.
     void GetProperties(GetPropertiesRequestView request,
@@ -132,6 +159,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
     std::optional<StreamChannel::WatchGainStateCompleter::Async> gain_completer_;
     Plugged last_reported_plugged_state_ = Plugged::kNotReported;
     audio_proto::GainState last_reported_gain_state_ = {};
+    std::optional<fidl::ServerBindingRef<fuchsia_hardware_audio::StreamConfig>> binding_ref_;
   };
 
   static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
@@ -249,7 +277,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
 
   fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(lock_);
-  fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(lock_);
+  fbl::RefPtr<RingBufferChannel> rb_channel_ __TA_GUARDED(lock_);
   fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>> stream_channels_ __TA_GUARDED(lock_);
 
   int32_t clock_domain_ = 0;

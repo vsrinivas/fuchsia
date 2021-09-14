@@ -178,12 +178,12 @@ class FakeDevice : public FakeDeviceType,
 
   // Helper methods.
   // Returns true if a reply was issued.
-  bool ReplyToUsbRequestQueue() {
+  bool ReplyToUsbRequestQueue(zx_status_t status) {
     auto value = queue_.pop();
     if (!value.has_value()) {
       return false;
     }
-    value->Complete(ZX_OK, 0);
+    value->Complete(status, 0);
     return true;
   }
 
@@ -425,7 +425,8 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   fake_device.DdkRelease();
 }
 
-TEST(UsbAudioTest, RingBufferPropertiesAndStartOk) {
+// TODO(fxbug.dev/84545): Fix flakes caused by this test.
+TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   Binder tester;
   FakeDevice fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
@@ -470,9 +471,9 @@ TEST(UsbAudioTest, RingBufferPropertiesAndStartOk) {
 
   // Reply until done.
   while (!done.load()) {
-    fake_device.ReplyToUsbRequestQueue();
+    fake_device.ReplyToUsbRequestQueue(ZX_OK);
     // Delay a bit, so there is time for non-data handling, e.g. Stop().
-    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
   }
   th.join();
 
@@ -549,13 +550,13 @@ TEST(UsbAudioTest, RingBufferStartWhileStarted) {
 
   // Reply until done.
   while (!done.load()) {
-    fake_device.ReplyToUsbRequestQueue();
+    fake_device.ReplyToUsbRequestQueue(ZX_OK);
     // Delay a bit, so there is time for non-data handling, e.g. Stop().
-    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
   }
   th.join();
   // Drain until no more requests are pending.
-  while (fake_device.ReplyToUsbRequestQueue()) {
+  while (fake_device.ReplyToUsbRequestQueue(ZX_OK)) {
   }
 
   fake_device.DdkAsyncRemove();
@@ -623,6 +624,63 @@ TEST(UsbAudioTest, RingBufferStopWhileStopped) {
   // Another stop immediately afterward should also be harmless
   auto restop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
   ASSERT_OK(restop.status());
+
+  fake_device.DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  fake_device.DdkRelease();
+}
+
+TEST(UsbAudioTest, Unplug) {
+  Binder tester;
+  FakeDevice fake_device(fake_ddk::kFakeParent);
+  ASSERT_OK(fake_device.Bind());
+  ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
+
+  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client.GetChannel();
+  ASSERT_EQ(ch.status(), ZX_OK);
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
+                .CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+
+  auto result = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->properties.external_delay(), 0);
+  ASSERT_EQ(result->properties.fifo_depth(), 576);  // Changes with frame rate.
+  ASSERT_EQ(result->properties.needs_cache_flush_or_invalidate(), true);
+
+  constexpr uint32_t kNumberOfPositionNotifications = 5;
+  constexpr uint32_t kMinFrames = 10;
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(kMinFrames,
+                                                                  kNumberOfPositionNotifications);
+  ASSERT_OK(vmo.status());
+
+  std::atomic<bool> done = {};
+  auto& ring_buffer = local;
+  auto th = std::thread([&ring_buffer, &done] {
+    auto start = fidl::WireCall<audio_fidl::RingBuffer>(ring_buffer).Start();
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED, start.status());
+    done.store(true);
+  });
+
+  // Reply until done.
+  while (!done.load()) {
+    fake_device.ReplyToUsbRequestQueue(ZX_ERR_IO_NOT_PRESENT);
+    // Delay a bit, so there is time for non-data handling, e.g. Stop().
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+  }
+  th.join();
+
+  auto properties = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel).GetProperties();
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, properties.status());
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());

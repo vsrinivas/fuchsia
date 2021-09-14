@@ -252,9 +252,9 @@ void UsbAudioStream::GetChannel(GetChannelRequestView request,
         this->DeactivateStreamChannelLocked(stream_channel.get());
       };
 
-  fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
+  stream_channel->BindServer(fidl::BindServer<fidl::WireServer<audio_fidl::StreamConfig>>(
       loop_.dispatcher(), std::move(stream_channel_local), stream_channel.get(),
-      std::move(on_unbound));
+      std::move(on_unbound)));
 
   if (privileged) {
     ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -491,7 +491,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   // Looks like we are going ahead with this format change.  Tear down any
   // exiting ring buffer interface before proceeding.
   if (rb_channel_ != nullptr) {
-    rb_channel_.reset();
+    rb_channel_->UnbindServer();
   }
 
   // Record the details of our cadence and format selection
@@ -533,7 +533,7 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 
   // Create a new ring buffer channel which can be used to move bulk data and
   // bind it to us.
-  rb_channel_ = Channel::Create<Channel>();
+  rb_channel_ = Channel::Create<RingBufferChannel>();
 
   fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
       [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
@@ -542,8 +542,8 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
         this->DeactivateRingBufferChannelLocked(rb_channel_.get());
       };
 
-  fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(
-      loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound));
+  rb_channel_->BindServer(fidl::BindServer<fidl::WireServer<audio_fidl::RingBuffer>>(
+      loop_.dispatcher(), std::move(ring_buffer), this, std::move(on_unbound)));
 }
 
 void UsbAudioStream::WatchGainState(StreamChannel* channel,
@@ -970,11 +970,11 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
 
       case Action::HANDLE_UNPLUG:
         if (rb_channel_ != nullptr) {
-          rb_channel_.reset();
+          rb_channel_->UnbindServer();
         }
 
         if (stream_channel_ != nullptr) {
-          stream_channel_.reset();
+          stream_channel_->UnbindServer();
         }
 
         {
@@ -1115,7 +1115,6 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
 }
 
 void UsbAudioStream::DeactivateStreamChannelLocked(StreamChannel* channel) {
-  ZX_DEBUG_ASSERT(rb_channel_.get() != channel);
   if (stream_channel_.get() == channel) {
     stream_channel_ = nullptr;
   }
