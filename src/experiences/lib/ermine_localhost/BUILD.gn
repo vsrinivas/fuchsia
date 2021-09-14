@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
-import("//build/dart/fidl_move.gni")
 import("//build/dart/test.gni")
 
 dart_library("ermine_localhost") {

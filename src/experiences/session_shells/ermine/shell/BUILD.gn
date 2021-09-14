@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/dart/dart_library.gni")
-import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/flutter/test.gni")
