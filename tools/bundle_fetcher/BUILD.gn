@@ -1,0 +1,49 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_binary("bundle_fetcher") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/bundle_fetcher/cmd"
+  deps = [ ":main" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":bundle_fetcher" ]
+  outputs = [ "bundle_fetcher" ]
+}
+
+go_library("main") {
+  source_dir = "cmd"
+
+  sources = [
+    "download.go",
+    "download_test.go",
+    "main.go",
+    "product_bundle.go",
+  ]
+
+  deps = [
+    "//third_party/golibs:cloud.google.com/go/storage",
+    "//third_party/golibs:github.com/google/subcommands",
+    "//tools/build",
+    "//tools/lib/color",
+    "//tools/lib/logger",
+  ]
+}
+
+go_test("download_main_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/bundle_fetcher/cmd" ]
+  deps = [
+    ":main",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":download_main_tests($host_toolchain)" ]
+}
