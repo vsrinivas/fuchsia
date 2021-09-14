@@ -19,10 +19,8 @@
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
-#include "src/cobalt/bin/system-metrics/testing/fake_log_stats_fetcher.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"
@@ -55,13 +53,10 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
       : executor_(dispatcher()),
         context_provider_(),
         fake_clock_(new FakeSteadyClock()),
-        fake_log_stats_fetcher_(new cobalt::FakeLogStatsFetcher(dispatcher())),
         daemon_(new SystemMetricsDaemon(
-            dispatcher(), context_provider_.context(), fake_granular_error_stats_specs_,
-            &fake_logger_, &fake_granular_error_stats_logger_,
+            dispatcher(), context_provider_.context(), &fake_logger_,
             std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
-            std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-            std::unique_ptr<cobalt::LogStatsFetcher>(fake_log_stats_fetcher_), nullptr, "tmp/")) {
+            std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()), nullptr, "tmp/")) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
         fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
         fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
@@ -116,8 +111,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
-  void LogLogStats() { daemon_->LogLogStats(); }
-
   void PrepareForLogCpuUsage() {
     daemon_->cpu_data_stored_ = 599;
     daemon_->activity_state_to_cpu_map_.clear();
@@ -135,21 +128,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     EXPECT_EQ(expected_last_event_code_second_position,
               fake_logger_.last_event_code_second_position());
     EXPECT_EQ(expected_event_count, fake_logger_.event_count());
-  }
-
-  void CheckValuesForGranularStatsLogger(LogMethod expected_log_method_invoked,
-                                         size_t expected_call_count, uint32_t expected_metric_id,
-                                         uint32_t expected_last_event_code,
-                                         uint32_t expected_last_event_code_second_position = -1,
-                                         size_t expected_event_count = 0) {
-    EXPECT_EQ(expected_log_method_invoked,
-              fake_granular_error_stats_logger_.last_log_method_invoked());
-    EXPECT_EQ(expected_call_count, fake_granular_error_stats_logger_.call_count());
-    EXPECT_EQ(expected_metric_id, fake_granular_error_stats_logger_.last_metric_id());
-    EXPECT_EQ(expected_last_event_code, fake_granular_error_stats_logger_.last_event_code());
-    EXPECT_EQ(expected_last_event_code_second_position,
-              fake_granular_error_stats_logger_.last_event_code_second_position());
-    EXPECT_EQ(expected_event_count, fake_granular_error_stats_logger_.event_count());
   }
 
   void CheckUptimeValues(size_t expected_call_count, uint32_t expected_last_event_code,
@@ -213,56 +191,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   // Rewinds the SystemMetricsDaemon's clock back to the daemon's startup time.
   void SetClockToDaemonStartTime() { fake_clock_->set_time(daemon_->start_time_); }
 
-  static SystemMetricsDaemon::MetricSpecs LoadGranularErrorStatsSpecs(const char* spec_file_path) {
-    return SystemMetricsDaemon::LoadGranularErrorStatsSpecs(spec_file_path);
-  }
-
  protected:
   async::Executor executor_;
   sys::testing::ComponentContextProvider context_provider_;
   FakeSteadyClock* fake_clock_;
   FakeLogger_Sync fake_logger_;
-  FakeLogger_Sync fake_granular_error_stats_logger_;
-  SystemMetricsDaemon::MetricSpecs fake_granular_error_stats_specs_{12312, 543514, 51435145};
-  cobalt::FakeLogStatsFetcher* const fake_log_stats_fetcher_;
   std::unique_ptr<SystemMetricsDaemon> daemon_;
 };
-
-// Verifies that loading the component allow list for error log metrics works properly.
-TEST_F(SystemMetricsDaemonTest, LoadLogMetricAllowList) {
-  std::unordered_map<std::string, cobalt::ComponentEventCode> map =
-      cobalt::LogStatsFetcherImpl::LoadAllowlist("/pkg/data/log_stats_component_allowlist.txt");
-  EXPECT_EQ(cobalt::ComponentEventCode::Appmgr,
-            map["fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm"]);
-  EXPECT_EQ(cobalt::ComponentEventCode::Sysmgr,
-            map["fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx"]);
-}
-
-// Verifies that the default spec file for granular error stats metric matches the auto-generated
-// registry.
-TEST_F(SystemMetricsDaemonTest, DefaultGranularErrorStatsSpecs) {
-  auto specs = LoadGranularErrorStatsSpecs("/pkg/data/default_granular_error_stats_specs.txt");
-  EXPECT_TRUE(specs.is_valid());
-  EXPECT_EQ(fuchsia_system_metrics::kCustomerId, specs.customer_id);
-  EXPECT_EQ(fuchsia_system_metrics::kProjectId, specs.project_id);
-  EXPECT_EQ(fuchsia_system_metrics::kGranularErrorLogCountMetricId, specs.metric_id);
-}
-
-// Tests loading an alternate spec file for granular error stats metric that doesn't match the
-// default values.
-TEST_F(SystemMetricsDaemonTest, AlternateGranularErrorStatsSpecs) {
-  auto specs = LoadGranularErrorStatsSpecs("/pkg/data/alternate_granular_error_stats_specs.txt");
-  EXPECT_TRUE(specs.is_valid());
-  EXPECT_EQ(123u, specs.customer_id);
-  EXPECT_EQ(432u, specs.project_id);
-  EXPECT_EQ(999u, specs.metric_id);
-}
-
-// Tests loading a bad spec file for granular error stats metric.
-TEST_F(SystemMetricsDaemonTest, BadGranularErrorStatsSpecs) {
-  auto specs = LoadGranularErrorStatsSpecs("/pkg/data/bad_granular_error_stats_specs.txt");
-  EXPECT_FALSE(specs.is_valid());
-}
 
 // Tests the method LogCpuUsage() and read from inspect
 TEST_F(SystemMetricsDaemonTest, InspectCpuUsage) {
@@ -588,78 +523,6 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
               DeviceState::Active, -1 /*no second position event code*/, 1);
 }
 
-// Check that component log stats are sent to cobalt's logger.
-TEST_F(SystemMetricsDaemonTest, LogLogStats) {
-  // Report 5 error logs, 3 kernel logs, and no per-component error log or granular records.
-  fake_log_stats_fetcher_->AddErrorCount(5);
-  fake_log_stats_fetcher_->AddKlogCount(3);
-  LogLogStats();
-  RunLoopUntilIdle();
-  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kKernelLogCountMetricId, -1, -1,
-              2);
-  CheckValuesForGranularStatsLogger(cobalt::kOther, 0, -1, -1, -1, 0);
-  EXPECT_EQ(5u, fake_logger_.logged_events()[0].payload.event_count().count);
-  EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
-            fake_logger_.logged_events()[0].metric_id);
-  EXPECT_EQ(3u, fake_logger_.logged_events()[1].payload.event_count().count);
-  fake_logger_.reset_logged_events();
-  fake_granular_error_stats_logger_.reset_logged_events();
-
-  // Report 4 error logs, 0 kernel logs, 3 logs for appmgr, and 2 granular records.
-  // Paths must be truncted to 64 characters before being sent to Cobalt as components.
-  const uint64_t line_no1 = 123;
-  const uint64_t line_no2 = 9999;
-  const char* kLongPath = "third_party/cobalt/src/local_aggregation_1.1/observation_generator.cc";
-  const char* kTruncatedPath = "_party/cobalt/src/local_aggregation_1.1/observation_generator.cc";
-  fake_log_stats_fetcher_->AddErrorCount(4);
-  fake_log_stats_fetcher_->AddComponentErrorCount(cobalt::ComponentEventCode::Appmgr, 3);
-  fake_log_stats_fetcher_->AddGranularRecord("path/to/file.cc", line_no1, 321);
-  fake_log_stats_fetcher_->AddGranularRecord(kLongPath, line_no2, 11);
-  LogLogStats();
-  RunLoopUntilIdle();
-  CheckValues(cobalt::kLogCobaltEvents, 2,
-              fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
-              cobalt::ComponentEventCode::Appmgr, -1, 3);
-  CheckValuesForGranularStatsLogger(cobalt::kLogCobaltEvents, 1,
-                                    fake_granular_error_stats_specs_.metric_id,
-                                    (line_no2 - 1) % 1023, -1, 2);
-
-  // 4 total error logs
-  EXPECT_EQ(fuchsia_system_metrics::kErrorLogCountMetricId,
-            fake_logger_.logged_events()[0].metric_id);
-  EXPECT_EQ(4u, fake_logger_.logged_events()[0].payload.event_count().count);
-
-  // 0 kernal logs
-  EXPECT_EQ(fuchsia_system_metrics::kKernelLogCountMetricId,
-            fake_logger_.logged_events()[1].metric_id);
-  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
-  EXPECT_EQ(0u, fake_logger_.logged_events()[1].payload.event_count().count);
-
-  // 3 logs for appmgr
-  EXPECT_EQ(fuchsia_system_metrics::kPerComponentErrorLogCountMetricId,
-            fake_logger_.logged_events()[2].metric_id);
-  EXPECT_EQ(3u, fake_logger_.logged_events()[2].payload.event_count().count);
-  EXPECT_EQ(3u, fake_logger_.logged_events()[2].payload.event_count().count);
-
-  // First granular record
-  EXPECT_EQ(fake_granular_error_stats_specs_.metric_id,
-            fake_granular_error_stats_logger_.logged_events()[0].metric_id);
-  EXPECT_EQ(321u, fake_granular_error_stats_logger_.logged_events()[0].payload.event_count().count);
-  EXPECT_EQ(line_no1 - 1, fake_granular_error_stats_logger_.logged_events()[0].event_codes[0]);
-  EXPECT_EQ("path/to/file.cc", fake_granular_error_stats_logger_.logged_events()[0].component);
-
-  // Second granular record
-  EXPECT_EQ(fake_granular_error_stats_specs_.metric_id,
-            fake_granular_error_stats_logger_.logged_events()[1].metric_id);
-  EXPECT_EQ(11u, fake_granular_error_stats_logger_.logged_events()[1].payload.event_count().count);
-  EXPECT_EQ((line_no2 - 1) % 1023,
-            fake_granular_error_stats_logger_.logged_events()[1].event_codes[0]);
-  EXPECT_EQ(kTruncatedPath, fake_granular_error_stats_logger_.logged_events()[1].component);
-
-  fake_logger_.reset_logged_events();
-  fake_granular_error_stats_logger_.reset_logged_events();
-}
-
 class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
  public:
   void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
@@ -736,16 +599,14 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
 
     // Initialize the SystemMetricsDaemon with the fake context, and other fakes.
     daemon_ = std::unique_ptr<SystemMetricsDaemon>(new SystemMetricsDaemon(
-        dispatcher(), context_provider_.context(), fake_granular_error_stats_specs_, nullptr,
-        nullptr, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
-        std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()), nullptr, nullptr,
-        "/tmp"));
+        dispatcher(), context_provider_.context(), nullptr,
+        std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
+        std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()), nullptr, "/tmp"));
   }
 
   // Note that we first save an unprotected pointer in fake_clock_ and then
   // give ownership of the pointer to daemon_.
   FakeSteadyClock* fake_clock_ = new FakeSteadyClock();
-  SystemMetricsDaemon::MetricSpecs fake_granular_error_stats_specs_{1, 2, 3};
   std::unique_ptr<SystemMetricsDaemon> daemon_;
 
   MockLoggerFactory* logger_factory_;

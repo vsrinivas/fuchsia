@@ -10,8 +10,6 @@ source_set("fake_fetchers") {
     "fake_archive.h",
     "fake_cpu_stats_fetcher.cc",
     "fake_cpu_stats_fetcher.h",
-    "fake_log_stats_fetcher.cc",
-    "fake_log_stats_fetcher.h",
   ]
 
   deps = [

@@ -82,24 +82,6 @@ resource("testapp_metrics_registry") {
           "/testapp_metrics_registry.pb") ]
   outputs = [ "data/testapp_metrics_registry.pb" ]
 }
-resource("log_stats_component_allowlist") {
-  sources = [ rebase_path("system-metrics/log_stats_component_allowlist.txt") ]
-  outputs = [ "data/log_stats_component_allowlist.txt" ]
-}
-resource("default_granular_error_stats_specs") {
-  sources = [ rebase_path("system-metrics/granular_error_stats_specs.txt") ]
-  outputs = [ "data/default_granular_error_stats_specs.txt" ]
-}
-resource("alternate_granular_error_stats_specs") {
-  sources = [ rebase_path(
-          "system-metrics/testing/alternate_granular_error_stats_specs_for_testing.txt") ]
-  outputs = [ "data/alternate_granular_error_stats_specs.txt" ]
-}
-resource("bad_granular_error_stats_specs") {
-  sources = [ rebase_path(
-          "system-metrics/testing/bad_granular_error_stats_specs_for_testing.txt") ]
-  outputs = [ "data/bad_granular_error_stats_specs.txt" ]
-}
 
 fuchsia_test_package("cobalt_tests") {
   test_components = [
@@ -109,10 +91,6 @@ fuchsia_test_package("cobalt_tests") {
     ":cobalt_testapp_no_network",
   ]
   deps = [
-    ":alternate_granular_error_stats_specs",
-    ":bad_granular_error_stats_specs",
-    ":default_granular_error_stats_specs",
-    ":log_stats_component_allowlist",
     ":testapp_metrics_registry",
     ":variants_no_network_components",
     "app:analyzer_devel_public",

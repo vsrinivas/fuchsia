@@ -31,9 +31,6 @@ source_set("system_metrics_daemon_lib") {
     "cpu_stats_fetcher.h",
     "cpu_stats_fetcher_impl.cc",
     "cpu_stats_fetcher_impl.h",
-    "log_stats_fetcher.h",
-    "log_stats_fetcher_impl.cc",
-    "log_stats_fetcher_impl.h",
     "system_metrics_daemon.cc",
     "system_metrics_daemon.h",
   ]
@@ -84,18 +81,6 @@ executable("system-metrics") {
   ]
 }
 
-config_data("config") {
-  for_pkg = "cobalt_system_metrics"
-
-  sources = [
-    # The metric specs for granular error stats.
-    "granular_error_stats_specs.txt",
-
-    # The default allowlist included in core. Other products can define their own allowlist.
-    "log_stats_component_allowlist.txt",
-  ]
-}
-
 fuchsia_package_with_single_component("cobalt_system_metrics") {
   manifest = "meta/cobalt_system_metrics.cmx"
   deps = [ ":system-metrics" ]
@@ -104,10 +89,7 @@ fuchsia_package_with_single_component("cobalt_system_metrics") {
 executable("cobalt_system_metrics_unittests") {
   testonly = true
 
-  sources = [
-    "log_stats_fetcher_impl_test.cc",
-    "system_metrics_daemon_test.cc",
-  ]
+  sources = [ "system_metrics_daemon_test.cc" ]
 
   deps = [
     ":system_metrics_daemon_lib",
