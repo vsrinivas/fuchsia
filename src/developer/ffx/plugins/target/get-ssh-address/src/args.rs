@@ -15,7 +15,8 @@ use {argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command};
 
 The command takes a <timeout> value in seconds with a default of `1.0`
 and overrides the value in the `target.interaction.timeout` key.",
-    error_code(1, "Timeout while getting ssh address")
+    error_code(1, "Timeout while getting ssh address"),
+    error_code(2, "Unable to get ssh address from target")
 )]
 
 pub struct GetSshAddressCommand {

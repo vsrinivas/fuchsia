@@ -133,6 +133,7 @@ mod test {
                 .detach();
                 responder.send().unwrap();
             }
+            r => panic!("unexpected request: {:?}", r),
         })
     }
 

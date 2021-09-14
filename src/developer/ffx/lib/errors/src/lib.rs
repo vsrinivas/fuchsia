@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_bridge::DaemonError;
+use fidl_fuchsia_developer_bridge::{DaemonError, OpenTargetError};
 
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
@@ -31,6 +31,12 @@ pub enum FfxError {
         DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target, .is_default_target)),
     })]
     DaemonError { err: DaemonError, target: Option<String>, is_default_target: bool },
+
+    #[error("{}", match .err {
+        OpenTargetError::QueryAmbiguous => format!("Target specification {} matched multiple targets. Use `ffx target list` to list known targets, and use a more specific matcher.", target_string(.target, .is_default_target)),
+        OpenTargetError::TargetNotFound => format!("Target specification {} was not found. Use `ffx target list` to list known targets, and use a different matcher.", target_string(.target, .is_default_target))
+    })]
+    OpenTargetError { err: OpenTargetError, target: Option<String>, is_default_target: bool },
 
     #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target, .is_default_target)))]
     FastbootError { target: Option<String>, is_default_target: bool },

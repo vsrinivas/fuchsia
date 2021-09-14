@@ -25,6 +25,7 @@ group("tests") {
     "echo:tests($host_toolchain)",
     "mdns:tests($host_toolchain)",
     "repo:tests($host_toolchain)",
+    "target_collection:tests($host_toolchain)",
     "tracing:tests($host_toolchain)",
   ]
 }

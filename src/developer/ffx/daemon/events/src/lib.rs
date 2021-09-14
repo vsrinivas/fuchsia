@@ -96,4 +96,12 @@ impl TargetConnectionState {
             _ => false,
         }
     }
+
+    pub fn is_manual(&self) -> bool {
+        matches!(self, Self::Manual)
+    }
+
+    pub fn is_product(&self) -> bool {
+        matches!(self, Self::Rcs(_) | Self::Mdns(_))
+    }
 }

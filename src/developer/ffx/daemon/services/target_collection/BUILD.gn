@@ -11,15 +11,25 @@ rustc_library("ffx_daemon_service_target_collection") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/developer/ffx/core:lib",
+    "//src/developer/ffx/daemon/events:lib",
+    "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/services:lib",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures-lite",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:log",
   ]
 
-  sources = [ "src/lib.rs" ]
+  test_deps = [ "//src/developer/ffx/lib/addr:lib" ]
+
+  sources = [
+    "src/lib.rs",
+    "src/target_handle.rs",
+  ]
 }
 
 group("tests") {

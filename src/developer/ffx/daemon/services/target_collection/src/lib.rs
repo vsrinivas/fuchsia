@@ -3,13 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, async_trait::async_trait, fidl_fuchsia_developer_bridge as bridge,
-    futures_lite::stream::StreamExt, services::prelude::*,
+    crate::target_handle::TargetHandle,
+    anyhow::{anyhow, Result},
+    async_trait::async_trait,
+    ffx_core::TryStreamUtilExt,
+    fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_developer_bridge as bridge,
+    fuchsia_async::futures::{future::ready, FutureExt, TryStreamExt},
+    fuchsia_async::Task,
+    services::prelude::*,
+    std::cell::{Cell, RefCell},
+    std::collections::HashMap,
+    std::rc::Rc,
 };
+
+mod target_handle;
 
 #[ffx_service]
 #[derive(Default)]
-pub struct TargetCollectionService {}
+pub struct TargetCollectionService {
+    /// Determines the next ID of a target service task to be spawned.
+    next_task_id: Cell<usize>,
+    target_handles: Rc<RefCell<HashMap<usize, Task<()>>>>,
+}
 
 #[async_trait(?Send)]
 impl FidlService for TargetCollectionService {
@@ -59,6 +75,52 @@ impl FidlService for TargetCollectionService {
                 .detach();
                 responder.send().map_err(Into::into)
             }
+            bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
+                let task_id = self.next_task_id.get();
+                self.next_task_id.set(task_id + 1);
+                let target = match target_collection.wait_for_match(query).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        return responder
+                            .send(&mut match e {
+                                bridge::DaemonError::TargetAmbiguous => {
+                                    Err(bridge::OpenTargetError::QueryAmbiguous)
+                                }
+                                bridge::DaemonError::TargetNotFound => {
+                                    Err(bridge::OpenTargetError::TargetNotFound)
+                                }
+                                e => {
+                                    // This, so far, will only happen if encountering
+                                    // TargetCacheError, which is highly unlikely.
+                                    log::warn!("encountered unhandled error: {:?}", e);
+                                    Err(bridge::OpenTargetError::TargetNotFound)
+                                }
+                            })
+                            .map_err(Into::into)
+                    }
+                };
+                let handles = self.target_handles.clone();
+                let target_handle =
+                    TargetHandle::new(target, cx.clone(), target_handle)?.then(move |_| {
+                        handles.borrow_mut().remove(&task_id);
+                        ready(())
+                    });
+                self.target_handles.borrow_mut().insert(task_id, Task::local(target_handle));
+                responder.send(&mut Ok(())).map_err(Into::into)
+            }
         }
+    }
+
+    async fn serve<'a>(
+        &'a self,
+        cx: &'a Context,
+        stream: <Self::Service as ProtocolMarker>::RequestStream,
+    ) -> Result<()> {
+        // Necessary to avoid hanging forever when a client drops a connection
+        // during a call to OpenTarget.
+        stream
+            .map_err(|err| anyhow!("{}", err))
+            .try_for_each_concurrent_while_connected(None, |req| self.handle(cx, req))
+            .await
     }
 }

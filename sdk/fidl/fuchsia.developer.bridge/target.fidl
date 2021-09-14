@@ -94,11 +94,45 @@ protocol TargetCollectionIterator {
     });
 };
 
-/// A protocol implemented in the daemon as a service.
+type OpenTargetError = strict enum {
+    /// When querying for a target, an ambiguous query was received (one that
+    /// matched multiple targets).
+    QUERY_AMBIGUOUS = 1;
+    /// No targets were able to match the query after waiting.
+    TARGET_NOT_FOUND = 2;
+};
+
+/// A protocol defining a collection of Fuchsia targets. This is used to inspect
+/// and interact with fuchsia targets that the daemon has discovered.
 @discoverable
 protocol TargetCollection {
     ListTargets(resource struct {
         query string:<255, optional>;
         iterator server_end:TargetCollectionIterator;
     }) -> ();
+
+    /// Attempts to open a target handle given the query matches exactly one
+    /// target. If a target does not yet exist in the cache that matches the
+    /// query, then this will hang until one is found. It is the caller's
+    /// responsibility to time out if this call takes too long.
+    OpenTarget(resource struct {
+        query string:<255, optional>;
+        target_handle server_end:TargetHandle;
+    }) -> (struct {}) error OpenTargetError;
+};
+
+/// This is a handle to a target received from the target collection.
+/// Not to be confused with the `TargetControl` protocol. This is exclusively
+/// for use with the target collection service.
+@discoverable
+protocol TargetHandle {
+    /// Waits for an SSH address to become available on the target.
+    ///
+    /// Returns:
+    /// * The first cached address viable for SSH. If there isn't one, will
+    ///   wait until there is. It is the client's responsibility to handle
+    ///   potential timeouts.
+    GetSshAddress() -> (struct {
+        address TargetAddrInfo;
+    });
 };

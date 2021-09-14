@@ -12,6 +12,7 @@ ffx_plugin("ffx_get_ssh_address") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/netext:lib",
+    "//src/developer/ffx/lib/timeout:lib",
   ]
 
   sources = [
