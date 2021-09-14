@@ -38,9 +38,9 @@ ensuring that the correct configurations are applied.
 Three SWD policies are currently proposed as part of this RFC. They aim to
 formalize the SWD policy configurations with semantic rather than
 product-driven naming. These policies are to be applied to product definitions
-to define SWD state in a more holistic fashion, and product owners will select
-one of the available policies rather than tune each individual configuration
-setting.
+to define SWD state in a more holistic fashion, and
+[product owners][glossary.product-owner] will select one of the available
+policies rather than tune each individual configuration setting.
 
 As need arises, we may add more policies, but this set of policies is expected
 to remain much smaller than the growth of product and build variants.
@@ -226,3 +226,5 @@ to reduce the number of settings to change down to a single value.
 Unfortunately, this was deemed to be infeasible as the SWD stack is implemented
 in multiple components across multiple packages and the zbi, with configuration
 spread across all of them.
+
+[glossary.product-owner]: /docs/glossary/README.md#product-owner

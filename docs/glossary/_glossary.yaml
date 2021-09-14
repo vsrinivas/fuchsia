@@ -988,6 +988,23 @@ environment to form a full SDK."
   related_guides: [""]
   area: ["System"]
 
+- term: "Product"
+  short_description: "A specification for an assembled system."
+  full_description: "For instance, the Fuchsia platform defines products such as `bringup` and
+  `core` in terms of build-time configuration values and a set of packages to assemble into a system
+  image."
+  see_also: ["<a href=\"/docs/glossary#package\">Package</a>",
+             "<a href=\"/docs/glossary#product-owner\">Product owner</a>"]
+  related_guides: ["<a href=\"/docs/concepts/build_system/bringup.md\">Bringup Product Definition</a>"]
+  area: ["System"]
+
+- term: "Product owner"
+  short_description: "Whoever defines a product, and is responsible for its provenance and releases."
+  full_description: ""
+  see_also: ["<a href=\"/docs/glossary#product\">Package</a>"]
+  related_guides: [""]
+  area: ["System"]
+
 - term: "Process"
   short_description: "A <a href=\"/docs/glossary#kernel-object\">kernel object</a> that
   represents an instance of a program as a set of instructions that are executed by one or more

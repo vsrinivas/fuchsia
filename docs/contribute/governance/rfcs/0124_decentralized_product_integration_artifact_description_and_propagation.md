@@ -2,6 +2,7 @@
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- *** DO NOT EDIT ABOVE THIS LINE -->
+{% import 'fuchsia-src/_common/_doc_widgets.md' as widgets %}
 
 <!--
 *** This should begin with an H2 element (for example, ## Summary).
@@ -11,7 +12,7 @@
 
 This RFC describes a mechanism to make source or prebuilt artifacts from the
 Fuchsia source tree or from petal repositories available for the assembly of a
-Fuchsia product outside of the Fuchsia source tree.
+Fuchsia [glossary.product] outside of the Fuchsia source tree.
 
 The mechanism comprises two essential aspects:
 
@@ -69,7 +70,7 @@ This process is shown in Figure 1.
 This process has several drawbacks:
 
 * Product assembly configuration is kept in the Fuchsia source tree, rather than
-  under the control of the product owner.
+  under the control of the [glossary.product-owner].
 * The version of the Fuchsia system is always ahead of the version of the
   Fuchsia SDK that any petal artifact was built with, because the Fuchsia system
   is built from the most recent source revision of the Fuchsia source tree, but
@@ -932,3 +933,5 @@ generalization of a build system to operate asynchronously and distributed.
 [fuchsia-package-hermetic]: /docs/concepts/software_model.md#distributing-components-through-packages
 [fuchsia-merkleroot]: /docs/concepts/packages/merkleroot.md
 [cipd]: https://chromium.googlesource.com/infra/luci/luci-go/+/HEAD/cipd/README.md
+[glossary.product]: /docs/glossary/README.md#product
+[glossary.product-owner]: /docs/glossary/README.md#product-owner

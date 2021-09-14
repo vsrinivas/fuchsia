@@ -342,8 +342,9 @@ will partner with the test owners to create the necessary platform solutions.
 
 ### Create a new system testing platform solution for product owners
 
-Fuchsia platform teams will develop a new solution for product owners to write
-system tests that meets the following criteria:
+Fuchsia platform teams will develop a new solution for
+[product owners][glossary.product-owner] to write system tests that meets the
+following criteria:
 
 1. System tests can be developed and executed OOT.
 
@@ -480,6 +481,7 @@ additional justification or otherwise be discouraged by the platform team.
 [fidl-abi-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
 [fsi]: /docs/concepts/system/abi/system.md
 [fuchsia-updatable]: /docs/concepts/principles/updatable.md
+[glossary.product-owner]: /docs/glossary/README.md#product-owner
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [new-e2e-test-guide]: /docs/development/testing/create_a_new_end_to_end_test.md
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md

@@ -77,7 +77,8 @@ path forward for updates to ensure that they can be kept relevant.
 
 ## Design
 
-In order to provide useful, up-to-date product metadata with our SDKs, we will:
+In order to provide useful, up-to-date [glossary.product] metadata with our
+SDKs, we will:
 
 * Define a new schema for the metadata.
 * Define a process for updating that schema.
@@ -918,6 +919,7 @@ schema can be found there][prior-art].
 [api-review]: /docs/contribute/governance/api_council.md
 [build-configuration]: /products/
 [ffx]: /docs/development/tools/ffx/overview.md
+[glossary.product]: /docs/glossary/README.md#product
 [json-schema]: http://json-schema.org/draft-07/schema#
 [prior-art]: https://fuchsia.googlesource.com/fuchsia/+/545a693eabe7c282de7e1560a3ee64f24f6988d1/build/images/BUILD.gn#177701
 [schemata]: /build/sdk/meta
