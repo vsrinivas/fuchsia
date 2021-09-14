@@ -1,0 +1,10 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/compat_test",
+    },
+}
