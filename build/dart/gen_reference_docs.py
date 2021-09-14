@@ -183,6 +183,11 @@ def generate_docs(
 
         # Run dartdoc.
         excluded_packages = ['Dart', 'logging']
+        # The flag no-enhanced-reference-lookup was removed in dart
+        # SDK 3.0, but this python script only runs in a builder that
+        # pins the dart sdk to the stable version.
+        # This is a work around fxb/80677 and should be removed once that
+        # bug is solved.
         process = subprocess.run(
             [
                 os.path.join(dart_prebuilt_dir, 'dartdoc'),
