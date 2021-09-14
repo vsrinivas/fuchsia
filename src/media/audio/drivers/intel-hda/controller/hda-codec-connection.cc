@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec-connection.h"
+#include "hda-codec-connection.h"
 
 #include <stdio.h>
 #include <zircon/assert.h>
@@ -29,29 +29,29 @@ namespace intel_hda {
     dev_props_[PROP_##_prop].value = (_value);                                       \
   } while (false)
 
-CodecConnection::ProbeCommandListEntry CodecConnection::PROBE_COMMANDS[] = {
-    {.verb = GET_PARAM(CodecParam::VENDOR_ID), .parse = &CodecConnection::ParseVidDid},
-    {.verb = GET_PARAM(CodecParam::REVISION_ID), .parse = &CodecConnection::ParseRevisionId},
+HdaCodecConnection::ProbeCommandListEntry HdaCodecConnection::PROBE_COMMANDS[] = {
+    {.verb = GET_PARAM(CodecParam::VENDOR_ID), .parse = &HdaCodecConnection::ParseVidDid},
+    {.verb = GET_PARAM(CodecParam::REVISION_ID), .parse = &HdaCodecConnection::ParseRevisionId},
 };
 
-#define DEV (static_cast<CodecConnection*>(ctx))
+#define DEV (static_cast<HdaCodecConnection*>(ctx))
 
 // Device FIDL thunks
-fuchsia_hardware_intel_hda_CodecDevice_ops_t CodecConnection::CODEC_FIDL_THUNKS = {
+fuchsia_hardware_intel_hda_CodecDevice_ops_t HdaCodecConnection::CODEC_FIDL_THUNKS = {
     .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t { return DEV->GetChannel(txn); },
 };
 
-zx_protocol_device_t CodecConnection::CODEC_DEVICE_THUNKS = []() {
+zx_protocol_device_t HdaCodecConnection::CODEC_DEVICE_THUNKS = []() {
   zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
     return fuchsia_hardware_intel_hda_CodecDevice_dispatch(ctx, txn, msg,
-                                                           &CodecConnection::CODEC_FIDL_THUNKS);
+                                                           &HdaCodecConnection::CODEC_FIDL_THUNKS);
   };
   return ops;
 }();
 
-ihda_codec_protocol_ops_t CodecConnection::CODEC_PROTO_THUNKS = {
+ihda_codec_protocol_ops_t HdaCodecConnection::CODEC_PROTO_THUNKS = {
     .get_driver_channel = [](void* ctx, zx_handle_t* channel_out) -> zx_status_t {
       ZX_DEBUG_ASSERT(ctx);
       return DEV->CodecGetDispatcherChannel(channel_out);
@@ -59,7 +59,7 @@ ihda_codec_protocol_ops_t CodecConnection::CODEC_PROTO_THUNKS = {
 };
 #undef DEV
 
-CodecConnection::CodecConnection(IntelHDAController& controller, uint8_t codec_id)
+HdaCodecConnection::HdaCodecConnection(IntelHDAController& controller, uint8_t codec_id)
     : controller_(controller), codec_id_(codec_id), loop_(&kAsyncLoopConfigNeverAttachToThread) {
   ::memset(&dev_props_, 0, sizeof(dev_props_));
   dev_props_[PROP_PROTOCOL].id = BIND_PROTOCOL;
@@ -70,12 +70,12 @@ CodecConnection::CodecConnection(IntelHDAController& controller, uint8_t codec_i
            info.dev_id, info.func_id, codec_id_);
 }
 
-fbl::RefPtr<CodecConnection> CodecConnection::Create(IntelHDAController& controller,
-                                                     uint8_t codec_id) {
+fbl::RefPtr<HdaCodecConnection> HdaCodecConnection::Create(IntelHDAController& controller,
+                                                           uint8_t codec_id) {
   ZX_DEBUG_ASSERT(codec_id < HDA_MAX_CODECS);
 
   fbl::AllocChecker ac;
-  auto ret = fbl::AdoptRef(new (&ac) CodecConnection(controller, codec_id));
+  auto ret = fbl::AdoptRef(new (&ac) HdaCodecConnection(controller, codec_id));
   if (!ac.check()) {
     GLOBAL_LOG(ERROR, "Out of memory attempting to allocate codec");
     return nullptr;
@@ -88,7 +88,7 @@ fbl::RefPtr<CodecConnection> CodecConnection::Create(IntelHDAController& control
   return ret;
 }
 
-zx_status_t CodecConnection::Startup() {
+zx_status_t HdaCodecConnection::Startup() {
   ZX_DEBUG_ASSERT(state_ == State::PROBING);
 
   for (size_t i = 0; i < countof(PROBE_COMMANDS); ++i) {
@@ -110,8 +110,8 @@ zx_status_t CodecConnection::Startup() {
   return ZX_OK;
 }
 
-void CodecConnection::SendCORBResponse(const fbl::RefPtr<Channel>& channel,
-                                       const CodecResponse& resp, uint32_t transaction_id) {
+void HdaCodecConnection::SendCORBResponse(const fbl::RefPtr<Channel>& channel,
+                                          const CodecResponse& resp, uint32_t transaction_id) {
   ZX_DEBUG_ASSERT(channel != nullptr);
   ihda_codec_send_corb_cmd_resp_t payload;
 
@@ -126,8 +126,8 @@ void CodecConnection::SendCORBResponse(const fbl::RefPtr<Channel>& channel,
   }
 }
 
-void CodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
-                                               std::unique_ptr<CodecCmdJob>&& job) {
+void HdaCodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
+                                                  std::unique_ptr<CodecCmdJob>&& job) {
   if (state_ == State::PROBING) {
     // Are we still in the PROBING stage of things?  If so, this job should
     // have no response channel assigned to it, and we should still be
@@ -155,7 +155,7 @@ void CodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
   }
 }
 
-void CodecConnection::ProcessUnsolicitedResponse(const CodecResponse& resp) {
+void HdaCodecConnection::ProcessUnsolicitedResponse(const CodecResponse& resp) {
   // If we still have a channel to our codec driver, grab a reference to it
   // and send the unsolicited response to it.
   fbl::RefPtr<Channel> codec_driver_channel;
@@ -168,7 +168,7 @@ void CodecConnection::ProcessUnsolicitedResponse(const CodecResponse& resp) {
     SendCORBResponse(codec_driver_channel, resp);
 }
 
-void CodecConnection::ProcessWakeupEvt() {
+void HdaCodecConnection::ProcessWakeupEvt() {
   // TODO(johngro) : handle wakeup events.  Wakeup events are delivered for
   // two reasons.
   //
@@ -181,7 +181,7 @@ void CodecConnection::ProcessWakeupEvt() {
   LOG(WARNING, "Wakeup event received - Don't know how to handle this yet!");
 }
 
-void CodecConnection::Shutdown() {
+void HdaCodecConnection::Shutdown() {
   // Close all existing connections and synchronize with any client threads
   // who are currently processing requests.
   state_ = State::SHUTTING_DOWN;
@@ -200,7 +200,7 @@ void CodecConnection::Shutdown() {
   state_ = State::SHUT_DOWN;
 }
 
-zx_status_t CodecConnection::PublishDevice() {
+zx_status_t HdaCodecConnection::PublishDevice() {
   // Generate our name.
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "intel-hda-codec-%03u", codec_id_);
@@ -226,7 +226,7 @@ zx_status_t CodecConnection::PublishDevice() {
   return ZX_OK;
 }
 
-zx_status_t CodecConnection::ParseVidDid(const CodecResponse& resp) {
+zx_status_t HdaCodecConnection::ParseVidDid(const CodecResponse& resp) {
   props_.vid = static_cast<uint16_t>((resp.data >> 16) & 0xFFFF);
   props_.did = static_cast<uint16_t>(resp.data & 0xFFFF);
 
@@ -236,7 +236,7 @@ zx_status_t CodecConnection::ParseVidDid(const CodecResponse& resp) {
   return (props_.vid != 0) ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-zx_status_t CodecConnection::ParseRevisionId(const CodecResponse& resp) {
+zx_status_t HdaCodecConnection::ParseRevisionId(const CodecResponse& resp) {
   props_.ihda_vmaj = static_cast<uint8_t>((resp.data >> 20) & 0xF);
   props_.ihda_vmin = static_cast<uint8_t>((resp.data >> 16) & 0xF);
   props_.rev_id = static_cast<uint8_t>((resp.data >> 8) & 0xFF);
@@ -251,7 +251,7 @@ zx_status_t CodecConnection::ParseRevisionId(const CodecResponse& resp) {
   return PublishDevice();
 }
 
-zx_status_t CodecConnection::GetChannel(fidl_txn_t* txn) {
+zx_status_t HdaCodecConnection::GetChannel(fidl_txn_t* txn) {
   zx::channel channel_local;
   zx::channel channel_remote;
   zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
@@ -280,8 +280,8 @@ zx_status_t CodecConnection::GetChannel(fidl_txn_t* txn) {
   return fuchsia_hardware_intel_hda_CodecDeviceGetChannel_reply(txn, channel_remote.release());
 }
 
-void CodecConnection::GetChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                          zx_status_t status, const zx_packet_signal_t* signal) {
+void HdaCodecConnection::GetChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
       return;
@@ -330,7 +330,7 @@ void CodecConnection::GetChannelSignalled(async_dispatcher_t* dispatcher, async:
   PROCESS_CMD_INNER(_req_ack, _ioctl, _payload, _handler)             \
   return _handler(channel, req._payload, std::move(received_handle))
 
-zx_status_t CodecConnection::ProcessCodecRequest(Channel* channel) {
+zx_status_t HdaCodecConnection::ProcessCodecRequest(Channel* channel) {
   zx_status_t res;
   uint32_t req_size;
   union {
@@ -380,7 +380,7 @@ zx_status_t CodecConnection::ProcessCodecRequest(Channel* channel) {
   }
 }
 
-zx_status_t CodecConnection::ProcessUserRequest(Channel* channel) {
+zx_status_t HdaCodecConnection::ProcessUserRequest(Channel* channel) {
   zx_status_t res;
   uint32_t req_size;
   union {
@@ -432,7 +432,7 @@ zx_status_t CodecConnection::ProcessUserRequest(Channel* channel) {
 
 #undef PROCESS_CMD
 
-void CodecConnection::ProcessCodecDeactivate(const Channel* channel) {
+void HdaCodecConnection::ProcessCodecDeactivate(const Channel* channel) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   // This should be the driver channel (client channels created with IOCTL do
@@ -458,7 +458,7 @@ void CodecConnection::ProcessCodecDeactivate(const Channel* channel) {
   }
 }
 
-zx_status_t CodecConnection::ProcessGetIDs(Channel* channel, const ihda_proto::GetIDsReq& req) {
+zx_status_t HdaCodecConnection::ProcessGetIDs(Channel* channel, const ihda_proto::GetIDsReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   ihda_proto::GetIDsResp resp;
@@ -473,8 +473,8 @@ zx_status_t CodecConnection::ProcessGetIDs(Channel* channel, const ihda_proto::G
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t CodecConnection::ProcessSendCORBCmd(Channel* channel,
-                                                const ihda_proto::SendCORBCmdReq& req) {
+zx_status_t HdaCodecConnection::ProcessSendCORBCmd(Channel* channel,
+                                                   const ihda_proto::SendCORBCmdReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   CodecVerb verb(req.verb);
@@ -502,8 +502,8 @@ zx_status_t CodecConnection::ProcessSendCORBCmd(Channel* channel,
   return res;
 }
 
-zx_status_t CodecConnection::ProcessRequestStream(Channel* channel,
-                                                  const ihda_proto::RequestStreamReq& req) {
+zx_status_t HdaCodecConnection::ProcessRequestStream(Channel* channel,
+                                                     const ihda_proto::RequestStreamReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   ihda_proto::RequestStreamResp resp;
@@ -532,8 +532,8 @@ zx_status_t CodecConnection::ProcessRequestStream(Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t CodecConnection::ProcessReleaseStream(Channel* channel,
-                                                  const ihda_proto::ReleaseStreamReq& req) {
+zx_status_t HdaCodecConnection::ProcessReleaseStream(Channel* channel,
+                                                     const ihda_proto::ReleaseStreamReq& req) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   // Remove the stream from the active set.
@@ -561,9 +561,9 @@ zx_status_t CodecConnection::ProcessReleaseStream(Channel* channel,
   return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t CodecConnection::ProcessSetStreamFmt(Channel* channel,
-                                                 const ihda_proto::SetStreamFmtReq& req,
-                                                 zx::handle received_handle) {
+zx_status_t HdaCodecConnection::ProcessSetStreamFmt(Channel* channel,
+                                                    const ihda_proto::SetStreamFmtReq& req,
+                                                    zx::handle received_handle) {
   ZX_DEBUG_ASSERT(channel != nullptr);
 
   zx::channel server_channel;
@@ -614,7 +614,7 @@ zx_status_t CodecConnection::ProcessSetStreamFmt(Channel* channel,
   return res;
 }
 
-zx_status_t CodecConnection::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {
+zx_status_t HdaCodecConnection::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {
   if (!remote_endpoint_out)
     return ZX_ERR_INVALID_ARGS;
 
@@ -653,9 +653,9 @@ zx_status_t CodecConnection::CodecGetDispatcherChannel(zx_handle_t* remote_endpo
   return status;
 }
 
-void CodecConnection::GetDispatcherChannelSignalled(async_dispatcher_t* dispatcher,
-                                                    async::WaitBase* wait, zx_status_t status,
-                                                    const zx_packet_signal_t* signal) {
+void HdaCodecConnection::GetDispatcherChannelSignalled(async_dispatcher_t* dispatcher,
+                                                       async::WaitBase* wait, zx_status_t status,
+                                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     if (status != ZX_ERR_CANCELED) {  // Cancel is expected.
       return;

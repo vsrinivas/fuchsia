@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_HDA_CODEC_CONNECTION_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_HDA_CODEC_CONNECTION_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
@@ -35,8 +35,8 @@ namespace intel_hda {
 class IntelHDAController;
 struct CodecResponse;
 
-// CodecConnection manages a connection to a child codec driver.
-class CodecConnection : public fbl::RefCounted<CodecConnection> {
+// HdaCodecConnection manages a connection to a child codec driver.
+class HdaCodecConnection : public fbl::RefCounted<HdaCodecConnection> {
  public:
   enum class State {
     PROBING,
@@ -47,7 +47,7 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
     FATAL_ERROR,
   };
 
-  static fbl::RefPtr<CodecConnection> Create(IntelHDAController& controller, uint8_t codec_id);
+  static fbl::RefPtr<HdaCodecConnection> Create(IntelHDAController& controller, uint8_t codec_id);
 
   zx_status_t Startup();
   void ProcessSolicitedResponse(const CodecResponse& resp, std::unique_ptr<CodecCmdJob>&& job);
@@ -71,9 +71,9 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   void DumpState();
 
  private:
-  friend class fbl::RefPtr<CodecConnection>;
+  friend class fbl::RefPtr<HdaCodecConnection>;
 
-  using ProbeParseCbk = zx_status_t (CodecConnection::*)(const CodecResponse& resp);
+  using ProbeParseCbk = zx_status_t (HdaCodecConnection::*)(const CodecResponse& resp);
   struct ProbeCommandListEntry {
     CodecVerb verb;
     ProbeParseCbk parse;
@@ -92,8 +92,8 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
   static zx_protocol_device_t CODEC_DEVICE_THUNKS;
   static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 
-  CodecConnection(IntelHDAController& controller, uint8_t codec_id);
-  virtual ~CodecConnection() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
+  HdaCodecConnection(IntelHDAController& controller, uint8_t codec_id);
+  virtual ~HdaCodecConnection() { ZX_DEBUG_ASSERT(state_ == State::SHUT_DOWN); }
 
   zx_status_t PublishDevice();
   void GetChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -164,4 +164,4 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_HDA_CODEC_CONNECTION_H_

@@ -15,14 +15,14 @@
 #include <fbl/auto_lock.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 
-#include "codec-connection.h"
 #include "debug-logging.h"
+#include "hda-codec-connection.h"
 #include "intel-hda-controller.h"
 
 namespace audio {
 namespace intel_hda {
 
-fbl::RefPtr<CodecConnection> IntelHDAController::GetCodec(uint id) {
+fbl::RefPtr<HdaCodecConnection> IntelHDAController::GetCodec(uint id) {
   ZX_DEBUG_ASSERT(id < countof(codecs_));
   fbl::AutoLock codec_lock(&codec_lock_);
   return codecs_[id];
@@ -321,7 +321,7 @@ void IntelHDAController::ProcessControllerIRQ() {
       // don't seem to give any indication of how to detect that a codec
       // has been unplugged.
       if (codecs_[i] == nullptr) {
-        codecs_[i] = CodecConnection::Create(*this, i);
+        codecs_[i] = HdaCodecConnection::Create(*this, i);
 
         // If we successfully created our codec, attempt to start it up.
         // If it fails to start, release our reference to the codec.

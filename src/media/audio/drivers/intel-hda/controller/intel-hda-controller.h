@@ -32,8 +32,8 @@
 #include <intel-hda/utils/utils.h>
 
 #include "codec-cmd-job.h"
-#include "codec-connection.h"
 #include "debug-logging.h"
+#include "hda-codec-connection.h"
 #include "intel-dsp.h"
 #include "utils.h"
 
@@ -105,7 +105,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   State GetState() { return state_.load(); }
 
   // Codec lifetime maanagement
-  fbl::RefPtr<CodecConnection> GetCodec(uint id);
+  fbl::RefPtr<HdaCodecConnection> GetCodec(uint id);
 
   // Methods used during initialization
   zx_status_t InitInternal(zx_device_t* pci_dev);
@@ -203,7 +203,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   fbl::DoublyLinkedList<std::unique_ptr<CodecCmdJob>> pending_corb_jobs_ TA_GUARDED(corb_lock_);
 
   fbl::Mutex codec_lock_;
-  fbl::RefPtr<CodecConnection> codecs_[HDA_MAX_CODECS];
+  fbl::RefPtr<HdaCodecConnection> codecs_[HDA_MAX_CODECS];
 
   fbl::RefPtr<IntelDsp> dsp_;
 

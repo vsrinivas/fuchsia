@@ -4,7 +4,7 @@
 
 #include "codec-cmd-job.h"
 
-#include "codec-connection.h"
+#include "hda-codec-connection.h"
 
 // Instantiate storage for the static allocator.
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::intel_hda::CodecCmdJobAllocTraits, 0x100, true);

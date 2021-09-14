@@ -16,8 +16,8 @@
 
 #include <intel-hda/utils/utils.h>
 
-#include "codec-connection.h"
 #include "debug-logging.h"
+#include "hda-codec-connection.h"
 #include "utils.h"
 
 namespace audio {

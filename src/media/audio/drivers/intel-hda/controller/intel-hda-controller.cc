@@ -20,9 +20,9 @@
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 
-#include "codec-connection.h"
 #include "debug-logging.h"
 #include "device-ids.h"
+#include "hda-codec-connection.h"
 #include "src/media/audio/drivers/intel-hda/controller/intel_hda-bind.h"
 #include "utils.h"
 
