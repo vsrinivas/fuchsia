@@ -25,6 +25,8 @@
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 #include "src/lib/fxl/command_line.h"
 
+using Command = fuchsia::camera::gym::Command;
+
 int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
@@ -156,9 +158,13 @@ int main(int argc, char* argv[]) {
 
     // Bridge ControllerReceiver to StreamCycler.
     camera::ControllerReceiver::CommandHandler command_handler =
-        [&cycler](fuchsia::camera::gym::Command command,
-                  camera::ControllerReceiver::SendCommandCallback callback) {
-          cycler->ExecuteCommand(std::move(command), std::move(callback));
+        [&cycler, &collage](fuchsia::camera::gym::Command command,
+                            camera::ControllerReceiver::SendCommandCallback callback) {
+          if (command.Which() == Command::Tag::kSetDescription) {
+            collage->ExecuteCommand(std::move(command), std::move(callback));
+          } else {
+            cycler->ExecuteCommand(std::move(command), std::move(callback));
+          }
         };
     controller_receiver->SetHandlers(std::move(command_handler));
 

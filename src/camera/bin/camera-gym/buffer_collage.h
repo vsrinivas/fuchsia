@@ -20,6 +20,8 @@
 
 #include <map>
 
+#include "fuchsia/camera/gym/cpp/fidl.h"
+
 namespace camera {
 
 struct BitmapImageNode {
@@ -57,6 +59,16 @@ struct CollectionView {
 // only be called from the loop's thread.
 class BufferCollage : public fuchsia::ui::app::ViewProvider {
  public:
+  static constexpr uint32_t kShowDescription    = 0x00000001;  // On/off for description
+  static constexpr uint32_t kShowMagnifyBoxes   = 0x00000002;  // On/off for magnify boxes
+
+  static constexpr uint32_t kShowStateCycleMask = 0x00000003;  // All bits used
+
+  static constexpr uint32_t kDefaultShowState   = kShowDescription;  // Backward compatible start
+
+  using CommandStatusHandler =
+      fit::function<void(fuchsia::camera::gym::Controller_SendCommand_Result)>;
+
   ~BufferCollage() override;
 
   // Creates a new BufferCollage instance using the provided interface handles. After returning, if
@@ -91,6 +103,40 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   // Updates the view to show or hide a mute icon.
   void PostSetMuteIconVisibility(bool visible);
+
+  // Returns the current magnify boxes mode. (Global to all streams)
+  bool show_magnify_boxes() {
+    return (show_state_ & kShowMagnifyBoxes) != 0;
+  }
+
+  // Returns the current description mode. (Global to all streams)
+  bool show_description() {
+    return (show_state_ & kShowDescription) != 0;
+  }
+
+  // Updates the magnify boxes mode. (Global to all streams)
+  void set_show_magnify_boxes(bool enable) {
+    if (enable) {
+      show_state_ |= kShowMagnifyBoxes;
+    } else {
+      show_state_ &= ~kShowMagnifyBoxes;
+    }
+  }
+
+  // Updates the description mode. (Global to all streams)
+  void set_show_description(bool enable) {
+    if (enable) {
+      show_state_ |= kShowDescription;
+    } else {
+      show_state_ &= ~kShowDescription;
+    }
+  }
+
+  // Manual mode entry points:
+  void CommandSuccessNotify();
+  void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
+  void PostedExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
+  void ExecuteSetDescriptionCommand(fuchsia::camera::gym::SetDescriptionCommand& command);
 
  private:
   BufferCollage();
@@ -148,9 +194,12 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
     std::unique_ptr<scenic::ShapeNode> node;
   } heartbeat_indicator_;
   zx::time start_time_;
-  bool show_magnify_boxes_ = false;
+  uint32_t show_state_ = kDefaultShowState;
   bool mute_visible_ = false;
   std::unique_ptr<BitmapImageNode> mute_indicator_;
+
+  // TODO(?????) - Is this really the ideal way to communicate status back?
+  CommandStatusHandler command_status_handler_;
 };
 
 }  // namespace camera

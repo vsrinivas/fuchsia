@@ -29,6 +29,10 @@
 
 namespace camera {
 
+using Command = fuchsia::camera::gym::Command;
+
+using SetDescriptionCommand = fuchsia::camera::gym::SetDescriptionCommand;
+
 constexpr uint32_t kViewRequestTimeoutMs = 5000;
 
 constexpr float kOffscreenDepth = 1.0f;
@@ -619,7 +623,7 @@ void BufferCollage::UpdateLayout() {
       }
       auto [element_width, element_height] =
           ScaleToFit(display_width, display_height, cell_width, cell_height);
-      view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes_);
+      view.mesh = BuildMesh(session_.get(), element_width, element_height, show_magnify_boxes());
       view.highlight_mesh = BuildHighlightMesh(session_.get());
       view.node = std::make_unique<scenic::ShapeNode>(session_.get());
       view.highlight_node = std::make_unique<scenic::ShapeNode>(session_.get());
@@ -643,7 +647,9 @@ void BufferCollage::UpdateLayout() {
                                                  kDescriptionDepth);
       view_->AddChild(*view.node);
       view_->AddChild(*view.highlight_node);
-      view_->AddChild(view.description_node->node);
+      if (show_description()) {
+        view_->AddChild(view.description_node->node);
+      }
     }
   }
   if (heartbeat_indicator_.node) {
@@ -728,7 +734,7 @@ void BufferCollage::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events
     }
     if (event.is_input() && event.input().is_pointer() &&
         event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP) {
-      show_magnify_boxes_ = !show_magnify_boxes_;
+      show_state_ = (show_state_ + 1) & kShowStateCycleMask;
       UpdateLayout();
     }
   }
@@ -793,6 +799,38 @@ BitmapImageNode::BitmapImageNode(scenic::Session* session, std::string filename,
   material.SetTexture(*image);
   node.SetMaterial(material);
   node.SetShape(*shape);
+}
+
+void BufferCollage::CommandSuccessNotify() {
+  CommandStatusHandler command_status_handler = std::move(command_status_handler_);
+  if (command_status_handler) {
+    fuchsia::camera::gym::Controller_SendCommand_Result result;
+    command_status_handler(result.WithResponse({}));
+  }
+}
+
+void BufferCollage::ExecuteCommand(Command command, BufferCollage::CommandStatusHandler handler) {
+  async::PostTask(loop_.dispatcher(),
+                  [this, command = std::move(command), handler = std::move(handler)]() mutable {
+                    PostedExecuteCommand(std::move(command), std::move(handler));
+                  });
+}
+
+void BufferCollage::PostedExecuteCommand(Command command, BufferCollage::CommandStatusHandler handler) {
+  command_status_handler_ = std::move(handler);
+  switch (command.Which()) {
+    case Command::Tag::kSetDescription:
+      ExecuteSetDescriptionCommand(command.set_description());
+      break;
+    default:
+      ZX_ASSERT(false);
+  }
+}
+
+void BufferCollage::ExecuteSetDescriptionCommand(fuchsia::camera::gym::SetDescriptionCommand& command) {
+  set_show_description(command.enable);
+  UpdateLayout();
+  CommandSuccessNotify();
 }
 
 }  // namespace camera

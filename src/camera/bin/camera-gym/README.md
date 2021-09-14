@@ -55,3 +55,11 @@ test_simple.sh
 test_crop.sh
 
   Running this bash script will cycle through crop settings in steps of 1/40's.
+
+### How to turn text descriptions on/off
+
+#### Turn off descriptions
+fx shell camera-gym-ctl --set-description=0
+
+#### Turn on descriptions
+fx shell camera-gym-ctl --set-description=1

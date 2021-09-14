@@ -34,6 +34,8 @@ class ControllerParser {
       const std::string& name, const std::string& value, bool async = false);
   fpromise::result<fuchsia::camera::gym::SetResolutionCommand> ParseSetResolutionCommand(
       const std::string& name, const std::string& value, bool async = false);
+  fpromise::result<fuchsia::camera::gym::SetDescriptionCommand> ParseSetDescriptionCommand(
+      const std::string& name, const std::string& value);
 
   // Maximum number of parameters returned by ParseValues.
   static constexpr size_t MAX_VALUES = 5;
