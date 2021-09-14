@@ -28,7 +28,7 @@ const MountOpt default_option[] = {
     {"disable_ext_identify", 0, true},
     {"inline_xattr", 0, false},
     {"inline_data", 0, false},
-    {"inline_dentry", 0, true},
+    {"inline_dentry", 1, true},
     {"active_logs", 6, true},
 };
 

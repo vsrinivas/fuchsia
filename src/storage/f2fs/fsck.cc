@@ -34,13 +34,13 @@ CursegType operator+(CursegType a, uint32_t &&b) {
 
 static inline bool IsSumNodeSeg(SummaryFooter &footer) { return footer.entry_type == kSumTypeNode; }
 
-static inline uint64_t BlkoffFromMain(SbInfo *sbi, uint64_t blk_addr) {
-  ZX_ASSERT(blk_addr >= GetSmInfo(sbi)->main_blkaddr);
-  return blk_addr - GetSmInfo(sbi)->main_blkaddr;
+static inline uint64_t BlkoffFromMain(SbInfo *sbi, uint64_t block_address) {
+  ZX_ASSERT(block_address >= GetSmInfo(sbi)->main_blkaddr);
+  return block_address - GetSmInfo(sbi)->main_blkaddr;
 }
 
-static inline uint32_t OffsetInSeg(SbInfo *sbi, uint64_t blk_addr) {
-  return (uint32_t)(BlkoffFromMain(sbi, blk_addr) % (1 << sbi->log_blocks_per_seg));
+static inline uint32_t OffsetInSeg(SbInfo *sbi, uint64_t block_address) {
+  return (uint32_t)(BlkoffFromMain(sbi, block_address) % (1 << sbi->log_blocks_per_seg));
 }
 
 static inline uint32_t AddrsPerInode(Inode *i) {
@@ -130,10 +130,10 @@ zx_status_t FsckWorker::FindAndDecHardLinkList(uint32_t nid) {
   return ZX_OK;
 }
 
-bool FsckWorker::IsValidSsaNodeBlk(uint32_t nid, uint32_t blk_addr) {
+bool FsckWorker::IsValidSsaNodeBlk(uint32_t nid, uint32_t block_address) {
   Summary sum_entry;
 
-  SegType ret = GetSumEntry(blk_addr, &sum_entry);
+  SegType ret = GetSumEntry(block_address, &sum_entry);
   ZX_ASSERT(static_cast<int>(ret) >= 0);
 
   if (ret == SegType::kSegTypeData || ret == SegType::kSegTypeCurData) {
@@ -142,11 +142,11 @@ bool FsckWorker::IsValidSsaNodeBlk(uint32_t nid, uint32_t blk_addr) {
   } else if (ret == SegType::kSegTypeNode) {
     if (LeToCpu(sum_entry.nid) != nid) {
       FX_LOGS(ERROR) << "nid                       [0x" << std::hex << nid << "]";
-      FX_LOGS(ERROR) << "target blk_addr           [0x" << std::hex << blk_addr << "]";
-      FX_LOGS(ERROR) << "summary blk_addr          [0x" << std::hex
-                     << GetSumBlock(&sbi_, GetSegNo(blk_addr)) << "]";
-      FX_LOGS(ERROR) << "seg no / offset           [0x" << std::hex << GetSegNo(blk_addr) << "/0x"
-                     << std::hex << OffsetInSeg(&sbi_, blk_addr) << "]";
+      FX_LOGS(ERROR) << "target block_address           [0x" << std::hex << block_address << "]";
+      FX_LOGS(ERROR) << "summary block_address          [0x" << std::hex
+                     << GetSumBlock(&sbi_, GetSegNo(block_address)) << "]";
+      FX_LOGS(ERROR) << "seg no / offset           [0x" << std::hex << GetSegNo(block_address)
+                     << "/0x" << std::hex << OffsetInSeg(&sbi_, block_address) << "]";
       FX_LOGS(ERROR) << "summary_entry.nid         [0x" << std::hex << LeToCpu(sum_entry.nid)
                      << "]";
       FX_LOGS(ERROR) << "--> node block's nid      [0x" << std::hex << nid << "]";
@@ -162,11 +162,11 @@ bool FsckWorker::IsValidSsaNodeBlk(uint32_t nid, uint32_t blk_addr) {
   return true;
 }
 
-bool FsckWorker::IsValidSsaDataBlk(uint32_t blk_addr, uint32_t parent_nid, uint16_t idx_in_node,
-                                   uint8_t version) {
+bool FsckWorker::IsValidSsaDataBlk(uint32_t block_address, uint32_t parent_nid,
+                                   uint16_t idx_in_node, uint8_t version) {
   Summary sum_entry;
 
-  SegType ret = GetSumEntry(blk_addr, &sum_entry);
+  SegType ret = GetSumEntry(block_address, &sum_entry);
   ZX_ASSERT(ret == SegType::kSegTypeData || ret == SegType::kSegTypeCurData);
 
   if (LeToCpu(sum_entry.nid) != parent_nid || sum_entry.version != version ||
@@ -180,7 +180,7 @@ bool FsckWorker::IsValidSsaDataBlk(uint32_t blk_addr, uint32_t parent_nid, uint1
     FX_LOGS(ERROR) << "version from nat          [0x" << std::hex << version << "]";
     FX_LOGS(ERROR) << "idx in parent node        [0x" << std::hex << idx_in_node << "]";
 
-    FX_LOGS(ERROR) << "Target data block addr    [0x" << std::hex << blk_addr << "]";
+    FX_LOGS(ERROR) << "Target data block address    [0x" << std::hex << block_address << "]";
     FX_LOGS(ERROR) << "Invalid data seg summary\n";
     ZX_ASSERT(0);
   }
@@ -221,7 +221,7 @@ zx_status_t FsckWorker::ChkNodeBlk(Inode *inode, uint32_t nid, FileType ftype, N
   IsValidSsaNodeBlk(nid, ni.blk_addr);
 
   if (TestValidBitmap(BlkoffFromMain(sbi, ni.blk_addr), fsck->sit_area_bitmap) == 0x0) {
-    FX_LOGS(INFO) << "SIT bitmap is 0x0. blk_addr[0x" << std::hex << ni.blk_addr << "]";
+    FX_LOGS(INFO) << "SIT bitmap is 0x0. block_address[0x" << std::hex << ni.blk_addr << "]";
     ZX_ASSERT(0);
   }
 
@@ -343,14 +343,22 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
   }
 #endif
 
-    // check data blocks in inode
-    for (idx = 0; idx < AddrsPerInode(&node_blk->i); idx++) {
-      if (LeToCpu(node_blk->i.i_addr[idx]) != 0) {
-        *blk_cnt = *blk_cnt + 1;
-        zx_status_t ret =
-            ChkDataBlk(&node_blk->i, LeToCpu(node_blk->i.i_addr[idx]), &child_cnt, &child_files,
-                       (i_blocks == *blk_cnt), ftype, nid, idx, ni->version);
-        ZX_ASSERT(ret == ZX_OK);
+    if (node_blk->i.i_inline & kInlineDentry) {
+      const auto &entry =
+          reinterpret_cast<const InlineDentry &>(node_blk->i.i_addr[kInlineStartOffset]);
+
+      ChkDentries(&child_cnt, &child_files, 1, entry.dentry_bitmap, entry.dentry, entry.filename,
+                  kNrInlineDentry);
+    } else {
+      // check data blocks in inode
+      for (idx = 0; idx < AddrsPerInode(&node_blk->i); idx++) {
+        if (LeToCpu(node_blk->i.i_addr[idx]) != 0) {
+          *blk_cnt = *blk_cnt + 1;
+          zx_status_t ret =
+              ChkDataBlk(&node_blk->i, LeToCpu(node_blk->i.i_addr[idx]), &child_cnt, &child_files,
+                         (i_blocks == *blk_cnt), ftype, nid, idx, ni->version);
+          ZX_ASSERT(ret == ZX_OK);
+        }
       }
     }
 
@@ -432,8 +440,10 @@ void FsckWorker::ChkDidnodeBlk(Inode *inode, uint32_t nid, FileType ftype, Node 
   }
 }
 
-void FsckWorker::PrintDentry(uint32_t depth, std::string_view &name, DentryBlock *de_blk, int idx,
-                             int last_blk) {
+template <size_t size>
+void FsckWorker::PrintDentry(const uint32_t depth, const std::string_view name,
+                             const uint8_t (&dentry_bitmap)[size], const DirEntry &dentries,
+                             const int idx, const int last_blk, const int max_entries) {
   int last_de = 0;
   int next_idx = 0;
   int name_len;
@@ -445,11 +455,11 @@ void FsckWorker::PrintDentry(uint32_t depth, std::string_view &name, DentryBlock
     return;
 #endif
 
-  name_len = LeToCpu(de_blk->dentry[idx].name_len);
+  name_len = LeToCpu(dentries.name_len);
   next_idx = idx + (name_len + kDentrySlotLen - 1) / kDentrySlotLen;
 
-  bit_offset = FindNextBit(de_blk->dentry_bitmap, kNrDentryInBlock, next_idx);
-  if (bit_offset >= kNrDentryInBlock && last_blk)
+  bit_offset = FindNextBit(dentry_bitmap, max_entries, next_idx);
+  if (bit_offset >= max_entries && last_blk)
     last_de = 1;
 
   if (tree_mark_.size() <= depth) {
@@ -468,38 +478,32 @@ void FsckWorker::PrintDentry(uint32_t depth, std::string_view &name, DentryBlock
   std::cout << (last_de ? "`" : "|") << "-- " << name << std::endl;
 }
 
-void FsckWorker::ChkDentryBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_cnt,
-                              uint32_t *child_files, int last_blk) {
+template <size_t bitmap_size, size_t entry_size>
+void FsckWorker::ChkDentries(uint32_t *const child_cnt, uint32_t *const child_files,
+                             const int last_blk, const uint8_t (&dentry_bitmap)[bitmap_size],
+                             const DirEntry (&dentries)[entry_size],
+                             const uint8_t (*filename)[kNameLen], const int max_entries) {
   FsckInfo *fsck = &fsck_;
   int i;
   int ret = 0;
-  int dentries = 0;
+  int num_entries = 0;
   uint32_t hash_code;
   uint32_t blk_cnt;
   FileType ftype;
-  DentryBlock *de_blk;
-
-  Block *blk = new Block;
-  ZX_ASSERT(blk != nullptr);
-  de_blk = reinterpret_cast<DentryBlock *>(blk->data);
-
-  ret = ReadBlock(de_blk, blk_addr);
-  ZX_ASSERT(ret >= 0);
 
   fsck->dentry_depth++;
 
-  for (i = 0; i < kNrDentryInBlock;) {
-    if (TestBit(i, de_blk->dentry_bitmap) == 0x0) {
+  for (i = 0; i < max_entries;) {
+    if (TestBit(i, dentry_bitmap) == 0x0) {
       i++;
       continue;
     }
 
-    std::string_view name(reinterpret_cast<char *>(de_blk->filename[i]),
-                          LeToCpu(de_blk->dentry[i].name_len));
-
+    std::string_view name(reinterpret_cast<const char *>(filename[i]),
+                          LeToCpu(dentries[i].name_len));
     hash_code = DentryHash(name.data(), static_cast<int>(name.length()));
 
-    ftype = static_cast<FileType>(de_blk->dentry[i].file_type);
+    ftype = static_cast<FileType>(dentries[i].file_type);
 
     // Becareful. 'dentry.file_type' is not imode
     if (ftype == FileType::kFtDir) {
@@ -511,64 +515,79 @@ void FsckWorker::ChkDentryBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_c
     }
 
     // TODO: Should we check '.' and '..' entries?
-    ZX_ASSERT(LeToCpu(de_blk->dentry[i].hash_code) == hash_code);
+    ZX_ASSERT(LeToCpu(dentries[i].hash_code) == hash_code);
 #ifdef F2FS_BU_DEBUG
     // TODO: DBG (2)
     printf("[%3u] - no[0x%x] name[%s] len[0x%x] ino[0x%x] type[0x%x]\n", fsck->dentry_depth, i,
-           name.data(), LeToCpu(de_blk->dentry[i].name_len), LeToCpu(de_blk->dentry[i].ino),
-           de_blk->dentry[i].file_type);
+           name.data(), LeToCpu(dentries[i].name_len), LeToCpu(dentries[i].ino),
+           dentries[i].file_type);
 #endif
-    PrintDentry(fsck->dentry_depth, name, de_blk, i, last_blk);
+    PrintDentry(fsck->dentry_depth, name, dentry_bitmap, dentries[i], i, last_blk, max_entries);
 
     blk_cnt = 1;
-    ret =
-        ChkNodeBlk(nullptr, LeToCpu(de_blk->dentry[i].ino), ftype, NodeType::kTypeInode, &blk_cnt);
+    ret = ChkNodeBlk(nullptr, LeToCpu(dentries[i].ino), ftype, NodeType::kTypeInode, &blk_cnt);
 
     ZX_ASSERT(ret >= 0);
 
     i += (name.length() + kDentrySlotLen - 1) / kDentrySlotLen;
-    dentries++;
+    num_entries++;
     *child_files = *child_files + 1;
   }
 #ifdef F2FS_BU_DEBUG
   // TODO: DBG (1)
   printf("[%3d] Dentry Block [0x%x] Done : dentries:%d in %d slots (len:%d)\n\n",
-         fsck->dentry_depth, blk_addr, dentries, kNrDentryInBlock, kMaxNameLen);
+         fsck->dentry_depth, blk_addr, num_entries, kNrDentryInBlock, kMaxNameLen);
 #endif
   fsck->dentry_depth--;
+}
+
+void FsckWorker::ChkDentryBlk(uint32_t block_address, uint32_t *child_cnt, uint32_t *child_files,
+                              int last_blk) {
+  int ret = 0;
+  DentryBlock *de_blk;
+
+  Block *blk = new Block;
+  ZX_ASSERT(blk != nullptr);
+  de_blk = reinterpret_cast<DentryBlock *>(blk->data);
+
+  ret = ReadBlock(de_blk, block_address);
+  ZX_ASSERT(ret == ZX_OK);
+
+  ChkDentries(child_cnt, child_files, last_blk, de_blk->dentry_bitmap, de_blk->dentry,
+              de_blk->filename, kNrDentryInBlock);
 
   delete blk;
 }
 
-zx_status_t FsckWorker::ChkDataBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_cnt,
+zx_status_t FsckWorker::ChkDataBlk(Inode *inode, uint32_t block_address, uint32_t *child_cnt,
                                    uint32_t *child_files, int last_blk, FileType ftype,
                                    uint32_t parent_nid, uint16_t idx_in_node, uint8_t ver) {
   FsckInfo *fsck = &fsck_;
 
   // Is it reserved block?
-  if (blk_addr == kNewAddr) {
+  if (block_address == kNewAddr) {
     fsck->chk.valid_blk_cnt++;
     return ZX_OK;
   }
 
-  IsValidBlkAddr(blk_addr);
+  IsValidBlkAddr(block_address);
 
-  IsValidSsaDataBlk(blk_addr, parent_nid, idx_in_node, ver);
+  IsValidSsaDataBlk(block_address, parent_nid, idx_in_node, ver);
 
-  if (TestValidBitmap(BlkoffFromMain(&sbi_, blk_addr), fsck->sit_area_bitmap) == 0x0) {
-    ZX_ASSERT_MSG(0, "SIT bitmap is 0x0. blk_addr[0x%x]\n", blk_addr);
+  if (TestValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->sit_area_bitmap) == 0x0) {
+    ZX_ASSERT_MSG(0, "SIT bitmap is 0x0. block_address[0x%x]\n", block_address);
   }
 
-  if (TestValidBitmap(BlkoffFromMain(&sbi_, blk_addr), fsck->main_area_bitmap) != 0) {
-    ZX_ASSERT_MSG(0, "Duplicated data block. pnid[0x%x] idx[0x%x] blk_addr[0x%x]\n", parent_nid,
-                  idx_in_node, blk_addr);
+  if (TestValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->main_area_bitmap) != 0) {
+    ZX_ASSERT_MSG(0, "Duplicated data block. pnid[0x%x] idx[0x%x] block_address[0x%x]\n",
+                  parent_nid, idx_in_node, block_address);
   }
-  SetValidBitmap(BlkoffFromMain(&sbi_, blk_addr), fsck->main_area_bitmap);
+  SetValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->main_area_bitmap);
 
   fsck->chk.valid_blk_cnt++;
 
   if (ftype == FileType::kFtDir) {
-    ChkDentryBlk(inode, blk_addr, child_cnt, child_files, last_blk);
+    ChkDentryBlk(block_address, child_cnt, child_files, last_blk);
   }
 
   return ZX_OK;
@@ -1000,7 +1019,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
 
   // Read the 1st cp block in this CP pack
   cp_page_1 = reinterpret_cast<Block *>(new Block);
-  if (ReadBlock(cp_page_1, cp_addr) < 0)
+  if (ReadBlock(cp_page_1, cp_addr) != ZX_OK)
     return nullptr;
 
   cp_block = (Checkpoint *)cp_page_1;
@@ -1021,7 +1040,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   // Read the 2nd cp block in this CP pack
   cp_page_2 = reinterpret_cast<Block *>(new Block);
   cp_addr += LeToCpu(cp_block->cp_pack_total_block_count) - 1;
-  if (ReadBlock(cp_page_2, cp_addr) < 0) {
+  if (ReadBlock(cp_page_2, cp_addr) != ZX_OK) {
     delete reinterpret_cast<Block *>(cp_page_1);
     delete reinterpret_cast<Block *>(cp_page_2);
     return nullptr;
@@ -1291,28 +1310,28 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
   CursegInfo *curseg;
   unsigned short blk_off;
   unsigned int segno = 0;
-  block_t blk_addr = 0;
+  block_t block_address = 0;
 
   if (IsDataSeg(type)) {
     segno = LeToCpu(ckpt->cur_data_segno[static_cast<int>(type)]);
     blk_off = LeToCpu(ckpt->cur_data_blkoff[type - CursegType::kCursegHotData]);
 
     if (IsSetCkptFlags(ckpt, kCpUmountFlag))
-      blk_addr = SumBlkAddr(kNrCursegType, static_cast<int>(type));
+      block_address = SumBlkAddr(kNrCursegType, static_cast<int>(type));
     else
-      blk_addr = SumBlkAddr(kNrCursegDataType, static_cast<int>(type));
+      block_address = SumBlkAddr(kNrCursegDataType, static_cast<int>(type));
   } else {
     segno = LeToCpu(ckpt->cur_node_segno[type - CursegType::kCursegHotNode]);
     blk_off = LeToCpu(ckpt->cur_node_blkoff[type - CursegType::kCursegHotNode]);
 
     if (IsSetCkptFlags(ckpt, kCpUmountFlag))
-      blk_addr = SumBlkAddr(kNrCursegNodeType, type - CursegType::kCursegHotNode);
+      block_address = SumBlkAddr(kNrCursegNodeType, type - CursegType::kCursegHotNode);
     else
-      blk_addr = GetSumBlock(&sbi_, segno);
+      block_address = GetSumBlock(&sbi_, segno);
   }
 
   sum_blk = reinterpret_cast<SummaryBlock *>(new Block);
-  ReadBlock(sum_blk, blk_addr);
+  ReadBlock(sum_blk, block_address);
 
   if (IsNodeSeg(type)) {
     if (IsSetCkptFlags(ckpt, kCpUmountFlag)) {
@@ -1385,16 +1404,16 @@ inline void FsckWorker::ChkSegRange(unsigned int segno) {
 SitBlock *FsckWorker::GetCurrentSitPage(unsigned int segno) {
   SitInfo *sit_i = GetSitInfo(&sbi_);
   unsigned int offset = SitBlockOffset(sit_i, segno);
-  block_t blk_addr = sit_i->sit_base_addr + offset;
+  block_t block_address = sit_i->sit_base_addr + offset;
   SitBlock *sit_blk = reinterpret_cast<SitBlock *>(new Block);
 
   ChkSegRange(segno);
 
   // calculate sit block address
   if (TestValidBitmap(offset, sit_i->sit_bitmap))
-    blk_addr += sit_i->sit_blocks;
+    block_address += sit_i->sit_blocks;
 
-  ReadBlock(sit_blk, blk_addr);
+  ReadBlock(sit_blk, block_address);
 
   return sit_blk;
 }
@@ -1460,7 +1479,7 @@ SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
   }
 
   ret = ReadBlock(sum_blk, ssa_blk);
-  ZX_ASSERT(ret >= 0);
+  ZX_ASSERT(ret == ZX_OK);
 
   if (IsSumNodeSeg(sum_blk->footer))
     return SegType::kSegTypeNode;
@@ -1468,16 +1487,16 @@ SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
     return SegType::kSegTypeData;
 }
 
-uint32_t FsckWorker::GetSegNo(uint32_t blk_addr) {
-  return (uint32_t)(BlkoffFromMain(&sbi_, blk_addr) >> sbi_.log_blocks_per_seg);
+uint32_t FsckWorker::GetSegNo(uint32_t block_address) {
+  return (uint32_t)(BlkoffFromMain(&sbi_, block_address) >> sbi_.log_blocks_per_seg);
 }
 
-SegType FsckWorker::GetSumEntry(uint32_t blk_addr, Summary *sum_entry) {
+SegType FsckWorker::GetSumEntry(uint32_t block_address, Summary *sum_entry) {
   uint32_t segno, offset;
   Block *blk = new Block;
 
-  segno = GetSegNo(blk_addr);
-  offset = OffsetInSeg(&sbi_, blk_addr);
+  segno = GetSegNo(block_address);
+  offset = OffsetInSeg(&sbi_, block_address);
 
   SummaryBlock *sum_blk = reinterpret_cast<SummaryBlock *>(blk->data);
   SegType type = GetSumBlockInfo(segno, sum_blk);
@@ -1517,7 +1536,7 @@ zx_status_t FsckWorker::GetNatEntry(nid_t nid, RawNatEntry *raw_nat) {
     block_addr += sbi_.blocks_per_seg;
 
   ret = ReadBlock(nat_block, block_addr);
-  ZX_ASSERT(ret >= 0);
+  ZX_ASSERT(ret == ZX_OK);
 
   memcpy(raw_nat, &nat_block->entries[entry_off], sizeof(RawNatEntry));
   delete blk;
@@ -1686,7 +1705,7 @@ void FsckWorker::BuildNatAreaBitmap() {
       block_addr += sbi_.blocks_per_seg;
 
     ret = ReadBlock(nat_block, block_addr);
-    ZX_ASSERT(ret >= 0);
+    ZX_ASSERT(ret == ZX_OK);
 
     nid = static_cast<uint32_t>(block_off * kNatEntryPerBlock);
     for (uint32_t i = 0; i < kNatEntryPerBlock; i++) {

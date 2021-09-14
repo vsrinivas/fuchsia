@@ -173,6 +173,7 @@ constexpr int kNidsPerBlock = 1018;   // Node IDs in an Indirect Block
 
 constexpr uint32_t kDentrySlotLen = 8;  // One directory entry slot covers 8bytes-long file name
 
+constexpr uint8_t kInlineStartOffset = 1;  // start offset of inline dentries
 constexpr uint8_t kInlineXattrAddrs = 50;  // 200 bytes for inline xattrs
 constexpr uint8_t kInlineXattr = 0x01;     // file inline xattr flag
 constexpr uint8_t kInlineData = 0x02;      // file inline data flag

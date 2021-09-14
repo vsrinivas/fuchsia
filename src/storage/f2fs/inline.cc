@@ -12,7 +12,7 @@ namespace {
 inline InlineDentry *GetInlineDentryAddr(Page *page) {
   Node *rn = static_cast<Node *>(PageAddress(page));
   Inode &ri = rn->i;
-  return reinterpret_cast<InlineDentry *>(&(ri.i_addr[1]));
+  return reinterpret_cast<InlineDentry *>(&(ri.i_addr[kInlineStartOffset]));
 }
 
 }  // namespace
@@ -298,8 +298,19 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   FlushDirtyNodePage(Vfs(), page);
 #endif
 
+  timespec cur_time;
+  clock_gettime(CLOCK_REALTIME, &cur_time);
+  SetCTime(cur_time);
+  SetMTime(cur_time);
+
+  if (vnode && vnode->IsDir()) {
+    DropNlink();
+    WriteInode(nullptr);
+  } else {
+    MarkInodeDirty();
+  }
+
   if (vnode) {
-    timespec cur_time;
     clock_gettime(CLOCK_REALTIME, &cur_time);
     SetCTime(cur_time);
     SetMTime(cur_time);
@@ -307,11 +318,12 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
     vnode->DropNlink();
     if (vnode->IsDir()) {
       vnode->DropNlink();
-      vnode->SetSize(0);
+      vnode->InitSize();
     }
-    vnode->WriteInode(NULL);
-    if (vnode->GetNlink() == 0)
+    vnode->WriteInode(nullptr);
+    if (vnode->GetNlink() == 0) {
       Vfs()->AddOrphanInode(vnode);
+    }
   }
 
   F2fsPutPage(page, 1);
@@ -379,7 +391,6 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
     }
 
     bit_pos += GetDentrySlots(LeToCpu(de->name_len));
-    *pos_cookie = bit_pos;
   }
 
   *pos_cookie = kNrInlineDentry;

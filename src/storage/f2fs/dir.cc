@@ -252,7 +252,14 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
   //   kunmap(page);
   // set_page_dirty(page);
 #else
-  FlushDirtyDataPage(Vfs(), page);
+  // If |de| is an inline dentry, the inode block should be flushed.
+  // Otherwise, it writes out the data block.
+  if (page->host == this) {
+    FlushDirtyDataPage(Vfs(), page);
+  } else {
+    ZX_ASSERT(page->host == nullptr);
+    FlushDirtyNodePage(Vfs(), page);
+  }
 #endif
 
   timespec cur_time;
@@ -322,7 +329,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
   }
   if (vnode->TestFlag(InodeInfoFlag::kIncLink)) {
     vnode->IncNlink();
-    vnode->WriteInode(NULL);
+    vnode->WriteInode(nullptr);
   }
   return 0;
 }
@@ -349,13 +356,15 @@ void Dir::UpdateParentMetadata(VnodeF2fs *vnode, unsigned int current_depth) {
     need_dir_update = true;
   }
 
-  if (need_dir_update)
-    WriteInode(NULL);
-  else
+  if (need_dir_update) {
+    WriteInode(nullptr);
+  } else {
     MarkInodeDirty();
+  }
 
-  if (vnode->TestFlag(InodeInfoFlag::kIncLink))
+  if (vnode->TestFlag(InodeInfoFlag::kIncLink)) {
     vnode->ClearFlag(InodeInfoFlag::kIncLink);
+  }
 }
 
 int Dir::RoomForFilename(DentryBlock *dentry_blk, int slots) {
@@ -525,7 +534,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 
   if (vnode && vnode->IsDir()) {
     DropNlink();
-    WriteInode(NULL);
+    WriteInode(nullptr);
   } else {
     MarkInodeDirty();
   }
@@ -540,9 +549,10 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
       vnode->DropNlink();
       vnode->InitSize();
     }
-    vnode->WriteInode(NULL);
-    if (vnode->GetNlink() == 0)
+    vnode->WriteInode(nullptr);
+    if (vnode->GetNlink() == 0) {
       Vfs()->AddOrphanInode(vnode);
+    }
   }
 
   if (bit_pos == kNrDentryInBlock) {
@@ -665,6 +675,11 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
   bool done = false;
 
   fs::SharedLock read_lock(io_lock_);
+
+  if (GetSize() == 0) {
+    *out_actual = 0;
+    return ZX_OK;
+  }
 
   if (TestFlag(InodeInfoFlag::kInlineDentry))
     return ReadInlineDir(cookie, dirents, len, out_actual);

@@ -40,7 +40,7 @@ static inline void WaitOnPageWriteback(Page *page) {
 }
 
 // Checkpoint
-inline int64_t VerAfter(uint64_t a, uint64_t b) { return (static_cast<int64_t>(a - b) > 0); }
+inline bool VerAfter(uint64_t a, uint64_t b) { return a > b; }
 
 // CRC
 inline uint32_t F2fsCalCrc32(uint32_t crc, void *buff, uint32_t len) {
@@ -86,8 +86,8 @@ static inline void ClearBit(uint32_t nr, void *addr) {
   bitmap[iter] &= ~static_cast<uint8_t>(1U << offset_in_iter);
 }
 
-static inline bool TestBit(uint32_t nr, void *addr) {
-  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+static inline bool TestBit(uint32_t nr, const void *addr) {
+  const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
   uint32_t iter = nr / size_per_iter;
@@ -98,8 +98,8 @@ static inline bool TestBit(uint32_t nr, void *addr) {
   return ret;
 }
 
-static inline uint32_t FindNextZeroBit(void *addr, uint32_t size, uint32_t offset) {
-  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+static inline uint32_t FindNextZeroBit(const void *addr, uint32_t size, uint32_t offset) {
+  const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
   while (offset < size) {
@@ -122,8 +122,8 @@ static inline uint32_t FindNextZeroBit(void *addr, uint32_t size, uint32_t offse
   return size;
 }
 
-static inline uint32_t FindNextBit(void *addr, uint32_t size, uint32_t offset) {
-  uint8_t *bitmap = static_cast<uint8_t *>(addr);
+static inline uint32_t FindNextBit(const void *addr, uint32_t size, uint32_t offset) {
+  const uint8_t *bitmap = static_cast<const uint8_t *>(addr);
   uint32_t size_per_iter = kBitsPerByte;
 
   while (offset < size) {

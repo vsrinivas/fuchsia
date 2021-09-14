@@ -102,22 +102,29 @@ class FsckWorker {
                          uint32_t *blk_cnt);
   zx_status_t ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk, uint32_t *blk_cnt,
                           NodeInfo *ni);
-  zx_status_t ChkDataBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_cnt,
+  zx_status_t ChkDataBlk(Inode *inode, uint32_t block_address, uint32_t *child_cnt,
                          uint32_t *child_files, int last_blk, FileType ftype, uint32_t parent_nid,
                          uint16_t idx_in_node, uint8_t ver);
   void ChkDnodeBlk(Inode *inode, uint32_t nid, FileType ftype, Node *node_blk, uint32_t *blk_cnt,
                    NodeInfo *ni);
   void ChkIdnodeBlk(Inode *inode, uint32_t nid, FileType ftype, Node *node_blk, uint32_t *blk_cnt);
   void ChkDidnodeBlk(Inode *inode, uint32_t nid, FileType ftype, Node *node_blk, uint32_t *blk_cnt);
-  void ChkDentryBlk(Inode *inode, uint32_t blk_addr, uint32_t *child_cnt, uint32_t *child_files,
+  template <size_t bitmap_size, size_t entry_size>
+  void ChkDentries(uint32_t *const child_cnt, uint32_t *const child_files, const int last_blk,
+                   const uint8_t (&dentry_bitmap)[bitmap_size],
+                   const DirEntry (&dentries)[entry_size], const uint8_t (*filename)[kNameLen],
+                   const int max_entries);
+  void ChkDentryBlk(uint32_t block_address, uint32_t *child_cnt, uint32_t *child_files,
                     int last_blk);
 
   void PrintRawSbInfo();
   void PrintCkptInfo();
   void PrintNodeInfo(Node *node_block);
   void PrintInodeInfo(Inode *inode);
-  void PrintDentry(uint32_t depth, std::string_view &name, DentryBlock *de_blk, int idx,
-                   int last_blk);
+  template <size_t size>
+  void PrintDentry(const uint32_t depth, const std::string_view name,
+                   const uint8_t (&dentry_bitmap)[size], const DirEntry &dentries, const int idx,
+                   const int last_blk, const int max_entries);
 
   // Fsck checks f2fs consistency as below.
   // 1. It loads a valid superblock, and it obtains valid node/inode/block count information.
@@ -166,7 +173,7 @@ class FsckWorker {
   zx_status_t ReadNormalSummaries(CursegType type);
   zx_status_t RestoreNodeSummary(unsigned int segno, SummaryBlock *sum_blk);
   SegType GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk);
-  SegType GetSumEntry(uint32_t blk_addr, Summary *sum_entry);
+  SegType GetSumEntry(uint32_t block_address, Summary *sum_entry);
   void ResetCurseg(CursegType type, int modified);
   zx_status_t RestoreCursegSummaries();
   SitBlock *GetCurrentSitPage(unsigned int segno);
@@ -176,13 +183,13 @@ class FsckWorker {
   zx_status_t GetNatEntry(nid_t nid, RawNatEntry *raw_nat);
   inline void ChkSegRange(unsigned int segno);
   SegEntry *GetSegEntry(unsigned int segno);
-  uint32_t GetSegNo(uint32_t blk_addr);
+  uint32_t GetSegNo(uint32_t block_address);
   zx_status_t GetNodeInfo(nid_t nid, NodeInfo *ni);
   void AddIntoHardLinkList(uint32_t nid, uint32_t link_cnt);
   zx_status_t FindAndDecHardLinkList(uint32_t nid);
 
-  inline bool IsValidSsaNodeBlk(uint32_t nid, uint32_t blk_addr);
-  inline bool IsValidSsaDataBlk(uint32_t blk_addr, uint32_t parent_nid, uint16_t idx_in_node,
+  inline bool IsValidSsaNodeBlk(uint32_t nid, uint32_t block_address);
+  inline bool IsValidSsaDataBlk(uint32_t block_address, uint32_t parent_nid, uint16_t idx_in_node,
                                 uint8_t version);
   inline bool IsValidNid(uint32_t nid) {
     ZX_ASSERT(nid <= (kNatEntryPerBlock * RawSuper(&sbi_)->segment_count_nat

@@ -75,6 +75,7 @@ TEST(InlineDirTest, InlineDirCreation) {
   root_dir = nullptr;
 
   unittest_lib::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDirConvert) {
@@ -146,6 +147,7 @@ TEST(InlineDirTest, InlineDirConvert) {
   root_dir = nullptr;
 
   unittest_lib::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDentryOps) {
@@ -245,6 +247,7 @@ TEST(InlineDirTest, InlineDentryOps) {
   root_dir = nullptr;
 
   unittest_lib::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
 }
 
 }  // namespace

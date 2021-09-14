@@ -535,7 +535,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       new_vnode->DropNlink();
       if (!new_vnode->GetNlink())
         Vfs()->AddOrphanInode(new_vnode);
-      new_vnode->WriteInode(NULL);
+      new_vnode->WriteInode(nullptr);
     } else {
       if (old_dir == new_dir && oldname == newname)
         return ZX_OK;
@@ -561,7 +561,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 
       if (old_dir_entry) {
         new_dir->IncNlink();
-        new_dir->WriteInode(NULL);
+        new_dir->WriteInode(nullptr);
       }
     }
 
@@ -590,7 +590,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
         F2fsPutPage(old_dir_page, 0);
       }
       old_dir->DropNlink();
-      old_dir->WriteInode(NULL);
+      old_dir->WriteInode(nullptr);
     }
   } while (false);
 
