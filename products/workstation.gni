@@ -79,6 +79,9 @@ product_bootfs_labels += [
 
   # enable DPI based scale factors, 2x above 240 DPI, 3x above 360, etc.
   "//products/kernel_cmdline:virtcon.dpi--240-360-480",
+
+  # enable double buffered output
+  "//products/kernel_cmdline:virtcon.buffer-count--2",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,

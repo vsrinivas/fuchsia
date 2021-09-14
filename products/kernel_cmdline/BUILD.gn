@@ -118,6 +118,10 @@ kernel_cmdline("virtcon.dpi--240-360-480") {
   args = [ "virtcon.dpi=240,360,480" ]
 }
 
+kernel_cmdline("virtcon.buffer-count--2") {
+  args = [ "virtcon.buffer_count=2" ]
+}
+
 kernel_cmdline("ktrace.grpmask-0") {
   args = [ "ktrace.grpmask=0" ]
 }
