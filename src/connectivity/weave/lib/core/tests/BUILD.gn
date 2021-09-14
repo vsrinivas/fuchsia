@@ -28,7 +28,7 @@ fuchsia_unittest_package("weave-trait-updater-unittests") {
       max_severity = "ERROR"
     }
   }
-  manifest = rebase_path("meta/weave_trait_updater_unittests.cmx")
+  manifest = rebase_path("meta/weave_trait_updater_unittests.cml")
 }
 
 group("tests") {
