@@ -24,10 +24,11 @@ void OverwriteCosine(double* buffer, int64_t buf_size, double freq, double magn 
   FX_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
   // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
-  FX_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
+  FX_DCHECK(freq * 2.0 <= static_cast<double>(buf_size))
+      << "Buffer too short--requested frequency will be aliased";
 
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
-  const double mult = 2.0 * M_PI / buf_size * freq;
+  const double mult = 2.0 * M_PI / static_cast<double>(buf_size) * freq;
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     buffer[idx] = magn * std::cos(mult * idx + phase);
@@ -503,15 +504,15 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   EXPECT_FALSE(result);
 
   // Audio entirely below the noise floor should be considered silent.
-  reals.samples()[1] = 0.09;
-  reals.samples()[2] = -0.09;
-  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.1);
+  reals.samples()[1] = 0.09f;
+  reals.samples()[2] = -0.09f;
+  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.1f);
   EXPECT_FALSE(result);
 
   // Impulse with exactly one frame.
   reals.samples()[1] = 0;
   reals.samples()[2] = 0;
-  reals.samples()[5] = 0.7;
+  reals.samples()[5] = 0.7f;
   result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0);
   EXPECT_TRUE(result);
   EXPECT_EQ(*result, 5);
@@ -520,9 +521,9 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   // such that there is no value 50% larger. In the samples below, the edge occurs
   // at +0.10 (there is no sample larger than 0.15).
   reals.samples() = {
-      0, -0.01, 0.04, -0.08, 0.09, -0.10, 0.10, 0.12, 0.13, 0.14, 0.13, 0.145,
+      0, -0.01f, 0.04f, -0.08f, 0.09f, -0.10f, 0.10f, 0.12f, 0.13f, 0.14f, 0.13f, 0.145f,
   };
-  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.01);
+  result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.01f);
   EXPECT_TRUE(result);
   EXPECT_EQ(*result, 6);
 }
@@ -537,11 +538,11 @@ TEST(AnalysisHelpers, MultiplyByTukeyWindow) {
   std::fill(want.begin(), want.end(), 1.0);
   // ramp up
   want[0] = 0;
-  want[1] = 0.5 * (1 - cos(M_PI * 1.0 / 3.0));
-  want[2] = 0.5 * (1 - cos(M_PI * 2.0 / 3.0));
+  want[1] = static_cast<float>(0.5 * (1 - cos(M_PI * 1.0 / 3.0)));
+  want[2] = static_cast<float>(0.5 * (1 - cos(M_PI * 2.0 / 3.0)));
   // ramp down
-  want[10] = 0.5 * (1 - cos(M_PI * 2.0 / 3.0));
-  want[11] = 0.5 * (1 - cos(M_PI * 1.0 / 3.0));
+  want[10] = static_cast<float>(0.5 * (1 - cos(M_PI * 2.0 / 3.0)));
+  want[11] = static_cast<float>(0.5 * (1 - cos(M_PI * 1.0 / 3.0)));
   want[12] = 0;
 
   using testing::ElementsAre;

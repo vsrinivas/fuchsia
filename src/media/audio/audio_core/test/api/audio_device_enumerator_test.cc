@@ -33,7 +33,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
     audio_dev_enum_.events().OnDeviceGainChanged =
         AddCallback("OnDeviceGainChanged", [device](uint64_t token, AudioGainInfo info) {
           EXPECT_EQ(token, device->token());
-          EXPECT_EQ(info.gain_db, -30);
+          EXPECT_EQ(info.gain_db, -30.0f);
           EXPECT_EQ(info.flags, AudioGainInfoFlags(0));
         });
     audio_dev_enum_->SetDeviceGain(

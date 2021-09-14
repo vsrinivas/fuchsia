@@ -34,7 +34,7 @@ class AudioBuffer {
   // Create an interleaved AudioBuffer, from a vector of 1-channel AudioBufferSlices
   static AudioBuffer Interleave(const std::vector<AudioBufferSlice<SampleFormat>>& channel_slices) {
     FX_CHECK(channel_slices.size());
-    auto format = Format::Create<SampleFormat>(channel_slices.size(),
+    auto format = Format::Create<SampleFormat>(static_cast<int32_t>(channel_slices.size()),
                                                channel_slices[0].format().frames_per_second())
                       .take_value();
     auto buffer = AudioBuffer<SampleFormat>(format, channel_slices[0].NumFrames());

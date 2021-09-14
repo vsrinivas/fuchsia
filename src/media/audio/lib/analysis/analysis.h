@@ -89,7 +89,7 @@ double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
       sum += s * s;
     }
   }
-  return sqrt(sum / slice.NumSamples());
+  return sqrt(sum / static_cast<double>(slice.NumSamples()));
 }
 
 // Locate the left edge of the first impulse in the given slice, ignoring samples quieter

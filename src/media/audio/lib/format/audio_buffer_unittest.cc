@@ -121,7 +121,7 @@ TEST(AudioBufferTest, Interleave) {
 
   // Mono 20 frames, with values 0..19
   AudioBuffer<kSampleFormat> buffer(kFormat1, 20);
-  for (auto frame = 0; frame < 20; ++frame) {
+  for (int16_t frame = 0; frame < 20; ++frame) {
     buffer.samples()[frame] = frame;
   }
 

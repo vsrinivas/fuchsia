@@ -521,9 +521,9 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
 
   // The exact length can be off by a fractional frame due to rounding.
   const auto ns_per_frame = format.frames_per_ns().Inverse();
-  const auto dt = zx::nsec(ns_per_frame.Scale(end - start));
-  const auto tol = zx::nsec(ns_per_frame.Scale(1));
-  EXPECT_NEAR(kVolumeRampDuration.get(), dt.get(), tol.get())
+  const auto dt = static_cast<double>(zx::nsec(ns_per_frame.Scale(end - start)).get());
+  const auto tol = static_cast<double>(zx::nsec(ns_per_frame.Scale(1)).get());
+  EXPECT_NEAR(kVolumeRampDuration.get(), dt, tol)
       << "ramp has length " << (end - start) << " frames, from frame " << start << " to " << end;
 }
 
@@ -536,8 +536,8 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto kPacketFrames = PacketsToFrames(1, kOutputFrameRate);
-  int64_t num_frames =
-      std::pow(2, std::floor(std::log2(PacketsToFrames(kNumPacketsInPayload, kOutputFrameRate))));
+  int32_t num_frames = static_cast<int32_t>(
+      std::pow(2, std::floor(std::log2(PacketsToFrames(kNumPacketsInPayload, kOutputFrameRate)))));
 
   // At 48kHz, this is 5.33ms per sinusoidal period. This is chosen intentionally to
   // (a) not align with volume updates, which happen every 10ms, and (b) include a

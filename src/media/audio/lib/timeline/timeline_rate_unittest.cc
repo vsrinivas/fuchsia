@@ -138,8 +138,14 @@ TEST(TimelineRateTest, Constructor_Double) {
   TimelineRate double_precision_adequate(0.75000002);
   EXPECT_GT(double_precision_adequate.subject_delta(), 3ull);
   EXPECT_GT(double_precision_adequate.reference_delta(), 4ull);
-  EXPECT_GT(static_cast<__uint128_t>(double_precision_adequate.subject_delta()) * 4,
-            static_cast<__uint128_t>(double_precision_adequate.reference_delta()) * 3);
+
+  // This is EXPECT_GT(subject_delta*4, reference_delta()*3), but gtest cannot do 128bit integers.
+  if ((static_cast<__uint128_t>(double_precision_adequate.subject_delta()) * 4) <
+      (static_cast<__uint128_t>(double_precision_adequate.reference_delta()) * 3)) {
+    ADD_FAILURE() << "cannot accommodate 52-bit mantissa: "
+                  << "subject_delta=" << double_precision_adequate.subject_delta() << ", "
+                  << "reference_delta=" << double_precision_adequate.reference_delta();
+  }
 
   // 4'503'599'627'370'496 is 2^52, and this double value is evaluated as 1/2^52.
   TimelineRate epsilon_double(2.221e-16);

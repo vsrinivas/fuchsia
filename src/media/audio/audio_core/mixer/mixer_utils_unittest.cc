@@ -242,8 +242,8 @@ TEST(SourceReaderTest, Map_2_4) {
 // The one destination channel is average of all source channels.
 TEST(SourceReaderTest, Map_3_1) {
   using SR = mixer::SourceReader<float, 3, 1>;
-  const float data[] = {-0.5, 1.0, 1.0, -0.8};
-  const float expect[] = {0.5, 0.4};
+  const float data[] = {-0.5f, 1.0f, 1.0f, -0.8f};
+  const float expect[] = {0.5f, 0.4f};
 
   EXPECT_EQ(SR::Read(data, 0), expect[0]);
   EXPECT_EQ(SR::Read(data, 1), SR::Read(data, 0));
@@ -284,8 +284,8 @@ TEST(SourceReaderTest, Map_3_2) {
 // The one destination channel is average of all source channels.
 TEST(SourceReaderTest, Map_4_1) {
   using SR = mixer::SourceReader<float, 4, 1>;
-  const float data[] = {-0.25, 0.75, 1.0, -0.5, -0.05};
-  const float expect[] = {0.25, 0.3};
+  const float data[] = {-0.25f, 0.75f, 1.0f, -0.5f, -0.05f};
+  const float expect[] = {0.25f, 0.3f};
 
   EXPECT_EQ(SR::Read(data, 0), expect[0]);
   EXPECT_EQ(SR::Read(data, 1), SR::Read(data, 0));

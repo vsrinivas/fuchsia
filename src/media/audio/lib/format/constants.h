@@ -29,7 +29,7 @@ constexpr int32_t kOffsetInt8ToUint8 =
 
 constexpr float kInt8ToFloat = 1.0f / kFloatToInt8;
 constexpr float kInt16ToFloat = 1.0f / kFloatToInt16;
-constexpr double kInt24In32ToFloat = 1.0 / kFloatToInt24In32;
+constexpr double kInt24ToFloat = 1.0 / kFloatToInt24;
 
 // The number of fractional bits used when expressing timestamps (in frame
 // units) as fixed point integers.  Ultimately, this determines the resolution

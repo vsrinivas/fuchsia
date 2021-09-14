@@ -43,8 +43,9 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   auto [amplitude, expected_amplitude] = SampleFormatToAmplitudes(SampleFormat);
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  auto source =
-      GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
+  using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
+  auto source = GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                                    static_cast<SampleT>(amplitude));
   AudioBuffer accum(accum_format, kFreqTestBufSize);
 
   int64_t dest_offset = 0;
@@ -471,8 +472,9 @@ void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results, dou
   auto mixer = SelectMixer(ASF::FLOAT, 1, 88200, 1, 48000, sampler_type);
   ASSERT_NE(mixer, nullptr);
 
-  MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 88200.0 / 48000.0),
-                            freq_resp_results, sinad_results, phase_results);
+  auto source_frames = std::round(static_cast<double>(kFreqTestBufSize) * 88200.0 / 48000.0);
+  MeasureFreqRespSinadPhase(mixer.get(), static_cast<int32_t>(source_frames), freq_resp_results,
+                            sinad_results, phase_results);
 }
 
 // For the given resampler, target micro-sampling -- with a 48001:48000 ratio.
@@ -492,8 +494,9 @@ void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results, doubl
   auto mixer = SelectMixer(ASF::FLOAT, 1, 44100, 1, 48000, sampler_type);
   ASSERT_NE(mixer, nullptr);
 
-  MeasureFreqRespSinadPhase(mixer.get(), round(kFreqTestBufSize * 44100.0 / 48000.0),
-                            freq_resp_results, sinad_results, phase_results);
+  auto source_frames = std::round(static_cast<double>(kFreqTestBufSize * 44100.0 / 48000.0));
+  MeasureFreqRespSinadPhase(mixer.get(), static_cast<int32_t>(source_frames), freq_resp_results,
+                            sinad_results, phase_results);
 }
 
 // For the given resampler, target the 1:2 upsampling ratio, articulated by specifying a source

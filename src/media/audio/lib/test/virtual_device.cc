@@ -42,14 +42,17 @@ VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironme
   }
   fidl_->ClearFormatRanges();
   fidl_->AddFormatRange(driver_format_, format_.frames_per_second(), format_.frames_per_second(),
-                        format_.channels(), format_.channels(), ASF_RANGE_FLAG_FPS_CONTINUOUS);
+                        static_cast<int8_t>(format_.channels()),
+                        static_cast<uint8_t>(format_.channels()), ASF_RANGE_FLAG_FPS_CONTINUOUS);
 
   fidl_->SetFifoDepth(kFifoDepthBytes);
   fidl_->SetExternalDelay(kExternalDelay.get());
 
-  fidl_->SetRingBufferRestrictions(frame_count, frame_count, frame_count);
+  fidl_->SetRingBufferRestrictions(static_cast<uint32_t>(frame_count),
+                                   static_cast<uint32_t>(frame_count),
+                                   static_cast<uint32_t>(frame_count));
 
-  auto ring_buffer_ms = static_cast<size_t>(
+  auto ring_buffer_ms = static_cast<uint32_t>(
       static_cast<double>(frame_count) / static_cast<double>(format_.frames_per_second()) * 1000);
   fidl_->SetNotificationFrequency(ring_buffer_ms / kNotifyMs);
 

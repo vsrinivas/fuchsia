@@ -51,28 +51,28 @@ class TestEffectBuilder {
   }
 
   TestEffectBuilder& WithBlockSize(int64_t block_size) {
-    spec_.block_size_frames = block_size;
+    spec_.block_size_frames = static_cast<uint32_t>(block_size);
     return *this;
   }
 
   TestEffectBuilder& WithMaxFramesPerBuffer(int64_t max_frames_per_buffer) {
-    spec_.max_batch_size = max_frames_per_buffer;
+    spec_.max_batch_size = static_cast<uint32_t>(max_frames_per_buffer);
     return *this;
   }
 
   TestEffectBuilder& WithSignalLatencyFrames(int64_t latency) {
-    spec_.signal_latency_frames = latency;
+    spec_.signal_latency_frames = static_cast<uint32_t>(latency);
     return *this;
   }
 
   TestEffectBuilder& WithRingOutFrames(int64_t ring_out_frames) {
-    spec_.ring_out_frames = ring_out_frames;
+    spec_.ring_out_frames = static_cast<uint32_t>(ring_out_frames);
     return *this;
   }
 
   TestEffectBuilder& WithChannelization(int32_t channels_in, int32_t channels_out) {
-    spec_.description.incoming_channels = channels_in;
-    spec_.description.outgoing_channels = channels_out;
+    spec_.description.incoming_channels = static_cast<uint16_t>(channels_in);
+    spec_.description.outgoing_channels = static_cast<uint16_t>(channels_out);
     return *this;
   }
 

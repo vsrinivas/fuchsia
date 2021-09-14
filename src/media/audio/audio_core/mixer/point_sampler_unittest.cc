@@ -471,10 +471,10 @@ TEST_F(PointSamplerRechannelTest, StereoToQuad) {
   auto accum = std::vector<float>(source.size() * 2);
   auto expect = std::vector<float>(source.size() * 2);
   for (auto idx = 0u; idx < source.size(); idx += 2) {
-    expect[idx * 2] = source[idx];          // First sample of each output frame should be L
-    expect[idx * 2 + 1] = source[idx + 1];  // Second sample of each output frame should be R
-    expect[idx * 2 + 2] = source[idx];      // Third  sample of each output frame should be L
-    expect[idx * 2 + 3] = source[idx + 1];  // Fourth sample of each output frame should be R
+    expect[idx * 2] = static_cast<float>(source[idx]);          // First sample should be L
+    expect[idx * 2 + 1] = static_cast<float>(source[idx + 1]);  // Second sample should be R
+    expect[idx * 2 + 2] = static_cast<float>(source[idx]);      // Third  sample should be L
+    expect[idx * 2 + 3] = static_cast<float>(source[idx + 1]);  // Fourth sample should be R
   }
   ShiftRightBy(expect, 31);  // right-shift these int32 values into float range
 
@@ -667,7 +667,7 @@ TEST_F(PointSamplerScalingTest, Precision) {
 
   // How we specify expectations for other tests (specify as integral float, shift-right) cannot
   // precisely express these values. Nonetheless, they are present and non-zero!
-  auto min_expect = std::array<float, 2>{3.051763215e-13, -3.051763215e-13};
+  auto min_expect = std::array<float, 2>{3.051763215e-13f, -3.051763215e-13f};
   EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
 
   // Per mixer optimization, we skip mixing if gain is Mute-equivalent. This

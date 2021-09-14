@@ -182,7 +182,8 @@ void AudioCoreHardwareTest::SetGainsToUnity() {
 
 // A packet containing captured audio data was just returned to us -- handle it.
 void AudioCoreHardwareTest::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
-  received_payload_frames_ = pkt.payload_size / (kNumChannels * kBytesPerSample);
+  received_payload_frames_ =
+      static_cast<int64_t>(pkt.payload_size) / static_cast<int64_t>(kNumChannels * kBytesPerSample);
 
   EXPECT_EQ(pkt.payload_offset, 0u);
   EXPECT_EQ(pkt.payload_size, vmo_buffer_byte_count_);
@@ -219,7 +220,7 @@ TEST_F(AudioCoreHardwareTest, AnalogNoiseDetectable) {
                              }));
   // Wait for the capture buffer to be returned.
   ExpectCallbacks();
-  ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
+  ASSERT_GT(received_payload_frames_, 0) << "No data frames captured";
 
   float sum_squares = 0.0f;
   for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
@@ -231,7 +232,7 @@ TEST_F(AudioCoreHardwareTest, AnalogNoiseDetectable) {
                                << "Is this a digital input? "
                                << "Is VirtualAudioDevice the default input?";
 
-  float rms = std::sqrt(sum_squares / received_payload_frames_);
+  float rms = std::sqrt(sum_squares / static_cast<float>(received_payload_frames_));
   FX_LOGS(INFO) << "Across " << received_payload_frames_ << " frames, we measured " << std::fixed
                 << std::setprecision(2) << ScaleToDb(rms) << " dB RMS of ambient noise";
 }
@@ -244,7 +245,7 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
                                OnPacketProduced(packet);
                              }));
   ExpectCallbacks();
-  ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
+  ASSERT_GT(received_payload_frames_, 0) << "No data frames captured";
 
   float sum = 0.0f;
   bool nonzero_sample_found = false;
@@ -256,7 +257,7 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
     GTEST_SKIP() << "Captured signal is all zeroes. DC offset cannot be measured";
   }
 
-  float mean = sum / received_payload_frames_;
+  float mean = sum / static_cast<float>(received_payload_frames_);
   float sum_square_diffs = 0.0;
   for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
     float diff = payload_buffer_[idx] - mean;
@@ -264,7 +265,7 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
   }
   EXPECT_GT(sum_square_diffs, 0.0f) << "Captured signal is purely constant";
 
-  float std_dev = std::sqrt(sum_square_diffs / received_payload_frames_);
+  float std_dev = std::sqrt(sum_square_diffs / static_cast<float>(received_payload_frames_));
   EXPECT_TRUE(std_dev > std::abs(mean))
       << "This device has a detectable " << (mean > 0.0f ? "positive" : "negative")
       << " DC Offset. Standard deviation (" << std::fixed << std::setprecision(7) << std_dev

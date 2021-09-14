@@ -77,8 +77,5 @@ template("audio_core_api_test_component") {
       "//third_party/googletest:gmock",
     ]
     testonly = true
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }

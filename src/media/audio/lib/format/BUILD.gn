@@ -51,9 +51,6 @@ executable("unittest-bin") {
     "//src/zircon/lib/zircon",
     "//third_party/googletest:gmock",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("audio-libformat-unittests") {

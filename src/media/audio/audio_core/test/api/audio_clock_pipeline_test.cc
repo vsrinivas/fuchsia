@@ -202,7 +202,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
 
     // A. two impulses are detected in the bisected output ring buffer
     auto num_frames_output = NumFramesOutput(clock_slew_ppm, frames_between_impulses);
-    auto midpoint = num_frames_output / 2;
+    auto midpoint = static_cast<int64_t>(num_frames_output) / 2;
     auto first_peak = FindPeak(AudioBufferSlice(&ring_buffer, 0, midpoint));
     auto second_peak = FindPeak(AudioBufferSlice(&ring_buffer, midpoint, ring_buffer.NumFrames()));
 
@@ -246,7 +246,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   // E. The renderer clock is running at the expected rate.
   // All measurements use tolerance ranges except where explicitly stated as exact.
   void RunStepTest(int32_t clock_slew_ppm, int64_t num_frames_input) {
-    constexpr double kInputStepMagnitude = 0.95;
+    constexpr float kInputStepMagnitude = 0.95f;
     constexpr double kOutputRelativeError = 0.025;
 
     Init(clock_slew_ppm, num_frames_input);
@@ -375,9 +375,10 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
 
     // Verify that this is enough output for our analysis (after removing TotalRampFrames)...
     ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input - TotalRampFrames()) >
-                num_frames_to_analyze);
+                static_cast<double>(num_frames_to_analyze));
     // ... and that this additional output doesn't cause us to overrun the ring buffer.
-    ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input) < kPayloadFrames);
+    ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input) <
+                static_cast<double>(kPayloadFrames));
 
     auto silent_packets = renderer_->AppendSlice(initial_silence, kPacketFrames, 0);
     auto packets1 = renderer_->AppendSlice(input, kPacketFrames, silent_packets.back()->end_pts);
@@ -400,9 +401,9 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
 
     // Compute the slewed frequency in the output.
-    int32_t output_freq = static_cast<double>(input_freq) *
-                          static_cast<double>(num_frames_to_analyze) /
-                          NumFramesOutput(clock_slew_ppm, num_frames_to_analyze);
+    int32_t output_freq = static_cast<int32_t>(
+        static_cast<double>(input_freq) * static_cast<double>(num_frames_to_analyze) /
+        NumFramesOutput(clock_slew_ppm, num_frames_to_analyze));
 
     // As the mixer tracks the input clock's position, it may be a little ahead or behind, resulting
     // in a cluster of detected frequencies, not just the single expected frequency. Measure this.

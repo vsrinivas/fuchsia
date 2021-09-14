@@ -378,7 +378,7 @@ void DelayEffectTest::TestDelayBounds(uint32_t frame_rate, uint32_t channels,
   for (uint32_t pass = 0; pass < 2; ++pass) {
     for (uint32_t i = 0; i < num_samples; ++i) {
       delay_buff_in_out[i] = static_cast<float>(i + pass * num_samples + 1);
-      expect[i] = fmax(delay_buff_in_out[i] - delay_samples, 0.0f);
+      expect[i] = fmax(delay_buff_in_out[i] - static_cast<float>(delay_samples), 0.0f);
     }
     ASSERT_EQ(effect.ProcessInPlace(num_frames, delay_buff_in_out.data()), ZX_OK);
 

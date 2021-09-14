@@ -51,7 +51,7 @@ template <>
 struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32> {
   using SampleT = int32_t;
   static constexpr SampleT kSilentValue = 0;
-  static float ToFloat(SampleT sample) { return static_cast<float>(sample * kInt24In32ToFloat); }
+  static float ToFloat(SampleT sample) { return static_cast<float>((sample >> 8) * kInt24ToFloat); }
   static std::string ToString(SampleT sample) { return fxl::StringPrintf("%08X", sample); }
   static constexpr size_t kCharsPerSample = 8;
 };

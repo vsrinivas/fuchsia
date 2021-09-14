@@ -73,7 +73,7 @@ class AudioCoreHardwareTest : public TestFixture {
   uint32_t vmo_buffer_frame_count_;
   uint32_t vmo_buffer_byte_count_;
 
-  uint32_t received_payload_frames_ = 0;
+  int64_t received_payload_frames_ = 0;
 
  private:
   std::optional<uint64_t> default_capture_device_token_ = std::nullopt;

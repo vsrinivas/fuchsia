@@ -20,13 +20,13 @@ class PidControlTest : public testing::Test {
     control.Start(zx::time(100));
 
     control.TuneForError(zx::time(110), 50);
-    EXPECT_FLOAT_EQ(control.Read(), 50 * pFactor);
+    EXPECT_DOUBLE_EQ(control.Read(), 50 * pFactor);
 
     control.TuneForError(zx::time(125), -10);
-    EXPECT_FLOAT_EQ(control.Read(), -10 * pFactor);
+    EXPECT_DOUBLE_EQ(control.Read(), -10 * pFactor);
 
     control.TuneForError(zx::time(130), 20);
-    EXPECT_FLOAT_EQ(control.Read(), 20 * pFactor);
+    EXPECT_DOUBLE_EQ(control.Read(), 20 * pFactor);
   }
 
   static void VerifyIntegralOnly(const double iFactor) {
@@ -41,8 +41,8 @@ class PidControlTest : public testing::Test {
     control.TuneForError(tune_time, 50);
 
     // From this, we expect error to change by 50*t*I
-    expected += 50.0 * iFactor * (tune_time - previous_time).get();
-    EXPECT_FLOAT_EQ(control.Read(), expected);
+    expected += 50.0 * iFactor * static_cast<double>((tune_time - previous_time).get());
+    EXPECT_DOUBLE_EQ(control.Read(), expected);
 
     previous_time = tune_time;
     tune_time += zx::duration(15);
@@ -50,8 +50,8 @@ class PidControlTest : public testing::Test {
     control.TuneForError(tune_time, -100);
 
     // From this, we expect error to change by -100*t*I
-    expected += -100.0 * iFactor * (tune_time - previous_time).get();
-    EXPECT_FLOAT_EQ(control.Read(), expected);
+    expected += -100.0 * iFactor * static_cast<double>((tune_time - previous_time).get());
+    EXPECT_DOUBLE_EQ(control.Read(), expected);
 
     previous_time = tune_time;
     tune_time += zx::duration(25);
@@ -59,9 +59,9 @@ class PidControlTest : public testing::Test {
     control.TuneForError(tune_time, 40);
 
     // From this, we expect error to change by 0*t*I -- to be zero!
-    expected += 40.0 * iFactor * (tune_time - previous_time).get();
-    EXPECT_FLOAT_EQ(control.Read(), expected);
-    EXPECT_FLOAT_EQ(expected, 0.0);
+    expected += 40.0 * iFactor * static_cast<double>((tune_time - previous_time).get());
+    EXPECT_DOUBLE_EQ(control.Read(), expected);
+    EXPECT_DOUBLE_EQ(expected, 0.0);
   }
 
   static void VerifyDerivativeOnly(double dFactor) {
@@ -79,9 +79,9 @@ class PidControlTest : public testing::Test {
     // curr_err=50; prev_err=0; delta_err=50; dur=10; err_rate=50/10
     control.TuneForError(tune_time, error);
 
-    error_rate = (error - previous_error) / (tune_time - previous_time).get();
+    error_rate = (error - previous_error) / static_cast<double>((tune_time - previous_time).get());
     // Reset error to 0 at t=10, from here we expect error to change by 5
-    EXPECT_FLOAT_EQ(control.Read(), dFactor * error_rate);
+    EXPECT_DOUBLE_EQ(control.Read(), dFactor * error_rate);
 
     previous_time = tune_time;
     tune_time += zx::duration(5);
@@ -90,9 +90,9 @@ class PidControlTest : public testing::Test {
     // curr_err=20; prev_err=50; delta_err=-30; dur=5; err_rate=-30/5
     control.TuneForError(tune_time, error);
 
-    error_rate = (error - previous_error) / (tune_time - previous_time).get();
+    error_rate = (error - previous_error) / static_cast<double>((tune_time - previous_time).get());
     // Now we expect error to change by -6
-    EXPECT_FLOAT_EQ(control.Read(), dFactor * error_rate);
+    EXPECT_DOUBLE_EQ(control.Read(), dFactor * error_rate);
 
     previous_time = tune_time;
     tune_time += zx::duration(20);
@@ -101,9 +101,9 @@ class PidControlTest : public testing::Test {
     // curr_err=30; prev_err=20; delta_err=10; dur=20; err_rate=10/20
     control.TuneForError(tune_time, error);
 
-    error_rate = (error - previous_error) / (tune_time - previous_time).get();
+    error_rate = (error - previous_error) / static_cast<double>((tune_time - previous_time).get());
     // Now we expect error to change by 0.5
-    EXPECT_FLOAT_EQ(control.Read(), dFactor * error_rate);
+    EXPECT_DOUBLE_EQ(control.Read(), dFactor * error_rate);
   }
 
   static void SmoothlyChaseToClockRate(const int32_t rate_adjust_ppm,
@@ -155,9 +155,11 @@ class PidControlTest : public testing::Test {
       zx::time predict_ref_time =
           previous_ref_time + (kIterationTimeslice * (1'000'000 + predict_ppm)) / 1'000'000;
       zx::time ref_time =
-          rate_change_ref_time + zx::duration((mono_time - rate_change_mono_time).get() * ref_rate);
+          rate_change_ref_time +
+          zx::duration(static_cast<int64_t>(
+              static_cast<double>((mono_time - rate_change_mono_time).get()) * ref_rate));
 
-      control.TuneForError(mono_time, (ref_time - predict_ref_time).get());
+      control.TuneForError(mono_time, static_cast<double>((ref_time - predict_ref_time).get()));
       previous_ref_time = predict_ref_time;
     }
 

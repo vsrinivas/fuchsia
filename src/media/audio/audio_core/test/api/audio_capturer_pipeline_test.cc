@@ -369,7 +369,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsManuallyReleased) {
     capturer_->fidl()->ReleasePacket(p);
   };
 
-  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
+  capturer_->fidl()->StartAsyncCapture(static_cast<uint32_t>(kFramesPerPacket));
 
   // To verify that we're automatically recycling packets, we need to loop
   // through the payload buffer at least twice.
@@ -414,7 +414,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsNotManuallyReleased) {
     packets.push_back(p);
   };
 
-  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
+  capturer_->fidl()->StartAsyncCapture(static_cast<uint32_t>(kFramesPerPacket));
 
   // We expect exactly kNumPackets.
   const zx::duration kLoopTimeout = zx::sec(10);

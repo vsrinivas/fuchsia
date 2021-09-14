@@ -350,7 +350,7 @@ TEST_F(EffectsProcessorTest, ProcessOutOfPlace) {
   // out[N * 4 + 2] == 0.0f
   // out[N * 4 + 3] == 0.0f
   auto CheckFrame = [&out](size_t frame) {
-    ASSERT_FLOAT_EQ(out[4 * frame + 0], frame + 3.0f);
+    ASSERT_FLOAT_EQ(out[4 * frame + 0], static_cast<float>(frame) + 3.0f);
     ASSERT_FLOAT_EQ(out[4 * frame + 1], 2.0f);
     ASSERT_FLOAT_EQ(out[4 * frame + 2], 0.0f);
     ASSERT_FLOAT_EQ(out[4 * frame + 3], 0.0f);
@@ -399,8 +399,8 @@ TEST_F(EffectsProcessorTest, SetStreamInfo) {
   // SetStreamInfo
   constexpr uint32_t kExpectedUsageMask =
       FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA | FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION;
-  constexpr float kExpectedGainDbfs = -20.0;
-  constexpr float kExpectedVolume = 0.8;
+  constexpr float kExpectedGainDbfs = -20.0f;
+  constexpr float kExpectedVolume = 0.8f;
   fuchsia_audio_effects_stream_info stream_info;
   stream_info.usage_mask = kExpectedUsageMask;
   stream_info.gain_dbfs = kExpectedGainDbfs;

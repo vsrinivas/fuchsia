@@ -174,13 +174,13 @@ class SincSamplerOutputTest : public SincSamplerTest {
   // negative wing) are ignored, we expect a generated output value of kValueWithoutPreviousFrames.
   // If they are NOT ignored, then we expect the result kValueWithPreviousFrames.
   static constexpr float kSource[] = {
-      1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
-      1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
-      1330.10897,  // ... source frames to satisfy negative filter width.
-      -10.001010,  // Center source frame
-      268.88298,   // Source frames to satisfy positive filter width ...
-      -268.88298, 268.88298,   -268.88298, 268.88298,   -268.88298, 268.88298,
-      -268.88298, 268.88298,   -268.88298, 268.88298,   -268.88298, 268.88298,
+      1330.10897f, -1330.10897f, 1330.10897f, -1330.10897f, 1330.10897f, -1330.10897f,
+      1330.10897f, -1330.10897f, 1330.10897f, -1330.10897f, 1330.10897f, -1330.10897f,
+      1330.10897f,  // ... source frames to satisfy negative filter width.
+      -10.001010f,  // Center source frame
+      268.88298f,   // Source frames to satisfy positive filter width ...
+      -268.88298f, 268.88298f,   -268.88298f, 268.88298f,   -268.88298f, 268.88298f,
+      -268.88298f, 268.88298f,   -268.88298f, 268.88298f,   -268.88298f, 268.88298f,
   };
   static constexpr Fixed kMixOneFrameSourceOffset = ffl::FromRatio(1, 128);
   // The center frame should contribute -10.0, the positive wing -5.0, and the negative wing +25.0.

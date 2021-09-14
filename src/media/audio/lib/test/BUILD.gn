@@ -75,9 +75,6 @@ source_set("hermetic_audio_test") {
     "//src/lib/fxl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Main entry point for tests that use hermetic_pipeline_test.h.

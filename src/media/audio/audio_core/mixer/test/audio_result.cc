@@ -635,7 +635,7 @@ void AudioResult::DumpNoiseFloorValues() {
 void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
   printf("\n       Epsilon:  %7.4e  (%10.4le dB)", AudioResult::ScaleEpsilon,
-         Gain::ScaleToDb(1.0 - AudioResult::ScaleEpsilon));
+         Gain::ScaleToDb(1.0f - AudioResult::ScaleEpsilon));
   printf("  Level: %11.4le dB  Sinad: %8.4lf dB", AudioResult::LevelEpsilonDown,
          AudioResult::SinadEpsilonDown);
 

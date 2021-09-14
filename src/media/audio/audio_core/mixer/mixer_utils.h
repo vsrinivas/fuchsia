@@ -60,7 +60,7 @@ class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, int32_t>>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr) {
-    return static_cast<float>(kInt24In32ToFloat * (*source_ptr));
+    return static_cast<float>(kInt24ToFloat * ((*source_ptr) >> 8));
   }
 };
 

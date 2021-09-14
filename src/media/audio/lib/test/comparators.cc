@@ -171,7 +171,7 @@ void CompareAudioBuffersApprox(AudioBufferSlice<SampleFormat> got_slice,
     return;  // bit-for-bit equal
   }
 
-  double diff_rms = sqrt(diff_ss / got_slice.NumSamples());
+  double diff_rms = sqrt(diff_ss / static_cast<double>(got_slice.NumSamples()));
   double relative_error = diff_rms / want_slice_rms;
   if (relative_error <= options.max_relative_error) {
     return;  // approximately equal

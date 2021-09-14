@@ -195,10 +195,11 @@ TEST_F(OutputProducerTest, PassThruInt24) {
 
 // Are all valid data values passed correctly to float outputs
 TEST_F(OutputProducerTest, PassThruFloat32) {
-  auto accum = std::array<float, 10>{-1.1,        1.1,          -1.0,        1.0, -0.503921568,
-                                     0.503921568, -0.000000119, 0.000000119, 0,   NAN};
+  auto accum = std::array<float, 10>{
+      -1.1f, 1.1f, -1.0f, 1.0f, -0.503921568f, 0.503921568f, -0.000000119f, 0.000000119f, 0, NAN,
+  };
 
-  constexpr auto kFillValue = 4.2f;
+  constexpr float kFillValue = 4.2f;
   auto dest = std::vector<float>(accum.size());
   std::fill(dest.begin(), dest.end(), kFillValue);
   ASSERT_EQ(dest.size(), accum.size()) << "Test error, vector lengths should match";
@@ -208,8 +209,8 @@ TEST_F(OutputProducerTest, PassThruFloat32) {
 
   output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() - 1);
   // Update the 3 places where accum should differ from dest, so we can compare entire arrays.
-  accum[0] = -1.0;                       // value was clamped
-  accum[1] = 1.0;                        // value was clamped
+  accum[0] = -1.0f;                      // value was clamped
+  accum[1] = 1.0f;                       // value was clamped
   accum[accum.size() - 1] = kFillValue;  // previous not-overwritten dest value
   EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
 }

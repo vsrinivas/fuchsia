@@ -49,7 +49,7 @@ constexpr double kFullScaleInt16AccumAmplitude =  // 0.999969482421875
 constexpr double kFullScaleInt24In32InputAmplitude =
     static_cast<double>(media::audio::kMaxInt24In32);
 constexpr double kFullScaleInt24In32AccumAmplitude =  // 0.99999988079071045
-    kFullScaleInt24In32InputAmplitude / media::audio::kFloatToInt24In32;
+    static_cast<double>(media::audio::kMaxInt24) / media::audio::kFloatToInt24;
 
 constexpr double kFullScaleFloatInputAmplitude = 1.0f;
 constexpr double kFullScaleFloatAccumAmplitude = 1.0f;

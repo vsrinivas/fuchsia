@@ -376,7 +376,7 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
-  auto expected_data = set_usage_to_disable ? kPlaybackData1 : 0x0;
+  int16_t expected_data = set_usage_to_disable ? kPlaybackData1 : 0x0;
   ExpectPacketContains("loopback_captured", loopback_captured, loopback_capturer->SnapshotPayload(),
                        10, expected_data);
 }

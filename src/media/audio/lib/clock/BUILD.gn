@@ -49,9 +49,6 @@ executable("unittest_bin") {
     "//src/media/audio/lib/clock/testing",
     "//src/zircon/lib/zircon",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("death_unittest_bin") {

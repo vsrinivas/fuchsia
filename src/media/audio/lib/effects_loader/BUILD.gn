@@ -45,9 +45,6 @@ executable("test") {
     "testing",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("audio_effects_loader_unittests") {
