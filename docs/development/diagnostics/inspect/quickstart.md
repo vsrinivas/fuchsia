@@ -263,6 +263,44 @@ See below for the quick start guide in your language of choice:
   };
   ```
 
+  ##### String References
+
+  You can use `inspect::StringReference` to reduce the memory footprint
+  of an Inspect hierarchy that has a lot of repeated data. For instance,
+
+  ```cpp
+  using inspect::Inspector;
+
+  Inspector inspector;
+
+  for (int i = 0; i < 100; i++) {
+    inspector.GetRoot().CreateChild("child", &inspector);
+  }
+  ```
+
+  Will include 100 copies of the string `"child"` in your inspect
+  output.
+
+  Alternatively,
+
+  ```cpp
+  using inspect::Inspector;
+  using inspect::StringReference;
+
+  namespace {
+    const StringReference kChild("child");
+  }
+
+  Inspector inspector;
+  for (int i = 0; i < 100; i++) {
+    inspector.GetRoot().CreateChild(kChild, &inspector)
+  }
+  ```
+
+  Will generate only one copy of `"child"` which is referenced 100 times.
+
+  This pattern is recommended anywhere a global constant key would be used.
+
 * {Rust}
 
   #### Setup
@@ -290,7 +328,7 @@ See below for the quick start guide in your language of choice:
 
   // This serves the inspect Tree to the default path for reading at the standard
   // location "/diagnostics/fuchsia.inspect.Tree".
-  inspect_runtime::serve(&mut fs);
+  inspect_runtime::serve(&inspector, &mut fs);
 
   // This will give you a reference to the root node of the inspect tree.
   let root = inspector.root();
@@ -373,6 +411,44 @@ See below for the quick start guide in your language of choice:
   In this example, neither the `name` node nor the uint property is visible to readers
   after `node` is dropped.
 
+  ##### String References
+
+  You can use `fuchsia_inspect::StringReference` to reduce the memory footprint
+  of an Inspect hierarchy that has a lot of repeated data. For instance,
+
+  ```rust
+  use fuchisa_inspect::Inspector;
+
+  let inspector = Inspector::new();
+  for _ in 0..100 {
+    inspector.root().record_child("child");
+  }
+  ```
+
+  Will generate 100 copies of `"child"`.
+
+  Alternatively,
+
+  ```rust
+  use fuchsia_inspect::{Inspector, StringReference}
+
+  lazy_static! {
+    static ref CHILD: StringReference<'static> = "child".into();
+  }
+
+  let inspector = Inspector::new();
+  for _ in 0..100 {
+    inspector.root().record_child(&*CHILD);
+  }
+  ```
+
+  Will generate only 1 copy of `"child"` which is referenced 100 times.
+
+  This pattern is recommended anytime a global constant key would be used.
+
+  Note: It isn't necessary for the `StringReference` to be static. It can also take a `String`,
+  owning it.
+
   #### Dynamic Value Support
 
   Refer to [C++ Dynamic Value Support](#dynamic-value-support), as similar
@@ -385,7 +461,7 @@ See below for the quick start guide in your language of choice:
       async move {
           let inspector = Inspector::new();
           inspector.root().record_string("version", "1.0");
-          inspector.root().record_lazy_{node,values}("lazy", [] {
+          inspector.root().record_lazy_{node,values}("lazy", || {
               let inspector = Inspector::new();
               inspector.root().record_int("value", 10);
               // `_value`'s drop is called when the function returns, so it will be removed.
