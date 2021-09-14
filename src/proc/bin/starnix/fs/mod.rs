@@ -43,6 +43,7 @@ pub use simple_file::*;
 pub use symlink_node::*;
 pub use vmo_file::*;
 
+pub mod buffers;
 pub mod devfs;
 pub mod devpts;
 pub mod eventfd;
