@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LAYOUT_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LAYOUT_H_
 
+#include <limits>
+
 #include "constants.h"
 #include "field.h"
 
@@ -149,6 +151,9 @@ struct ElfNote;
 template <ElfData Data>
 class ElfNoteSegment;
 
+template <typename Addr>
+constexpr auto kAddrBits = std::numeric_limits<typename Addr::value_type>::digits;
+
 // The various ELF data structure layouts differ by class (32-bit vs 64-bit).
 // But many use the same layout with certain fields being either 32 or 64 bits.
 // The layouts that actually differ in field order and the like are defined by
@@ -168,6 +173,8 @@ struct Elf : private Layout<Class, Data> {
   using size_type = typename Addr::value_type;
 
   using Addend = SignedField<size_type, kSwap>;
+
+  static constexpr auto kAddressBits = kAddrBits<Addr>;
 
   using Note = ElfNote;
   using NoteSegment = ElfNoteSegment<kData>;

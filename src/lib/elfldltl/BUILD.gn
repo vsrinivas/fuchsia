@@ -19,6 +19,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/fuzzer.h",
     "lib/elfldltl/layout.h",
     "lib/elfldltl/note.h",
+    "lib/elfldltl/relocation.h",
     "lib/elfldltl/self.h",
   ]
 
@@ -47,6 +48,7 @@ source_set("unittests") {
     "field-tests.cc",
     "layout-tests.cc",
     "note-tests.cc",
+    "relocation-tests.cc",
   ]
   deps = [
     ".",
@@ -67,9 +69,17 @@ cpp_fuzzer("note-fuzzer") {
   deps = [ "." ]
 }
 
+cpp_fuzzer("relocation-fuzzer") {
+  sources = [ "relocation-fuzzer.cc" ]
+  deps = [ "." ]
+}
+
 fuzzer_package("elfldltl-fuzzers") {
   fuzz_host = true
-  cpp_fuzzers = [ ":note-fuzzer" ]
+  cpp_fuzzers = [
+    ":note-fuzzer",
+    ":relocation-fuzzer",
+  ]
 }
 
 group("tests") {

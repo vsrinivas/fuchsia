@@ -73,3 +73,9 @@ using link-time references.  Both 32-bit and 64-bit formats are supported
 independent of the native pointer size, as is dynamic selection between the two
 in case the 32-bit format is used to size-optimize 64-bit binaries.  These APIs
 are useful for implementing static PIE self-relocation and similar cases.
+
+## Relocation
+
+[`<lib/elfldltl/relocation.h>`](include/lib/elfldltl/relocation.h) provides
+decoders for the relocation metadata formats.  This provides straightforward
+iterable C++ container views for the various kinds of relocation records.
