@@ -5,5 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.process.lifecycle") {
+  sdk_category = "partner"
+  api = "fuchsia.process.lifecycle.api"
   sources = [ "lifecycle.fidl" ]
 }

@@ -237,6 +237,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.power.profile:fuchsia.power.profile_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.process:fuchsia.process_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_sdk($fidl_toolchain)",
