@@ -86,9 +86,15 @@ class OtRadioDevice : public DeviceType {
   void FreeDevice();
   zx_status_t AssertResetPin();
   zx_status_t Reset();
+  zx_status_t ResetWithDelay();
+  void HandleResetRetry();
   zx_status_t GetNCPVersion();
   zx_status_t DriverUnitTestGetNCPVersion();
   zx_status_t DriverUnitTestGetResetEvent();
+  uint32_t GetTimeoutMs();
+  void BeginResetRetryTimer();
+  bool ShouldRetryReset();
+  bool IsHardResetting();
   void SetMaxInboundAllowance();
 
   zx::port port_;
@@ -160,6 +166,7 @@ class OtRadioDevice : public DeviceType {
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
   bool interrupt_is_asserted_ = false;
   bool inbound_frame_available_ = false;
+  zx::time hard_reset_end_ = zx::time(0);
 };
 
 }  // namespace ot

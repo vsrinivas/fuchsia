@@ -13,11 +13,12 @@
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
-#include <zircon/time.h>
 
 #include <iterator>
 
@@ -32,7 +33,11 @@
 namespace ot {
 namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
-constexpr uint8_t kRcpBusyPollingDelayMs = 10;
+constexpr uint32_t kRcpBusyPollingDelayMs = 10;
+constexpr uint8_t kRcpHardResetPinAssertTimeMs = 100;
+constexpr uint8_t kRcpHardResetWaitTimeMs = 400;
+constexpr zx::duration kRcpHardResetRetryWaitTime = zx::msec(700);
+
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
 
@@ -49,7 +54,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
                                                      OpenCompleter::Sync& completer) {
-  zx_status_t res = ot_radio_obj_.Reset();
+  zx_status_t res = ot_radio_obj_.ResetWithDelay();
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
@@ -318,7 +323,7 @@ zx_status_t OtRadioDevice::GetNCPVersion() {
 
 zx_status_t OtRadioDevice::DriverUnitTestGetResetEvent() {
   SetMaxInboundAllowance();
-  return Reset();
+  return ResetWithDelay();
 }
 
 zx_status_t OtRadioDevice::AssertResetPin() {
@@ -330,7 +335,7 @@ zx_status_t OtRadioDevice::AssertResetPin() {
     zxlogf(ERROR, "ot-radio: gpio write failed");
     return status;
   }
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+  zx::nanosleep(zx::deadline_after(zx::msec(kRcpHardResetPinAssertTimeMs)));
   return status;
 }
 
@@ -338,20 +343,70 @@ zx_status_t OtRadioDevice::Reset() {
   zx_status_t status = ZX_OK;
   zxlogf(DEBUG, "ot-radio: reset");
 
-  status = gpio_[OT_RADIO_RESET_PIN].Write(0);
+  BeginResetRetryTimer();
+  status = AssertResetPin();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: gpio write failed");
+    zxlogf(ERROR, "ot-radio: assert reset pin failed");
     return status;
   }
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));
 
   status = gpio_[OT_RADIO_RESET_PIN].Write(1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: gpio write failed");
+  }
+  return status;
+}
+
+zx_status_t OtRadioDevice::ResetWithDelay() {
+  zx_status_t status = Reset();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: reset failed");
     return status;
   }
-  zx::nanosleep(zx::deadline_after(zx::msec(400)));
+
+  zx::nanosleep(zx::deadline_after(zx::msec(kRcpHardResetWaitTimeMs)));
   return status;
+}
+
+uint32_t OtRadioDevice::GetTimeoutMs() {
+  uint32_t timeout = spinel_framer_->GetTimeoutMs();
+  if (!(IsHardResetting() && !inbound_frame_available_)) {
+    return timeout;
+  }
+  // If reset is in progress and inbound frame is not available
+  // apply short timeout
+  timeout = std::min(kRcpBusyPollingDelayMs, timeout);
+  return timeout;
+}
+
+void OtRadioDevice::HandleResetRetry() {
+  if (ShouldRetryReset()) {
+    zxlogf(INFO, "ot-radio: rcp unresponsive, firing hard reset again!");
+    Reset();
+  }
+}
+
+void OtRadioDevice::BeginResetRetryTimer() {
+  hard_reset_end_ = zx::clock::get_monotonic() + kRcpHardResetRetryWaitTime;
+}
+
+bool OtRadioDevice::IsHardResetting() { return hard_reset_end_ != zx::time(0); }
+
+bool OtRadioDevice::ShouldRetryReset() {
+  if (!IsHardResetting()) {
+    return false;
+  }
+  if (inbound_frame_available_) {
+    zxlogf(DEBUG, "ot-radio: rcp back online");
+    hard_reset_end_ = zx::time(0);
+    return false;
+  }
+  zx::time cur_time_us = zx::clock::get_monotonic();
+  if (hard_reset_end_ > cur_time_us) {
+    zxlogf(DEBUG, "ot-radio: waiting for rcp to back online");
+    return false;
+  }
+  return true;
 }
 
 zx_status_t OtRadioDevice::RadioThread() {
@@ -360,12 +415,13 @@ zx_status_t OtRadioDevice::RadioThread() {
 
   while (true) {
     zx_port_packet_t packet = {};
-    int timeout_ms = spinel_framer_->GetTimeoutMs();
+    uint32_t timeout_ms = GetTimeoutMs();
     auto status = port_.wait(zx::deadline_after(zx::msec(timeout_ms)), &packet);
 
     if (status == ZX_ERR_TIMED_OUT) {
       spinel_framer_->TrySpiTransaction();
       ReadRadioPacket();
+      HandleResetRetry();
       continue;
     } else if (status != ZX_OK) {
       zxlogf(ERROR, "ot-radio: port wait failed: %d", status);
@@ -385,6 +441,8 @@ zx_status_t OtRadioDevice::RadioThread() {
           zxlogf(DEBUG, "ot-radio: new packet unavailable, sleeping");
           zx::nanosleep(zx::deadline_after(zx::msec(kRcpBusyPollingDelayMs)));
         }
+
+        HandleResetRetry();
 
         interrupt_is_asserted_ = IsInterruptAsserted();
       } while (interrupt_is_asserted_ && inbound_allowance_ != 0);
