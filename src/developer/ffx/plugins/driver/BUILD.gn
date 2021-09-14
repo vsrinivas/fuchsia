@@ -14,6 +14,7 @@ ffx_plugin("ffx_driver") {
     "dump:ffx_driver_dump",
     "list:ffx_driver_list",
     "list-devices:ffx_driver_list_devices",
+    "list-hosts:ffx_driver_list_hosts",
     "lspci:ffx_driver_lspci",
     "lsusb:ffx_driver_lsusb",
     "register:ffx_driver_register",
