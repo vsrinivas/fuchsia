@@ -42,6 +42,11 @@ fuchsia_test_component("component") {
 fuchsia_test_package("bt-avrcp-integration-tests") {
   test_components = [ ":component" ]
 
+  test_specs = {
+    # The profile integration tests tend to flake if tests are run in parallel.
+    parallel = 1
+  }
+
   deps = [
     "//src/connectivity/bluetooth/profiles/bt-avrcp:component",
     "//src/connectivity/bluetooth/testing/mock-piconet-server",

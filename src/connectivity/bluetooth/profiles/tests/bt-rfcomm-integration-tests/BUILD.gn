@@ -36,6 +36,12 @@ fuchsia_test_component("bt_rfcomm_integration_tests") {
 
 fuchsia_test_package("bt-rfcomm-integration-tests") {
   test_components = [ ":bt_rfcomm_integration_tests" ]
+
+  test_specs = {
+    # The profile integration tests tend to flake if tests are run in parallel.
+    parallel = 1
+  }
+
   deps = [
     # The RFCOMM v2 component.
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
