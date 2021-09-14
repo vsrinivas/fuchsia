@@ -9,15 +9,15 @@ use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 pub use fidl_fuchsia_hardware_ethernet_ext::EthernetInfo;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
 use netstack3_core::receive_frame;
 use packet::serialize::Buf;
-use std::ops::DerefMut;
+use std::ops::DerefMut as _;
 
 use super::{
     devices::{BindingId, Devices},
-    ContextExt as _, StackContext, StackDispatcher,
+    ContextExt as _, StackContext, StackDispatcher as _,
 };
 
 pub async fn setup_ethernet(

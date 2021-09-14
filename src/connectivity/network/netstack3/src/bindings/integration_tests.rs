@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::convert::TryFrom as _;
 use std::num::NonZeroU16;
-use std::ops::DerefMut;
+use std::ops::DerefMut as _;
 use std::sync::{Arc, Once};
 
 use anyhow::{format_err, Context as _, Error};
@@ -13,12 +13,12 @@ use fidl::encoding::Decodable;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_icmp as fidl_icmp;
 use fidl_fuchsia_net_stack::{self as fidl_net_stack, AdministrativeStatus, PhysicalStatus};
-use fidl_fuchsia_net_stack_ext::FidlReturn;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use futures::{lock::Mutex, Future, StreamExt};
+use futures::{lock::Mutex, Future, StreamExt as _};
 use log::debug;
 use net_types::{
     ethernet::Mac,
@@ -40,7 +40,7 @@ use crate::bindings::{
     context::Lockable,
     devices::DeviceInfo,
     icmp::InnerIcmpConnId,
-    util::{ConversionContext, IntoFidl, TryFromFidlWithContext, TryIntoFidl},
+    util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, LockedStackContext, StackContext, StackDispatcher,
 };
 

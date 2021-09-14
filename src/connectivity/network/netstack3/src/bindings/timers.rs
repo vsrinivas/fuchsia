@@ -12,7 +12,7 @@ use fuchsia_async as fasync;
 use futures::{
     channel::mpsc,
     future::{AbortHandle, Abortable, Aborted},
-    stream::{FuturesUnordered, StreamExt},
+    stream::{FuturesUnordered, StreamExt as _},
 };
 use log::debug;
 

@@ -5,8 +5,11 @@
 use super::{
     devices::{CommonInfo, Devices},
     ethernet_worker,
-    util::{IntoFidl, TryFromFidlWithContext, TryIntoCore, TryIntoFidl, TryIntoFidlWithContext},
-    ContextExt as _, LockedStackContext, StackContext, StackDispatcher,
+    util::{
+        IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidl as _,
+        TryIntoFidlWithContext as _,
+    },
+    ContextExt as _, LockedStackContext, StackContext, StackDispatcher as _,
 };
 
 use fidl_fuchsia_net as fidl_net;
@@ -15,7 +18,7 @@ use fidl_fuchsia_net_stack::{
     InterfaceProperties, PhysicalStatus, StackRequest, StackRequestStream,
 };
 use fuchsia_async as fasync;
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr};
 use netstack3_core::{

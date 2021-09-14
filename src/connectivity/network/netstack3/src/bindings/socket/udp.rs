@@ -4,13 +4,13 @@
 
 //! UDP socket bindings.
 
-use std::convert::TryInto;
+use std::convert::TryInto as _;
 use std::marker::PhantomData;
 use std::num::NonZeroU16;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref as _, DerefMut as _};
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::endpoints::{RequestStream as _, ServerEnd};
 use fidl::AsyncChannel;
 use fidl_fuchsia_io::{self as fio, NodeInfo, NodeMarker};
 use fidl_fuchsia_net as fnet;
@@ -19,8 +19,8 @@ use fidl_fuchsia_posix_socket::{
     self as psocket, DatagramSocketRequest, DatagramSocketRequestStream,
 };
 use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx, prelude::HandleBased, Peered};
-use futures::{StreamExt, TryFutureExt};
+use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
+use futures::{StreamExt as _, TryFutureExt as _};
 use log::{debug, error, trace};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{

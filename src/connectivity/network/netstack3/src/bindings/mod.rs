@@ -21,7 +21,7 @@ mod stack_fidl_worker;
 mod timers;
 mod util;
 
-use std::convert::TryFrom;
+use std::convert::TryFrom as _;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -29,7 +29,7 @@ use fidl_fuchsia_net_icmp as fidl_icmp;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
-use futures::{lock::Mutex, StreamExt};
+use futures::{lock::Mutex, StreamExt as _};
 use log::{debug, error, trace, warn};
 use net_types::ethernet::Mac;
 use net_types::ip::{Ipv4, Ipv6};

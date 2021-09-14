@@ -5,11 +5,11 @@
 //! Implementation of fuchsia.net.icmp.EchoSocket.
 
 use futures::channel::mpsc;
-use futures::{select, StreamExt};
+use futures::{select, StreamExt as _};
 use log::{error, trace};
 use std::collections::VecDeque;
 use std::fmt;
-use std::ops::DerefMut;
+use std::ops::DerefMut as _;
 use thiserror::Error;
 
 use fuchsia_async as fasync;
