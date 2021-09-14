@@ -18,6 +18,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/field.h",
     "lib/elfldltl/fuzzer.h",
     "lib/elfldltl/layout.h",
+    "lib/elfldltl/machine.h",
     "lib/elfldltl/note.h",
     "lib/elfldltl/relocation.h",
     "lib/elfldltl/self.h",

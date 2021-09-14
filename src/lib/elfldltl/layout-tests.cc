@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/elfldltl/layout.h>
+#include <lib/elfldltl/machine.h>
 
 #include <tuple>
 #include <type_traits>
@@ -244,7 +245,7 @@ struct AllMachinesEhdrTests {
   template <elfldltl::ElfMachine... Machine>
   using Tests = std::tuple<EhdrTests<Elf, Machine>...>;
 
-  Tests<elfldltl::ElfMachine::kAarch64, elfldltl::ElfMachine::kX86_64> kTests;
+  elfldltl::AllSupportedMachines<Tests> kTests;
 };
 
 template <class... Elf>

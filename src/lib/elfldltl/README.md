@@ -79,3 +79,10 @@ are useful for implementing static PIE self-relocation and similar cases.
 [`<lib/elfldltl/relocation.h>`](include/lib/elfldltl/relocation.h) provides
 decoders for the relocation metadata formats.  This provides straightforward
 iterable C++ container views for the various kinds of relocation records.
+
+[`<lib/elfldltl/machine.h>`](include/lib/elfldltl/machine.h) provides a uniform
+API for the machine-specific format constants needed for dynamic relocation and
+TLS layout via a template class parameterized by machine.  Each specialization
+provides a consistent API for the constants whose values (and presence) vary by
+machine.  Only the constants related to machines and relocation types supported
+by the toolkit are provided.

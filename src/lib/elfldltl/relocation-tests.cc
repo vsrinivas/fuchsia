@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/elfldltl/layout.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/elfldltl/relocation.h>
 
 #include <limits>
@@ -75,17 +76,23 @@ constexpr typename RelocInfo::size_type RelocAddend(const RelocInfo& info,
   return 0;
 }
 
+constexpr auto kTestMachine = elfldltl::ElfMachine::kNone;
+using TestType = elfldltl::RelocationTraits<kTestMachine>::Type;
+constexpr uint32_t kRelativeType = static_cast<uint32_t>(TestType::kRelative);
+
 constexpr auto VisitRelativeRel = [](auto elf) {
   using RelocInfo = elfldltl::RelocationInfo<decltype(elf)>;
   using Rel = typename RelocInfo::Rel;
 
   constexpr Rel relocs[] = {
-      {8, 0},
-      {24, 0},
+      {8, kRelativeType},
+      {24, kRelativeType},
   };
 
   RelocInfo info;
   info.set_rel(relocs, 2);
+
+  EXPECT_TRUE(RelocInfo::template ValidateRelative<kTestMachine>(info.rel_relative()));
 
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
@@ -112,12 +119,14 @@ constexpr auto VisitRelativeRela = [](auto elf) {
   using Rela = typename RelocInfo::Rela;
 
   constexpr Rela relocs[] = {
-      {{8, 0}, 0x11111111},
-      {{24, 0}, 0x33333333},
+      {{8, kRelativeType}, 0x11111111},
+      {{24, kRelativeType}, 0x33333333},
   };
 
   RelocInfo info;
   info.set_rela(relocs, 2);
+
+  EXPECT_TRUE(RelocInfo::template ValidateRelative<kTestMachine>(info.rela_relative()));
 
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
@@ -153,6 +162,8 @@ constexpr auto VisitRelativeRelrSingle = [](auto elf) {
   RelocInfo info;
   info.set_relr(relocs);
 
+  EXPECT_TRUE(RelocInfo::ValidateRelative(info.relr()));
+
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
     auto offset = RelocOffset(info, reloc);
@@ -182,6 +193,8 @@ constexpr auto VisitRelativeRelrNoBitmaps = [](auto elf) {
 
   RelocInfo info;
   info.set_relr(relocs);
+
+  EXPECT_TRUE(RelocInfo::ValidateRelative(info.relr()));
 
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
@@ -217,6 +230,8 @@ constexpr auto VisitRelativeRelrSingleBitmap = [](auto elf) {
 
   RelocInfo info;
   info.set_relr(relocs);
+
+  EXPECT_TRUE(RelocInfo::ValidateRelative(info.relr()));
 
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
@@ -254,6 +269,8 @@ constexpr auto VisitRelativeRelrMultipleBitmaps = [](auto elf) {
   RelocInfo info;
   info.set_relr(relocs);
 
+  EXPECT_TRUE(RelocInfo::ValidateRelative(info.relr()));
+
   size_t count = 0;
   EXPECT_TRUE(info.VisitRelative([&](auto&& reloc) -> bool {
     auto offset = RelocOffset(info, reloc);
@@ -285,5 +302,49 @@ TEST(ElfldltlRelocationTests, VisitSymbolicEmpty) {
 }
 
 // TODO(fxbug.dev/72221): real VisitSymbolic tests
+
+template <elfldltl::ElfMachine Machine>
+constexpr void CheckMachine() {
+  using Traits = elfldltl::RelocationTraits<Machine>;
+
+  // Each machine must provide all these as distinct values, and no others.
+  // This is mostly just a compile-time test to elicit errors if a Type::kFoo
+  // is missing and to get the compiler warnings if any enum constants are
+  // omitted from this switch.  The only runtime test is that kNone is zero.
+  uint32_t type = 0;
+  switch (static_cast<typename Traits::Type>(type)) {
+    case Traits::Type::kNone:  // Has value zero on every machine.
+      EXPECT_EQ(0u, type);
+      break;
+
+      // All other values are machine-dependent.
+    case Traits::Type::kRelative:
+    case Traits::Type::kAbsolute:
+    case Traits::Type::kPlt:
+    case Traits::Type::kTlsAbsolute:
+    case Traits::Type::kTlsRelative:
+    case Traits::Type::kTlsModule:
+      FAIL();
+      break;
+
+    default:
+      if (type == Traits::kGot) {
+        FAIL();
+        break;
+      }
+
+      if (type == Traits::kTlsDesc) {
+        FAIL();
+        break;
+      }
+  }
+}
+
+template <elfldltl::ElfMachine... Machines>
+struct CheckMachines {
+  CheckMachines() { (CheckMachine<Machines>(), ...); };
+};
+
+TEST(ElfldltlRelocationTests, Machines) { elfldltl::AllSupportedMachines<CheckMachines>(); }
 
 }  // namespace

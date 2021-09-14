@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <variant>
 
+#include "machine.h"
+
 namespace elfldltl {
 
 // This represents the ELF metadata in an ELF file that directs what dynamic
@@ -86,6 +88,26 @@ class RelocationInfo {
   constexpr RelocationInfo& set_jmprel(JmprelTable table) {
     jmprel_ = table;
     return *this;
+  }
+
+  // Return the number of valid entries in the table, from rel_relative(),
+  // rela_relative(), or relr().  Hence returns relocs.size() if all entries
+  // are valid, or else the index of the first invalid entry.
+
+  template <ElfMachine Machine, class Reloc>  // DT_REL or DT_RELA
+  static size_t ValidateRelative(cpp20::span<const Reloc> relocs) {
+    constexpr auto valid = [](const auto& reloc) -> bool {
+      constexpr uint32_t relative_type =
+          static_cast<uint32_t>(RelocationTraits<Machine>::Type::kRelative);
+      return reloc.type() == relative_type;
+    };
+    return std::count_if(relocs.begin(), relocs.end(), valid);
+  }
+
+  static size_t ValidateRelative(cpp20::span<const Addr> relocs) {  // DT_RELR
+    // The first entry must be a fresh address (low bit clear), and all
+    // possible bit patterns are valid for all subsequent entries.
+    return (relocs.empty() || (relocs.front() & 1) != 0) ? 0 : relocs.size();
   }
 
   // Call visit(Elf::Rela reloc) -> bool or visit(Elf::size_type addr) on every
