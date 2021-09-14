@@ -3881,7 +3881,7 @@ From //build/toolchain/goma.gni:11
 ### use_legacy_virtcon
 Set to use legacy virtcon implementation.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/bringup/bundles/BUILD.gn:7
 
