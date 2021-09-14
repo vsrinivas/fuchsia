@@ -460,3 +460,23 @@ fuchsia_unittest_package("h265-encoder-test") {
     environments = [ sherlock_env ]
   }
 }
+
+fuchsia_unittest_component("h265-encoder-test-legacy") {
+  manifest = "meta/h265_encoder_test.cmx"
+  deps = [ ":h265_encoder_test_bin" ]
+}
+
+fuchsia_test_component("h265-encoder-test-v2") {
+  manifest = "meta/h265_encoder_test_v2.cml"
+  deps = [ ":h265_encoder_test_bin" ]
+}
+
+fuchsia_test_package("h265-encoder-tests") {
+  test_components = [
+    ":h265-encoder-test-legacy",
+    ":h265-encoder-test-v2",
+  ]
+  test_specs = {
+    environments = [ sherlock_env ]
+  }
+}
