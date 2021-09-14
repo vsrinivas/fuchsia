@@ -623,6 +623,12 @@
             path: "/svc_for_sys/fuchsia.session.Launcher",
         },
 
+        // From session_manager
+        {
+            protocol: "fuchsia.ui.accessibility.view.Registry",
+            path: "/svc_for_sys/fuchsia.ui.accessibility.view.Registry",
+        },
+
         // From test_manager
         {
             protocol: "fuchsia.test.manager.Query",

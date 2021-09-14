@@ -127,6 +127,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
   void SendViewConnectedEvent(uint32_t view_holder_id);
 
+  void SendViewHolderDisconnectedEvent(uint32_t view_id);
+
   const std::unordered_map<uint32_t, ViewHolderAttributes>& view_holders() { return view_holders_; }
 
   const std::set<uint32_t>& materials() { return materials_; }

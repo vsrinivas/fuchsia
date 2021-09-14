@@ -39,6 +39,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -58,6 +59,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//src/lib/test_util",
+    "//src/lib/ui/fuchsia-scenic",
     "//src/session/testing",
     "//third_party/rust_crates:lazy_static",
   ]
