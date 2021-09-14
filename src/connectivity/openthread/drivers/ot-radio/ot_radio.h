@@ -86,7 +86,6 @@ class OtRadioDevice : public DeviceType {
   void FreeDevice();
   zx_status_t AssertResetPin();
   zx_status_t Reset();
-  zx_status_t ResetWithDelay();
   void HandleResetRetry();
   zx_status_t GetNCPVersion();
   zx_status_t DriverUnitTestGetNCPVersion();

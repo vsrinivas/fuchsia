@@ -35,7 +35,6 @@ namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
 constexpr uint32_t kRcpBusyPollingDelayMs = 10;
 constexpr uint8_t kRcpHardResetPinAssertTimeMs = 100;
-constexpr uint8_t kRcpHardResetWaitTimeMs = 400;
 constexpr zx::duration kRcpHardResetRetryWaitTime = zx::msec(700);
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
@@ -54,7 +53,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
                                                      OpenCompleter::Sync& completer) {
-  zx_status_t res = ot_radio_obj_.ResetWithDelay();
+  zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
@@ -323,7 +322,7 @@ zx_status_t OtRadioDevice::GetNCPVersion() {
 
 zx_status_t OtRadioDevice::DriverUnitTestGetResetEvent() {
   SetMaxInboundAllowance();
-  return ResetWithDelay();
+  return Reset();
 }
 
 zx_status_t OtRadioDevice::AssertResetPin() {
@@ -354,17 +353,6 @@ zx_status_t OtRadioDevice::Reset() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: gpio write failed");
   }
-  return status;
-}
-
-zx_status_t OtRadioDevice::ResetWithDelay() {
-  zx_status_t status = Reset();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: reset failed");
-    return status;
-  }
-
-  zx::nanosleep(zx::deadline_after(zx::msec(kRcpHardResetWaitTimeMs)));
   return status;
 }
 
