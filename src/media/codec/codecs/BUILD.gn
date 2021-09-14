@@ -30,6 +30,7 @@ group("hw_dependent_tests") {
     "//src/media/codec/examples:h264_decoder_fuzzer_test",
     "//src/media/codec/examples:use_h264_decoder_frame_num_gaps_tests",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
+    "//src/media/codec/examples:use_h264_decoder_secure_output_tests",
     "//src/media/codec/examples:use_h264_decoder_stream_switching_tests",
     "//src/media/codec/examples:use_h264_decoder_tests",
     "//src/media/codec/examples:use_h264_multi_decoder_concurrent_stream_switching_tests",

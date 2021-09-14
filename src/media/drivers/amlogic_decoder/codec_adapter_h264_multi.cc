@@ -362,7 +362,11 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
   // part.  For that flush to not overwrite anything the HW wrote to the buffer, this flush
   // eliminates any dirty cache lines that might otherwise get flushed after HW has written to the
   // buffer.
-  buffer->CacheFlush(0, buffer->size());
+  if (!IsOutputSecure()) {
+    buffer->CacheFlush(0, buffer->size());
+  }
+
+
   all_output_buffers_.push_back(buffer);
 }
 
@@ -402,7 +406,9 @@ void CodecAdapterH264Multi::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
 
   // Eliminate any dirty CPU cache lines, so that later when we do a flush+invalidate after HW is
   // done writing to the buffer, we won't be writing over anything the HW wrote.
-  buffer->CacheFlush(0, buffer->size());
+  if (!IsOutputSecure()) {
+    buffer->CacheFlush(0, buffer->size());
+  }
 
   // Getting the buffer is all we needed the packet for.  The packet won't get
   // re-used until it goes back on the free list below.
