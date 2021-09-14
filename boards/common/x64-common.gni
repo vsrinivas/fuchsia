@@ -44,6 +44,7 @@ _bootfs_deps =
     ] + _imports.virtio_drivers +
     [
       "//src/graphics/display/drivers/simple:simple.bochs",
+      "//src/graphics/display/drivers/simple:simple.gga",
       "//src/graphics/display/drivers/simple:simple.intel",
       "//src/graphics/display/drivers/simple:simple.vmware",
       "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",

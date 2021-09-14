@@ -17,6 +17,7 @@ group("drivers") {
     "drivers/intel-i915",
     "drivers/simple:simple.amd-kaveri",
     "drivers/simple:simple.bochs",
+    "drivers/simple:simple.gga",
     "drivers/simple:simple.intel",
     "drivers/simple:simple.nv",
     "drivers/simple:simple.vmware",

@@ -13,6 +13,7 @@ extend uint fuchsia.BIND_PCI_VID {
   AMD = 0x1002,
   REALTEK = 0x10ec,
   NVIDIA = 0x10de,
+  GOOGLE = 0x1ae0,
   VIRTIO = 0x1af4,
   BROADCOM = 0x14e4,
   ATHEROS = 0x168c,
@@ -39,6 +40,7 @@ extend uint fuchsia.BIND_PCI_DID {
   VIRTIO_DEV_TYPE_T_9P = 0x1009,
   RTL8111 = 0x8168,
   INTEL_SPT_SPI0 = 0x9d29,
+  GOOGLE_GRAPHICS_ADAPTER = 0xa002,
 };
 
 extend uint fuchsia.BIND_PCI_CLASS {

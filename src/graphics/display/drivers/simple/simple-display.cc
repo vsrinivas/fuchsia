@@ -259,6 +259,9 @@ zx_status_t SimpleDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     case ZX_PIXEL_FORMAT_BGR_888x:
       image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
       break;
+    case ZX_PIXEL_FORMAT_RGB_888:
+      image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kBgr24;
+      break;
   }
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value =

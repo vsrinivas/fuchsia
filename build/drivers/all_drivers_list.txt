@@ -237,6 +237,7 @@
 //src/graphics/display/drivers/intel-i915:intel-i915-driver
 //src/graphics/display/drivers/simple:simple.amd-kaveri-driver
 //src/graphics/display/drivers/simple:simple.bochs-driver
+//src/graphics/display/drivers/simple:simple.gga-driver
 //src/graphics/display/drivers/simple:simple.intel-driver
 //src/graphics/display/drivers/simple:simple.nv-driver
 //src/graphics/display/drivers/simple:simple.vmware-driver

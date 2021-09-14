@@ -10,6 +10,7 @@ group("drivers") {
     "//src/graphics/display/drivers/aml-hdmi:aml-hdmi",
     "//src/graphics/display/drivers/simple:simple.amd-kaveri",
     "//src/graphics/display/drivers/simple:simple.bochs",
+    "//src/graphics/display/drivers/simple:simple.gga",
     "//src/graphics/display/drivers/simple:simple.intel",
     "//src/graphics/display/drivers/simple:simple.nv",
     "//src/graphics/display/drivers/simple:simple.vmware",

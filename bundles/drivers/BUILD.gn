@@ -69,6 +69,7 @@ group("pci") {
     "//src/graphics/display/drivers/intel-i915:intel-i915",
     "//src/graphics/display/drivers/simple:simple.amd-kaveri",
     "//src/graphics/display/drivers/simple:simple.bochs",
+    "//src/graphics/display/drivers/simple:simple.gga",
     "//src/graphics/display/drivers/simple:simple.intel",
     "//src/graphics/display/drivers/simple:simple.nv",
     "//src/graphics/display/drivers/simple:simple.vmware",

@@ -30,10 +30,11 @@ source_set("shared") {
 }
 
 simple_drivers = [
-  "bochs",
   "amd-kaveri",
-  "nv",
+  "bochs",
+  "gga",
   "intel",
+  "nv",
   "vmware",
 ]
 
