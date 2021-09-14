@@ -7,7 +7,15 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.io") {
   sdk_category = "partner"
   api = "fuchsia.io.api"
-  sources = [ "io.fidl" ]
+
+  sources = [
+    "connection-info.fidl",
+    "connection-options.fidl",
+    "io.fidl",
+    "node-attributes.fidl",
+    "rights-abilities.fidl",
+  ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.io2",
     "//sdk/fidl/fuchsia.mem",

@@ -1,0 +1,253 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.io;
+
+using fuchsia.mem;
+using zx;
+
+/// Returns run-time information about a node that is specific to the
+/// current connection.
+type ConnectionInfo = resource table {
+    /// The active variant corresponds to one of the supported protocols
+    /// of the node, and represents the result of the connection-time
+    /// negotiation. Provides auxiliary handles if applicable.
+    1: representation Representation;
+
+    /// Information about the rights possessed by the current connection.
+    /// Note: `rights` limits the set of operations allowed on the connection,
+    /// but does not guarantee their availability. For example, one may have
+    /// the [`Rights.EXECUTE`] right on a file connection, but the file itself
+    /// does not have the `EXECUTE` ability, and hence cannot be executed.
+    /// See [`ConnectionOptions.rights`].
+    2: rights Rights;
+
+    /// The set of available operations on this channel. It is always the
+    /// intersection between the rights possessed by this connection, and the
+    /// abilities of the node. The value may be zero in the case of an empty
+    /// intersection.
+    /// See [`ConnectionOptions.rights`].
+    3: available_operations Operations;
+};
+
+/// Set the relevant bit to one to fetch the corresponding field
+/// during [`fuchsia.io2/Node.Describe`].
+type ConnectionInfoQuery = strict bits : uint64 {
+    /// Requests [`ConnectionInfo.representation`].
+    REPRESENTATION = 0x1;
+
+    /// Requests [`ConnectionInfo.rights`].
+    RIGHTS = 0x2;
+
+    /// Requests [`ConnectionInfo.available_operations`].
+    AVAILABLE_OPERATIONS = 0x4;
+};
+
+/// Describes how the connection should be handled, and provides auxiliary
+/// handles and information for the connection where applicable.
+/// Refer to [`Node.Describe`] and [`Node.OnConnectionInfo`].
+///
+/// If handles are returned which offer alternative ways of access to the node,
+/// the rights on the handles should correspond to the rights on the connection.
+///
+/// If the client specified more than one protocol in `protocols` during
+/// [`Directory.Open`] or [`Node.Reopen`], the [`Representation`] xunion carries
+/// additionally the result of the connection-time negotiation via its tag.
+///
+/// The elements have one-to-one correspondence with the members of
+/// [`NodeProtocols`].
+type Representation = flexible resource union {
+    /// See [`NodeProtocols.CONNECTOR`].
+    1: connector ConnectorInfo;
+
+    /// See [`NodeProtocols.DIRECTORY`].
+    2: directory DirectoryInfo;
+
+    /// See [`NodeProtocols.FILE`].
+    3: file FileInfo;
+
+    /// See [`NodeProtocols.MEMORY`].
+    4: memory MemoryInfo;
+
+    /// See [`NodeProtocols.POSIX_SOCKET`].
+    5: posix_socket PosixSocketInfo;
+
+    /// See [`NodeProtocols.PIPE`].
+    6: pipe PipeInfo;
+
+    /// See [`NodeProtocols.DEBUGLOG`].
+    7: debuglog DebuglogInfo;
+
+    @deprecated("devices will be services in the future")
+    8: device DeviceInfo;
+
+    @deprecated("tty may not be useful")
+    9: tty TtyInfo;
+};
+
+/// Auxiliary data for the connector representation of a node, used for
+/// protocol discovery and connection.
+///
+/// It supports connecting to arbitrary protocols exported by the filesystem
+/// server at a path, including ones that do not compose [`fuchsia.io2/Node`].
+type ConnectorInfo = table {};
+
+/// Auxiliary data for the directory representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Directory`] protocol.
+type DirectoryInfo = table {};
+
+/// Auxiliary data for the file representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/File`] protocol.
+type FileInfo = resource table {
+    /// An optional event which transmits information about an object's
+    /// readability or writability. This event relays information about the
+    /// underlying object, not the capability granted to client: this event
+    /// may be signalled "readable" on a connection that does not have
+    /// the capability to read.
+    ///
+    /// This event will be present if the following conditions are met:
+    ///
+    /// - The `available_operations` on the file connection is not empty.
+    /// - The filesystem supports signalling readability/writability events.
+    ///
+    /// The [`FileSignal`] values may be observed on this event.
+    1: observer zx.handle:EVENT;
+
+    /// Returns if the file is opened in append mode.
+    /// In append mode, the seek offset is moved to the end before every
+    /// write, the two steps performed in an atomic manner.
+    2: is_append bool;
+
+    /// An optional stream object, which can be used to read to and write from
+    /// the file.
+    ///
+    /// Reading and writing the file using the stream object can be up to 20x
+    /// faster than reading and writing the file using the Read and Write
+    /// operations in the [`fuchsia.io2/File`] protocol.
+    3: stream zx.handle:STREAM;
+};
+
+/// Auxiliary data for the memory object representation of a node.
+/// The node is a file which is represented as a VMO.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Memory`] protocol.
+type MemoryInfo = resource table {
+    /// Although a VMO is returned as a part of this structure, that VMO may
+    /// back multiple files. To identify the logical portion of the VMO that
+    /// represents the single file, offset and size are also supplied.
+    ///
+    /// If the range covers the entire VMO (i.e. the offset is zero and the
+    /// length matches the size of the VMO), then all clients must receive a
+    /// VMO with the same koid. This can be a duplicate of the same underlying
+    /// page-aligned VMO.
+    ///
+    /// The rights on this VMO should correspond to the rights on the
+    /// node connection.
+    1: buffer fuchsia.mem.Range;
+};
+
+/// Auxiliary data for the POSIX socket representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.posix.socket/Control`] protocol.
+type PosixSocketInfo = resource table {
+    /// The backing transport for the socket.
+    /// The rights on this socket should correspond to the rights on the
+    /// node connection.
+    1: socket zx.handle:SOCKET;
+};
+
+/// The pipe representation of a node.
+/// A pipe is a data streaming interface, commonly used for standard in/out.
+/// There is no universal requirement as to if it is uni- or bi-directional.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Pipe`] protocol.
+type PipeInfo = resource table {
+    /// The backing socket transport for the pipe.
+    /// The rights on this socket should correspond to the rights on the
+    /// node connection.
+    1: socket zx.handle:SOCKET;
+};
+
+/// The debuglog representation of a node.
+/// The selection of this variant in [`Representation`] implies that the
+/// connection speaks the [`fuchsia.io2/Debuglog`] protocol.
+type DebuglogInfo = resource table {
+    /// The backing debuglog kernel object.
+    1: debuglog zx.handle:LOG;
+};
+
+/// The object may be cast to the shared interface of devices.
+@deprecated("devices will be services in the future")
+type DeviceInfo = resource table {
+    /// An optional event which transmits information about a device's state.
+    ///
+    /// The [`DeviceSignal`] values may be observed on this event.
+    1: event zx.handle:EVENTPAIR;
+};
+
+/// The object may be cast to a Tty interface.
+@deprecated("tty functionalities may be covered by a tty service")
+type TtyInfo = resource table {
+    /// An optional event which transmits information about a device's state.
+    ///
+    /// The [`DeviceSignal`] values may be observed on this event.
+    1: event zx.handle:EVENTPAIR;
+};
+
+/// A node may have multiple supported representations when opening, even though
+/// it may have a fixed underlying identity.
+///
+/// Today, a file is accessed via the [`fuchsia.io2/File`] protocol, and sends a
+/// [`Representation.FileInfo`] when opened with `GET_CONNECTION_INFO`. However,
+/// in the future we might introduce a more sophisticated `FileV2` protocol, or
+/// a more efficient `SuperFastFile` backed by a specialized kernel object.
+/// New clients can request the more advanced representations by specifying
+/// the corresponding bits in [`NodeProtocols`], whereas existing clients
+/// would continue to talk to the node via the old representation.
+///
+/// [`NodeProtocols`] enables forward-compatibility through a form of protocol
+/// negotiation.
+///
+/// The elements have one-to-one correspondence with the members of
+/// [`Representation`].
+type NodeProtocols = strict bits : uint64 {
+    /// The connector representation of a node.
+    /// The connection will speak either [`fuchsia.io2/Node`], or some custom
+    /// protocol, depending on the flags used during opening and reopening.
+    CONNECTOR = 0x1;
+
+    /// The directory representation of a node.
+    /// The connection will speak the [`fuchsia.io2/Directory`] protocol.
+    DIRECTORY = 0x2;
+
+    /// The file representation of a node.
+    /// The connection will speak the [`fuchsia.io2/File`] protocol.
+    FILE = 0x4;
+
+    /// The memory representation of a node. A memory object is a file whose
+    /// contents are explicitly backed by some VMO.
+    /// The connection will speak the [`fuchsia.io2/Memory`] protocol, and
+    /// [`Representation`] would contain a [`fuchsia.mem/Range`] object
+    /// representing the contents of the file.
+    MEMORY = 0x8;
+
+    /// The POSIX socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket/Control`] protocol.
+    POSIX_SOCKET = 0x10;
+
+    /// The pipe representation of a node.
+    /// The connection will speak the [`fuchsia.io2/Pipe`] protocol.
+    PIPE = 0x20;
+
+    /// The debuglog representation of a node.
+    /// The connection will speak the [`fuchsia.io2/Debuglog`] protocol.
+    DEBUGLOG = 0x40;
+
+    @deprecated("devices will be services in the future")
+    DEVICE = 0x10000000;
+
+    @deprecated("tty functionalities may be covered by a tty service")
+    TTY = 0x20000000;
+};

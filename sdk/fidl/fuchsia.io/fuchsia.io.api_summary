@@ -1,4 +1,22 @@
 const fuchsia.io/CLONE_FLAG_SAME_RIGHTS uint32 67108864
+bits/member fuchsia.io/ConnectionFlags.APPEND 4
+bits/member fuchsia.io/ConnectionFlags.CONNECT 2
+bits/member fuchsia.io/ConnectionFlags.GET_CONNECTION_INFO 1
+bits/member fuchsia.io/ConnectionFlags.TRUNCATE 8
+strict bits fuchsia.io/ConnectionFlags uint64
+table/member fuchsia.io/ConnectionInfo.available_operations fuchsia.io/Operations
+table/member fuchsia.io/ConnectionInfo.representation fuchsia.io/Representation
+table/member fuchsia.io/ConnectionInfo.rights fuchsia.io/Operations
+resource table fuchsia.io/ConnectionInfo
+bits/member fuchsia.io/ConnectionInfoQuery.AVAILABLE_OPERATIONS 4
+bits/member fuchsia.io/ConnectionInfoQuery.REPRESENTATION 1
+bits/member fuchsia.io/ConnectionInfoQuery.RIGHTS 2
+strict bits fuchsia.io/ConnectionInfoQuery uint64
+table/member fuchsia.io/ConnectionOptions.flags fuchsia.io/ConnectionFlags
+table/member fuchsia.io/ConnectionOptions.protocols fuchsia.io/NodeProtocols
+table/member fuchsia.io/ConnectionOptions.rights_request fuchsia.io/RightsRequest
+table fuchsia.io/ConnectionOptions
+table fuchsia.io/ConnectorInfo
 const fuchsia.io/DEVICE_SIGNAL_ERROR uint32 134217728
 const fuchsia.io/DEVICE_SIGNAL_HANGUP uint32 268435456
 const fuchsia.io/DEVICE_SIGNAL_OOB uint32 33554432
@@ -12,14 +30,21 @@ const fuchsia.io/DIRENT_TYPE_SOCKET uint8 12
 const fuchsia.io/DIRENT_TYPE_UNKNOWN uint8 0
 struct/member fuchsia.io/DatagramSocket.event zx/handle:EVENTPAIR
 resource struct fuchsia.io/DatagramSocket
+table/member fuchsia.io/DebuglogInfo.debuglog zx/handle:DEBUGLOG
+resource table fuchsia.io/DebuglogInfo
 struct/member fuchsia.io/Device.event zx/handle:<EVENTPAIR,optional>
 resource struct fuchsia.io/Device
+table/member fuchsia.io/DeviceInfo.event zx/handle:EVENTPAIR
+resource table fuchsia.io/DeviceInfo
 protocol/member fuchsia.io/Directory.AddInotifyFilter(string:4095 path,fuchsia.io2/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/Directory.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.Close() -> (int32 s)
+protocol/member fuchsia.io/Directory.Close2() -> (fuchsia.io/Node_Close2_Result result)
 protocol/member fuchsia.io/Directory.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.io/Directory.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.io/Directory.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
 protocol/member fuchsia.io/Directory.GetToken() -> (int32 s,zx/handle:optional token)
 protocol/member fuchsia.io/Directory.IoToIo2Placeholder()
 protocol/member fuchsia.io/Directory.Link(string:4096 src,zx/handle dst_parent_token,string:4096 dst) -> (int32 s)
@@ -30,18 +55,24 @@ protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 p
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/Directory.Rename(string:4096 src,zx/handle dst_parent_token,string:4096 dst) -> (int32 s)
 protocol/member fuchsia.io/Directory.Rename2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename2_Result result)
+protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)
 protocol/member fuchsia.io/Directory.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Directory.Sync() -> (int32 s)
+protocol/member fuchsia.io/Directory.Sync2() -> (fuchsia.io/Node_Sync2_Result result)
 protocol/member fuchsia.io/Directory.Unlink(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink_Result result)
+protocol/member fuchsia.io/Directory.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
 protocol/member fuchsia.io/Directory.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
 protocol fuchsia.io/Directory
 protocol/member fuchsia.io/DirectoryAdmin.AddInotifyFilter(string:4095 path,fuchsia.io2/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/DirectoryAdmin.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/DirectoryAdmin.Close() -> (int32 s)
+protocol/member fuchsia.io/DirectoryAdmin.Close2() -> (fuchsia.io/Node_Close2_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.io/DirectoryAdmin.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/DirectoryAdmin.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.io/DirectoryAdmin.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.GetDevicePath() -> (int32 s,string:<4096,optional> path)
 protocol/member fuchsia.io/DirectoryAdmin.GetToken() -> (int32 s,zx/handle:optional token)
 protocol/member fuchsia.io/DirectoryAdmin.IoToIo2Placeholder()
@@ -56,14 +87,18 @@ protocol/member fuchsia.io/DirectoryAdmin.QueryFilesystem() -> (int32 s,box<fuch
 protocol/member fuchsia.io/DirectoryAdmin.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/DirectoryAdmin.Rename(string:4096 src,zx/handle dst_parent_token,string:4096 dst) -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.Rename2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename2_Result result)
+protocol/member fuchsia.io/DirectoryAdmin.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/DirectoryAdmin.Rewind() -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.Sync() -> (int32 s)
+protocol/member fuchsia.io/DirectoryAdmin.Sync2() -> (fuchsia.io/Node_Sync2_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Unlink(string:255 name,fuchsia.io2/UnlinkOptions options) -> (fuchsia.io/Directory_Unlink_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Unmount() -> (int32 s)
 protocol/member fuchsia.io/DirectoryAdmin.UnmountNode() -> (int32 s,client_end:<fuchsia.io/Directory,optional> remote)
+protocol/member fuchsia.io/DirectoryAdmin.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
 protocol/member fuchsia.io/DirectoryAdmin.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
 protocol fuchsia.io/DirectoryAdmin
+table fuchsia.io/DirectoryInfo
 struct fuchsia.io/DirectoryObject
 protocol/member fuchsia.io/DirectoryWatcher.OnEvent(vector<uint8>:8192 events)
 protocol fuchsia.io/DirectoryWatcher
@@ -80,8 +115,11 @@ const fuchsia.io/FILE_SIGNAL_WRITABLE uint32 33554432
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File.Close() -> (int32 s)
+protocol/member fuchsia.io/File.Close2() -> (fuchsia.io/Node_Close2_Result result)
 protocol/member fuchsia.io/File.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.io/File.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.io/File.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
 protocol/member fuchsia.io/File.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
 protocol/member fuchsia.io/File.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/File.IoToIo2Placeholder()
@@ -90,14 +128,21 @@ protocol/member fuchsia.io/File.NodeSetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/File.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.io/File.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File.Seek(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
 protocol/member fuchsia.io/File.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/File.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/File.Sync() -> (int32 s)
+protocol/member fuchsia.io/File.Sync2() -> (fuchsia.io/Node_Sync2_Result result)
 protocol/member fuchsia.io/File.Truncate(uint64 length) -> (int32 s)
+protocol/member fuchsia.io/File.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
 protocol/member fuchsia.io/File.Write(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
 protocol/member fuchsia.io/File.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
 protocol fuchsia.io/File
+table/member fuchsia.io/FileInfo.is_append bool
+table/member fuchsia.io/FileInfo.observer zx/handle:EVENT
+table/member fuchsia.io/FileInfo.stream zx/handle:STREAM
+resource table fuchsia.io/FileInfo
 struct/member fuchsia.io/FileObject.event zx/handle:<EVENT,optional>
 struct/member fuchsia.io/FileObject.stream zx/handle:<STREAM,optional>
 resource struct fuchsia.io/FileObject
@@ -126,18 +171,26 @@ const fuchsia.io/MODE_TYPE_MASK uint32 1044480
 const fuchsia.io/MODE_TYPE_SERVICE uint32 65536
 const fuchsia.io/MODE_TYPE_SOCKET uint32 49152
 const fuchsia.io/MOUNT_CREATE_FLAG_REPLACE uint32 1
+table/member fuchsia.io/MemoryInfo.buffer fuchsia.mem/Range
+resource table fuchsia.io/MemoryInfo
 const fuchsia.io/NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 1
 const fuchsia.io/NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 2
 protocol/member fuchsia.io/Node.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Node.Close() -> (int32 s)
+protocol/member fuchsia.io/Node.Close2() -> (fuchsia.io/Node_Close2_Result result)
 protocol/member fuchsia.io/Node.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.io/Node.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.io/Node.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
 protocol/member fuchsia.io/Node.IoToIo2Placeholder()
 protocol/member fuchsia.io/Node.NodeGetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/Node.NodeSetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Node.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
+protocol/member fuchsia.io/Node.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Node.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.io/Node.Sync() -> (int32 s)
+protocol/member fuchsia.io/Node.Sync2() -> (fuchsia.io/Node_Sync2_Result result)
+protocol/member fuchsia.io/Node.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
 protocol fuchsia.io/Node
 struct/member fuchsia.io/NodeAttributes.content_size uint64
 struct/member fuchsia.io/NodeAttributes.creation_time uint64
@@ -147,6 +200,24 @@ struct/member fuchsia.io/NodeAttributes.mode uint32
 struct/member fuchsia.io/NodeAttributes.modification_time uint64
 struct/member fuchsia.io/NodeAttributes.storage_size uint64
 struct fuchsia.io/NodeAttributes
+table/member fuchsia.io/NodeAttributes2.abilities fuchsia.io/Operations
+table/member fuchsia.io/NodeAttributes2.content_size uint64
+table/member fuchsia.io/NodeAttributes2.creation_time uint64
+table/member fuchsia.io/NodeAttributes2.id uint64
+table/member fuchsia.io/NodeAttributes2.link_count uint64
+table/member fuchsia.io/NodeAttributes2.modification_time uint64
+table/member fuchsia.io/NodeAttributes2.protocols fuchsia.io/NodeProtocols
+table/member fuchsia.io/NodeAttributes2.storage_size uint64
+table fuchsia.io/NodeAttributes2
+bits/member fuchsia.io/NodeAttributesQuery.ABILITIES 2
+bits/member fuchsia.io/NodeAttributesQuery.CONTENT_SIZE 4
+bits/member fuchsia.io/NodeAttributesQuery.CREATION_TIME 32
+bits/member fuchsia.io/NodeAttributesQuery.ID 128
+bits/member fuchsia.io/NodeAttributesQuery.LINK_COUNT 16
+bits/member fuchsia.io/NodeAttributesQuery.MODIFICATION_TIME 64
+bits/member fuchsia.io/NodeAttributesQuery.PROTOCOLS 1
+bits/member fuchsia.io/NodeAttributesQuery.STORAGE_SIZE 8
+strict bits fuchsia.io/NodeAttributesQuery uint64
 union/member fuchsia.io/NodeInfo.datagram_socket fuchsia.io/DatagramSocket
 union/member fuchsia.io/NodeInfo.device fuchsia.io/Device
 union/member fuchsia.io/NodeInfo.directory fuchsia.io/DirectoryObject
@@ -158,6 +229,33 @@ union/member fuchsia.io/NodeInfo.stream_socket fuchsia.io/StreamSocket
 union/member fuchsia.io/NodeInfo.tty fuchsia.io/Tty
 union/member fuchsia.io/NodeInfo.vmofile fuchsia.io/Vmofile
 resource strict union fuchsia.io/NodeInfo
+bits/member fuchsia.io/NodeProtocols.CONNECTOR 1
+bits/member fuchsia.io/NodeProtocols.DEBUGLOG 64
+bits/member fuchsia.io/NodeProtocols.DEVICE 268435456
+bits/member fuchsia.io/NodeProtocols.DIRECTORY 2
+bits/member fuchsia.io/NodeProtocols.FILE 4
+bits/member fuchsia.io/NodeProtocols.MEMORY 8
+bits/member fuchsia.io/NodeProtocols.PIPE 32
+bits/member fuchsia.io/NodeProtocols.POSIX_SOCKET 16
+bits/member fuchsia.io/NodeProtocols.TTY 536870912
+strict bits fuchsia.io/NodeProtocols uint64
+struct fuchsia.io/Node_Close2_Response
+union/member fuchsia.io/Node_Close2_Result.err int32
+union/member fuchsia.io/Node_Close2_Result.response fuchsia.io/Node_Close2_Response
+strict union fuchsia.io/Node_Close2_Result
+struct/member fuchsia.io/Node_GetAttributes_Response.attributes fuchsia.io/NodeAttributes2
+struct fuchsia.io/Node_GetAttributes_Response
+union/member fuchsia.io/Node_GetAttributes_Result.err int32
+union/member fuchsia.io/Node_GetAttributes_Result.response fuchsia.io/Node_GetAttributes_Response
+strict union fuchsia.io/Node_GetAttributes_Result
+struct fuchsia.io/Node_Sync2_Response
+union/member fuchsia.io/Node_Sync2_Result.err int32
+union/member fuchsia.io/Node_Sync2_Result.response fuchsia.io/Node_Sync2_Response
+strict union fuchsia.io/Node_Sync2_Result
+struct fuchsia.io/Node_UpdateAttributes_Response
+union/member fuchsia.io/Node_UpdateAttributes_Result.err int32
+union/member fuchsia.io/Node_UpdateAttributes_Result.response fuchsia.io/Node_UpdateAttributes_Response
+strict union fuchsia.io/Node_UpdateAttributes_Result
 const fuchsia.io/OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 46661632
 const fuchsia.io/OPEN_FLAG_APPEND uint32 1048576
 const fuchsia.io/OPEN_FLAG_CREATE uint32 65536
@@ -175,10 +273,45 @@ const fuchsia.io/OPEN_RIGHT_ADMIN uint32 4
 const fuchsia.io/OPEN_RIGHT_EXECUTABLE uint32 8
 const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2
+bits/member fuchsia.io/Operations.ADMIN 72057594037927936
+bits/member fuchsia.io/Operations.CONNECT 1
+bits/member fuchsia.io/Operations.ENUMERATE 64
+bits/member fuchsia.io/Operations.EXECUTE 8
+bits/member fuchsia.io/Operations.GET_ATTRIBUTES 16
+bits/member fuchsia.io/Operations.MODIFY_DIRECTORY 256
+bits/member fuchsia.io/Operations.READ_BYTES 2
+bits/member fuchsia.io/Operations.TRAVERSE 128
+bits/member fuchsia.io/Operations.UPDATE_ATTRIBUTES 32
+bits/member fuchsia.io/Operations.WRITE_BYTES 4
+strict bits fuchsia.io/Operations uint64
 struct/member fuchsia.io/Pipe.socket zx/handle:SOCKET
 resource struct fuchsia.io/Pipe
+table/member fuchsia.io/PipeInfo.socket zx/handle:SOCKET
+resource table fuchsia.io/PipeInfo
+table/member fuchsia.io/PosixSocketInfo.socket zx/handle:SOCKET
+resource table fuchsia.io/PosixSocketInfo
+const fuchsia.io/RW_STAR_DIR fuchsia.io/Operations 503
+const fuchsia.io/RX_STAR_DIR fuchsia.io/Operations 219
+const fuchsia.io/R_STAR_DIR fuchsia.io/Operations 211
 struct/member fuchsia.io/RawSocket.event zx/handle:EVENTPAIR
 resource struct fuchsia.io/RawSocket
+union/member fuchsia.io/Representation.connector fuchsia.io/ConnectorInfo
+union/member fuchsia.io/Representation.debuglog fuchsia.io/DebuglogInfo
+union/member fuchsia.io/Representation.device fuchsia.io/DeviceInfo
+union/member fuchsia.io/Representation.directory fuchsia.io/DirectoryInfo
+union/member fuchsia.io/Representation.file fuchsia.io/FileInfo
+union/member fuchsia.io/Representation.memory fuchsia.io/MemoryInfo
+union/member fuchsia.io/Representation.pipe fuchsia.io/PipeInfo
+union/member fuchsia.io/Representation.posix_socket fuchsia.io/PosixSocketInfo
+union/member fuchsia.io/Representation.tty fuchsia.io/TtyInfo
+resource flexible union fuchsia.io/Representation
+struct/member fuchsia.io/RightsRequest.at_least fuchsia.io/Operations
+struct/member fuchsia.io/RightsRequest.at_most fuchsia.io/Operations
+struct/member fuchsia.io/RightsRequest.resolution fuchsia.io/RightsResolution
+struct fuchsia.io/RightsRequest
+enum/member fuchsia.io/RightsResolution.MAXIMIZE 1
+enum/member fuchsia.io/RightsResolution.POSIX 2
+strict enum fuchsia.io/RightsResolution uint32
 enum/member fuchsia.io/SeekOrigin.CURRENT 1
 enum/member fuchsia.io/SeekOrigin.END 2
 enum/member fuchsia.io/SeekOrigin.START 0
@@ -188,6 +321,8 @@ struct/member fuchsia.io/StreamSocket.socket zx/handle:SOCKET
 resource struct fuchsia.io/StreamSocket
 struct/member fuchsia.io/Tty.event zx/handle:<EVENTPAIR,optional>
 resource struct fuchsia.io/Tty
+table/member fuchsia.io/TtyInfo.event zx/handle:EVENTPAIR
+resource table fuchsia.io/TtyInfo
 const fuchsia.io/VMO_FLAG_EXACT uint32 131072
 const fuchsia.io/VMO_FLAG_EXEC uint32 4
 const fuchsia.io/VMO_FLAG_PRIVATE uint32 65536
@@ -208,8 +343,10 @@ const fuchsia.io/WATCH_MASK_DELETED uint32 1
 const fuchsia.io/WATCH_MASK_EXISTING uint32 8
 const fuchsia.io/WATCH_MASK_IDLE uint32 16
 const fuchsia.io/WATCH_MASK_REMOVED uint32 4
+const fuchsia.io/W_STAR_DIR fuchsia.io/Operations 485
 struct/member fuchsia.io/WatchedEvent.event uint8
 struct/member fuchsia.io/WatchedEvent.len uint8
 struct/member fuchsia.io/WatchedEvent.name vector<uint8>:255
 struct fuchsia.io/WatchedEvent
+const fuchsia.io/X_STAR_DIR fuchsia.io/Operations 201
 library fuchsia.io

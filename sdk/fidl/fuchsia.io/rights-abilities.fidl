@@ -1,0 +1,87 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io;
+
+/// The common members definition behind [`Rights`] and [`Abilities`].
+/// Note that Directory operations are distinct from File operations, with the
+/// exception of some common operations (e.g. `GET_ATTRIBUTES`) defined on the
+/// underlying [`fuchsia.io2/Node`].
+type Operations = strict bits : uint64 {
+    /// Connecting to a service.
+    CONNECT = 0x01;
+
+    /// Reading from the byte contents of a node.
+    READ_BYTES = 0x02;
+
+    /// Writing to the byte contents of a node.
+    WRITE_BYTES = 0x04;
+
+    /// Execute the byte contents of a node.
+    EXECUTE = 0x08;
+
+    /// Reading the attributes of a node.
+    GET_ATTRIBUTES = 0x10;
+
+    /// Updating the attributes of a node.
+    UPDATE_ATTRIBUTES = 0x20;
+
+    /// Reading the list of entries in a directory.
+    ENUMERATE = 0x40;
+
+    /// Opening a node from a directory.
+    ///
+    /// When used in `ConnectionOptions.rights`, it must be specified together
+    /// with [`Rights.ENUMERATE`], since one can always probe the directory
+    /// contents by opening children.
+    TRAVERSE = 0x80;
+
+    /// Modifying the list of entries in a directory.
+    /// For example: node creation, renaming, linking, unlinking, etc.
+    ///
+    /// When used in `ConnectionOptions.rights`, it must be specified together
+    /// with [`Rights.ENUMERATE`], since one can always probe the directory
+    /// contents by triggering name conflicts during node creation.
+    MODIFY_DIRECTORY = 0x100;
+
+    // TODO(fxbug.dev/36541)
+    // Temporary operation ported from fuchsia.io to allow OPEN_RIGHT_ADMIN.
+    ADMIN = 0x100000000000000;
+};
+
+/// Alias for directory permission alias r*
+const R_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES;
+
+/// Alias for directory permission alias rw*
+const RW_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY | Operations.GET_ATTRIBUTES | Operations.UPDATE_ATTRIBUTES;
+
+/// Alias for directory permission alias rx*
+const RX_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES | Operations.EXECUTE;
+
+/// Alias for directory permission alias w*
+const W_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY | Operations.UPDATE_ATTRIBUTES;
+
+/// Alias for directory permission alias x*
+const X_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.EXECUTE;
+
+/// Rights are properties specific to a connection. They limit which operations
+/// are allowed on a connection.
+///
+/// Invoking an operation without the corresponding right results in a
+/// `ZX_ERR_ACCESS_DENIED` error.
+alias Rights = Operations;
+
+/// Abilities are properties intrinsic to a node. They specify which operations
+/// are supported by it.
+///
+/// Invoking an operation without corresponding support in the node results in a
+/// `ZX_ERR_NOT_SUPPORTED` error.
+/// Note that if both the access denied and the not supported error conditions
+/// apply, the access denied case takes precedence.
+alias Abilities = Operations;
