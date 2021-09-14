@@ -18,6 +18,7 @@
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
 #include <ktl/limits.h>
+#include <vm/fault.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -614,19 +615,58 @@ void VmAddressRegion::Activate() {
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
-zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
+zx_status_t VmAddressRegion::RangeOp(RangeOpType op, size_t offset, size_t len,
                                      user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
-
   if (buffer || buffer_size) {
     return ZX_ERR_INVALID_ARGS;
   }
-
-  size = ROUNDUP(size, PAGE_SIZE);
-  if (size == 0 || !IS_PAGE_ALIGNED(base)) {
+  len = ROUNDUP(len, PAGE_SIZE);
+  if (len == 0 || !IS_PAGE_ALIGNED(offset)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  zx_status_t status;
+  // Might need to fault in absent pages in a mapping.
+  //
+  // TODO(fxbug.dev/84616): Waiting on page requests needs to take place with the address space lock
+  // dropped, which means not all VMAR ops will be able to complete with the lock held. We
+  // make the choice to only drop the lock when necessary, i.e. when required to wait on page
+  // requests, instead of *always* dropping the lock for *all* VMAR ops before calling the
+  // underlying VMO functions. While this can make the behavior of VMAR ops inconsistent, it
+  // minimizes possible race conditions due to simultaneous modifications on the address space while
+  // the lock was dropped. See the linked bug for a discussion around this design choice.
+  __UNINITIALIZED LazyPageRequest page_request;
+  while (len > 0) {
+    vaddr_t next_offset;
+    status = RangeOpInternal(op, offset, len, &page_request, &next_offset);
+    // Break from the loop unless told to wait.
+    if (status != ZX_ERR_SHOULD_WAIT) {
+      break;
+    }
+
+    // We should have been asked to wait on an address that is page-aligned and in range.
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(next_offset));
+    DEBUG_ASSERT(next_offset >= offset);
+    DEBUG_ASSERT(next_offset < offset + len);
+
+    status = page_request->Wait();
+    // For now we ignore any failures returned from Wait() since it is only used for hinting ops
+    // which are best effort. Simply proceed to the next page.
+    if (status != ZX_OK) {
+      next_offset += PAGE_SIZE;
+    }
+
+    // Update the range.
+    len -= (next_offset - offset);
+    offset = next_offset;
+  }
+
+  return status;
+}
+
+zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_t size,
+                                             LazyPageRequest* page_request, vaddr_t* next_offset) {
   Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
@@ -692,6 +732,8 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
     return result;
   };
 
+  // TODO(fxbug.dev/84616): See the linked bug for a discussion around dropping the address space
+  // lock before addding a new op.
   switch (op) {
     case RangeOpType::Decommit:
       return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
@@ -716,6 +758,66 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t size,
         }
         return ZX_OK;
       });
+    case RangeOpType::DontNeed:
+      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
+        AssertHeld(mapping->lock_ref());
+        // Return early if this doesn't map a pager backed VMO.
+        if (!mapping->vmo_locked()->is_pager_backed()) {
+          return ZX_OK;
+        }
+        // Convert the mapping offset into a vmo offset.
+        const size_t vmo_offset = mapping->object_offset_locked() + mapping_offset;
+        return mapping->vmo_locked()->HintRange(vmo_offset, size, VmObject::EvictionHint::DontNeed);
+      });
+    case RangeOpType::AlwaysNeed:
+      return process_range(
+          [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
+            AssertHeld(mapping->lock_ref());
+            // Return early if this doesn't map a pager backed VMO.
+            if (!mapping->vmo_locked()->is_pager_backed()) {
+              return ZX_OK;
+            }
+
+            vaddr_t start_offset = mapping->base() + mapping_offset;
+            vaddr_t end_offset = start_offset + size;
+            while (start_offset < end_offset) {
+              // Simulate a read fault. We do not want to fork pages in clones.
+              zx_status_t status = mapping->PageFaultWithVmoCallback(
+                  start_offset, VMM_PF_FLAG_SW_FAULT, page_request,
+                  // Callback to invoke while holding the VMO lock in case of successful page
+                  // lookup. We want to set the hint on the page while the VMO is locked so that the
+                  // page does not get evicted from under us.
+                  [](VmObject* vmo_locked, vm_page_t* page) {
+                    if (!vmo_locked->is_paged()) {
+                      return;
+                    }
+                    auto vmop = static_cast<VmObjectPaged*>(vmo_locked);
+                    AssertHeld(vmop->lock_ref());
+                    vmop->HintAlwaysNeedLocked(page);
+                  });
+
+              if (status == ZX_ERR_SHOULD_WAIT) {
+                // Return from RangeOpInternal so that the caller can wait on the page request with
+                // the aspace lock dropped. We will continue from the stashed start_offset when we
+                // resume after dropping the aspace lock, instead of restarting traversal from the
+                // top gain, so we risk missing any mappings for smaller addresses that might have
+                // been created in the interim. This is fine as we don't provide strong semantics
+                // with hinting, and so the behavior with concurrent aspace modification is not
+                // defined. Presumably any pages the user wanted to apply hints to would have been
+                // created prior to calling op_range anyway, so perhaps it's okay to miss these
+                // racing maps in practice. We make the choice to continue where we left off to
+                // allow forward progress without the risk of livelock.
+                *next_offset = start_offset;
+                return status;
+              }
+
+              // Can't really do anything in case an error is encountered while faulting the page.
+              // Simply ignore it and move on to the next page. Hints are best effort anyway.
+              start_offset += PAGE_SIZE;
+            }
+            return ZX_OK;
+          });
+
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

@@ -227,6 +227,10 @@ typedef struct zx_vmo_lock_state {
 // Keep value in sync with ZX_VMO_OP_DECOMMIT.
 #define ZX_VMAR_OP_DECOMMIT              ((uint32_t)2u)
 #define ZX_VMAR_OP_MAP_RANGE             ((uint32_t)3u)
+// Keep value in sync with ZX_VMO_OP_DONT_NEED.
+#define ZX_VMAR_OP_DONT_NEED             ((uint32_t)12u)
+// Keep value in sync with ZX_VMO_OP_ALWAYS_NEED.
+#define ZX_VMAR_OP_ALWAYS_NEED           ((uint32_t)13u)
 
 // Pager opcodes
 #define ZX_PAGER_OP_FAIL                 ((uint32_t)1u)

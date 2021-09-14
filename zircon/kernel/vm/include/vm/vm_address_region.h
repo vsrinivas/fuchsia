@@ -484,11 +484,20 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   enum class RangeOpType {
     Decommit,
     MapRange,
+    DontNeed,
+    AlwaysNeed,
   };
 
   // Apply |op| to VMO mappings in the specified range of pages.
   zx_status_t RangeOp(RangeOpType op, size_t offset, size_t len, user_inout_ptr<void> buffer,
                       size_t buffer_size);
+
+  // Helper function used by RangeOp. Returns ZX_ERR_SHOULD_WAIT if a page needs to be faulted in
+  // from a pager, indicating that the caller needs to wait on the |page_request|. If that happens,
+  // |next_offset| will contain the faulting offset, i.e. the offset that RangeOp should resume from
+  // after the wait.
+  zx_status_t RangeOpInternal(RangeOpType op, vaddr_t base, size_t size,
+                              LazyPageRequest* page_request, vaddr_t* next_offset);
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to this region to allocate.  If a subregion is entirely in
@@ -637,6 +646,13 @@ class VmMapping final : public VmAddressRegionOrMapping,
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
   zx_status_t PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request)
       TA_REQ(lock()) override;
+
+  // The same as PageFault with an optional |vmo_locked_callback| that needs to be called after
+  // looking up the page while the VMO lock is held.
+  zx_status_t PageFaultWithVmoCallback(
+      vaddr_t va, uint pf_flags, LazyPageRequest* page_request,
+      ktl::optional<fbl::Function<void(VmObject* vmo_locked, vm_page_t* page)>> vmo_locked_callback)
+      TA_REQ(lock());
 
   // Apis intended for use by VmObject
 

@@ -246,6 +246,13 @@ class VmObjectPaged final : public VmObject {
   // consideration when reclaiming pages under memory pressure (if applicable).
   zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) override;
 
+  // Sets the always_need hint on |page| if it belongs to the root VMO in this hierarchy, and is
+  // pager-backed. Called from VmMapping while holding the VMO lock when faulting a page, hence
+  // needs to be public.
+  void HintAlwaysNeedLocked(vm_page_t* page) const TA_REQ(lock_) {
+    cow_pages_locked()->HintAlwaysNeedLocked(page);
+  }
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);

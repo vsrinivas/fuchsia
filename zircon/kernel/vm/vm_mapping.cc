@@ -741,6 +741,12 @@ zx_status_t VmMapping::DestroyLocked() {
 }
 
 zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageRequest* page_request) {
+  return PageFaultWithVmoCallback(va, pf_flags, page_request, ktl::nullopt);
+}
+
+zx_status_t VmMapping::PageFaultWithVmoCallback(
+    vaddr_t va, const uint pf_flags, LazyPageRequest* page_request,
+    ktl::optional<fbl::Function<void(VmObject* vmo_locked, vm_page_t* page)>> vmo_locked_callback) {
   VM_KTRACE_DURATION(2, "VmMapping::PageFault", va, pf_flags);
   canary_.Assert();
 
@@ -810,6 +816,10 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
     return status;
   }
   DEBUG_ASSERT(lookup_info.num_pages > 0);
+
+  if (vmo_locked_callback.has_value()) {
+    vmo_locked_callback.value()(object_.get(), paddr_to_vm_page(lookup_info.paddrs[0]));
+  }
 
   // if we read faulted, and lookup didn't say that this is always writable, then we map or modify
   // the page without any write permissions. This ensures we will fault again if a write is
