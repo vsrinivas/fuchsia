@@ -10,7 +10,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.boot.FactoryItems",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.weave.FactoryDataManager",
