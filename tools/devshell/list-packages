@@ -33,7 +33,6 @@ universe_packages_list="${FUCHSIA_BUILD_DIR}/universe_packages.list"
 package_sets=()
 verbose=false
 search_query="^.*$" # Default query matches "any" to list all packages.
-repo_name=""
 
 function main {
   fx-standard-switches "$@"
@@ -57,10 +56,6 @@ function main {
       verbose=true
       shift
       ;;
-    -r|--repository)
-      repo_name="$2"
-      shift
-      ;;
     -*)
       fx-error "Unknown argument: $1"
       return 1
@@ -72,72 +67,42 @@ function main {
     esac
   done
 
-  if is_feature_enabled "legacy_serve"; then
-    # Default to universe if no options are provided.
-    if [[ ${#package_sets[@]} -eq 0 ]]; then
-      package_sets+=( "${universe_packages_list}" )
-    fi
-
-    if [[ ${#package_sets[@]} -ne 1 ]]; then
-      fx-error "Cannot supply multiple package set filters."
-      return 1
-    fi
-
-    # Search the provided package set.
-    results=($(grep "${search_query}" "${package_sets[0]}"))
-
-    # Pass through a non-zero return value when no results are found.
-    if [[ ${#results[@]} -eq 0 ]]; then
-      return 1
-    fi
-
-    # Verbose searches through all package sets and tags each result.
-    if "${verbose}"; then
-      all_packages=( "${base_packages_list}" "${cache_packages_list}" "${universe_packages_list}" )
-      for i in "${!results[@]}"; do
-        package="${results[$i]}"
-        tags=($(grep "^${package}$" "${all_packages[@]}"))
-
-        for j in "${!tags[@]}"; do
-          package_file=$(basename "${tags[$j]%:*}")
-          tags[$j]="${package_file%_packages.list}"
-        done
-
-        results[$i]="${package} [${tags[*]}]"
-      done
-    fi
-
-    # Print all matching patterns with discovered sets.
-    printf '%s\n' "${results[@]}"
-  else
-    if [[ ${#package_sets[@]} -gt 0 ]]; then
-      fx-error "Flags '--base', '--cache', or '--universe' are not yet supported"
-      fx-error "by ffx repository. See http://fxbug.dev/81512 for more details"
-      return 1
-    fi
-
-    if "$verbose"; then
-      fx-error "Flag '--verbose' is not yet supported by ffx repository"
-      fx-error "See http://fxbug.dev/81512 for more details"
-      return 1
-    fi
-
-    # Use the build directory's name by default. Note that package URLs are not
-    # allowed to have underscores, so replace them with hyphens.
-    if [[ -z "${repo_name}" ]]; then
-      repo_name=$(ffx-default-repository-name)
-    fi
-
-    # Make sure ffx knows about the build repository.
-    ffx-add-repository "$repo_name" || return $?
-
-    fx-command-run ffx --config ffx_repository=true repository package list
-    err=$?
-    if [[ $err -ne 0 ]]; then
-      fx-error "Unable to list packages from the repository"
-      return $err
-    fi
+  # Default to universe if no options are provided.
+  if [[ ${#package_sets[@]} -eq 0 ]]; then
+    package_sets+=( "${universe_packages_list}" )
   fi
+
+  if [[ ${#package_sets[@]} -ne 1 ]]; then
+    fx-error "Cannot supply multiple package set filters."
+    return 1
+  fi
+
+  # Search the provided package set.
+  results=($(grep "${search_query}" "${package_sets[0]}"))
+
+  # Pass through a non-zero return value when no results are found.
+  if [[ ${#results[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  # Verbose searches through all package sets and tags each result.
+  if "${verbose}"; then
+    all_packages=( "${base_packages_list}" "${cache_packages_list}" "${universe_packages_list}" )
+    for i in "${!results[@]}"; do
+      package="${results[$i]}"
+      tags=($(grep "^${package}$" "${all_packages[@]}"))
+
+      for j in "${!tags[@]}"; do
+        package_file=$(basename "${tags[$j]%:*}")
+        tags[$j]="${package_file%_packages.list}"
+      done
+
+      results[$i]="${package} [${tags[*]}]"
+    done
+  fi
+
+  # Print all matching patterns with discovered sets.
+  printf '%s\n' "${results[@]}"
   return 0
 }
 
