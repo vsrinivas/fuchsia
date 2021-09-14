@@ -33,6 +33,10 @@ specified for the corresponding VMO *op* (if there is one) by [`zx_vmo_op_range(
 
 The supported operations are:
 
+**ZX_VMAR_OP_COMMIT** - Requires the **ZX_RIGHT_WRITE** right, and applies only to writable
+mappings. The operation's semantics are otherwise as described by
+[`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_COMMIT**.
+
 **ZX_VMO_OP_DECOMMIT** - Deprecated. Use **ZX_VMAR_OP_DECOMMIT** instead.
 
 **ZX_VMAR_OP_DECOMMIT** - Requires the **ZX_RIGHT_WRITE** right, and applies only to writable

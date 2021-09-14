@@ -233,7 +233,9 @@ zx_status_t VmAddressRegionDispatcher::RangeOp(uint32_t op, vaddr_t base, size_t
                                                user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
 
-  if (op == ZX_VMAR_OP_DECOMMIT) {
+  if (op == ZX_VMAR_OP_COMMIT) {
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::Commit, base, len, buffer, buffer_size);
+  } else if (op == ZX_VMAR_OP_DECOMMIT) {
     return vmar_->RangeOp(VmAddressRegion::RangeOpType::Decommit, base, len, buffer, buffer_size);
   } else if (op == ZX_VMAR_OP_MAP_RANGE) {
     return vmar_->RangeOp(VmAddressRegion::RangeOpType::MapRange, base, len, buffer, buffer_size);

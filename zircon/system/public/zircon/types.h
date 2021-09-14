@@ -224,6 +224,8 @@ typedef struct zx_vmo_lock_state {
 } zx_vmo_lock_state_t;
 
 // VMAR opcodes
+// Keep value in sync with ZX_VMO_OP_COMMIT.
+#define ZX_VMAR_OP_COMMIT                ((uint32_t)1u)
 // Keep value in sync with ZX_VMO_OP_DECOMMIT.
 #define ZX_VMAR_OP_DECOMMIT              ((uint32_t)2u)
 #define ZX_VMAR_OP_MAP_RANGE             ((uint32_t)3u)

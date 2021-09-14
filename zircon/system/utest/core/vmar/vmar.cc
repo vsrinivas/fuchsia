@@ -2301,4 +2301,95 @@ TEST(Vmar, RangeOpDecommitNestedVmar) {
   EXPECT_EQ(*(volatile char*)mapping1_addr, 42);
 }
 
+// Test zx_vmar_op_range ZX_VMAR_OP_COMMIT.
+TEST(Vmar, RangeOpCommit) {
+  // Create a temporary VMAR to work with.
+  auto root_vmar = zx::vmar::root_self();
+  zx::vmar vmar;
+  zx_vaddr_t base_addr;
+  const uint64_t kVmarSize = 20 * zx_system_get_page_size();
+  ASSERT_OK(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, kVmarSize, &vmar, &base_addr));
+
+  // Create two sub-VMARs to hold the mappings.
+  zx::vmar sub_vmar1, sub_vmar2;
+  zx_vaddr_t base_addr1, base_addr2;
+  const uint64_t kSubVmarSize = 8 * zx_system_get_page_size();
+  ASSERT_OK(vmar.allocate(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
+      zx_system_get_page_size(), kSubVmarSize, &sub_vmar1, &base_addr1));
+  ASSERT_EQ(base_addr1, base_addr + zx_system_get_page_size());
+  ASSERT_OK(vmar.allocate(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
+      kSubVmarSize + 2 * zx_system_get_page_size(), kSubVmarSize, &sub_vmar2, &base_addr2));
+  ASSERT_EQ(base_addr2, base_addr1 + kSubVmarSize + zx_system_get_page_size());
+
+  // Create a VMO and clone it.
+  zx::vmo vmo, clone;
+  const uint64_t kVmoSize = 5 * zx_system_get_page_size();
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kVmoSize, &clone));
+
+  // Map the VMO and its clone.
+  zx_vaddr_t addr1, addr2;
+  ASSERT_OK(sub_vmar1.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, kVmoSize,
+                          &addr1));
+  ASSERT_EQ(base_addr1, addr1);
+  ASSERT_OK(sub_vmar2.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone, 0,
+                          kVmoSize, &addr2));
+  ASSERT_EQ(base_addr2, addr2);
+
+  // Commit pages 1 and 2 in the parent.
+  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr1 + zx_system_get_page_size(),
+                          2 * zx_system_get_page_size(), nullptr, 0));
+  // Commit pages 2 and 3 in the clone.
+  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr2 + 2 * zx_system_get_page_size(),
+                          2 * zx_system_get_page_size(), nullptr, 0));
+
+  // Both VMOs should now have 2 pages committed. We can query committed counts despite these pages
+  // being zero because explicitly committed pages are not deduped by the zero scanner.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_OK(clone.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // Commit all pages in the clone.
+  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr2, kVmoSize, nullptr, 0));
+
+  // The clone should have all pages committed, but the parent should still have only 2.
+  ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_OK(clone.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(kVmoSize, info.committed_bytes);
+
+  // Map a single page as read-only and try to commit it. The commit should fail.
+  zx_vaddr_t addr;
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ, kVmarSize - zx_system_get_page_size(), vmo,
+                     0, zx_system_get_page_size(), &addr));
+  ASSERT_EQ(base_addr + kVmarSize - zx_system_get_page_size(), addr);
+  ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
+            vmar.op_range(ZX_VMAR_OP_COMMIT, addr, zx_system_get_page_size(), nullptr, 0));
+
+  // The commit counts should not have changed.
+  ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+  ASSERT_OK(clone.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(kVmoSize, info.committed_bytes);
+
+  // Some trivial failure cases.
+  // Out of range.
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, 2 * kVmarSize, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, vmar.op_range(ZX_VMAR_OP_COMMIT, 0, kVmarSize, nullptr, 0));
+  // Various combinations of gaps.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, kVmarSize, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr,
+                                            base_addr1 + kSubVmarSize - base_addr, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr2,
+                                            base_addr + kVmarSize - base_addr2, nullptr, 0));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr1,
+                                            base_addr2 + kSubVmarSize - base_addr1, nullptr, 0));
+}
+
 }  // namespace

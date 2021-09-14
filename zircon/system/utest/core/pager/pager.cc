@@ -3286,4 +3286,202 @@ TEST(Pager, ZeroHandlesRace) {
   thread.join();
 }
 
+// Tests that OP_COMMIT works as expected via zx_vmar_op_range().
+TEST(Pager, OpCommitVmar) {
+  // Create a temporary VMAR to work with.
+  auto root_vmar = zx::vmar::root_self();
+  zx::vmar vmar;
+  zx_vaddr_t base_addr;
+  const uint64_t kVmarSize = 15 * zx_system_get_page_size();
+  ASSERT_OK(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, kVmarSize, &vmar, &base_addr));
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  // Create two pager VMOs.
+  constexpr uint64_t kNumPages = 3;
+  Vmo* vmo1;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo1));
+  Vmo* vmo2;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo2));
+
+  // Map the two VMOs with no gap in between.
+  const uint64_t kVmoSize = kNumPages * zx_system_get_page_size();
+  zx_vaddr_t addr1, addr2;
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo1->vmo(), 0,
+                     kVmoSize, &addr1));
+  ASSERT_EQ(addr1, base_addr);
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, kVmoSize, vmo2->vmo(), 0,
+                     kVmoSize, &addr2));
+  ASSERT_EQ(addr2, base_addr + kVmoSize);
+
+  // Supply a page in each VMO, so that we're working with a mix of committed and uncommitted pages.
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 1, 1));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 1, 1));
+
+  // Also map in a non pager-backed VMO to work with.
+  zx::vmo anon_vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &anon_vmo));
+  zx_vaddr_t addr3;
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 2 * kVmoSize, anon_vmo, 0,
+                     kVmoSize, &addr3));
+  ASSERT_EQ(addr3, base_addr + 2 * kVmoSize);
+
+  TestThread t1([&vmar, base_addr, kVmoSize]() -> bool {
+    return vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, 3 * kVmoSize, nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // We should see page requests for both VMOs.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 0, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 2, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 0, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 2, 1));
+
+  ASSERT_TRUE(t1.Wait());
+
+  // The non pager-backed VMO should also have committed pages.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_OK(anon_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  ASSERT_EQ(kVmoSize, info.committed_bytes);
+
+  // Can't commit with gaps in the VMAR.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, kVmarSize, nullptr, 0));
+}
+
+// Tests that OP_COMMIT works as expected via zx_vmar_op_range(), when working with a nested VMAR
+// tree.
+TEST(Pager, OpCommitNestedVmar) {
+  // Create a temporary VMAR to work with.
+  auto root_vmar = zx::vmar::root_self();
+  zx::vmar vmar;
+  zx_vaddr_t base_addr;
+  const uint64_t kVmarSize = 10 * zx_system_get_page_size();
+  ASSERT_OK(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, kVmarSize, &vmar, &base_addr));
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  // Create two pager VMOs.
+  constexpr uint64_t kNumPages = 3;
+  const uint64_t kVmoSize = kNumPages * zx_system_get_page_size();
+  Vmo* vmo1;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo1));
+  Vmo* vmo2;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo2));
+
+  // Create two sub-VMARs to hold the mappings, with no gap between them.
+  zx::vmar sub_vmar1, sub_vmar2;
+  zx_vaddr_t base_addr1, base_addr2;
+  ASSERT_OK(vmar.allocate(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, 0,
+      kVmoSize, &sub_vmar1, &base_addr1));
+  ASSERT_EQ(base_addr1, base_addr);
+  ASSERT_OK(vmar.allocate(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, kVmoSize,
+      kVmoSize, &sub_vmar2, &base_addr2));
+  ASSERT_EQ(base_addr2, base_addr + kVmoSize);
+
+  // Map the two VMOs in the two sub-VMARs.
+  zx_vaddr_t addr1, addr2;
+  ASSERT_OK(sub_vmar1.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo1->vmo(), 0,
+                          kVmoSize, &addr1));
+  ASSERT_EQ(base_addr1, addr1);
+  ASSERT_OK(sub_vmar2.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo2->vmo(), 0,
+                          kVmoSize, &addr2));
+  ASSERT_EQ(base_addr2, addr2);
+
+  // Supply a page in each VMO, so that we're working with a mix of committed and uncommitted pages.
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 1, 1));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 1, 1));
+
+  TestThread t1([&vmar, base_addr, kVmoSize]() -> bool {
+    return vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, 2 * kVmoSize, nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // We should see page requests for both VMOs.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 0, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo1, 2, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 0, 1));
+  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo2, 2, 1));
+
+  ASSERT_TRUE(t1.Wait());
+
+  // Can't commit with gaps in the VMAR.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, kVmarSize, nullptr, 0));
+}
+
+// Tests that OP_COMMIT works as expected via zx_vmar_op_range() with mapped clones.
+TEST(Pager, OpCommitCloneVmar) {
+  // Create a temporary VMAR to work with.
+  auto root_vmar = zx::vmar::root_self();
+  zx::vmar vmar;
+  zx_vaddr_t base_addr;
+  const uint64_t kVmarSize = 5 * zx_system_get_page_size();
+  ASSERT_OK(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
+                                0, kVmarSize, &vmar, &base_addr));
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  // Create a VMO and a clone.
+  constexpr uint64_t kNumPages = 4;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  // Map the clone.
+  zx_vaddr_t addr;
+  const uint64_t kVmoSize = kNumPages * zx_system_get_page_size();
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone->vmo(), 0,
+                     kVmoSize, &addr));
+  ASSERT_EQ(addr, base_addr);
+
+  // Fork a page in the clone.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+  uint8_t data = 0xcc;
+  ASSERT_OK(clone->vmo().write(&data, zx_system_get_page_size(), sizeof(data)));
+
+  TestThread t1([&vmar, base_addr]() -> bool {
+    // Commit only a few pages, not all.
+    return vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr + zx_system_get_page_size(),
+                         2 * zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t1.Start());
+
+  // We should see page requests for the root VMO only for pages that were not forked.
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+
+  ASSERT_TRUE(t1.Wait());
+
+  // The clone should have two pages committed now.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_OK(clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // The previously forked page should not have been overwritten.
+  uint8_t new_data;
+  ASSERT_OK(clone->vmo().read(&new_data, zx_system_get_page_size(), sizeof(data)));
+  ASSERT_EQ(data, new_data);
+
+  // No more page requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests

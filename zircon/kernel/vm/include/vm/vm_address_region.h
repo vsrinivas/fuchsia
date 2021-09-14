@@ -482,6 +482,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
   enum class RangeOpType {
+    Commit,
     Decommit,
     MapRange,
     DontNeed,

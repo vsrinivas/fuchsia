@@ -651,9 +651,12 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, size_t offset, size_t len,
     DEBUG_ASSERT(next_offset < offset + len);
 
     status = page_request->Wait();
-    // For now we ignore any failures returned from Wait() since it is only used for hinting ops
-    // which are best effort. Simply proceed to the next page.
     if (status != ZX_OK) {
+      if (op != RangeOpType::AlwaysNeed && op != RangeOpType::DontNeed) {
+        break;
+      }
+      // Ignore any failures returned from Wait() for hinting ops, which are best effort, and simply
+      // proceed to the next page.
       next_offset += PAGE_SIZE;
     }
 
@@ -735,6 +738,37 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
   // TODO(fxbug.dev/84616): See the linked bug for a discussion around dropping the address space
   // lock before addding a new op.
   switch (op) {
+    case RangeOpType::Commit:
+      return process_range(
+          [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
+            AssertHeld(mapping->lock_ref());
+            vaddr_t start_offset = mapping->base() + mapping_offset;
+            vaddr_t end_offset = start_offset + size;
+            while (start_offset < end_offset) {
+              // Simulate a write fault to commit the page.
+              zx_status_t status = mapping->PageFault(
+                  start_offset, VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE, page_request);
+
+              if (status == ZX_ERR_SHOULD_WAIT) {
+                // Return from RangeOpInternal so that the caller can wait on the page request with
+                // the aspace lock dropped. We will continue from the stashed start_offset when we
+                // resume after dropping the aspace lock, instead of restarting traversal from the
+                // top gain, so we risk missing any mappings for smaller addresses that might have
+                // been created in the interim. Modifying the aspace while an op is in progress is
+                // not defined. We make the choice to continue where we left off to allow forward
+                // progress without the risk of livelock.
+                *next_offset = start_offset;
+              }
+
+              if (status != ZX_OK) {
+                return status;
+              }
+
+              // Move on to the next page.
+              start_offset += PAGE_SIZE;
+            }
+            return ZX_OK;
+          });
     case RangeOpType::Decommit:
       return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
         AssertHeld(mapping->lock_ref());
