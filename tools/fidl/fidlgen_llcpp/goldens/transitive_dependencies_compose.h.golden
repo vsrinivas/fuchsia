@@ -821,7 +821,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_transitivedependenciescompose::Top::GetFoo>&& result) = 0;
+          ::fidl_test_transitivedependenciescompose::Top::GetFoo>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -848,6 +848,11 @@ class ::fidl::internal::WireClientImpl<
                    ::fidl_test_transitivedependenciescompose::Top::GetFoo>*
                        response)>
                   _cb);
+  void GetFoo(
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<
+              ::fidl_test_transitivedependenciescompose::Top::GetFoo>&& result)>
+          _cb);
 
   // Asynchronous variant of |Top.GetFoo()|.
   // Caller provides the backing storage for FIDL message via request buffer.

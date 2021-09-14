@@ -80,7 +80,7 @@ TEST(V2Integration, AsyncCallResponseDecode) {
 
   sync_completion_t done;
   client->MethodWithResponse(
-      [&done](fidl::WireUnownedResult<TestProtocol::MethodWithResponse>&& result) {
+      [&done](fidl::WireUnownedResult<TestProtocol::MethodWithResponse>& result) {
         ASSERT_EQ(ZX_OK, result.status());
         ASSERT_EQ(123u, result->u.v());
         sync_completion_signal(&done);

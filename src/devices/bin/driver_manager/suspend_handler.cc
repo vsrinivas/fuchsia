@@ -187,7 +187,7 @@ void SuspendHandler::SuspendAfterFilesystemShutdown() {
 void SuspendHandler::ShutdownFilesystems(fit::callback<void(zx_status_t)> callback) {
   fshost_admin_client_->Shutdown(
       [callback = std::move(callback)](
-          fidl::WireUnownedResult<fuchsia_fshost::Admin::Shutdown>&& result) mutable {
+          fidl::WireUnownedResult<fuchsia_fshost::Admin::Shutdown>& result) mutable {
         if (!result.ok()) {
           LOGF(WARNING,
                "Failed to cause VFS exit ourselves, this is expected during orderly shutdown: %s",

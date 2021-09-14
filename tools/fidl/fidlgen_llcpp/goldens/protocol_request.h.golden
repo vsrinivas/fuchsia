@@ -2256,7 +2256,7 @@ class ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>
   WireResponseContext();
 
   virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>&&
+      ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>&
           result) = 0;
 
  private:
@@ -2276,7 +2276,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>&& result) = 0;
+          ::fidl_test_protocolrequest::Parent::GetChildRequest>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -2300,6 +2300,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
   void GetChild(::fit::callback<
                 void(::fidl::WireResponse<
                      ::fidl_test_protocolrequest::Parent::GetChild>* response)>
+                    _cb);
+  void GetChild(::fit::callback<
+                void(::fidl::WireUnownedResult<
+                     ::fidl_test_protocolrequest::Parent::GetChild>&& result)>
                     _cb);
 
   // Asynchronous variant of |Parent.GetChild()|.
@@ -2331,6 +2335,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
       ::fit::callback<
           void(::fidl::WireResponse<
                ::fidl_test_protocolrequest::Parent::GetChildRequest>* response)>
+          _cb);
+  void GetChildRequest(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocolrequest::Parent::GetChildRequest>&& result)>
           _cb);
 
   // Asynchronous variant of |Parent.GetChildRequest()|.

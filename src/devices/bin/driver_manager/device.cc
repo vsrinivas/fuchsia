@@ -336,7 +336,7 @@ void Device::SendInit(InitCompletion completion) {
   VLOGF(1, "Initializing device %p '%s'", this, name_.data());
   device_controller()->Init(
       [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Init>&& result) {
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Init>& result) {
         if (!result.ok()) {
           dev->CompleteInit(result.status());
           return;
@@ -381,7 +381,7 @@ void Device::SendSuspend(uint32_t flags, SuspendCompletion completion) {
   device_controller()->Suspend(
       flags,
       [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Suspend>&& result) {
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Suspend>& result) {
         if (!result.ok()) {
           dev->CompleteSuspend(result.status());
           return;
@@ -409,7 +409,7 @@ void Device::SendResume(uint32_t target_system_state, ResumeCompletion completio
   device_controller()->Resume(
       target_system_state,
       [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Resume>&& result) {
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Resume>& result) {
         if (!result.ok()) {
           dev->CompleteResume(result.status());
           return;
@@ -502,7 +502,7 @@ void Device::SendUnbind(UnbindCompletion& completion) {
   set_state(Device::State::kUnbinding);
   device_controller()->Unbind(
       [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>&& result) {
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>& result) {
         if (!result.ok()) {
           dev->CompleteUnbind(result.status());
           return;
@@ -524,7 +524,7 @@ void Device::SendCompleteRemove(RemoveCompletion& completion) {
   set_state(Device::State::kUnbinding);
   device_controller()->CompleteRemoval(
       [dev = fbl::RefPtr(this)](
-          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::CompleteRemoval>&&
+          fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::CompleteRemoval>&
               result) {
         if (!result.ok()) {
           if (dev->remove_completion_) {

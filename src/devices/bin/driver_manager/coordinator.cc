@@ -181,7 +181,7 @@ void Coordinator::RegisterWithPowerManager(
   power_manager_client_->Register(
       std::move(system_state_transition), std::move(devfs),
       [this, completion = std::move(completion)](
-          fidl::WireUnownedResult<fpm::DriverManagerRegistration::Register>&& result) mutable {
+          fidl::WireUnownedResult<fpm::DriverManagerRegistration::Register>& result) mutable {
         if (!result.ok()) {
           LOGF(INFO, "Failed to register with power_manager: %s\n",
                result.error().FormatDescription().c_str());
@@ -1050,7 +1050,7 @@ zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
   }
   dev->device_controller()->BindDriver(
       fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
-      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>&& result) {
+      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
         if (!result.ok()) {
           LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
           dev->flags &= (~DEV_CTX_BOUND);

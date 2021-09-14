@@ -5565,7 +5565,7 @@ class ::fidl::WireResponseContext<
   virtual void OnResult(
       ::fidl::WireUnownedResult<
           ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>&& result) = 0;
+              StrictXUnionHenceResponseMayBeStackAllocated>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -5586,7 +5586,7 @@ class ::fidl::WireResponseContext<
   virtual void OnResult(
       ::fidl::WireUnownedResult<
           ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result) = 0;
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -5614,6 +5614,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
           void(::fidl::WireResponse<
                ::fidl_test_union::TestProtocol::
                    StrictXUnionHenceResponseMayBeStackAllocated>* response)>
+          _cb);
+  void StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_union::TestProtocol::
+                   StrictXUnionHenceResponseMayBeStackAllocated>&& result)>
           _cb);
 
   // Asynchronous variant of
@@ -5657,6 +5663,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
           void(::fidl::WireResponse<
                ::fidl_test_union::TestProtocol::
                    FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)>
+          _cb);
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_union::TestProtocol::
+                   FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result)>
           _cb);
 
   // Asynchronous variant of

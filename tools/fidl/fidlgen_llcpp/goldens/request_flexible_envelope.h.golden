@@ -1905,9 +1905,9 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
  public:
   WireResponseContext();
 
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>&& result) = 0;
+  virtual void OnResult(
+      ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestStrictResponseFlexible>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -1924,9 +1924,9 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
  public:
   WireResponseContext();
 
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>&& result) = 0;
+  virtual void OnResult(
+      ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestFlexibleResponseStrict>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -1954,6 +1954,12 @@ class ::fidl::internal::WireClientImpl<
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
+          _cb);
+  void RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fit::callback<void(::fidl::WireUnownedResult<
+                           ::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>&& result)>
           _cb);
 
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
@@ -1998,6 +2004,12 @@ class ::fidl::internal::WireClientImpl<
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
+          _cb);
+  void RequestFlexibleResponseStrict(
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fit::callback<void(::fidl::WireUnownedResult<
+                           ::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>&& result)>
           _cb);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.

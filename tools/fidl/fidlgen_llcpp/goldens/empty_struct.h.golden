@@ -1499,7 +1499,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& result) = 0;
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -1534,6 +1534,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
       ::fit::callback<
           void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
                                         SendAndReceive>* response)>
+          _cb);
+  void SendAndReceive(
+      const ::fidl_test_emptystruct::wire::Empty& e,
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<
+              ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& result)>
           _cb);
 
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.

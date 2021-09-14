@@ -1460,7 +1460,7 @@ class ::fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>
   WireResponseContext();
 
   virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&&
+      ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&
           result) = 0;
 
  private:
@@ -1485,6 +1485,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)>
           _cb);
+  void Foo(::fidl::StringView s,
+           ::fit::callback<void(::fidl::WireUnownedResult<
+                                ::fidl_test_inheritance::Super::Foo>&& result)>
+               _cb);
 
   // Asynchronous variant of |Super.Foo()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -1573,8 +1577,7 @@ class ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>
   WireResponseContext();
 
   virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&&
-          result) = 0;
+      ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -1598,6 +1601,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub> final
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)>
           _cb);
+  void Foo(::fidl::StringView s,
+           ::fit::callback<void(::fidl::WireUnownedResult<
+                                ::fidl_test_inheritance::Sub::Foo>&& result)>
+               _cb);
 
   // Asynchronous variant of |Sub.Foo()|.
   // Caller provides the backing storage for FIDL message via request buffer.

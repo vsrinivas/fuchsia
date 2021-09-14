@@ -42,7 +42,7 @@ fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view serv
   }
   fpromise::bridge<void, zx_status_t> bridge;
   auto callback = [completer = std::move(bridge.completer)](
-                      fidl::WireUnownedResult<fdfs::Exporter::Export>&& response) mutable {
+                      fidl::WireUnownedResult<fdfs::Exporter::Export>& response) mutable {
     if (!response.ok()) {
       completer.complete_error(response.status());
     } else if (response->result.is_err()) {

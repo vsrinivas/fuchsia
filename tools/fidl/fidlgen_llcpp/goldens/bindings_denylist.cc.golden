@@ -78,9 +78,11 @@ namespace fidl_test_bindingsdenylist {
         LibfuzzerNeedsNonemptyProtocol>::OnRawResult(::fidl::IncomingMessage&&
                                                          msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<
-             ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                 LibfuzzerNeedsNonemptyProtocol>(msg.error()));
+    ::fidl::WireUnownedResult<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>
+        result{msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<
@@ -88,9 +90,10 @@ namespace fidl_test_bindingsdenylist {
                                LibfuzzerNeedsNonemptyProtocol>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<
-           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-               LibfuzzerNeedsNonemptyProtocol>(std::move(decoded)));
+  ::fidl::WireUnownedResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                LibfuzzerNeedsNonemptyProtocol>
+      result{std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -117,8 +120,8 @@ void fidl::internal::WireClientImpl<
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                      LibfuzzerNeedsNonemptyProtocol>&& result) override {
-      cb_(std::move(result));
+                      LibfuzzerNeedsNonemptyProtocol>& result) override {
+      cb_(result);
       delete this;
     }
 
@@ -133,6 +136,23 @@ void fidl::internal::WireClientImpl<
       _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
+}
+void fidl::internal::WireClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    LibfuzzerNeedsNonemptyProtocol(
+        ::fit::callback<
+            void(::fidl::WireUnownedResult<
+                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                     LibfuzzerNeedsNonemptyProtocol>&& result)>
+            _cb) {
+  auto _forwarder =
+      [_cb = std::move(_cb)](
+          ::fidl::WireUnownedResult<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocol>& _result) mutable {
+        _cb(std::move(_result));
+      };
+  LibfuzzerNeedsNonemptyProtocol(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<
@@ -153,12 +173,12 @@ void fidl::internal::WireClientImpl<
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                      LibfuzzerNeedsNonemptyProtocol>&& result) override {
+                      LibfuzzerNeedsNonemptyProtocol>& result) override {
       if (result.ok()) {
         ::fidl::WireResponse<
             ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                 LibfuzzerNeedsNonemptyProtocol>* response = result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }

@@ -54,13 +54,12 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  client->TwoWay(fidl::StringView(data),
-                 [&done](fidl::WireUnownedResult<Example::TwoWay>&& result) {
-                   ASSERT_OK(result.status());
-                   ASSERT_EQ(strlen(data), result->out.size());
-                   EXPECT_EQ(0, strncmp(result->out.data(), data, strlen(data)));
-                   sync_completion_signal(&done);
-                 });
+  client->TwoWay(fidl::StringView(data), [&done](fidl::WireUnownedResult<Example::TwoWay>& result) {
+    ASSERT_OK(result.status());
+    ASSERT_EQ(strlen(data), result->out.size());
+    EXPECT_EQ(0, strncmp(result->out.data(), data, strlen(data)));
+    sync_completion_signal(&done);
+  });
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
@@ -72,7 +71,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
 
-    void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
+    void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
       ASSERT_OK(result.status());
       auto& out = result->out;
       ASSERT_EQ(size_, out.size());
@@ -385,7 +384,7 @@ class ExpectErrorResponseContext final : public fidl::WireResponseContext<Exampl
         expected_status_(expected_status),
         expected_reason_(expected_reason) {}
 
-  void OnResult(fidl::WireUnownedResult<Example::TwoWay>&& result) override {
+  void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
     EXPECT_TRUE(!result.ok());
     EXPECT_STATUS(expected_status_, result.status());
     EXPECT_EQ(expected_reason_, result.error().reason());
@@ -546,7 +545,7 @@ TEST(GenAPITestCase, NotifyInFlightResultCallbacksDuringCancellation) {
     auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
     client->TwoWay("foo", [observer = std::move(callback_destruction_observer),
-                           &called](fidl::WireUnownedResult<Example::TwoWay>&& result) {
+                           &called](fidl::WireUnownedResult<Example::TwoWay>& result) {
       called = true;
       EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
       EXPECT_EQ(fidl::Reason::kUnbind, result.reason());

@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
 
   // Make a non-pipelined request to get an instance of Echo
   launcher->GetEcho("non pipelined: ",
-                    [&](fidl::WireUnownedResult<fuchsia_examples::EchoLauncher::GetEcho>&& result) {
+                    [&](fidl::WireUnownedResult<fuchsia_examples::EchoLauncher::GetEcho>& result) {
                       ZX_ASSERT(result.ok());
                       // Take the channel to Echo in the response, bind it to the dispatcher, and
                       // make an EchoString request on it.
@@ -54,7 +54,7 @@ int main(int argc, const char** argv) {
   // A client can be initialized using the client end without waiting for a response
   fidl::WireClient echo_pipelined(std::move(client_end), dispatcher);
   echo_pipelined->EchoString(
-      "hello!", [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>&& result) {
+      "hello!", [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
         ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                       result.error().FormatDescription().c_str());
         std::string reply(result->response.data(), result->response.size());

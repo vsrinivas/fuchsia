@@ -24,6 +24,10 @@ const fragmentMethodClientImplAsyncTmpl = `
   void {{ .Name }}({{ RenderParams .RequestArgs
     (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
+  {{- /* TODO(fxbug.dev/75324): Remove after migrating non-fuchsia.git uses */}}
+  void {{ .Name }}({{ RenderParams .RequestArgs
+      (printf "::fit::callback<void (%s&& result)> _cb" .WireUnownedResult) }});
+
   {{- /* Async caller-allocate flavor */}}
   {{ .Docs }}
   {{- if .DocComments }}
@@ -59,8 +63,8 @@ const fragmentMethodClientImplAsyncTmpl = `
       ResponseContext(Callback cb)
           : cb_(std::move(cb)) {}
 
-      void OnResult({{ .WireUnownedResult }}&& result) override {
-        cb_(std::move(result));
+      void OnResult({{ .WireUnownedResult }}& result) override {
+        cb_(result);
         delete this;
       }
 
@@ -76,6 +80,16 @@ const fragmentMethodClientImplAsyncTmpl = `
     ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
   }
 
+  {{- /* TODO(fxbug.dev/75324): Remove after migrating non-fuchsia.git uses */}}
+  void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+    {{ RenderParams .RequestArgs
+      (printf "::fit::callback<void (%s&& result)> _cb" .WireUnownedResult) }}) {
+    auto _forwarder = [_cb = std::move(_cb)] ({{ .WireUnownedResult }}& _result) mutable {
+      _cb(std::move(_result));
+    };
+    {{ .Name }}({{ RenderForwardParams .RequestArgs "std::move(_forwarder)" }});
+  }
+
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{ RenderParams .RequestArgs
       (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
@@ -85,10 +99,10 @@ const fragmentMethodClientImplAsyncTmpl = `
       ResponseContext(Callback cb)
           : cb_(std::move(cb)) {}
 
-      void OnResult({{ .WireUnownedResult }}&& result) override {
+      void OnResult({{ .WireUnownedResult }}& result) override {
         if (result.ok()) {
           ::fidl::WireResponse<{{ .Marker }}>* response = result.Unwrap();
-          cb_(std::move(response));
+          cb_(response);
         }
         delete this;
       }

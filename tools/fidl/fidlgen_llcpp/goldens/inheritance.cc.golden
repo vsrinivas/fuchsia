@@ -72,16 +72,18 @@ namespace fidl_test_inheritance {
 fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>::OnRawResult(
     ::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-        msg.error()));
+    ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> result{
+        msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> result{
+      std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -101,9 +103,9 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(
-        ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&& result)
+        ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>& result)
         override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -118,6 +120,17 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
+    ::fidl::StringView s,
+    ::fit::callback<void(::fidl::WireUnownedResult<
+                         ::fidl_test_inheritance::Super::Foo>&& result)>
+        _cb) {
+  auto _forwarder =
+      [_cb = std::move(_cb)](
+          ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&
+              _result) mutable { _cb(std::move(_result)); };
+  Foo(s, std::move(_forwarder));
+}
 
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ::fidl::StringView s,
@@ -131,12 +144,12 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(
-        ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&& result)
+        ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>& result)
         override {
       if (result.ok()) {
         ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response =
             result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }
@@ -348,16 +361,18 @@ namespace fidl_test_inheritance {
 fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>::OnRawResult(
     ::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-        msg.error()));
+    ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> result{
+        msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> result{
+      std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -376,9 +391,9 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
    public:
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
-    void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&&
+    void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&
                       result) override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -393,6 +408,17 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
+void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
+    ::fidl::StringView s,
+    ::fit::callback<void(
+        ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&& result)>
+        _cb) {
+  auto _forwarder =
+      [_cb = std::move(_cb)](
+          ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&
+              _result) mutable { _cb(std::move(_result)); };
+  Foo(s, std::move(_forwarder));
+}
 
 void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
     ::fidl::StringView s,
@@ -405,12 +431,12 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
    public:
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
-    void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&&
+    void OnResult(::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>&
                       result) override {
       if (result.ok()) {
         ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response =
             result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }

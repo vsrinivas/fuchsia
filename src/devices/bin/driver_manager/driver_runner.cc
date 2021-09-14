@@ -661,7 +661,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 
 void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
   auto match_callback = [this,
-                         &node](fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>&& result) {
+                         &node](fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
     auto driver_node = &node;
     auto orphaned = [this, &driver_node] {
       orphaned_nodes_.push_back(driver_node->weak_from_this());
@@ -799,7 +799,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto open_callback = [name, url](fidl::WireUnownedResult<fsys::Realm::OpenExposedDir>&& result) {
+  auto open_callback = [name, url](fidl::WireUnownedResult<fsys::Realm::OpenExposedDir>& result) {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
            url.data(), result.FormatDescription().c_str());
@@ -812,7 +812,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   };
   auto create_callback = [this, name, url, collection, server_end = std::move(endpoints->server),
                           open_callback = std::move(open_callback)](
-                             fidl::WireUnownedResult<fsys::Realm::CreateChild>&& result) mutable {
+                             fidl::WireUnownedResult<fsys::Realm::CreateChild>& result) mutable {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.c_str(), url.c_str(),
            result.error().FormatDescription().c_str());

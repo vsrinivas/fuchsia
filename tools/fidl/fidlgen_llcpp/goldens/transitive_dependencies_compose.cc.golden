@@ -81,18 +81,20 @@ namespace fidl_test_transitivedependenciescompose {
     ::fidl_test_transitivedependenciescompose::Top::GetFoo>::
     OnRawResult(::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<
-             ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        msg.error()));
+    ::fidl::WireUnownedResult<
+        ::fidl_test_transitivedependenciescompose::Top::GetFoo>
+        result{msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<
-           ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<
+      ::fidl_test_transitivedependenciescompose::Top::GetFoo>
+      result{std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -115,9 +117,9 @@ void fidl::internal::
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<
-                  ::fidl_test_transitivedependenciescompose::Top::GetFoo>&&
+                  ::fidl_test_transitivedependenciescompose::Top::GetFoo>&
                       result) override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -131,6 +133,20 @@ void fidl::internal::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
+}
+void fidl::internal::
+    WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
+        ::fit::callback<
+            void(::fidl::WireUnownedResult<
+                 ::fidl_test_transitivedependenciescompose::Top::GetFoo>&&
+                     result)>
+            _cb) {
+  auto _forwarder =
+      [_cb = std::move(_cb)](
+          ::fidl::WireUnownedResult<
+              ::fidl_test_transitivedependenciescompose::Top::GetFoo>&
+              _result) mutable { _cb(std::move(_result)); };
+  GetFoo(std::move(_forwarder));
 }
 
 void fidl::internal::
@@ -147,13 +163,13 @@ void fidl::internal::
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<
-                  ::fidl_test_transitivedependenciescompose::Top::GetFoo>&&
+                  ::fidl_test_transitivedependenciescompose::Top::GetFoo>&
                       result) override {
       if (result.ok()) {
         ::fidl::WireResponse<
             ::fidl_test_transitivedependenciescompose::Top::GetFoo>* response =
             result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }

@@ -1072,7 +1072,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(::fidl::WireUnownedResult<
                         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                            LibfuzzerNeedsNonemptyProtocol>&& result) = 0;
+                            LibfuzzerNeedsNonemptyProtocol>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -1100,6 +1100,11 @@ class ::fidl::internal::WireClientImpl<
       ::fit::callback<void(::fidl::WireResponse<
                            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>* response)>
+          _cb);
+  void LibfuzzerNeedsNonemptyProtocol(
+      ::fit::callback<void(::fidl::WireUnownedResult<
+                           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                               LibfuzzerNeedsNonemptyProtocol>&& result)>
           _cb);
 
   // Asynchronous variant of

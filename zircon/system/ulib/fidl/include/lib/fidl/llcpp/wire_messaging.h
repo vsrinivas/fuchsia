@@ -62,7 +62,7 @@ template <typename FidlMethod>
 class WireUnownedResult;
 
 template <typename FidlMethod>
-using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&&)>;
+using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&)>;
 
 namespace internal {
 

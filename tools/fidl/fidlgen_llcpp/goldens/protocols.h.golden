@@ -17406,7 +17406,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&
           result) = 0;
 
  private:
@@ -17443,6 +17443,13 @@ class ::fidl::internal::WireClientImpl<
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
                                    ResponseMethod>* response)>
+          _cb);
+  void ResponseMethod(
+      ::zx::socket&& h,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
+                   result)>
           _cb);
 
   // Asynchronous variant of |HandleRightsProtocol.ResponseMethod()|.
@@ -17561,7 +17568,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(::fidl::WireUnownedResult<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestEmptyResponse>&& result) = 0;
+                            NoRequestEmptyResponse>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -17580,7 +17587,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(::fidl::WireUnownedResult<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestWithResponse>&& result) = 0;
+                            NoRequestWithResponse>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -17599,7 +17606,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(::fidl::WireUnownedResult<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestEmptyResponse>&& result) = 0;
+                            WithRequestEmptyResponse>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -17618,7 +17625,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(::fidl::WireUnownedResult<
                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestWithResponse>&& result) = 0;
+                            WithRequestWithResponse>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -17651,6 +17658,12 @@ class ::fidl::internal::WireClientImpl<
                ::fidl_test_protocols::WithAndWithoutRequestResponse::
                    NoRequestEmptyResponse>* response)>
           _cb);
+  void NoRequestEmptyResponse(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestEmptyResponse>&& result)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Caller provides
@@ -17682,6 +17695,12 @@ class ::fidl::internal::WireClientImpl<
           void(::fidl::WireResponse<
                ::fidl_test_protocols::WithAndWithoutRequestResponse::
                    NoRequestWithResponse>* response)>
+          _cb);
+  void NoRequestWithResponse(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestWithResponse>&& result)>
           _cb);
 
   // Asynchronous variant of
@@ -17732,6 +17751,13 @@ class ::fidl::internal::WireClientImpl<
                ::fidl_test_protocols::WithAndWithoutRequestResponse::
                    WithRequestEmptyResponse>* response)>
           _cb);
+  void WithRequestEmptyResponse(
+      ::fidl::StringView arg,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestEmptyResponse>&& result)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
@@ -17777,6 +17803,13 @@ class ::fidl::internal::WireClientImpl<
           void(::fidl::WireResponse<
                ::fidl_test_protocols::WithAndWithoutRequestResponse::
                    WithRequestWithResponse>* response)>
+          _cb);
+  void WithRequestWithResponse(
+      ::fidl::StringView arg,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestWithResponse>&& result)>
           _cb);
 
   // Asynchronous variant of
@@ -17911,7 +17944,7 @@ class ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>
   WireResponseContext();
 
   virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>&&
+      ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>&
           result) = 0;
 
  private:
@@ -17940,6 +17973,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
               response)>
           _cb);
+  void Request(int64_t x,
+               ::fit::callback<
+                   void(::fidl::WireUnownedResult<
+                        ::fidl_test_protocols::Transitional::Request>&& result)>
+                   _cb);
 
   // Asynchronous variant of |Transitional.Request()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -18133,7 +18171,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& result) = 0;
+          ::fidl_test_protocols::WithProtocolEnds::ClientEnds>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18152,7 +18190,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& result) = 0;
+          ::fidl_test_protocols::WithProtocolEnds::ServerEnds>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18171,7 +18209,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&&
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&
           result) = 0;
 
  private:
@@ -18200,6 +18238,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>
       ::fit::callback<
           void(::fidl::WireResponse<
                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>* response)>
+          _cb);
+  void ClientEnds(
+      ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& result)>
           _cb);
 
   // Asynchronous variant of |WithProtocolEnds.ClientEnds()|.
@@ -18242,6 +18286,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>
           void(::fidl::WireResponse<
                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>* response)>
           _cb);
+  void ServerEnds(
+      ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& result)>
+          _cb);
 
   // Asynchronous variant of |WithProtocolEnds.ServerEnds()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -18282,6 +18332,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>
       ::fit::callback<
           void(::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
                                         StructContainingEnds>* response)>
+          _cb);
+  void StructContainingEnds(
+      ::fidl_test_protocols::wire::ProtocolEnds&& in,
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::
+                                        StructContainingEnds>&& result)>
           _cb);
 
   // Asynchronous variant of |WithProtocolEnds.StructContainingEnds()|.
@@ -18459,7 +18515,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&&
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&
           result) = 0;
 
  private:
@@ -18479,7 +18535,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&
           result) = 0;
 
  private:
@@ -18499,7 +18555,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&& result) = 0;
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18518,7 +18574,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&& result) = 0;
+          ::fidl_test_protocols::WithErrorSyntax::HandleInResult>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18544,6 +18600,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       ::fit::callback<
           void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                         ResponseAsStruct>* response)>
+          _cb);
+  void ResponseAsStruct(
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::
+                                        ResponseAsStruct>&& result)>
           _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
@@ -18579,6 +18640,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                         ErrorAsPrimitive>* response)>
           _cb);
+  void ErrorAsPrimitive(
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::
+                                        ErrorAsPrimitive>&& result)>
+          _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -18612,6 +18678,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           void(::fidl::WireResponse<
                ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* response)>
           _cb);
+  void ErrorAsEnum(
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&& result)>
+          _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -18643,6 +18714,11 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       ::fit::callback<
           void(::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
                                         HandleInResult>* response)>
+          _cb);
+  void HandleInResult(
+      ::fit::callback<void(
+          ::fidl::WireUnownedResult<
+              ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&& result)>
           _cb);
 
   // Asynchronous variant of |WithErrorSyntax.HandleInResult()|.
@@ -18807,7 +18883,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::MethodB>&& result) = 0;
+          ::fidl_test_protocols::ChannelProtocol::MethodB>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18826,7 +18902,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& result) = 0;
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18845,7 +18921,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::MutateSocket>&& result) = 0;
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
@@ -18879,6 +18955,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
               response)>
+          _cb);
+  void MethodB(
+      int64_t a, int64_t b,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::ChannelProtocol::MethodB>&& result)>
           _cb);
 
   // Asynchronous variant of |ChannelProtocol.MethodB()|.
@@ -18915,6 +18997,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
           void(::fidl::WireResponse<
                ::fidl_test_protocols::ChannelProtocol::TakeHandle>* response)>
           _cb);
+  void TakeHandle(
+      ::zx::handle&& h,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& result)>
+          _cb);
 
   // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -18950,6 +19038,12 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
       ::fit::callback<
           void(::fidl::WireResponse<
                ::fidl_test_protocols::ChannelProtocol::MutateSocket>* response)>
+          _cb);
+  void MutateSocket(
+      ::zx::socket&& a,
+      ::fit::callback<
+          void(::fidl::WireUnownedResult<
+               ::fidl_test_protocols::ChannelProtocol::MutateSocket>&& result)>
           _cb);
 
   // Asynchronous variant of |ChannelProtocol.MutateSocket()|.

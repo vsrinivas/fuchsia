@@ -134,8 +134,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   bool called = false;
   bootstrap_client()->ImportSettings(
       std::move(buffer),
-      [&called](
-          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+      [&called](fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
         EXPECT_TRUE(result.ok());
         EXPECT_EQ(result.status(), ZX_OK);
         called = true;
@@ -177,7 +176,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
   bootstrap_client()->ImportSettings(
       std::move(buffer),
       [&errored](
-          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
         // Confirm that the call failed:
         ASSERT_EQ(result.status(), ZX_ERR_IO);
         ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);
@@ -212,7 +211,7 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
   bootstrap_client()->ImportSettings(
       std::move(buffer),
       [&errored](
-          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>&& result) {
+          fidl::WireUnownedResult<fuchsia_lowpan_bootstrap::Thread::ImportSettings>& result) {
         // Confirm that the call failed:
         ASSERT_EQ(result.status(), ZX_ERR_IO);
         ASSERT_EQ(result.reason(), fidl::Reason::kPeerClosed);

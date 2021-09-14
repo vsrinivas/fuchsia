@@ -301,9 +301,10 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>::
     OnRawResult(::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<
-             ::fidl_test_union::TestProtocol::
-                 StrictXUnionHenceResponseMayBeStackAllocated>(msg.error()));
+    ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                  StrictXUnionHenceResponseMayBeStackAllocated>
+        result{msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<
@@ -311,10 +312,10 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<
-           ::fidl_test_union::TestProtocol::
-               StrictXUnionHenceResponseMayBeStackAllocated>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+      result{std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -337,9 +338,11 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     OnRawResult(::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<
-             ::fidl_test_union::TestProtocol::
-                 FlexibleXUnionHenceResponseMustBeHeapAllocated>(msg.error()));
+    ::fidl::WireUnownedResult<
+        ::fidl_test_union::TestProtocol::
+            FlexibleXUnionHenceResponseMustBeHeapAllocated>
+        result{msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<
@@ -347,10 +350,10 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<
-           ::fidl_test_union::TestProtocol::
-               FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+      result{std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -376,9 +379,9 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_union::TestProtocol::
-                      StrictXUnionHenceResponseMayBeStackAllocated>&& result)
+                      StrictXUnionHenceResponseMayBeStackAllocated>& result)
         override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -393,6 +396,20 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
+}
+void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
+    StrictXUnionHenceResponseMayBeStackAllocated(
+        ::fit::callback<
+            void(::fidl::WireUnownedResult<
+                 ::fidl_test_union::TestProtocol::
+                     StrictXUnionHenceResponseMayBeStackAllocated>&& result)>
+            _cb) {
+  auto _forwarder = [_cb = std::move(_cb)](
+                        ::fidl::WireUnownedResult<
+                            ::fidl_test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>&
+                            _result) mutable { _cb(std::move(_result)); };
+  StrictXUnionHenceResponseMayBeStackAllocated(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
@@ -412,13 +429,13 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_union::TestProtocol::
-                      StrictXUnionHenceResponseMayBeStackAllocated>&& result)
+                      StrictXUnionHenceResponseMayBeStackAllocated>& result)
         override {
       if (result.ok()) {
         ::fidl::WireResponse<::fidl_test_union::TestProtocol::
                                  StrictXUnionHenceResponseMayBeStackAllocated>*
             response = result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }
@@ -495,9 +512,9 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_union::TestProtocol::
-                      FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result)
+                      FlexibleXUnionHenceResponseMustBeHeapAllocated>& result)
         override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -512,6 +529,20 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
+}
+void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
+    FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        ::fit::callback<
+            void(::fidl::WireUnownedResult<
+                 ::fidl_test_union::TestProtocol::
+                     FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result)>
+            _cb) {
+  auto _forwarder = [_cb = std::move(_cb)](
+                        ::fidl::WireUnownedResult<
+                            ::fidl_test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>&
+                            _result) mutable { _cb(std::move(_result)); };
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
@@ -531,14 +562,14 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
 
     void OnResult(::fidl::WireUnownedResult<
                   ::fidl_test_union::TestProtocol::
-                      FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result)
+                      FlexibleXUnionHenceResponseMustBeHeapAllocated>& result)
         override {
       if (result.ok()) {
         ::fidl::WireResponse<
             ::fidl_test_union::TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocated>* response =
             result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }

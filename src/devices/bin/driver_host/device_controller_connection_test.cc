@@ -126,7 +126,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
   client->BindDriver(
       ::fidl::StringView(""), std::move(vmo),
-      [](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::BindDriver>&& result) {
+      [](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::BindDriver>& result) {
         ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
         ASSERT_EQ(fidl::Reason::kUnbind, result.reason());
       });
@@ -213,7 +213,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
 
   bool unbind_successful = false;
   client->Unbind(
-      [&](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>&& result) {
+      [&](fidl::WireUnownedResult<fuchsia_device_manager::DeviceController::Unbind>& result) {
         ASSERT_OK(result.status());
         unbind_successful = result->result.is_response();
       });

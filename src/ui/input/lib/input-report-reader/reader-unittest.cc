@@ -289,7 +289,7 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
 
   // Read the report. This will hang until a report is sent.
   reader->ReadInputReports(
-      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&&
+      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
               result) {
         ASSERT_OK(result.status());
         ASSERT_FALSE(result->result.is_err());
@@ -335,7 +335,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
 
   // Queue a read.
   reader->ReadInputReports(
-      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&&
+      [&](fidl::WireUnownedResult<fuchsia_input_report::InputReportsReader::ReadInputReports>&
               result) {
         ASSERT_STATUS(ZX_ERR_CANCELED, result.status());
         ASSERT_EQ(fidl::Reason::kUnbind, result.reason());

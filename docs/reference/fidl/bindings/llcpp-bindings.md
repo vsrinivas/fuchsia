@@ -563,7 +563,7 @@ asynchronous case. `TicTacToe` has only one response context,
 should be overridden to handle responses:
 
 ```c++
-virtual void OnResult(fidl::WireUnownedResult<MakeMove>&& result) = 0;
+virtual void OnResult(fidl::WireUnownedResult<MakeMove>& result) = 0;
 virtual void OnCanceled() = 0;
 ```
 

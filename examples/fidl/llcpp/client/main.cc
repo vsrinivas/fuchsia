@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
   // Make an EchoString call, passing it a lambda to handle the result asynchronously.
   // |result| contains the method response or a transport error if applicable.
   client->EchoString("hello",
-                     [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>&& result) {
+                     [&](fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
                        ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
                                      result.error().FormatDescription().c_str());
                        auto* response = result.Unwrap();

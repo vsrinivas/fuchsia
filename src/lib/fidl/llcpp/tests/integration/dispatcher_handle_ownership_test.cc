@@ -99,7 +99,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
 
   // Test the managed overload.
   {
-    client->GetResource([&](fidl::WireUnownedResult<test::Protocol::GetResource>&& result) {
+    client->GetResource([&](fidl::WireUnownedResult<test::Protocol::GetResource>& result) {
       ASSERT_TRUE(result.ok());
       // The handles in |r| should be closed by the bindings runtime after we return.
     });
@@ -114,7 +114,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
   // Test the caller-allocating overload.
   {
     class ResponseContext final : public fidl::WireResponseContext<test::Protocol::GetResource> {
-      void OnResult(fidl::WireUnownedResult<test::Protocol::GetResource>&& r) override {
+      void OnResult(fidl::WireUnownedResult<test::Protocol::GetResource>& r) override {
         // The handles in |r| should be closed by the bindings runtime after we return.
         ASSERT_OK(r.status());
       }

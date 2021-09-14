@@ -238,7 +238,7 @@ zx_status_t CompositeDevice::TryAssemble() {
   driver_host->controller()->CreateCompositeDevice(
       std::move(coordinator_endpoints->client), std::move(device_controller_endpoints->server),
       fragments, fidl::StringView::FromExternal(name()), new_device->local_id(),
-      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateCompositeDevice>&& result) {
+      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateCompositeDevice>& result) {
         if (!result.ok()) {
           LOGF(ERROR, "Failed to create composite device: %s",
                result.error().FormatDescription().c_str());

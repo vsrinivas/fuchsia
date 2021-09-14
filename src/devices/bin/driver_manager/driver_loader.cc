@@ -87,7 +87,7 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
 
   driver_index_->WaitForBaseDrivers(
       [this, callback = std::move(callback)](
-          fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>&& result) mutable {
+          fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
         if (!result.ok()) {
           // Since IsolatedDevmgr doesn't use the ComponentFramework, DriverIndex can be
           // closed before DriverManager during tests, which would mean we would see

@@ -501,12 +501,12 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   ASSERT_FALSE(devfs_has_watchers(root_node));
 }
 
-// This functor accepts a |fidl::WireUnownedResult<FidlMethod>&&| and checks that
+// This functor accepts a |fidl::WireUnownedResult<FidlMethod>&| and checks that
 // the call completed with an application error |s| of |ZX_ERR_NOT_SUPPORTED|.
 class UnsupportedErrorMatcher {
  public:
   template <typename FidlMethod>
-  void operator()(fidl::WireUnownedResult<FidlMethod>&& result) {
+  void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
     ASSERT_OK(result.status());
     ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
   }
@@ -541,7 +541,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
     fuchsia_io::wire::DirectoryRename2Result x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
     client->Rename2("", std::move(e), "",
-                    [](fidl::WireUnownedResult<fuchsia_io::DirectoryAdmin::Rename2>&& ret) {
+                    [](fidl::WireUnownedResult<fuchsia_io::DirectoryAdmin::Rename2>& ret) {
                       ASSERT_OK(ret.status());
                       ASSERT_TRUE(ret->result.is_err());
                       ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);

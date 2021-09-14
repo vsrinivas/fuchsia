@@ -27,14 +27,14 @@ extern "C" int cpp_out_of_mem() {
 extern "C" int llcpp_channel_overflow() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  // The protocol used doesn't matter, the server endpoint of the channel isn't sent to the 
+  // The protocol used doesn't matter, the server endpoint of the channel isn't sent to the
   // component implementing the protocol and stays in the crasher process.
   auto endpoints = fidl::CreateEndpoints<fuchsia_feedback::CrashReporter>();
   fidl::WireClient<fuchsia_feedback::CrashReporter> client(std::move(endpoints->client),
                                                            loop.dispatcher());
   while (true) {
     client->File(fuchsia_feedback::wire::CrashReport(),
-                 [](fidl::WireUnownedResult<fuchsia_feedback::CrashReporter::File> &&) {});
+                 [](fidl::WireUnownedResult<fuchsia_feedback::CrashReporter::File> &) {});
   }
 
   loop.Run();

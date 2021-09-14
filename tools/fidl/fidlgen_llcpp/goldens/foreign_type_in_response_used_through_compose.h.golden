@@ -857,7 +857,7 @@ class ::fidl::WireResponseContext<
 
   virtual void OnResult(
       ::fidl::WireUnownedResult<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&&
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
           result) = 0;
 
  private:
@@ -885,6 +885,11 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<
               ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
               response)>
+          _cb);
+  void GetFoo(
+      ::fit::callback<void(::fidl::WireUnownedResult<
+                           ::fidl_test_foreigntypeinresponseusedthroughcompose::
+                               Top::GetFoo>&& result)>
           _cb);
 
   // Asynchronous variant of |Top.GetFoo()|.

@@ -135,18 +135,20 @@ namespace fidl_test_emptystruct {
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
     OnRawResult(::fidl::IncomingMessage&& msg) {
   if (unlikely(!msg.ok())) {
-    OnResult(::fidl::WireUnownedResult<
-             ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        msg.error()));
+    ::fidl::WireUnownedResult<
+        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+        result{msg.error()};
+    OnResult(result);
     return cpp17::nullopt;
   }
   ::fidl::DecodedMessage<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  OnResult(::fidl::WireUnownedResult<
-           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-      std::move(decoded)));
+  ::fidl::WireUnownedResult<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+      result{std::move(decoded)};
+  OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);
   }
@@ -189,9 +191,9 @@ void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<
-                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&&
+                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
                       result) override {
-      cb_(std::move(result));
+      cb_(result);
       delete this;
     }
 
@@ -205,6 +207,20 @@ void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, e);
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
+}
+void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive(
+        const ::fidl_test_emptystruct::wire::Empty& e,
+        ::fit::callback<void(
+            ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::
+                                          SendAndReceive>&& result)>
+            _cb) {
+  auto _forwarder =
+      [_cb = std::move(_cb)](
+          ::fidl::WireUnownedResult<
+              ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+              _result) mutable { _cb(std::move(_result)); };
+  SendAndReceive(e, std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
@@ -222,13 +238,13 @@ void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
     ResponseContext(Callback cb) : cb_(std::move(cb)) {}
 
     void OnResult(::fidl::WireUnownedResult<
-                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&&
+                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
                       result) override {
       if (result.ok()) {
         ::fidl::WireResponse<
             ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response =
             result.Unwrap();
-        cb_(std::move(response));
+        cb_(response);
       }
       delete this;
     }
