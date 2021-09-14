@@ -225,6 +225,15 @@ then skip Step 2 through 4 and perform the following workaround instead:
    fx pave
    ```
 
+### Paving or netbooting not working after Zedboot {#paving-not-working-after-zedboot}
+
+In the [Pave Fuchsia](#pave-fuchsia) section, after issuing an `fx pave`
+command, if paving does not complete, make sure the Ethernet cable used
+is connected to the Ethernet port of the NUC directly and not using an
+Ethernet to USB adapter connected to a USB port in the NUC. Even though
+Ethernet to USB adapters work after Fuchsia has been paved (for instance
+when doing `fx ota`), they do not work with Zedboot.
+
 <!-- Reference links -->
 
 [remote-management-for-nuc]: nuc-remote-management.md
