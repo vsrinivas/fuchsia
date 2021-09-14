@@ -2350,12 +2350,6 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
     return;
   }
 
-  // Walk up the tree to get to the root parent. A raw pointer is fine, as we'll recompute the root
-  // if we drop the lock below.
-  // We need the root to check if the pages are owned by the root below. Hints only apply to pages
-  // in the root that are visible to this child, not to pages the child might have forked.
-  const VmCowPages* root = GetRootLocked();
-
   uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
   uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
@@ -2373,14 +2367,6 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
     // We need to wait for the page to be faulted in. We will drop the lock as we wait.
     if (status == ZX_ERR_SHOULD_WAIT) {
       guard->CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
-
-      // The root might have gone away when the lock was dropped. Compute the root again and check
-      // if we still have a page source backing it.
-      root = GetRootLocked();
-      if (!root->page_source_) {
-        // No longer backed by a root with a page source (pager). Nothing more to do.
-        return;
-      }
 
       // The size might have changed since we dropped the lock. Adjust the range if required.
       if (start_offset >= size_locked()) {
@@ -2406,16 +2392,26 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
     if (status == ZX_OK) {
       DEBUG_ASSERT(lookup.num_pages == 1);
       vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
-      // Check to see if the page is owned by the root VMO. Hints only apply to the root.
-      if (page->object.get_object() == root) {
-        page->object.always_need = 1;
-        // Nothing more to do. The lookup must have already marked the page accessed, moving it
-        // to the head of the first page queue.
-      }
+      // The root might have gone away when the lock was dropped. HintAlwaysNeedLocked will compute
+      // the root again and check if we still have a page source backing it before applying the
+      // hint.
+      HintAlwaysNeedLocked(page);
+      // Nothing more to do. The lookup must have already marked the page accessed, moving it
+      // to the head of the first page queue.
     }
     // Can't really do anything in case an error is encountered while looking up the page. Simply
     // ignore it and move on to the next page. Hints are best effort anyway.
     start_offset += PAGE_SIZE;
+  }
+}
+
+void VmCowPages::HintAlwaysNeedLocked(vm_page_t* page) const {
+  if (!is_pager_backed_locked()) {
+    return;
+  }
+  // Check to see if the page is owned by the root VMO. Hints only apply to the root.
+  if (page->object.get_object() == GetRootLocked()) {
+    page->object.always_need = 1;
   }
 }
 

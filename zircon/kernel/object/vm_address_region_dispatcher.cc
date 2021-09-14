@@ -237,6 +237,10 @@ zx_status_t VmAddressRegionDispatcher::RangeOp(uint32_t op, vaddr_t base, size_t
     return vmar_->RangeOp(VmAddressRegion::RangeOpType::Decommit, base, len, buffer, buffer_size);
   } else if (op == ZX_VMAR_OP_MAP_RANGE) {
     return vmar_->RangeOp(VmAddressRegion::RangeOpType::MapRange, base, len, buffer, buffer_size);
+  } else if (op == ZX_VMAR_OP_DONT_NEED) {
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::DontNeed, base, len, buffer, buffer_size);
+  } else if (op == ZX_VMAR_OP_ALWAYS_NEED) {
+    return vmar_->RangeOp(VmAddressRegion::RangeOpType::AlwaysNeed, base, len, buffer, buffer_size);
   }
   return ZX_ERR_INVALID_ARGS;
 }

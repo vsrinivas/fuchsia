@@ -242,6 +242,9 @@ class VmCowPages final
   void ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len, Guard<Mutex>* guard)
       TA_REQ(lock_);
 
+  // Helper function to hint always_need on a |page| (if applicable).
+  void HintAlwaysNeedLocked(vm_page_t* page) const TA_REQ(lock_);
+
   zx_status_t LockRangeLocked(uint64_t offset, uint64_t len, zx_vmo_lock_state_t* lock_state_out);
   zx_status_t TryLockRangeLocked(uint64_t offset, uint64_t len);
   zx_status_t UnlockRangeLocked(uint64_t offset, uint64_t len);
@@ -286,6 +289,9 @@ class VmCowPages final
                                                   zx_duration_t min_duration_since_reclaimable,
                                                   list_node_t* freed_list)
       TA_EXCL(DiscardableVmosLock::Get());
+
+  // Walks up the parent tree and returns the root, or |this| if there is no parent.
+  const VmCowPages* GetRootLocked() const TA_REQ(lock_);
 
  private:
   // private constructor (use Create())
@@ -573,9 +579,6 @@ class VmCowPages final
       TA_EXCL(DiscardableVmosLock::Get());
 
   DiscardablePageCounts GetDiscardablePageCounts() const TA_EXCL(lock_);
-
-  // Walks up the parent tree and returns the root, or |this| if there is no parent.
-  const VmCowPages* GetRootLocked() const TA_REQ(lock_);
 
   // Returns the root parent's page source.
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
