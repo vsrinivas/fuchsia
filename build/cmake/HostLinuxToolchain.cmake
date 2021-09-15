@@ -37,7 +37,7 @@ if("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Linux")
   # An example would be https://gitub.com/KhronosGroup/Vulkan-Loader and
   # its "asm_offset" program.
   #
-  # NOTE: Alternatives have been tried unsuccesfully, i.e.:
+  # NOTE: Alternatives have been tried unsuccessfully, i.e.:
   #
   #  With $(set CMAKE_CROSSCOMPILING_EMULATOR), the build fails because
   #  the CMake ninja/Make script tries to find the executable in the current
