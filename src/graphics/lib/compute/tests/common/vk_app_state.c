@@ -461,9 +461,9 @@ pipeline_cache_load(const char *                  file_path,
   VkPipelineCache pipeline_cache;
   VkResult        vk_res = vkCreatePipelineCache(device,
                                           &(const VkPipelineCacheCreateInfo){
-                                            .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-                                            .initialDataSize = data_size,
-                                            .pInitialData    = data,
+                                                   .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+                                                   .initialDataSize = data_size,
+                                                   .pInitialData    = data,
                                           },
                                           allocator,
                                           &pipeline_cache);
@@ -836,21 +836,10 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
 
   if (enable_validation)
     {
-      // VK_LAYER_KHRONOS_validation is the new hotness to use, but not
-      // all Vulkan installs support it yet, so fallback to
-      // VK_LAYER_LUNARG_standard_validation if it is not available.
-      static const char * const validation_layer_names[] = {
-        "VK_LAYER_KHRONOS_validation",
-        "VK_LAYER_LUNARG_standard_validation",
-      };
-      for (uint32_t nn = 0; nn < ARRAY_SIZE(validation_layer_names); ++nn)
+      const char * layer_name = "VK_LAYER_KHRONOS_validation";
+      if (instance_info_has_layer(&instance_info, layer_name))
         {
-          const char * layer_name = validation_layer_names[nn];
-          if (instance_info_has_layer(&instance_info, layer_name))
-            {
-              string_list_append(&enabled_layers, layer_name);
-              break;
-            }
+          string_list_append(&enabled_layers, layer_name);
         }
     }
 

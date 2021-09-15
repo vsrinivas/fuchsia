@@ -31,23 +31,17 @@ vk_find_validation_layer()
   VkLayerProperties * layer_properties = malloc(layer_count * sizeof(VkLayerProperties));
   vk(EnumerateInstanceLayerProperties(&layer_count, layer_properties));
 
-  bool found_khr_validation    = false;
-  bool found_lunarg_validation = false;
+  bool found_khr_validation = false;
 
   for (uint32_t i = 0; i < layer_count; i++)
     {
       found_khr_validation = found_khr_validation || (strcmp(layer_properties[i].layerName,
                                                              "VK_LAYER_KHRONOS_validation") == 0);
-      found_lunarg_validation =
-        found_lunarg_validation ||
-        (strcmp(layer_properties[i].layerName, "VK_LAYER_LUNARG_standard_validation") == 0);
     }
 
   free(layer_properties);
 
-  return found_khr_validation
-           ? "VK_LAYER_KHRONOS_validation"
-           : found_lunarg_validation ? "VK_LAYER_LUNARG_standard_validation" : NULL;
+  return found_khr_validation ? "VK_LAYER_KHRONOS_validation" : NULL;
 }
 //
 //

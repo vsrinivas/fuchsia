@@ -64,10 +64,8 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
 
   ~VulkanInstance();
 
-  // Get the name of Vulkan validation layer. On platforms with Vulkan API
-  // < 1.1.106 only VK_LAYER_LUNARG_standard_validation is supported, while it
-  // is deprecated and we need to use VK_LAYER_KHRONOS_validation instead if
-  // possible.
+  // Get the name of Vulkan validation layer if it is supported. Otherwise
+  // return std::nullopt instead.
   static std::optional<std::string> GetValidationLayerName();
 
   // Enumerate the available instance layers.  Return true if all required

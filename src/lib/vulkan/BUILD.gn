@@ -291,11 +291,6 @@ if (is_host) {
     sources = [
       "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_khronos_validation.json",
     ]
-    if (is_linux) {
-      # On Linux we also add VkLayer_standard_validation to support Vulkan 1.0
-      # drivers.
-      sources += [ "$vulkan_host_runtime_dir/$_layers_dir/VkLayer_standard_validation.json" ]
-    }
     outputs = [ "${root_out_dir}/${vulkan_host_runtime_out_root}/${_layers_dir}/{{source_file_part}}" ]
   }
 

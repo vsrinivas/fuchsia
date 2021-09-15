@@ -137,21 +137,15 @@ bool VulkanTest::InitVulkan() {
 
   std::vector<const char*> layers;
   bool found_khr_validation = false;
-  bool found_lunarg_validation = false;
 
   for (const auto& property : layer_properties) {
     found_khr_validation =
         found_khr_validation || (strcmp(property.layerName, "VK_LAYER_KHRONOS_validation") == 0);
-    found_lunarg_validation =
-        found_lunarg_validation ||
-        (strcmp(property.layerName, "VK_LAYER_LUNARG_standard_validation") == 0);
   }
 
   // Vulkan loader is needed for loading layers.
   if (found_khr_validation) {
     layers.push_back("VK_LAYER_KHRONOS_validation");
-  } else if (found_lunarg_validation) {
-    layers.push_back("VK_LAYER_LUNARG_standard_validation");
   }
 
   VkInstanceCreateInfo create_info{
