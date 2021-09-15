@@ -175,5 +175,6 @@ DDK_PROTOCOL_DEF(HDMI,                    157, "hdmi", PF_NOPUB)
 DDK_PROTOCOL_DEF(GPU_DEPENDENCY_INJECTION, 158, "gpu-dependency-injection", 0)
 DDK_PROTOCOL_DEF(TPM_IMPL,                159, "tpm-impl", 0)
 DDK_PROTOCOL_DEF(TPM,                     160, "tpm", 0)
+DDK_PROTOCOL_DEF(CHROMEOS_ACPI,           161, "chromeos-acpi", 0)
 #undef DDK_PROTOCOL_DEF
 #endif

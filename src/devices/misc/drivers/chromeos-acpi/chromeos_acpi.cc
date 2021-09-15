@@ -38,7 +38,9 @@ zx_status_t ChromeosAcpi::Bind() {
     return status;
   }
 
-  return DdkAdd(ddk::DeviceAddArgs("chromeos_acpi").set_inspect_vmo(inspect_.DuplicateVmo()));
+  return DdkAdd(ddk::DeviceAddArgs("chromeos_acpi")
+                    .set_inspect_vmo(inspect_.DuplicateVmo())
+                    .set_proto_id(ZX_PROTOCOL_CHROMEOS_ACPI));
 }
 
 void ChromeosAcpi::DdkInit(ddk::InitTxn txn) {

@@ -11,6 +11,6 @@
   "pkg/ddk/include/lib/ddk/metadata.h": "e92fdbb682c5259a989c0c46d448e47c",
   "pkg/ddk/include/lib/ddk/mmio-buffer.h": "c367b69b7d7339ee0216b9297921eefe",
   "pkg/ddk/include/lib/ddk/phys-iter.h": "d39773b5ab2a3175193afaf0ed41f2e0",
-  "pkg/ddk/include/lib/ddk/protodefs.h": "43d768325b82b7486cb4c270ee5f339e",
+  "pkg/ddk/include/lib/ddk/protodefs.h": "9c9b74a91e3639e3dcbe054f51ad29f3",
   "pkg/ddk/include/lib/ddk/trace/event.h": "e538e7ff5318c397e0cd1dca545eadca"
 }
