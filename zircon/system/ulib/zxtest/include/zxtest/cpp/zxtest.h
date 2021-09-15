@@ -67,15 +67,15 @@
   }                                                                                               \
   _ZXTEST_BEGIN_TEST_BODY(_ZXTEST_TEST_CLASS(TestCase, Test))
 
-#define _ZXTEST_REGISTER_PARAMETERIZED(TestSuite, Test)                               \
-  _ZXTEST_TEST_CLASS_DECL(TestSuite, _ZXTEST_TEST_CLASS(TestSuite, Test));            \
-  static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor)); \
-  void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                    \
-    zxtest::Runner::GetInstance()->AddParameterizedTest<TestSuite>(                   \
-        std::make_unique<zxtest::internal::AddTestDelegateImpl<                       \
-            TestSuite, TestSuite::ParamType, _ZXTEST_TEST_CLASS(TestSuite, Test)>>(), \
-        #TestSuite, #Test, {.filename = __FILE__, .line_number = __LINE__});          \
-  }                                                                                   \
+#define _ZXTEST_REGISTER_PARAMETERIZED(TestSuite, Test)                                \
+  _ZXTEST_TEST_CLASS_DECL(TestSuite, _ZXTEST_TEST_CLASS(TestSuite, Test));             \
+  static void _ZXTEST_REGISTER_FN(TestSuite, Test)(void) __attribute__((constructor)); \
+  void _ZXTEST_REGISTER_FN(TestSuite, Test)(void) {                                    \
+    zxtest::Runner::GetInstance()->AddParameterizedTest<TestSuite>(                    \
+        std::make_unique<zxtest::internal::AddTestDelegateImpl<                        \
+            TestSuite, TestSuite::ParamType, _ZXTEST_TEST_CLASS(TestSuite, Test)>>(),  \
+        #TestSuite, #Test, {.filename = __FILE__, .line_number = __LINE__});           \
+  }                                                                                    \
   _ZXTEST_BEGIN_TEST_BODY(_ZXTEST_TEST_CLASS(TestSuite, Test))
 
 #define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test, _ZXTEST_DEFAULT_FIXTURE)

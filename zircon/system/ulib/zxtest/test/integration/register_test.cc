@@ -48,6 +48,7 @@ class ParamTestParent : public zxtest::TestWithParam<int> {};
 class ParamTestChild : public ParamTestParent {};
 
 TEST_P(ParamTestChild, EmptyTest1) {}
+TEST_P(ParamTestChild, SameName) {}
 
 INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::testing::Values(1, 3, 5, 7, 8))
 
@@ -56,6 +57,7 @@ class StringAndBoolParent : public zxtest::TestWithParam<StringAndBool> {};
 class StringAndBoolChild : public StringAndBoolParent {};
 
 TEST_P(StringAndBoolChild, ThisIsATest) {}
+TEST_P(StringAndBoolChild, SameName) {}
 
 INSTANTIATE_TEST_SUITE_P(
     APrefix, StringAndBoolChild,
