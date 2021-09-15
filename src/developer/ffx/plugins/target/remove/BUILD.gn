@@ -9,9 +9,8 @@ ffx_plugin("ffx_target_remove") {
   edition = "2018"
   with_unit_tests = true
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
   deps = [ "//src/developer/ffx/lib/errors:lib" ]
 }

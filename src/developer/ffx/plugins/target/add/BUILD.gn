@@ -9,10 +9,9 @@ ffx_plugin("ffx_target_add") {
   edition = "2018"
   with_unit_tests = true
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//third_party/rust_crates:libc",

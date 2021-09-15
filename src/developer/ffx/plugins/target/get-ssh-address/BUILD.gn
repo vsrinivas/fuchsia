@@ -15,8 +15,7 @@ ffx_plugin("ffx_get_ssh_address") {
     "//src/developer/ffx/lib/timeout:lib",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

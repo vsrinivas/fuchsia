@@ -20,8 +20,9 @@ ffx_plugin("ffx_list") {
     "//third_party/rust_crates:serde_json",
   ]
 
+  args_sources = [ "src/args.rs" ]
+
   sources = [
-    "src/args.rs",
     "src/lib.rs",
     "src/target_formatter.rs",
   ]

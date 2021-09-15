@@ -55,8 +55,9 @@ if (is_host) {
       "//src/sys/run_test_suite/ffx/test:ffx_test",
     ]
 
+    args_sources = [ "src/args.rs" ]
+
     sources = [
-      "src/args.rs",
       "src/lib.rs",
       "src/main.rs",
     ]
