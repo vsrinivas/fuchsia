@@ -2032,13 +2032,23 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
   }
 
   const auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
-    auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdd::DriverDevelopment>>(
-        dispatcher_, std::move(request), this);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-           fidl::DiscoverableProtocolName<fdd::DriverDevelopment>, zx_status_get_string(status));
-    }
-    return status;
+    fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(
+        dispatcher_, std::move(request), this,
+        [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
+           fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
+          if (info.ok()) {
+            return;
+          }
+          if (info.reason() == fidl::Reason::kPeerClosed) {
+            // For this development protocol, the client is free to disconnect
+            // at any time.
+            return;
+          }
+          LOGF(ERROR, "Error serving '%s': %s",
+               fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+               info.FormatDescription().c_str());
+        });
+    return ZX_OK;
   };
   status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
                              fbl::MakeRefCounted<fs::Service>(driver_dev));
