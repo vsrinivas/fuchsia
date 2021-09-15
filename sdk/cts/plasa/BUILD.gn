@@ -7,7 +7,14 @@ group("plasa") {
   deps = [
     ":compdb",
     ":filter_compdb",
+    ":tests",
+    "//sdk/cts/plasa/clang_doc_filter:host",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "clang_doc_filter:tests" ]
 }
 
 action("compdb") {

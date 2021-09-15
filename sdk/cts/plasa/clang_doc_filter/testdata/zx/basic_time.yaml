@@ -1,0 +1,522 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+---
+USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+Name:            'basic_time'
+Path:            'zx'
+Namespace:
+  - Type:            Namespace
+    Name:            'zx'
+    USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+DefLocation:
+  LineNumber:      223
+  Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+TagType:         Class
+ChildFunctions:
+  - USR:             '127BDE5A2BF185B0C35AE7C52CE2A596945CF48C'
+    Name:            'basic_time<kClockId>'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      225
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             'EB28ADA49EE964B8395205CECEDE8A2F77210DF4'
+    Name:            'basic_time<kClockId>'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      227
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Name:            'zx_time_t'
+        Name:            'value'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '3379E75860F85A70093D1C545DF502B6D2DF5262'
+    Name:            'basic_time<kClockId>'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      230
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'timespec'
+          USR:             'E3DFB5F99DA2BDD9D8A42D0A066B9EC9268AE758'
+          Path:            'GlobalNamespace'
+        Name:            'ts'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             'AEEEE77B00A0330D57C2BCF6FF072DFD2DB40B20'
+    Name:            'infinite'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      233
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '0D7934A13DB6A47312A21B17C869E8B9EF218601'
+    Name:            'infinite_past'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      237
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '5FE9AB58DF067621FF2C3F6A15D434ABC6238857'
+    Name:            'get'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      241
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Name:            'zx_time_t'
+    Access:          Public
+  - USR:             'CBFF7D11ED7A9413427E1F84053DA831DFBBE6F2'
+    Name:            'get_address'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      243
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Name:            'zx_time_t *'
+    Access:          Public
+  - USR:             '09BD5256D403A01A6B5319CF6510C328A6B34596'
+    Name:            'operator-'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      245
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '741F9133DC36DD244D4A46FC1B06A9F6D293FCF0'
+    Name:            'operator+'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      249
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'delta'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '3D7CA56A31E6BC49EB9C6A224BD87AA6403A0763'
+    Name:            'operator-'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      253
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'delta'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '1E1D3FCC569B7DF1768C2F5F6DFF2B313EF94EF6'
+    Name:            'operator+='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      257
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'delta'
+    ReturnType:
+      Type:
+        Name:            'basic_time<kClockId> &'
+    Access:          Public
+  - USR:             '63F7529627E147FA2F952F31593E342507E196C4'
+    Name:            'operator-='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      262
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'delta'
+    ReturnType:
+      Type:
+        Name:            'basic_time<kClockId> &'
+    Access:          Public
+  - USR:             '29C5610023B4E3D5DDD4DBCD9C02415B4AB6EB7C'
+    Name:            'operator=='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      267
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             'D6713CA42CF20F79326CEF274A6D670C9A27A4F4'
+    Name:            'operator!='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      268
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '52C0FAFC20D1EF8D2A89450A9FAA07F9DB1F5C45'
+    Name:            'operator<'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      269
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '3ED868F73D2865C0FD36214F005799277648FE61'
+    Name:            'operator<='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      270
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '9E4BA96DA462652CEAB15911A2BD015B0102EB95'
+    Name:            'operator>'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      271
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '91A906A2BA4DC326B41C2A4BDEB307F33761043C'
+    Name:            'operator>='
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      272
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'basic_time'
+          USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             'B159CCC78158EAF73C091E9032CA0D7903D75FB3'
+    Name:            'to_timespec'
+    Namespace:
+      - Type:            Record
+        Name:            'basic_time'
+        USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      275
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'basic_time'
+      USR:             'C815C3A1A88F3D9E058B80A108A3DDF4CDF0E78B'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'timespec'
+        USR:             'E3DFB5F99DA2BDD9D8A42D0A066B9EC9268AE758'
+        Path:            'GlobalNamespace'
+    Access:          Public
+...

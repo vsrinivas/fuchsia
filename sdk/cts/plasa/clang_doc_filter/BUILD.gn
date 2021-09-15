@@ -1,0 +1,82 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  go_library("gopkg") {
+    sources = [
+      "main.go",
+      "model.go",
+      "report.go",
+    ]
+    deps = [ "//third_party/golibs:gopkg.in/yaml.v2" ]
+  }
+
+  go_binary("clang_doc_filter") {
+    gopackage = "go.fuchsia.dev/fuchsia/sdk/cts/plasa/clang_doc_filter"
+    deps = [ ":gopkg" ]
+  }
+
+  go_library("clang_doc_filter_test_lib") {
+    testonly = true
+    sources = [
+      "model_test.go",
+      "report_test.go",
+    ]
+    deps = [
+      ":gopkg",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
+  }
+
+  _testdata_path = "${target_gen_dir}/testdata"
+
+  go_test("clang_doc_filter_test") {
+    output_name = "clang_doc_filter_test"
+    gopackages = [ "go.fuchsia.dev/fuchsia/sdk/cts/plasa/clang_doc_filter" ]
+    args = [
+      "--test_data_dir",
+      rebase_path(_testdata_path),
+    ]
+    deps = [ ":clang_doc_filter_test_lib" ]
+    non_go_deps = [
+      ":testdatadir",
+      ":testdatafiles",
+    ]
+  }
+
+  host_test_data("testdatafiles") {
+    sources = [
+      "testdata/@nonymous_record_FFBFAD8A3BBD799586600B40A3453BBD95900F13.yaml",
+      "testdata/GlobalNamespace/index.yaml",
+      "testdata/zx/basic_time.yaml",
+      "testdata/zx/bti.yaml",
+      "testdata/zx/channel.yaml",
+      "testdata/zx/clock.yaml",
+      "testdata/zx/debuglog.yaml",
+      "testdata/zx/duration.yaml",
+    ]
+    outputs = [ "${_testdata_path}/files/{{source_file_part}}" ]
+  }
+
+  host_test_data("testdatadir") {
+    sources = [ "testdata/zx/channel.yaml" ]
+    outputs = [ "${_testdata_path}/dir/{{source_file_part}}" ]
+  }
+}  # is_host
+
+install_host_tools("host") {
+  deps = [ ":clang_doc_filter" ]
+  outputs = [ "clang_doc_filter" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":clang_doc_filter_test($host_toolchain)" ]
+}

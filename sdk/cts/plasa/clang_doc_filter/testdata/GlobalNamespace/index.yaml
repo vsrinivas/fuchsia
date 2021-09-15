@@ -1,0 +1,3030 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+---
+USR:             '0000000000000000000000000000000000000000'
+ChildNamespaces:
+  - Type:            Namespace
+    Name:            'zx'
+    USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'async'
+    USR:             'DFE28A02B7AEB64D027029057AE43E158A4CB53D'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'cpp17'
+    USR:             'D6B41D1AB944B36813DB5B76710F2F597945D380'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'cpp20'
+    USR:             'B5B209A465DFD2B8C1F2B6243B73B3682149EAFA'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'cpp23'
+    USR:             '35DAB0A95987D7A948BF0F79783C50130E51B630'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'fit'
+    USR:             '62239C75785B111BAE0B85A36B88CD4EA2D889F8'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'fpromise'
+    USR:             'C116FF6156C280703464E62517CA9FAB6843780E'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'fidl'
+    USR:             '41AE1E701191D6BEB4051E77970773621E921264'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'fuchsia'
+    USR:             '896A8493E1D63ACB02CCE69BED1BE134C8ADED2B'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'images'
+    USR:             'EDB629129412F09A956E20EC462686D47980CB80'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'inspect'
+    USR:             '83DAE728CFC6BD34EC3493A9C3455F567FE6BE57'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'vfs'
+    USR:             '2A1E78A7772E4F79B47F2131A83EA0DD64594762'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'sys'
+    USR:             '8478662C2941F80AB4DB0DDA1B7C46A7A9777445'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'loop_fixture'
+    USR:             '54427135CC938485DD61F98320FE2555C7470A09'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'media'
+    USR:             '10926BCE8B17815FA3720B8E2A63004C91C9F1D3'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'modular'
+    USR:             'BAA3EB8BFD6DC0FDAB9FA5018EDAD969B90CD3FF'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'modular_testing'
+    USR:             'A8EF8803DEAC848FFF5C3CC16C8A64029AF19C54'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'scenic'
+    USR:             'DE37967DFE1B8DB8C0DCD8A72829BD6D94BFF9AB'
+    IsInGlobalNamespace: true
+  - Type:            Namespace
+    Name:            'measure_tape'
+    USR:             '3FFA0C5D3E6C90D689057E7864AE342326181539'
+    IsInGlobalNamespace: true
+ChildRecords:
+  - Type:            Record
+    Name:            'async_dispatcher'
+    USR:             '3B02573D5C135590A1EA6CF7A80B48423A5AB347'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_guest_bell_trap'
+    USR:             '3E8609B828453A7BE9ABD42D1A060AD0371829E5'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_wait'
+    USR:             '9D43D4DAFA90AB48BE23B9C3FE91E9DF5726A6DF'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_task'
+    USR:             'B14236A6A4B7AEBE7457207ED3E3A93C5F7FC976'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_receiver'
+    USR:             'D37EF77FC5073A69FE1D6145CA1E9F34F04ED1F5'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_irq'
+    USR:             'A0BF39F7F26BAF0BA13FE686546C1331AC792E36'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_paged_vmo'
+    USR:             '8C98A3ABF9A68544B047599A65FDBD41DE340A42'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_state_t'
+    USR:             'EF80D6EA11500AA3A1120BB76950163B29E06CC1'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_ops'
+    USR:             '42D73B40D142CC46DD82740908FF8DB114F2C17C'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_loop'
+    USR:             '054EEA256A745F057D649604DED8C21B8D625850'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_loop_default_accessors_t'
+    USR:             '08192023AD6E68380EF32B7D6433E29DA4D20EFB'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'async_loop_config'
+    USR:             'F3585BA857B469CDE0F35F0D10A65E8D4E700FF3'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlStructElementHeader'
+    USR:             '1A5417D43635DDBF070A31ABF760F5EC4B0E85B8'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlStructField'
+    USR:             'E5786E9A2B3BB6DC99895A6133E6038C16963833'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlStructPadding'
+    USR:             '1D147B7EC0D943853C012D16AED32ABEF4CC32D3'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlStructElement'
+    USR:             '1BB6DFB201CDCABB52CBE803BF5D47813A4626CC'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlTableField'
+    USR:             'FF6E214FEF5362F72C78D116CF75A4D33C8E5D67'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlXUnionField'
+    USR:             '13138785D8D8F6C240E8697080EF919F879E5D81'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedPrimitive'
+    USR:             '2550CD7186DC093D067D8D9EF5C51B076850A1B8'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedEnum'
+    USR:             '2DE405F13C1613AE0BD655BD71F07E4CD44B1076'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedBits'
+    USR:             'EDD1D638AB951196BCD7D1CAC32E698E51CCEEF5'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedStruct'
+    USR:             'E642899D1E5C9768E1B4C4BBA3EB5D43373C78A1'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedStructPointer'
+    USR:             '3DD09ABD4C1D46BC224434F36B4A66225B095403'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedTable'
+    USR:             '568DD1803AFDCC30A35AEB097EA31B8E629F3202'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedXUnion'
+    USR:             'CE19F0AB2A89A8BC9E344D01E0DE860434EED964'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedArray'
+    USR:             'C029E66C6F0B191B8F4851B188D3A71B7B476263'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedHandle'
+    USR:             '295F25DE8A2287753A56E67A26A03294CD48A73E'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedString'
+    USR:             'F0D66097854716F51378E5EE5418B760C2AF50CD'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlCodedVector'
+    USR:             'B4D4E8F1CD057AA4935DDEFB926F9FCECF240F47'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'fidl_type'
+    USR:             '0AE1D23726DCCEB7A9348FB6DA163B317DB4C3F0'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'FidlHasTypeTag'
+    USR:             'A064164D9051ADFF60BBD89E22AC0ABD15428203'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'fidl_trace_tag'
+    USR:             '7DED4D1F2B70C264E6C1D77D6C0DF9344D6E89E8'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'fdio_namespace'
+    USR:             '40B01ACEAA36C2ED596AFBF23B00651334A7CB66'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'fdio_flat_namespace'
+    USR:             '99898C57C3A79E3C0B24C3537191CD39DC3D8827'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'fdio'
+    USR:             'E9315C86F2EF9AACC01365696ACB6CB2586820DF'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'zxio_tag'
+    USR:             '70092F7FD7F5B426ACC967DFC3A9FA070CA1EDBE'
+    Path:            'GlobalNamespace'
+  - Type:            Record
+    Name:            'zxio_storage'
+    USR:             'F16A81D0D161230A2B81248894F860BBFB44D4FF'
+    Path:            'GlobalNamespace'
+ChildFunctions:
+  - USR:             'B3AB0FB27DB95328C2C5CA4E38C85F51BE9BD080'
+    Name:            'async_loop_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Creates a message loop and returns a pointer to it in |out_loop|.'
+              - Kind:            'TextComment'
+                Text:            ' All operations on the message loop are thread-safe (except destroy).'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Note that it''s ok to run the loop on a different thread from the one'
+              - Kind:            'TextComment'
+                Text:            ' upon which it was created.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |config| provides configuration for the message loop. Must not be null.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| on success.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NO_MEMORY| if allocation failed.'
+              - Kind:            'TextComment'
+                Text:            ' May return other errors if the necessary internal handles could not be created.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See also |kAsyncLoopConfigNeverAttachToThread|,'
+              - Kind:            'TextComment'
+                Text:            ' |kAsyncLoopConfigAttachToCurrentThread|, and'
+              - Kind:            'TextComment'
+                Text:            ' |kAsyncLoopConfigNoAttachToCurrentThread|.'
+    Location:
+      - LineNumber:      97
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'const async_loop_config_t *'
+        Name:            'config'
+      - Type:
+          Name:            'async_loop_t **'
+        Name:            'out_loop'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '62777ACFBD236C6D13687593E4C1644BB3A1AA6B'
+    Name:            'async_loop_get_dispatcher'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Gets the message loop''s asynchronous dispatch interface.'
+    Location:
+      - LineNumber:      100
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'async_dispatcher_t *'
+  - USR:             '32A8173D0D9EB45FB3284EE9BB273DB19C3ED52E'
+    Name:            'async_loop_from_dispatcher'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Gets the message loop associated with the specified asynchronous dispatch interface'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This function assumes the dispatcher is backed by an |async_loop_t| which was created'
+              - Kind:            'TextComment'
+                Text:            ' using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher'
+              - Kind:            'TextComment'
+                Text:            ' implementations.'
+    Location:
+      - LineNumber:      107
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+    ReturnType:
+      Type:
+        Name:            'async_loop_t *'
+  - USR:             '0A4B1491A825386D04B74538431DC72F0804DF76'
+    Name:            'async_loop_shutdown'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Shuts down the message loop, notifies handlers which asked to handle shutdown.'
+              - Kind:            'TextComment'
+                Text:            ' The message loop must not currently be running on any threads other than'
+              - Kind:            'TextComment'
+                Text:            ' those started by |async_loop_start_thread()| which this function will join.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Does nothing if already shutting down.'
+    Location:
+      - LineNumber:      114
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             '56D968398C2FB9760501876AFFF46C5B9777CEBB'
+    Name:            'async_loop_destroy'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Destroys the message loop.'
+              - Kind:            'TextComment'
+                Text:            ' Implicitly calls |async_loop_shutdown()| and joins all threads started'
+              - Kind:            'TextComment'
+                Text:            ' using |async_loop_start_thread()| before destroying the loop itself.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If `make_default_for_current_thread` was true in the config used to create'
+              - Kind:            'TextComment'
+                Text:            ' the loop, then this method must be called on the same thread that called'
+              - Kind:            'TextComment'
+                Text:            ' async_loop_create.'
+    Location:
+      - LineNumber:      123
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             '3214C0A2046716F6ABF516CFA949EF3556D10D1C'
+    Name:            'async_loop_run'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Runs the message loop on the current thread.'
+              - Kind:            'TextComment'
+                Text:            ' This function can be called on multiple threads to setup a multi-threaded'
+              - Kind:            'TextComment'
+                Text:            ' dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Dispatches events until the |deadline| expires or the loop is quitted.'
+              - Kind:            'TextComment'
+                Text:            ' Use |ZX_TIME_INFINITE| to dispatch events indefinitely.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If |once| is true, performs a single unit of work then returns.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the dispatcher returns after one cycle.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_TIMED_OUT| if the deadline expired.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_CANCELED| if the loop quitted.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.'
+    Location:
+      - LineNumber:      138
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+      - Type:
+          Name:            'zx_time_t'
+        Name:            'deadline'
+      - Type:
+          Name:            '_Bool'
+        Name:            'once'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '3A983CBEF66F87C4E3936010D9568F05E953724F'
+    Name:            'async_loop_run_until_idle'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Dispatches events until there are none remaining, and then returns without'
+              - Kind:            'TextComment'
+                Text:            ' waiting. This is useful for unit testing, because the behavior doesn''t depend'
+              - Kind:            'TextComment'
+                Text:            ' on time.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the dispatcher reaches an idle state.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_CANCELED| if the loop quitted.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.'
+    Location:
+      - LineNumber:      147
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '7D76968E93727102086C40808776C3F8079C9484'
+    Name:            'async_loop_quit'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Quits the message loop.'
+              - Kind:            'TextComment'
+                Text:            ' Active invocations of |async_loop_run()| and threads started using'
+              - Kind:            'TextComment'
+                Text:            ' |async_loop_start_thread()| will eventually terminate upon completion of their'
+              - Kind:            'TextComment'
+                Text:            ' current unit of work.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Subsequent calls to |async_loop_run()| or |async_loop_start_thread()|'
+              - Kind:            'TextComment'
+                Text:            ' will return immediately until |async_loop_reset_quit()| is called.'
+    Location:
+      - LineNumber:      156
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             '584254D96982DD879CEB19875B418B2265307B0E'
+    Name:            'async_loop_reset_quit'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Resets the quit state of the message loop so that it can be restarted'
+              - Kind:            'TextComment'
+                Text:            ' using |async_loop_run()| or |async_loop_start_thread()|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This function must only be called when the message loop is not running.'
+              - Kind:            'TextComment'
+                Text:            ' The caller must ensure all active invocations of |async_loop_run()| and'
+              - Kind:            'TextComment'
+                Text:            ' threads started using |async_loop_start_thread()| have terminated before'
+              - Kind:            'TextComment'
+                Text:            ' resetting the quit state.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the loop''s state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the loop''s state was |ASYNC_LOOP_SHUTDOWN| or if'
+              - Kind:            'TextComment'
+                Text:            ' the message loop is currently active on one or more threads.'
+    Location:
+      - LineNumber:      169
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '1C267B6D50615116FAEF63090DE8C211A210976A'
+    Name:            'async_loop_get_state'
+    Location:
+      - LineNumber:      176
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'async_loop_state_t'
+  - USR:             '69372AFE9F8DD6FA8D35A3781CC87482DDB1AF19'
+    Name:            'async_loop_start_thread'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Starts a message loop running on a new thread.'
+              - Kind:            'TextComment'
+                Text:            ' The thread will run until the loop quits.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |name| is the desired name for the new thread, may be NULL.'
+              - Kind:            'TextComment'
+                Text:            ' If |out_thread| is not NULL, it is set to the new thread identifier.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| on success.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NO_MEMORY| if allocation or thread creation failed.'
+    Location:
+      - LineNumber:      187
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+      - Type:
+          Name:            'const char *'
+        Name:            'name'
+      - Type:
+          Name:            'thrd_t *'
+        Name:            'out_thread'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '34FCF470AB3B5B9BE68CC6D92C4C9166071A712D'
+    Name:            'async_loop_join_threads'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Blocks until all dispatch threads started with |async_loop_start_thread()|'
+              - Kind:            'TextComment'
+                Text:            ' have terminated.'
+    Location:
+      - LineNumber:      191
+        Filename:        '../../zircon/system/ulib/async-loop/include/lib/async-loop/loop.h'
+    Params:
+      - Type:
+          Name:            'async_loop_t *'
+        Name:            'loop'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             '5A000A77F3EDDAAD23E0B53378AE1DA94F94B99A'
+    Name:            'async_post_task'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Posts a task to run on or after its deadline following all posted'
+              - Kind:            'TextComment'
+                Text:            ' tasks with lesser or equal deadlines.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The task''s handler will be invoked exactly once unless the task is canceled.'
+              - Kind:            'TextComment'
+                Text:            ' When the dispatcher is shutting down (being destroyed), the handlers of'
+              - Kind:            'TextComment'
+                Text:            ' all remaining tasks will be invoked with a status of |ZX_ERR_CANCELED|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the task was successfully posted.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      51
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/task.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_task_t *'
+        Name:            'task'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'FCD1D365CCC35B97453A1921E424F3CB1226F7E8'
+    Name:            'async_cancel_task'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Cancels the task associated with |task|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If successful, the task''s handler will not run.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the task was pending and it has been successfully'
+              - Kind:            'TextComment'
+                Text:            ' canceled; its handler will not run again and can be released immediately.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_FOUND| if there was no pending task either because it'
+              - Kind:            'TextComment'
+                Text:            ' already ran, had not been posted, or has been dequeued and is pending'
+              - Kind:            'TextComment'
+                Text:            ' execution (perhaps on another thread).'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      65
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/task.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_task_t *'
+        Name:            'task'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '6B195A90B70303BC55BBCB022FB2636306440CA9'
+    Name:            'async_bind_irq'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Begins asynchronously waiting on an IRQ specified in |irq|.'
+              - Kind:            'TextComment'
+                Text:            ' Invokes the handler when the wait completes.'
+              - Kind:            'TextComment'
+                Text:            ' The wait''s handler will be invoked exactly once unless the wait is canceled.'
+              - Kind:            'TextComment'
+                Text:            ' When the dispatcher is shutting down (being destroyed), the handlers of'
+              - Kind:            'TextComment'
+                Text:            ' all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the wait was successfully begun.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      43
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/irq.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_irq_t *'
+        Name:            'irq'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'D2EB726802EDCC194AB05ED7176066E1955C2148'
+    Name:            'async_unbind_irq'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Unbinds the IRQ associated with |irq|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If successful, the IRQ will be unbound from the async loop.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the IRQ has been successfully unbound.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      53
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/irq.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_irq_t *'
+        Name:            'irq'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '895088A60016808103E765F2A1464F4F20BA411F'
+    Name:            'async_create_paged_vmo'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Create a pager owned VMO.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+              - Kind:            'TextComment'
+                Text:            ' Other error values are possible. See the documentation for'
+              - Kind:            'TextComment'
+                Text:            ' |zx_pager_create_vmo()|.'
+    Location:
+      - LineNumber:      46
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/paged_vmo.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_paged_vmo_t *'
+        Name:            'paged_vmo'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'options'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'pager'
+      - Type:
+          Name:            'uint64_t'
+        Name:            'vmo_size'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'vmo_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '81BB2F36E9C0D41B33FE33828E15231EEA24C661'
+    Name:            'async_detach_paged_vmo'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Detach ownership of VMO from pager.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_HANDLE| if pager or vmo is not a valid handle.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_WRONG_TYPE| if pager is not a pager handle or vmo is not a vmo handle.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_INVALID_ARGS| if vmo is not a vmo created from pager.'
+              - Kind:            'TextComment'
+                Text:            ' Other error values are possible. See the documentation for'
+              - Kind:            'TextComment'
+                Text:            ' |zx_detach_paged_vmo()|.'
+    Location:
+      - LineNumber:      58
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/paged_vmo.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_paged_vmo_t *'
+        Name:            'paged_vmo'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '2CECF8DA6BD782C76067964B396C8656FD056A4E'
+    Name:            'async_queue_packet'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Enqueues a packet of data for delivery to a receiver.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |data| will be copied into the packet.  May be NULL to create a'
+              - Kind:            'TextComment'
+                Text:            ' zero-initialized packet payload.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the packet was successfully enqueued.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      45
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/receiver.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_receiver_t *'
+        Name:            'receiver'
+      - Type:
+          Name:            'const zx_packet_user_t *'
+        Name:            'data'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '37A0875684E0573FF88493DEA5D29A88D6B74BBD'
+    Name:            'async_now'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns the current time in the dispatcher''s timebase.'
+              - Kind:            'TextComment'
+                Text:            ' For most loops, this is generally obtained from |ZX_CLOCK_MONOTONIC|'
+              - Kind:            'TextComment'
+                Text:            ' but certain loops may use a different tiembase, notably for testing.'
+    Location:
+      - LineNumber:      15
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/time.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+    ReturnType:
+      Type:
+        Name:            'zx_time_t'
+  - USR:             'E524C7FD1B91F076B712C8C5706EE7D87CAF5D4E'
+    Name:            'async_set_guest_bell_trap'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Sets a bell trap in the guest to be handled asynchronously via a handler.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |guest| is the handle of the guest the trap will be set on.'
+              - Kind:            'TextComment'
+                Text:            ' |addr| is the base address for the trap in the guest''s physical address space.'
+              - Kind:            'TextComment'
+                Text:            ' |length| is the size of the trap in the guest''s physical address space.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the trap was successfully set.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_ACCESS_DENIED| if the guest does not have |ZX_RIGHT_WRITE|.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_ALREADY_EXISTS| if a bell trap with the same |addr| exists.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_INVALID_ARGS| if |addr| or |length| are invalid.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_OUT_OF_RANGE| if |addr| or |length| are out of range of the'
+              - Kind:            'TextComment'
+                Text:            ' address space.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_WRONG_TYPE| if |guest| is not a handle to a guest.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      50
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/trap.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_guest_bell_trap_t *'
+        Name:            'trap'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'guest'
+      - Type:
+          Name:            'zx_vaddr_t'
+        Name:            'addr'
+      - Type:
+          Name:            'size_t'
+        Name:            'length'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '2B212ECAC1504BB62653BECEA405816D9977DFF6'
+    Name:            'async_begin_wait'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Begins asynchronously waiting for an object to receive one or more signals'
+              - Kind:            'TextComment'
+                Text:            ' specified in |wait|.  Invokes the handler when the wait completes.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The wait''s handler will be invoked exactly once unless the wait is canceled.'
+              - Kind:            'TextComment'
+                Text:            ' When the dispatcher is shutting down (being destroyed), the handlers of'
+              - Kind:            'TextComment'
+                Text:            ' all remaining waits will be invoked with a status of |ZX_ERR_CANCELED|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the wait was successfully begun.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_ACCESS_DENIED| if the object does not have |ZX_RIGHT_WAIT|.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      56
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/wait.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_wait_t *'
+        Name:            'wait'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '3F7FF95A0F4FC9EBFDB3E6828B4412DB94CD9629'
+    Name:            'async_cancel_wait'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Cancels the wait associated with |wait|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If successful, the wait''s handler will not run.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_OK| if the wait was pending and it has been successfully'
+              - Kind:            'TextComment'
+                Text:            ' canceled; its handler will not run again and can be released immediately.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it'
+              - Kind:            'TextComment'
+                Text:            ' already completed, had not been started, or its completion packet has been'
+              - Kind:            'TextComment'
+                Text:            ' dequeued from the port and is pending delivery to its handler (perhaps on'
+              - Kind:            'TextComment'
+                Text:            ' another thread).'
+              - Kind:            'TextComment'
+                Text:            ' Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This operation is thread-safe.'
+    Location:
+      - LineNumber:      71
+        Filename:        '../../zircon/system/ulib/async/include/lib/async/wait.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+      - Type:
+          Name:            'async_wait_t *'
+        Name:            'wait'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '4E301F1BCD069FB6DB51FF84BA679702D259AD91'
+    Name:            'fidl_encode'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See'
+              - Kind:            'TextComment'
+                Text:            ' https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg'
+    Location:
+      - LineNumber:      21
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'max_handles'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'out_actual_handles'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'F89D822FD983219B4075DED12BA483BCD85CE9A1'
+    Name:            'fidl_encode_etc'
+    Location:
+      - LineNumber:      24
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'zx_handle_disposition_t *'
+        Name:            'handle_dispositions'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'max_handle_dispositions'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'out_actual_handle_dispositions'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'F75172E53BBE2439B75204D412115A1FE5EFADAB'
+    Name:            'fidl_encode_msg'
+    Location:
+      - LineNumber:      28
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'fidl_outgoing_msg_byte_t *'
+        Name:            'msg'
+      - Type:
+          Name:            'uint32_t *'
+        Name:            'out_actual_handles'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '418AA4EF6963B26F0A04BF851B9442DF646E8872'
+    Name:            'fidl_decode_etc'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Perform a fidl_decode and check handle types and rights against the types and rights specified'
+              - Kind:            'TextComment'
+                Text:            ' in the FIDL file.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' It is an error for a zx_handle_info_t to contain a handle type that does not match what is'
+              - Kind:            'TextComment'
+                Text:            ' expected from FIDL unless either the expected or actual type is ZX_OBJ_TYPE_NONE.'
+              - Kind:            'TextComment'
+                Text:            ' It is also error if there are fewer actual rights than expected rights and the actual or'
+              - Kind:            'TextComment'
+                Text:            ' expected rights are not ZX_RIGHT_SAME_RIGHTS. If there are more actual rights than expected'
+              - Kind:            'TextComment'
+                Text:            ' rights, the actual rights will be reduced to the expected rights via a call to'
+              - Kind:            'TextComment'
+                Text:            ' zx_handle_replace.'
+    Location:
+      - LineNumber:      40
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'const zx_handle_info_t *'
+        Name:            'handle_infos'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handle_infos'
+      - Type:
+          Name:            'const char **'
+        Name:            'error_msg_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '1E10BCACD09430C04255E7EEF37B20D347B1E480'
+    Name:            'internal_fidl_decode_etc__v2__may_break'
+    Location:
+      - LineNumber:      43
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'const zx_handle_info_t *'
+        Name:            'handle_infos'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handle_infos'
+      - Type:
+          Name:            'const char **'
+        Name:            'error_msg_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '59A77154228CA75BCCF4C4660B38CA887B12DB4B'
+    Name:            'internal__fidl_decode_etc_hlcpp__v2__may_break'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Perform a fidl_decode_etc as input for HLCPP (leave unknown handles in flexible resource types'
+              - Kind:            'TextComment'
+                Text:            ' intact instead of closing them, add offsets to unknown envelopes).'
+              - Kind:            'TextComment'
+                Text:            ' IT MAY BREAK AT ANY TIME OR BE REMOVED WITHOUT NOTICE.'
+    Location:
+      - LineNumber:      52
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'const zx_handle_info_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+      - Type:
+          Name:            'const char **'
+        Name:            'error_msg_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'FEB15D71616C1D7BDE4C31E1D77350268CC8CBA4'
+    Name:            'fidl_decode_msg'
+    Location:
+      - LineNumber:      57
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'fidl_incoming_msg_t *'
+        Name:            'msg'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '435738A318A313D28252AE013646339D3C19571A'
+    Name:            'fidl_validate'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Validates an encoded message against the given |type|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |bytes| are not modified.'
+    Location:
+      - LineNumber:      63
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'const void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '626B3CBA40E33841C2DC2799E2902FB1830AE2F7'
+    Name:            'fidl_validate_msg'
+    Location:
+      - LineNumber:      65
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'const fidl_outgoing_msg_byte_t *'
+        Name:            'msg'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '775FB640A458F59EDCA1D34B7039391408D54943'
+    Name:            'internal__fidl_validate__v2__may_break'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Validates an encoded message against the given |type|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |bytes| are not modified.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This is a version of the FIDL validator that validates against the v2 wire format.'
+              - Kind:            'TextComment'
+                Text:            ' IT MAY BREAK AT ANY TIME OR BE REMOVED WITHOUT NOTICE.'
+    Location:
+      - LineNumber:      74
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'const void *'
+        Name:            'bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_bytes'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '77BA374D48DFA9979A64C781C9AA4C924512B01F'
+    Name:            'fidl_validate_string'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Validates a FIDL string, and verifies that it is a well-formed UTF-8 code'
+              - Kind:            'TextComment'
+                Text:            ' unit sequence. That is respect the UTF-8 encoding, and be formed solely of'
+              - Kind:            'TextComment'
+                Text:            ' unicode scalar value, i.e. any Unicode code point except high-surrogate'
+              - Kind:            'TextComment'
+                Text:            ' and low-surrogate code points.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |data| is not modified.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See also http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404'
+    Location:
+      - LineNumber:      86
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const char *'
+        Name:            'data'
+      - Type:
+          Name:            'uint64_t'
+        Name:            'size'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'F599BF751D6BD6D6DAED4F17922C8B88C5CE23C2'
+    Name:            'fidl_format_type_name'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Stores the name of a fidl type into the provided buffer.'
+              - Kind:            'TextComment'
+                Text:            ' Truncates the name if it is too long to fit into the buffer.'
+              - Kind:            'TextComment'
+                Text:            ' Returns the number of characters written into the buffer.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Note: This function does not write a trailing NUL.'
+    Location:
+      - LineNumber:      93
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'char *'
+        Name:            'buffer'
+      - Type:
+          Name:            'size_t'
+        Name:            'capacity'
+    ReturnType:
+      Type:
+        Name:            'size_t'
+  - USR:             '2701E1A6F33DE5D91491B780CA7CD0793DAAA652'
+    Name:            'fidl_close_handles'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Traverses a decoded FIDL message starting at |value|, closing all handles within it.'
+              - Kind:            'TextComment'
+                Text:            ' If the message is non-contiguous in memory, the function will follow pointers and close handles'
+              - Kind:            'TextComment'
+                Text:            ' in any scattered out-of-line objects.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Handle values in |value| are replaced with ZX_HANDLE_INVALID.'
+    Location:
+      - LineNumber:      104
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/coding.h'
+    Params:
+      - Type:
+          Name:            'const fidl_type_t *'
+        Name:            'type'
+      - Type:
+          Name:            'void *'
+        Name:            'value'
+      - Type:
+          Name:            'const char **'
+        Name:            'out_error_msg'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'FA878F1A84805481C122F7F14AC33EC934324801'
+    Name:            'FidlHandleCloseMany'
+    Location:
+      - LineNumber:      39
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/internal.h'
+    Params:
+      - Type:
+          Name:            'const zx_handle_t *'
+        Name:            'handles'
+      - Type:
+          Name:            'size_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '6890433C9D10FA1ABDBB99BDF7B3DAF1292BAC1A'
+    Name:            'FidlHandleDispositionCloseMany'
+    Location:
+      - LineNumber:      40
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/internal.h'
+    Params:
+      - Type:
+          Name:            'const zx_handle_disposition_t *'
+        Name:            'handle_dispositions'
+      - Type:
+          Name:            'size_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '620EB3D49D5215D29C35C1D32C8D2BF5CDA729C5'
+    Name:            'FidlHandleInfoCloseMany'
+    Location:
+      - LineNumber:      42
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/internal.h'
+    Params:
+      - Type:
+          Name:            'const zx_handle_info_t *'
+        Name:            'handle_infos'
+      - Type:
+          Name:            'size_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'E7F0640351A39C89721307B34D53D344E01A0C78'
+    Name:            'FidlEnsureHandleRights'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Checks that the handle meets specified type and rights requirements. If the'
+              - Kind:            'TextComment'
+                Text:            ' handle has execess rights, the rights will be reduced to the required rights.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The handle pointed to by |handle_ptr| may be overwritten. If it is overwritten,'
+              - Kind:            'TextComment'
+                Text:            ' the original handle will be closed.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' For details on rules used for these checks, see the implementation.'
+    Location:
+      - LineNumber:      113
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/internal.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'handle_ptr'
+      - Type:
+          Name:            'zx_rights_t'
+        Name:            'actual_type'
+      - Type:
+          Name:            'zx_obj_type_t'
+        Name:            'actual_rights'
+      - Type:
+          Name:            'zx_obj_type_t'
+        Name:            'required_object_type'
+      - Type:
+          Name:            'zx_rights_t'
+        Name:            'required_rights'
+      - Type:
+          Name:            'const char **'
+        Name:            'error'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '2C14F60F3A5EBEE85299EACFDD8383B3F0C77A91'
+    Name:            'FidlHandleDispositionsToHandleInfos'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Converts an array of |zx_handle_disposition_t| to an array of |zx_handle_info_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This behaves similarly to what happens when a handle is written using'
+              - Kind:            'TextComment'
+                Text:            ' zx_channel_write_etc and then read using zx_channel_read_etc.'
+              - Kind:            'TextComment'
+                Text:            ' The handle type and rights are checked and the output handle may have reduced'
+              - Kind:            'TextComment'
+                Text:            ' rights if the input has excess rights.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This takes ownership of the input handles.'
+    Location:
+      - LineNumber:      125
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/internal.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_disposition_t *'
+        Name:            'handle_dispositions'
+      - Type:
+          Name:            'zx_handle_info_t *'
+        Name:            'handle_infos'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'num_handles'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '3821DC66746532D9A97BFCDF280FFC0B83803FD3'
+    Name:            'fidl_init_txn_header'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' TODO(fxbug.dev/38643): make this inline'
+              - Kind:            'TextComment'
+                Text:            ' Initialize a txn header as per the Transaction Header v3 proposal (FTP-037)'
+    Location:
+      - LineNumber:      14
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/txn_header.h'
+    Params:
+      - Type:
+          Name:            'fidl_message_header_t *'
+        Name:            'out_hdr'
+      - Type:
+          Name:            'zx_txid_t'
+        Name:            'txid'
+      - Type:
+          Name:            'uint64_t'
+        Name:            'ordinal'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             'F6BD4B1F6EBCA29A1D2997C40347F36B66676C7B'
+    Name:            'fidl_validate_txn_header'
+    Location:
+      - LineNumber:      16
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/txn_header.h'
+    Params:
+      - Type:
+          Name:            'const fidl_message_header_t *'
+        Name:            'hdr'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'A90E4DA335BFFDF5C019C01196759482ACAF038A'
+    Name:            'fidl_epitaph_write'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Sends an epitaph with the given values down the channel.'
+              - Kind:            'TextComment'
+                Text:            ' See'
+              - Kind:            'TextComment'
+                Text:            ' https://fuchsia.dev/fuchsia-src/development/languages/fidl/languages/c.md#fidl_epitaph_write'
+    Location:
+      - LineNumber:      17
+        Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/epitaph.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'channel'
+      - Type:
+          Name:            'zx_status_t'
+        Name:            'error'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'D1131CB63A2553ACE1717860A2A80255A14BDFC2'
+    Name:            'fdio_ns_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Create a new, empty namespace'
+    Location:
+      - LineNumber:      17
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t **'
+        Name:            'out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'D20EE8B11DA93B17909BC1566228C7C125AF8AB1'
+    Name:            'fdio_ns_destroy'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Destroy and deallocate a namespace.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If the namespace is in-use, it will be destroyed once it is'
+              - Kind:            'TextComment'
+                Text:            ' no longer referenced.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' This function always returns |ZX_OK|.'
+    Location:
+      - LineNumber:      25
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'FC73AA42CC60977DF360C7D85D9E267C01AF69BE'
+    Name:            'fdio_ns_bind'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Create a new directory within a namespace, bound to the'
+              - Kind:            'TextComment'
+                Text:            ' directory-protocol-compatible handle h'
+              - Kind:            'TextComment'
+                Text:            ' The path must be an absolute path, like "/x/y/z", containing'
+              - Kind:            'TextComment'
+                Text:            ' no "." nor ".." entries.  It is relative to the root of the'
+              - Kind:            'TextComment'
+                Text:            ' namespace.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Ownership of |h| is transferred to |ns|: it is closed on error.'
+    Location:
+      - LineNumber:      34
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'h'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'A5B67AB976D5189227EB45D3FA663036E5F39368'
+    Name:            'fdio_ns_unbind'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Unbinds |path| from a namespace, closing the handle within |ns| that'
+              - Kind:            'TextComment'
+                Text:            ' corresponds to that path when all references to the node go out of scope.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns ZX_ERR_NOT_FOUND if |path| is not a remote.'
+              - Kind:            'TextComment'
+                Text:            ' Returns ZX_ERR_NOT_SUPPORTED if |path| is the root of the namespace.'
+              - Kind:            'TextComment'
+                Text:            ' Returns ZX_ERR_INVALID_ARGS if |path| is otherwise invalid.'
+    Location:
+      - LineNumber:      42
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '2A993B6FFE0F313CFEFBDB75362EB76D13961C94'
+    Name:            'fdio_ns_is_bound'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Whether |path| is bound to a remote directory in |ns|.'
+    Location:
+      - LineNumber:      45
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+  - USR:             '5AAE96104C6BEB039DC6C42D68CCB677647248F5'
+    Name:            'fdio_ns_bind_fd'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Create a new directory within a namespace, bound to the'
+              - Kind:            'TextComment'
+                Text:            ' directory referenced by the file descriptor fd.'
+              - Kind:            'TextComment'
+                Text:            ' The path must be an absolute path, like "/x/y/z", containing'
+              - Kind:            'TextComment'
+                Text:            ' no "." nor ".." entries.  It is relative to the root of the'
+              - Kind:            'TextComment'
+                Text:            ' namespace.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |fd| is borrowed by this function, but is not closed on success or error.'
+              - Kind:            'TextComment'
+                Text:            ' Closing the fd after success does not affect namespace.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Failures:'
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_BAD_STATE: Namespace is already in use and immutable.'
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ALREADY_EXISTS: There is already a mounted directory there.'
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED: This path would shadow a mounted directory.'
+    Location:
+      - LineNumber:      60
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'DC9902098327FF9B42FA5CFAE0FC931EDC5D500A'
+    Name:            'fdio_ns_opendir'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Open the root directory of the namespace as a file descriptor'
+    Location:
+      - LineNumber:      63
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+    ReturnType:
+      Type:
+        Name:            'int'
+  - USR:             '605F6AE50E256D160370D595BF999AEC23AD2660'
+    Name:            'fdio_ns_chdir'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' chdir to / in the provided namespace'
+    Location:
+      - LineNumber:      66
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'E30E69559EDAF61DB373986B89CD3342D802B8B9'
+    Name:            'fdio_ns_get_installed'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Retrieve the fdio "global" namespace (if any).'
+    Location:
+      - LineNumber:      69
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t **'
+        Name:            'ns'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'A063D0C5C8A20BCEADB86A14CD47DA29389CEE81'
+    Name:            'fdio_ns_export'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' On success the caller takes ownership of a fdio_flat_namespace_t'
+              - Kind:            'TextComment'
+                Text:            ' containing a flat representation of the exported namespace (the'
+              - Kind:            'TextComment'
+                Text:            ' one provided in ''ns'' or the active root namespace, respectively.)'
+              - Kind:            'TextComment'
+                Text:            ' The handles are CLONEs of the handles in the namespace and also'
+              - Kind:            'TextComment'
+                Text:            ' belong to the caller.'
+              - Kind:            'TextComment'
+                Text:            ' The whole data structure can be released with fdio_ns_free_flat_ns().'
+    Location:
+      - LineNumber:      89
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'fdio_flat_namespace_t **'
+        Name:            'out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'DD2C12C6BDE2B09ED456C9F187643C8B177F7FEE'
+    Name:            'fdio_ns_export_root'
+    Location:
+      - LineNumber:      90
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_flat_namespace_t **'
+        Name:            'out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '061982164EAF2031B00110457B0FA22C2AA20BD6'
+    Name:            'fdio_ns_connect'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Attempt to connect to a service through the namespace.'
+              - Kind:            'TextComment'
+                Text:            ' The handle is always consumed.  It will be closed on error'
+              - Kind:            'TextComment'
+                Text:            ' or passed to the remote service on success.'
+              - Kind:            'TextComment'
+                Text:            ' The path must be an absolute path starting with / and containing'
+              - Kind:            'TextComment'
+                Text:            ' no ".." or "." or empty segments.'
+    Location:
+      - LineNumber:      97
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_ns_t *'
+        Name:            'ns'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'zxflags'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'h'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '93DB10F7128776B936A99E8DC5C5D1BB70ED048A'
+    Name:            'fdio_ns_free_flat_ns'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Frees a flat namespace.'
+              - Kind:            'TextComment'
+                Text:            ' Closes all handles contained within |ns|.'
+    Location:
+      - LineNumber:      101
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/namespace.h'
+    Params:
+      - Type:
+          Name:            'fdio_flat_namespace_t *'
+        Name:            'ns'
+    ReturnType:
+      Type:
+        Name:            'void'
+  - USR:             'E9B85520937A9DCC0648813836363C2BE8674A9D'
+    Name:            'fdio_fd_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Create a file descriptor from a |zx_handle_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |handle| must be to a channel, socket, vmo, or debuglog object.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If the |zx_handle_t| is a channel, then the channel must implement the'
+              - Kind:            'TextComment'
+                Text:            ' |fuchsia.io.Node| protocol.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' For more precise control over which file descriptor is allocated, consider'
+              - Kind:            'TextComment'
+                Text:            ' using |fdio_create| and |fdio_bind_to_fd|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |handle|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, |fd_out| contains a file descriptor that can be used to access'
+              - Kind:            'TextComment'
+                Text:            ' |handle|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' TODO: Catalog errors.'
+    Location:
+      - LineNumber:      31
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fd.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'handle'
+      - Type:
+          Name:            'int *'
+        Name:            'fd_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'B6E2F47CF9CB66A722FC94D3D2D9F58B4CB285E9'
+    Name:            'fdio_cwd_clone'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Clones the current working directory.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, |out_handle| contains a handle that represents the current'
+              - Kind:            'TextComment'
+                Text:            ' working directory. This handle is suitable for transferring to another'
+              - Kind:            'TextComment'
+                Text:            ' process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED: The cwd cannot be represented as a |zx_handle_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_BAD_STATE: The cwd cannot be cloned in its current state.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ACCESS_DENIED: The cwd has insufficient rights to clone the underlying'
+              - Kind:            'TextComment'
+                Text:            ' object.'
+    Location:
+      - LineNumber:      47
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fd.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'out_handle'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '0DB34A04BEFC392D0F71660B58918B15F9FA281C'
+    Name:            'fdio_fd_clone'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Clones a file descriptor.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, |out_handle| contains a handle that represents the given file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor. This handle is suitable for transferring to another process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |fd| is not modified by this function.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED: |fd| cannot be represented as a |zx_handle_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_BAD_STATE: |fd| cannot be cloned in its current state.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying'
+              - Kind:            'TextComment'
+                Text:            ' object.'
+    Location:
+      - LineNumber:      66
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fd.h'
+    Params:
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'out_handle'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '59E8669AB754F3344DB82917E7AC58C76B695007'
+    Name:            'fdio_fd_transfer'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Prepares a file descriptor for transfer to another process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon return, the given file descriptor has been removed from the file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor table for this process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, |out_handle| contains a handle that represents the given file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_UNAVAILABLE: |fd| is busy or has been dup''ed and therefore is'
+              - Kind:            'TextComment'
+                Text:            ' referenced by multiple entries in the file descriptor table.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED: |fd| cannot be represented as a |zx_handle_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_BAD_STATE: |fd| cannot be transferred to another process in its'
+              - Kind:            'TextComment'
+                Text:            ' current state.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying'
+              - Kind:            'TextComment'
+                Text:            ' object.'
+    Location:
+      - LineNumber:      90
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fd.h'
+    Params:
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'out_handle'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'C661C0C95F0C1BBFDB9BC92FC09264C4C8301BAA'
+    Name:            'fdio_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Creates an |fdio_t| from a |zx_handle_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |handle| must be to a channel, socket, vmo, or debuglog object.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If the |zx_handle_t| is a channel, then the channel must implement the'
+              - Kind:            'TextComment'
+                Text:            ' |fuchsia.io.Node| protocol.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |handle|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' TODO: Catalog errors.'
+    Location:
+      - LineNumber:      31
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'handle'
+      - Type:
+          Name:            'fdio_t **'
+        Name:            'out_io'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '4A9DBC85E02A983355023171D2BAA45E379ACA63'
+    Name:            'fdio_null_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Creates an |fdio_t| that does nothing.'
+    Location:
+      - LineNumber:      34
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    ReturnType:
+      Type:
+        Name:            'fdio_t *'
+  - USR:             'BEBF87E55B47275680E73F912065A373C7CCA253'
+    Name:            'fdio_get_zxio'
+    Location:
+      - LineNumber:      38
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'fdio_t *'
+        Name:            'io'
+    ReturnType:
+      Type:
+        Name:            'zxio_t *'
+  - USR:             '38F114618E75E63F752AA5B616BC86A70A10026A'
+    Name:            'fdio_fd_create_null'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Creates a file descriptor that does nothing.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns -1 and sets errno if the function is unable to create the file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor (e.g., if the file descriptor table is full).'
+    Location:
+      - LineNumber:      44
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    ReturnType:
+      Type:
+        Name:            'int'
+  - USR:             'B4906372368D80164E983933F59075F1E1E9B8A8'
+    Name:            'fdio_bind_to_fd'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Install an |fdio_t| in the file descriptor table for this process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If fd >= 0, request a specific fd, and starting_fd is ignored.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If fd '
+              - Kind:            'TextComment'
+                Text:            '<'
+              - Kind:            'TextComment'
+                Text:            ' 0, request the first available fd >= starting_fd.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, returns the allocated file descriptor. Returns -1 on failure.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always takes ownership of the given reference to the |fdio_t|. Upon success,'
+              - Kind:            'TextComment'
+                Text:            ' that reference is owned by the file descriptor table. Upon failure, the'
+              - Kind:            'TextComment'
+                Text:            ' reference is released.'
+    Location:
+      - LineNumber:      57
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'fdio_t *'
+        Name:            'io'
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+      - Type:
+          Name:            'int'
+        Name:            'starting_fd'
+    ReturnType:
+      Type:
+        Name:            'int'
+  - USR:             '787706C837F091D75185FD9A7D6A401A82D46166'
+    Name:            'fdio_unbind_from_fd'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Removes a file descriptor from the file descriptor table for this process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, the |fdio_t| underlying the file descriptor is returned in'
+              - Kind:            'TextComment'
+                Text:            ' |io_out|, and the caller receives ownership of one reference to |fdio_t|.'
+              - Kind:            'TextComment'
+                Text:            ' Specifically, the caller is responsible for calling |fdio_unsafe_release|'
+              - Kind:            'TextComment'
+                Text:            ' upon success.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_UNAVAILABLE: |fd| is busy or has been dup''ed and therefore is'
+              - Kind:            'TextComment'
+                Text:            ' referenced by multiple entries in the file descriptor table.'
+    Location:
+      - LineNumber:      72
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+      - Type:
+          Name:            'fdio_t **'
+        Name:            'io_out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '25B7B03EE904FD2FA6504057EF20B218F562F3B2'
+    Name:            'fdio_get_service_handle'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' If this fd represents a "service" (an rpc channel speaking'
+              - Kind:            'TextComment'
+                Text:            ' an unknown fidl protocol or a fuchsia.io.* protocol),'
+              - Kind:            'TextComment'
+                Text:            ' this call will return ZX_OK and return the underlying handle.'
+              - Kind:            'TextComment'
+                Text:            ' On both success and failure, the fd is effectively closed.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED is returned if this fd does not represent'
+              - Kind:            'TextComment'
+                Text:            ' a FIDL transport'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_UNAVAILABLE is returned if this fd has been dup()''d and'
+              - Kind:            'TextComment'
+                Text:            ' duplicates are sharing the FIDL transport'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' TODO: Can also return ZX_ERR_NOT_FOUND. Maybe should be ZX_ERR_INVALID_ARGS?'
+              - Kind:            'TextComment'
+                Text:            ' TODO: This function appears to work only for |fuchsia.io| protocols now.'
+              - Kind:            'TextComment'
+                Text:            ' Should we rename it to something like |fdio_take_remote|?'
+    Location:
+      - LineNumber:      88
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'int'
+        Name:            'fd'
+      - Type:
+          Name:            'zx_handle_t *'
+        Name:            'out'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '1552AFA8290BCDD6C3A47828805D9E3BB91328EE'
+    Name:            'fdio_zxio_create'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Creates an |fdio_t| that is backed by a |zxio_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |zxio_t| is initialized with a null ops table. The |zxio_storage_t| for'
+              - Kind:            'TextComment'
+                Text:            ' the |zxio_t| is returned via |out_storage|. The client can re-initialize the'
+              - Kind:            'TextComment'
+                Text:            ' |zxio_storage_t| to customize the behavior of the |zxio_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The returned |zxio_storage_t| is valid for the lifetime of the returned'
+              - Kind:            'TextComment'
+                Text:            ' |fdio_t|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' To bind the |fdio_t| to a file descriptor, use |fdio_bind_to_fd|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, the caller receives ownership of one reference to |fdio_t|.'
+              - Kind:            'TextComment'
+                Text:            ' Specifically, the caller is responsible for calling |fdio_unsafe_release|'
+              - Kind:            'TextComment'
+                Text:            ' upon success.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon failure, returns NULL.'
+    Location:
+      - LineNumber:      111
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/fdio.h'
+    Params:
+      - Type:
+          Name:            'zxio_storage_t **'
+        Name:            'out_storage'
+    ReturnType:
+      Type:
+        Name:            'fdio_t *'
+  - USR:             '0F7EB506749B329F0A584B9FE83BA4958F1A457A'
+    Name:            'fdio_service_connect'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Connects to a service at the given |path|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |path| is looked up in the namespace for the current process. If found in'
+              - Kind:            'TextComment'
+                Text:            ' the namespace, the object at the path is opened, passing the |request| to'
+              - Kind:            'TextComment'
+                Text:            ' the remote party.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, the |request| is handed off to the remote party. The operation'
+              - Kind:            'TextComment'
+                Text:            ' completes asynchronously, which means a ZX_OK result does not ensure that the'
+              - Kind:            'TextComment'
+                Text:            ' requested service actually exists.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |request| must be a channel.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |request|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_INVALID_ARGS: |path| is invalid.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_FOUND: A prefix of |path| cannot be found in the namespace for the'
+              - Kind:            'TextComment'
+                Text:            ' current process.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_NOT_SUPPORTED: The requested |path| was found in the namespace for the'
+              - Kind:            'TextComment'
+                Text:            ' current process but the namespace entry does not support connecting to'
+              - Kind:            'TextComment'
+                Text:            ' services.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ACCESS_DENIED: The namespace entry has insufficient rights to connect'
+              - Kind:            'TextComment'
+                Text:            ' to services.'
+    Location:
+      - LineNumber:      45
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'B13B582856548C0A3397B9E54C89AFA599DB8FE3'
+    Name:            'fdio_service_connect_at'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Connects to a service at the given |path| relative to the given |directory|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, the |request| is handed off to the remote party. The operation'
+              - Kind:            'TextComment'
+                Text:            ' completes asynchronously, which means a ZX_OK result does not ensure that the'
+              - Kind:            'TextComment'
+                Text:            ' requested service actually exists.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |directory| must be a channel that implements the |fuchsia.io.Directory|'
+              - Kind:            'TextComment'
+                Text:            ' protocol.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |request| must be a channel.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |request|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_INVALID_ARGS: |directory| or |path| is invalid.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' ZX_ERR_ACCESS_DENIED: |directory| has insufficient rights to connect to'
+              - Kind:            'TextComment'
+                Text:            ' services.'
+    Location:
+      - LineNumber:      66
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'directory'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'D2AC7A42F8D2464DB81897ACA7F81088F632D3AD'
+    Name:            'fdio_service_connect_by_name'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Connect to a service named |name| in /svc.'
+    Location:
+      - LineNumber:      70
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'const char *'
+        Name:            'name'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '25C8E75C989717F027B9894B15B3D15C224EE7E1'
+    Name:            'fdio_open'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Opens the remote object at the given |path| relative to the root of the namespace with the given'
+              - Kind:            'TextComment'
+                Text:            ' |flags| asynchronously.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |flags| is a bit field of |fuchsia.io.OPEN_*|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |request|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See |fdio_service_connect| for details.'
+    Location:
+      - LineNumber:      80
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             'DC7E18EECAB86072E21211E28BAD8F718C29BC10'
+    Name:            'fdio_open_at'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Opens the remote object at the given |path| relative to the given |directory| with the given'
+              - Kind:            'TextComment'
+                Text:            ' |flags| asynchronously.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |flags| is a bit field of |fuchsia.io.OPEN_*|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Always consumes |request|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See |fdio_service_connect_at| for details.'
+    Location:
+      - LineNumber:      90
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'directory'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '370AE30BB6B99DF3929F00BAD22FD290F4628E98'
+    Name:            'fdio_open_fd'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Opens the remote object at the given |path| relative to the root of the namespace with the given'
+              - Kind:            'TextComment'
+                Text:            ' |flags| synchronously, and on success, binds that channel to a file descriptor, returned via'
+              - Kind:            'TextComment'
+                Text:            ' |out_fd|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Note that unlike fdio_open, this function is synchronous. This is because it produces a file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor, which requires synchronously waiting for the open to complete.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |flags| is a bit field of |fuchsia.io.OPEN_*|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See |fdio_service_connect| for details.'
+    Location:
+      - LineNumber:      103
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'int *'
+        Name:            'out_fd'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '0E55B3716CD3628956E470ED86E6D842D3B871E7'
+    Name:            'fdio_open_fd_at'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Opens the remote object at the given |path| relative to the given |dir_fd| with the given |flags|'
+              - Kind:            'TextComment'
+                Text:            ' synchronously, and on success, binds that channel to a file descriptor, returned via |out_fd|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Note that unlike fdio_open, this function is synchronous. This is because it produces a file'
+              - Kind:            'TextComment'
+                Text:            ' descriptor, which requires synchronously waiting for the open to complete.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |flags| is a bit field of |fuchsia.io.OPEN_*|.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' See |fdio_service_connect| fort details.'
+    Location:
+      - LineNumber:      114
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'int'
+        Name:            'dir_fd'
+      - Type:
+          Name:            'const char *'
+        Name:            'path'
+      - Type:
+          Name:            'uint32_t'
+        Name:            'flags'
+      - Type:
+          Name:            'int *'
+        Name:            'out_fd'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '9AC2A684B001C6126E3698F9F3CCB9D7CDC6F2AA'
+    Name:            'fdio_service_clone'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Clone the given |node| asynchronously.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |node| must be a channel that implements the |fuchsia.io.Node| protocol.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, returns a handle to a newly created channel whose remote'
+              - Kind:            'TextComment'
+                Text:            ' endpoint has been sent to |node| as a request for a clone.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |node| is cloned as readable and writable.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon failure, returns |ZX_HANDLE_INVALID|.'
+    Location:
+      - LineNumber:      126
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'node'
+    ReturnType:
+      Type:
+        Name:            'zx_handle_t'
+  - USR:             'BB80BD8D023F16E3E7ABFB8A4D898D35393124C7'
+    Name:            'fdio_service_clone_to'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Requests that |request| be connected to a clone of the given |node|'
+              - Kind:            'TextComment'
+                Text:            ' asynchronously.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |node| must be a channel that implements the |fuchsia.io.Node| protocol.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |request| must be a channel.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Upon success, |request| has been sent to |node| as a request for a clone.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' The |node| is cloned as readable and writable.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' # Errors'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' |ZX_ERR_INVALID_ARGS|: |node| or |request| is invalid.'
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Returns transport- and application-level errors associated with'
+              - Kind:            'TextComment'
+                Text:            ' |fuchsia.io.Node/Clone|.'
+    Location:
+      - LineNumber:      145
+        Filename:        '../../sdk/lib/fdio/include/lib/fdio/directory.h'
+    Params:
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'node'
+      - Type:
+          Name:            'zx_handle_t'
+        Name:            'request'
+    ReturnType:
+      Type:
+        Name:            'zx_status_t'
+  - USR:             '0FBEEFA1218BFC051B80C2CF4FAF5A9A54B3AC9A'
+    Name:            'async_get_default_dispatcher'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Gets the current thread''s default asynchronous dispatcher interface.'
+              - Kind:            'TextComment'
+                Text:            ' Returns |NULL| if none.'
+    Location:
+      - LineNumber:      15
+        Filename:        '../../zircon/system/ulib/async-default/include/lib/async/default.h'
+    ReturnType:
+      Type:
+        Name:            'async_dispatcher_t *'
+  - USR:             '4D95ADF3FBCFAE71E7BE4687DDF5C98FFF8EBB3F'
+    Name:            'async_set_default_dispatcher'
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            ' Sets the current thread''s default asynchronous dispatcher interface.'
+              - Kind:            'TextComment'
+                Text:            ' May be set to |NULL| if this thread doesn''t have a default dispatcher.'
+    Location:
+      - LineNumber:      19
+        Filename:        '../../zircon/system/ulib/async-default/include/lib/async/default.h'
+    Params:
+      - Type:
+          Name:            'async_dispatcher_t *'
+        Name:            'dispatcher'
+    ReturnType:
+      Type:
+        Name:            'void'
+ChildEnums:
+  - USR:             '6B818A9B022C5A7FEB6658FB3DD7DD8D5793327B'
+    Name:            'fidl_trigger_tag'
+    DefLocation:
+      LineNumber:      17
+      Filename:        '../../zircon/system/ulib/fidl/include/lib/fidl/trace.h'
+    Members:
+      - 'kFidlTriggerWillLLCPPInPlaceEncode'
+      - 'kFidlTriggerDidLLCPPInPlaceEncode'
+      - 'kFidlTriggerWillLLCPPLinearizeAndEncode'
+      - 'kFidlTriggerDidLLCPPLinearizeAndEncode'
+      - 'kFidlTriggerWillLLCPPDecode'
+      - 'kFidlTriggerDidLLCPPDecode'
+      - 'kFidlTriggerWillLLCPPChannelWrite'
+      - 'kFidlTriggerDidLLCPPChannelWrite'
+      - 'kFidlTriggerWillLLCPPChannelCall'
+      - 'kFidlTriggerDidLLCPPChannelCall'
+      - 'kFidlTriggerWillLLCPPAsyncChannelRead'
+      - 'kFidlTriggerDidLLCPPAsyncChannelRead'
+      - 'kFidlTriggerWillHLCPPEncode'
+      - 'kFidlTriggerDidHLCPPEncode'
+      - 'kFidlTriggerWillHLCPPDecode'
+      - 'kFidlTriggerDidHLCPPDecode'
+      - 'kFidlTriggerWillHLCPPValidate'
+      - 'kFidlTriggerDidHLCPPValidate'
+      - 'kFidlTriggerWillHLCPPChannelWrite'
+      - 'kFidlTriggerDidHLCPPChannelWrite'
+      - 'kFidlTriggerWillHLCPPChannelRead'
+      - 'kFidlTriggerDidHLCPPChannelRead'
+      - 'kFidlTriggerWillHLCPPChannelCall'
+      - 'kFidlTriggerDidHLCPPChannelCall'
+      - 'kFidlTriggerWillCChannelRead'
+      - 'kFidlTriggerDidCChannelRead'
+      - 'kFidlTriggerWillCChannelWrite'
+      - 'kFidlTriggerDidCChannelWrite'
+...

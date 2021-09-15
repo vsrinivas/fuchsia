@@ -1,0 +1,67 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+---
+USR:             'FFBFAD8A3BBD799586600B40A3453BBD95900F13'
+ChildFunctions:
+  - USR:             'DE4219B4EBCD5FB82A13035273F215075C547552'
+    Name:            'ValueUnion_image_id'
+    Namespace:
+      - Type:            Record
+        Name:            'ValueUnion_image_id'
+        USR:             'FFBFAD8A3BBD799586600B40A3453BBD95900F13'
+      - Type:            Record
+        Name:            'CreateImageArgs'
+        USR:             '201F944BF146137ACB0C8E895205416BF99B9F00'
+      - Type:            Namespace
+        Name:            'composition'
+        USR:             'A86998690543EDEE91CFC5975CAEBE88388774C9'
+      - Type:            Namespace
+        Name:            'ui'
+        USR:             'D35B1B8BF2DD859E75B1CBC7D00F83CCF5B29EA2'
+      - Type:            Namespace
+        Name:            'fuchsia'
+        USR:             '896A8493E1D63ACB02CCE69BED1BE134C8ADED2B'
+    DefLocation:
+      LineNumber:      1675
+      Filename:        'fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'ValueUnion_image_id'
+      USR:             'FFBFAD8A3BBD799586600B40A3453BBD95900F13'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '8FC415ED162141230A4A57F3D9C61290D44BCAB9'
+    Name:            '~ValueUnion_image_id'
+    Namespace:
+      - Type:            Record
+        Name:            'ValueUnion_image_id'
+        USR:             'FFBFAD8A3BBD799586600B40A3453BBD95900F13'
+      - Type:            Record
+        Name:            'CreateImageArgs'
+        USR:             '201F944BF146137ACB0C8E895205416BF99B9F00'
+      - Type:            Namespace
+        Name:            'composition'
+        USR:             'A86998690543EDEE91CFC5975CAEBE88388774C9'
+      - Type:            Namespace
+        Name:            'ui'
+        USR:             'D35B1B8BF2DD859E75B1CBC7D00F83CCF5B29EA2'
+      - Type:            Namespace
+        Name:            'fuchsia'
+        USR:             '896A8493E1D63ACB02CCE69BED1BE134C8ADED2B'
+    DefLocation:
+      LineNumber:      1676
+      Filename:        'fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition/hlcpp/fuchsia/ui/composition/cpp/fidl.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'ValueUnion_image_id'
+      USR:             'FFBFAD8A3BBD799586600B40A3453BBD95900F13'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+...

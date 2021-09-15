@@ -1,0 +1,811 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+---
+USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+Name:            'duration'
+Path:            'zx'
+Namespace:
+  - Type:            Namespace
+    Name:            'zx'
+    USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+DefLocation:
+  LineNumber:      18
+  Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+TagType:         Class
+ChildFunctions:
+  - USR:             '6A9FF13D73FE23B66B35CD32B79116BAABD10D0C'
+    Name:            'duration'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      20
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '7AB7BFE65A9DADABC1F0D0A697CF34C47D03B1C4'
+    Name:            'duration'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      22
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'zx_duration_t'
+        Name:            'value'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '58708F063BDF19CDF0827284EAEEBFD648277F9D'
+    Name:            'duration'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      25
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'timespec'
+          USR:             'E3DFB5F99DA2BDD9D8A42D0A066B9EC9268AE758'
+          Path:            'GlobalNamespace'
+        Name:            'ts'
+    ReturnType:
+      Type:
+        Name:            'void'
+    Access:          Public
+  - USR:             '87C2B3BDB136D68012E28CAAE0BB0F637EB4BEE3'
+    Name:            'infinite'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      28
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '373B69012E2D02064AE92E0B53A29E30990BEF5B'
+    Name:            'infinite_past'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      30
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '726D5EBD9A03EBCDA3F7C26371B64610161A224A'
+    Name:            'get'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      32
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'zx_duration_t'
+    Access:          Public
+  - USR:             '01D3456BEAD46E9C74F8CC966EDBBBD105C56BDA'
+    Name:            'operator+'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      34
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             'C893EC23D80807679EFFC76B3066BA707AD47A8F'
+    Name:            'operator-'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      38
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '61605EAE068424756C5C3AE8EB1B903E5139EC0A'
+    Name:            'operator*'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      42
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'multiplier'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '915B5DAA381C7DD8F1B01BA01B2227F0F16F30DB'
+    Name:            'operator/'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      46
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'divisor'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '30D6D296022A96F1F20B4CE78E4BEB0023763497'
+    Name:            'operator/'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      48
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             '86524AE2B21E510D96D92EC73392781FA81727FB'
+    Name:            'operator%'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      50
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'divisor'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+        Path:            'zx'
+    Access:          Public
+  - USR:             '2DEC103CB73D31066E83884C25EEF0B2BA55AC81'
+    Name:            'operator%'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      52
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             '4CC708687787D4DFCEDFEE967B292EFFD4E04937'
+    Name:            'operator+='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      54
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'class zx::duration &'
+    Access:          Public
+  - USR:             '21E5CA9A383207C7363A1025EB4C45202EBEF799'
+    Name:            'operator-='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      59
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            'class zx::duration &'
+    Access:          Public
+  - USR:             'B97EAAC10410AAA35B2B01B79FDD05B661C7B0E8'
+    Name:            'operator*='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      64
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'multiplier'
+    ReturnType:
+      Type:
+        Name:            'class zx::duration &'
+    Access:          Public
+  - USR:             '7258DE53CE01356E7DA97C18630AC30B7B3D7C6F'
+    Name:            'operator/='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      69
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'divisor'
+    ReturnType:
+      Type:
+        Name:            'class zx::duration &'
+    Access:          Public
+  - USR:             '4F2E2E6DF5E0FB87D1336FAC0920479871D7AAAA'
+    Name:            'operator%='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      74
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Name:            'int64_t'
+        Name:            'divisor'
+    ReturnType:
+      Type:
+        Name:            'class zx::duration &'
+    Access:          Public
+  - USR:             '14E5826751A6BE0183C1308DFFD18C12040C138B'
+    Name:            'operator=='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      79
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '9DFEE9D26512518F95A0A7935C78D120FE1EABC4'
+    Name:            'operator!='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      80
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             'F59895F39A895BF94070FBB020637B6593E85D68'
+    Name:            'operator<'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      81
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             'E5087F70AA0679947F38CF5854F85580728DC28B'
+    Name:            'operator<='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      82
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '9EA457B8FF463F95162E5EDBC5052457FE42E197'
+    Name:            'operator>'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      83
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '2A38FA9D0DC0C9E37A1FE666FB113BC512CD7CB1'
+    Name:            'operator>='
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      84
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    Params:
+      - Type:
+          Type:            Record
+          Name:            'duration'
+          USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+          Path:            'zx'
+        Name:            'other'
+    ReturnType:
+      Type:
+        Name:            '_Bool'
+    Access:          Public
+  - USR:             '7C95712441500E7E0A3EEAC044C1319CF97D732C'
+    Name:            'to_nsecs'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      86
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             'DB25EA7FB2A9A5E99F21E2FCEA80D3ADED5C432A'
+    Name:            'to_usecs'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      88
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             'F3FD0727B3AE202213D52C468B231594172E5C97'
+    Name:            'to_msecs'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      90
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             '4D05EC51389710FFAD0C0591DD034C32F6272FDE'
+    Name:            'to_secs'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      92
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             'E461B5DC6EBDAEDEC94CC9EEACBE822929AF4138'
+    Name:            'to_mins'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      94
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             'BEEAE7A41F0EA79968B9F2980763FE6EBD15A471'
+    Name:            'to_hours'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      96
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Name:            'int64_t'
+    Access:          Public
+  - USR:             'A4ACAFE2B1EAB0A159BA7B97A729AFEBB81D2EDD'
+    Name:            'to_timespec'
+    Namespace:
+      - Type:            Record
+        Name:            'duration'
+        USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+      - Type:            Namespace
+        Name:            'zx'
+        USR:             '974DB69EAA597679E9D6D298DBC977FCF28F223B'
+    DefLocation:
+      LineNumber:      99
+      Filename:        '../../zircon/system/ulib/zx/include/lib/zx/time.h'
+    IsMethod:        true
+    Parent:
+      Type:            Record
+      Name:            'duration'
+      USR:             'F2CC4597A0F0746A69374F940AA625B6F0560114'
+    ReturnType:
+      Type:
+        Type:            Record
+        Name:            'timespec'
+        USR:             'E3DFB5F99DA2BDD9D8A42D0A066B9EC9268AE758'
+        Path:            'GlobalNamespace'
+    Access:          Public
+...
