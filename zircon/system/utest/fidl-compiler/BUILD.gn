@@ -33,6 +33,7 @@ if (current_toolchain != default_toolchain) {
       "flat_ast_tests.cc",
       "flexible_tests.cc",
       "formatter_tests.cc",
+      "generated_name_tests.cc",
       "handle_tests.cc",
       "json_diagnostics_tests.cc",
       "json_findings_tests.cc",
