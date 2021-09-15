@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "definitions": {
+        "envelope": {
+            "additionalProperties": false,
+            "description": "A versioned envelope.",
+            "properties": {
+                "data": {
+                    "description": "The payload."
+                },
+                "schema_id": {
+                    "description": "The value of the '$id' property of the schema that constraints this JSON document.",
+                    "minLength": 1,
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "schema_id"
+            ],
+            "type": "object"
+        }
+    },
+    "id": "https://fuchsia.dev/schema/common-00000000.json"
+}
