@@ -640,7 +640,9 @@ clone_and_build "${VULKAN_VALIDATION_LAYERS}" "${VULKAN_VALIDATION_LAYERS_GIT_UR
     "${VULKAN_HEADERS_CMD[@]}" "${GLSLANG_CMD[@]}" \
     -DSPIRV_HEADERS_INSTALL_DIR="${INSTALL_PREFIX}" \
     -DSPIRV_TOOLS_LIB="${INSTALL_PREFIX}/lib/libSPIRV-Tools.a" \
-    -DSPIRV_TOOLS_OPT_LIB="${INSTALL_PREFIX}/lib/libSPIRV-Tools-opt.a"
+    -DSPIRV_TOOLS_OPT_LIB="${INSTALL_PREFIX}/lib/libSPIRV-Tools-opt.a" \
+    -DUSE_ROBIN_HOOD_HASHING=OFF \
+    -DBUILD_WERROR=OFF
 
 # Finally, copy files of interest to their final location
 #
