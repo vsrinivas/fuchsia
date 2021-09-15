@@ -6,7 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "bt-a2dp-loopback",
-    "bt-a2dp-source-integration-tests",
+    "bt-a2dp-source-integration-tests:tests",
 
     # TODO(fxbug.dev/80164): Re-enable these tests once the test flakes have been fixed.
     # "bt-avrcp-integration-tests:tests",

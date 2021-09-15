@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.shard.cml" ],
+    program: {
+        binary: "bin/bt_a2dp",
+        args: [
+            "--enable-sink",
+            "false",
+            "--enable-avrcp-target",
+            "false",
+        ],
+    },
+
+    // Note: This declaration needs to exist because `bt-a2dp.shard.cml` references this child.
+    //       However, for the scope of this integration test, `avrcp-target` support is disabled -
+    //       see the `args` section of `program`.
+    children: [
+        {
+            name: "bt-avrcp-target",
+            url: "fuchsia-pkg://fuchsia.com/bt-avrcp-target#meta/bt-avrcp-target.cm",
+        },
+    ],
+}

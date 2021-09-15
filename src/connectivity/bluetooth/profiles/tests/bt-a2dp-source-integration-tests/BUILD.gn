@@ -5,23 +5,29 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
+fuchsia_component("bt-a2dp-source-component-v2") {
+  component_name = "bt-a2dp-source"
+  manifest = "meta/test-a2dp-source.cml"
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
+}
+
 rustc_test("tests_bin") {
   output_name = "bt_a2dp_source_integration_tests"
   source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/testing/fixture",
     "//src/lib/trace/rust:trace",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 
@@ -30,11 +36,46 @@ rustc_test("tests_bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_test_component("bt_a2dp_source_integration_tests") {
-  manifest = "meta/bt-a2dp-source-integration-tests.cmx"
+fuchsia_test_component("bt-a2dp-source-integration-test-component") {
+  manifest = "meta/bt-a2dp-source-integration-tests.cml"
   deps = [ ":tests_bin" ]
 }
 
 fuchsia_test_package("bt-a2dp-source-integration-tests") {
-  test_components = [ ":bt_a2dp_source_integration_tests" ]
+  test_components = [ ":bt-a2dp-source-integration-test-component" ]
+
+  # The max severity is set to ERROR due to the Cobalt connector ERROR message if the `Logger`
+  # capability is unavailable. This occurs in some cases when the `mock-cobalt` component exits
+  # (because the test has completed) before the A2DP component attempts to connect to it. This is
+  # not a bug in the test, and may be fixed if we enforce ordering in component shut down.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
+  deps = [
+    # The v2 A2DP component with only Source mode enabled.
+    ":bt-a2dp-source-component-v2",
+
+    # Mock Piconet Server
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
+
+    # Fuchsia Component Test library component
+    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+
+    # Mock cobalt component that provides Cobalt services to A2DP.
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bt-a2dp-source-integration-tests",
+
+    # Codec Factory package with the CFv2 component providing the `fuchsia.mediacodec.CodecFactory`
+    # capability.
+    "//src/media/codec:codec_factory",
+  ]
 }
