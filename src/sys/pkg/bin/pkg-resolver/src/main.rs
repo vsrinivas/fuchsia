@@ -6,6 +6,7 @@ use {
     async_lock::RwLock as AsyncRwLock,
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
+    fdio::Namespace,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
@@ -169,6 +170,11 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             None
         }
     };
+
+    if data_proxy.is_some() {
+        let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        namespace.unbind("/data").context("failed to unbind /data from default namespace")?;
+    }
 
     let config_proxy =
         match io_util::directory::open_in_namespace("/config/data", io_util::OPEN_RIGHT_READABLE) {
