@@ -632,6 +632,38 @@ pub fn sys_fchownat(
     Ok(SUCCESS)
 }
 
+pub fn sys_fsetxattr(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    name_addr: UserCString,
+    value_addr: UserAddress,
+    size: usize,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let op = match flags {
+        0 => XattrOp::Set,
+        XATTR_CREATE => XattrOp::Create,
+        XATTR_REPLACE => XattrOp::Replace,
+        _ => return error!(EINVAL),
+    };
+    let file = ctx.task.files.get(fd)?;
+    let mut name = vec![0u8; XATTR_NAME_MAX as usize];
+    let name = ctx.task.mm.read_c_string(name_addr, &mut name).map_err(|e| {
+        if e == ENAMETOOLONG {
+            errno!(ERANGE)
+        } else {
+            e
+        }
+    })?;
+    if size > XATTR_SIZE_MAX as usize {
+        return error!(ERANGE);
+    }
+    let mut value = vec![0u8; size];
+    ctx.task.mm.read_memory(value_addr, &mut value)?;
+    file.name.entry.node.set_xattr(name, &value, op)?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_getcwd(
     ctx: &SyscallContext<'_>,
     buf: UserAddress,

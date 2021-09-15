@@ -38,5 +38,6 @@
 #include <linux/timerfd.h>
 #include <linux/uio.h>
 #include <linux/wait.h>
+#include <linux/xattr.h>
 
 #endif  // SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_

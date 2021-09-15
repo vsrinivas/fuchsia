@@ -91,6 +91,16 @@ pub enum SymlinkTarget {
     Node(NamespaceNode),
 }
 
+#[derive(PartialEq, Eq)]
+pub enum XattrOp {
+    /// Set the value of the extended attribute regardless of whether it exists.
+    Set,
+    /// Create a new extended attribute. Fail if it already exists.
+    Create,
+    /// Replace the value of the extended attribute. Fail if it doesn't exist.
+    Replace,
+}
+
 pub trait FsNodeOps: Send + Sync {
     /// Open a FileObject for this node.
     ///
@@ -168,6 +178,11 @@ pub trait FsNodeOps: Send + Sync {
     fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
         Ok(node.info())
     }
+
+    /// Set an extended attribute on the node.
+    fn set_xattr(&self, _name: &FsStr, _value: &FsStr, _op: XattrOp) -> Result<(), Errno> {
+        error!(ENOTSUP)
+    }
 }
 
 /// Implements FsNodeOps methods in a way that makes sense for symlinks. You must implement
@@ -179,6 +194,17 @@ macro_rules! fs_node_impl_symlink {
             unreachable!("Symlink nodes cannot be opened.");
         }
     };
+}
+
+/// Delegates xattr FsNodeOps methods to another object.
+#[macro_export]
+macro_rules! fs_node_impl_xattr_delegate {
+    ($self:ident, $delegate:expr) => {
+        fn set_xattr(&$self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
+            $delegate.set_xattr(name, value, op)
+        }
+    };
+    ($delegate:expr) => { fs_node_impl_xattr_delegate(self, $delegate) };
 }
 
 pub struct SpecialNode;
@@ -376,6 +402,10 @@ impl FsNode {
             st_blksize: BYTES_PER_BLOCK,
             ..Default::default()
         })
+    }
+
+    pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
+        self.ops().set_xattr(name, value, op)
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {

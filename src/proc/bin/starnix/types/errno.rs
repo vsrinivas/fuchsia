@@ -251,6 +251,9 @@ pub const ERFKILL: Errno = Errno { value: uapi::ERFKILL, name: "ERFKILL", file: 
 pub const EHWPOISON: Errno =
     Errno { value: uapi::EHWPOISON, name: "EHWPOISON", file: None, line: None };
 
+// ENOTSUP is a different error in posix, but has the same value as EOPNOTSUPP in linux.
+pub const ENOTSUP: Errno = EOPNOTSUPP;
+
 // There isn't really a mapping from zx::Status to Errno. The correct mapping is context-speific
 // but this converter is a reasonable first-approximation. The translation matches
 // fdio_status_to_errno. See fxbug.dev/30921 for more context.
