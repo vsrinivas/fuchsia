@@ -4,39 +4,42 @@
 
 #include "example_server_app.h"
 
-#include <lib/sys/cpp/component_context.h>
-
-#include "lib/fidl/cpp/interface_request.h"
-
 namespace example {
-
-constexpr size_t kRequestHistogramBuckets = 10;
-constexpr uint64_t kRequestHistogramFloor = 1;
-constexpr uint64_t kRequestHistogramInitialStep = 1;
-constexpr uint64_t kRequestHistogramStepMultiplier = 2;
 
 ExampleServerApp::ExampleServerApp()
     : ExampleServerApp(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
 ExampleServerApp::ExampleServerApp(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {
+  // [START initialization]
   inspector_ = std::make_unique<sys::ComponentInspector>(context_.get());
-  connections_node_ = inspector_->root().CreateChild("connections");
+  // [END initializeation]
 
+  // [START properties]
+  // Attach properties to the root node of the tree
+  inspect::Node& root_node = inspector_->root();
+  // Important: Hold references to properties and don't let them go out of scope.
+  auto total_requests = root_node.CreateUint("total_requests", 0);
+  auto bytes_processed = root_node.CreateUint("bytes_processed", 0);
+  // [END properties]
+
+  // [START health_check]
+  inspector_->Health().StartingUp();
+
+  // [START_EXCLUDE]
   echo_stats_ = std::make_shared<EchoConnectionStats>(EchoConnectionStats{
-      inspector_->root().CreateExponentialUintHistogram(
-          "request_size_histogram", kRequestHistogramFloor, kRequestHistogramInitialStep,
-          kRequestHistogramStepMultiplier, kRequestHistogramBuckets),
-      inspector_->root().CreateUint("total_requests", 0),
+      std::move(bytes_processed),
+      std::move(total_requests),
   });
 
   context_->outgoing()->AddPublicService<EchoConnection::Echo>(
       [this](fidl::InterfaceRequest<EchoConnection::Echo> request) {
-        bindings_.AddBinding(
-            std::make_unique<EchoConnection>(
-                connections_node_.CreateChild(std::to_string(connection_count_++)), echo_stats_),
-            std::move(request));
+        bindings_.AddBinding(std::make_unique<EchoConnection>(echo_stats_), std::move(request));
       });
+  // [END_EXCLUDE]
+
+  inspector_->Health().Ok();
+  // [END health_check]
 }
 
 }  // namespace example

@@ -1,4 +1,6 @@
-# Inspect example
+# Inspect Dart
+
+<!-- TODO(fxbug.dev/84446): Migrate this example to use CFv2 -->
 
 A simple module that demonstrates usage of the Dart Inspect API.
 

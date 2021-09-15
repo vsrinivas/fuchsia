@@ -3,7 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/testing/environments.gni")
+
+group("cpp") {
+  testonly = true
+  public_deps = [
+    ":inspect-example-cpp",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":inspect-example-cpp-tests" ]
+}
 
 source_set("lib") {
   sources = [
@@ -14,15 +26,19 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//examples/fidl/fuchsia.examples",
+    "//examples/components/routing/fidl:echo",
     "//sdk/lib/fidl/cpp",
+
+    # [START inspect_libs]
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+
+    # [END inspect_libs]
   ]
 }
 
-executable("bin") {
-  output_name = "example_server"
+executable("server_bin") {
+  output_name = "inspect_server_cpp"
 
   sources = [ "example_server.cc" ]
 
@@ -34,60 +50,32 @@ executable("bin") {
   ]
 }
 
-executable("client") {
-  output_name = "example_client"
+fuchsia_component("server_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ ":server_bin" ]
+}
 
-  sources = [ "example_client.cc" ]
-
+fuchsia_package("inspect-example-cpp") {
   deps = [
-    "//examples/fidl/fuchsia.examples",
-    "//sdk/lib/fdio",
-    "//src/lib/files",
+    ":server_component",
+    "//examples/components/routing:echo_realm",
+    "//examples/components/routing/echo_client:echo_client_component",
   ]
 }
 
-fuchsia_shell_package("example_client") {
-  deps = [ ":client" ]
-}
-
-fuchsia_package_with_single_component("example_server") {
-  deps = [ ":bin" ]
-  manifest = "meta/example_server.cmx"
-}
-
-executable("example_server_cpp_unittests") {
-  output_name = "example_server_unittests"
+executable("test_bin") {
   testonly = true
-
-  sources = [ "echo_connection_unittest.cc" ]
-
+  output_name = "example_test_bin"
+  sources = [ "example_unittests.cc" ]
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
   ]
 }
 
-fuchsia_unittest_package("example_server_unittests") {
-  deps = [ ":example_server_cpp_unittests" ]
-  test_specs = {
-    environments = [ emu_env ]
-  }
-}
-
-group("cpp") {
-  testonly = true
-  public_deps = [
-    ":example_client",
-    ":example_server",
-    ":tests",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":example_server_unittests" ]
+fuchsia_unittest_package("inspect-example-cpp-tests") {
+  deps = [ ":test_bin" ]
 }

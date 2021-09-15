@@ -8,42 +8,56 @@ import("//build/rust/rustc_binary.gni")
 group("rust") {
   testonly = true
   public_deps = [
-    ":inspect-rs",
+    ":inspect-example-rust",
     ":tests",
   ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":inspect_example_rs_tests" ]
+  public_deps = [ ":inspect-example-rust-tests" ]
 }
 
-rustc_binary("bin") {
-  name = "inspect_example_rs"
+rustc_binary("server_bin") {
+  name = "inspect_server_rust"
 
   edition = "2018"
-
+  source_root = "src/echo_server.rs"
   with_unit_tests = true
 
   deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+
+    # [START inspect_libs]
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
+
+    # [END inspect_libs]
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [ "src/echo_server.rs" ]
 }
 
-fuchsia_package_with_single_component("inspect-rs") {
-  manifest = "meta/inspect-rs.cmx"
-  deps = [ ":bin" ]
+fuchsia_component("server_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ ":server_bin" ]
 }
 
-fuchsia_unittest_package("inspect_example_rs_tests") {
-  deps = [ ":bin_test" ]
+fuchsia_package("inspect-example-rust") {
+  deps = [
+    ":server_component",
+    "//examples/components/routing:echo_realm",
+    "//examples/components/routing/echo_client:echo_client_component",
+  ]
+}
+
+fuchsia_unittest_package("inspect-example-rust-tests") {
+  deps = [ ":server_bin_test" ]
 }
