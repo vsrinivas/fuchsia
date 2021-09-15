@@ -83,5 +83,5 @@ This prevents tests from affecting one another.
 
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [Documentation Guide]: /docs/contribute/docs/documentation-standards.md
-[Languages]: /docs/development/languages?hl=en
+[Languages]: /docs/development/languages/README.md
 [Testing Best Practices]: /docs/contribute/testing/best-practices.md
