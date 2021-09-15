@@ -124,7 +124,7 @@ other product configurations.
 ### Add a dependency on the FIDL library
 
 1. Add `"//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp"` to the `deps` of the `executable`
-2. Include the bindings into the main file with `#include <fuchsia/examples/llcpp/fidl.h>`
+2. Include the bindings into the main file with `#include <fidl/fuchsia.examples/cpp/wire.h>`
 
 The full `bin` target declaration should now look like this:
 
