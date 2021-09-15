@@ -30,6 +30,7 @@ pub struct DisplayMetrics {
 
     /// The pixel density of the display. This is either supplied by the client constructing
     /// the display metrics, or a hard-coded default is used based on the display dimensions.
+    #[allow(unused)]
     density_in_pixels_per_mm: f32,
 
     /// The expected viewing distance for the display, in millimeters. For example, a desktop

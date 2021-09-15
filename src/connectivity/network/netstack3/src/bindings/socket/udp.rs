@@ -184,6 +184,7 @@ impl<I: Ip> BindingData<I> {
 /// Information on socket control plane.
 #[derive(Debug)]
 pub struct SocketControlInfo<I: Ip> {
+    #[allow(unused)]
     properties: SocketWorkerProperties,
     state: SocketState<I>,
 }

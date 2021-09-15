@@ -24,6 +24,7 @@ use std::collections::HashMap;
 // Use: Create once per server instantiation.
 #[derive(Debug)]
 struct InnerWlanFacade {
+    #[allow(unused)]
     scan_results: bool,
 }
 
@@ -31,6 +32,7 @@ struct InnerWlanFacade {
 pub struct WlanFacade {
     wlan_svc: DeviceServiceProxy,
     monitor_svc: DeviceMonitorProxy,
+    #[allow(unused)]
     inner: RwLock<InnerWlanFacade>,
 }
 

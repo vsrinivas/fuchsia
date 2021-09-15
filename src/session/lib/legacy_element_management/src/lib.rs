@@ -209,14 +209,17 @@ pub struct Element {
     custom_annotations: HashMap<String, Value>,
 
     /// The component URL used to launch the component. Private but printable via "{:?}".
+    #[allow(unused)]
     url: String,
 
     /// v2 component child name, or empty string if not a child of the realm (such as a CFv1
     /// component). Private but printable via "{:?}"".
+    #[allow(unused)]
     name: String,
 
     /// v2 component child collection name or empty string if not a child of the realm (such as a
     /// CFv1 component). Private but printable via "{:?}"".
+    #[allow(unused)]
     collection: String,
 }
 

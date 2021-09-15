@@ -27,11 +27,17 @@ static NEXT_FLATLAND_INSTANCE_ID: AtomicUsize = AtomicUsize::new(1);
 
 #[derive(Clone)]
 pub struct Flatland {
+    #[allow(unused)]
     flatland: FlatlandProxy,
+    #[allow(unused)]
     id: FlatlandInstanceId,
+    #[allow(unused)]
     release_fences: Rc<RefCell<Vec<zx::Event>>>,
+    #[allow(unused)]
     next_transform_id: Cell<u64>,
+    #[allow(unused)]
     next_content_id: Cell<u64>,
+    #[allow(unused)]
     next_trace_id: Cell<u64>,
 }
 
@@ -109,7 +115,9 @@ impl Flatland {
 /// generated correctly.
 #[derive(Clone)]
 pub struct ScenicSession {
+    #[allow(unused)]
     session: fuchsia_scenic::SessionPtr,
+    #[allow(unused)]
     next_trace_id: Cell<u64>,
 }
 

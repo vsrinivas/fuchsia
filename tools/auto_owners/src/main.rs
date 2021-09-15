@@ -424,11 +424,13 @@ mod tests {
     #[derive(Debug)]
     struct Paths {
         /// `.../host_x64`
+        #[allow(unused)]
         test_root_dir: PathBuf,
 
         /// `.../host_x64/test_data`, this is the root of the runfilfes tree, a
         /// path //foo/bar will be copied at `.../host_x64/test_data/foo/bar` for
         /// this test.
+        #[allow(unused)]
         test_data_dir: PathBuf,
 
         /// `.../host_x64/test_data/tools/auto_owners/tests`: this is the directory
@@ -437,6 +439,7 @@ mod tests {
 
         /// `.../host_x64/test_data/tools/auto_owners/runfiles`: this is the directory
         /// where the binary runfiles live.
+        #[allow(unused)]
         runfiles_dir: PathBuf,
 
         /// `.../runfiles/gn`: the absolute path to the gn binary. gn is used for

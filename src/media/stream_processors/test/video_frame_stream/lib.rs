@@ -12,6 +12,7 @@ use stream_processor_test::*;
 
 #[derive(Debug)]
 pub struct VideoFrame {
+    #[allow(unused)]
     format: sysmem::ImageFormat2,
     data: Vec<u8>,
 }

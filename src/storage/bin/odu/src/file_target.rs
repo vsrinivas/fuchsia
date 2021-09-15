@@ -32,6 +32,7 @@ pub struct FileIoPacket {
 
     // This value represents the seed used to generate the contents of the
     // IoPacket.
+    #[allow(unused)]
     seed: u64,
 
     // Start and finish timestamps for different stages of IO.

@@ -73,6 +73,7 @@ where
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
     /// Holds Inspect data about manifests, families, and the fallback collection.
+    #[allow(unused)]
     inspect_data: inspect::ServiceInspectData,
 
     /// Indicates whether the service is running on an internal (non-production) Fuchsia build.

@@ -310,12 +310,14 @@ impl OutputWorker {
 struct VirtualOutput {
     extracted_data: Vec<u8>,
     capturing: Arc<Mutex<bool>>,
+    #[allow(unused)]
     have_data: bool,
 
     sample_format: AudioSampleFormat,
     channels: u8,
     frames_per_second: u32,
 
+    #[allow(unused)]
     output: Option<OutputProxy>,
     output_sender: Option<mpsc::Sender<ExtractMsg>>,
 }
@@ -778,6 +780,7 @@ struct VirtualAudio {
     output_sample_format: AudioSampleFormat,
     output_channels: u8,
     output_frames_per_second: u32,
+    #[allow(unused)]
     output: Option<OutputProxy>,
 
     // Input is from the AudioCore side, so it's the audio we'll be injecting

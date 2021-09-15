@@ -197,7 +197,9 @@ pub(crate) struct IpSock<I: IpExt, D> {
     // even well-defined for IPv4 in the absence of a subnet? B) Presumably we
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
+    #[allow(unused)]
     proto: I::Proto,
+    #[allow(unused)]
     unroutable_behavior: UnroutableBehavior,
 
     // This is merely cached and can change.

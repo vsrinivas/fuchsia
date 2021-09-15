@@ -177,16 +177,22 @@ pub struct TypefaceInspectData {
     /// The main `Node` for the typeface.
     node: finspect::Node,
     /// Numeric asset ID.
+    #[allow(unused)]
     asset_id: finspect::UintProperty,
     /// Path or URL to the asset.
+    #[allow(unused)]
     asset_location: Option<finspect::StringProperty>,
     /// Index of the typeface within the font asset.
+    #[allow(unused)]
     font_index: finspect::UintProperty,
     /// Style properties of the typeface.
+    #[allow(unused)]
     style: finspect::Node,
     /// Languages supported by the asset, as a sequence of BCP-47 language tags joined on ", ".
+    #[allow(unused)]
     languages: finspect::StringProperty,
     /// Number of code points covered by the typeface.
+    #[allow(unused)]
     code_point_count: finspect::UintProperty,
     /// Name of the font family. This should only be filled in in contexts where the typefaces are
     /// not already grouped by family (e.g. fallback chain).

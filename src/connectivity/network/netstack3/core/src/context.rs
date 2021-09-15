@@ -1027,6 +1027,7 @@ pub(crate) mod testutil {
     /// The result of a single step in a `DummyNetwork`
     #[derive(Debug)]
     pub(crate) struct StepResult {
+        #[allow(unused)]
         time_delta: Duration,
         timers_fired: usize,
         frames_sent: usize,

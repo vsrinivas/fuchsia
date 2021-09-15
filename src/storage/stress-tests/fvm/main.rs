@@ -69,6 +69,7 @@ pub struct Args {
 
     /// parameter passed in by rust test runner
     #[argh(switch)]
+    #[allow(unused)]
     nocapture: bool,
 }
 

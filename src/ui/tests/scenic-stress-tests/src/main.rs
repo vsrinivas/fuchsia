@@ -29,6 +29,7 @@ pub struct Args {
 
     /// controls delay between each touch operation (down, up)
     #[argh(option, short = 'd', default = "1")]
+    #[allow(unused)]
     touch_delay_secs: u64,
 
     /// if set, the test runs for this time limit before exiting successfully.
@@ -37,6 +38,7 @@ pub struct Args {
 
     /// flag passed in by rust test runner
     #[argh(switch)]
+    #[allow(unused)]
     nocapture: bool,
 }
 

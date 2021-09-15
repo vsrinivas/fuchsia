@@ -118,6 +118,7 @@ impl Responder for EchoSocketWatchResponder {
 #[derive(Debug)]
 pub struct EchoSocketWorkerInner<R: Responder, CV4, CV6> {
     conn: InnerIcmpConnId<CV4, CV6>,
+    #[allow(unused)]
     icmp_id: u16,
     results: VecDeque<EchoSocketWatchResult>,
     responders: VecDeque<R>,
