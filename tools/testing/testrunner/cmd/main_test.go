@@ -554,6 +554,8 @@ func TestRunAndOutputTest(t *testing.T) {
 		}()
 		// Wait for Test() to be called before timing out.
 		<-tester.called
+		// Wait for After() to be called before advancing the clock.
+		<-fakeClock.AfterCalledChan()
 		fakeClock.Advance(timeout + 40*time.Second)
 
 		// A timeout should result in a nil err and a failed test result.

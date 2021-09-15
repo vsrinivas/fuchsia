@@ -52,10 +52,6 @@ type timer struct {
 	ch      chan time.Time
 }
 
-func (t *timer) timer() <-chan time.Time {
-	return t.ch
-}
-
 func (t *timer) advanceTo(newTime time.Time) {
 	if newTime.After(t.endTime) {
 		t.ch <- newTime
@@ -64,12 +60,13 @@ func (t *timer) advanceTo(newTime time.Time) {
 
 // FakeClock provides support for mocking the current time in tests.
 type FakeClock struct {
-	now   time.Time
-	timer *timer
+	now         time.Time
+	timer       *timer
+	afterCalled chan struct{}
 }
 
 func NewFakeClock() *FakeClock {
-	return &FakeClock{now: time.Now()}
+	return &FakeClock{now: time.Now(), afterCalled: make(chan struct{}, 1)}
 }
 
 func (c *FakeClock) Now() time.Time {
@@ -79,7 +76,10 @@ func (c *FakeClock) Now() time.Time {
 func (c *FakeClock) After(d time.Duration) <-chan time.Time {
 	t := &timer{c.now.Add(d), make(chan time.Time, 1)}
 	c.timer = t
-	return t.timer()
+	if len(c.afterCalled) == 0 {
+		c.afterCalled <- struct{}{}
+	}
+	return t.ch
 }
 
 func (c *FakeClock) Advance(d time.Duration) {
@@ -88,4 +88,10 @@ func (c *FakeClock) Advance(d time.Duration) {
 	if c.timer != nil {
 		c.timer.advanceTo(c.now)
 	}
+}
+
+// AfterCalledChan returns the channel to wait for the clock's timer to be set from a
+// call to After().
+func (c *FakeClock) AfterCalledChan() chan struct{} {
+	return c.afterCalled
 }
