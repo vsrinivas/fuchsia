@@ -429,8 +429,48 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		}
 	}
 
-	ns.onPropertiesChange(nic, nil)
+	switch addr.Protocol {
+	case header.IPv4ProtocolNumber:
+		ns.interfaceWatchers.onAddressAdd(nic, addr, zxtime.Monotonic(int64(zx.TimensecInfinite)))
+	// TODO(https://fxbug.dev/82045): This assumes that DAD is always enabled, and relies on the DAD
+	// completion callback to unblock hanging gets waiting for interface address changes.
+	case header.IPv6ProtocolNumber:
+	default:
+	}
 	return zx.ErrOk
+}
+
+func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
+	ns.interfaceWatchers.mu.Lock()
+	defer ns.interfaceWatchers.mu.Unlock()
+
+	nicInfo, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		_ = syslog.Warnf("onInterfaceAdd(%d): NIC cannot be found", nicid)
+		return
+	}
+
+	ns.interfaceWatchers.onInterfaceAddLocked(nicid, nicInfo, ns.GetExtendedRouteTable())
+}
+
+func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addressPatch) {
+	ns.interfaceWatchers.mu.Lock()
+	defer ns.interfaceWatchers.mu.Unlock()
+
+	nicInfo, ok := ns.stack.NICInfo()[nicid]
+	if !ok {
+		_ = syslog.Warnf("onPropertiesChange(%d, %+v): interface cannot be found", nicid, addressPatches)
+		return
+	}
+
+	ns.interfaceWatchers.onPropertiesChangeLocked(nicid, nicInfo, addressPatches)
+}
+
+func (ns *Netstack) onDefaultRouteChange() {
+	ns.interfaceWatchers.mu.Lock()
+	defer ns.interfaceWatchers.mu.Unlock()
+
+	ns.interfaceWatchers.onDefaultRouteChangeLocked(ns.GetExtendedRouteTable())
 }
 
 // Called when DAD completes with either success or failure.

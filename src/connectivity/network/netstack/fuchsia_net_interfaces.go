@@ -12,12 +12,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"sort"
 	"sync"
+	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -46,6 +47,23 @@ type addressPatch struct {
 	validUntil time.Time
 }
 
+func makeInterfacesAddress(protocolAddr tcpip.ProtocolAddress, validUntil time.Time) interfaces.Address {
+	switch protocolAddr.Protocol {
+	case ipv4.ProtocolNumber:
+	case ipv6.ProtocolNumber:
+	default:
+		panic(fmt.Sprintf("makeInterfaceAddress(%+v, %s): unknown protocol", protocolAddr, validUntil))
+	}
+
+	var addr interfaces.Address
+	addr.SetAddr(net.Subnet{
+		Addr:      fidlconv.ToNetIpAddress(protocolAddr.AddressWithPrefix.Address),
+		PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
+	})
+	addr.SetValidUntil(validUntil.MonotonicNano())
+	return addr
+}
+
 func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDefaultIPv6Route bool, addressPatches []addressPatch) interfaces.Properties {
 	var p interfaces.Properties
 	ifs := nicInfo.Context.(*ifState)
@@ -68,15 +86,7 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 
 	var addrs []interfaces.Address
 	for _, a := range nicInfo.ProtocolAddresses {
-		if a.Protocol != ipv4.ProtocolNumber && a.Protocol != ipv6.ProtocolNumber {
-			continue
-		}
-		var addr interfaces.Address
-		addr.SetAddr(net.Subnet{
-			Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
-			PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
-		})
-		addr.SetValidUntil(math.MaxInt64)
+		addr := makeInterfacesAddress(a, time.Monotonic(int64(zx.TimensecInfinite)))
 		for _, p := range addressPatches {
 			if p.addr == a.AddressWithPrefix {
 				addr.SetValidUntil(p.validUntil.MonotonicNano())
@@ -235,21 +245,12 @@ type interfaceWatcherCollection struct {
 	}
 }
 
-func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addressPatch) {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
-
-	nicInfo, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		_ = syslog.WarnTf(watcherProtocolName, "onPropertiesChange interface %d cannot be found", nicid)
-		return
-	}
-
-	if properties, ok := ns.interfaceWatchers.mu.lastObserved[nicid]; ok {
+func (wc *interfaceWatcherCollection) onPropertiesChangeLocked(nicid tcpip.NICID, nicInfo tcpipstack.NICInfo, addressPatches []addressPatch) {
+	if properties, ok := wc.mu.lastObserved[nicid]; ok {
 		newProperties := interfaceProperties(nicInfo, properties.GetHasDefaultIpv4Route(), properties.GetHasDefaultIpv6Route(), addressPatches)
 		if diff := diffInterfaceProperties(properties, newProperties); !emptyInterfaceProperties(diff) {
-			ns.interfaceWatchers.mu.lastObserved[nicid] = newProperties
-			for w := range ns.interfaceWatchers.mu.watchers {
+			wc.mu.lastObserved[nicid] = newProperties
+			for w := range wc.mu.watchers {
 				w.onEvent(interfaces.EventWithChanged(diff))
 			}
 		}
@@ -258,13 +259,60 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addre
 	}
 }
 
-func (ns *Netstack) onDefaultRouteChange() {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
+// onAddressAdd is called when an address is added.
+//
+// If performed, DAD must have completed successfully before calling this function, as the
+// presence of an address indicates to clients that the address can be used.
+func (wc *interfaceWatcherCollection) onAddressAdd(nicid tcpip.NICID, protocolAddr tcpip.ProtocolAddress, validUntil time.Time) {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
 
+	properties, ok := wc.mu.lastObserved[nicid]
+	if !ok {
+		_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): NIC no longer exists", nicid, protocolAddr, validUntil)
+		return
+	}
+
+	if addrs, changed := func() ([]interfaces.Address, bool) {
+		if !properties.HasAddresses() {
+			return nil, true
+		} else {
+			addrs := properties.GetAddresses()
+			for _, a := range addrs {
+				subnet := a.GetAddr()
+				foundAddrWithPrefix := tcpip.AddressWithPrefix{
+					Address:   fidlconv.ToTCPIPAddress(subnet.Addr),
+					PrefixLen: int(subnet.PrefixLen),
+				}
+				if foundAddrWithPrefix == protocolAddr.AddressWithPrefix {
+					_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): address %+v already exists", nicid, protocolAddr, validUntil, foundAddrWithPrefix)
+					return nil, false
+				}
+			}
+			return addrs, true
+		}
+	}(); changed {
+		addrs = append(addrs, makeInterfacesAddress(protocolAddr, validUntil))
+		sort.Slice(addrs, func(i, j int) bool {
+			return cmpSubnet(addrs[i].GetAddr(), addrs[j].GetAddr()) <= 0
+		})
+		properties.SetAddresses(addrs)
+		wc.mu.lastObserved[nicid] = properties
+
+		var diff interfaces.Properties
+		diff.SetId(uint64(nicid))
+		diff.SetAddresses(addrs)
+
+		for w := range wc.mu.watchers {
+			w.onEvent(interfaces.EventWithChanged(diff))
+		}
+	}
+}
+
+func (wc *interfaceWatcherCollection) onDefaultRouteChangeLocked(routes []routes.ExtendedRoute) {
 	v4DefaultRoute := make(map[tcpip.NICID]struct{})
 	v6DefaultRoute := make(map[tcpip.NICID]struct{})
-	for _, er := range ns.GetExtendedRouteTable() {
+	for _, er := range routes {
 		if er.Enabled {
 			if er.Route.Destination.Equal(header.IPv4EmptySubnet) {
 				v4DefaultRoute[er.Route.NIC] = struct{}{}
@@ -274,7 +322,7 @@ func (ns *Netstack) onDefaultRouteChange() {
 		}
 	}
 
-	for nicid, properties := range ns.interfaceWatchers.mu.lastObserved {
+	for nicid, properties := range wc.mu.lastObserved {
 		var diff interfaces.Properties
 		diff.SetId(uint64(nicid))
 		if _, ok := v4DefaultRoute[nicid]; ok != properties.GetHasDefaultIpv4Route() {
@@ -286,31 +334,22 @@ func (ns *Netstack) onDefaultRouteChange() {
 			diff.SetHasDefaultIpv6Route(ok)
 		}
 		if diff.HasHasDefaultIpv4Route() || diff.HasHasDefaultIpv6Route() {
-			ns.interfaceWatchers.mu.lastObserved[nicid] = properties
-			for w := range ns.interfaceWatchers.mu.watchers {
+			wc.mu.lastObserved[nicid] = properties
+			for w := range wc.mu.watchers {
 				w.onEvent(interfaces.EventWithChanged(diff))
 			}
 		}
 	}
 }
 
-func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
-	ns.interfaceWatchers.mu.Lock()
-	defer ns.interfaceWatchers.mu.Unlock()
-
-	if properties, ok := ns.interfaceWatchers.mu.lastObserved[nicid]; ok {
+func (wc *interfaceWatcherCollection) onInterfaceAddLocked(nicid tcpip.NICID, nicInfo tcpipstack.NICInfo, routes []routes.ExtendedRoute) {
+	if properties, ok := wc.mu.lastObserved[nicid]; ok {
 		_ = syslog.WarnTf(watcherProtocolName, "interface added but already known: %+v", properties)
 		return
 	}
 
-	nicInfo, ok := ns.stack.NICInfo()[nicid]
-	if !ok {
-		_ = syslog.WarnTf(watcherProtocolName, "interface %d added but not in NICInfo map", nicid)
-		return
-	}
-
 	var hasDefaultIpv4Route, hasDefaultIpv6Route bool
-	for _, er := range ns.GetExtendedRouteTable() {
+	for _, er := range routes {
 		if er.Enabled && er.Route.NIC == nicid {
 			hasDefaultIpv4Route = hasDefaultIpv4Route || er.Route.Destination.Equal(header.IPv4EmptySubnet)
 			hasDefaultIpv6Route = hasDefaultIpv6Route || er.Route.Destination.Equal(header.IPv6EmptySubnet)
@@ -318,8 +357,8 @@ func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
 	}
 
 	properties := interfaceProperties(nicInfo, hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
-	ns.interfaceWatchers.mu.lastObserved[nicid] = properties
-	for w := range ns.interfaceWatchers.mu.watchers {
+	wc.mu.lastObserved[nicid] = properties
+	for w := range wc.mu.watchers {
 		w.onEvent(interfaces.EventWithAdded(properties))
 	}
 }

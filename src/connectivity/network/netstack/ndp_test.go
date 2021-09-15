@@ -133,13 +133,6 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			if err := ifs.Up(); err != nil {
 				t.Fatalf("ifs.Up(): %s", err)
 			}
-			if status := ns.addInterfaceAddress(ifs.nicid, tcpip.ProtocolAddress{
-				Protocol:          ipv6.ProtocolNumber,
-				AddressWithPrefix: test.addr,
-			}, true /* addRoute */); status != zx.ErrOk {
-				t.Fatalf("failed to add address: %s", status)
-			}
-
 			request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
 			if err != nil {
 				t.Fatalf("failed to create interface watcher protocol channel pair: %s", err)
@@ -157,14 +150,26 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			}
 			if event, err := watcher.Watch(context.Background()); err != nil {
 				t.Fatalf("failed to watch: %s", err)
-			} else if event.Which() != interfaces.EventExisting || event.Existing.GetId() != uint64(ifs.nicid) || !hasAddr(event.Existing.GetAddresses()) {
-				t.Fatalf("got: %+v, expected interface %d exists event with address %s", event, ifs.nicid, test.addr)
+			} else if event.Which() != interfaces.EventExisting || event.Existing.GetId() != uint64(ifs.nicid) || hasAddr(event.Existing.GetAddresses()) {
+				t.Fatalf("got: %+v, expected interface %d exists event without address %s", event, ifs.nicid, test.addr)
 			}
 
 			if event, err := watcher.Watch(context.Background()); err != nil {
 				t.Fatalf("failed to watch: %s", err)
 			} else if event.Which() != interfaces.EventIdle {
 				t.Fatalf("got: %+v, expected Idle event", event)
+			}
+
+			if status := ns.addInterfaceAddress(ifs.nicid, tcpip.ProtocolAddress{
+				Protocol:          ipv6.ProtocolNumber,
+				AddressWithPrefix: test.addr,
+			}, true /* addRoute */); status != zx.ErrOk {
+				t.Fatalf("failed to add address: %s", status)
+			}
+			if event, err := watcher.Watch(context.Background()); err != nil {
+				t.Fatalf("failed to watch: %s", err)
+			} else if event.Which() != interfaces.EventChanged || event.Changed.GetId() != uint64(ifs.nicid) || !hasAddr(event.Changed.GetAddresses()) {
+				t.Fatalf("got: %+v, expected interface %d changed event with address %s", event, ifs.nicid, test.addr)
 			}
 
 			// Remove address directly without causing a watcher state update so that

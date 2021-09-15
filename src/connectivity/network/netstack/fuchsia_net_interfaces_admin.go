@@ -290,9 +290,12 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 			return admin.AddressRemovalReasonInvalid
 		}
 
-		// NB: `ifState.mu` must be locked to avoid racing against interface online
-		// changes, but we release it before actually adding the address to avoid
-		// potential deadlocks.
+		// NB: Must lock `ifState.mu` and then `addressStateProviderCollection.mu`
+		// to prevent interface online changes (which acquire the same locks in
+		// the same order) from interposing a modification to address assignment
+		// state before the `impl` is inserted into the collection.
+		//
+		// `ifState.mu` is released as soon as possible to avoid deadlock issues.
 		online := func() bool {
 			ifs.mu.Lock()
 			defer ifs.mu.Unlock()

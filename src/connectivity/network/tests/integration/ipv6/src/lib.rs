@@ -605,6 +605,28 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             | fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative => {
                 // The first DAD message should be sent immediately.
                 expect_dad_neighbor_solicitation(fake_ep).await;
+
+                // Ensure that fuchsia.net.interfaces/Watcher doesn't erroneously report the
+                // address as added before DAD completes successfully or otherwise.
+                assert_eq!(
+                    iface.get_addrs().await.expect("failed to get addresses").into_iter().find(
+                        |fidl_fuchsia_net_interfaces_ext::Address {
+                             addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                             valid_until: _,
+                         }| {
+                            match addr {
+                                fidl_fuchsia_net::IpAddress::Ipv4(
+                                    fidl_fuchsia_net::Ipv4Address { addr: _ },
+                                ) => false,
+                                fidl_fuchsia_net::IpAddress::Ipv6(
+                                    fidl_fuchsia_net::Ipv6Address { addr },
+                                ) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                            }
+                        }
+                    ),
+                    None,
+                    "added IPv6 LL address already present even though it is tentative"
+                );
             }
             fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable => {}
         }
