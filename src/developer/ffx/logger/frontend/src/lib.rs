@@ -15,13 +15,14 @@ use {
         DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorError, ArchiveIteratorMarker, DiagnosticsData,
+        ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorProxy, DiagnosticsData,
     },
     fuchsia_async::Timer,
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
     },
+    timeout::timeout,
 };
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
@@ -58,6 +59,7 @@ pub trait LogFormatter {
     fn set_boot_timestamp(&mut self, boot_ts_nanos: i64);
 }
 
+#[derive(Clone, Debug)]
 pub struct LogCommandParameters {
     pub target_identifier: String,
     pub session_timestamp: Duration,
@@ -118,10 +120,32 @@ pub async fn exec_log_cmd<W: std::io::Write>(
     })?;
 
     let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
-    'request_loop: loop {
-        let (get_next_results, terminal_err) = run_logging_pipeline(&mut requests, &proxy).await;
+    // This variable is set to true iff the most recent log we received was a disconnect event.
+    let mut got_disconnect = false;
+    loop {
+        // If our last log entry was a disconnect event, we add a timeout to the logging pipeline. If no logs come through
+        // before the timeout, we assume the disconnect event is still relevant and retry connecting to the target.
+        let (get_next_results, terminal_err) = if got_disconnect {
+            match timeout(Duration::from_secs(5), run_logging_pipeline(&mut requests, &proxy)).await
+            {
+                Ok(tup) => tup,
+                Err(_) => match retry_loop(&daemon_proxy, params.clone(), writer).await {
+                    Ok(p) => {
+                        proxy = p;
+                        continue;
+                    }
+                    Err(e) => {
+                        writeln!(writer, "Retry failed - trying again. Error was: {}", e)?;
+                        continue;
+                    }
+                },
+            }
+        } else {
+            run_logging_pipeline(&mut requests, &proxy).await
+        };
 
         for result in get_next_results.into_iter() {
+            got_disconnect = false;
             if let Err(e) = result {
                 log::warn!("got an error from the daemon {:?}", e);
                 log_formatter.push_log(Err(e)).await?;
@@ -138,6 +162,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
 
             for entry in entries {
                 let parsed: LogEntry = serde_json::from_str(&entry.data)?;
+                got_disconnect = false;
 
                 match (&parsed.data, params.target_to_bound) {
                     (LogData::TargetLog(log_data), Some(t)) => {
@@ -148,59 +173,11 @@ pub async fn exec_log_cmd<W: std::io::Write>(
                     }
                     (LogData::FfxEvent(EventType::TargetDisconnected), _) => {
                         log_formatter.push_log(Ok(parsed)).await?;
-                        loop {
-                            let (new_proxy, server) = create_proxy::<ArchiveIteratorMarker>()
-                                .context("failed to create endpoints")?;
-                            match setup_daemon_stream(
-                                &daemon_proxy,
-                                &params.target_identifier,
-                                server,
-                                params.stream_mode,
-                                params.target_from_bound,
-                            )
-                            .await?
-                            {
-                                Ok(()) => {
-                                    proxy = new_proxy;
-                                    continue 'request_loop;
-                                }
-                                Err(e) => {
-                                    match e {
-                                        DiagnosticsStreamError::NoMatchingTargets => {
-                                            writeln!(
-                                                writer,
-                                                "{}",
-                                                format_ffx_event(
-                                                    &format!(
-                                                        "{} isn't up. Retrying...",
-                                                        &params.target_identifier
-                                                    ),
-                                                    None
-                                                )
-                                            )?;
-                                        }
-                                        DiagnosticsStreamError::NoStreamForTarget => {
-                                            writeln!(writer, "{}" , format_ffx_event(&format!("{} is up, but the logger hasn't started yet. Retrying...", &params.target_identifier), None))?;
-                                        }
-                                        _ => {
-                                            writeln!(
-                                                writer,
-                                                "{}",
-                                                format_ffx_event(
-                                                    &format!(
-                                                        "Retry failed ({:?}). Trying again...",
-                                                        e
-                                                    ),
-                                                    None
-                                                )
-                                            )?;
-                                        }
-                                    }
-                                    Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
-                                    continue;
-                                }
-                            }
-                        }
+                        // Rather than immediately attempt a retry here, we continue the loop. If neither of the
+                        // outer loops have a log entry following this disconnect event, we will retry after attempting fetch
+                        // subsequent logs from the backend.
+                        got_disconnect = true;
+                        continue;
                     }
                     _ => {}
                 }
@@ -212,6 +189,67 @@ pub async fn exec_log_cmd<W: std::io::Write>(
         if let Some(err) = terminal_err {
             log::info!("log command got a terminal error: {}", err);
             return Ok(());
+        }
+    }
+}
+
+async fn retry_loop<W: std::io::Write>(
+    daemon_proxy: &DaemonProxy,
+    params: LogCommandParameters,
+    writer: &mut W,
+) -> Result<ArchiveIteratorProxy> {
+    loop {
+        let (new_proxy, server) =
+            create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
+        match setup_daemon_stream(
+            daemon_proxy,
+            &params.target_identifier,
+            server,
+            params.stream_mode,
+            params.target_from_bound,
+        )
+        .await?
+        {
+            Ok(()) => return Ok(new_proxy),
+            Err(e) => {
+                match e {
+                    DiagnosticsStreamError::NoMatchingTargets => {
+                        writeln!(
+                            writer,
+                            "{}",
+                            format_ffx_event(
+                                &format!("{} isn't up. Retrying...", &params.target_identifier),
+                                None
+                            )
+                        )?;
+                    }
+                    DiagnosticsStreamError::NoStreamForTarget => {
+                        writeln!(
+                            writer,
+                            "{}",
+                            format_ffx_event(
+                                &format!(
+                                    "{} is up, but the logger hasn't started yet. Retrying...",
+                                    &params.target_identifier
+                                ),
+                                None
+                            )
+                        )?;
+                    }
+                    _ => {
+                        writeln!(
+                            writer,
+                            "{}",
+                            format_ffx_event(
+                                &format!("Retry failed ({:?}). Trying again...", e),
+                                None
+                            )
+                        )?;
+                    }
+                }
+                Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
+                continue;
+            }
         }
     }
 }

@@ -430,24 +430,15 @@ pub async fn log_impl<W: std::io::Write>(
                         eprintln!(
                             "It looks like there is no symbol index for your sdk root registered."
                         );
-                        eprintln!("If you want symbolization to work correctly, run the following from your checkout:");
 
                         if sdk_type.is_ok() && sdk_type.unwrap() == "in-tree".to_string() {
+                            eprintln!("If you want symbolization to work correctly, run the following from your checkout:");
                             eprintln!("  fx symbol-index register");
                         } else {
-                            let symbol_index = s.get_host_tool("symbol-index");
-                            match symbol_index {
-                                Ok(path) => {
-                                    eprintln!("  {} register", path.to_string_lossy().to_string());
-                                }
-                                Err(e) => {
-                                    eprintln!("We could not find the path to the symbol-index host-tool: {}", e);
-                                }
-                            }
+                            eprintln!("Check the documentation for your environment for instructions on how to register symbols in the symbol index.");
                         }
 
-                        eprintln!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting, \
-                                    or passing the '--ignore-symbolizer-failure' flag to this command.");
+                        eprintln!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting.");
                     } else if registered_result.is_err() {
                         log::warn!(
                             "checking the registration of the SDK root failed: {}",

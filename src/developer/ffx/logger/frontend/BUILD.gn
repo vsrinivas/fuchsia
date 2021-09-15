@@ -17,6 +17,7 @@ rustc_library("lib") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/timeout:lib",
     "//src/developer/ffx/logger/data:lib",
     "//src/developer/ffx/logger/test_utils:lib",
     "//src/developer/ffx/logger/utils:lib",
