@@ -19,6 +19,7 @@ use {
     services::prelude::*,
     std::cell::{Cell, RefCell},
     std::collections::HashMap,
+    std::net::SocketAddr,
     std::rc::Rc,
 };
 
@@ -134,6 +135,21 @@ impl FidlService for TargetCollectionService {
                 let target = target_collection.merge_insert(target);
                 target.run_host_pipe();
                 responder.send().map_err(Into::into)
+            }
+            bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
+                let manual_targets = cx.get_manual_targets().await?;
+                if let Some(target) = target_collection.get(target_id.clone()) {
+                    let ssh_port = target.ssh_port();
+                    for addr in target.manual_addrs() {
+                        let mut sockaddr = SocketAddr::from(addr);
+                        ssh_port.map(|p| sockaddr.set_port(p));
+                        let _ = manual_targets.remove(format!("{}", sockaddr)).await.map_err(|e| {
+                            log::error!("Unable to persist target removal: {}", e);
+                        });
+                    }
+                }
+                let result = target_collection.remove_target(target_id.clone());
+                responder.send(result).map_err(Into::into)
             }
         }
     }

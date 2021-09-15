@@ -124,6 +124,16 @@ protocol TargetCollection {
     AddTarget(struct {
         ip TargetAddrInfo;
     }) -> ();
+
+    /// Manually remove a target from the target list.
+    ///
+    /// If the target_id doesn't match a device name, the daaemon will attempt
+    /// to interpret it as an IP.
+    RemoveTarget(struct {
+        target_id string:fuchsia.device.DEVICE_NAME_MAX;
+    }) -> (struct {
+        removed bool;
+    });
 };
 
 /// This is a handle to a target received from the target collection.

@@ -131,6 +131,7 @@ protocol Daemon {
     /// Manually remove a target from the target list.
     ///
     /// If target_id doesn't match a device name, the daemon will try to interpret it as an IP.
+    @deprecated("Use target collection service. See `target remove` plugin.")
     RemoveTarget(struct {
         target_id string:fuchsia.device.DEVICE_NAME_MAX;
     }) -> (struct {
