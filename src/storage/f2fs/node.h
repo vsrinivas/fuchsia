@@ -39,23 +39,32 @@ struct NodeInfo {
 class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
                  public fbl::DoublyLinkedListable<NatEntry *> {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(NatEntry);
   NatEntry() = default;
-  ~NatEntry() = default;
-  bool checkpointed = false;  // whether it is checkpointed or not
-  NodeInfo ni;                // in-memory node information
+  NatEntry(const NatEntry &) = delete;
+  NatEntry &operator=(const NatEntry &) = delete;
+  NatEntry(const NatEntry &&) = delete;
+  NatEntry &operator=(const NatEntry &&) = delete;
 
-  ino_t GetKey() const { return ni.nid; }
+  const NodeInfo &GetNodeInfo() { return ni_; }
+  void SetNodeInfo(const NodeInfo &value) { ni_ = value; }
+
+  bool IsCheckpointed() const { return checkpointed_; }
+  void SetCheckpointed() { checkpointed_ = true; }
+  void ClearCheckpointed() { checkpointed_ = false; }
+  uint32_t GetNid() const { return ni_.nid; }
+  void SetNid(const nid_t value) { ni_.nid = value; }
+  block_t GetBlockAddress() { return ni_.blk_addr; }
+  void SetBlockAddress(const block_t value) { ni_.blk_addr = value; }
+  uint32_t GetIno() { return ni_.ino; }
+  void SetIno(const nid_t value) { ni_.ino = value; }
+  uint8_t GetVersion() { return ni_.version; }
+  void SetVersion(const uint8_t value) { ni_.version = value; }
+  ino_t GetKey() const { return ni_.nid; }
+
+ private:
+  bool checkpointed_ = false;  // whether it is checkpointed or not
+  NodeInfo ni_;                // in-memory node information
 };
-
-inline uint32_t NatGetNid(NatEntry *nat) { return nat->ni.nid; }
-inline void NatSetNid(NatEntry *nat, nid_t n) { nat->ni.nid = n; }
-inline block_t NatGetBlkaddr(NatEntry *nat) { return nat->ni.blk_addr; }
-inline void NatSetBlkaddr(NatEntry *nat, block_t b) { nat->ni.blk_addr = b; }
-inline uint32_t NatGetIno(NatEntry *nat) { return nat->ni.ino; }
-inline void NatSetIno(NatEntry *nat, uint32_t i) { nat->ni.ino = i; }
-inline uint8_t NatGetVersion(NatEntry *nat) { return nat->ni.version; }
-inline void NatSetVersion(NatEntry *nat, uint8_t v) { nat->ni.version = v; }
 
 inline uint8_t IncNodeVersion(uint8_t version) { return ++version; }
 
@@ -90,7 +99,7 @@ class NodeMgr {
   void SetDentryMark(Page *page, int mark);
 
   zx_status_t NextFreeNid(nid_t *nid);
-  void NodeInfoFromRawNat(NodeInfo *ni, RawNatEntry *raw_ne);
+  void NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne);
   static zx_status_t RestoreNodeSummary(F2fs *fs, uint32_t segno, SummaryBlock *sum);
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
@@ -135,7 +144,7 @@ class NodeMgr {
   // Caller should acquire LockType:kFileOp.
   zx_status_t NewInodePage(Dir *parent, VnodeF2fs *child);
 
-  int IsCheckpointedNode(nid_t nid);
+  bool IsCheckpointedNode(nid_t nid);
 
   void ClearColdData(Page *page);
 
@@ -155,9 +164,6 @@ class NodeMgr {
   // The file offset can be calcuated by using the node offset that |node_page| has.
   // See NodeMgt::IS_DNODE().
   block_t StartBidxOfNode(Page *node_page);
-
-  void SetNatCacheDirty(NmInfo *nm_i, NatEntry *ne) __TA_REQUIRES(nm_i->nat_tree_lock);
-  void ClearNatCacheDirty(NmInfo *nm_i, NatEntry *ne) __TA_REQUIRES(nm_i->nat_tree_lock);
 
  private:
   F2fs *fs_;
@@ -179,12 +185,12 @@ class NodeMgr {
   Page *GetNextNatPage(nid_t nid);
   void RaNatPages(nid_t nid);
 
-  NatEntry *LookupNatCache(NmInfo *nm_i, nid_t n) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
-  uint32_t GangLookupNatCache(NmInfo *nm_i, uint32_t nr, NatEntry **ep)
-      __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
-  void DelFromNatCache(NmInfo *nm_i, NatEntry *e) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
-  NatEntry *GrabNatEntry(NmInfo *nm_i, nid_t nid) __TA_REQUIRES_SHARED(nm_i->nat_tree_lock);
-  void CacheNatEntry(NmInfo *nm_i, nid_t nid, RawNatEntry *ne);
+  NatEntry *LookupNatCache(NmInfo &nm_i, nid_t n) __TA_REQUIRES_SHARED(nm_i.nat_tree_lock);
+  uint32_t GangLookupNatCache(NmInfo &nm_i, uint32_t nr, NatEntry **ep)
+      __TA_REQUIRES_SHARED(nm_i.nat_tree_lock);
+  void DelFromNatCache(NmInfo &nm_i, NatEntry &entry) __TA_REQUIRES_SHARED(nm_i.nat_tree_lock);
+  NatEntry *GrabNatEntry(NmInfo &nm_i, nid_t nid) __TA_REQUIRES_SHARED(nm_i.nat_tree_lock);
+  void CacheNatEntry(NmInfo &nm_i, nid_t nid, RawNatEntry &ne);
   void SetNodeAddr(NodeInfo *ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 

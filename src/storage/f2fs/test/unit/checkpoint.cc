@@ -192,27 +192,27 @@ void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version) {
   SbInfo &sbi = fs->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
   std::unique_ptr<NatEntry> nat_entry = std::make_unique<NatEntry>();
-  auto ne = nat_entry.get();
+  auto cache_entry = nat_entry.get();
 
-  memset(ne, 0, sizeof(NatEntry));
-  NatSetNid(ne, nid);
+  memset(cache_entry, 0, sizeof(NatEntry));
+  cache_entry->SetNid(nid);
 
-  ZX_ASSERT(!(*ne).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
+  ZX_ASSERT(!(*cache_entry).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
 
   std::lock_guard nat_lock(nm_i->nat_tree_lock);
   nm_i->nat_cache.insert(std::move(nat_entry));
 
-  ZX_ASSERT(!(*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->clean_nat_list.push_back(ne);
-  nm_i->nat_cnt++;
+  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list.push_back(cache_entry);
+  ++nm_i->nat_cnt;
 
-  ne->checkpointed = false;
-  NatSetBlkaddr(ne, blkaddr);
-  NatSetVersion(ne, version);
-  ZX_ASSERT((*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->clean_nat_list.erase(*ne);
-  ZX_ASSERT(!(*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->dirty_nat_list.push_back(ne);
+  cache_entry->ClearCheckpointed();
+  cache_entry->SetBlockAddress(blkaddr);
+  cache_entry->SetVersion(version);
+  ZX_ASSERT((*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list.erase(*cache_entry);
+  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->dirty_nat_list.push_back(cache_entry);
 }
 
 bool IsRootInode(CursegType curseg_type, uint32_t offset) {

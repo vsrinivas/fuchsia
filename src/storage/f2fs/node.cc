@@ -6,25 +6,23 @@
 
 namespace f2fs {
 
-inline void NodeMgr::SetNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
-  ZX_ASSERT(ne != nullptr);
-  ZX_ASSERT(nm_i->clean_nat_list.erase(*ne) != nullptr);
-  nm_i->dirty_nat_list.push_back(ne);
+void SetNatCacheDirty(NmInfo &nm_i, NatEntry &ne) __TA_REQUIRES(nm_i.nat_tree_lock) {
+  ZX_ASSERT(nm_i.clean_nat_list.erase(ne) != nullptr);
+  nm_i.dirty_nat_list.push_back(&ne);
 }
 
-inline void NodeMgr::ClearNatCacheDirty(NmInfo *nm_i, NatEntry *ne) {
-  ZX_ASSERT(ne != nullptr);
-  ZX_ASSERT(nm_i->dirty_nat_list.erase(*ne) != nullptr);
-  nm_i->clean_nat_list.push_back(ne);
+void ClearNatCacheDirty(NmInfo &nm_i, NatEntry &ne) __TA_REQUIRES(nm_i.nat_tree_lock) {
+  ZX_ASSERT(nm_i.dirty_nat_list.erase(ne) != nullptr);
+  nm_i.clean_nat_list.push_back(&ne);
 }
 
-inline void NodeMgr::NodeInfoFromRawNat(NodeInfo *ni, RawNatEntry *raw_ne) {
-  ni->ino = LeToCpu(raw_ne->ino);
-  ni->blk_addr = LeToCpu(raw_ne->block_addr);
-  ni->version = raw_ne->version;
+void NodeMgr::NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne) {
+  ni.ino = LeToCpu(raw_ne.ino);
+  ni.blk_addr = LeToCpu(raw_ne.block_addr);
+  ni.version = raw_ne.version;
 }
 
-inline bool NodeMgr::IncValidNodeCount(SbInfo *sbi, VnodeF2fs *vnode, uint32_t count) {
+bool NodeMgr::IncValidNodeCount(SbInfo *sbi, VnodeF2fs *vnode, uint32_t count) {
   block_t valid_block_count;
   uint32_t ValidNodeCount;
 
@@ -431,125 +429,119 @@ void NodeMgr::RaNatPages(nid_t nid) {
   }
 }
 
-NatEntry *NodeMgr::LookupNatCache(NmInfo *nm_i, nid_t n) {
-  if (auto nat_entry = nm_i->nat_cache.find(n); nat_entry != nm_i->nat_cache.end()) {
+NatEntry *NodeMgr::LookupNatCache(NmInfo &nm_i, nid_t n) {
+  if (auto nat_entry = nm_i.nat_cache.find(n); nat_entry != nm_i.nat_cache.end()) {
     return &(*nat_entry);
   }
   return nullptr;
 }
 
-uint32_t NodeMgr::GangLookupNatCache(NmInfo *nm_i, uint32_t nr, NatEntry **out) {
+uint32_t NodeMgr::GangLookupNatCache(NmInfo &nm_i, uint32_t nr, NatEntry **out) {
   uint32_t ret = 0;
-  for (auto iter = nm_i->nat_cache.begin(); iter != nm_i->nat_cache.end(); ++iter) {
-    if (ret == nr)
+  for (auto &entry : nm_i.nat_cache) {
+    out[ret] = &entry;
+    if (++ret == nr)
       break;
-    out[ret] = &(*iter);
-    ZX_ASSERT(out[ret] != nullptr);
-    ret++;
   }
   return ret;
 }
 
-void NodeMgr::DelFromNatCache(NmInfo *nm_i, NatEntry *ne) {
-  ZX_ASSERT(ne != nullptr);
-  ZX_ASSERT_MSG(nm_i->clean_nat_list.erase(*ne) != nullptr, "Cannot find NAT in list(nid = %u)",
-                ne->ni.nid);
-  auto deleted = nm_i->nat_cache.erase(*ne);
-  ZX_ASSERT_MSG(deleted != nullptr, "Cannot find NAT in cache(nid = %u)", ne->ni.nid);
-  nm_i->nat_cnt--;
-  deleted.reset();
+void NodeMgr::DelFromNatCache(NmInfo &nm_i, NatEntry &entry) {
+  ZX_ASSERT_MSG(nm_i.clean_nat_list.erase(entry) != nullptr, "Cannot find NAT in list(nid = %u)",
+                entry.GetNid());
+  auto deleted = nm_i.nat_cache.erase(entry);
+  ZX_ASSERT_MSG(deleted != nullptr, "Cannot find NAT in cache(nid = %u)", entry.GetNid());
+  --nm_i.nat_cnt;
 }
 
-int NodeMgr::IsCheckpointedNode(nid_t nid) {
+bool NodeMgr::IsCheckpointedNode(nid_t nid) {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
-  NatEntry *ne;
-  int is_cp = 1;
 
   fs::SharedLock nat_lock(nm_i->nat_tree_lock);
-  ne = LookupNatCache(nm_i, nid);
-  if (ne && !ne->checkpointed)
-    is_cp = 0;
-  return is_cp;
+  NatEntry *ne = LookupNatCache(*nm_i, nid);
+  if (ne && !ne->IsCheckpointed()) {
+    return false;
+  }
+  return true;
 }
 
-NatEntry *NodeMgr::GrabNatEntry(NmInfo *nm_i, nid_t nid) {
+NatEntry *NodeMgr::GrabNatEntry(NmInfo &nm_i, nid_t nid) {
   auto new_entry = std::make_unique<NatEntry>();
 
   if (!new_entry)
     return nullptr;
 
-  auto raw_ptr = new_entry.get();
-  memset(raw_ptr, 0, sizeof(NatEntry));
-  NatSetNid(raw_ptr, nid);
+  auto entry = new_entry.get();
+  entry->SetNid(nid);
 
-  nm_i->clean_nat_list.push_back(raw_ptr);
-  nm_i->nat_cache.insert(std::move(new_entry));
-  nm_i->nat_cnt++;
-  return raw_ptr;
+  nm_i.clean_nat_list.push_back(entry);
+  nm_i.nat_cache.insert(std::move(new_entry));
+  ++nm_i.nat_cnt;
+  return entry;
 }
 
-void NodeMgr::CacheNatEntry(NmInfo *nm_i, nid_t nid, RawNatEntry *ne) {
-  NatEntry *e;
-retry:
-  std::lock_guard lock(nm_i->nat_tree_lock);
-  e = LookupNatCache(nm_i, nid);
-  if (!e) {
-    e = GrabNatEntry(nm_i, nid);
-    if (!e) {
-      goto retry;
+void NodeMgr::CacheNatEntry(NmInfo &nm_i, nid_t nid, RawNatEntry &raw_entry) {
+  while (true) {
+    std::lock_guard lock(nm_i.nat_tree_lock);
+    NatEntry *entry = LookupNatCache(nm_i, nid);
+    if (!entry) {
+      if (entry = GrabNatEntry(nm_i, nid); !entry) {
+        continue;
+      }
     }
-    NatSetBlkaddr(e, LeToCpu(ne->block_addr));
-    NatSetIno(e, LeToCpu(ne->ino));
-    NatSetVersion(e, ne->version);
-    e->checkpointed = true;
+    entry->SetBlockAddress(LeToCpu(raw_entry.block_addr));
+    entry->SetIno(LeToCpu(raw_entry.ino));
+    entry->SetVersion(raw_entry.version);
+    entry->SetCheckpointed();
+    break;
   }
 }
 
 void NodeMgr::SetNodeAddr(NodeInfo *ni, block_t new_blkaddr) {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
-  NatEntry *e;
-retry:
-  std::lock_guard nat_lock(nm_i->nat_tree_lock);
-  e = LookupNatCache(nm_i, ni->nid);
-  if (!e) {
-    e = GrabNatEntry(nm_i, ni->nid);
-    if (!e) {
-      goto retry;
+  while (true) {
+    std::lock_guard nat_lock(nm_i->nat_tree_lock);
+    NatEntry *entry = LookupNatCache(*nm_i, ni->nid);
+    if (!entry) {
+      entry = GrabNatEntry(*nm_i, ni->nid);
+      if (!entry) {
+        continue;
+      }
+      entry->SetNodeInfo(*ni);
+      entry->SetCheckpointed();
+      ZX_ASSERT(ni->blk_addr != kNewAddr);
+    } else if (new_blkaddr == kNewAddr) {
+      // when nid is reallocated,
+      // previous nat entry can be remained in nat cache.
+      // So, reinitialize it with new information.
+      entry->SetNodeInfo(*ni);
+      ZX_ASSERT(ni->blk_addr == kNullAddr);
     }
-    e->ni = *ni;
-    e->checkpointed = true;
-    ZX_ASSERT(ni->blk_addr != kNewAddr);
-  } else if (new_blkaddr == kNewAddr) {
-    /*
-     * when nid is reallocated,
-     * previous nat entry can be remained in nat cache.
-     * So, reinitialize it with new information.
-     */
-    e->ni = *ni;
-    ZX_ASSERT(ni->blk_addr == kNullAddr);
+
+    if (new_blkaddr == kNewAddr) {
+      entry->ClearCheckpointed();
+    }
+
+    // sanity check
+    ZX_ASSERT(!(entry->GetBlockAddress() != ni->blk_addr));
+    ZX_ASSERT(!(entry->GetBlockAddress() == kNullAddr && new_blkaddr == kNullAddr));
+    ZX_ASSERT(!(entry->GetBlockAddress() == kNewAddr && new_blkaddr == kNewAddr));
+    ZX_ASSERT(!(entry->GetBlockAddress() != kNewAddr && entry->GetBlockAddress() != kNullAddr &&
+                new_blkaddr == kNewAddr));
+
+    // increament version no as node is removed
+    if (entry->GetBlockAddress() != kNewAddr && new_blkaddr == kNullAddr) {
+      uint8_t version = entry->GetVersion();
+      entry->SetVersion(IncNodeVersion(version));
+    }
+
+    // change address
+    entry->SetBlockAddress(new_blkaddr);
+    SetNatCacheDirty(*nm_i, *entry);
+    break;
   }
-
-  if (new_blkaddr == kNewAddr)
-    e->checkpointed = false;
-
-  /* sanity check */
-  ZX_ASSERT(!(NatGetBlkaddr(e) != ni->blk_addr));
-  ZX_ASSERT(!(NatGetBlkaddr(e) == kNullAddr && new_blkaddr == kNullAddr));
-  ZX_ASSERT(!(NatGetBlkaddr(e) == kNewAddr && new_blkaddr == kNewAddr));
-  ZX_ASSERT(
-      !(NatGetBlkaddr(e) != kNewAddr && NatGetBlkaddr(e) != kNullAddr && new_blkaddr == kNewAddr));
-
-  /* increament version no as node is removed */
-  if (NatGetBlkaddr(e) != kNewAddr && new_blkaddr == kNullAddr) {
-    uint8_t version = NatGetVersion(e);
-    NatSetVersion(e, IncNodeVersion(version));
-  }
-
-  /* change address */
-  NatSetBlkaddr(e, new_blkaddr);
-  SetNatCacheDirty(nm_i, e);
 }
 
 int NodeMgr::TryToFreeNats(int nr_shrink) {
@@ -561,16 +553,14 @@ int NodeMgr::TryToFreeNats(int nr_shrink) {
 
   std::lock_guard nat_lock(nm_i->nat_tree_lock);
   while (nr_shrink && !nm_i->clean_nat_list.is_empty()) {
-    NatEntry *ne = &nm_i->clean_nat_list.front();
-    DelFromNatCache(nm_i, ne);
+    NatEntry *cache_entry = &nm_i->clean_nat_list.front();
+    DelFromNatCache(*nm_i, *cache_entry);
     nr_shrink--;
   }
   return nr_shrink;
 }
 
-/**
- * This function returns always success
- */
+// This function returns always success
 void NodeMgr::GetNodeInfo(nid_t nid, NodeInfo *ni) {
   SbInfo &sbi = fs_->GetSbInfo();
   NmInfo *nm_i = GetNmInfo(&sbi);
@@ -580,43 +570,41 @@ void NodeMgr::GetNodeInfo(nid_t nid, NodeInfo *ni) {
   NatBlock *nat_blk;
   Page *page = NULL;
   RawNatEntry ne;
-  NatEntry *e;
   int i;
 
   ni->nid = nid;
 
   {
-    /* Check nat cache */
+    // Check nat cache
     fs::SharedLock nat_lock(nm_i->nat_tree_lock);
-    e = LookupNatCache(nm_i, nid);
-    if (e) {
-      ni->ino = NatGetIno(e);
-      ni->blk_addr = NatGetBlkaddr(e);
-      ni->version = NatGetVersion(e);
+    NatEntry *entry = LookupNatCache(*nm_i, nid);
+    if (entry) {
+      ni->ino = entry->GetIno();
+      ni->blk_addr = entry->GetBlockAddress();
+      ni->version = entry->GetVersion();
       return;
     }
   }
 
   {
-    /* Check current segment summary */
+    // Check current segment summary
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
     i = SegMgr::LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 0);
     if (i >= 0) {
       ne = NatInJournal(sum, i);
-      NodeInfoFromRawNat(ni, &ne);
+      NodeInfoFromRawNat(*ni, ne);
     }
   }
   if (i < 0) {
-    /* Fill NodeInfo from nat page */
+    // Fill NodeInfo from nat page
     page = GetCurrentNatPage(start_nid);
     nat_blk = static_cast<NatBlock *>(PageAddress(page));
     ne = nat_blk->entries[nid - start_nid];
 
-    NodeInfoFromRawNat(ni, &ne);
+    NodeInfoFromRawNat(*ni, ne);
     F2fsPutPage(page, 1);
   }
-  /* cache nat entry */
-  CacheNatEntry(GetNmInfo(&sbi), nid, &ne);
+  CacheNatEntry(*nm_i, nid, ne);
 }
 
 /**
@@ -1618,12 +1606,11 @@ void NodeMgr::BuildFreeNids() {
 
   /* remove the free nids from current allocated nids */
   list_for_every_entry_safe (&nm_i->free_nid_list, fnid, next_fnid, FreeNid, list) {
-    NatEntry *ne;
-
     fs::SharedLock nat_lock(nm_i->nat_tree_lock);
-    ne = LookupNatCache(nm_i, fnid->nid);
-    if (ne && NatGetBlkaddr(ne) != kNullAddr)
+    NatEntry *entry = LookupNatCache(*nm_i, fnid->nid);
+    if (entry && entry->GetBlockAddress() != kNullAddr) {
       RemoveFreeNid(nm_i, fnid->nid);
+    }
   }
 }
 
@@ -1814,24 +1801,24 @@ bool NodeMgr::FlushNatsInJournal() {
   }
 
   for (i = 0; i < NatsInCursum(sum); i++) {
-    NatEntry *ne = nullptr;
-    RawNatEntry raw_ne = NatInJournal(sum, i);
+    NatEntry *cache_entry = nullptr;
+    RawNatEntry raw_entry = NatInJournal(sum, i);
     nid_t nid = LeToCpu(NidInJournal(sum, i));
 
-    while (!ne) {
+    while (!cache_entry) {
       std::lock_guard nat_lock(nm_i->nat_tree_lock);
-      ne = LookupNatCache(nm_i, nid);
-      if (ne) {
-        SetNatCacheDirty(nm_i, ne);
+      cache_entry = LookupNatCache(*nm_i, nid);
+      if (cache_entry) {
+        SetNatCacheDirty(*nm_i, *cache_entry);
       } else {
-        ne = GrabNatEntry(nm_i, nid);
-        if (!ne) {
+        cache_entry = GrabNatEntry(*nm_i, nid);
+        if (!cache_entry) {
           continue;
         }
-        NatSetBlkaddr(ne, LeToCpu(raw_ne.block_addr));
-        NatSetIno(ne, LeToCpu(raw_ne.ino));
-        NatSetVersion(ne, raw_ne.version);
-        SetNatCacheDirty(nm_i, ne);
+        cache_entry->SetBlockAddress(LeToCpu(raw_entry.block_addr));
+        cache_entry->SetIno(LeToCpu(raw_entry.ino));
+        cache_entry->SetVersion(raw_entry.version);
+        SetNatCacheDirty(*nm_i, *cache_entry);
       }
     }
   }
@@ -1866,12 +1853,12 @@ void NodeMgr::FlushNatEntries() {
       int offset = -1;
       __UNUSED block_t old_blkaddr, new_blkaddr;
 
-      NatEntry *ne = iter.CopyPointer();
+      NatEntry *cache_entry = iter.CopyPointer();
       iter++;
 
-      nid = NatGetNid(ne);
+      nid = cache_entry->GetNid();
 
-      if (NatGetBlkaddr(ne) == kNewAddr)
+      if (cache_entry->GetBlockAddress() == kNewAddr)
         continue;
 
       if (!flushed) {
@@ -1906,11 +1893,11 @@ void NodeMgr::FlushNatEntries() {
         old_blkaddr = LeToCpu(raw_ne.block_addr);
       }
 
-      new_blkaddr = NatGetBlkaddr(ne);
+      new_blkaddr = cache_entry->GetBlockAddress();
 
-      raw_ne.ino = CpuToLe(NatGetIno(ne));
+      raw_ne.ino = CpuToLe(cache_entry->GetIno());
       raw_ne.block_addr = CpuToLe(new_blkaddr);
-      raw_ne.version = NatGetVersion(ne);
+      raw_ne.version = cache_entry->GetVersion();
 
       if (offset < 0) {
         nat_blk->entries[nid - start_nid] = raw_ne;
@@ -1919,13 +1906,13 @@ void NodeMgr::FlushNatEntries() {
         SetNidInJournal(sum, offset, CpuToLe(nid));
       }
 
-      if (NatGetBlkaddr(ne) == kNullAddr) {
-        DelFromNatCache(nm_i, ne);
+      if (cache_entry->GetBlockAddress() == kNullAddr) {
+        DelFromNatCache(*nm_i, *cache_entry);
         // We can reuse this freed nid at this point
         AddFreeNid(GetNmInfo(&sbi), nid);
       } else {
-        ClearNatCacheDirty(nm_i, ne);
-        ne->checkpointed = true;
+        ClearNatCacheDirty(*nm_i, *cache_entry);
+        cache_entry->SetCheckpointed();
       }
     }
   }
@@ -2021,11 +2008,11 @@ void NodeMgr::DestroyNodeManager() {
   {
     // destroy nat cache
     std::lock_guard nat_lock(nm_i->nat_tree_lock);
-    while ((found = GangLookupNatCache(nm_i, kNatvecSize, natvec))) {
+    while ((found = GangLookupNatCache(*nm_i, kNatvecSize, natvec))) {
       uint32_t idx;
       for (idx = 0; idx < found; idx++) {
         NatEntry *e = natvec[idx];
-        DelFromNatCache(nm_i, e);
+        DelFromNatCache(*nm_i, *e);
       }
     }
     ZX_ASSERT(!nm_i->nat_cnt);

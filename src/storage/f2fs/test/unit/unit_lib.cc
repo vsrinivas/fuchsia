@@ -305,9 +305,9 @@ bool IsCachedNat(NmInfo *nm_i, nid_t n) {
 
 void RemoveTruncatedNode(NmInfo *nm_i, std::vector<nid_t> &nids) {
   for (auto iter = nids.begin(); iter != nids.end();) {
-    auto ne = nm_i->nat_cache.find(*iter);
-    if (ne != nm_i->nat_cache.end()) {
-      if (NatGetBlkaddr(&(*ne)) == kNullAddr) {
+    auto cache_entry = nm_i->nat_cache.find(*iter);
+    if (cache_entry != nm_i->nat_cache.end()) {
+      if ((*cache_entry).GetBlockAddress() == kNullAddr) {
         iter = nids.erase(iter);
       } else {
         iter++;

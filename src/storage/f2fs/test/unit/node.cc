@@ -35,7 +35,7 @@ TEST(NodeMgrTest, NatCache) {
   fbl::RefPtr<VnodeF2fs> root;
   unittest_lib::CreateRoot(fs.get(), &root);
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-  NatEntry *e = nullptr;
+  NatEntry *entry = nullptr;
 
   // 1. Check NAT cache is empty
   {
@@ -44,8 +44,8 @@ TEST(NodeMgrTest, NatCache) {
     ASSERT_EQ(nm_i->clean_nat_list.size_slow(), static_cast<size_t>(1));  // root inode
     ASSERT_TRUE(nm_i->dirty_nat_list.is_empty());
 
-    e = &nm_i->clean_nat_list.front();
-    ASSERT_EQ(e->ni.nid, static_cast<nid_t>(3));  // root inode
+    entry = &nm_i->clean_nat_list.front();
+    ASSERT_EQ(entry->GetNid(), static_cast<nid_t>(RootIno(&sbi)));
   }
 
   // 2. Check NAT entry is cached in dirty NAT entries list
@@ -104,10 +104,10 @@ TEST(NodeMgrTest, NatCache) {
   {
     std::lock_guard nat_lock(nm_i->nat_tree_lock);
     while (!nm_i->nat_cache.is_empty()) {
-      e = &nm_i->nat_cache.front();
-      nm_i->clean_nat_list.erase(*e);
-      nm_i->nat_cache.erase(*e);
-      nm_i->nat_cnt--;
+      entry = &nm_i->nat_cache.front();
+      nm_i->clean_nat_list.erase(*entry);
+      nm_i->nat_cache.erase(*entry);
+      --nm_i->nat_cnt;
     }
     ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
   }
@@ -162,10 +162,10 @@ TEST(NodeMgrTest, NatCache) {
   {
     std::lock_guard nat_lock(nm_i->nat_tree_lock);
     while (!nm_i->nat_cache.is_empty()) {
-      e = &nm_i->nat_cache.front();
-      nm_i->clean_nat_list.erase(*e);
-      nm_i->nat_cache.erase(*e);
-      nm_i->nat_cnt--;
+      entry = &nm_i->nat_cache.front();
+      nm_i->clean_nat_list.erase(*entry);
+      nm_i->nat_cache.erase(*entry);
+      --nm_i->nat_cnt;
     }
     ASSERT_EQ(nm_i->nat_cnt, static_cast<uint32_t>(0));
   }
