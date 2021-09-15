@@ -6,7 +6,8 @@ use {
     async_lock::RwLock,
     async_trait::async_trait,
     ffx_daemon_core::events::{EventHandler, Status as EventStatus},
-    ffx_daemon_events::{DaemonEvent, TargetEvent},
+    ffx_daemon_events::{DaemonEvent, TargetEvent, TargetInfo},
+    ffx_daemon_target::target::Target,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
@@ -23,6 +24,7 @@ use {
         collections::HashSet,
         convert::{TryFrom, TryInto},
         net,
+        rc::Rc,
         sync::Arc,
         time::Duration,
     },
@@ -829,20 +831,48 @@ struct DaemonEventHandler {
     manager: Arc<RepositoryManager>,
 }
 
+impl DaemonEventHandler {
+    /// pub(crate) so that this is visible to tests.
+    pub(crate) fn build_matcher(t: TargetInfo) -> Option<String> {
+        if let Some(nodename) = t.nodename {
+            Some(nodename)
+        } else {
+            // If this target doesn't have a nodename, we fall back to matching on IP/port.
+            // Since this is only used for matching and not connecting,
+            // we simply choose the first address in the list.
+            if let Some(addr) = t.addresses.first() {
+                let addr_str =
+                    if addr.ip().is_ipv6() { format!("[{}]", addr) } else { format!("{}", addr) };
+
+                if let Some(p) = t.ssh_port.as_ref() {
+                    Some(format!("{}:{}", addr_str, p))
+                } else {
+                    Some(format!("{}", addr))
+                }
+            } else {
+                None
+            }
+        }
+    }
+}
+
 #[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<EventStatus> {
         match event {
-            DaemonEvent::NewTarget(t) => {
-                if let Some(n) = t.nodename.as_ref() {
-                    let (_, q) = self.cx.get_target_event_queue(Some(n.clone())).await?;
-                    q.add_handler(TargetEventHandler::new(
-                        self.cx.clone(),
-                        Arc::clone(&self.manager),
-                        n.clone(),
-                    ))
-                    .await;
-                }
+            DaemonEvent::NewTarget(info) => {
+                let matcher = if let Some(s) = Self::build_matcher(info) {
+                    s
+                } else {
+                    return Ok(EventStatus::Waiting);
+                };
+                let (t, q) = self.cx.get_target_event_queue(Some(matcher)).await?;
+                q.add_handler(TargetEventHandler::new(
+                    self.cx.clone(),
+                    Arc::clone(&self.manager),
+                    t,
+                ))
+                .await;
             }
             _ => {}
         }
@@ -854,12 +884,12 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 struct TargetEventHandler {
     cx: Context,
     manager: Arc<RepositoryManager>,
-    target_identifier: String,
+    target: Rc<Target>,
 }
 
 impl TargetEventHandler {
-    fn new(cx: Context, manager: Arc<RepositoryManager>, target_identifier: String) -> Self {
-        Self { cx, manager, target_identifier }
+    fn new(cx: Context, manager: Arc<RepositoryManager>, target: Rc<Target>) -> Self {
+        Self { cx, manager, target }
     }
 }
 
@@ -873,10 +903,17 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
         // Make sure we pick up any repositories that have been added since the last event.
         load_repositories_from_config(&self.manager).await;
 
+        let source_nodename = if let Some(n) = self.target.nodename() {
+            n
+        } else {
+            log::warn!("not registering target due to missing nodename {:?}", self.target);
+            return Ok(EventStatus::Waiting);
+        };
+
         // Find any saved registrations for this target and register them on the device.
         for (repo_name, targets) in pkg::config::get_registrations().await {
             for (target_nodename, target_info) in targets {
-                if target_nodename != self.target_identifier {
+                if target_nodename != source_nodename {
                     continue;
                 }
 
@@ -913,6 +950,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
 mod tests {
     use {
         super::*,
+        addr::TargetAddr,
         ffx_config::ConfigLevel,
         fidl::{self, endpoints::Request},
         fidl_fuchsia_developer_bridge_ext::RepositoryStorageType,
@@ -1143,7 +1181,11 @@ mod tests {
     #[async_trait::async_trait(?Send)]
     impl EventHandlerProvider for TestEventHandlerProvider {
         async fn setup_event_handlers(&self, cx: Context, manager: Arc<RepositoryManager>) {
-            let handler = TargetEventHandler::new(cx, manager, TARGET_NODENAME.to_string());
+            let handler = TargetEventHandler::new(
+                cx,
+                manager,
+                Target::new_named(TARGET_NODENAME.to_string()),
+            );
             handler.on_event(TargetEvent::RcsActivated).await.unwrap();
         }
     }
@@ -1950,5 +1992,48 @@ mod tests {
             // Make sure we didn't communicate with the device.
             assert_eq!(fake_engine.take_events(), vec![]);
         });
+    }
+
+    #[test]
+    fn test_build_matcher_nodename() {
+        assert_eq!(
+            DaemonEventHandler::build_matcher(TargetInfo {
+                nodename: Some(TARGET_NODENAME.to_string()),
+                ..TargetInfo::default()
+            }),
+            Some(TARGET_NODENAME.to_string())
+        );
+
+        assert_eq!(
+            DaemonEventHandler::build_matcher(TargetInfo {
+                nodename: Some(TARGET_NODENAME.to_string()),
+                addresses: vec![TargetAddr::new("[fe80::1%1000]:0").unwrap()],
+                ..TargetInfo::default()
+            }),
+            Some(TARGET_NODENAME.to_string())
+        )
+    }
+
+    #[test]
+    fn test_build_matcher_missing_nodename_no_port() {
+        assert_eq!(
+            DaemonEventHandler::build_matcher(TargetInfo {
+                addresses: vec![TargetAddr::new("[fe80::1%1000]:0").unwrap()],
+                ..TargetInfo::default()
+            }),
+            Some("fe80::1%1000".to_string())
+        )
+    }
+
+    #[test]
+    fn test_build_matcher_missing_nodename_with_port() {
+        assert_eq!(
+            DaemonEventHandler::build_matcher(TargetInfo {
+                addresses: vec![TargetAddr::new("[fe80::1%1000]:0").unwrap()],
+                ssh_port: Some(9182),
+                ..TargetInfo::default()
+            }),
+            Some("[fe80::1%1000]:9182".to_string())
+        )
     }
 }
