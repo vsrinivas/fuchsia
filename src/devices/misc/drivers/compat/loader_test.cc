@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/misc/drivers/compat/compat_loader.h"
+#include "src/devices/misc/drivers/compat/loader.h"
 
 #include <fuchsia/ldsvc/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -54,11 +54,9 @@ class TestLoader : public fldsvc::testing::Loader_TestBase {
 
 }  // namespace
 
-namespace compat {
+class LoaderTest : public gtest::TestLoopFixture {};
 
-class CompatLoaderTest : public gtest::TestLoopFixture {};
-
-TEST_F(CompatLoaderTest, LoadObject) {
+TEST_F(LoaderTest, LoadObject) {
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
 
   // Create VMO for backing loader reply.
@@ -80,7 +78,7 @@ TEST_F(CompatLoaderTest, LoadObject) {
   zx_koid_t loader_koid = GetKoid(loader_vmo);
 
   // Create compat loader.
-  CompatLoader loader(dispatcher());
+  compat::Loader loader(dispatcher());
   status = loader.Bind(std::move(endpoints->client), std::move(loader_vmo)).status_value();
   ASSERT_EQ(ZX_OK, status);
   status = loader.Bind({}, {}).status_value();
@@ -102,7 +100,7 @@ TEST_F(CompatLoaderTest, LoadObject) {
   ASSERT_TRUE(RunLoopUntilIdle());
 
   // Test that loading the driver library fetches a VMO from the compat loader.
-  client->LoadObject(kLibDriverName, [loader_koid](auto* response) {
+  client->LoadObject(compat::kLibDriverName, [loader_koid](auto* response) {
     EXPECT_EQ(ZX_OK, response->rv);
     zx_koid_t actual_koid = GetKoid(response->object);
     EXPECT_EQ(loader_koid, actual_koid);
@@ -112,13 +110,13 @@ TEST_F(CompatLoaderTest, LoadObject) {
 
   // Test that loading the driver library a second returns an error. We should
   // only see a single request for the driver library by the dynamic loader.
-  client->LoadObject(kLibDriverName,
+  client->LoadObject(compat::kLibDriverName,
                      [](auto* response) { EXPECT_EQ(ZX_ERR_NOT_FOUND, response->rv); });
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }
 
-TEST_F(CompatLoaderTest, DoneClosesConnection) {
+TEST_F(LoaderTest, DoneClosesConnection) {
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
 
   // Create backing loader.
@@ -127,7 +125,7 @@ TEST_F(CompatLoaderTest, DoneClosesConnection) {
                                                      &backing_loader);
 
   // Create compat loader.
-  CompatLoader loader(dispatcher());
+  compat::Loader loader(dispatcher());
   zx_status_t status = loader.Bind(std::move(endpoints->client), zx::vmo()).status_value();
   ASSERT_EQ(ZX_OK, status);
 
@@ -148,7 +146,7 @@ TEST_F(CompatLoaderTest, DoneClosesConnection) {
   EXPECT_EQ(fidl::Reason::kPeerClosed, handler.Reason());
 }
 
-TEST_F(CompatLoaderTest, ConfigSucceeds) {
+TEST_F(LoaderTest, ConfigSucceeds) {
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
 
   // Create backing loader.
@@ -157,7 +155,7 @@ TEST_F(CompatLoaderTest, ConfigSucceeds) {
                                                      &backing_loader);
 
   // Create compat loader.
-  CompatLoader loader(dispatcher());
+  compat::Loader loader(dispatcher());
   zx_status_t status = loader.Bind(std::move(endpoints->client), zx::vmo()).status_value();
   ASSERT_EQ(ZX_OK, status);
 
@@ -173,7 +171,7 @@ TEST_F(CompatLoaderTest, ConfigSucceeds) {
   ASSERT_TRUE(RunLoopUntilIdle());
 }
 
-TEST_F(CompatLoaderTest, CloneSucceeds) {
+TEST_F(LoaderTest, CloneSucceeds) {
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
 
   // Create backing loader.
@@ -182,7 +180,7 @@ TEST_F(CompatLoaderTest, CloneSucceeds) {
                                                      &backing_loader);
 
   // Create compat loader.
-  CompatLoader loader(dispatcher());
+  compat::Loader loader(dispatcher());
   zx_status_t status = loader.Bind(std::move(endpoints->client), zx::vmo()).status_value();
   ASSERT_EQ(ZX_OK, status);
 
@@ -200,11 +198,11 @@ TEST_F(CompatLoaderTest, CloneSucceeds) {
   ASSERT_TRUE(RunLoopUntilIdle());
 }
 
-TEST_F(CompatLoaderTest, NoBackingLoader) {
+TEST_F(LoaderTest, NoBackingLoader) {
   auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
 
   // Create compat loader.
-  CompatLoader loader(dispatcher());
+  compat::Loader loader(dispatcher());
   zx_status_t status = loader.Bind(std::move(endpoints->client), {}).status_value();
   ASSERT_EQ(ZX_OK, status);
 
@@ -223,5 +221,3 @@ TEST_F(CompatLoaderTest, NoBackingLoader) {
 
   ASSERT_TRUE(RunLoopUntilIdle());
 }
-
-}  // namespace compat

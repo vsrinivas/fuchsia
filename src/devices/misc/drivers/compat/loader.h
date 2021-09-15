@@ -11,15 +11,15 @@ namespace compat {
 
 constexpr char kLibDriverName[] = "libdriver.so";
 
-// CompatLoader is a loader service that is used to override the DFv1 driver
-// library with an alternative implementation.
+// Loader is a loader service that is used to override the DFv1 driver library
+// with an alternative implementation.
 //
 // For most requests, it passes them along to a backing loader service, however
 // if the DFv1 driver library is requested, it will return the compatibility
 // driver's VMO.
-class CompatLoader : public fidl::WireServer<fuchsia_ldsvc::Loader> {
+class Loader : public fidl::WireServer<fuchsia_ldsvc::Loader> {
  public:
-  explicit CompatLoader(async_dispatcher_t* dispatcher);
+  explicit Loader(async_dispatcher_t* dispatcher);
 
   // Binds a backing loader, `client_end`, and the VMO for the compatibility
   // driver, `driver_vmo`.

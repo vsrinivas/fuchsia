@@ -11,8 +11,8 @@ group("tests") {
 
 source_set("lib") {
   sources = [
-    "compat_loader.cc",
-    "compat_loader.h",
+    "loader.cc",
+    "loader.h",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_llcpp" ]
 }
@@ -21,7 +21,7 @@ executable("unittests") {
   testonly = true
   output_name = "compat_test"
 
-  sources = [ "compat_loader_test.cc" ]
+  sources = [ "loader_test.cc" ]
 
   deps = [
     ":lib",
