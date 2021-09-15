@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_BOARD_INFO_H_
 #define SRC_BRINGUP_BIN_NETSVC_BOARD_INFO_H_
 
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <unistd.h>
 
 bool CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, const char* name,

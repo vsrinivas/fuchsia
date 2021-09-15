@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FS_TEST_TEST_FILESYSTEM_H_
 #define SRC_STORAGE_FS_TEST_TEST_FILESYSTEM_H_
 
-#include <fuchsia/io/llcpp/fidl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 
 #include "src/storage/fs_test/fs_test.h"
 

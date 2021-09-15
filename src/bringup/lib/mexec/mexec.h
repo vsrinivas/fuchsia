@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 #define SRC_BRINGUP_LIB_MEXEC_MEXEC_H_
 
-#include <fuchsia/device/manager/llcpp/fidl.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

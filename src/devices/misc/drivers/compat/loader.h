@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_COMPAT_COMPAT_LOADER_H_
 #define SRC_DEVICES_MISC_DRIVERS_COMPAT_COMPAT_LOADER_H_
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 
 namespace compat {
 

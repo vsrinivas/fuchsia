@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
 #define SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
 
-#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>

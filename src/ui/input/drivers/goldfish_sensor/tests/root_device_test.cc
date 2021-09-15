@@ -5,7 +5,7 @@
 #include "src/ui/input/drivers/goldfish_sensor/root_device.h"
 
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/ddk/driver.h>
 
 #include <string>

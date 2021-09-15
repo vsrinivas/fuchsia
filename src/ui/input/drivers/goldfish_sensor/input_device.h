@@ -4,7 +4,7 @@
 
 #ifndef SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_INPUT_DEVICE_H_
 #define SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_INPUT_DEVICE_H_
-#include <fuchsia/input/report/llcpp/fidl.h>
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/result.h>
 
