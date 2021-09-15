@@ -58,6 +58,7 @@ protocol Daemon {
 
     /// Lists targets by nodename.
     /// TODO(fxbug.dev/52798): Use an iterator instead of a limited vector.
+    @deprecated("Use target collection service. See `target list` plugin.")
     ListTargets(struct {
         value string:fuchsia.device.DEVICE_NAME_MAX;
     }) -> (struct {
@@ -108,6 +109,7 @@ protocol Daemon {
     /// * Timeout error if steps 1 and 2 don't happen in time.
     /// * Cache error if a target has appeared but suddenly disappears before
     ///   running the function to completion.
+    @deprecated("Use target collection service. See get-ssh-address plugin.")
     GetSshAddress(struct {
         target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         timeout zx.duration;
