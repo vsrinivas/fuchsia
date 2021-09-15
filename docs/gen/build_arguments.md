@@ -1133,14 +1133,14 @@ using '--args=ermine_app_entries="config/app_launch_entries.json"'
 
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:24
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:23
 
 ### ermine_start_screensaver
 Whether or not to launch screensaver.
 
 **Current value (from the default):** `true`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:30
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:29
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -3556,7 +3556,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:27
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:26
 
 ### sysmgr_golden_warn_override
 Used by config_package().
