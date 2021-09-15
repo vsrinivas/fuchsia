@@ -134,9 +134,7 @@ gvisor_tests = [
   "munmap_test",
   "open_create_test",
   "open_test",
-
-  # Disabled due to https://fxbug.dev/84512
-  #"pipe_test",
+  "pipe_test",
 
   # "poll_test",
   # "ppoll_test",
