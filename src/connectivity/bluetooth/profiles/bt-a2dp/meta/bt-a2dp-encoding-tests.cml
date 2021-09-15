@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/media/codec/factory/meta/include_codecfactory.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/bt_a2dp_encoding_tests",
+    },
+    use: [
+        // See `include_codecfactory.shard.cml` which defines `#codec-factory` which provides this
+        // capability.
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec-factory",
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+}

@@ -123,14 +123,6 @@ fuchsia_unittest_package("bt-a2dp-tests") {
   deps = [ ":bin_test" ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":bt-a2dp-encoding-tests",
-    ":bt-a2dp-tests",
-  ]
-}
-
 rustc_test("encoding_integration_bin") {
   output_name = "bt_a2dp_encoding_tests"
   features = [ "test_encoding" ]
@@ -218,6 +210,18 @@ rustc_test("encoding_integration_bin") {
 }
 
 fuchsia_unittest_package("bt-a2dp-encoding-tests") {
-  manifest = "meta/bt-a2dp-encoding-tests.cmx"
+  manifest = "meta/bt-a2dp-encoding-tests.cml"
   deps = [ ":encoding_integration_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bt-a2dp-encoding-tests",
+    ":bt-a2dp-tests",
+
+    # The `bt-a2dp-encoding-tests` use the CFv2 Codec Factory component which is part of this
+    # package. See `include_codecfactory.shard.cml` for the list of provided capabilities.
+    "//src/media/codec:codec_factory",
+  ]
 }
