@@ -119,6 +119,11 @@ protocol TargetCollection {
         query string:<255, optional>;
         target_handle server_end:TargetHandle;
     }) -> (struct {}) error OpenTargetError;
+
+    /// Manually adds a target that cannot be discovered via mDNS.
+    AddTarget(struct {
+        ip TargetAddrInfo;
+    }) -> ();
 };
 
 /// This is a handle to a target received from the target collection.

@@ -53,16 +53,12 @@ if (is_host) {
       "//third_party/rust_crates:thiserror",
     ]
 
-    test_deps = [
-      "//third_party/rust_crates:matches",
-      "//third_party/rust_crates:serial_test",
-    ]
+    test_deps = [ "//third_party/rust_crates:matches" ]
 
     sources = [
       "src/constants.rs",
       "src/daemon.rs",
       "src/lib.rs",
-      "src/manual_targets.rs",
       "src/target_control.rs",
     ]
     inputs = [ "data/config.json" ]

@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     ffx_daemon_core::events::Queue,
     ffx_daemon_events::{DaemonEvent, TargetEvent},
-    ffx_daemon_target::{target::Target, target_collection::TargetCollection},
+    ffx_daemon_target::{manual_targets, target::Target, target_collection::TargetCollection},
     fidl::endpoints::Proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -53,6 +53,11 @@ pub trait DaemonServiceProvider {
 
     /// Returns a copy of the daemon target collection.
     async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
+        unimplemented!()
+    }
+
+    /// Returns a reference to the daemon's manual targets.
+    async fn get_manual_targets(&self) -> Result<Rc<dyn manual_targets::ManualTargets>> {
         unimplemented!()
     }
 }
@@ -141,5 +146,9 @@ impl Context {
 
     pub async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
         self.inner.get_target_collection().await
+    }
+
+    pub async fn get_manual_targets(&self) -> Result<Rc<dyn manual_targets::ManualTargets>> {
+        self.inner.get_manual_targets().await
     }
 }

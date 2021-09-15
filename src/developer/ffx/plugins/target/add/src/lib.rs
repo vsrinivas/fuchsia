@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_net as net,
+    fidl_fuchsia_developer_bridge::{self as bridge, TargetCollectionProxy},
+    fidl_fuchsia_net as net,
     regex::Regex,
     std::net::IpAddr,
 };
@@ -14,8 +15,8 @@ use {
 #[cfg(not(test))]
 use std::ffi::CString;
 
-#[ffx_plugin()]
-pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<()> {
+#[ffx_plugin(TargetCollectionProxy = "daemon::service")]
+pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand) -> Result<()> {
     let v6bracket = Regex::new(r"^\[([^\]]+)\](:\d+)?$")?;
     let v4port = Regex::new(r"^(\d+\.\d+\.\d+\.\d+)(:\d+)?$")?;
     let with_scope = Regex::new(r"^(.*)%(.*)$")?;
@@ -61,11 +62,9 @@ pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<(
         bridge::TargetAddrInfo::Ip(bridge::TargetIp { ip, scope_id })
     };
 
-    if let Err(e) = daemon_proxy.add_target(&mut addr).await? {
-        Err(anyhow!("Error adding target: {:?}", e))
-    } else {
-        Ok(())
-    }
+    target_collection_proxy.add_target(&mut addr).await?;
+
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,15 +73,14 @@ pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<(
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_developer_bridge::DaemonRequest;
 
-    fn setup_fake_daemon_server<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
+    fn setup_fake_target_collection<T: 'static + Fn(bridge::TargetAddrInfo) + Send>(
         test: T,
-    ) -> bridge::DaemonProxy {
-        setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::AddTarget { ip, responder } => {
+    ) -> TargetCollectionProxy {
+        setup_fake_target_collection_proxy(move |req| match req {
+            bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
                 test(ip);
-                responder.send(&mut Ok(())).unwrap();
+                responder.send().unwrap();
             }
             _ => assert!(false),
         })
@@ -90,7 +88,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -110,7 +108,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_port() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
@@ -131,7 +129,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_v6() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -147,7 +145,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_v6_port() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
@@ -164,7 +162,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_v6_scope_id() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -180,7 +178,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_v6_scope_id_port() {
-        let server = setup_fake_daemon_server(|addr| {
+        let server = setup_fake_target_collection(|addr| {
             assert_eq!(
                 addr,
                 bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {

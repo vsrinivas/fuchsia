@@ -63,6 +63,7 @@ rustc_library("lib") {
   test_deps = [
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serial_test",
   ]
 
   sources = [
@@ -72,6 +73,7 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/logger/mod.rs",
     "src/logger/streamer.rs",
+    "src/manual_targets.rs",
     "src/overnet/host_pipe.rs",
     "src/overnet/mod.rs",
     "src/overnet/ssh.rs",

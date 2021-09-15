@@ -4,7 +4,6 @@
 
 use {
     crate::constants::{get_socket, CURRENT_EXE_HASH},
-    crate::manual_targets,
     crate::target_control::TargetControl,
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
@@ -20,6 +19,7 @@ use {
     ffx_daemon_services::create_service_register_map,
     ffx_daemon_target::fastboot::{spawn_fastboot_discovery, Fastboot},
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
+    ffx_daemon_target::manual_targets,
     ffx_daemon_target::target::{
         target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType,
     },
@@ -244,6 +244,10 @@ impl DaemonServiceProvider for Daemon {
 
     async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
         Ok(self.target_collection.clone())
+    }
+
+    async fn get_manual_targets(&self) -> Result<Rc<dyn manual_targets::ManualTargets>> {
+        Ok(self.manual_targets.clone())
     }
 }
 

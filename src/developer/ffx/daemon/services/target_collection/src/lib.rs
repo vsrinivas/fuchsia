@@ -6,7 +6,12 @@ use {
     crate::target_handle::TargetHandle,
     anyhow::{anyhow, Result},
     async_trait::async_trait,
+    chrono::Utc,
     ffx_core::TryStreamUtilExt,
+    ffx_daemon_events::TargetConnectionState,
+    ffx_daemon_target::target::{
+        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType,
+    },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fuchsia_async::futures::{future::ready, FutureExt, TryStreamExt},
@@ -107,6 +112,28 @@ impl FidlService for TargetCollectionService {
                     });
                 self.target_handles.borrow_mut().insert(task_id, Task::local(target_handle));
                 responder.send(&mut Ok(())).map_err(Into::into)
+            }
+            bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
+                // TODO(awdavies): The related tests for this are still implemented in
+                // daemon/src/daaemon.rs and should be migrated here once:
+                // a.) The previous AddTargets function is deprecated, and
+                // b.) All references to manual_targets are moved here instead
+                //     of in the daemon.
+                let addr = target_addr_info_to_socketaddr(ip);
+                let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual);
+                let manual_targets = cx.get_manual_targets().await?;
+                let _ = manual_targets.add(format!("{}", addr)).await.map_err(|e| {
+                    log::error!("Unable to persist manual target: {:?}", e);
+                });
+                let target =
+                    Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
+                if addr.port() != 0 {
+                    target.set_ssh_port(Some(addr.port()));
+                }
+                target.update_connection_state(|_| TargetConnectionState::Manual);
+                let target = target_collection.merge_insert(target);
+                target.run_host_pipe();
+                responder.send().map_err(Into::into)
             }
         }
     }
