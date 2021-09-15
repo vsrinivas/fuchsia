@@ -440,44 +440,14 @@ const MAX_FILENAME uint64 = 255;
 const NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 = 0x00000001;
 const NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 = 0x00000002;
 
-/// The reference point for updating the seek offset. See [`File.Seek`].
-///
-/// This enum matches the `zx_stream_seek_origin_t` enum.
+/// Update the Seek offset.
 type SeekOrigin = strict enum : uint32 {
     /// Seek from the start of the file.
-    /// The seek offset will be set to `offset` bytes.
-    /// The seek offset cannot be negative in this case.
     START = 0;
-
     /// Seek from the current position in the file.
-    /// The seek offset will be the current seek offset plus `offset` bytes.
     CURRENT = 1;
-
     /// Seek from the end of the file.
-    /// The seek offset will be the file size plus `offset` bytes.
     END = 2;
-};
-
-type VmoFlags = strict bits : uint64 {
-    /// Requests that the VMO be readable.
-    READ = 0x00000001;
-
-    /// Requests that the VMO be writable.
-    WRITE = 0x00000002;
-
-    /// Request that the VMO be executable.
-    EXECUTE = 0x00000004;
-
-    /// Require a copy-on-write clone of the underlying VMO.
-    /// The request should fail if the VMO cannot be cloned.
-    /// May not be supplied with `SHARED_BUFFER`.
-    PRIVATE_CLONE = 0x00010000;
-
-    /// Require an exact (non-cloned) handle to the underlying VMO.
-    /// All clients using this flag would get a VMO with the same koid.
-    /// The request should fail if a handle to the exact VMO cannot be returned.
-    /// May not be supplied with `PRIVATE_CLONE`.
-    SHARED_BUFFER = 0x00020000;
 };
 
 /// Requests that the VMO be readable.
@@ -499,15 +469,6 @@ const VMO_FLAG_PRIVATE uint32 = 0x00010000;
 /// May not be supplied with `VMO_FLAG_PRIVATE`.
 const VMO_FLAG_EXACT uint32 = 0x00020000;
 
-// TODO: We should run some experiments to see what's the optimum value, or
-// what's the point of diminishing marginal returns.
-/// The maximum I/O size that is allowed for read/write operations using
-/// byte vectors.
-const MAX_TRANSFER_SIZE uint64 = 8192;
-
-/// The byte vector type used for read/write operations.
-alias Transfer = bytes:MAX_TRANSFER_SIZE;
-
 /// File defines the interface of a node which contains a flat layout of data.
 protocol File {
     compose Node;
@@ -528,32 +489,6 @@ protocol File {
         data vector<uint8>:MAX_BUF;
     });
 
-    /// Reads up to 'count' bytes at the seek offset.
-    /// The seek offset is moved forward by the number of bytes read.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `data.length` will never be greater than `count`.
-    /// * If `data.length` is less than `count`, it means that the seek offset
-    ///   has reached the end of file as part of this operation.
-    /// * If `data.length` is zero while `count` is not, it means that the
-    ///   seek offset is already at or beyond the end of file, and no data could
-    ///   be read.
-    /// * If `count` is zero, the server should perform all the checks ensuring
-    ///   read access without actually read anything, and return an empty
-    ///   `data` vector.
-    ///
-    /// This method requires the [`Rights.READ_BYTES`] right.
-    ///
-    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
-    @transitional
-    @selector("fuchsia.io/File.Read")
-    Read2(struct {
-        count uint64;
-    }) -> (struct {
-        data Transfer;
-    }) error zx.status;
-
     /// Reads up to `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
@@ -570,32 +505,6 @@ protocol File {
         data vector<uint8>:MAX_BUF;
     });
 
-    /// Reads up to 'count' bytes at the provided offset.
-    /// Does not affect the seek offset.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `data.length` will never be greater than `count`.
-    /// * If `data.length` is less than `count`, it means that `ReadAt` has hit
-    ///   the end of file as part of this operation.
-    /// * If `data.length` is zero while `count` is not, it means that `offset`
-    ///   is at or past the end of file, and no data can be read.
-    /// * If `count` is zero, the server should perform all the checks ensuring
-    ///   read access without actually reading anything, and return an empty
-    ///   `data` vector.
-    ///
-    /// This method requires the [`Rights.READ_BYTES`] right.
-    ///
-    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
-    @transitional
-    @selector("fuchsia.io/File.ReadAt")
-    ReadAt2(struct {
-        count uint64;
-        offset uint64;
-    }) -> (struct {
-        data Transfer;
-    }) error zx.status;
-
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
@@ -608,35 +517,6 @@ protocol File {
         s zx.status;
         actual uint64;
     });
-
-    /// Writes data at the seek offset.
-    /// The seek offset is moved forward by the number of bytes written.
-    /// If the file is in append mode, the seek offset is first set to the end
-    /// of the file, followed by the write, in one atomic step.
-    ///
-    /// The file size may grow if the seek offset plus `data.length` is beyond
-    /// the current end of file.
-    ///
-    /// + request `data` the byte buffer to write to the file.
-    /// - response `actual_count` the number of bytes written.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `actual_count` will never be greater than `data.length`.
-    /// * If the server is unable to write all the data due to e.g. not enough
-    ///   space, `actual_count` may be less than `data.length`.
-    /// * If `data.length` is zero, the server should perform all the checks
-    ///   ensuring write access without mutating the file. The seek offset
-    ///   is still updated if in append mode.
-    ///
-    /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
-    @selector("fuchsia.io/File.Write")
-    Write2(struct {
-        data Transfer;
-    }) -> (struct {
-        actual_count uint64;
-    }) error zx.status;
 
     /// Writes data to the provided offset.
     /// Does not affect the seek offset.
@@ -652,34 +532,6 @@ protocol File {
         actual uint64;
     });
 
-    /// Writes data at the provided offset.
-    /// Does not affect the seek offset.
-    ///
-    /// The file size may grow if `offset` plus `data.length` is past the
-    /// current end of file.
-    ///
-    /// + request `data` the byte buffer to write to the file.
-    /// + request `offset` the offset from start of the file to begin writing.
-    /// - response `actual_count` the number of bytes written.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `actual_count` will never be greater than `data.length`.
-    /// * If the server is unable to write all the data due to e.g. not enough
-    ///   space, `actual_count` may be less than `data.length`.
-    /// * If `data.length` is zero, the server should perform all the checks
-    ///   ensuring write access without mutating the file.
-    ///
-    /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
-    @selector("fuchsia.io/File.WriteAt")
-    WriteAt2(struct {
-        data Transfer;
-        offset uint64;
-    }) -> (struct {
-        actual_count uint64;
-    }) error zx.status;
-
     /// Moves the offset at which the next invocation of `Read()` or `Write()` will
     /// occur.
     ///
@@ -693,24 +545,6 @@ protocol File {
         offset uint64;
     });
 
-    /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
-    /// will occur. The seek offset is specific to each file connection.
-    ///
-    /// + request `origin` the reference point where `offset` will be based on.
-    /// + request `offset` the number of bytes to seek.
-    /// - response `offset_from_start` the adjusted seek offset, from the start
-    ///   of the file.
-    ///
-    /// This method does not require any rights.
-    @transitional
-    @selector("fuchsia.io/File.Seek")
-    Seek2(struct {
-        origin SeekOrigin;
-        offset int64;
-    }) -> (struct {
-        offset_from_start uint64;
-    }) error zx.status;
-
     /// Shrinks the file size to 'length' bytes.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
@@ -721,20 +555,6 @@ protocol File {
     }) -> (struct {
         s zx.status;
     });
-
-    /// Shrinks or grows the file size to 'length' bytes.
-    ///
-    /// If file size is reduced by this operation, the extra trailing data'
-    /// is discarded.
-    /// If file size is increased by this operation, the extended area appears
-    /// as if it was zeroed.
-    ///
-    /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
-    @selector("fuchsia.io/File.Resize")
-    Resize(struct {
-        length uint64;
-    }) -> (struct {}) error zx.status;
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
@@ -774,26 +594,6 @@ protocol File {
         s zx.status;
         buffer box<fuchsia.mem.Buffer>;
     });
-
-    /// Acquires a [`fuchsia.mem/Buffer`] representing this file, if
-    /// there is one, with the requested access rights.
-    ///
-    /// + request `flags` a [`VmoFlags`] indicating the desired mode of access.
-    /// - response `buffer` the requested [`fuchsia.mem/Buffer`].
-    /// * error a [`zx.status`] value indicating the failure.
-    ///
-    /// This method requires the following rights:
-    ///
-    /// * [`Rights.READ_BYTES`] if `flags` includes [`VmoFlags.READ`].
-    /// * [`Rights.WRITE_BYTES`] if `flags` includes [`VmoFlags.WRITE`].
-    /// * [`Rights.EXECUTE`] if `flags` includes [`VmoFlags.EXECUTE`].
-    @transitional
-    @selector("fuchsia.io/File.GetBuffer")
-    GetBuffer2(struct {
-        flags VmoFlags;
-    }) -> (resource struct {
-        buffer fuchsia.mem.Buffer;
-    }) error zx.status;
 };
 
 // Dirent type information associated with the results of ReadDirents.
