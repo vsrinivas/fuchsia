@@ -101,6 +101,13 @@ function main {
     fx-command-run build "${artifacts[@]}"
   fi
 
+  if [[ ! -f "${FUCHSIA_BUILD_DIR}/pave.sh" ]]; then
+    fx-error "'pave.sh' script does not exist."
+    fx-error "Run 'fx pave --build' or 'fx build' to build it and"
+    fx-error "all the required artifacts to pave a device."
+    exit 1
+  fi
+
   exec "${FUCHSIA_BUILD_DIR}/pave.sh" "${pave_args[@]}"
 }
 
