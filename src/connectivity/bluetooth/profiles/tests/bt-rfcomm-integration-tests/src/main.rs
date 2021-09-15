@@ -264,3 +264,91 @@ async fn rfcomm_component_connecting_to_another_rfcomm_component() {
     let data2 = vec![0x98, 0x97, 0x96, 0x95];
     send_and_expect_data(&channel2, &channel1, data2).await;
 }
+
+fn a2dp_service_definition() -> bredr::ServiceDefinition {
+    // Minimal Sink definition. Note: This is not a complete definition, but enough to register.
+    bredr::ServiceDefinition {
+        service_class_uuids: Some(vec![Uuid::new16(0x110B).into()]), // Audio Sink UUID
+        protocol_descriptor_list: Some(vec![bredr::ProtocolDescriptor {
+            protocol: bredr::ProtocolIdentifier::L2Cap,
+            params: vec![bredr::DataElement::Uint16(bredr::PSM_AVDTP)],
+        }]),
+        ..bredr::ServiceDefinition::EMPTY
+    }
+}
+
+/// Tests that a non-RFCOMM service advertisement can still be discovered when using the RFCOMM
+/// component as an intermediary.
+#[fuchsia::test]
+async fn passthrough_advertisement_is_discovered() {
+    let (test_topology, rfcomm_under_test, test_driven_peer) = setup_test_topology().await;
+
+    // RFCOMM client advertises A2DP Sink - no RFCOMM needed.
+    let profile = rfcomm_under_test
+        .connect_to_protocol::<bredr::ProfileMarker>(&test_topology)
+        .expect("Profile should be available");
+    let a2dp = a2dp_service_definition();
+    let _client =
+        ProfileClient::advertise(profile.clone(), &vec![a2dp], bredr::ChannelParameters::EMPTY)
+            .unwrap();
+
+    // Test driven peer searches for A2DP Sink.
+    let mut search_results = test_driven_peer
+        .register_service_search(bredr::ServiceClassProfileIdentifier::AudioSink, vec![])
+        .expect("can register search");
+    // We expect it to discover `client's` service advertisement.
+    let request = search_results.select_next_some().await.unwrap();
+    let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } = request;
+    assert_eq!(rfcomm_under_test.peer_id(), peer_id.into());
+    // Ack the response so that the `search_results` channel doesn't get full.
+    responder.send().unwrap();
+}
+
+/// Tests that a non-RFCOMM service search can still discover an advertisement when using the RFCOMM
+/// component as an intermediary.
+#[fuchsia::test]
+async fn passthrough_search_discovers_advertisement() {
+    let (test_topology, rfcomm_under_test, test_driven_peer) = setup_test_topology().await;
+
+    // Test-driven peer advertises A2DP Sink.
+    let a2dp = a2dp_service_definition();
+    let mut connect_requests = test_driven_peer
+        .register_service_advertisement(vec![a2dp])
+        .expect("can register advertisement");
+
+    // RFCOMM client searches for A2DP Sink.
+    let profile = rfcomm_under_test
+        .connect_to_protocol::<bredr::ProfileMarker>(&test_topology)
+        .expect("Profile should be available");
+    let mut client = ProfileClient::new(profile.clone());
+    let _ = client
+        .add_search(bredr::ServiceClassProfileIdentifier::AudioSink, &[])
+        .expect("can register search");
+    // We expect it to discover `test_driven_peer`s service advertisement.
+    match client.next().await.unwrap() {
+        Ok(ProfileEvent::SearchResult { id, .. }) => {
+            assert_eq!(test_driven_peer.peer_id(), id);
+        }
+        x => panic!("Expected search result but got: {:?}", x),
+    }
+
+    // Passthrough L2CAP connection is OK - the channel endpoints should be delivered to the
+    // `client` and `test_driven_peer`.
+    let _client_channel = profile
+        .connect(
+            &mut test_driven_peer.peer_id().into(),
+            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                psm: Some(bredr::PSM_AVDTP),
+                ..bredr::L2capParameters::EMPTY
+            }),
+        )
+        .await;
+
+    let (other_id, _test_driven_peer_channel, _, _) = connect_requests
+        .select_next_some()
+        .await
+        .expect("connection request")
+        .into_connected()
+        .unwrap();
+    assert_eq!(other_id, rfcomm_under_test.peer_id().into());
+}
