@@ -1261,15 +1261,8 @@ fn get_buffer_write_only() {
             async move {
                 // VMO is not resizable and can not be shared in writeable mode.
                 assert_write!(proxy, "No shared writable VMOs");
-
-                {
-                    let buffer = assert_get_buffer!(proxy, VMO_FLAG_WRITE);
-                    assert!(buffer.is_some());
-                    let buffer = buffer.unwrap();
-
-                    assert_eq!(buffer.size, 23);
-                    buffer.vmo.write(b"Default is private", 0).unwrap();
-                }
+                // Ensure we cannot get a writable VMO without specifying VMO_FLAG_PRIVATE.
+                assert_get_buffer_err!(proxy, VMO_FLAG_WRITE, Status::NOT_SUPPORTED);
 
                 assert_get_buffer_err!(
                     proxy,
@@ -1300,7 +1293,10 @@ fn get_buffer_read_write() {
         |proxy| {
             async move {
                 {
-                    let buffer = assert_get_buffer!(proxy, VMO_FLAG_READ | VMO_FLAG_WRITE);
+                    let buffer = assert_get_buffer!(
+                        proxy,
+                        VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_PRIVATE
+                    );
                     assert!(buffer.is_some());
                     let buffer = buffer.unwrap();
 

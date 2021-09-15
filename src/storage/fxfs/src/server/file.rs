@@ -35,7 +35,7 @@ use {
         execution_scope::ExecutionScope,
         file::{
             connection::{self, io1::FileConnection},
-            File, SharingMode,
+            File,
         },
         path::Path,
     },
@@ -270,7 +270,7 @@ impl File for FxFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _mode: SharingMode, _flags: u32) -> Result<Option<Buffer>, Status> {
+    async fn get_buffer(&self, _flags: u32) -> Result<Buffer, Status> {
         log::error!("get_buffer not implemented");
         Err(Status::NOT_SUPPORTED)
     }

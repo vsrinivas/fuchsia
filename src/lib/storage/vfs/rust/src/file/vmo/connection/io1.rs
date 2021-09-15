@@ -10,7 +10,7 @@ use crate::{
         GET_FLAGS_VISIBLE,
     },
     execution_scope::ExecutionScope,
-    file::common::new_connection_validate_flags,
+    file::common::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights},
     file::vmo::{
         asynchronous::{NewVmo, VmoFileState},
         connection::{AsyncConsumeVmo, VmoFileInterface},
@@ -24,7 +24,7 @@ use {
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
         SeekOrigin, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
@@ -92,11 +92,6 @@ enum ConnectionState {
     /// Connection has been dropped by the peer or an error has occurred.  [`handle_close`] still
     /// need to be called (though it would not be able to report the status to the peer).
     Dropped,
-}
-
-enum SharingMode {
-    Shared,
-    Private,
 }
 
 impl VmoFileConnection {
@@ -787,15 +782,27 @@ impl VmoFileConnection {
     where
         R: FnOnce(zx::Status, Option<Buffer>) -> Result<(), fidl::Error>,
     {
-        let mode = match Self::get_buffer_validate_flags(flags, self.flags) {
-            Err(status) => return responder(status, None),
-            Ok(mode) => mode,
-        };
+        if let Err(status) = get_buffer_validate_flags(flags, self.flags) {
+            return responder(status, None);
+        }
+
+        // The only sharing mode we support that disallows the VMO size to change currently
+        // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
+        if flags & VMO_FLAG_WRITE != 0 && flags & VMO_FLAG_PRIVATE == 0 {
+            return responder(zx::Status::NOT_SUPPORTED, None);
+        }
+
+        // Disallow opening as both writable and executable. In addition to improving W^X
+        // enforcement, this also eliminates any inconstiencies related to clones that use
+        // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
+        if flags & VMO_FLAG_EXEC != 0 && flags & VMO_FLAG_WRITE != 0 {
+            return responder(zx::Status::NOT_SUPPORTED, None);
+        }
 
         let (status, buffer) = update_initialized_state! {
             match &*self.file.state().await;
             error: "handle_write_at" => (zx::Status::INTERNAL, None);
-            { vmo, size, .. } => match mode {
+            { vmo, size, .. } => {
                 // Logic here matches the io.fidl requirements and matches what works for memfs.
                 // Shared requests are satisfied by duplicating an handle, and private shares are
                 // child VMOs.
@@ -805,85 +812,58 @@ impl VmoFileConnection {
                 // outstanding child VMOs.  While it is possible with the `init_vmo`/`consume_vmo`
                 // model currently implemented, it is very likely that adding another customization
                 // callback here will make the implementation of those files systems easier.
-                SharingMode::Shared => match Self::get_as_shared(&vmo, flags) {
-                    Ok(vmo) => (zx::Status::OK, Some(Buffer { vmo, size: *size })),
-                    Err(status) => (status, None),
-                },
-                SharingMode::Private => match Self::get_as_private(&vmo, flags, *size) {
-                    Ok(vmo) => (zx::Status::OK, Some(Buffer { vmo, size: *size })),
-                    Err(status) => (status, None),
-                },
+                let vmo_rights = vmo_flags_to_rights(flags);
+                // Unless private sharing mode is specified, we always default to shared.
+                let result = if flags & VMO_FLAG_PRIVATE != 0 {
+                    Self::get_as_private(&vmo, vmo_rights, *size)
+                }
+                else {
+                    Self::get_as_shared(&vmo, vmo_rights)
+                };
+                // Ideally a match statement would be more readable here, but using one here causes
+                // within the update_initialized_state! macro causes a syntax error ("unexpected
+                // token in input"), so for now we just use an if statement.
+                if let Ok(vmo) = result {
+                    (zx::Status::OK, Some(Buffer{vmo, size: *size}))
+                } else {
+                    (result.unwrap_err(), None)
+                }
             }
         };
 
         responder(status, buffer)
     }
 
-    // Removes rights not requested in flags from the underlying VMO's current rights.
-    fn get_vmo_rights(vmo: &zx::Vmo, flags: u32) -> Result<zx::Rights, zx::Status> {
-        let mut rights = vmo.basic_info()?.rights;
-
-        if flags & VMO_FLAG_READ == 0 {
-            rights -= zx::Rights::READ;
-        }
-
-        if flags & VMO_FLAG_WRITE == 0 {
-            rights -= zx::Rights::WRITE;
-        }
-
-        if flags & VMO_FLAG_EXEC == 0 {
-            rights -= zx::Rights::EXECUTE;
-        }
-
-        Ok(rights)
-    }
-
-    fn get_as_shared(vmo: &zx::Vmo, flags: u32) -> Result<zx::Vmo, zx::Status> {
-        let rights = Self::get_vmo_rights(vmo, flags)?;
+    fn get_as_shared(vmo: &zx::Vmo, mut rights: zx::Rights) -> Result<zx::Vmo, zx::Status> {
+        // Add set of basic rights to include in shared mode before duplicating the VMO handle.
+        rights |= zx::Rights::BASIC | zx::Rights::MAP | zx::Rights::GET_PROPERTY;
         vmo.as_handle_ref().duplicate(rights).map(Into::into)
     }
 
-    fn get_as_private(vmo: &zx::Vmo, flags: u32, size: u64) -> Result<zx::Vmo, zx::Status> {
-        let new_vmo = vmo.create_child(
-            zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | zx::VmoChildOptions::RESIZABLE,
-            0,
-            size,
-        )?;
-        let rights = Self::get_vmo_rights(vmo, flags)?;
-        new_vmo.into_handle().replace_handle(rights).map(Into::into)
-    }
+    fn get_as_private(
+        vmo: &zx::Vmo,
+        mut rights: zx::Rights,
+        size: u64,
+    ) -> Result<zx::Vmo, zx::Status> {
+        // Add set of basic rights to include in private mode, ensuring we provide SET_PROPERTY.
+        rights |= zx::Rights::BASIC
+            | zx::Rights::MAP
+            | zx::Rights::GET_PROPERTY
+            | zx::Rights::SET_PROPERTY;
 
-    fn get_buffer_validate_flags(
-        new_vmo_flags: u32,
-        connection_flags: u32,
-    ) -> Result<SharingMode, zx::Status> {
-        if connection_flags & OPEN_RIGHT_READABLE == 0
-            && (new_vmo_flags & VMO_FLAG_READ != 0 || new_vmo_flags & VMO_FLAG_EXEC != 0)
-        {
-            return Err(zx::Status::ACCESS_DENIED);
-        }
-
-        if connection_flags & OPEN_RIGHT_WRITABLE == 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(zx::Status::ACCESS_DENIED);
-        }
-
-        if new_vmo_flags & VMO_FLAG_PRIVATE != 0 && new_vmo_flags & VMO_FLAG_EXACT != 0 {
-            return Err(zx::Status::INVALID_ARGS);
-        }
-
-        // We do not share the VMO itself with a WRITE flag, as this would allow someone to change
-        // the size "under our feel" and there seems to be now way to protect from it.
-        if new_vmo_flags & VMO_FLAG_EXACT != 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(zx::Status::NOT_SUPPORTED);
-        }
-
-        // We use shared mode by default, if the caller did not specify.  It should be more
-        // lightweight, I assume?  Except when a writable share is necessary.  `VMO_FLAG_EXACT |
-        // VMO_FLAG_WRITE` is prohibited above.
-        if new_vmo_flags & VMO_FLAG_PRIVATE != 0 || new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            Ok(SharingMode::Private)
+        // Ensure we give out a copy-on-write clone.
+        let mut child_options = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
+        // If we don't need a writable clone, we need to add CHILD_NO_WRITE since
+        // SNAPSHOT_AT_LEAST_ON_WRITE removes ZX_RIGHT_EXECUTE even if the parent VMO has it, but
+        // adding CHILD_NO_WRITE will ensure EXECUTE is maintained.
+        if !rights.contains(zx::Rights::WRITE) {
+            child_options |= zx::VmoChildOptions::NO_WRITE;
         } else {
-            Ok(SharingMode::Shared)
+            // If we need a writable clone, ensure it can be resized.
+            child_options |= zx::VmoChildOptions::RESIZABLE;
         }
+
+        let new_vmo = vmo.create_child(child_options, 0, size)?;
+        new_vmo.into_handle().replace_handle(rights).map(Into::into)
     }
 }

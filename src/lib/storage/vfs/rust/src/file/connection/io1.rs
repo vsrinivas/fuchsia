@@ -8,7 +8,9 @@ use {
         directory::entry::DirectoryEntry,
         execution_scope::ExecutionScope,
         file::{
-            common::new_connection_validate_flags, connection::util::OpenFile, File, SharingMode,
+            common::{get_buffer_validate_flags, new_connection_validate_flags},
+            connection::util::OpenFile,
+            File,
         },
         path::Path,
     },
@@ -17,9 +19,7 @@ use {
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
         NodeMarker, SeekOrigin, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
-        VMO_FLAG_WRITE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         self as zx,
@@ -302,7 +302,10 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::GetBuffer { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
-                let (status, mut buffer) = self.handle_get_buffer(flags).await;
+                let (status, mut buffer) = match self.handle_get_buffer(flags).await {
+                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
+                    Err(status) => (status, None),
+                };
                 responder.send(status.into_raw(), buffer.as_mut())?;
             }
             FileRequest::AdvisoryLock { request: _, responder } => {
@@ -455,54 +458,9 @@ impl<T: 'static + File> FileConnection<T> {
     async fn handle_get_buffer(
         &mut self,
         flags: u32,
-    ) -> (zx::Status, Option<fidl_fuchsia_mem::Buffer>) {
-        let mode = match Self::get_buffer_validate_flags(flags, self.flags) {
-            Err(status) => return (status, None),
-            Ok(mode) => mode,
-        };
-
-        match self.file.get_buffer(mode, flags).await {
-            Ok(buf) => (zx::Status::OK, buf),
-            Err(e) => (e, None),
-        }
-    }
-
-    fn get_buffer_validate_flags(
-        new_vmo_flags: u32,
-        connection_flags: u32,
-    ) -> Result<SharingMode, zx::Status> {
-        if connection_flags & OPEN_RIGHT_READABLE == 0
-            && (new_vmo_flags & VMO_FLAG_READ != 0 || new_vmo_flags & VMO_FLAG_EXEC != 0)
-        {
-            return Err(zx::Status::ACCESS_DENIED);
-        }
-
-        if connection_flags & OPEN_RIGHT_WRITABLE == 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(zx::Status::ACCESS_DENIED);
-        }
-
-        if connection_flags & OPEN_RIGHT_EXECUTABLE == 0 && new_vmo_flags & VMO_FLAG_EXEC != 0 {
-            return Err(zx::Status::ACCESS_DENIED);
-        }
-
-        if new_vmo_flags & VMO_FLAG_PRIVATE != 0 && new_vmo_flags & VMO_FLAG_EXACT != 0 {
-            return Err(zx::Status::INVALID_ARGS);
-        }
-
-        // We do not share the VMO itself with a WRITE flag, as this would allow someone to change
-        // the size "under our feel" and there seems to be now way to protect from it.
-        if new_vmo_flags & VMO_FLAG_EXACT != 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(zx::Status::NOT_SUPPORTED);
-        }
-
-        // We use shared mode by default, if the caller did not specify.  It should be more
-        // lightweight, I assume?  Except when a writable share is necessary.  `VMO_FLAG_EXACT |
-        // VMO_FLAG_WRITE` is prohibited above.
-        if new_vmo_flags & VMO_FLAG_PRIVATE != 0 || new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            Ok(SharingMode::Private)
-        } else {
-            Ok(SharingMode::Shared)
-        }
+    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+        get_buffer_validate_flags(flags, self.flags)?;
+        self.file.get_buffer(flags).await
     }
 }
 
@@ -514,6 +472,7 @@ mod tests {
         fidl_fuchsia_io::{
             FileEvent, FileProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
+            VMO_FLAG_EXEC, VMO_FLAG_READ,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
@@ -529,7 +488,7 @@ mod tests {
         WriteAt { offset: u64, content: Vec<u8> },
         Append { content: Vec<u8> },
         Truncate { length: u64 },
-        GetBuffer { mode: SharingMode, flags: u32 },
+        GetBuffer { flags: u32 },
         GetSize,
         GetAttrs,
         SetAttrs { flags: u32, attrs: NodeAttributes },
@@ -609,13 +568,9 @@ mod tests {
             self.handle_operation(FileOperation::Truncate { length })
         }
 
-        async fn get_buffer(
-            &self,
-            mode: SharingMode,
-            flags: u32,
-        ) -> Result<Option<fidl_fuchsia_mem::Buffer>, zx::Status> {
-            self.handle_operation(FileOperation::GetBuffer { mode, flags })?;
-            Ok(None)
+        async fn get_buffer(&self, flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+            self.handle_operation(FileOperation::GetBuffer { flags })?;
+            Err(zx::Status::NOT_SUPPORTED)
         }
 
         async fn get_size(&self) -> Result<u64, zx::Status> {
@@ -851,15 +806,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-        assert!(buffer.is_none());
+        let (status, _buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::GetBuffer { mode: SharingMode::Shared, flags: VMO_FLAG_READ },
+                FileOperation::GetBuffer { flags: VMO_FLAG_READ },
             ]
         );
     }

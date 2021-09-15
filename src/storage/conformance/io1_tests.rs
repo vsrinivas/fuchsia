@@ -4,7 +4,10 @@
 
 use {
     fdio::fdio_sys::V_IRWXU,
-    fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, Proxy},
+    fidl::{
+        endpoints::{create_endpoints, create_proxy, ProtocolMarker, Proxy},
+        AsHandleRef,
+    },
     fidl_fuchsia_io as io,
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
@@ -155,6 +158,28 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
     }
     .expect("DirectoryEntry name is None!")
     .clone()
+}
+
+/// Asserts that the given `vmo_rights` align with the `vmo_flags` passed to a get_buffer call.
+/// We check that the returned rights align with and do not exceed those in the given flags, that
+/// we have at least basic VMO rights, and that the flags align with the expected sharing mode.
+fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: u32) {
+    let vmo_rights: zx::Rights = buffer.vmo.basic_info().expect("failed to get VMO info").rights;
+
+    // Ensure that we have at least some basic rights.
+    assert!(vmo_rights.contains(zx::Rights::BASIC));
+    assert!(vmo_rights.contains(zx::Rights::MAP));
+    assert!(vmo_rights.contains(zx::Rights::GET_PROPERTY));
+
+    // Ensure the returned rights match and do not exceed those we requested in `vmo_flags`.
+    assert!(vmo_rights.contains(zx::Rights::READ) == (vmo_flags & io::VMO_FLAG_READ != 0));
+    assert!(vmo_rights.contains(zx::Rights::WRITE) == (vmo_flags & io::VMO_FLAG_WRITE != 0));
+    assert!(vmo_rights.contains(zx::Rights::EXECUTE) == (vmo_flags & io::VMO_FLAG_EXEC != 0));
+
+    // Make sure we get SET_PROPERTY if we specified a private copy.
+    if vmo_flags & io::VMO_FLAG_PRIVATE != 0 {
+        assert!(vmo_rights.contains(zx::Rights::SET_PROPERTY));
+    }
 }
 
 /// Creates a directory with the given DirectoryEntry, opening the file with the given
@@ -924,6 +949,10 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
         let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
             .await
             .expect("Failed to create file and obtain buffer");
+
+        // Ensure that the returned VMO's rights are consistent with the expected flags.
+        validate_vmo_rights(&buffer, io::VMO_FLAG_READ);
+
         // Check contents of buffer.
         let mut data = vec![0; buffer.size as usize];
         buffer.vmo.read(&mut data, 0).expect("VMO read failed");
@@ -962,6 +991,10 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
         let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
             .await
             .expect("Failed to create file and obtain buffer");
+
+        // Ensure that the returned VMO's rights are consistent with the expected flags.
+        validate_vmo_rights(&buffer, io::VMO_FLAG_WRITE);
+
         // Ensure that we can actually write to the VMO.
         buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
     }

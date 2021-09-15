@@ -10,7 +10,8 @@ use {
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
+        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_zircon as zx,
 };
@@ -104,9 +105,56 @@ pub fn new_connection_validate_flags(
     Ok(flags)
 }
 
+/// Converts the set of validated VMO flags to their respective zx::Rights.
+pub fn vmo_flags_to_rights(vmo_flags: u32) -> zx::Rights {
+    // Map VMO flags to their respective rights.
+    let mut rights = zx::Rights::NONE;
+    if vmo_flags & VMO_FLAG_READ != 0 {
+        rights |= zx::Rights::READ;
+    }
+    if vmo_flags & VMO_FLAG_WRITE != 0 {
+        rights |= zx::Rights::WRITE;
+    }
+    if vmo_flags & VMO_FLAG_EXEC != 0 {
+        rights |= zx::Rights::EXECUTE;
+    }
+
+    rights
+}
+
+/// Validate flags passed to `get_buffer` against the underlying connection flags.
+/// Returns Ok() if the flags were validated, and an Error(zx::Status) otherwise.
+///
+/// Changing this function can be dangerous!  Flags operations may have security implications.
+pub fn get_buffer_validate_flags(vmo_flags: u32, connection_flags: u32) -> Result<(), zx::Status> {
+    // Disallow inconsistent flag combination.
+    if vmo_flags & VMO_FLAG_PRIVATE != 0 && vmo_flags & VMO_FLAG_EXACT != 0 {
+        return Err(zx::Status::INVALID_ARGS);
+    }
+
+    // Ensure the requested rights in vmo_flags do not exceed those of the underlying connection.
+    if vmo_flags & VMO_FLAG_READ != 0 && connection_flags & OPEN_RIGHT_READABLE == 0 {
+        return Err(zx::Status::ACCESS_DENIED);
+    }
+    if vmo_flags & VMO_FLAG_WRITE != 0 && connection_flags & OPEN_RIGHT_WRITABLE == 0 {
+        return Err(zx::Status::ACCESS_DENIED);
+    }
+    if vmo_flags & VMO_FLAG_EXEC != 0 && connection_flags & OPEN_RIGHT_EXECUTABLE == 0 {
+        return Err(zx::Status::ACCESS_DENIED);
+    }
+
+    // As documented in the io.fidl protocol, if VMO_FLAG_EXEC is requested, ensure that the
+    // connection also has OPEN_RIGHT_READABLE.
+    if vmo_flags & VMO_FLAG_EXEC != 0 && connection_flags & OPEN_RIGHT_READABLE == 0 {
+        return Err(zx::Status::ACCESS_DENIED);
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::new_connection_validate_flags;
+    use super::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights};
     use crate::test_utils::build_flag_combinations;
 
     use {
@@ -114,7 +162,8 @@ mod tests {
             OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
             OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
             OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
+            VMO_FLAG_WRITE,
         },
         fuchsia_zircon as zx,
     };
@@ -125,6 +174,12 @@ mod tests {
             flags & OPEN_RIGHT_WRITABLE != 0,
             flags & OPEN_RIGHT_EXECUTABLE != 0,
         );
+    }
+
+    fn rights_to_vmo_flags(readable: bool, writable: bool, executable: bool) -> u32 {
+        return if readable { VMO_FLAG_READ } else { 0 }
+            | if writable { VMO_FLAG_WRITE } else { 0 }
+            | if executable { VMO_FLAG_EXEC } else { 0 };
     }
 
     #[track_caller]
@@ -293,6 +348,99 @@ mod tests {
             }
             if executable {
                 ncvf_err(open_flags, readable, writable, false, zx::Status::ACCESS_DENIED);
+            }
+        }
+    }
+
+    /// Validates that the passed VMO flags are correctly mapped to their respective Rights.
+    #[test]
+    fn test_vmo_flags_to_rights() {
+        for vmo_flags in build_flag_combinations(0, VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_EXEC)
+        {
+            let rights: zx::Rights = vmo_flags_to_rights(vmo_flags);
+            assert_eq!(vmo_flags & VMO_FLAG_READ != 0, rights.contains(zx::Rights::READ));
+            assert_eq!(vmo_flags & VMO_FLAG_WRITE != 0, rights.contains(zx::Rights::WRITE));
+            assert_eq!(vmo_flags & VMO_FLAG_EXEC != 0, rights.contains(zx::Rights::EXECUTE));
+        }
+    }
+
+    #[test]
+    fn get_buffer_validate_flags_invalid() {
+        // Cannot specify both PRIVATE and EXACT at the same time, since they conflict.
+        assert_eq!(
+            get_buffer_validate_flags(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT, 0),
+            Err(zx::Status::INVALID_ARGS)
+        );
+    }
+
+    /// Ensure that the check passes if we request the same or less rights than the connection has.
+    #[test]
+    fn get_buffer_validate_flags_less_rights() {
+        for open_flags in build_flag_combinations(
+            0,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+        ) {
+            let (readable, writable, executable) = io_flags_to_rights(open_flags);
+            let vmo_flags = rights_to_vmo_flags(readable, writable, executable);
+
+            // The io1.fidl protocol specifies that VMO_FLAG_EXEC requires the connection to be both
+            // readable and executable.
+            if executable && !readable {
+                assert_eq!(
+                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    Err(zx::Status::ACCESS_DENIED)
+                );
+                continue;
+            }
+
+            // Ensure that we can open the VMO with the same rights as the connection.
+            get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+
+            // Ensure that we can also open the VMO with *less* rights than the connection has.
+            if readable {
+                let vmo_flags = rights_to_vmo_flags(false, writable, false);
+                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+            }
+            if writable {
+                let vmo_flags = rights_to_vmo_flags(readable, false, executable);
+                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+            }
+            if executable {
+                let vmo_flags = rights_to_vmo_flags(true, writable, false);
+                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+            }
+        }
+    }
+
+    /// Ensure that vmo_flags cannot exceed rights of connection_flags.
+    #[test]
+    fn get_buffer_validate_flags_more_rights() {
+        for open_flags in build_flag_combinations(
+            0,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+        ) {
+            // Ensure we cannot return a VMO with more rights than the connection itself has.
+            let (readable, writable, executable) = io_flags_to_rights(open_flags);
+            if !readable {
+                let vmo_flags = rights_to_vmo_flags(true, writable, executable);
+                assert_eq!(
+                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    Err(zx::Status::ACCESS_DENIED)
+                );
+            }
+            if !writable {
+                let vmo_flags = rights_to_vmo_flags(readable, true, false);
+                assert_eq!(
+                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    Err(zx::Status::ACCESS_DENIED)
+                );
+            }
+            if !executable {
+                let vmo_flags = rights_to_vmo_flags(readable, false, true);
+                assert_eq!(
+                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    Err(zx::Status::ACCESS_DENIED)
+                );
             }
         }
     }

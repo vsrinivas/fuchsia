@@ -28,7 +28,7 @@ use {
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
-        file::{connection, File as VfsFile, SharingMode},
+        file::{connection, File as VfsFile},
         path::Path,
     },
 };
@@ -257,9 +257,8 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _mode: SharingMode, _flags: u32) -> Result<Option<Buffer>, Status> {
-        // Not supported, so return None.
-        Ok(None)
+    async fn get_buffer(&self, _flags: u32) -> Result<Buffer, Status> {
+        Err(Status::NOT_SUPPORTED)
     }
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {

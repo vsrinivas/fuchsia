@@ -11,7 +11,7 @@ use {
         NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -156,11 +156,7 @@ impl vfs::file::File for MetaFile {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(
-        &self,
-        mode: vfs::file::SharingMode,
-        flags: u32,
-    ) -> Result<Option<fidl_fuchsia_mem::Buffer>, zx::Status> {
+    async fn get_buffer(&self, flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         if flags & (VMO_FLAG_WRITE | VMO_FLAG_EXEC | VMO_FLAG_EXACT) != 0 {
             return Err(zx::Status::NOT_SUPPORTED);
         }
@@ -169,38 +165,35 @@ impl vfs::file::File for MetaFile {
             fx_log_err!("Failed to get MetaFile VMO during get_buffer: {:#}", anyhow!(e));
             zx::Status::INTERNAL
         })?;
-        match mode {
-            vfs::file::SharingMode::Private => {
-                let vmo = vmo
-                    .create_child(
-                        zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE
-                            | zx::VmoChildOptions::NO_WRITE,
-                        0, /*offset*/
-                        self.location.length,
-                    )
-                    .map_err(|e| {
-                        fx_log_err!(
-                            "Failed to create private child VMO during get_buffer: {:#}",
-                            anyhow!(e.clone())
-                        );
-                        e
-                    })?;
-                Ok(Some(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length }))
-            }
-            vfs::file::SharingMode::Shared => {
-                let rights = zx::Rights::BASIC
-                    | zx::Rights::MAP
-                    | zx::Rights::PROPERTY
-                    | if flags & VMO_FLAG_READ != 0 { zx::Rights::READ } else { zx::Rights::NONE };
-                let vmo = vmo.duplicate_handle(rights).map_err(|e| {
+
+        if flags & VMO_FLAG_PRIVATE != 0 {
+            let vmo = vmo
+                .create_child(
+                    zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | zx::VmoChildOptions::NO_WRITE,
+                    0, /*offset*/
+                    self.location.length,
+                )
+                .map_err(|e| {
                     fx_log_err!(
-                        "Failed to clone VMO handle during get_buffer: {:#}",
+                        "Failed to create private child VMO during get_buffer: {:#}",
                         anyhow!(e.clone())
                     );
                     e
                 })?;
-                Ok(Some(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length }))
-            }
+            Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })
+        } else {
+            let rights = zx::Rights::BASIC
+                | zx::Rights::MAP
+                | zx::Rights::PROPERTY
+                | if flags & VMO_FLAG_READ != 0 { zx::Rights::READ } else { zx::Rights::NONE };
+            let vmo = vmo.duplicate_handle(rights).map_err(|e| {
+                fx_log_err!(
+                    "Failed to clone VMO handle during get_buffer: {:#}",
+                    anyhow!(e.clone())
+                );
+                e
+            })?;
+            Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })
         }
     }
 
@@ -467,14 +460,11 @@ mod tests {
     async fn file_get_buffer_rejects_unsupported_flags() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        use vfs::file::SharingMode::*;
-        for sharing_mode in [Private, Shared] {
-            for flag in [VMO_FLAG_WRITE, VMO_FLAG_EXEC, VMO_FLAG_EXACT] {
-                assert_eq!(
-                    File::get_buffer(&meta_file, sharing_mode, flag).await.err().unwrap(),
-                    zx::Status::NOT_SUPPORTED
-                );
-            }
+        for flag in [VMO_FLAG_WRITE, VMO_FLAG_EXEC, VMO_FLAG_EXACT] {
+            assert_eq!(
+                File::get_buffer(&meta_file, flag).await.err().unwrap(),
+                zx::Status::NOT_SUPPORTED
+            );
         }
     }
 
@@ -482,11 +472,9 @@ mod tests {
     async fn file_get_buffer_private() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, vfs::file::SharingMode::Private, 0)
-                .await
-                .expect("get_buffer should succeed")
-                .expect("get_buffer should return a buffer");
+        let fidl_fuchsia_mem::Buffer { vmo, size } = File::get_buffer(&meta_file, VMO_FLAG_PRIVATE)
+            .await
+            .expect("get_buffer should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable
@@ -506,14 +494,11 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_buffer_shared() {
+    async fn file_get_buffer_not_private() {
         let (_env, meta_file) = TestEnv::new().await;
 
         let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, vfs::file::SharingMode::Shared, VMO_FLAG_READ)
-                .await
-                .expect("get_buffer should succeed")
-                .expect("get_buffer should return a buffer");
+            File::get_buffer(&meta_file, VMO_FLAG_READ).await.expect("get_buffer should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable

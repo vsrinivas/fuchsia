@@ -226,11 +226,7 @@ impl vfs::file::File for Meta {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(
-        &self,
-        _mode: vfs::file::SharingMode,
-        _flags: u32,
-    ) -> Result<Option<fidl_fuchsia_mem::Buffer>, zx::Status> {
+    async fn get_buffer(&self, _flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -271,7 +267,7 @@ mod tests {
         fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-            VMO_FLAG_READ,
+            VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
@@ -636,11 +632,10 @@ mod tests {
     async fn file_get_buffer() {
         let (_env, meta) = TestEnv::new().await;
 
-        use vfs::file::SharingMode::*;
-        for sharing_mode in [Private, Shared] {
+        for sharing_mode in [0, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE] {
             for flag in [0, VMO_FLAG_READ] {
                 assert_eq!(
-                    File::get_buffer(&meta, sharing_mode, flag).await.err().unwrap(),
+                    File::get_buffer(&meta, flag | sharing_mode).await.err().unwrap(),
                     zx::Status::NOT_SUPPORTED
                 );
             }

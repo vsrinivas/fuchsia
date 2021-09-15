@@ -54,8 +54,8 @@ pub trait File: Sync + Send + DirectoryEntry {
     async fn truncate(&self, length: u64) -> Result<(), Status>;
 
     /// Get a VMO representing this file.
-    /// If this is not supported by the underlying filesystem, Ok(None) should be returned.
-    async fn get_buffer(&self, mode: SharingMode, flags: u32) -> Result<Option<Buffer>, Status>;
+    /// If not supported by the underlying filesystem, should return Error(NOT_SUPPORTED).
+    async fn get_buffer(&self, flags: u32) -> Result<Buffer, Status>;
 
     /// Get the size of this file.
     /// This is used to calculate seek offset relative to the end.
@@ -77,11 +77,4 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// the call returns. It merely guarantees that any changes to the file have been propagated
     /// to the next layer in the storage stack.
     async fn sync(&self) -> Result<(), Status>;
-}
-
-/// VMO mode for get_buffer.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum SharingMode {
-    Shared,
-    Private,
 }
