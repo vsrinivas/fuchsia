@@ -35,6 +35,8 @@ rustc_binary("bin") {
     "src/eventloop.rs",
     "src/main.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("component-v2") {

@@ -19,7 +19,7 @@ use {
     inspect::InspectInfo,
     net_declare::std_ip,
     net_types::{ip::IpAddress as _, ScopeableAddress as _},
-    std::collections::HashMap,
+    std::collections::hash_map::{Entry, HashMap},
 };
 
 const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("8.8.8.8");
@@ -297,31 +297,34 @@ impl StateInfo {
     ///
     /// Returns the protocols and their new reachability states iff a change was observed.
     fn update(&mut self, id: Id, new_reachability: IpVersions<StateEvent>) -> StateDelta {
-        let IpVersions { ipv4: new_ipv4_state, ipv6: new_ipv6_state } = new_reachability;
-
         let previous_system_ipv4 = self.get_system_ipv4();
         let previous_system_ipv6 = self.get_system_ipv6();
         let port = match self.per_interface.entry(id) {
-            std::collections::hash_map::Entry::Occupied(mut occupied) => {
-                let IpVersions { ipv4: ipv4_state, ipv6: ipv6_state } = occupied.get_mut();
-                IpVersions {
-                    ipv4: ipv4_state.update(new_ipv4_state),
-                    ipv6: ipv6_state.update(new_ipv6_state),
-                }
+            Entry::Occupied(mut occupied) => {
+                let IpVersions { ipv4, ipv6 } = occupied.get_mut();
+                let IpVersions { ipv4: new_ipv4, ipv6: new_ipv6 } = new_reachability;
+
+                IpVersions { ipv4: ipv4.update(new_ipv4), ipv6: ipv6.update(new_ipv6) }
             }
-            std::collections::hash_map::Entry::Vacant(vacant) => {
-                vacant.insert(new_reachability);
+            Entry::Vacant(vacant) => {
+                let IpVersions { ipv4, ipv6 } = vacant.insert(new_reachability);
                 IpVersions {
-                    ipv4: Delta { previous: None, current: new_ipv4_state },
-                    ipv6: Delta { previous: None, current: new_ipv6_state },
+                    ipv4: Delta { previous: None, current: *ipv4 },
+                    ipv6: Delta { previous: None, current: *ipv6 },
                 }
             }
         };
 
         let IpVersions { ipv4: system_ipv4, ipv6: system_ipv6 } = self.per_interface.iter().fold(
-            IpVersions {
-                ipv4: SystemState { id, state: new_ipv4_state },
-                ipv6: SystemState { id, state: new_ipv6_state },
+            {
+                let IpVersions {
+                    ipv4: Delta { previous: _, current: ipv4 },
+                    ipv6: Delta { previous: _, current: ipv6 },
+                } = port;
+                IpVersions {
+                    ipv4: SystemState { id, state: ipv4 },
+                    ipv6: SystemState { id, state: ipv6 },
+                }
             },
             |IpVersions { ipv4: system_ipv4, ipv6: system_ipv6 },
              (&id, &IpVersions { ipv4, ipv6 })| {
@@ -405,16 +408,11 @@ impl Monitor {
     }
 
     fn interface_node(&mut self, id: Id, name: &str) -> Option<&mut InspectInfo> {
-        match self.inspector {
-            Some(inspector) => {
-                if !self.nodes.contains_key(&id) {
-                    let n = InspectInfo::new(inspector.root(), &format!("{:?}", id), name);
-                    self.nodes.insert(id, n);
-                }
-                self.nodes.get_mut(&id)
-            }
-            None => None,
-        }
+        self.inspector.map(move |inspector| {
+            self.nodes.entry(id).or_insert_with_key(|id| {
+                InspectInfo::new(inspector.root(), &format!("{:?}", id), name)
+            })
+        })
     }
 
     /// Update state based on the new reachability info.
@@ -483,9 +481,7 @@ impl Monitor {
 }
 
 fn log_state(info: Option<&mut InspectInfo>, proto: Proto, state: State) {
-    info.map(|info| {
-        info.log_state(proto, state);
-    });
+    info.into_iter().for_each(|info| info.log_state(proto, state))
 }
 
 /// `compute_state` processes an event and computes the reachability based on the event and
