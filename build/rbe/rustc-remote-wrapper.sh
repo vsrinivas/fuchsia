@@ -91,7 +91,13 @@ fsatrace="$project_root"/prebuilt/fsatrace/fsatrace
 
 # Modify original command to extract dep-info only (fast).
 # Start with `env` in case command starts with environment variables.
-dep_only_command=(env)
+# Note: `env` is not $root_build_dir/env, which comes from
+# //third_party/sbase:env.  This assumes that this tool path is
+# available on the remote executor, and avoids a dependency on the host-built
+# `env` binary.  Since /usr/bin/env lies outside of $exec_root,
+# reproxy will not consider this as an input (for uploading/caching).
+env=/usr/bin/env
+dep_only_command=("$env")
 
 # Infer the source_root.
 first_source=
@@ -129,7 +135,7 @@ comma_remote_inputs=
 
 # Compute a rustc command suitable for local and remote execution.
 # Prefix command with `env` in case it starts with local environment variables.
-rustc_command=(env)
+rustc_command=("$env")
 
 # arch-vendor-os
 target_triple=
