@@ -15,7 +15,6 @@ use {
     fuchsia_async::{Task, Time, Timer},
     fuchsia_zircon::Event,
     fuchsia_zircon::{Duration, Status},
-    futures::prelude::*,
     std::{
         any::Any,
         marker::PhantomPinned,
@@ -89,7 +88,7 @@ impl FatFilesystemInner {
 
 pub struct FatFilesystem {
     inner: Mutex<FatFilesystemInner>,
-    dirty_task: Mutex<Option<Task<()>>>,
+    dirty_task: Mutex<Option<(Time, Task<()>)>>,
     fs_id: Event,
 }
 
@@ -145,16 +144,31 @@ impl FatFilesystem {
     /// Mark the filesystem as dirty. This will cause the disk to automatically be flushed after
     /// one second, and cancel any previous pending flushes.
     pub fn mark_dirty(self: &Pin<Arc<Self>>) {
-        let clone = self.clone();
-        let task = Timer::new(Time::after(Duration::from_seconds(1))).then(|_| async move {
-            let _ = clone.lock().unwrap().filesystem.as_ref().map(|f| f.flush());
-        });
-
-        let task = Task::spawn(task);
-        let mut task_lock = self.dirty_task.lock().unwrap();
-        // replace() will return the old Task, which we drop, which causes the old flush task to be
-        // cancelled.
-        task_lock.replace(task);
+        let deadline = Time::after(Duration::from_seconds(1));
+        match &mut *self.dirty_task.lock().unwrap() {
+            Some((time, _)) => *time = deadline,
+            x @ None => {
+                let this = self.clone();
+                *x = Some((
+                    deadline,
+                    Task::spawn(async move {
+                        loop {
+                            let deadline;
+                            {
+                                let mut task = this.dirty_task.lock().unwrap();
+                                deadline = task.as_ref().unwrap().0;
+                                if Time::now() >= deadline {
+                                    *task = None;
+                                    break;
+                                }
+                            }
+                            Timer::new(deadline).await;
+                        }
+                        let _ = this.lock().unwrap().filesystem.as_ref().map(|f| f.flush());
+                    }),
+                ));
+            }
+        }
     }
 
     /// Do a simple rename of the file, without unlinking dst.
