@@ -9,6 +9,26 @@ ffx_plugin("ffx_pdk_fetch") {
   edition = "2018"
   with_unit_tests = true
 
+  deps = [
+    "//src/developer/ffx/plugins/pdk/lib:ffx_pdk_lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
+    "//third_party/rust_crates:async-fs",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:futures-lite",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  test_deps = [
+    "//src/developer/ffx/lib/pkg:empty-repo",
+    "//src/developer/ffx/lib/pkg:pkg",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:tempfile",
+  ]
+
   sources = [
     "src/args.rs",
     "src/lib.rs",
