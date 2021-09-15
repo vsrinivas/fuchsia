@@ -13,7 +13,7 @@ ExampleServerApp::ExampleServerApp(std::unique_ptr<sys::ComponentContext> contex
     : context_(std::move(context)) {
   // [START initialization]
   inspector_ = std::make_unique<sys::ComponentInspector>(context_.get());
-  // [END initializeation]
+  // [END initialization]
 
   // [START properties]
   // Attach properties to the root node of the tree
