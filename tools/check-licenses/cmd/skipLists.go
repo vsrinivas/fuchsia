@@ -117,7 +117,6 @@ var additionalSkipDirs = []string{
 	"third_party/cobalt_config",                          // b/178682768 -
 	"third_party/crashpad/third_party/apple_cf",          // b/173233942 - To be deleted
 	"third_party/crashpad/third_party/getopt",            // b/173234393 - To be deleted
-	"third_party/crashpad/third_party/xnu",               // b/173234731 - To be deleted
 	"third_party/grpc/third_party/cares",                 // b/173238234 -
 	"third_party/libc-tests/third_party/nacl-tests",      // b/178682771
 	"zircon/prebuilt/downloads/firmware/bluetooth",       // b/178734895 -
