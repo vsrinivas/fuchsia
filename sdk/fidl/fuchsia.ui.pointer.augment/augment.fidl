@@ -85,9 +85,17 @@ protocol MouseSourceWithGlobalMouse {
     });
 };
 
-/// An augmentation of [`fuchsia.ui.pointer.MouseEvent`] to provide view-global
-/// visibility for mouse behavior.
-/// - The augmented data are scoped to the view of the client.
+/// An augmentation of [`fuchsia.ui.pointer.MouseEvent`] to provide global
+/// visibility for mouse behavior in the injection subtree.
+/// - The augmented data is scoped to the view of the client, meaning no events
+///   will be delivered when the mouse pointer is outside the view (even when
+///   the stream is latched to this view).
+/// - Augmented data is only produced for events injected either into or above
+///   the view in the scene graph.
+///   -  This means that local events ~= global events when the view is the
+///      root of the injection subtree.
+///   -  Otherwise the client will see all events up to root of the injection
+///      subtree.
 type MouseEventWithGlobalMouse = table {
     /// Identical usage to [`fuchsia.ui.pointer.MouseEvent`]. In particular, if
     /// the client's view is obscured, `mouse_event` will be empty.
@@ -163,7 +171,8 @@ type TouchEventWithLocalHit = struct {
     /// Identical usage to [`fuchsia.ui.pointer.TouchEvent`].
     touch_event pointer.TouchEvent;
 
-    /// Augmented data for `touch_event` that describes the top-most client KOID that it hits.
+    /// Augmented data for `touch_event` that describes the top-most client
+    /// KOID that it hits.
     local_viewref_koid zx.koid;
 
     /// Augmented data for `touch_event` that describes its local coordinates in

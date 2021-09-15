@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
+#include "src/ui/scenic/lib/input/mouse_source.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
@@ -281,10 +282,12 @@ void InputSystem::RegisterTouchSource(
 void InputSystem::RegisterMouseSource(
     fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,
     zx_koid_t client_view_ref_koid) {
-  const auto [_, success] = mouse_sources_.try_emplace(
-      client_view_ref_koid, std::move(mouse_source_request),
-      /*error_handler*/
-      [this, client_view_ref_koid] { mouse_sources_.erase(client_view_ref_koid); });
+  const auto [it, success] = mouse_sources_.emplace(
+      client_view_ref_koid,
+      std::make_unique<MouseSource>(std::move(mouse_source_request),
+                                    /*error_handler*/ [this, client_view_ref_koid] {
+                                      mouse_sources_.erase(client_view_ref_koid);
+                                    }));
   FX_DCHECK(success);
 }
 
@@ -311,6 +314,45 @@ void InputSystem::RegisterListener(
                                                      .view_ref = std::move(view_ref)};
 
   success_callback(true);
+}
+
+zx_koid_t InputSystem::FindViewRefKoidOfRelatedChannel(
+    const fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSource>& original) const {
+  const zx_koid_t related_koid = utils::ExtractRelatedKoid(original.channel());
+  const auto it = std::find_if(
+      mouse_sources_.begin(), mouse_sources_.end(),
+      [related_koid](const auto& kv) { return kv.second->channel_koid() == related_koid; });
+  return it == mouse_sources_.end() ? ZX_KOID_INVALID : it->first;
+}
+
+void InputSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSource> original,
+                          UpgradeCallback callback) {
+  // TODO(fxbug.dev/84270): This currently requires the client to wait until the MouseSource has
+  // been hooked up before making the Upgrade() call. This is not a great user experience. Change
+  // this so we cache the channel if it arrives too early.
+  const zx_koid_t view_ref_koid = FindViewRefKoidOfRelatedChannel(original);
+  if (view_ref_koid == ZX_KOID_INVALID) {
+    auto error = fuchsia::ui::pointer::augment::ErrorForGlobalMouse::New();
+    error->error_reason = fuchsia::ui::pointer::augment::ErrorReason::DENIED;
+    error->original = std::move(original);
+    callback({}, std::move(error));
+    return;
+  } else {
+    mouse_sources_.erase(view_ref_koid);
+    fidl::InterfaceHandle<fuchsia::ui::pointer::augment::MouseSourceWithGlobalMouse> handle;
+    auto global_mouse =
+        std::make_unique<MouseSourceWithGlobalMouse>(handle.NewRequest(),
+                                                     /*error_handler*/ [this, view_ref_koid] {
+                                                       global_mouse_sources_.erase(view_ref_koid);
+                                                       mouse_sources_.erase(view_ref_koid);
+                                                     });
+    const auto [_, success] = global_mouse_sources_.emplace(view_ref_koid, global_mouse.get());
+    FX_DCHECK(success);
+    const auto [__, success2] = mouse_sources_.emplace(view_ref_koid, std::move(global_mouse));
+    FX_DCHECK(success2);
+
+    callback(std::move(handle), nullptr);
+  }
 }
 
 std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
@@ -782,11 +824,21 @@ void InputSystem::SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent&
     if (view_exit) {
       // Bounding box and correct transform does not matter on view exit (since we don't send any
       // pointer samples), and we are likely working with a broken ViewTree, so skip them.
-      it->second.UpdateStream(stream_id, event, {}, view_exit);
+      it->second->UpdateStream(stream_id, event, {}, view_exit);
     } else {
-      it->second.UpdateStream(stream_id, EventWithReceiverFromViewportTransform(event, receiver),
-                              view_tree_snapshot_->view_tree.at(receiver).bounding_box, view_exit);
+      it->second->UpdateStream(stream_id, EventWithReceiverFromViewportTransform(event, receiver),
+                               view_tree_snapshot_->view_tree.at(receiver).bounding_box, view_exit);
     }
+  }
+}
+
+void InputSystem::UpdateGlobalMouse(const InternalMouseEvent& event) {
+  const auto hits = HitTest(event, /*semantic_hit_test*/ false);
+  for (auto& [koid, mouse] : global_mouse_sources_) {
+    FX_DCHECK(koid == event.target ||
+              view_tree_snapshot_->IsDescendant(/*descendant*/ koid, /*ancestor*/ event.target));
+    const bool inside_view = std::find(hits.begin(), hits.end(), koid) != hits.end();
+    mouse->AddGlobalEvent(event, inside_view);
   }
 }
 
@@ -798,6 +850,14 @@ void InputSystem::InjectMouseEventExclusive(const InternalMouseEvent& event,
             current_exclusive_mouse_receivers_.at(stream_id) == event.target);
   current_exclusive_mouse_receivers_[stream_id] = event.target;
   SendEventToMouse(event.target, event, stream_id, /*view_exit=*/false);
+
+  // If the exclusive receiver is a MouseSourceWithGlobalMouse, add the global values to it.
+  const auto it = global_mouse_sources_.find(event.target);
+  if (it != global_mouse_sources_.end()) {
+    const auto hits = HitTest(event, /*semantic_hit_test*/ false);
+    const bool inside_view = std::find(hits.begin(), hits.end(), event.target) != hits.end();
+    it->second->AddGlobalEvent(event, inside_view);
+  }
 }
 
 void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
@@ -807,7 +867,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
   // Grab the current mouse receiver or create a new one.
   MouseReceiver& mouse_receiver = current_mouse_receivers_[stream_id];
 
-  // Update the latch state.
+  // Unlatch a current latch if all buttons are released.
   const bool button_down = !event.buttons.pressed.empty();
   mouse_receiver.latched = mouse_receiver.latched && button_down;
 
@@ -818,6 +878,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
       mouse_receiver.view_koid != event.target) {
     SendEventToMouse(mouse_receiver.view_koid, event, stream_id, /*view_exit=*/true);
     mouse_receiver.view_koid = ZX_KOID_INVALID;
+    UpdateGlobalMouse(event);
     return;
   }
 
@@ -841,6 +902,9 @@ void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
 
   // Finally, send the event to the hovered/latched view.
   SendEventToMouse(mouse_receiver.view_koid, event, stream_id, /*view_exit=*/false);
+
+  // Update all MouseSourceWithGlobalMouse.
+  UpdateGlobalMouse(event);
 }
 
 void InputSystem::CancelMouseStream(StreamId stream_id) {
@@ -862,7 +926,7 @@ void InputSystem::CancelMouseStream(StreamId stream_id) {
 
   const auto it = mouse_sources_.find(receiver);
   if (it != mouse_sources_.end()) {
-    it->second.UpdateStream(stream_id, {}, {}, /*view_exit=*/true);
+    it->second->UpdateStream(stream_id, {}, {}, /*view_exit=*/true);
   }
 }
 

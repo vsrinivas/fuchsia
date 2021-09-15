@@ -11,12 +11,14 @@
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/ui/scenic/lib/input/input_system.h"
+#include "src/ui/scenic/lib/input/mouse_source.h"
 
 // These tests exercise the full mouse delivery flow of InputSystem for
 // clients of the fuchsia.ui.pointer.MouseSource protocol.
 
 namespace input::test {
 
+using fup_GlobalMouseEvent = fuchsia::ui::pointer::augment::MouseEventWithGlobalMouse;
 using fup_MouseEvent = fuchsia::ui::pointer::MouseEvent;
 using fuchsia::ui::pointer::MouseViewStatus;
 
@@ -27,6 +29,7 @@ using scenic_impl::input::StreamId;
 constexpr zx_koid_t kContextKoid = 100u;
 constexpr zx_koid_t kClient1Koid = 1u;
 constexpr zx_koid_t kClient2Koid = 2u;
+constexpr zx_koid_t kClient3Koid = 3u;
 
 constexpr StreamId kStream1Id = 11u;
 constexpr StreamId kStream2Id = 22u;
@@ -101,18 +104,17 @@ class MouseTest : public gtest::TestLoopFixture {
 
   // Starts a recursive MouseSource::Watch() loop that collects all received events into
   // |out_events|.
-  void StartWatchLoop(fuchsia::ui::pointer::MouseSourcePtr& mouse_source,
-                      std::vector<fup_MouseEvent>& out_events) {
+  template <class T, class U>
+  void StartWatchLoop(T& mouse_source, U& out_events) {
     const size_t index = watch_loops_.size();
-    watch_loops_.emplace_back();
-    watch_loops_.at(index) = [this, &mouse_source, &out_events,
-                              index](std::vector<fup_MouseEvent> events) {
-      std::move(events.begin(), events.end(), std::back_inserter(out_events));
-      mouse_source->Watch([this, index](std::vector<fup_MouseEvent> events) {
-        watch_loops_.at(index)(std::move(events));
-      });
-    };
-    mouse_source->Watch(watch_loops_.at(index));
+    watch_loops_.emplace_back().emplace<std::function<void(U)>>(
+        [this, &mouse_source, &out_events, index](U events) {
+          std::move(events.begin(), events.end(), std::back_inserter(out_events));
+          mouse_source->Watch([this, index](U events) {
+            std::get<std::function<void(U)>>(watch_loops_.at(index))(std::move(events));
+          });
+        });
+    mouse_source->Watch(std::get<std::function<void(U)>>(watch_loops_.at(index)));
   }
 
  private:
@@ -125,8 +127,10 @@ class MouseTest : public gtest::TestLoopFixture {
   fuchsia::ui::pointer::MouseSourcePtr client2_ptr_;
 
  private:
-  // Holds watch loops so they stay alive through the duration of the test.
-  std::vector<std::function<void(std::vector<fup_MouseEvent>)>> watch_loops_;
+  // Holds watch loop state alive for the duration of the test.
+  std::vector<std::variant<std::function<void(std::vector<fup_MouseEvent>)>,
+                           std::function<void(std::vector<fup_GlobalMouseEvent>)>>>
+      watch_loops_;
 };
 
 TEST_F(MouseTest, Watch_WithNoInjectedEvents_ShouldNeverReturn) {
@@ -514,6 +518,224 @@ TEST_F(MouseTest, CancelMouseStream_ShouldSendEvent_OnlyWhenThereIsOngoingStream
   input_system_.CancelMouseStream(kStream2Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events2.empty());
+}
+
+// This case should also cover when the target is below the MouseSourceWithGlobalMouse in the view
+// tree, since hits from below are impossible.
+TEST_F(MouseTest, MouseSourceWithGlobalMouse_DoesNotGetEventsWhenNotHit) {
+  // Set up a MouseSourceWithGlobalMouse for client 1.
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
+  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+    global_client_ptr.Bind(std::move(new_handle));
+  });
+  RunLoopUntilIdle();
+
+  std::vector<fup_GlobalMouseEvent> received_events;
+  StartWatchLoop(global_client_ptr, received_events);
+
+  // Inject with client 1 as the target, but nothing is hit.
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {},
+      /*hierarchy*/ {kContextKoid, kClient1Koid}));
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(received_events.empty()) << "Should get no events when not hit.";
+}
+
+TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsOriginatingFromAbove) {
+  // Set up a MouseSourceWithGlobalMouse for client 2.
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
+  input_system_.Upgrade(std::move(client2_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+    global_client_ptr.Bind(std::move(new_handle));
+  });
+  RunLoopUntilIdle();
+
+  std::vector<fup_GlobalMouseEvent> received_events;
+  StartWatchLoop(global_client_ptr, received_events);
+
+  // Client 1 is above client 2 in the view hierarchy, and client 2 is hit.
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {kClient2Koid},
+      /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  // Inject with client 1 as the target.
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  // Client 2 should only get both local and global event.
+  ASSERT_EQ(received_events.size(), 1u);
+  const auto& event = received_events.front();
+  EXPECT_TRUE(event.has_mouse_event());
+  EXPECT_TRUE(event.has_global_position());
+  ASSERT_TRUE(event.has_global_stream_info());
+  EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::ENTERED);
+}
+
+TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsWithSelfAsTarget) {
+  // Set up a MouseSourceWithGlobalMouse for client 1.
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
+  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+    global_client_ptr.Bind(std::move(new_handle));
+  });
+  RunLoopUntilIdle();
+
+  std::vector<fup_GlobalMouseEvent> received_events;
+  StartWatchLoop(global_client_ptr, received_events);
+
+  // Inject with client 1 as the target, and client 2 is top hit.
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {kClient2Koid, kClient1Koid},
+      /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  // Client 1 should only get global events.
+  ASSERT_EQ(received_events.size(), 1u);
+  const auto& event = received_events.front();
+  EXPECT_FALSE(event.has_mouse_event());
+  EXPECT_TRUE(event.has_global_position());
+  ASSERT_TRUE(event.has_global_stream_info());
+  EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::ENTERED);
+}
+
+TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsForExclusiveInjection) {
+  // Set up a MouseSourceWithGlobalMouse for client 1.
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
+  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+    global_client_ptr.Bind(std::move(new_handle));
+  });
+  RunLoopUntilIdle();
+
+  std::vector<fup_GlobalMouseEvent> received_events;
+  StartWatchLoop(global_client_ptr, received_events);
+
+  // Nothing is hit.
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {},
+      /*hierarchy*/ {kContextKoid, kClient1Koid}));
+  // Inject with client 1 as the target.
+  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  {  // Client should get only normal event, since the injection was outside the view.
+    ASSERT_EQ(received_events.size(), 1u);
+    const auto& event = received_events.front();
+    EXPECT_TRUE(event.has_mouse_event());
+    EXPECT_FALSE(event.has_global_position());
+    EXPECT_FALSE(event.has_global_stream_info());
+  }
+  received_events.clear();
+
+  // Client 1 is hit.
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {kClient1Koid},
+      /*hierarchy*/ {kContextKoid, kClient1Koid}));
+  // Inject with client 1 as the target.
+  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  {  // Client should get both normal and global events, since we're now hovering over the view.
+    ASSERT_EQ(received_events.size(), 1u);
+    const auto& event = received_events.front();
+    EXPECT_TRUE(event.has_mouse_event());
+    EXPECT_TRUE(event.has_global_position());
+    ASSERT_TRUE(event.has_global_stream_info());
+    EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::ENTERED);
+  }
+}
+
+TEST_F(MouseTest, MouseSourceWithGlobalMouseTest) {
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client1_ptr;
+  input_system_.Upgrade(std::move(client1_ptr_), [&global_client1_ptr](auto new_handle, auto _) {
+    global_client1_ptr.Bind(std::move(new_handle));
+  });
+  fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client2_ptr;
+  input_system_.Upgrade(std::move(client2_ptr_), [&global_client2_ptr](auto new_handle, auto _) {
+    global_client2_ptr.Bind(std::move(new_handle));
+  });
+  RunLoopUntilIdle();
+
+  std::vector<fup_GlobalMouseEvent> received_events1;
+  StartWatchLoop(global_client1_ptr, received_events1);
+  std::vector<fup_GlobalMouseEvent> received_events2;
+  StartWatchLoop(global_client2_ptr, received_events2);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(received_events1.empty());
+  EXPECT_TRUE(received_events2.empty());
+
+  // Client 1 is top and only hit
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {kClient1Koid},
+      /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+
+  {  // Client 1 should get global data and normal data.
+    ASSERT_EQ(received_events1.size(), 1u);
+    const auto& event = received_events1.front();
+    EXPECT_TRUE(event.has_mouse_event());
+    EXPECT_TRUE(event.has_global_position());
+    ASSERT_TRUE(event.has_global_stream_info());
+    EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::ENTERED);
+  }
+  // Client 2 should get nothing.
+  EXPECT_TRUE(received_events2.empty());
+  received_events1.clear();
+
+  // Client 2 is top hit, but client 1 is still in the hit list.
+  input_system_.OnNewViewTreeSnapshot(
+      NewSnapshot(/*hits*/ {kClient2Koid, kClient1Koid},
+                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+  {  // Client 1 gets global data and a view exited event on the normal path.
+    ASSERT_EQ(received_events1.size(), 1u);
+    const auto& event = received_events1.front();
+    ASSERT_TRUE(event.has_mouse_event());
+    ASSERT_TRUE(event.mouse_event().has_stream_info());
+    EXPECT_EQ(event.mouse_event().stream_info().status, MouseViewStatus::EXITED);
+    EXPECT_TRUE(event.has_global_position());
+    EXPECT_FALSE(event.has_global_stream_info());
+  }
+  {  // Client 2 gets an enter event and the normal data.
+    ASSERT_EQ(received_events2.size(), 1u);
+    const auto& event = received_events2.front();
+    EXPECT_TRUE(event.has_mouse_event());
+    EXPECT_TRUE(event.has_global_position());
+    ASSERT_TRUE(event.has_global_stream_info());
+    EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::ENTERED);
+  }
+  received_events1.clear();
+  received_events2.clear();
+
+  // No hits.
+  input_system_.OnNewViewTreeSnapshot(
+      NewSnapshot(/*hits*/ {},
+                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+
+  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+  {  // Client 1 gets only global data and a global view exited event.
+    ASSERT_EQ(received_events1.size(), 1u);
+    const auto& event = received_events1.front();
+    EXPECT_FALSE(event.has_mouse_event());
+    EXPECT_TRUE(event.has_global_position());
+    ASSERT_TRUE(event.has_global_stream_info());
+    EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::EXITED);
+  }
+  {  // Client 2 gets global data, a global view exited event AND a view exited event on the normal
+     // path.
+    ASSERT_EQ(received_events2.size(), 1u);
+    const auto& event = received_events2.front();
+    EXPECT_TRUE(event.has_mouse_event());
+    ASSERT_TRUE(event.mouse_event().has_stream_info());
+    EXPECT_EQ(event.mouse_event().stream_info().status, MouseViewStatus::EXITED);
+    EXPECT_TRUE(event.has_global_position());
+    ASSERT_TRUE(event.has_global_stream_info());
+    EXPECT_EQ(event.global_stream_info().status, MouseViewStatus::EXITED);
+  }
 }
 
 }  // namespace input::test

@@ -17,6 +17,12 @@ fuchsia::ui::scenic::Present2Args CreatePresent2Args(zx_time_t requested_present
                                                      std::vector<zx::event> release_fences,
                                                      zx_duration_t requested_prediction_span);
 
+// Helper for extracting the koid from a kernel object.
+zx_koid_t ExtractKoid(const zx::object_base& object);
+
+// Helper for extracting the related koid from a kernel object.
+zx_koid_t ExtractRelatedKoid(const zx::object_base& object);
+
 // Helper for extracting the koid from a ViewRef.
 zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);
 

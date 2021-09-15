@@ -30,6 +30,10 @@ source_set("input") {
     "mouse_injector.h",
     "mouse_source.cc",
     "mouse_source.h",
+    "mouse_source_base.cc",
+    "mouse_source_base.h",
+    "mouse_source_with_global_mouse.cc",
+    "mouse_source_with_global_mouse.h",
     "pointerinjector_registry.cc",
     "pointerinjector_registry.h",
     "stream_id.cc",
@@ -61,6 +65,7 @@ source_set("input") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointer.augment",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
   ]

@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/pointer/augment/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include <map>
@@ -20,7 +21,8 @@
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
-#include "src/ui/scenic/lib/input/mouse_source.h"
+#include "src/ui/scenic/lib/input/mouse_source_base.h"
+#include "src/ui/scenic/lib/input/mouse_source_with_global_mouse.h"
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 #include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/scenic/system.h"
@@ -36,7 +38,9 @@ namespace scenic_impl::input {
 using RequestFocusFunc = fit::function<void(zx_koid_t)>;
 
 // Tracks input APIs.
-class InputSystem : public System, public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class InputSystem : public System,
+                    public fuchsia::ui::pointer::augment::GlobalMouse,
+                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
     fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
@@ -79,6 +83,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   void DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                               scheduling::SessionId session_id);
+
+  // |fuchsia::ui::pointer::augment::GlobalMouse|
+  void Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSource> original,
+               UpgradeCallback callback) override;
 
   // For tests.
   // TODO(fxbug.dev/72919): Remove when integration tests are properly separated out.
@@ -134,6 +142,11 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
     return hits.empty() ? ZX_KOID_INVALID : hits.front();
   }
 
+  // Finds the ViewRef koid registered with the other side of the |original| channel and returns it.
+  // Returns ZX_KOID_INVALID if the related channel isn't found.
+  zx_koid_t FindViewRefKoidOfRelatedChannel(
+      const fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSource>& original) const;
+
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
   void ReportPointerEventToPointerCaptureListener(const InternalTouchEvent& event) const;
@@ -145,6 +158,9 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // Locates and sends an event to the MouseSource identified by |receiver|, if one exists.
   void SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent& event, StreamId stream_id,
                         bool view_exit);
+
+  // Updates all MouseSourceWithGlobalMouse, causing them to send any pending events.
+  void UpdateGlobalMouse(const InternalMouseEvent& event);
 
   // Takes a ViewRef koid and creates a GfxLegacyContender that delivers events to the corresponding
   // SessionListener on contest victory.
@@ -292,7 +308,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // All MouseSource instances. Each instance can be the receiver of any number of mouse streams,
   // and each stream is captured in either |current_mouse_receivers_| or
   // |current_exclusive_mouse_receivers_|.
-  std::unordered_map<zx_koid_t, MouseSource> mouse_sources_;
+  std::unordered_map<zx_koid_t, std::unique_ptr<MouseSourceBase>> mouse_sources_;
+  // Map of pointers to all MouseSourceWithGlobalMouse instances.
+  // Must be cleaned up when the owning pointer in |mouse_sources_| is cleaned up.
+  std::unordered_map<zx_koid_t, MouseSourceWithGlobalMouse*> global_mouse_sources_;
 
   // Inspect data.
   inspect::Node hit_test_stats_node_;

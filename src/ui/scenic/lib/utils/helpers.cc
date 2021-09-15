@@ -24,14 +24,26 @@ fuchsia::ui::scenic::Present2Args CreatePresent2Args(zx_time_t requested_present
   return args;
 }
 
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+zx_koid_t ExtractKoid(const zx::object_base& object) {
   zx_info_handle_basic_t info{};
-  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
-      ZX_OK) {
+  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
     return ZX_KOID_INVALID;  // no info
   }
 
   return info.koid;
+}
+
+zx_koid_t ExtractRelatedKoid(const zx::object_base& object) {
+  zx_info_handle_basic_t info{};
+  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.related_koid;
+}
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  return ExtractKoid(view_ref.reference);
 }
 
 zx::event CopyEvent(const zx::event& event) {

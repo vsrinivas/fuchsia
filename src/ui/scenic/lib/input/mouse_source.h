@@ -9,56 +9,23 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
-#include <queue>
-#include <unordered_set>
-
-#include "src/ui/scenic/lib/input/internal_pointer_event.h"
-#include "src/ui/scenic/lib/input/stream_id.h"
-#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
+#include "src/ui/scenic/lib/input/mouse_source_base.h"
 
 namespace scenic_impl::input {
 
 // Implementation of the |fuchsia::ui::pointer::MouseSource| interface. One instance per
 // channel.
-class MouseSource : public fuchsia::ui::pointer::MouseSource {
+class MouseSource : public MouseSourceBase, fuchsia::ui::pointer::MouseSource {
  public:
   MouseSource(fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> event_provider,
               fit::function<void()> error_handler);
 
   ~MouseSource() override = default;
 
-  void UpdateStream(StreamId stream_id, const InternalMouseEvent& event,
-                    view_tree::BoundingBox view_bounds, bool view_exit);
-
   // |fuchsia::ui::pointer::MouseSource|
-  void Watch(WatchCallback callback) override;
-
-  // TODO(fxbug.dev/70182): Add clean up methods for when streams end or devices go away. When we
-  // know exactly what that will look like.
-
-  // TODO(fxbug.dev/78951): Implement ANR.
+  void Watch(WatchCallback callback) override { MouseSourceBase::WatchBase(std::move(callback)); }
 
  private:
-  void SendPendingIfWaiting();
-
-  // Closes the fidl channel. This triggers the destruction of the MouseSource object through
-  // the error handler set in InputSystem. NOTE: No further method calls or member accesses should
-  // be made after CloseChannel(), since they might be made on a destroyed object.
-  void CloseChannel(zx_status_t epitaph);
-
-  bool is_first_event_ = true;
-  Viewport current_viewport_;
-  view_tree::BoundingBox current_view_bounds_;
-
-  // Events waiting to be sent to client. Sent in batches of up to
-  // fuchsia::ui::pointer::MOUSE_MAX_EVENT events on each call to Watch().
-  std::queue<fuchsia::ui::pointer::MouseEvent> pending_events_;
-  WatchCallback pending_callback_ = nullptr;
-
-  std::unordered_set<StreamId> tracked_streams_;
-
-  std::unordered_set<uint32_t> tracked_devices_;
-
   fidl::Binding<fuchsia::ui::pointer::MouseSource> binding_;
   const fit::function<void()> error_handler_;
 };
