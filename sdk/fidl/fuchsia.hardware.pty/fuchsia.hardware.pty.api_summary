@@ -8,6 +8,7 @@ protocol/member fuchsia.hardware.pty/Device.Describe2(fuchsia.io/ConnectionInfoQ
 protocol/member fuchsia.hardware.pty/Device.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.hardware.pty/Device.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
 protocol/member fuchsia.hardware.pty/Device.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
+protocol/member fuchsia.hardware.pty/Device.GetBuffer2(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File_GetBuffer2_Result result)
 protocol/member fuchsia.hardware.pty/Device.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.pty/Device.GetWindowSize() -> (int32 status,fuchsia.hardware.pty/WindowSize size)
 protocol/member fuchsia.hardware.pty/Device.IoToIo2Placeholder()
@@ -17,10 +18,14 @@ protocol/member fuchsia.hardware.pty/Device.NodeSetFlags(uint32 flags) -> (int32
 protocol/member fuchsia.hardware.pty/Device.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.hardware.pty/Device.OpenClient(uint32 id,server_end:fuchsia.hardware.pty/Device client) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.hardware.pty/Device.Read2(uint64 count) -> (fuchsia.io/File_Read2_Result result)
 protocol/member fuchsia.hardware.pty/Device.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.hardware.pty/Device.ReadAt2(uint64 count,uint64 offset) -> (fuchsia.io/File_ReadAt2_Result result)
 protocol/member fuchsia.hardware.pty/Device.ReadEvents() -> (int32 status,uint32 events)
 protocol/member fuchsia.hardware.pty/Device.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
+protocol/member fuchsia.hardware.pty/Device.Resize(uint64 length) -> (fuchsia.io/File_Resize_Result result)
 protocol/member fuchsia.hardware.pty/Device.Seek(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
+protocol/member fuchsia.hardware.pty/Device.Seek2(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File_Seek2_Result result)
 protocol/member fuchsia.hardware.pty/Device.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.SetWindowSize(fuchsia.hardware.pty/WindowSize size) -> (int32 status)
@@ -29,7 +34,9 @@ protocol/member fuchsia.hardware.pty/Device.Sync2() -> (fuchsia.io/Node_Sync2_Re
 protocol/member fuchsia.hardware.pty/Device.Truncate(uint64 length) -> (int32 s)
 protocol/member fuchsia.hardware.pty/Device.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node_UpdateAttributes_Result result)
 protocol/member fuchsia.hardware.pty/Device.Write(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
+protocol/member fuchsia.hardware.pty/Device.Write2(vector<uint8>:8192 data) -> (fuchsia.io/File_Write2_Result result)
 protocol/member fuchsia.hardware.pty/Device.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
+protocol/member fuchsia.hardware.pty/Device.WriteAt2(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File_WriteAt2_Result result)
 protocol fuchsia.hardware.pty/Device
 const fuchsia.hardware.pty/EVENT_HANGUP uint32 1
 const fuchsia.hardware.pty/EVENT_INTERRUPT uint32 2
