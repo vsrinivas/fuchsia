@@ -186,6 +186,7 @@ protocol Node {
     /// elements.
     @transitional
     @deprecated
+    @selector("fuchsia.io1/Node.IoToIo2Placeholder")
     IoToIo2Placeholder();
 
     /// Create another connection to the same remote object.
@@ -343,7 +344,7 @@ protocol Node {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    // @selector("fuchsia.io1/Node.SetAttr")
+    @selector("fuchsia.io1/Node.SetAttr")
     SetAttr(struct {
         flags uint32;
         attributes NodeAttributes;
@@ -480,6 +481,7 @@ protocol File {
     /// `ZX_ERR_BAD_HANDLE`.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
+    @selector("fuchsia.io1/File.Read")
     Read(struct {
         count uint64;
     }) -> (struct {
@@ -494,6 +496,7 @@ protocol File {
     /// `ZX_ERR_BAD_HANDLE`.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
+    @selector("fuchsia.io1/File.ReadAt")
     ReadAt(struct {
         count uint64;
         offset uint64;
@@ -507,6 +510,7 @@ protocol File {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/File.Write")
     Write(struct {
         data vector<uint8>:MAX_BUF;
     }) -> (struct {
@@ -519,6 +523,7 @@ protocol File {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/File.WriteAt")
     WriteAt(struct {
         data vector<uint8>:MAX_BUF;
         offset uint64;
@@ -531,6 +536,7 @@ protocol File {
     /// occur.
     ///
     /// This method does not require any rights.
+    @selector("fuchsia.io1/File.Seek")
     Seek(struct {
         offset int64;
         start SeekOrigin;
@@ -543,6 +549,7 @@ protocol File {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/File.Truncate")
     Truncate(struct {
         length uint64;
     }) -> (struct {
@@ -552,6 +559,7 @@ protocol File {
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
     /// This method does not require any rights.
+    @selector("fuchsia.io1/File.GetFlags")
     GetFlags() -> (struct {
         s zx.status;
         flags uint32;
@@ -562,6 +570,7 @@ protocol File {
     /// - `OPEN_FLAG_APPEND`
     ///
     /// This method does not require any rights.
+    @selector("fuchsia.io1/File.SetFlags")
     SetFlags(struct {
         flags uint32;
     }) -> (struct {
@@ -578,6 +587,7 @@ protocol File {
     /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     /// - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
     /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VMO_FLAG_EXEC`.
+    @selector("fuchsia.io1/File.GetBuffer")
     GetBuffer(struct {
         flags uint32;
     }) -> (resource struct {
@@ -645,6 +655,7 @@ type WatchedEvent = struct {
 /// filter which events they want to receive notifications for.
 protocol DirectoryWatcher {
     // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
+    @selector("fuchsia.io1/DirectoryWatcher.OnEvent")
     OnEvent(struct {
         events vector<uint8>:MAX_BUF;
     });
@@ -687,6 +698,7 @@ protocol Directory {
     /// being created, `mode` is otherwise ignored. If an object is being created and the mode
     /// type is not set, a directory will be created if OPEN_FLAG_DIRECTORY is set (explicitly or
     /// implicitly), or otherwise a server chosen object type.
+    @selector("fuchsia.io1/Directory.Open")
     Open(resource struct {
         flags uint32;
         mode uint32;
@@ -713,6 +725,7 @@ protocol Directory {
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
+    @selector("fuchsia.io1/Directory.AddInotifyFilter")
     AddInotifyFilter(resource struct {
         path fuchsia.io2.Path;
         filter fuchsia.io2.InotifyWatchMask;
@@ -779,6 +792,7 @@ protocol Directory {
     // llcpp arrives.
     // TODO(smklein): Get rid of "max_bytes".
     // TODO(smklein): Document the behavior when the seek pointer reaches the end of the directory.
+    @selector("fuchsia.io1/Directory.ReadDirents")
     ReadDirents(struct {
         max_bytes uint64;
     }) -> (struct {
@@ -789,6 +803,7 @@ protocol Directory {
     /// Resets the directory seek offset.
     ///
     /// This method does not require any rights, similar to ReadDirents.
+    @selector("fuchsia.io1/Directory.Rewind")
     Rewind() -> (struct {
         s zx.status;
     });
@@ -798,6 +813,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/Directory.GetToken")
     GetToken() -> (resource struct {
         s zx.status;
         token zx.handle:optional;
@@ -813,6 +829,7 @@ protocol Directory {
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @transitional // Rename is being removed, use Rename2 instead.
+    @selector("fuchsia.io1/Directory.Rename")
     Rename(resource struct {
         src string:MAX_PATH;
         dst_parent_token zx.handle;
@@ -852,6 +869,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/Directory.Link")
     Link(resource struct {
         src string:MAX_PATH;
         dst_parent_token zx.handle;
@@ -880,6 +898,7 @@ protocol Directory {
     /// Options must be zero; it is reserved.
     ///
     /// This method does not require any rights, similar to ReadDirents.
+    @selector("fuchsia.io1/Directory.Watch")
     Watch(resource struct {
         mask uint32;
         options uint32;
@@ -930,6 +949,7 @@ protocol DirectoryAdmin {
     /// All future requests to this node will be forwarded to the remote filesystem.
     /// To re-open a node without forwarding to the remote target, the node
     /// should be opened with `OPEN_FLAG_NO_REMOTE`.
+    @selector("fuchsia.io1/DirectoryAdmin.Mount")
     Mount(resource struct {
         remote client_end:Directory;
     }) -> (struct {
@@ -938,6 +958,7 @@ protocol DirectoryAdmin {
 
     /// Atomically create a directory with a provided path, and mount the
     /// remote handle to the newly created directory.
+    @selector("fuchsia.io1/DirectoryAdmin.MountAndCreate")
     MountAndCreate(resource struct {
         remote client_end:Directory;
         name string:MAX_FILENAME;
@@ -948,24 +969,28 @@ protocol DirectoryAdmin {
 
     /// Unmount this filesystem. After this function returns successfully,
     /// all connections to the filesystem will be terminated.
+    @selector("fuchsia.io1/DirectoryAdmin.Unmount")
     Unmount() -> (struct {
         s zx.status;
     });
 
     /// Detach a node which was previously attached to this directory
     /// with Mount.
+    @selector("fuchsia.io1/DirectoryAdmin.UnmountNode")
     UnmountNode() -> (resource struct {
         s zx.status;
         remote client_end:<Directory, optional>;
     });
 
     /// Query the filesystem for filesystem-specific information.
+    @selector("fuchsia.io1/DirectoryAdmin.QueryFilesystem")
     QueryFilesystem() -> (struct {
         s zx.status;
         info box<FilesystemInfo>;
     });
 
     /// Acquire the path to the device backing this filesystem, if there is one.
+    @selector("fuchsia.io1/DirectoryAdmin.GetDevicePath")
     GetDevicePath() -> (struct {
         s zx.status;
         path string:<MAX_PATH, optional>;

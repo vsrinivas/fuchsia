@@ -226,30 +226,4 @@ protocol protocol {
   EXPECT_EQ(iface->methods[31].generated_ordinal64->value, 0x54fd307bb5bfab2d);
 }
 
-TEST(OrdinalsTests, GoodHackToRenameFuchsiaIoToFuchsiaIoOne) {
-  TestLibrary library_io(R"FIDL(library fuchsia.io;
-
-protocol SomeProtocol {
-    SomeMethod();
-};
-)FIDL");
-  ASSERT_COMPILED(library_io);
-
-  TestLibrary library_io_one(R"FIDL(library fuchsia.io1;
-
-protocol SomeProtocol {
-    SomeMethod();
-};
-)FIDL");
-  ASSERT_COMPILED(library_io_one);
-
-  const fidl::flat::Protocol* io_protocol = library_io.LookupProtocol("SomeProtocol");
-  uint64_t io_hash64 = io_protocol->methods[0].generated_ordinal64->value;
-
-  const fidl::flat::Protocol* io_one_protocol = library_io_one.LookupProtocol("SomeProtocol");
-  uint64_t io_one_hash64 = io_one_protocol->methods[0].generated_ordinal64->value;
-
-  ASSERT_EQ(io_hash64, io_one_hash64);
-}
-
 }  // namespace

@@ -79,7 +79,8 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
   // `fuchsia.io` library to `fuchsia.io1`. In short, from an ABI standpoint,
   // both `fuchsia.io` and `fuchsia.io1` are the same.
   if (full_name == "fuchsia.io") {
-    full_name = "fuchsia.io1";
+    assert(false &&
+        "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
   }
   full_name.append("/");
   full_name.append(protocol_name.data(), protocol_name.size());
