@@ -15,7 +15,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.devicesettings.DeviceSettingsManager",
                 "fuchsia.media.audio.VolumeControl",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",

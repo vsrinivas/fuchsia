@@ -18,7 +18,6 @@
         "services": [
             "fuchsia.camera3.DeviceWatcher",
             "fuchsia.deprecatedtimezone.Timezone",
-            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.input.report.InputDevice",
