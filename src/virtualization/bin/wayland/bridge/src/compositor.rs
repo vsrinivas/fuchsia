@@ -22,11 +22,21 @@ use {
 
 #[cfg(feature = "flatland")]
 use {
-    crate::scenic::Flatland, fidl_fuchsia_ui_composition::TransformId, std::collections::VecDeque,
+    crate::buffer::ImageInstanceId,
+    crate::scenic::Flatland,
+    fidl_fuchsia_math::{RectF, SizeU},
+    fidl_fuchsia_ui_composition::TransformId,
+    std::{
+        collections::VecDeque,
+        sync::atomic::{AtomicUsize, Ordering},
+    },
 };
 
 #[cfg(not(feature = "flatland"))]
 use {crate::scenic::ScenicSession, fuchsia_scenic as scenic, futures::prelude::*};
+
+#[cfg(feature = "flatland")]
+static NEXT_IMAGE_INSTANCE_ID: AtomicUsize = AtomicUsize::new(1);
 
 /// An implementation of the wl_compositor global.
 pub struct Compositor;
@@ -263,6 +273,15 @@ pub struct Surface {
     /// Present credits that determine if we are allowed to present.
     #[cfg(feature = "flatland")]
     present_credits: u32,
+
+    /// Global identifier for image instances used by this surface.
+    #[cfg(feature = "flatland")]
+    image_instance_id: ImageInstanceId,
+
+    /// The current content of this surface as determined by the currently attached
+    /// buffer.
+    #[cfg(feature = "flatland")]
+    content: Option<BufferAttachment>,
 }
 
 impl Surface {
@@ -346,6 +365,8 @@ impl Surface {
             subsurfaces: vec![(id.into(), None)],
             callbacks: VecDeque::new(),
             present_credits: 1,
+            image_instance_id: NEXT_IMAGE_INSTANCE_ID.fetch_add(1, Ordering::Relaxed),
+            content: None,
         }
     }
 
@@ -388,111 +409,38 @@ impl Surface {
     }
 
     /// Updates the current surface state by applying a single `SurfaceCommand`.
-    ///
-    /// Returns `true` if the application of the command requires relayout of
-    /// the surfaces view hierarchy. Ex: changing the size of the attached
-    /// buffer or the associated viewport parameters requires updates to the
-    /// scenic nodes, while just replacing the attached buffer requires no such
-    /// update.
-    fn apply(&mut self, command: SurfaceCommand, task_queue: &TaskQueue) -> Result<bool, Error> {
-        let node = match self.node.as_ref() {
-            Some(node) => node,
-            None => {
-                // This is expected for some surfaces that aren't implemented
-                // yet, like wl_pointer cursor surfaces.
-                println!(
-                    "No flatland instance associated with surface role {:?}; skipping commit",
-                    self.role
-                );
-                return Ok(false);
-            }
-        };
-        let needs_relayout = match command {
+    fn apply(&mut self, command: SurfaceCommand) -> Result<(), Error> {
+        match command {
             SurfaceCommand::AttachBuffer(attachment) => {
-                let buffer = attachment.buffer.clone();
-                let image_id = buffer.image_id(&node.flatland);
-                node.flatland
-                    .proxy()
-                    .set_content(&mut node.transform_id.clone(), &mut image_id.clone())
-                    .expect("fidl error");
-                let previous_size = mem::replace(&mut self.size, buffer.image_size());
-
-                // Create and register a release fence to release this buffer when
-                // scenic is done with it.
-                let release_fence = zx::Event::create().unwrap();
-                node.flatland.add_release_fence(
-                    release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
-                );
-                let task_queue = task_queue.clone();
-                fasync::Task::local(async move {
-                    let _signals =
-                        fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
-                            .await
-                            .unwrap();
-                    // Safe to ignore result as EVENT_SIGNALED must have
-                    // been observed if we reached this.
-                    task_queue.post(move |client| {
-                        client.event_queue().post(attachment.id(), WlBufferEvent::Release)
-                    });
-                })
-                .detach();
-                previous_size != self.size
+                self.content = Some(attachment.clone());
             }
-            SurfaceCommand::ClearBuffer => true,
+            SurfaceCommand::ClearBuffer => {}
             SurfaceCommand::Frame(callback) => {
                 if self.frame.is_some() {
                     return Err(format_err!("Multiple frame requests posted between commits"));
                 }
                 self.frame = Some(callback);
-                false
             }
             SurfaceCommand::SetViewportCropParams(params) => {
-                if self.crop_params != Some(params) {
-                    self.crop_params = Some(params);
-                    true
-                } else {
-                    false
-                }
+                self.crop_params = Some(params);
             }
             SurfaceCommand::ClearViewportCropParams => {
-                if self.crop_params != None {
-                    self.crop_params = None;
-                    true
-                } else {
-                    false
-                }
+                self.crop_params = None;
             }
             SurfaceCommand::SetViewportScaleParams(params) => {
-                if self.scale_params != Some(params) {
-                    self.scale_params = Some(params);
-                    true
-                } else {
-                    false
-                }
+                self.scale_params = Some(params);
             }
             SurfaceCommand::ClearViewportScaleParams => {
-                if self.scale_params != None {
-                    self.scale_params = None;
-                    true
-                } else {
-                    false
-                }
+                self.scale_params = None;
             }
             SurfaceCommand::SetWindowGeometry(geometry) => {
-                if self.window_geometry.as_ref() != Some(&geometry) {
-                    self.window_geometry = Some(geometry);
-                    true
-                } else {
-                    false
-                }
+                self.window_geometry = Some(geometry);
             }
             SurfaceCommand::SetPosition(x, y) => {
                 self.position = (x, y);
-                true
             }
             SurfaceCommand::AddSubsurface(surface_ref, subsurface_ref) => {
                 self.subsurfaces.push((surface_ref, Some(subsurface_ref)));
-                false
             }
             SurfaceCommand::PlaceSubsurface(params) => {
                 let sibling_index = if let Some(index) =
@@ -516,10 +464,9 @@ impl Surface {
                     SurfaceRelation::Above => anchor_index + 1,
                 };
                 self.subsurfaces.insert(new_index, sibling_entry);
-                true
             }
         };
-        Ok(needs_relayout)
+        Ok(())
     }
 
     /// Performs the logic to commit the local state of this surface.
@@ -531,27 +478,82 @@ impl Surface {
         callbacks: &mut Vec<ObjectRef<Callback>>,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::commit_self");
+
         let commands = mem::replace(&mut self.pending_commands, Vec::new());
         for command in commands {
-            self.apply(command, &task_queue)?;
+            self.apply(command)?;
         }
 
-        if let Some(crop) = self.crop_params.as_ref() {
-            // TODO(fxb/83657): implement cropping.
-            if crop.x != 0.0
-                || crop.y != 0.0
-                || crop.width != self.size.width as f32
-                || crop.height != self.size.height as f32
-            {
-                panic!("missing support for cropping");
+        let node = match self.node.as_ref() {
+            Some(node) => node,
+            None => {
+                // This is expected for some surfaces that aren't implemented
+                // yet, like wl_pointer cursor surfaces.
+                println!(
+                    "No flatland instance associated with surface role {:?}; skipping commit",
+                    self.role
+                );
+                return Ok(());
             }
-        }
+        };
 
-        if let Some(scale) = self.scale_params.as_ref() {
-            // TODO(fxb/83657): implement scaling.
-            if scale.width != self.size.width || scale.height != self.size.height {
-                panic!("missing support for scaling");
-            }
+        if let Some(content) = &self.content {
+            // Acquire image content. The instance ID ensures that usage of buffer by
+            // another surface will not conflict with this surface.
+            let image_content =
+                content.buffer.image_content(self.image_instance_id, &node.flatland);
+            self.size = content.buffer.image_size();
+
+            // Set image as content for transform.
+            node.flatland
+                .proxy()
+                .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
+                .expect("fidl error");
+
+            // Create and register a release fence to release this buffer when
+            // scenic is done with it.
+            let release_fence = zx::Event::create().unwrap();
+            node.flatland.add_release_fence(
+                release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
+            );
+            let buffer_id = content.id();
+            let task_queue = task_queue.clone();
+            fasync::Task::local(async move {
+                let _signals = fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
+                    .await
+                    .unwrap();
+                // Safe to ignore result as EVENT_SIGNALED must have
+                // been observed if we reached this.
+                task_queue.post(move |client| {
+                    client.event_queue().post(buffer_id, WlBufferEvent::Release)
+                });
+            })
+            .detach();
+
+            // Set image sample region based on current crop params.
+            let mut sample_region = self.crop_params.map_or(
+                RectF {
+                    x: 0.0,
+                    y: 0.0,
+                    width: self.size.width as f32,
+                    height: self.size.height as f32,
+                },
+                |crop| RectF { x: crop.x, y: crop.y, width: crop.width, height: crop.height },
+            );
+            node.flatland
+                .proxy()
+                .set_image_sample_region(&mut image_content.id.clone(), &mut sample_region)
+                .expect("fidl error");
+
+            // Set destination size based on current scale params.
+            let mut destination_size = self.scale_params.map_or(
+                SizeU { width: self.size.width as u32, height: self.size.height as u32 },
+                |scale| SizeU { width: scale.width as u32, height: scale.height as u32 },
+            );
+            node.flatland
+                .proxy()
+                .set_image_destination_size(&mut image_content.id.clone(), &mut destination_size)
+                .expect("fidl error");
         }
 
         if let Some(callback) = self.frame.take() {
