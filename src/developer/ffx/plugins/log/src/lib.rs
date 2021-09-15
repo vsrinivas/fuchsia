@@ -467,12 +467,12 @@ pub async fn log_cmd<W: std::io::Write>(
     writer: &mut W,
 ) -> Result<()> {
     let stream_mode = if cmd.dump {
-        if cmd.no_dump_recent {
+        if cmd.from_now {
             ffx_bail!("--no-dump-recent may not be used in combination with --dump");
         }
 
         StreamMode::SnapshotAll
-    } else if cmd.no_dump_recent {
+    } else if cmd.from_now {
         StreamMode::Subscribe
     } else {
         StreamMode::SnapshotRecentThenSubscribe
@@ -656,7 +656,7 @@ mod test {
             kernel: false,
             severity: Severity::Info,
             show_metadata: false,
-            no_dump_recent: false,
+            from_now: false,
             no_symbols: false,
             dump: false,
             since: None,
@@ -763,7 +763,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_no_dump_with_error() {
         let mut formatter = FakeLogFormatter::new();
-        let cmd = LogCommand { no_dump_recent: true, ..empty_log_command() };
+        let cmd = LogCommand { from_now: true, ..empty_log_command() };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::Subscribe),
             ..DaemonDiagnosticsStreamParameters::EMPTY

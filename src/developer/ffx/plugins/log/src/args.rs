@@ -54,7 +54,7 @@ Dump the most recent logs and stream new ones as they happen:
   $ ffx log
 
 Stream new logs without dumping recent ones, filtering for severity of at least \"WARN\":
-  $ ffx log --severity warn --no-dump-recent
+  $ ffx log --severity warn --from-now
 
 Dump all logs from components with a moniker, url, or message containing \"remote-control\" logged
 in the last 5 minutes:
@@ -78,6 +78,7 @@ pub struct LogCommand {
     /// May be repeated.
     #[argh(option)]
     pub contains: Vec<String>,
+
     /// exclude a string in either the message, component or url.
     /// May be repeated.
     #[argh(option)]
@@ -131,11 +132,12 @@ pub struct LogCommand {
     #[argh(option, default = "Severity::Info")]
     pub severity: Severity,
 
-    /// when --dump is not provided, whether to print a small chunk of recent logs before streaming
+    /// when --dump is not provided, start printing logs only from the moment
+    /// the command is run
     #[argh(switch)]
-    pub no_dump_recent: bool,
+    pub from_now: bool,
 
-    /// when --dump is not provided, whether to print a small chunk of recent logs before streaming
+    /// if provided, logs will not be symbolized
     #[argh(switch)]
     pub no_symbols: bool,
 
