@@ -217,7 +217,7 @@ impl FileOps for DevKmsg {
         let total = UserBuffer::get_total_length(data);
         let mut bytes = vec![0; total];
         task.mm.read_all(data, &mut bytes)?;
-        log::info!("received kmsg log: {:?}", String::from_utf8_lossy(&bytes));
+        log::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
         Ok(total)
     }
 }
