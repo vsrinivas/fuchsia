@@ -49,6 +49,9 @@ VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
 
   // AdoptVkImage() should fail and return nullptr instead.
   EXPECT_FALSE(naive_image);
+
+  // The image was not adopted to Escher. So we should destroy the image.
+  escher->vk_device().destroyImage(vk_image);
 }
 
 }  // namespace escher

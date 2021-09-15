@@ -198,6 +198,7 @@ ImagePtr NewImage(const vk::Device& device, const vk::ImageCreateInfo& create_in
   if (memory_reqs.size > gpu_mem->size()) {
     FX_LOGS(ERROR) << "Memory requirements for image exceed available memory: " << memory_reqs.size
                    << " " << gpu_mem->size();
+    device.destroyImage(image_result.value);
     return nullptr;
   }
 
