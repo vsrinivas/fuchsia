@@ -18,6 +18,17 @@ const MAX_KEY_SIZE uint32 = 256;
 /// contents inaccessible).
 @for_deprecated_c_bindings
 protocol DeviceManager {
+    /// Formats the device, destroying any previously-secured data.  A new data
+    /// key is generated and wrapped with the provided `key` into key slot `slot`,
+    /// Returns `ZX_ERR_BAD_STATE` if the device is not currently sealed.
+    /// Returns `ZX_OK` on success.
+    Format(struct {
+        key bytes:MAX_KEY_SIZE;
+        slot uint8;
+    }) -> (struct {
+        status zx.status;
+    });
+
     /// Attempts to unseal the device by using the provided master key to unwrap
     /// the data key wrapped in the specified key slot.  If the key provided was
     /// the correct key for this slot, then the device node responding to this

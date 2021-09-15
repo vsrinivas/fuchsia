@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZXCRYPT_FDIO_VOLUME_H_
-#define ZXCRYPT_FDIO_VOLUME_H_
+#ifndef SRC_SECURITY_ZXCRYPT_FDIO_VOLUME_H_
+#define SRC_SECURITY_ZXCRYPT_FDIO_VOLUME_H_
 
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 
 #include <memory>
@@ -69,6 +69,11 @@ zx_status_t TryWithKeysFrom(
 class __EXPORT FdioVolumeManager {
  public:
   explicit FdioVolumeManager(zx::channel&& chan);
+
+  // Request that the volume provided by the manager represented by |chan| be
+  // formatted with the given key material/slot, destroying all previous data
+  // and key slots.
+  zx_status_t Format(const uint8_t* key, size_t key_len, uint8_t slot);
 
   // Request that the volume provided by the manager represented by |chan| be
   // unsealed with the given key material/slot.  If successful, the driver
@@ -187,8 +192,8 @@ class __EXPORT FdioVolume final : public Volume {
   zx_status_t Write();
 
   // OpenManager, but using a pre-created fdio_t.
-  zx_status_t OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller, const zx::duration& timeout,
-                                    zx_handle_t* out);
+  zx_status_t OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& caller,
+                                    const zx::duration& timeout, zx_handle_t* out);
 
   // Returns the topological path of the underlying block device, relative to
   // |devfs_root_fd|
@@ -204,4 +209,4 @@ class __EXPORT FdioVolume final : public Volume {
 
 }  // namespace zxcrypt
 
-#endif  // ZXCRYPT_FDIO_VOLUME_H_
+#endif  // SRC_SECURITY_ZXCRYPT_FDIO_VOLUME_H_

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/security/zxcrypt/ddk-volume.h"
+
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/volume/c/banjo.h>
 #include <inttypes.h>
@@ -15,7 +17,7 @@
 #include <utility>
 
 #include <fbl/alloc_checker.h>
-#include "src/security/zxcrypt/ddk-volume.h"
+
 #include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0

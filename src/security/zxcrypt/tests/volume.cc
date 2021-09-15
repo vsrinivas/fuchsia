@@ -236,6 +236,24 @@ void TestShred(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(VolumeTest, TestShred)
 
+void TestFormatThroughDriver(Volume::Version version, bool fvm) {
+  TestDevice device;
+  ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());
+  ASSERT_NO_FATAL_FAILURES(device.Create(kDeviceSize, kBlockSize, fvm, version));
+
+  std::unique_ptr<FdioVolume> volume;
+  ASSERT_OK(FdioVolume::Init(device.parent(), device.devfs_root(), &volume));
+
+  zx::channel driver_chan;
+  ASSERT_OK(volume->OpenManager(zx::duration::infinite(), driver_chan.reset_and_get_address()));
+  FdioVolumeManager zxc_manager(std::move(driver_chan));
+  uint8_t slot = 0;
+  auto& key = device.key();
+  ASSERT_OK(zxc_manager.Format(key.get(), key.len(), slot));
+  EXPECT_OK(zxc_manager.Unseal(key.get(), key.len(), slot));
+}
+DEFINE_EACH_DEVICE(VolumeTest, TestFormatThroughDriver)
+
 void TestShredThroughDriver(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURES(device.SetupDevmgr());

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/security/zxcrypt/volume.h"
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -22,7 +24,6 @@
 #include "src/security/fcrypto/cipher.h"
 #include "src/security/fcrypto/hkdf.h"
 #include "src/security/fcrypto/secret.h"
-#include "src/security/zxcrypt/volume.h"
 
 #define ZXDEBUG 0
 
@@ -84,6 +85,25 @@ void Volume::Reset() {
   slot_len_ = 0;
   num_key_slots_ = 0;
   digest_ = crypto::digest::kUninitialized;
+}
+
+zx_status_t Volume::Format(const crypto::Secret& key, key_slot_t slot) {
+  zx_status_t rc;
+
+  if ((rc = CreateBlock()) != ZX_OK) {
+    xprintf("CreateBlock failed: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+  if ((rc = SealBlock(key, slot)) != ZX_OK) {
+    xprintf("SealBlock failed: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+  if ((rc = CommitBlock()) != ZX_OK) {
+    xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t Volume::Unlock(const crypto::Secret& key, key_slot_t slot) {

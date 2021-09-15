@@ -43,6 +43,10 @@ class DeviceManager final : public DeviceManagerType {
   void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(mtx_);
   void DdkRelease();
 
+  // Formats the zxcrypt volume, destroying any data contained therein, and
+  // enrolls the given key in the requested key slot.  Leaves the device sealed.
+  void Format(FormatRequestView request, FormatCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
+
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
   void Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
@@ -63,6 +67,10 @@ class DeviceManager final : public DeviceManagerType {
     kShredded,
     kRemoved,
   };
+
+  // Formats the zxcrypt volume, enrolling |ikm| in key slot |slot|.  Keeps the
+  // device sealed.
+  zx_status_t FormatLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_REQUIRES(mtx_);
 
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
   zx_status_t UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_REQUIRES(mtx_);

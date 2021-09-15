@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_
-#define SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_
+#ifndef SRC_SECURITY_ZXCRYPT_VOLUME_H_
+#define SRC_SECURITY_ZXCRYPT_VOLUME_H_
 
 #include <lib/zx/time.h>
 #include <stddef.h>
@@ -76,6 +76,8 @@ class __EXPORT Volume {
   size_t reserved_blocks() const { return reserved_blocks_; }
   size_t reserved_slices() const { return reserved_slices_; }
   size_t num_slots() const { return num_key_slots_; }
+
+  zx_status_t Format(const crypto::Secret& key, key_slot_t slot);
 
   // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
   // given key |slot|.
@@ -184,4 +186,4 @@ class __EXPORT Volume {
 
 }  // namespace zxcrypt
 
-#endif  // SRC_SECURITY_ZXCRYPT_INCLUDE_ZXCRYPT_VOLUME_H_
+#endif  // SRC_SECURITY_ZXCRYPT_VOLUME_H_

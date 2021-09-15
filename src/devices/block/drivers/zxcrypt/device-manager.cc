@@ -72,6 +72,16 @@ void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
 
 void DeviceManager::DdkRelease() { delete this; }
 
+void DeviceManager::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
+  fbl::AutoLock lock(&mtx_);
+  if (state_ != kSealed) {
+    zxlogf(ERROR, "can't format zxcrypt, state=%d", state_);
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
+  }
+  completer.Reply(FormatLocked(request->key.data(), request->key.count(), 0));
+}
+
 void DeviceManager::Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   if (state_ != kSealed) {
@@ -127,6 +137,30 @@ void DeviceManager::Shred(ShredRequestView request, ShredCompleter::Sync& comple
 
   state_ = kShredded;
   completer.Reply(ZX_OK);
+}
+
+zx_status_t DeviceManager::FormatLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {
+  zx_status_t rc;
+
+  crypto::Secret key;
+  uint8_t* buf;
+  if ((rc = key.Allocate(ikm_len, &buf)) != ZX_OK) {
+    zxlogf(ERROR, "failed to allocate %zu-byte key: %s", ikm_len, zx_status_get_string(rc));
+    return rc;
+  }
+  memcpy(buf, ikm, key.len());
+  std::unique_ptr<DdkVolume> volume;
+  if ((rc = DdkVolume::OpenOpaque(parent(), &volume)) != ZX_OK) {
+    zxlogf(ERROR, "failed to open volume: %s", zx_status_get_string(rc));
+    return rc;
+  }
+
+  if ((rc = volume->Format(key, slot)) != ZX_OK) {
+    zxlogf(ERROR, "failed to format: %s", zx_status_get_string(rc));
+    return rc;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {
