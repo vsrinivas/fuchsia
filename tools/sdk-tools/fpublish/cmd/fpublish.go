@@ -22,6 +22,7 @@ type sdkProvider interface {
 	GetToolsDir() (string, error)
 	GetFuchsiaProperty(deviceName string, property string) (string, error)
 	ResolveTargetAddress(deviceIP string, deviceName string) (sdkcommon.DeviceConfig, error)
+	RunFFX(args []string, interactive bool) (string, error)
 }
 
 var osExit = os.Exit
@@ -55,7 +56,25 @@ func main() {
 		osExit(1)
 	}
 	fmt.Println(message)
+
+	registerSymbolIndex(sdk, flag.Args(), *verboseFlag)
+
 	osExit(0)
+}
+
+// Register the packages in the symbol index. Discard any failure.
+func registerSymbolIndex(sdk sdkProvider, packages []string, verbose bool) {
+	for _, pkg := range packages {
+		// pkg should end with ".far", otherwise the publish function should fail.
+		args := []string{"debug", "symbol-index", "add", pkg[:len(pkg)-4] + ".symbol-index.json"}
+		if verbose {
+			fmt.Printf("Running command: ffx %v\n", args)
+		}
+		// The command outputs nothing if succeeds, and outputs error messages if fails,
+		// which is sufficient for our users. Use interactive=true here allows the
+		// command to output.
+		sdk.RunFFX(args, true)
+	}
 }
 
 func publish(sdk sdkProvider, packageRepo string, deviceName string, packages []string, verbose bool) (string, error) {

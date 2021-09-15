@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -16,9 +17,10 @@ import (
 )
 
 type testSDKProperties struct {
-	dataPath   string
-	err        error
-	properties map[string]string
+	dataPath        string
+	err             error
+	properties      map[string]string
+	expectedFfxArgs []string
 }
 
 func (testSDK testSDKProperties) GetToolsDir() (string, error) {
@@ -43,6 +45,17 @@ func (testSDK testSDKProperties) ResolveTargetAddress(deviceIP string, deviceNam
 		DeviceName: deviceName,
 		DeviceIP:   deviceIP,
 	}, nil
+}
+
+func (testSDK testSDKProperties) RunFFX(args []string, interactive bool) (string, error) {
+	if !reflect.DeepEqual(args, testSDK.expectedFfxArgs) {
+		fmt.Fprintf(os.Stderr, "Argument mismatch.\n")
+		fmt.Fprintf(os.Stderr, "Expected: %v\n", testSDK.expectedFfxArgs)
+		fmt.Fprintf(os.Stderr, "Actual  : %v\n", args)
+		os.Exit(1)
+	}
+
+	return "", nil
 }
 
 // See exec_test.go for details, but effectively this runs the function called TestHelperProcess passing
@@ -139,6 +152,10 @@ func handleFakeFFX(args []string) {
 
 	if args[0] == "target" && args[1] == "list" && args[2] == "--format" && args[3] == "json" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
+		os.Exit(0)
+	}
+
+	if args[0] == "debug" && args[1] == "symbol-index" && args[2] == "add" {
 		os.Exit(0)
 	}
 	fmt.Fprintf(os.Stderr, "Unexpected ffx sub command: %v", args)
@@ -329,4 +346,11 @@ func TestFPublish(t *testing.T) {
 		})
 
 	}
+}
+
+func TestRegisterSymbolIndex(t *testing.T) {
+	testSDK := testSDKProperties{
+		expectedFfxArgs: []string{"debug", "symbol-index", "add", "some/package.symbol-index.json"},
+	}
+	registerSymbolIndex(testSDK, []string{"some/package.far"}, false)
 }
