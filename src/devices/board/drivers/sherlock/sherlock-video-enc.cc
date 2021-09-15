@@ -12,6 +12,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-video-enc-bind.h"
 
 namespace sherlock {
 
@@ -48,39 +49,6 @@ constexpr pbus_irq_t sherlock_video_enc_irqs[] = {
     },
 };
 
-constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr zx_bind_inst_t canvas_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
-};
-const zx_bind_inst_t dos_gclk0_hcodec_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_HCODEC),
-};
-const zx_bind_inst_t clk_dos_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS),
-};
-constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-constexpr device_fragment_part_t canvas_fragment[] = {
-    {countof(canvas_match), canvas_match},
-};
-constexpr device_fragment_part_t dos_gclk0_hcodec_fragment[] = {
-    {countof(dos_gclk0_hcodec_match), dos_gclk0_hcodec_match},
-};
-constexpr device_fragment_part_t clk_dos_fragment[] = {
-    {countof(clk_dos_match), clk_dos_match},
-};
-constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"clock-dos-hcodec", countof(dos_gclk0_hcodec_fragment), dos_gclk0_hcodec_fragment},
-    {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
-};
-
 static pbus_dev_t video_enc_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-video-enc";
@@ -99,10 +67,11 @@ static pbus_dev_t video_enc_dev = []() {
 zx_status_t Sherlock::VideoEncInit() {
   zxlogf(INFO, "video-enc init");
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &video_enc_dev, reinterpret_cast<uint64_t>(fragments), countof(fragments), nullptr);
+  zx_status_t status =
+      pbus_.AddComposite(&video_enc_dev, reinterpret_cast<uint64_t>(aml_video_enc_fragments),
+                         countof(aml_video_enc_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Sherlock::VideoEncInit: CompositeDeviceAdd() failed for video: %d", status);
+    zxlogf(ERROR, "Sherlock::VideoEncInit: AddComposite() failed for video: %d", status);
     return status;
   }
   return ZX_OK;

@@ -15,3 +15,22 @@ uint G12A_CLK_ID {
   // CPU clocks
   CLK_SYS_CPU_CLK = 1048576,
 };
+
+// Values taken from <soc/aml-meson/g12b-clk.h>
+uint G12B_CLK_ID {
+  // SYS CPU Clocks
+  CLK_SYS_PLL_DIV16 = 65536,
+  CLK_SYS_CPU_CLK_DIV16 = 65537,
+
+  // SYS CPUB Clocks
+  CLK_SYS_PLLB_DIV16 = 65539,
+  CLK_SYS_CPUB_CLK_DIV16 = 65540,
+
+  CLK_DOS_GCLK_VDEC = 65541,
+  CLK_DOS_GCLK_HCODEC = 65542,
+  CLK_DOS = 65543,
+
+  // CPU Clocks
+  CLK_SYS_CPU_BIG_CLK = 1048576,
+  CLK_SYS_CPU_LITTLE_CLK = 1048577,
+};
