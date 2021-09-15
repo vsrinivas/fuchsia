@@ -191,11 +191,12 @@ fuchsia_unittest_component("factory_store_providers_bin_test_comp") {
   deps = [ ":bin_test" ]
 }
 
+fuchsia_test_package("factory_store_providers_tests_no_errors") {
+  test_components = [ ":factory_store_providers_bin_test_comp" ]
+}
+
 fuchsia_test_package("factory_store_providers_tests") {
-  test_components = [
-    ":factory_store_providers_bin_test_comp",
-    ":factory_store_providers_test_comp",
-  ]
+  test_components = [ ":factory_store_providers_test_comp" ]
   deps = [
            ":factory_store_providers_comp",
            ":fake_factory_items_comp",
@@ -245,5 +246,6 @@ group("tests") {
   deps = [
     ":factory_store_providers_ext4_tests",
     ":factory_store_providers_tests",
+    ":factory_store_providers_tests_no_errors",
   ]
 }
