@@ -285,11 +285,16 @@ fs_test_suite("minfs") {
   extra_components = [
     ":minfs-dirty-cache-integration-test",
     ":minfs-integration-fs-tests",
-    ":minfs-integration-test",
     ":minfs-micro-benchmark-test",
     ":minfs-power-test",
     ":minfs-unit-test",
   ]
+
+  # TODO(fxbug.dev/84622): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    deps += [ ":minfs-integration-test" ]
+  }
 }
 
 slow_fs_test_suite("minfs") {
