@@ -24,10 +24,6 @@ const fragmentMethodClientImplAsyncTmpl = `
   void {{ .Name }}({{ RenderParams .RequestArgs
     (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 
-  {{- /* TODO(fxbug.dev/75324): Remove after migrating non-fuchsia.git uses */}}
-  void {{ .Name }}({{ RenderParams .RequestArgs
-      (printf "::fit::callback<void (%s&& result)> _cb" .WireUnownedResult) }});
-
   {{- /* Async caller-allocate flavor */}}
   {{ .Docs }}
   {{- if .DocComments }}
@@ -78,16 +74,6 @@ const fragmentMethodClientImplAsyncTmpl = `
       {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs -}}
     );
     ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(), _context);
-  }
-
-  {{- /* TODO(fxbug.dev/75324): Remove after migrating non-fuchsia.git uses */}}
-  void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-    {{ RenderParams .RequestArgs
-      (printf "::fit::callback<void (%s&& result)> _cb" .WireUnownedResult) }}) {
-    auto _forwarder = [_cb = std::move(_cb)] ({{ .WireUnownedResult }}& _result) mutable {
-      _cb(std::move(_result));
-    };
-    {{ .Name }}({{ RenderForwardParams .RequestArgs "std::move(_forwarder)" }});
   }
 
   void {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(

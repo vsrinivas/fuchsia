@@ -886,11 +886,6 @@ class ::fidl::internal::WireClientImpl<
               ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
               response)>
           _cb);
-  void GetFoo(
-      ::fit::callback<void(::fidl::WireUnownedResult<
-                           ::fidl_test_foreigntypeinresponseusedthroughcompose::
-                               Top::GetFoo>&& result)>
-          _cb);
 
   // Asynchronous variant of |Top.GetFoo()|.
   // Caller provides the backing storage for FIDL message via request buffer.

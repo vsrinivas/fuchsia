@@ -2269,11 +2269,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
                ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>*
                    response)>
                _cb);
-  void Add(
-      int32_t a, int32_t b,
-      ::fit::callback<void(::fidl::WireUnownedResult<
-                           ::fidl_test_nullable::SimpleProtocol::Add>&& result)>
-          _cb);
 
   // Asynchronous variant of |SimpleProtocol.Add()|.
   // Caller provides the backing storage for FIDL message via request buffer.

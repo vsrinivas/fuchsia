@@ -134,20 +134,6 @@ void fidl::internal::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::
-    WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_transitivedependenciescompose::Top::GetFoo>&&
-                     result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_transitivedependenciescompose::Top::GetFoo>&
-              _result) mutable { _cb(std::move(_result)); };
-  GetFoo(std::move(_forwarder));
-}
 
 void fidl::internal::
     WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::GetFoo(

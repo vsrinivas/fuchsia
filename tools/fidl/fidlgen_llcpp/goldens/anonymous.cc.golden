@@ -188,20 +188,6 @@ void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
-    SomeMethod(
-        ::fidl_test_anonymous::wire::UnionMember union_member,
-        ::fidl_test_anonymous::wire::TableMember table_member,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& result)>
-            _cb) {
-  auto _forwarder = [_cb = std::move(_cb)](
-                        ::fidl::WireUnownedResult<
-                            ::fidl_test_anonymous::SomeProtocol::SomeMethod>&
-                            _result) mutable { _cb(std::move(_result)); };
-  SomeMethod(union_member, table_member, std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
     SomeMethod(

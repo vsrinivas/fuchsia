@@ -1101,11 +1101,6 @@ class ::fidl::internal::WireClientImpl<
                            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>* response)>
           _cb);
-  void LibfuzzerNeedsNonemptyProtocol(
-      ::fit::callback<void(::fidl::WireUnownedResult<
-                           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                               LibfuzzerNeedsNonemptyProtocol>&& result)>
-          _cb);
 
   // Asynchronous variant of
   // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Caller provides

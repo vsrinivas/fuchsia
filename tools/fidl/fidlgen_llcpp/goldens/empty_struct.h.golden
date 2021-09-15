@@ -1535,12 +1535,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
           void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
                                         SendAndReceive>* response)>
           _cb);
-  void SendAndReceive(
-      const ::fidl_test_emptystruct::wire::Empty& e,
-      ::fit::callback<void(
-          ::fidl::WireUnownedResult<
-              ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& result)>
-          _cb);
 
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.
   // Caller provides the backing storage for FIDL message via request buffer.

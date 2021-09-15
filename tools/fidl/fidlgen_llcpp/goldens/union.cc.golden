@@ -397,20 +397,6 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_union::TestProtocol::
-                     StrictXUnionHenceResponseMayBeStackAllocated>&& result)>
-            _cb) {
-  auto _forwarder = [_cb = std::move(_cb)](
-                        ::fidl::WireUnownedResult<
-                            ::fidl_test_union::TestProtocol::
-                                StrictXUnionHenceResponseMayBeStackAllocated>&
-                            _result) mutable { _cb(std::move(_result)); };
-  StrictXUnionHenceResponseMayBeStackAllocated(std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(
@@ -529,20 +515,6 @@ void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_union::TestProtocol::
-                     FlexibleXUnionHenceResponseMustBeHeapAllocated>&& result)>
-            _cb) {
-  auto _forwarder = [_cb = std::move(_cb)](
-                        ::fidl::WireUnownedResult<
-                            ::fidl_test_union::TestProtocol::
-                                FlexibleXUnionHenceResponseMustBeHeapAllocated>&
-                            _result) mutable { _cb(std::move(_result)); };
-  FlexibleXUnionHenceResponseMustBeHeapAllocated(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::

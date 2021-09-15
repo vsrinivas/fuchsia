@@ -1955,12 +1955,6 @@ class ::fidl::internal::WireClientImpl<
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
           _cb);
-  void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fit::callback<void(::fidl::WireUnownedResult<
-                           ::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>&& result)>
-          _cb);
 
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -2004,12 +1998,6 @@ class ::fidl::internal::WireClientImpl<
       ::fit::callback<void(
           ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
-          _cb);
-  void RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fit::callback<void(::fidl::WireUnownedResult<
-                           ::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>&& result)>
           _cb);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.

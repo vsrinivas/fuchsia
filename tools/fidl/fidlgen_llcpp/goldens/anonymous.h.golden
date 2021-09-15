@@ -2727,13 +2727,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
           ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
               response)>
           _cb);
-  void SomeMethod(
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member,
-      ::fit::callback<
-          void(::fidl::WireUnownedResult<
-               ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& result)>
-          _cb);
 
   // Asynchronous variant of |SomeProtocol.SomeMethod()|.
   // Caller provides the backing storage for FIDL message via request buffer.

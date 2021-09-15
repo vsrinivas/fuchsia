@@ -250,21 +250,6 @@ void fidl::internal::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::
-    WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
-        ::zx::socket&& h,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
-                     result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&
-              _result) mutable { _cb(std::move(_result)); };
-  ResponseMethod(std::move(h), std::move(_forwarder));
-}
 
 void fidl::internal::
     WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::ResponseMethod(
@@ -1215,23 +1200,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestEmptyResponse(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     NoRequestEmptyResponse>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestEmptyResponse>& _result) mutable {
-        _cb(std::move(_result));
-      };
-  NoRequestEmptyResponse(std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -1335,23 +1303,6 @@ void fidl::internal::WireClientImpl<
       _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    NoRequestWithResponse(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     NoRequestWithResponse>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  NoRequestWithResponse>& _result) mutable {
-        _cb(std::move(_result));
-      };
-  NoRequestWithResponse(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<
@@ -1498,24 +1449,6 @@ void fidl::internal::WireClientImpl<
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestEmptyResponse(
-        ::fidl::StringView arg,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     WithRequestEmptyResponse>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestEmptyResponse>& _result) mutable {
-        _cb(std::move(_result));
-      };
-  WithRequestEmptyResponse(arg, std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -1644,24 +1577,6 @@ void fidl::internal::WireClientImpl<
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    WithRequestWithResponse(
-        ::fidl::StringView arg,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                     WithRequestWithResponse>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                  WithRequestWithResponse>& _result) mutable {
-        _cb(std::move(_result));
-      };
-  WithRequestWithResponse(arg, std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<
@@ -2424,20 +2339,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{}, x);
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
-    Request(int64_t x,
-            ::fit::callback<
-                void(::fidl::WireUnownedResult<
-                     ::fidl_test_protocols::Transitional::Request>&& result)>
-                _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::Transitional::Request>& _result) mutable {
-        _cb(std::move(_result));
-      };
-  Request(x, std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
@@ -3260,20 +3161,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
-    ClientEnds(
-        ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb =
-           std::move(_cb)](::fidl::WireUnownedResult<
-                           ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&
-                               _result) mutable { _cb(std::move(_result)); };
-  ClientEnds(std::move(in), std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     ClientEnds(
@@ -3389,20 +3276,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
                                    std::move(in));
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
-    ServerEnds(
-        ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb =
-           std::move(_cb)](::fidl::WireUnownedResult<
-                           ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&
-                               _result) mutable { _cb(std::move(_result)); };
-  ServerEnds(std::move(in), std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
@@ -3521,20 +3394,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
                                    std::move(in));
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
-    StructContainingEnds(
-        ::fidl_test_protocols::wire::ProtocolEnds&& in,
-        ::fit::callback<void(
-            ::fidl::WireUnownedResult<::fidl_test_protocols::WithProtocolEnds::
-                                          StructContainingEnds>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&
-              _result) mutable { _cb(std::move(_result)); };
-  StructContainingEnds(std::move(in), std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
@@ -4467,19 +4326,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ResponseAsStruct(
-        ::fit::callback<void(
-            ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::
-                                          ResponseAsStruct>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&
-              _result) mutable { _cb(std::move(_result)); };
-  ResponseAsStruct(std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStruct(
@@ -4587,19 +4433,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ErrorAsPrimitive(
-        ::fit::callback<void(
-            ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::
-                                          ErrorAsPrimitive>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&
-              _result) mutable { _cb(std::move(_result)); };
-  ErrorAsPrimitive(std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive(
@@ -4706,19 +4539,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    ErrorAsEnum(
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb =
-           std::move(_cb)](::fidl::WireUnownedResult<
-                           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&
-                               _result) mutable { _cb(std::move(_result)); };
-  ErrorAsEnum(std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnum(
@@ -4821,19 +4641,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
       OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{});
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
-    HandleInResult(
-        ::fit::callback<void(
-            ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::
-                                          HandleInResult>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&
-              _result) mutable { _cb(std::move(_result)); };
-  HandleInResult(std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
@@ -5822,18 +5629,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
 }
-void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    MethodB(int64_t a, int64_t b,
-            ::fit::callback<
-                void(::fidl::WireUnownedResult<
-                     ::fidl_test_protocols::ChannelProtocol::MethodB>&& result)>
-                _cb) {
-  auto _forwarder = [_cb = std::move(_cb)](
-                        ::fidl::WireUnownedResult<
-                            ::fidl_test_protocols::ChannelProtocol::MethodB>&
-                            _result) mutable { _cb(std::move(_result)); };
-  MethodB(a, b, std::move(_forwarder));
-}
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MethodB(int64_t a, int64_t b,
@@ -5940,19 +5735,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
                                    std::move(h));
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    TakeHandle(
-        ::zx::handle&& h,
-        ::fit::callback<
-            void(::fidl::WireUnownedResult<
-                 ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& result)>
-            _cb) {
-  auto _forwarder = [_cb = std::move(_cb)](
-                        ::fidl::WireUnownedResult<
-                            ::fidl_test_protocols::ChannelProtocol::TakeHandle>&
-                            _result) mutable { _cb(std::move(_result)); };
-  TakeHandle(std::move(h), std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
@@ -6063,20 +5845,6 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
                                    std::move(a));
   ::fidl::internal::ClientBase::SendTwoWay(_request.GetOutgoingMessage(),
                                            _context);
-}
-void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
-    MutateSocket(
-        ::zx::socket&& a,
-        ::fit::callback<void(
-            ::fidl::WireUnownedResult<
-                ::fidl_test_protocols::ChannelProtocol::MutateSocket>&& result)>
-            _cb) {
-  auto _forwarder =
-      [_cb = std::move(_cb)](
-          ::fidl::WireUnownedResult<
-              ::fidl_test_protocols::ChannelProtocol::MutateSocket>&
-              _result) mutable { _cb(std::move(_result)); };
-  MutateSocket(std::move(a), std::move(_forwarder));
 }
 
 void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::

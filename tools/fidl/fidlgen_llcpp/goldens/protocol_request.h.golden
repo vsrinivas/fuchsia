@@ -2301,10 +2301,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
                 void(::fidl::WireResponse<
                      ::fidl_test_protocolrequest::Parent::GetChild>* response)>
                     _cb);
-  void GetChild(::fit::callback<
-                void(::fidl::WireUnownedResult<
-                     ::fidl_test_protocolrequest::Parent::GetChild>&& result)>
-                    _cb);
 
   // Asynchronous variant of |Parent.GetChild()|.
   // Caller provides the backing storage for FIDL message via request buffer.
@@ -2335,11 +2331,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
       ::fit::callback<
           void(::fidl::WireResponse<
                ::fidl_test_protocolrequest::Parent::GetChildRequest>* response)>
-          _cb);
-  void GetChildRequest(
-      ::fit::callback<
-          void(::fidl::WireUnownedResult<
-               ::fidl_test_protocolrequest::Parent::GetChildRequest>&& result)>
           _cb);
 
   // Asynchronous variant of |Parent.GetChildRequest()|.
