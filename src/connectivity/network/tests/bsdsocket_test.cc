@@ -106,6 +106,18 @@ TEST(LocalhostTest, DatagramSocketSendMsgNameLenTooBig) {
   ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
+TEST(LocalhostTest, DatagramSocketAtOOBMark) {
+  fbl::unique_fd client;
+  ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  // sockatmark is not supported on datagram sockets on Linux or Fuchsia.
+  // It is on macOS.
+  EXPECT_EQ(sockatmark(client.get()), -1);
+  // This should be ENOTTY per POSIX:
+  // https://pubs.opengroup.org/onlinepubs/9699919799/functions/sockatmark.html
+  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
+}
+
 #if !defined(__Fuchsia__)
 bool IsRoot() {
   uid_t ruid, euid, suid;
@@ -2172,6 +2184,48 @@ TEST_F(NetStreamSocketsTest, BlockingAcceptWrite) {
   char buf[sizeof(msg) + 1] = {};
   ASSERT_EQ(read(client().get(), buf, sizeof(buf)), ssize_t(sizeof(msg))) << strerror(errno);
   ASSERT_STREQ(buf, msg);
+}
+
+TEST_F(NetStreamSocketsTest, SocketAtOOBMark) {
+  int result = sockatmark(client().get());
+#if defined(__Fuchsia__)
+  // sockatmark is not supported on Fuchsia.
+  EXPECT_EQ(result, -1);
+  // TODO(https://fxbug.dev/84632): This should be ENOSYS, not ENOTTY.
+  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
+#else   //  defined(__Fuchsia__)
+  EXPECT_EQ(result, 0) << strerror(errno);
+#endif  // defined(__Fuchsia__)
+}
+
+TEST_F(NetStreamSocketsTest, Sendmmsg) {
+  struct mmsghdr header {
+    .msg_hdr = {}, .msg_len = 0,
+  };
+  int result = sendmmsg(client().get(), &header, 0u, 0u);
+#if defined(__Fuchsia__)
+  // Fuchsia does not support sendmmsg().
+  // TODO(https://fxbug.dev/45262, https://fxbug.dev/42678): Implement sendmmsg().
+  EXPECT_EQ(result, -1);
+  EXPECT_EQ(errno, ENOSYS) << strerror(errno);
+#else   // defined(__Fuchsia__)
+  EXPECT_EQ(result, 0) << strerror(errno);
+#endif  // defined(__Fuchsia__)
+}
+
+TEST_F(NetStreamSocketsTest, Recvmmsg) {
+  struct mmsghdr header {
+    .msg_hdr = {}, .msg_len = 0,
+  };
+  int result = recvmmsg(client().get(), &header, 1u, MSG_DONTWAIT, nullptr);
+  EXPECT_EQ(result, -1);
+#if __Fuchsia__
+  // Fuchsia does not support recvmmsg().
+  // TODO(https://fxbug.dev/45260): Implement recvmmsg().
+  EXPECT_EQ(errno, ENOSYS) << strerror(errno);
+#else   // __Fuchsia__
+  EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+#endif  // __Fuchsia__
 }
 
 class TimeoutSockoptsTest : public ::testing::TestWithParam<int /* optname */> {};

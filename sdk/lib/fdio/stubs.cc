@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "fdio_unistd.h"
-#include "private-socket.h"
 
 // checkfile, checkfileat, and checkfd let us error out if the object
 // doesn't exist, which allows the stubs to be a little more 'real'
@@ -62,20 +61,6 @@ static int checkfilefd(const char* path, int fd, int err) {
     return -1;
   }
   return checkfd(fd, err);
-}
-
-static int checksocket(int fd, int sock_err, int err) {
-  fdio_ptr io = fd_to_io(fd);
-  if (io == nullptr) {
-    errno = EBADF;
-    return -1;
-  }
-  bool is_socket = fdio_is_socket(io.get());
-  if (!is_socket) {
-    errno = sock_err;
-    return -1;
-  }
-  return seterr(err);
 }
 
 static int checkdir(DIR* dir, int err) {
@@ -160,19 +145,20 @@ int ttyname_r(int fd, char* name, size_t size) {
 
 __EXPORT
 int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
-  return checksocket(fd, ENOTSOCK, ENOSYS);
+  return checkfd(fd, ENOSYS);
 }
 
 __EXPORT
 int recvmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags,
              struct timespec* timeout) {
-  return checksocket(fd, ENOTSOCK, ENOSYS);
+  return checkfd(fd, ENOSYS);
 }
 
 __EXPORT
 int sockatmark(int fd) {
-  // ENOTTY is sic.
-  return checksocket(fd, ENOTTY, ENOSYS);
+  // ENOTTY is intentional for non-socket objects, but needs more investigation for sockets.
+  // See https://fxbug.dev/84632.
+  return checkfd(fd, ENOTTY);
 }
 
 __EXPORT

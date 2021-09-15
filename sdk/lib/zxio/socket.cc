@@ -271,12 +271,3 @@ zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
   zxio_init(&zs->io, &zxio_raw_socket_ops);
   return ZX_OK;
 }
-
-zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket) {
-  if (io == nullptr || out_is_socket == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const zxio_ops_t* ops = zxio_get_ops(io);
-  return ops == &zxio_datagram_socket_ops || ops == &zxio_stream_socket_ops ||
-         ops == &zxio_raw_socket_ops;
-}

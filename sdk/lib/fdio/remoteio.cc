@@ -11,7 +11,6 @@
 #include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
-#include "private-socket.h"
 #include "zxio.h"
 
 namespace fio = fuchsia_io;

@@ -19,7 +19,6 @@
 #include <safemath/safe_conversions.h>
 
 #include "fdio_unistd.h"
-#include "private-socket.h"
 #include "zxio.h"
 
 namespace fio = fuchsia_io;
@@ -2260,15 +2259,4 @@ zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
     return zx::error(status);
   }
   return zx::ok(io);
-}
-
-bool fdio_is_socket(fdio_t* io) {
-  if (!io) {
-    return false;
-  }
-  bool is_socket = false;
-  if (zxio_is_socket(&io->zxio_storage().io, &is_socket) != ZX_OK) {
-    return false;
-  }
-  return is_socket;
 }
