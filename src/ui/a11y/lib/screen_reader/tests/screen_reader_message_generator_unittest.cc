@@ -422,5 +422,33 @@ TEST_F(ScreenReaderMessageGeneratorTest, FormatCharacterForSpelling) {
   ASSERT_EQ(result2.utterance.message(), "a");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTextField) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::TEXT_FIELD);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TEXT_FIELD),
+                                               "text field");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "text field");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeSearchBox) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::SEARCH_BOX);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_SEARCH_BOX),
+                                               "search box");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "search box");
+}
+
 }  // namespace
 }  // namespace accessibility_test

@@ -151,6 +151,10 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
       } else if (node->role() == Role::LINK) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_LINK));
+      } else if (node->role() == Role::TEXT_FIELD) {
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TEXT_FIELD));
+      } else if (node->role() == Role::SEARCH_BOX) {
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SEARCH_BOX));
       } else if (node->role() == Role::CHECK_BOX) {
         auto check_box_description = DescribeCheckBox(node);
         std::copy(std::make_move_iterator(check_box_description.begin()),
