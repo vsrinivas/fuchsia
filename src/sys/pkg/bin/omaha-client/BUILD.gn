@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
@@ -98,6 +99,10 @@ rustc_binary("bin") {
     "src/storage/stash.rs",
     "src/timer.rs",
   ]
+}
+
+core_shard("omaha-client-service-core-shard") {
+  shard_file = "meta/omaha_client_service.core_shard.cml"
 }
 
 fuchsia_component("omaha-client-service") {
