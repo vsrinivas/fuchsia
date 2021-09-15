@@ -4,7 +4,7 @@
 
 // Util functions to dump info/data for debug.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/inspect.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/inspect-host-cmd.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -14,8 +14,6 @@
 #include <string>
 
 #include <fbl/string_printf.h>
-
-#ifdef IWL_INSPECT
 
 #define INSPECT_BUFSIZ 512
 
@@ -40,7 +38,7 @@ static std::string join_bitmap_string(const char** bit_defs, size_t bit_defs_len
 }
 
 // This function returns a multi-line string.
-static std::string iwl_inspect_host_cmd_str(struct iwl_host_cmd* cmd) {
+static std::string inspect_host_cmd_str(struct iwl_host_cmd* cmd) {
   const char* flags_defs[] = {
       // bit definition of 'enum CMD_MODE'
       "async",        "want_skb",        "send_in_rfkill", "high_prio",
@@ -70,8 +68,6 @@ static std::string iwl_inspect_host_cmd_str(struct iwl_host_cmd* cmd) {
   return out;
 }
 
-void iwl_inspect_host_cmd(const char* func_name, int line_no, struct iwl_host_cmd* cmd) {
-  printf("%s():%d %s", func_name, line_no, iwl_inspect_host_cmd_str(cmd).c_str());
+void inspect_host_cmd(const char* func_name, int line_no, struct iwl_host_cmd* cmd) {
+  printf("%s():%d %s", func_name, line_no, inspect_host_cmd_str(cmd).c_str());
 }
-
-#endif  // IWL_INSPECT

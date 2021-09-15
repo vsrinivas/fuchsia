@@ -54,8 +54,6 @@ driver_bind_rules("fuchsia_bind") {
 source_set("fuchsia_device") {
   sources = [
     "bind.cc",
-    "inspect.cc",
-    "inspect.h",
     "mvm-mlme.cc",
     "mvm-mlme.h",
     "pcie-device.cc",

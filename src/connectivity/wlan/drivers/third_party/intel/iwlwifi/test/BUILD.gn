@@ -14,6 +14,8 @@ source_set("sim_library") {
   testonly = true
   sources = [
     "fake-ucode-capa-test.cc",
+    "inspect-host-cmd.cc",
+    "inspect-host-cmd.h",
     "sim-mvm.cc",
     "sim-nvm-data.inc",
     "sim-nvm.cc",
@@ -41,6 +43,7 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/fake-bti",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
