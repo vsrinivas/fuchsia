@@ -23,5 +23,5 @@ ffx_plugin("ffx_target") {
     "wait:ffx_wait",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

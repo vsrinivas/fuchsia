@@ -42,6 +42,11 @@ import("plugins.gni")
 #     location of the args library is at `./src/args.rs`, see
 #     `args_source_root` here for more details.
 #
+#   args_sources (optional)
+#     List of source files for the args library. If not provided, uses
+#     the `sources` field. Use this to prevent changes from the plugin
+#     library from triggering a full rebuild of ffx and all plugins.
+#
 #   test_deps (optional)
 #     List of rust_library GN targets on which this crate's tests depend.
 #
@@ -132,6 +137,7 @@ template("ffx_plugin") {
                                  "args_source_root",
                                  "source_root",
                                  "sources",
+                                 "args_sources",
                                  "enforce_source_listing",
                                  "target_name",
                                  "with_unit_tests",
@@ -174,6 +180,12 @@ template("ffx_plugin") {
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
 
+      if (defined(invoker.args_sources)) {
+        sources = invoker.args_sources
+      } else {
+        sources = invoker.sources
+      }
+
       # If the args library has tests enabled, enable them in the library.
       if (defined(invoker.args_with_unit_tests) &&
           invoker.args_with_unit_tests == true) {
@@ -191,6 +203,7 @@ template("ffx_plugin") {
                                "config_data",
                                "deps",
                                "source_root",
+                               "sources",
                                "non_rust_deps",
                                "target_name",
                                "with_unit_tests",
@@ -226,12 +239,12 @@ template("ffx_plugin") {
     plugins_name = output_name + "_plugins"
     execution_lib = output_name
 
-    plugin_source_root = "src/lib.rs"
-    if (defined(invoker.source_root)) {
-      plugin_source_root = invoker.source_root
-    }
     includes_execution = false
     if (defined(invoker.sources)) {
+      plugin_source_root = "src/lib.rs"
+      if (defined(invoker.source_root)) {
+        plugin_source_root = invoker.source_root
+      }
       foreach(i, invoker.sources) {
         if (i == plugin_source_root) {
           includes_execution = true

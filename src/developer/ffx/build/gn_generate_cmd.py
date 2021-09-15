@@ -4,9 +4,12 @@
 # found in the LICENSE file.
 #
 import argparse
+import filecmp
 import os
+import shutil
 import string
 import sys
+import tempfile
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -49,8 +52,13 @@ def main(args_list=None):
     template = env.get_template(template_name)
     libraries = args.deps.split(',')
     deps = map(wrap_deps, libraries)
-    with open(args.out, 'w') as file:
+    temp_file = tempfile.NamedTemporaryFile(mode='w')
+    with open(temp_file.name, 'w') as file:
         file.write(template.render(deps=deps))
+        file.flush()
+        if (not os.path.isfile(args.out) or not
+            filecmp.cmp(temp_file.name, args.out, shallow=False)):
+            shutil.copyfile(temp_file.name, args.out)
 
 
 if __name__ == '__main__':
