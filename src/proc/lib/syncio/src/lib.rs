@@ -2,18 +2,93 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::From;
+use std::ptr;
+
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
 
+use crate::zxio::{zxio_dirent_iterator_next, zxio_dirent_iterator_t};
+
 pub mod zxio;
 
+pub use zxio::zxio_dirent_t;
 pub use zxio::zxio_node_attributes_t;
 pub use zxio::zxio_signals_t;
 
 // TODO: We need a more comprehensive error strategy.
 // Our dependencies create elaborate error objects, but Starnix would prefer
 // this library produce zx::Status errors for easier conversion to Errno.
+
+/// This struct is a more ergonomic way of reading zxio_dirent values, because
+/// it saves the data it points to instead of rellying on pointers.
+#[derive(Default)]
+pub struct ZxioDirent {
+    pub protocols: Option<zxio::zxio_node_protocols_t>,
+    pub abilities: Option<zxio::zxio_abilities_t>,
+    pub id: Option<zxio::zxio_id_t>,
+    pub name: Vec<u8>,
+}
+
+#[derive(Default)]
+pub struct DirentIterator {
+    iterator: zxio_dirent_iterator_t,
+
+    /// Whether the iterator has reached the end of dir entries.
+    /// This is necessary because the zxio API returns only once the error code
+    /// indicating the iterator has reached the end, where subsequent calls may
+    /// return other error codes.
+    finished: bool,
+}
+
+/// It is important that all methods here are &mut self, to require the client
+/// to obtain exclusive access to the object, externally locking it.
+impl DirentIterator {
+    /// Returns the next dir entry for this iterator. If the end is reached,
+    /// returns ZX_ERR_NOT_FOUND.
+    pub fn next(&mut self) -> Result<ZxioDirent, zx::Status> {
+        if self.finished {
+            return Err(zx::Status::NOT_FOUND);
+        }
+        let mut entry: *mut zxio_dirent_t = ptr::null_mut();
+        let status = unsafe { zxio_dirent_iterator_next(&mut self.iterator, &mut entry) };
+        let result = match zx::ok(status) {
+            Ok(()) => {
+                let result = unsafe { ZxioDirent::from(&*entry) };
+                Ok(result)
+            }
+            Err(zx::Status::NOT_FOUND) => {
+                self.finished = true;
+                Err(zx::Status::NOT_FOUND)
+            }
+            Err(e) => Err(e),
+        };
+        result
+    }
+}
+
+impl Drop for DirentIterator {
+    fn drop(&mut self) {
+        unsafe { zxio::zxio_dirent_iterator_destroy(&mut self.iterator) };
+    }
+}
+
+unsafe impl Send for DirentIterator {}
+unsafe impl Sync for DirentIterator {}
+
+impl From<&zxio_dirent_t> for ZxioDirent {
+    fn from(dirent: &zxio_dirent_t) -> ZxioDirent {
+        let protocols = if dirent.has.protocols { Some(dirent.protocols) } else { None };
+        let abilities = if dirent.has.abilities { Some(dirent.abilities) } else { None };
+        let id = if dirent.has.id { Some(dirent.id) } else { None };
+        let name: Vec<u8> = unsafe {
+            std::slice::from_raw_parts(dirent.name as *const u8, dirent.name_length as usize)
+                .to_owned()
+        };
+        ZxioDirent { protocols, abilities, id, name }
+    }
+}
 
 #[derive(Default)]
 pub struct Zxio {
@@ -66,6 +141,13 @@ impl Zxio {
         };
         zx::ok(status)?;
         Ok(actual)
+    }
+
+    pub fn clone(&self) -> Result<Zxio, zx::Status> {
+        let mut handle = 0;
+        let status = unsafe { zxio::zxio_clone(self.as_ptr(), &mut handle) };
+        zx::ok(status)?;
+        unsafe { Zxio::create(zx::Handle::from_raw(handle)) }
     }
 
     pub fn read_at(&self, offset: u64, data: &mut [u8]) -> Result<usize, zx::Status> {
@@ -151,6 +233,14 @@ impl Zxio {
         let handle = unsafe { zx::Unowned::<zx::Handle>::from_raw_handle(handle) };
         let signals = zx::Signals::from_bits_truncate(zx_signals);
         (handle, signals)
+    }
+
+    pub fn create_dirent_iterator(&self) -> Result<DirentIterator, zx::Status> {
+        let mut iterator = DirentIterator::default();
+        let status =
+            unsafe { zxio::zxio_dirent_iterator_init(&mut iterator.iterator, self.as_ptr()) };
+        zx::ok(status)?;
+        Ok(iterator)
     }
 }
 

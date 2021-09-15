@@ -64,12 +64,9 @@ impl FileSystem {
     }
 
     /// Create a new filesystem and call set_root in one step.
-    pub fn new_with_root(
-        ops: impl FileSystemOps + 'static,
-        root: impl FsNodeOps + 'static,
-    ) -> FileSystemHandle {
+    pub fn new_with_root(ops: impl FileSystemOps + 'static, root_node: FsNode) -> FileSystemHandle {
         let fs = Self::new_with_permanent_entries(ops);
-        fs.set_root(root);
+        fs.set_root_node(root_node);
         fs
     }
 
@@ -150,11 +147,23 @@ impl FileSystem {
         }
     }
 
-    pub fn create_node(self: &Arc<Self>, ops: Box<dyn FsNodeOps>, mode: FileMode) -> FsNodeHandle {
-        let inode_num = self.next_inode_num();
-        let node = FsNode::new(ops, self, inode_num, mode);
+    // File systems that produce their own IDs for nodes should invoke this
+    // function. The ones who leave to this object to assign the IDs should
+    // call |create_node|.
+    pub fn create_node_with_id(
+        self: &Arc<Self>,
+        ops: Box<dyn FsNodeOps>,
+        mode: FileMode,
+        id: ino_t,
+    ) -> FsNodeHandle {
+        let node = FsNode::new(ops, self, id, mode);
         self.nodes.lock().insert(node.inode_num, Arc::downgrade(&node));
         node
+    }
+
+    pub fn create_node(self: &Arc<Self>, ops: Box<dyn FsNodeOps>, mode: FileMode) -> FsNodeHandle {
+        let inode_num = self.next_inode_num();
+        self.create_node_with_id(ops, mode, inode_num)
     }
 
     pub fn create_node_with_ops(
@@ -178,6 +187,7 @@ impl FileSystem {
     }
 
     pub fn next_inode_num(&self) -> ino_t {
+        assert!(!self.ops.generate_node_ids());
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 
@@ -252,6 +262,11 @@ pub trait FileSystemOps: Send + Sync {
         // TODO: This should return ENOSYS, but that currently breaks a bunch of tests (since not
         // enough `FileSystemOps` implement `stat`).
         Ok(statfs::default())
+    }
+
+    /// Whether this file system generates its own node IDs.
+    fn generate_node_ids(&self) -> bool {
+        false
     }
 }
 

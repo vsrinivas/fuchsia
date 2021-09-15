@@ -25,10 +25,13 @@ fn create_pkgfs() -> Arc<FsContext> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return FsContext::new(RemoteFs::new(
-        root.into_channel().unwrap().into_zx_channel(),
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-    ));
+    return FsContext::new(
+        RemoteFs::new(
+            root.into_channel().unwrap().into_zx_channel(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )
+        .unwrap(),
+    );
 }
 
 /// Creates a `Kernel` and `Task` with the package file system for testing purposes.

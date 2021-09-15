@@ -10,7 +10,8 @@ pub struct DevptsFs;
 impl FileSystemOps for DevptsFs {}
 impl DevptsFs {
     pub fn new() -> FileSystemHandle {
-        FileSystem::new_with_root(DevptsFs, DevptsDirectory)
+        let root_node = FsNode::new_root(DevptsDirectory);
+        FileSystem::new_with_root(DevptsFs, root_node)
     }
 }
 
