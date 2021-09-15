@@ -23,10 +23,14 @@ using fuchsia_hardware_vreg::wire::PwmVregMetadataEntry;
 class AmlPwmRegulator : public AmlPwmRegulatorType,
                         public ddk::VregProtocol<AmlPwmRegulator, ddk::base_protocol> {
  public:
-  explicit AmlPwmRegulator(zx_device_t* parent, PwmVregMetadataEntry vreg_range,
+  explicit AmlPwmRegulator(zx_device_t* parent, const PwmVregMetadataEntry& vreg_range,
                            ddk::PwmProtocolClient pwm)
       : AmlPwmRegulatorType(parent),
-        vreg_range_(vreg_range),
+        pwm_index_(vreg_range.pwm_index()),
+        period_ns_(vreg_range.period_ns()),
+        min_voltage_uv_(vreg_range.min_voltage_uv()),
+        voltage_step_uv_(vreg_range.voltage_step_uv()),
+        num_steps_(vreg_range.num_steps()),
         current_step_(vreg_range.num_steps()),
         pwm_(pwm) {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -42,7 +46,12 @@ class AmlPwmRegulator : public AmlPwmRegulatorType,
  private:
   friend class FakePwmRegulator;
 
-  PwmVregMetadataEntry vreg_range_;
+  uint32_t pwm_index_;
+  uint32_t period_ns_;
+  uint32_t min_voltage_uv_;
+  uint32_t voltage_step_uv_;
+  uint32_t num_steps_;
+
   uint32_t current_step_;
 
   ddk::PwmProtocolClient pwm_;

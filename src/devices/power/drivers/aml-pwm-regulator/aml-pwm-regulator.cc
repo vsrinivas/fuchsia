@@ -11,9 +11,9 @@
 namespace aml_pwm_regulator {
 
 zx_status_t AmlPwmRegulator::VregSetVoltageStep(uint32_t step) {
-  if (step >= vreg_range_.num_steps()) {
+  if (step >= num_steps_) {
     zxlogf(ERROR, "Requested step (%u) is larger than allowed (total number of steps %u).", step,
-           vreg_range_.num_steps());
+           num_steps_);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -22,10 +22,10 @@ zx_status_t AmlPwmRegulator::VregSetVoltageStep(uint32_t step) {
   }
 
   aml_pwm::mode_config on = {aml_pwm::ON, {}};
-  pwm_config_t cfg = {false, vreg_range_.period_ns(),
-                      static_cast<float>((vreg_range_.num_steps() - 1 - step) * 100.0 /
-                                         ((vreg_range_.num_steps() - 1) * 1.0)),
-                      reinterpret_cast<uint8_t*>(&on), sizeof(on)};
+  pwm_config_t cfg = {
+      false, period_ns_,
+      static_cast<float>((num_steps_ - 1 - step) * 100.0 / ((num_steps_ - 1) * 1.0)),
+      reinterpret_cast<uint8_t*>(&on), sizeof(on)};
   auto status = pwm_.SetConfig(&cfg);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Unable to configure PWM. %d", status);
@@ -43,9 +43,9 @@ void AmlPwmRegulator::VregGetRegulatorParams(vreg_params_t* out_params) {
     return;
   }
 
-  out_params->min_uv = vreg_range_.min_voltage_uv();
-  out_params->num_steps = vreg_range_.num_steps();
-  out_params->step_size_uv = vreg_range_.voltage_step_uv();
+  out_params->min_uv = min_voltage_uv_;
+  out_params->num_steps = num_steps_;
+  out_params->step_size_uv = voltage_step_uv_;
 }
 
 zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
@@ -108,8 +108,8 @@ zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    std::unique_ptr<AmlPwmRegulator> device(
-        new (&ac) AmlPwmRegulator(parent, std::move(pwm_vreg), std::move(pwm)));
+    std::unique_ptr<AmlPwmRegulator> device(new (&ac)
+                                                AmlPwmRegulator(parent, pwm_vreg, std::move(pwm)));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
