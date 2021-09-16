@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using fuchsia.mem;
+using zx;
+
+/// Maps test inputs to specific behaviors in the target code, e.g. by invoking APIs, making FIDL
+/// calls. etc. The adapter includes the target-specific code often referred to as the "fuzz target
+/// function".
+///
+/// See also:
+///     https://llvm.org/docs/LibFuzzer.html#fuzz-target
+@discoverable
+protocol TargetAdapter {
+    /// Provides the eventpair used by driver and adapter to signal each other, and the shared VMO
+    /// used to provide test inputs to the adapter.
+    Connect(resource struct {
+        eventpair zx.handle:EVENTPAIR;
+        test_input fuchsia.mem.Buffer;
+    }) -> ();
+};

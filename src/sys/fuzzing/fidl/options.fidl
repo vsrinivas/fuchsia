@@ -1,0 +1,77 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using zx;
+
+/// See |Controller.Configure|.
+type Options = table {
+    /// Perform this many fuzzing runs, then exit normally. If unset (or zero), fuzz indefinitely.
+    1: runs uint32;
+
+    /// If non-zero, fuzz for this duration and then exit normally. If zero, fuzz indefinitely.
+    /// Defaults to 0.
+    2: max_total_time zx.duration;
+
+    // PRNG seed to use when generating inputs. The same seed for the same target should produce the
+    // same inputs. If zero, the current ticks will be used. Defaults to 0.
+    3: seed uint32;
+
+    /// If non-zero, limit the maximum size of a test input to this size, in bytes. Use 0 to disable
+    /// the limit. Defaults to 1 MB.
+    4: max_input_size uint64;
+
+    // Maximum number of consecutive mutations to apply to an input. Defaults to 5.
+    5: mutation_depth uint16;
+
+    /// If an AFL-style dictionary is supplied using |Controller.WriteDictionary|, include words up
+    /// to this level. Defaults to 0, i.e. words without an explicit level.
+    6: dictionary_level uint16;
+
+    /// If true, treat instrumented process exits as fuzzing errors. Defaults to false.
+    7: detect_exits bool;
+
+    /// If true, and ASan or LSan are available, try to detect memory leaks. Defaults to false.
+    /// Leak detection can be expensive, so it is recommended to first develop a corpus that covers
+    /// a reasonable amount of the code under test before attempting to detect leaks.
+    8: detect_leaks bool;
+
+    /// If non-zero, any run that takes longer than this duration will raise a TIMEOUT error.
+    /// Use 0 to disable the limit. Defaults to 20 minutes.
+    9: run_limit zx.duration;
+
+    /// If non-zero, any allocation over this size in bytes will raise a BAD_MALLOC error. Use 0 to
+    /// disable the limit. Defaults to 2 GB.
+   10: malloc_limit uint64;
+
+    /// If non-zero, any process that uses more than this amount of memory in bytes will raise an
+    /// OOM error. Use 0 to disable the limit. Defaults to 2 GB.
+   11: oom_limit uint64;
+
+    /// If non-zero, purge the sanitizer's allocator quarantine and reclaim memory periodically
+    /// between runs after an interval of this many seconds. Use 0 to disable allocator purging.
+    /// Default to 1.
+   12: purge_interval zx.duration;
+
+    /// Exit code used by the instrumented process if it encounters a bad allocation. Set this
+    /// if the target already uses the default for another reason. Defaults to 2000.
+   13: malloc_exitcode int32;
+
+    /// Exit code used by the instrumented process if it encounters a sanitizer error. Set this
+    /// if the target already uses the default for another reason. Defaults to 2001.
+   14: death_exitcode int32;
+
+    /// Exit code used by the instrumented process if it encounters a leak. Set this if the target
+    /// already uses the default for another reason. Defaults to 2002.
+   15: leak_exitcode int32;
+
+    /// Exit code used by the instrumented process if it exceeds the OOM limit. Set this if the
+    /// target already uses the default for another reason. Defaults to 2003.
+   16: oom_exitcode int32;
+
+    /// If non-zero, the engine will periodically update any added monitors after this duration.
+    /// Defaults to 20.
+   17: pulse_interval zx.duration;
+};

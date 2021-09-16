@@ -1,0 +1,193 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using zx;
+
+/// Encapsulates transferring a fuzzer inputs over a socket, e.g. between a host and device via
+/// overnet.
+type Input = resource struct {
+    /// Socket that can be used to read the data.
+    socket zx.handle:SOCKET;
+
+    /// The total amount of data to be transferred.
+    size uint64;
+};
+
+/// See |Controller.Execute| and |Controller.Fuzz|.
+type Result = flexible enum : uint32 {
+    /// No errors encountered.
+    NO_ERRORS = 1;
+
+    /// A single memory allocation by an instrumented remote process exceeded the configured limit.
+    BAD_MALLOC = 2;
+
+    /// An instrumented process raised an exception.
+    CRASH = 3;
+
+    /// A sanitizer runtime in an instrumented process detected an error.
+    DEATH = 4;
+
+    /// An instrumented process exited unexpectedly.
+    EXIT = 5;
+
+    /// A memory leak was detected in an instrumented process.
+    LEAK = 6;
+
+    /// An instrumented process's memory usage exceeded the configured limit.
+    OOM = 7;
+
+    /// A single run exceeded the configured limit.
+    TIMEOUT = 8;
+};
+
+/// Provides the management interface for fuzzing.
+///
+/// Within the component test framework, the fuzz_test_runner creates the underlying channel for
+/// this protocol, passing one end to the fuzzer being started and the other to the fuzz_manager.
+///
+/// The channel is closed when the fuzzer is no longer needed, and on error. Clients should exit and
+/// not attempt to reconnect.
+protocol Controller {
+    /// See |Options|. Sets various execution and error detection parameters. This may be called
+    /// multiple times; only the most recently received options are used. If the |Options| parameter
+    /// omits one or more fields, those parameters are unchanged in the fuzzer. Until the initial
+    /// call to this method, the fuzzer should assume the default values for |Options|.
+    ///
+    /// Returns ZX_OK if the options were set.
+    /// Returns ZX_ERR_BAD_STATE if a long-running call such as.Execute, Cleanse, Minimize, Fuzz, or
+    /// Merge is in progress.
+    Configure(struct {
+        options Options;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// See |Options|. Gets the current values for the various execution and error detection
+    /// parameters.
+    GetOptions() -> (struct {
+        options Options;
+    });
+
+    /// Writes the provided |input| to either the "seed" or "live" |corpus|.
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    AddToCorpus(resource struct {
+        corpus Corpus;
+        input Input;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Returns a connected |corpus_reader| for either the "seed" or "live" corpus.
+    ReadCorpus(resource struct {
+        corpus Corpus;
+        corpus_reader client_end:CorpusReader;
+    }) -> ();
+
+    /// Parses and loads an AFL-style dictionary. Invalid entries are logged and skipped.
+    /// See also:
+    ///     https://github.com/mirrorer/afl/blob/master/dictionaries/README.dictionaries
+    ///
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    /// Returns ZX_ERR_INVALID_ARGS if parsing the dictionary fails.
+    WriteDictionary(resource struct {
+        dictionary Input;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Returns the current dictionary as an Input, which may be empty.
+    ReadDictionary() -> (resource struct {
+        dictionary Input;
+    });
+
+    /// See |Status|. Returns various fuzzing metrics, e.g. total coverage, speed, etc.
+    GetStatus() -> (struct {
+        status Status;
+    });
+
+    // Installs a |Monitor| to push status. To pull status instead, use |GetStatus|.
+    AddMonitor(resource struct {
+        monitor client_end:Monitor;
+    }) -> ();
+
+    /// Returns the result and the triggering input, if it exists, from the last fuzzing session.
+    GetResults() -> (resource struct {
+        result Result;
+        error_input Input;
+    });
+
+    /// Returns the result of running the target with a single |test_input|.
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    Execute(resource struct {
+        test_input Input;
+    }) -> (struct {
+        result Result;
+    }) error zx.status;
+
+    /// Attempts to find the smallest input that produces the same error as the given |test_input|,
+    /// constrained by the configured |total_time| and/or |runs| options.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetResults| to retrieve the results
+    /// when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    /// Returns ZX_ERR_INVALID_ARGS if the provided |test_input| does not cause an error.
+    /// Returns an error if taking an input fails; see |Input| for details.
+    Minimize(resource struct {
+        test_input Input;
+    }) -> (resource struct {
+        minimized Input;
+    }) error zx.status;
+
+    /// Attempts to replace bytes of the given |test_input| with "filler" bytes, e.g. \x00, \xFF,
+    /// without changing the error produced.
+    ///
+    /// Returns ZX_ERR_INVALID_ARGS if the provided |test_input| does not cause an error.
+    /// Returns an error if taking an input fails; see |Input| for details.
+    Cleanse(resource struct {
+        test_input Input;
+    }) -> (resource struct {
+        cleansed Input;
+    }) error zx.status;
+
+    /// Runs the normal fuzzing feedback loop:
+    ///   1. Selects an input from the corpus.
+    ///   2. Mutates the input.
+    ///   3. Uses the |Adapter| to execute the input.
+    ///   4. Checks feedback from |ProcessProxies|.
+    ///   5. If the input produced useful feedback, adds it to the corpus.
+    ///
+    /// This loop continues until one of three conditions is met:
+    ///   1. The configured, non-zero number of |runs| has been reached.
+    ///   2. The configured, non-zero |duration| elapses.
+    ///   3. An error is detected, and returned.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetResults| to retrieve the results
+    /// when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    Fuzz() -> (resource struct {
+        result Result;
+        error_input Input;
+    }) error zx.status;
+
+    /// Attempts to shrink the corpora. Inputs from the seed corpus will be preserved. All other
+    /// inputs will be sorted by amount of feedback produced and input size, and only those inputs
+    /// that add new feedback not seen earlier in the sequence will be kept.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetCorpusReader| to retrieve the
+    /// results when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    /// Returns ZX_ERR_INVALID_ARGS if an input in the seed corpus causes an error. Skips inputs in
+    /// the live corpus that cause errors.
+    Merge() -> (struct {
+        result zx.status;
+    });
+};

@@ -1,0 +1,102 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using zx;
+
+/// Details about an instrumented process.
+///
+/// See also:
+///   https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info#zx_info_task_stats
+///   https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info#zx_info_task_runtime
+type ProcessStats = struct {
+    /// The kernel object identifier of the task.
+    koid uint64;
+
+    /// The total size of mapped memory ranges in this process.
+    mem_mapped_bytes uint64;
+
+    /// Committed memory that is only mapped into this process.
+    mem_private_bytes uint64;
+
+    /// Committed memory that is mapped into this and at least one other process.
+    mem_shared_bytes uint64;
+
+    /// Estimate of how much of |mem_shared_bytes| that this process owns.
+    mem_scaled_shared_bytes uint64;
+
+    /// The total amount of time this process was running on a CPU and not blocked.
+    cpu_time zx.duration;
+
+    // The total amount of time this process was ready but not actually using a CPU.
+    queue_time zx.duration;
+
+    // The total amount of time this process spent handling page faults.
+    page_fault_time zx.duration;
+
+    // The total amount of time this process spent waiting on contended kernel locks.
+    lock_contention_time zx.duration;
+};
+
+// See |Monitor|. Used to indicate why an update was sent.
+type UpdateReason = flexible enum : uint8 {
+    // Represents an otherwise unspecified update. Useful when integrating other engines as runners,
+    // e.g. libFuzzer,
+    MISC = 1;
+
+    // A fuzzing action is starting. See, e.g. |Controller.Fuzz|, |Controller.Merge|, etc.
+    INIT = 2;
+
+    // An input produced new feedback.
+    NEW = 3;
+
+    // Periodic status update, configured with |Options.pulse_interval|.
+    PULSE = 4;
+
+    // A shorter input for some particular feedback has been found.
+    REDUCE = 5;
+
+    // A fuzzing action is complete.
+    DONE = 6;
+};
+
+// The maximum number of processes for which stats will be returned via |Status|.
+const MAX_PROCESS_STATS uint16 = 256;
+
+/// See |Controller.GetStatus|.
+type Status = table {
+    /// True if the fuzzer is working on a commands, e.g. it is fuzzing.
+    1: running bool;
+
+    /// Number of runs performed so far.
+    2: runs uint32;
+
+    /// Time spent so far, in seconds.
+    3: elapsed zx.duration;
+
+    /// Number of program edges covered so far.
+    4: covered_pcs uint64;
+
+    /// Number of opaque features encountered so far.
+    5: covered_features uint64;
+
+    /// Number of inputs in the "live" corpus.
+    6: corpus_num_inputs uint64;
+
+    /// Total size of the inputs in the "live" corpus.
+    7: corpus_total_size uint64;
+
+    /// Information about the instrumented processes attached to the engine.
+    8: process_stats vector<ProcessStats>:MAX_PROCESS_STATS;
+};
+
+/// See |Status|. This protocol is used to push status from the |Controller| to callers.
+protocol Monitor {
+    /// Sends the current status.
+    Update(struct {
+        reason UpdateReason;
+        status Status;
+    }) -> ();
+};

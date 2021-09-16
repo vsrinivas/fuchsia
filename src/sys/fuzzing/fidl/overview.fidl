@@ -1,0 +1,63 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// The component fuzzer framework.
+///
+/// Fuzzing (or fuzz testing) is the process of pseudorandomly generating inputs for some target,
+/// executing the target with those inputs, and detecting various error conditions that may arise as
+/// a result. Guided fuzzing uses additional feedback from the target besides errors to determine
+/// whether inputs should be saved and used as the basis of subsequent inputs. A concrete example
+/// of guided fuzzing is coverage-guided fuzzing, which uses whether executing the target with a
+/// fuzzing input produced new code coverage to determine whether it should be added to the corpus,
+/// that is, the set of saved inputs.
+///
+/// Guided fuzzing frameworks can be described using the following taxonomy:
+///
+/// * Engine: A target-agnostic feedback loop.
+///   * Corpus management: Maintains a collection of fuzzing inputs.
+///   * Mutators: Mutation strategies and a PRNG used to create new inputs from exisiting ones.
+///   * Feedback analysis: Dispositions an input based on its feedback, e.g. code coverage.
+///   * Management interface: Interacts with the user to coordinates workflows.
+/// * Target: The specific code under test.
+///   * Input processing: Maps the fuzzer input for a single run to the code under test.
+///   * Feedback collection: Observes the behavior caused by an input.
+///   * Error detection: Determines when an input has caused an error and collects artifacts.
+///
+/// In order to fuzz a components and component topologies, the component fuzzer framework leverages
+/// the test runner framework for its environment and execution features. It adds the pieces of the
+/// taxonomy above into and around the test runner framework:
+///
+///  * A fuzz-manager that acts as a sibling to test-manager, and provides the management interface.
+///  * A fuzz-registry that allows the fuzz-manager to find running fuzzers.
+///  * A fuzz-test-runner within the test runner framework that launches the fuzzed realm and passes
+///    it a connection to the fuzz-registry.
+///  * A fuzzer engine within the fuzzed realm that registers with the registry. It provides
+///    mutators and feedback analysis.
+///  * A target adapter that provides input processing from the fuzz-test-driver to specific
+///    behaviors in the target components, e.g. via FIDL calls.
+///  * A ELF library that is linked against instrumented processes in the target components and that
+///    provides feedback collection and error detection to the fuzz-test-driver.
+///
+/// This FIDL library provides the protocols and types used by these elements of the framework to
+/// interact with one another. These types are found in the following files:
+///
+///  * adapter.fidl:
+///    * Implementations of the |TargetAdapter| protocol provide input-processing.
+///  * controller.fidl:
+///    * |Input| structs represent file-like fuzzing inputs that can be transferred over FIDL.
+///    * Each |Result| enumerates a possible outcome of executing the target with a fuzzing input.
+///    * Implementations of the |Controller| protocol allow clients to control fuzzing execution.
+///  * corpus.fidl:
+///    * Each |Corpus| enumerates a set of fuzzing inputs.
+///    * Implementations of the |CorpusReader| protocol allow iterating over a corpus of inputs.
+///  * options.fidl:
+///    * The |Options| table details various configurable parameters for the fuzzer.
+///  * process.fidl:
+///    * The |Feedback| table lists target-provided feedback that can be used to guide fuzzing.
+///    * Implementations of the |ProcessProxy| protocol accept feedback from targets.
+///  * status.fidl:
+///    * |ProcessStats| has ZX_INFO_TASK_STATS and ZX_INFO_TASK_RUNTIME details from targets.
+///    * Each |UpdateReason| enumerates why status is being "pushed" by the fuzzer.
+///    * Implementations of the |Monitor| protocol subscribe to updates from the fuzzer.
+library fuchsia.fuzzer;

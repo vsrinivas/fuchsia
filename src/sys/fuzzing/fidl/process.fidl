@@ -1,0 +1,54 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using fuchsia.mem;
+using zx;
+
+/// Feedback is uniquely identified by a pair of 64 bit keys.
+alias Identifier = array<uint64, 2>;
+
+/// Represents data collected from the fuzzer target as a result of executing a test input.
+type Feedback = resource table {
+    // Uniquely identifies the source of the feedback. If feedback is added more than once with the
+    // same source ID, the previous feedback is discarded. This can be used to handle processes
+    // which exit and restart.
+    1: id Identifier;
+
+    /// The provided VMOs contain inline 8-bit code-coverage edge counters for an LLVM module.
+    /// See also:
+    ///     https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
+    2: inline_8bit_counters fuchsia.mem.Buffer;
+};
+
+/// Coordinates feedback collection and other diagnostics with an instrumented, remote process under
+/// test. The connection to the |ProcessProxy| should be established very early in a remote
+/// process's lifecycle.
+///
+/// The channel is closed on FIDL error. Clients should exit and not attempt to reconnect.
+@discoverable
+protocol ProcessProxy {
+    /// Registers the remote process with the fuzzing engine.
+    ///
+    /// This method is called once per connection to set up the eventpair used by the proxy and
+    /// remote process to signal each other, and to provide the process proxy with the handle used
+    /// for querying status and debugging on error. It returns the options currently set in the
+    /// engine; see |Configure|.
+    ///
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    Connect(resource struct {
+        eventpair zx.handle:EVENTPAIR;
+        process zx.handle:PROCESS;
+    }) -> (struct {
+        options Options;
+    });
+
+    /// Adds a source of feedback from a remote process for use in guiding fuzzing.
+    ///
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    AddFeedback(resource struct {
+        feedback Feedback;
+    }) -> ();
+};

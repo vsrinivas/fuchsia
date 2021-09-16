@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.fuzzer") {
+  sources = [
+    "adapter.fidl",
+    "controller.fidl",
+    "corpus.fidl",
+    "options.fidl",
+    "process.fidl",
+    "registry.fidl",
+    "status.fidl",
+  ]
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+}
