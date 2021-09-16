@@ -38,9 +38,7 @@ import (
 //   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
 
 const (
-	// http://http.us.debian.org/debian no longer contains arm64 packages
-	// for jessie so we instead use the last snapshot that still has them.
-	aptRepo = "https://snapshot.debian.org/archive/debian/20190324T093412Z"
+	aptRepo = "http://http.us.debian.org/debian"
 )
 
 type stringsValue []string

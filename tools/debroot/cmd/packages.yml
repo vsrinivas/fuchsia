@@ -1,6 +1,6 @@
 dists:
-  - jessie
-  - jessie-updates
+  - buster
+  - buster-updates
 architectures:
   - amd64
   - arm64
@@ -12,13 +12,13 @@ keyring: debian-archive-keyring.gpg
 packages:
   - package: libc6
   - package: libc6-dev
-  - package: libgcc-4.9-dev
+  - package: libgcc-8-dev
   - package: libgcc1
   - package: libgl1-mesa-dev
   - package: libgl1-mesa-glx
   - package: libglapi-mesa
   - package: libpulse-dev
-  - package: libstdc++-4.9-dev
+  - package: libstdc++-8-dev
   - package: libstdc++6
   - package: libx11-6
   - package: libx11-dev
