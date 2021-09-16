@@ -3,7 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
+
+fidl("fuchsia.fuzzer") {
+  sources = [ "fuzzer.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+}
 
 group("tests") {
   testonly = true

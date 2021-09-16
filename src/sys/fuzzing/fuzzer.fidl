@@ -1,168 +1,470 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-/// A library of cross-process fuzzing protocols.
+
+/// The component fuzzer framework.
 ///
-/// A fuzzer can be described in three parts:
-///   1. The code under test.
-///   2. A fuzz target function that maps each test input to the interface of the code under test.
-///   3. A fuzzing engine that generates new test inputs.
-/// For more details, see https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/overview
+/// Guided fuzzing frameworks can be described using the following taxonomy:
+/// * Engine: A target-agnostic feedback loop.
+///  * Corpus management: Maintains a collection of fuzzing inputs.
+///  * Mutators: Mutation strategies and a PRNG used to create new inputs from exisiting ones.
+///  * Feedback analysis: Dispositions an input based on its feedback, e.g. code coverage.
+///  * Management interface: Interacts with the user to coordinates workflows.
+/// * Target: The specific code under test.
+///  * Input processing: Maps the fuzzer input for a single run to the code under test.
+///  * Feedback collection: Observes the behavior caused by an input.
+///  * Error detection: Determines when an input has caused an error and collects artifacts.
 ///
-/// LLVM's libFuzzer is a coverage-guided fuzzing engine. It includes a pair of interfaces for
-/// coordinating test execution and coverage collection from one or more remote processes. LibFuzzer
-/// refers to the methods invoked by the engine process and executed in a remote process as the
-/// "FuzzerRemote" interface, and to the methods invoked by remote processes and executed in the
-/// engine processto the "FuzzerProxy" interface.
+/// In order to fuzz a components and component topologies, the component fuzzer framework leverages
+/// the test runner framework for its environment and execution features. It adds the pieces of the
+/// taxonomy above into and around the test runner framework:
+///  * A fuzz-manager that acts as a sibling to test-manager, and provides the management interface.
+///  * A fuzz-test-runner within the test runner framework that connects to the fuzz-manager,
+///    provides the corpus management, and launches the fuzzed realm.
+///  * A fuzzer engine within the fuzzed realm that connects to the runner and provides mutators
+///    and feedback analysis.
+///  * A target adapter that provides input processing from the fuzz-test-driver to specific
+///    behaviors in the target components, e.g. via FIDL calls.
+///  * A library that is linked against instrumented processes in the target components and that
+///    provides feedback collection and error detection to the fuzz-test-driver.
 ///
-/// Notably, these interfaces do NOT specify how calls are forwarded from the one process to the
-/// other. Instead, the libFuzzer runtime (in the engine process) and the libFuzzerRemote runtime
-/// (in the remote processes) both assume they will be linked against a transport library that
-/// implements the each interface in the other process, i.e.:
-///   * The engine process is linked against an implementation of the FuzzerRemote interface that
-///     forwards to the remote process.
-///   * The remote process is linked against an implementation of the FuzzerProxy interface that
-///     forwards to the engine process.
-///
-/// The protocols in this library are designed to match these interfaces expectations and provide
-/// a compatible Fuchsia transport library for libFuzzer using FIDL and Zircon objects.
-///
-/// See also:
-///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerRemoteInterface.h
+/// This library provides the protocols and types used by these elements of the framework to
+/// interact with one another.
 library fuchsia.fuzzer;
 
 using fuchsia.mem;
 using zx;
 
-/// libFuzzer's FuzzerProxiedOptions are sent from the FuzzerProxy to the FuzzerRemote as an opaque
-/// sequence of bytes.
+/// See |Controller.Configure|.
+type Options = table {
+    /// Perform this many fuzzing runs, then exit normally. If unset (or zero), fuzz indefinitely.
+    1: runs uint32;
+
+    /// If non-zero, fuzz for this duration and then exit normally. If zero, fuzz indefinitely.
+    /// Defaults to 0.
+    2: max_total_time zx.duration;
+
+    // PRNG seed to use when generating inputs. The same seed for the same target should produce the
+    // same inputs. If zero, the current ticks will be used. Defaults to 0.
+    3: seed uint32;
+
+    /// If non-zero, limit the maximum size of a test input to this size, in bytes. Use 0 to disable
+    /// the limit. Defaults to 1 MB.
+    4: max_input_size uint64;
+
+    // Maximum number of consecutive mutations to apply to an input. Defaults to 5.
+    5: mutation_depth uint16;
+
+    /// If an AFL-style dictionary is supplied using |Controller.WriteDictionary|, include words up
+    /// to this level. Defaults to 0, i.e. words without an explicit level.
+    6: dictionary_level uint16;
+
+    /// If true, treat instrumented process exits as fuzzing errors. Defaults to false.
+    7: detect_exits bool;
+
+    /// If true, and ASan or LSan are available, try to detect memory leaks. Defaults to false.
+    /// Leak detection can be expensive, so it is recommended to first develop a corpus that covers
+    /// a reasonable amount of the code under test before attempting to detect leaks.
+    8: detect_leaks bool;
+
+    /// If non-zero, any run that takes longer than this duration will raise a TIMEOUT error.
+    /// Use 0 to disable the limit. Defaults to 20 minutes.
+    9: run_limit zx.duration;
+
+    /// If non-zero, any allocation over this size in bytes will raise a BAD_MALLOC error. Use 0 to
+    /// disable the limit. Defaults to 2 GB.
+   10: malloc_limit uint64;
+
+    /// If non-zero, any process that uses more than this amount of memory in bytes will raise an
+    /// OOM error. Use 0 to disable the limit. Defaults to 2 GB.
+   11: oom_limit uint64;
+
+    /// If non-zero, purge the sanitizer's allocator quarantine and reclaim memory periodically
+    /// between runs after an interval of this many seconds. Use 0 to disable allocator purging.
+    /// Default to 1.
+   12: purge_interval zx.duration;
+
+    /// Exit code used by the instrumented process if it encounters a bad allocation. Set this
+    /// if the target already uses the default for another reason. Defaults to 2000.
+   13: malloc_exitcode int32;
+
+    /// Exit code used by the instrumented process if it encounters a sanitizer error. Set this
+    /// if the target already uses the default for another reason. Defaults to 2001.
+   14: death_exitcode int32;
+
+    /// Exit code used by the instrumented process if it encounters a leak. Set this if the target
+    /// already uses the default for another reason. Defaults to 2002.
+   15: leak_exitcode int32;
+
+    /// Exit code used by the instrumented process if it exceeds the OOM limit. Set this if the
+    /// target already uses the default for another reason. Defaults to 2003.
+   16: oom_exitcode int32;
+
+    /// If non-zero, the engine will periodically update any added monitors after this duration.
+    /// Defaults to 20.
+   17: pulse_interval zx.duration;
+};
+
+/// Encapsulates transferring a fuzzer inputs over a socket, e.g. between a host and device via
+/// overnet.
+type Input = resource struct {
+    /// Socket that can be used to read the data.
+    socket zx.handle:SOCKET;
+
+    /// The total amount of data to be transferred.
+    size uint64;
+};
+
+/// See |Controller.GetCorpusWriter| and |Controller.GetCorpusReader|.
+type Corpus = flexible enum : uint8 {
+    /// Indicates a set of fixed, immutable inputs typically provided at start-up. These inputs are
+    /// never discarded when merging.
+    SEED = 1;
+
+    /// Indicates a set of inputs generated by the fuzzer. These may be modified and/or discarded
+    /// when merging and minimizing the corpus.
+    LIVE = 2;
+};
+
+/// Receives a sequence of test inputs belonging to a fuzzer's corpus.
+/// Returns an error if the transfer fails.
+protocol CorpusReader {
+    Next(resource struct {
+        test_input Input;
+    }) -> (struct {
+        result zx.status;
+    });
+};
+
+/// Details about an instrumented process.
 ///
 /// See also:
-///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerRemoteInterface.h
-const MAX_OPTIONS_SIZE int32 = 64;
-alias FuzzerProxiedOptions = bytes:MAX_OPTIONS_SIZE;
+///   https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info#zx_info_task_stats
+///   https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info#zx_info_task_runtime
+type ProcessStats = struct {
+    /// The kernel object identifier of the task.
+    koid uint64;
 
-// These errors correspond to the subset of libFuzzer's error callback that are expected to be
-// detected in a remote process.
-type FuzzerError = strict enum : uint8 {
-    CRASH = 1;
-    DEATH = 2;
-    EXIT = 3;
-    LEAK = 4;
-    MALLOC_LIMIT = 5;
-    RSS_LIMIT = 6;
+    /// The total size of mapped memory ranges in this process.
+    mem_mapped_bytes uint64;
+
+    /// Committed memory that is only mapped into this process.
+    mem_private_bytes uint64;
+
+    /// Committed memory that is mapped into this and at least one other process.
+    mem_shared_bytes uint64;
+
+    /// Estimate of how much of |mem_shared_bytes| that this process owns.
+    mem_scaled_shared_bytes uint64;
+
+    /// The total amount of time this process was running on a CPU and not blocked.
+    cpu_time zx.duration;
+
+    // The total amount of time this process was ready but not actually using a CPU.
+    queue_time zx.duration;
+
+    // The total amount of time this process spent handling page faults.
+    page_fault_time zx.duration;
+
+    // The total amount of time this process spent waiting on contended kernel locks.
+    lock_contention_time zx.duration;
 };
 
-/// Underlying transport for libFuzzer's FuzzerProxy interface on Fuchsia.
+// See |Monitor|. Used to indicate why an update was sent.
+type UpdateReason = flexible enum : uint8 {
+    // Represents an otherwise unspecified update. Useful when integrating other engines as runners,
+    // e.g. libFuzzer,
+    MISC = 1;
+
+    // A fuzzing action is starting. See, e.g. |Controller.Fuzz|, |Controller.Merge|, etc.
+    INIT = 2;
+
+    // An input produced new feedback.
+    NEW = 3;
+
+    // Periodic status update, configured with |Options.pulse_interval|.
+    PULSE = 4;
+
+    // A shorter input for some particular feedback has been found.
+    REDUCE = 5;
+
+    // A fuzzing action is complete.
+    DONE = 6;
+};
+
+// The maximum number of processes for which stats will be returned via |Status|.
+const MAX_PROCESS_STATS uint16 = 256;
+
+/// See |Controller.GetStatus|.
+type Status = table {
+    /// True if the fuzzer is working on a commands, e.g. it is fuzzing.
+    1: running bool;
+
+    /// Number of runs performed so far.
+    2: runs uint32;
+
+    /// Time spent so far, in seconds.
+    3: elapsed zx.duration;
+
+    /// Number of program edges covered so far.
+    4: covered_pcs uint64;
+
+    /// Number of opaque features encountered so far.
+    5: covered_features uint64;
+
+    /// Number of inputs in the "live" corpus.
+    6: corpus_num_inputs uint64;
+
+    /// Total size of the inputs in the "live" corpus.
+    7: corpus_total_size uint64;
+
+    /// Information about the instrumented processes attached to the engine.
+    8: process_stats vector<ProcessStats>:MAX_PROCESS_STATS;
+};
+
+/// See |Status|. This protocol is used to push status from the |Controller| to callers.
+protocol Monitor {
+    /// Sends the current status.
+    Update(struct {
+        reason UpdateReason;
+        status Status;
+    }) -> ();
+};
+
+/// See |Controller.Execute| and |Controller.Fuzz|.
+type Result = flexible enum : uint32 {
+    /// No errors encountered.
+    NO_ERRORS = 1;
+
+    /// A single memory allocation by an instrumented remote process exceeded the configured limit.
+    BAD_MALLOC = 2;
+
+    /// An instrumented process raised an exception.
+    CRASH = 3;
+
+    /// A sanitizer runtime in an instrumented process detected an error.
+    DEATH = 4;
+
+    /// An instrumented process exited unexpectedly.
+    EXIT = 5;
+
+    /// A memory leak was detected in an instrumented process.
+    LEAK = 6;
+
+    /// An instrumented process's memory usage exceeded the configured limit.
+    OOM = 7;
+
+    /// A single run exceeded the configured limit.
+    TIMEOUT = 8;
+};
+
+/// Provides the management interface for fuzzing.
 ///
-/// This protocol provides methods that remote processes can use to register themselves, their
-/// coverage data, and any encountered errors with the fuzzing engine process. These methods should
-/// only be used during set-up (Connect, AddCoverage) or tear-down (HandleError). All other
-/// coordination between processes during fuzzing should use the objects shared during set-up, e.g.
-/// the eventpair and VMOs.
-@discoverable
-protocol Proxy {
-    /// Registers the remote process with the fuzzing engine.
+/// Within the component test framework, the fuzz_test_runner creates the underlying channel for
+/// this protocol, passing one end to the fuzzer being started and the other to the fuzz_manager.
+///
+/// The channel is closed when the fuzzer is no longer needed, and on error. Clients should exit and
+/// not attempt to reconnect.
+protocol Controller {
+    /// See |Options|. Sets various execution and error detection parameters. This may be called
+    /// multiple times; only the most recently received options are used. If the |Options| parameter
+    /// omits one or more fields, those parameters are unchanged in the fuzzer. Until the initial
+    /// call to this method, the fuzzer should assume the default values for |Options|.
     ///
-    /// This method is called once per connection by the remote process to register its process ID,
-    /// as used by the libFuzzer interfaces, and an eventpair by which the engine and remote
-    /// processes can signal each other. The engine returns the subset of the fuzzing options that
-    /// are needed by the remote process.
-    ///
-    /// The channel is closed on error. Clients should not attempt to reconnect.
-    Connect(resource struct {
-        pid uint64;
-        paired zx.handle:EVENTPAIR;
+    /// Returns ZX_OK if the options were set.
+    /// Returns ZX_ERR_BAD_STATE if a long-running call such as.Execute, Cleanse, Minimize, Fuzz, or
+    /// Merge is in progress.
+    Configure(struct {
+        options Options;
     }) -> (struct {
-        options FuzzerProxiedOptions;
+        result zx.status;
     });
 
-    /// Registers the provided VMOs to be used for inline 8-bit edge counters and PC tables.
-    ///
-    /// This should be called for each element in a process's DSO map, i.e. for the process itself
-    /// and any shared objects it loads. The fuzzing engine will exit if it encounters any errors in
-    /// setting up the shared coverage.
-    ///
-    /// The channel is closed on error. Clients should not attempt to reconnect.
-    ///
-    /// See also:
-    ///   https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
-    ///   https://clang.llvm.org/docs/SanitizerCoverage.html#pc-table
-    AddCoverage(resource struct {
-        inline_8bit_counters fuchsia.mem.Buffer;
-        pcs fuchsia.mem.Buffer;
+    /// See |Options|. Gets the current values for the various execution and error detection
+    /// parameters.
+    GetOptions() -> (struct {
+        options Options;
+    });
+
+    /// Writes the provided |input| to either the "seed" or "live" |corpus|.
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    AddToCorpus(resource struct {
+        corpus Corpus;
+        input Input;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Returns a connected |corpus_reader| for either the "seed" or "live" corpus.
+    ReadCorpus(resource struct {
+        corpus Corpus;
+        corpus_reader client_end:CorpusReader;
     }) -> ();
 
-    /// Reports detection of a monitored error condition.
-    ///
-    /// libFuzzer has a number of error conditions it monitors. It will halt fuzzing and report
-    /// detailed error information when these conditions are detected. With this method, the remote
-    /// process can notify the engine process of one of these errors. It also includes a generic
-    /// parameter used by some of the libFuzzer error callbacks (e.g. FuzzerMallocLimitCallback),
-    /// and a tear-off protocol for requesting further diagnostic information from the remote
-    /// process.
-    ///
-    /// The channel is closed on error. Clients should not attempt to reconnect.
-    ///
+    /// Parses and loads an AFL-style dictionary. Invalid entries are logged and skipped.
     /// See also:
-    ///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerMonitor.h
-    HandleError(resource struct {
-        error FuzzerError;
-        param uint64;
-        diagnostics client_end:RemoteDiagnostics;
+    ///     https://github.com/mirrorer/afl/blob/master/dictionaries/README.dictionaries
+    ///
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    /// Returns ZX_ERR_INVALID_ARGS if parsing the dictionary fails.
+    WriteDictionary(resource struct {
+        dictionary Input;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Returns the current dictionary as an Input, which may be empty.
+    ReadDictionary() -> (resource struct {
+        dictionary Input;
+    });
+
+    /// See |Status|. Returns various fuzzing metrics, e.g. total coverage, speed, etc.
+    GetStatus() -> (struct {
+        status Status;
+    });
+
+    // Installs a |Monitor| to push status. To pull status instead, use |GetStatus|.
+    AddMonitor(resource struct {
+        monitor client_end:Monitor;
+    }) -> ();
+
+    /// Returns the result and the triggering input, if it exists, from the last fuzzing session.
+    GetResults() -> (resource struct {
+        result Result;
+        error_input Input;
+    });
+
+    /// Returns the result of running the target with a single |test_input|.
+    /// Returns an error if transferring the input fails; see |Input| for details.
+    Execute(resource struct {
+        test_input Input;
+    }) -> (struct {
+        result Result;
+    }) error zx.status;
+
+    /// Attempts to find the smallest input that produces the same error as the given |test_input|,
+    /// constrained by the configured |total_time| and/or |runs| options.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetResults| to retrieve the results
+    /// when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    /// Returns ZX_ERR_INVALID_ARGS if the provided |test_input| does not cause an error.
+    /// Returns an error if taking an input fails; see |Input| for details.
+    Minimize(resource struct {
+        test_input Input;
+    }) -> (resource struct {
+        minimized Input;
+    }) error zx.status;
+
+    /// Attempts to replace bytes of the given |test_input| with "filler" bytes, e.g. \x00, \xFF,
+    /// without changing the error produced.
+    ///
+    /// Returns ZX_ERR_INVALID_ARGS if the provided |test_input| does not cause an error.
+    /// Returns an error if taking an input fails; see |Input| for details.
+    Cleanse(resource struct {
+        test_input Input;
+    }) -> (resource struct {
+        cleansed Input;
+    }) error zx.status;
+
+    /// Runs the normal fuzzing feedback loop:
+    ///   1. Selects an input from the corpus.
+    ///   2. Mutates the input.
+    ///   3. Uses the |Adapter| to execute the input.
+    ///   4. Checks feedback from |ProcessProxies|.
+    ///   5. If the input produced useful feedback, adds it to the corpus.
+    ///
+    /// This loop continues until one of three conditions is met:
+    ///   1. The configured, non-zero number of |runs| has been reached.
+    ///   2. The configured, non-zero |duration| elapses.
+    ///   3. An error is detected, and returned.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetResults| to retrieve the results
+    /// when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    Fuzz() -> (resource struct {
+        result Result;
+        error_input Input;
+    }) error zx.status;
+
+    /// Attempts to shrink the corpora. Inputs from the seed corpus will be preserved. All other
+    /// inputs will be sorted by amount of feedback produced and input size, and only those inputs
+    /// that add new feedback not seen earlier in the sequence will be kept.
+    ///
+    /// This is a long running call that continues executing after the method returns. Callers can
+    /// use |AddMonitor| to monitor the status of the call, and |GetCorpusReader| to retrieve the
+    /// results when it completes.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if another long-running call is in progress.
+    /// Returns ZX_ERR_INVALID_ARGS if an input in the seed corpus causes an error. Skips inputs in
+    /// the live corpus that cause errors.
+    Merge() -> (struct {
+        result zx.status;
     });
 };
 
-/// Tear-off protocol for requesting diagnostics from a remote process.
+/// Maps test inputs to specific behaviors in the target code, e.g. by invoking APIs, making FIDL
+/// calls. etc. The adapter includes the target-specific code often referred to as the "fuzz target
+/// function".
 ///
-/// When handling errors, libFuzzer will request that the remote process print certain types of
-/// information as part of dumping detailed information related to the error. This protocol provides
-/// the engine process a means to send these requests back to the remote process.
-///
-/// Implementations should take care to track the thread and/or other execution context that
-/// instantiates the service, as requests should be satisfied from the same context.
-protocol RemoteDiagnostics {
-    /// Prints the call stack from the thread that invoked Proxy.HandleError to the remote process's
-    /// standard output, which is either the engine process's stdout or logfile.
-    PrintStackTrace() -> ();
-
-    /// Prints the memory statistics from the thread that invoked Proxy.HandleError to the remote
-    /// process's standard output, which is either the engine process's stdout or logfile.
-    PrintMemoryProfile() -> ();
+/// See also:
+///     https://llvm.org/docs/LibFuzzer.html#fuzz-target
+@discoverable
+protocol TargetAdapter {
+    /// Provides the eventpair used by driver and adapter to signal each other, and the shared VMO
+    /// used to provide test inputs to the adapter.
+    Connect(resource struct {
+        eventpair zx.handle:EVENTPAIR;
+        test_input fuchsia.mem.Buffer;
+    }) -> ();
 };
 
-// Maximum data consumer label length.
-const MAX_LABEL_SIZE int32 = 128;
+/// Feedback is uniquely identified by a pair of 64 bit keys.
+alias Identifier = array<uint64, 2>;
 
-/// Splits the engine process's fuzzer test input between multiple remote processes.
+/// Represents data collected from the fuzzer target as a result of executing a test input.
+type Feedback = resource table {
+    // Uniquely identifies the source of the feedback. If feedback is added more than once with the
+    // same source ID, the previous feedback is discarded. This can be used to handle processes
+    // which exit and restart.
+    1: id Identifier;
+
+    /// The provided VMOs contain inline 8-bit code-coverage edge counters for an LLVM module.
+    /// See also:
+    ///     https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
+    2: inline_8bit_counters fuchsia.mem.Buffer;
+};
+
+/// Coordinates feedback collection and other diagnostics with an instrumented, remote process under
+/// test. The connection to the |ProcessProxy| should be established very early in a remote
+/// process's lifecycle.
 ///
-/// For traditional single-process fuzzers, the fuzzing engine generates a sequence of bytes known
-/// as a test input that the fuzz target function uses to exercise the interface to the code under
-/// test. For multi-process FIDL fuzzing, it may also need to provide data to fake dependencies of
-/// the code under test, or "fakes", in addition to the fuzz target function.
-///
-/// When possible, these fakes should be implemented within the engine process itself and draw
-/// directly from the provided test input. If the fakes must be executed in a separate process, they
-/// can consume a portion of the test input using this protocol.
-///
-/// Implementations should split the single test input between the different consumers in a way that
-/// is "fuzzer-stable", i.e. most mutations such as adding or removing bytes shouldn't radically
-/// alter what data the consumers receive.
+/// The channel is closed on FIDL error. Clients should exit and not attempt to reconnect.
 @discoverable
-protocol DataProvider {
-    /// Associates a shared VMO with a partition label.
+protocol ProcessProxy {
+    /// Registers the remote process with the fuzzing engine.
     ///
-    /// Registers the provided VMO to be used for transferring the test input of an additional data
-    /// consumer. The DataProvider implementation must provide a way to add labels before consumers
-    /// connect, and fuzzer authors must add them during initialization. This is required for the
-    /// DataProvider to be able to partition the test input in the same manner regardless of when
-    /// a data consumer connects. The provided eventpair should be used to signal when test input
-    /// data is available.
+    /// This method is called once per connection to set up the eventpair used by the proxy and
+    /// remote process to signal each other, and to provide the process proxy with the handle used
+    /// for querying status and debugging on error. It returns the options currently set in the
+    /// engine; see |Configure|.
     ///
-    /// The channel is closed on error. Clients should not attempt to reconnect.
-    Register(resource struct {
-        label string:MAX_LABEL_SIZE;
-        ep zx.handle:EVENTPAIR;
-        buf fuchsia.mem.Buffer;
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    Connect(resource struct {
+        eventpair zx.handle:EVENTPAIR;
+        process zx.handle:PROCESS;
+    }) -> (struct {
+        options Options;
+    });
+
+    /// Adds a source of feedback from a remote process for use in guiding fuzzing.
+    ///
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    AddFeedback(resource struct {
+        feedback Feedback;
     }) -> ();
 };
