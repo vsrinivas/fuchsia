@@ -659,6 +659,11 @@ async fn clone_per_package_source(source: PackageSource) {
                 DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
                 DirEntry { name: "file".to_string(), kind: DirentKind::File },
                 DirEntry { name: "meta".to_string(), kind: DirentKind::Directory },
+                DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
             ],
         )
         .await;
@@ -686,6 +691,11 @@ async fn clone_per_package_source(source: PackageSource) {
                 DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
                 DirEntry { name: "file".to_string(), kind: DirentKind::File },
                 DirEntry { name: "package".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
             ],
         )
         .await;
@@ -752,6 +762,11 @@ async fn read_dirents_per_package_source(source: PackageSource) {
             DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
             DirEntry { name: "meta".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
         ],
     )
     .await;
@@ -764,6 +779,11 @@ async fn read_dirents_per_package_source(source: PackageSource) {
             DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
             DirEntry { name: "file".to_string(), kind: DirentKind::File },
             DirEntry { name: "package".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
         ],
     )
     .await;

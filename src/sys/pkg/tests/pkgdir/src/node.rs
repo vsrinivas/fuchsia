@@ -127,8 +127,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         Args {
             open_mode: MODE_TYPE_DIRECTORY,
             expected_mode: MODE_TYPE_DIRECTORY | 0o755,
-            expected_content_size: 69,
-            expected_storage_size: 69,
+            expected_content_size: 74,
+            expected_storage_size: 74,
             ..Default::default()
         },
     )
@@ -138,8 +138,8 @@ async fn get_attr_per_package_source(source: PackageSource) {
         "meta/dir",
         Args {
             expected_mode: MODE_TYPE_DIRECTORY | 0o755,
-            expected_content_size: 69,
-            expected_storage_size: 69,
+            expected_content_size: 74,
+            expected_storage_size: 74,
             ..Default::default()
         },
     )

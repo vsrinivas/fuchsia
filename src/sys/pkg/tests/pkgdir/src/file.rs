@@ -20,10 +20,13 @@ use {
     fuchsia_zircon as zx,
     io_util::directory::open_file,
     matches::assert_matches,
-    std::{cmp, convert::TryInto},
+    std::{
+        cmp,
+        convert::{TryFrom as _, TryInto},
+    },
 };
 
-const TEST_PKG_HASH: &str = "4679b8a4d2853fa935f4c63511f402ab387f1afbc26cf9addec3a24f2c5dc598";
+const TEST_PKG_HASH: &str = "4f329d13506973259344e3397d07c8d72c98273203ea025469f5dce162c9aaf7";
 
 #[fuchsia::test]
 async fn read() {
@@ -318,20 +321,34 @@ async fn get_buffer() {
 // TestMapFilePrivateAndExact, TestMapFileForWrite, and TestMapFileForExec from pkgfs_test.go.
 async fn get_buffer_per_package_source(source: PackageSource) {
     let root_dir = source.dir;
+
     // For non-meta files, GetBuffer() calls with supported flags should succeed.
-    for path in ["file", "meta/file"] {
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    for size in [0, 1, 4095, 4096, 4097] {
+        for path in [format!("file_{}", size), format!("meta/file_{}", size)] {
+            if path == "file_0" {
+                continue;
+            }
 
-        let _ = test_get_buffer_success(&file, path, VMO_FLAG_READ).await;
+            let file = open_file(&root_dir, &path, OPEN_RIGHT_READABLE).await.unwrap();
 
-        let buffer0 = test_get_buffer_success(&file, path, VMO_FLAG_READ | VMO_FLAG_PRIVATE).await;
-        let buffer1 = test_get_buffer_success(&file, path, VMO_FLAG_READ | VMO_FLAG_PRIVATE).await;
-        assert_ne!(
-            buffer0.vmo.as_handle_ref().get_koid().unwrap(),
-            buffer1.vmo.as_handle_ref().get_koid().unwrap(),
-            "We should receive our own clone each time we invoke GetBuffer() with the VmoFlagPrivate field set"
-        );
+            let _ = test_get_buffer_success(&file, VMO_FLAG_READ, size).await;
+
+            let buffer0 =
+                test_get_buffer_success(&file, VMO_FLAG_READ | VMO_FLAG_PRIVATE, size).await;
+            let buffer1 =
+                test_get_buffer_success(&file, VMO_FLAG_READ | VMO_FLAG_PRIVATE, size).await;
+            assert_ne!(
+                buffer0.vmo.as_handle_ref().get_koid().unwrap(),
+                buffer1.vmo.as_handle_ref().get_koid().unwrap(),
+                "We should receive our own clone each time we invoke GetBuffer() with the VmoFlagPrivate field set"
+            );
+        }
     }
+
+    // The empty blob will not return a vmo, failing calls to GetBuffer() with BAD_STATE.
+    let file = open_file(&root_dir, "file_0", OPEN_RIGHT_READABLE).await.unwrap();
+    let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::BAD_STATE));
 
     // For "meta as file", GetBuffer() should be unsupported.
     let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
@@ -359,29 +376,39 @@ async fn get_buffer_per_package_source(source: PackageSource) {
     }
 }
 
+fn round_up_to_4096_multiple(val: usize) -> usize {
+    (val + 4095) & !4095
+}
+
 async fn test_get_buffer_success(
     file: &FileProxy,
-    path: &str,
     get_buffer_flags: u32,
+    size: usize,
 ) -> Box<fidl_fuchsia_mem::Buffer> {
     let (status, buffer) = file.get_buffer(get_buffer_flags).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     let buffer = buffer.unwrap();
 
+    assert_eq!(buffer.size, u64::try_from(size).unwrap());
+    assert_eq!(buffer.vmo.get_content_size().unwrap(), u64::try_from(size).unwrap());
     let vmo_size = buffer.vmo.get_size().unwrap().try_into().unwrap();
     let mut actual_contents = vec![0u8; vmo_size];
     let () = buffer.vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
 
+    let rounded_size = round_up_to_4096_multiple(size);
+    assert_eq!(vmo_size, rounded_size);
     assert!(
-        path.as_bytes()
+        b"ABCD"
             .iter()
             .copied()
+            .cycle()
+            .take(size)
             // VMOs should be zero-padded to 4096 bytes.
             .chain(std::iter::repeat(b'\0'))
-            .take(vmo_size)
+            .take(rounded_size)
             .eq(actual_contents.iter().copied()),
         "vmo content mismatch for file size {}",
-        vmo_size
+        vmo_size,
     );
 
     buffer

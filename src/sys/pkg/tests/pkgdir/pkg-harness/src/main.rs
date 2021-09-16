@@ -131,6 +131,20 @@ async fn make_test_package() -> Package {
         .add_resource_at("exceeds_max_buf", exceeds_max_buf_contents.as_bytes())
         .add_resource_at("meta/exceeds_max_buf", exceeds_max_buf_contents.as_bytes());
 
+    // For use in testing File.GetBuffer on different file sizes.
+    let file_sizes = [0, 1, 4095, 4096, 4097];
+    for size in &file_sizes {
+        builder = builder
+            .add_resource_at(
+                format!("file_{}", size),
+                make_file_contents(*size).collect::<Vec<u8>>().as_slice(),
+            )
+            .add_resource_at(
+                format!("meta/file_{}", size),
+                make_file_contents(*size).collect::<Vec<u8>>().as_slice(),
+            );
+    }
+
     // Make directory nodes of each kind (root dir, non-meta subdir, meta dir, meta subdir)
     // that overflow the fuchsia.io/Directory.ReadDirents buffer.
     for base in ["", "dir_overflow_readdirents/", "meta/", "meta/dir_overflow_readdirents/"] {
@@ -180,4 +194,8 @@ async fn make_test_package() -> Package {
 
 fn repeat_by_n(seed: char, n: usize) -> String {
     std::iter::repeat(seed).take(n).collect()
+}
+
+fn make_file_contents(size: usize) -> impl Iterator<Item = u8> {
+    b"ABCD".iter().copied().cycle().take(size)
 }
