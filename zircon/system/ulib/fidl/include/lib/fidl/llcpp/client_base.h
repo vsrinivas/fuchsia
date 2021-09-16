@@ -126,9 +126,9 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // - The call raced with an external error in the meantime that caused binding
   //   teardown.
   //
-  // Note that |OnRawResult| may be invoked synchronously if there was a
-  // synchronous error (e.g. writing the request). In the error path, the user
-  // must not re-take locks that are already acquired when making the FIDL call.
+  // |OnRawResult| is always invoked asynchronously whether in case of success
+  // or error, unless the dispatcher is shut down, in which case it will be
+  // called synchronously.
   virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(::fidl::IncomingMessage&& result) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
