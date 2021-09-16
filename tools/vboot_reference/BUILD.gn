@@ -226,6 +226,7 @@ config("internal_config") {
     "-Wno-sign-compare",
     "-Wno-unused-function",
     "-Wno-implicit-fallthrough",
+    "-Wno-incompatible-pointer-types-discards-qualifiers",
   ]
   if (is_mac) {
     defines = [
