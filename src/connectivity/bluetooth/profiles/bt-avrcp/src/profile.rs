@@ -12,31 +12,6 @@ use {
     std::fmt::Debug,
 };
 
-#[derive(Debug, PartialEq)]
-pub(crate) enum ChannelType {
-    Control,
-    Browse,
-}
-
-/// Attempts to parse the PSM from the given protocol in |protocols|.
-/// Returns None if no PSM was extracted.
-pub(crate) fn protocol_to_channel_type(protocols: &Vec<ProtocolDescriptor>) -> Option<ChannelType> {
-    for protocol in protocols {
-        for param in &protocol.params {
-            if let DataElement::Uint16(psm) = param {
-                if psm == &PSM_AVCTP {
-                    return Some(ChannelType::Control);
-                } else if psm == &PSM_AVCTP_BROWSE {
-                    return Some(ChannelType::Browse);
-                } else {
-                    continue;
-                }
-            }
-        }
-    }
-    None
-}
-
 bitflags! {
     pub struct AvrcpTargetFeatures: u16 {
         const CATEGORY1         = 1 << 0;
@@ -305,30 +280,5 @@ mod tests {
         ];
         let service = AvrcpService::from_attributes(attributes);
         assert!(service.is_some());
-    }
-
-    /// Tests parsing the PSM from the ProtocolDescriptor works as expected.
-    #[test]
-    fn test_protocol_to_channel_type() {
-        let empty = ProtocolDescriptor { protocol: ProtocolIdentifier::L2Cap, params: vec![] };
-        assert_eq!(None, protocol_to_channel_type(&vec![empty]));
-
-        let descriptor = ProtocolDescriptor {
-            protocol: ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(PSM_AVCTP), DataElement::Uint16(99)],
-        };
-        assert_eq!(Some(ChannelType::Control), protocol_to_channel_type(&vec![descriptor]));
-
-        let descriptor = ProtocolDescriptor {
-            protocol: ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(10), DataElement::Uint16(PSM_AVCTP_BROWSE)],
-        };
-        assert_eq!(Some(ChannelType::Browse), protocol_to_channel_type(&vec![descriptor]));
-
-        let not_avrcp_descriptor = ProtocolDescriptor {
-            protocol: ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(10), DataElement::Uint16(8)],
-        };
-        assert_eq!(None, protocol_to_channel_type(&vec![not_avrcp_descriptor]));
     }
 }

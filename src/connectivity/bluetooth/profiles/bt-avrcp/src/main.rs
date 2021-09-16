@@ -7,6 +7,7 @@
 use {
     anyhow::{format_err, Context, Error},
     fuchsia_async as fasync,
+    fuchsia_bluetooth::profile::{psm_from_protocol, Psm},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
@@ -29,7 +30,7 @@ mod tests;
 use crate::{
     metrics::{MetricsNode, METRICS_NODE_NAME},
     peer_manager::PeerManager,
-    profile::{protocol_to_channel_type, AvrcpService, ChannelType},
+    profile::AvrcpService,
 };
 
 #[fasync::run_singlethreaded]
@@ -76,13 +77,13 @@ async fn main() -> Result<(), Error> {
                 match request {
                     ProfileEvent::PeerConnected { id, protocol, channel } => {
                         info!("Incoming connection request from {:?} with protocol: {:?}", id, protocol);
-
-                        match protocol_to_channel_type(&protocol) {
-                            Some(ChannelType::Control) => peer_manager.new_control_connection(&id, channel),
-                            Some(ChannelType::Browse) => peer_manager.new_browse_connection(&id, channel),
-                            None => {
+                        let protocol = protocol.iter().map(Into::into).collect();
+                        match psm_from_protocol(&protocol) {
+                            Some(Psm::AVCTP) => peer_manager.new_control_connection(&id, channel),
+                            Some(Psm::AVCTP_BROWSE) => peer_manager.new_browse_connection(&id, channel),
+                            _ => {
                                 info!("Received connection over non-AVRCP protocol: {:?}", protocol);
-                            }
+                            },
                         }
                     },
                     ProfileEvent::SearchResult { id, protocol: _, attributes } => {
