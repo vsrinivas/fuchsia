@@ -70,8 +70,8 @@ fuchsia_unittest_package("dhcpd-cli-tests") {
   deps = [
     ":component",
     ":dhcpd-cli-test",
-    "//src/connectivity/network/dhcp:component-v1",
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/dhcp:component-legacy",
+    "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/sys/stash:stash_secure",
   ]
   manifest = "meta/dhcpd_cli_test.cmx"

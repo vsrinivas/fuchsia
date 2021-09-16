@@ -48,10 +48,10 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
 
     # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug-v2",
+    "//src/connectivity/network/netstack:component-debug",
 
     # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component-v2",
+    "//src/connectivity/network/netstack3:component",
 
     # reachability monitor is under test.
     "//src/connectivity/management/reachability:component-v2",
@@ -66,14 +66,14 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/dhcp:component",
 
     # DHCPv6 client is under test.
-    "//src/connectivity/network/dhcpv6/client:component-v2",
+    "//src/connectivity/network/dhcpv6/client:component",
 
     # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:component-v2",
+    "//src/connectivity/network/dns:component",
 
     # netcfg integration with netstack is tested.
     ":netcfg-netemul-config",
-    "//src/connectivity/network/netcfg:component-v2",
+    "//src/connectivity/network/netcfg:component",
   ]
 }
 

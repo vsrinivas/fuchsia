@@ -111,7 +111,7 @@ fuchsia_test_package("dhcp-tests") {
   deps = [ "//src/sys/stash:stash_secure_v2" ]
 }
 
-fuchsia_component("component-v1") {
+fuchsia_component("component-legacy") {
   component_name = "dhcpd"
   manifest = "meta/dhcpd.cmx"
   deps = [ ":bin" ]

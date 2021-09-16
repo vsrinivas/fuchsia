@@ -43,7 +43,7 @@ fuchsia_test_package("overnet-examples-tests") {
   ]
   deps = [
     "//src/connectivity/network/mdns/service:component",
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:mock-device-settings",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",

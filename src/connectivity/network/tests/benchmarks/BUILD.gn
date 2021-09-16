@@ -25,7 +25,7 @@ fuchsia_unittest_package("socket-benchmarks-package") {
   package_name = "socket-benchmarks"
   deps = [
     ":socket_benchmarks",
-    "//src/connectivity/network/netstack:component",
+    "//src/connectivity/network/netstack:component-legacy",
   ]
   manifest = "meta/socket-benchmarks.cmx"
 }

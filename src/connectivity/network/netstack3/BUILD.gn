@@ -69,20 +69,20 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component("component-legacy") {
   component_name = "netstack3"
   manifest = "meta/netstack3.cmx"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "netstack3"
   manifest = "meta/netstack3.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("netstack3") {
-  deps = [ ":component" ]
+  deps = [ ":component-legacy" ]
 }
 
 fuchsia_unittest_package("netstack3-tests") {

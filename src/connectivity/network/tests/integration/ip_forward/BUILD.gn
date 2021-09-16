@@ -51,7 +51,7 @@ fuchsia_test_package("netemul-ip-forward-tests") {
   ]
   deps = [
     # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }

@@ -13,18 +13,9 @@ grand_unified_binary("bin") {
   output_name = "netstack"
 }
 
-# TODO(https://fxbug.dev/83976): rm once soft transition is complete.
-fuchsia_component("component-v2") {
-  component_name = "netstack"
-  manifest = "meta/netstack.cml"
-  deps = [ ":bin" ]
-}
-
-# TODO(https://fxbug.dev/83976): Point to v2 manifest once out of tree
-# dependents have migrated to `:component-legacy`.
 fuchsia_component("component") {
   component_name = "netstack"
-  manifest = "meta/netstack.cmx"
+  manifest = "meta/netstack.cml"
   deps = [ ":bin" ]
 }
 
@@ -34,12 +25,10 @@ fuchsia_component("component-legacy") {
   deps = [ ":bin" ]
 }
 
-# TODO(https://fxbug.dev/83976): Point to v2 manifest once out of tree
-# dependents have migrated to `:component-debug-legacy`.
 fuchsia_component("component-debug") {
   testonly = true
   component_name = "netstack-debug"
-  manifest = "meta/netstack_debug.cmx"
+  manifest = "meta/netstack_debug.cml"
   deps = [ ":bin" ]
 }
 
@@ -50,16 +39,9 @@ fuchsia_component("component-debug-legacy") {
   deps = [ ":bin" ]
 }
 
-# TODO(https://fxbug.dev/83976): rm once soft transition is complete.
-fuchsia_component("component-debug-v2") {
-  testonly = true
-  component_name = "netstack-debug"
-  manifest = "meta/netstack_debug.cml"
-  deps = [ ":bin" ]
-}
-
+# TODO(https://fxbug.dev/84248): rm once no longer used in network:config.
 fuchsia_package("netstack") {
-  deps = [ ":component" ]
+  deps = [ ":component-legacy" ]
 }
 
 generated_go("gen/netstack") {

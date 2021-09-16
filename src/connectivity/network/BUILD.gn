@@ -9,11 +9,11 @@ fuchsia_component("component") {
   manifest = "meta/network.cml"
   deps = [
     "dhcp:component",
-    "dhcpv6/client:component-v2",
-    "dns:component-v2",
-    "http-client:component_v2",
-    "netcfg:component-v2",
-    "netstack:component-v2",
+    "dhcpv6/client:component",
+    "dns:component",
+    "http-client:component",
+    "netcfg:component",
+    "netstack:component",
   ]
 }
 

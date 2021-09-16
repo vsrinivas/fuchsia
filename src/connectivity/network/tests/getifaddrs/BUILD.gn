@@ -30,7 +30,7 @@ fuchsia_component("getifaddrs-netemul-test") {
 fuchsia_test_package("getifaddrs-tests") {
   test_components = [ ":getifaddrs-netemul-test" ]
   deps = [
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }

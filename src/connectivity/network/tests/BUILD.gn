@@ -217,10 +217,10 @@ fuchsia_test_package("netstack-c-api-tests-inner") {
     ":device_name_provider",
 
     # dns_resolver is under test.
-    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/dns:component-legacy",
 
     # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
 
     # netstack-cfg is used to configure netstack in test environments.
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",

@@ -94,26 +94,26 @@ fuchsia_unittest_package("dns-resolver-tests") {
 
 fuchsia_test_package("dns-tests") {
   test_components = [ ":dns_lib_test" ]
-  deps = [ "//src/connectivity/network/netstack:component-debug" ]
+  deps = [ "//src/connectivity/network/netstack:component-debug-legacy" ]
 }
 
 # NOTE(https://fxbug.dev/83213): This component is load bearing out of tree in
 # surprising ways. We can't remove its definition until that's no longer true.
 # See the bug for details.
-fuchsia_component("component") {
+fuchsia_component("component-legacy") {
   component_name = "dns-resolver"
   manifest = "meta/dns-resolver.cmx"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "dns_resolver"
   manifest = "meta/dns_resolver.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("dns-resolver") {
-  deps = [ ":component" ]
+  deps = [ ":component-legacy" ]
 }
 
 group("tests") {

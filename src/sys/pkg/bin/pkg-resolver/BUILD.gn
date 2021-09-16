@@ -140,8 +140,8 @@ fuchsia_test_package("unit-tests-package") {
   package_name = "pkg-resolver-unit-tests"
   deps = [
     ":unit-tests-driver",
-    "//src/connectivity/network/dns:component-v2",
-    "//src/connectivity/network/netstack:component-v2",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
   ]

@@ -43,20 +43,20 @@ rustc_binary("dhcpv6_client") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component("component-legacy") {
   component_name = "dhcpv6-client"
   manifest = "meta/dhcpv6-client.cmx"
   deps = [ ":dhcpv6_client" ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "dhcpv6-client"
   manifest = "meta/dhcpv6-client.cml"
   deps = [ ":dhcpv6_client" ]
 }
 
 fuchsia_package("dhcpv6-client") {
-  deps = [ ":component" ]
+  deps = [ ":component-legacy" ]
 }
 
 group("client") {
@@ -70,7 +70,7 @@ fuchsia_unittest_package("dhcpv6-client-tests") {
 
     # The DHCPv6 client creates sockets so it depends on an implementation of
     # `fuchsia.posix.socket.Provider`.
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
   ]
 }
 

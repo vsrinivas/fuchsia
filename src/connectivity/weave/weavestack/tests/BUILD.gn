@@ -66,7 +66,7 @@ fuchsia_test_package("package-test") {
   package_name = "weavestack-unittests"
   test_components = [ ":weavestack-unittests" ]
   deps = [
-    "//src/connectivity/network/netstack:component-debug-v2",
+    "//src/connectivity/network/netstack:component-debug",
     "//src/connectivity/network/tun/network-tun:component-v2",
   ]
   test_specs = {

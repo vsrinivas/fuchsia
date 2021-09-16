@@ -279,7 +279,7 @@ fuchsia_test_package("mdns-netemul-tests") {
   ]
   deps = [
     ":component",
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",
   ]

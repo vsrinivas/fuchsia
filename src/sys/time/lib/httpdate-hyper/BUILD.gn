@@ -54,6 +54,6 @@ fuchsia_unittest_package("httpdate-hyper-tests") {
   manifest = "meta/httpdate-hyper-lib-test.cmx"
   deps = [
     ":httpdate-hyper_test",
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
   ]
 }

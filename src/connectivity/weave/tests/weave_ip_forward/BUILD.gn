@@ -52,7 +52,7 @@ fuchsia_test_package("weave-ip-fwd-tests") {
   test_components = [ ":weave-ip-fwd-test-wpan-non-subnet-6" ]
   deps = [
     # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component-debug-legacy",
 
     # TODO(jiamingw): figure out what this test should be doing and move it back to test_components.
     ":weave-ip-fwd-test-wpan-subnet-6",

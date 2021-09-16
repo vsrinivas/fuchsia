@@ -72,8 +72,8 @@ fuchsia_test_package("ping3-tests") {
     # The component under test.
     ":component",
 
-    # ping3-tests lauches netstack3.
-    "//src/connectivity/network/netstack3:component",
+    # ping3-tests launches netstack3.
+    "//src/connectivity/network/netstack3:component-legacy",
 
     # ping3-tests uses netemul to create hermetic test environment.
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",

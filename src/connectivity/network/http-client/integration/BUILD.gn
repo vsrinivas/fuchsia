@@ -34,8 +34,8 @@ fuchsia_test_package("http-client-integration-tests") {
   test_components = [ ":component" ]
   deps = [
     # The component under test.
-    "../:component_v2",
-    "//src/connectivity/network/netstack:component-debug-v2",
+    "../:component",
+    "//src/connectivity/network/netstack:component-debug",
   ]
 }
 

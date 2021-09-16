@@ -763,10 +763,10 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":pkg_resolver_zero_blob_network_body_timeout-component",
     ":pkg_resolver_zero_blob_network_header_timeout-component",
     ":pkg_resolver_zero_tuf_metadata_timeout-component",
-    "//src/connectivity/network/dns:component-v2",
+    "//src/connectivity/network/dns:component",
 
     # Isolated, low-deps netstack
-    "//src/connectivity/network/netstack:component-debug-v2",
+    "//src/connectivity/network/netstack:component-debug",
 
     # Embedded archivist, which we need for inspect
     "//src/diagnostics/archivist:archivist-for-embedding",
