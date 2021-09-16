@@ -6,7 +6,7 @@
 
 use argh::FromArgs;
 
-#[derive(Debug, Default, FromArgs, PartialEq)]
+#[derive(FromArgs, PartialEq)]
 #[argh(
     name = "fgsutil",
     description = "GCS download utility for Fuchsia",
@@ -14,7 +14,39 @@ use argh::FromArgs;
     error_code(1, "Invalid credentials.")
 )]
 pub struct Args {
+    #[argh(subcommand)]
+    pub cmd: SubCommand,
+
     /// display version
     #[argh(switch)]
     pub version: bool,
 }
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum SubCommand {
+    Cat(CatArgs),
+    Config(ConfigArgs),
+    Cp(CpArgs),
+    List(ListArgs),
+}
+
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "cat", description = "concatenate object content to stdout")]
+pub struct CatArgs {}
+
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(
+    subcommand,
+    name = "config",
+    description = "obtain credentials and create configuration file"
+)]
+pub struct ConfigArgs {}
+
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "cp", description = "copy files and objects")]
+pub struct CpArgs {}
+
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "list", description = "list providers, buckets, or objects")]
+pub struct ListArgs {}

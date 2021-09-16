@@ -2,15 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-if (is_host) {
-  import("//build/rust/rustc_binary.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
 
-  rustc_binary("fgsutil-host") {
-    testonly = true
+if (is_host) {
+  rustc_binary("fgsutil_bin") {
     name = "fgsutil"
     with_unit_tests = true
     sources = [
       "src/args.rs",
+      "src/config.rs",
       "src/main.rs",
     ]
 
@@ -20,8 +21,15 @@ if (is_host) {
       "//src/lib/gcs",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:home",
       "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:nix",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+    ]
+    test_deps = [
+      "//src/lib/testing/temp_test_env",
+      "//third_party/rust_crates:serial_test",
     ]
   }
 }
@@ -38,5 +46,10 @@ group("fgsutil") {
 group("fgsutil-test") {
   testonly = true
 
-  deps = [ ":fgsutil-host_test($host_toolchain)" ]
+  deps = [ ":fgsutil_bin_test($host_toolchain)" ]
+}
+
+install_host_tools("fgsutil-host") {
+  deps = [ ":fgsutil_bin" ]
+  outputs = [ "fgsutil" ]
 }

@@ -197,6 +197,10 @@ impl TokenStore {
         }
     }
 
+    pub fn refresh_token(&self) -> Option<String> {
+        self.refresh_token.to_owned()
+    }
+
     /// Create localhost base URLs and fake credentials for testing.
     #[cfg(test)]
     fn local_fake(refresh_token: Option<String>) -> Self {
