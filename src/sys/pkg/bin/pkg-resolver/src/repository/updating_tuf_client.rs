@@ -111,13 +111,13 @@ pub enum UpdateResult {
 
 #[derive(Debug)]
 pub struct RepoVersions {
-    #[allow(unused)]
+    #[allow(dead_code)] // fields present so they're included in the Debug output
     root: u32,
-    #[allow(unused)]
+    #[allow(dead_code)]
     timestamp: Option<u32>,
-    #[allow(unused)]
+    #[allow(dead_code)]
     snapshot: Option<u32>,
-    #[allow(unused)]
+    #[allow(dead_code)]
     targets: Option<u32>,
 }
 
