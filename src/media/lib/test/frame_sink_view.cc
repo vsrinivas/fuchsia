@@ -8,11 +8,12 @@
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/frame_sink.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls/object.h>
 
 #include <iomanip>
 #include <memory>
-
-namespace {
+#include <type_traits>
 
 constexpr uint32_t kShapeWidth = 640;
 constexpr uint32_t kShapeHeight = 480;
@@ -27,35 +28,42 @@ constexpr float kInitialWindowYPos = 240;
 // dispatcher's single thread.
 class Frame {
  public:
-  Frame(async_dispatcher_t* dispatcher, ::zx::eventpair& release_eventpair, fit::closure on_done)
-      : wait_(this), on_done_(std::move(on_done)) {
-    zx_status_t status = release_eventpair.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_eventpair_);
+  Frame(FrameSinkView* owner, async_dispatcher_t* dispatcher, ::zx::event& release_event, fit::closure on_done)
+      : owner_(owner), wait_(this), on_done_(std::move(on_done)) {
+    zx_status_t status = release_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &release_event_);
     if (status != ZX_OK) {
       FX_PLOGS(FATAL, status) << "::zx::event::duplicate() failed";
       FX_NOTREACHED();
     }
-    wait_.set_object(release_eventpair_.get());
-    // TODO(dustingreen): We should make it so an eventpair A B can have A wait
-    // for B to be signalled without B's holder caring that it's an eventpair
-    // instead of an event.
-    //
-    // TODO(dustingreen): Have ImagePipe accept eventpair as well as event, or
-    // instead of event.  Maybe have it signal the peer instead of signalling
-    // its end, or maybe signal both ends.
-    //
-    // For now we use the other end getting closed instead of the other end
-    // being signalled, so we can more easily move on if Scenic dies.
-    wait_.set_trigger(ZX_EVENTPAIR_PEER_CLOSED);
+    wait_.set_object(release_event_.get());
+    wait_.set_trigger(ZX_EVENT_SIGNALED);
     status = wait_.Begin(dispatcher);
     if (status != ZX_OK) {
       FX_PLOGS(FATAL, status) << "Begin() failed";
       FX_NOTREACHED();
     }
+    owner_->RegisterFrame(this);
   }
 
   ~Frame() {
-    // on_done_ was already run prior to ~Frame, and set to nullptr.
-    FX_DCHECK(!on_done_);
+    owner_->UnregisterFrame(this);
+    ZX_ASSERT(!on_done_);
+  }
+
+  void CancelFrame() {
+    zx_status_t cancel_status = wait_.Cancel();
+    ZX_DEBUG_ASSERT(cancel_status != ZX_ERR_NOT_SUPPORTED);
+    if (cancel_status != ZX_OK) {
+      // WaitHandler() will run.
+      return;
+    }
+    // WaitHandler won't run.
+    FX_LOGS(INFO) << "CancelFrame() ended wait early. (scenic died?)";
+    on_done_();
+    on_done_ = nullptr;
+
+    // Frame is self-deleting when done.
+    delete this;
   }
 
   // Normally this runs when the remote end of the eventpair is closed.  In
@@ -80,25 +88,29 @@ class Frame {
     on_done_ = nullptr;
 
     // If the handler is called it means the handler needs to delete the frame.
-    // This applies even if the status is ZX_ERR_CANCELED because that'll only
-    // happen if the dispatcher is shutting down, not if a canceller manually
-    // cancels (which we don't do currently anyway).
+    // This applies even if the status is ZX_ERR_CANCELED; that'll only happen
+    // if the dispatcher is shutting down, not if a canceller manually cancels,
+    // which is done in CancelFrame().
     delete this;
   }
 
-  ::zx::eventpair release_eventpair_;
+  FrameSinkView* owner_ = nullptr;
+  ::zx::event release_event_;
   async::WaitMethod<Frame, &Frame::WaitHandler> wait_;
   fit::closure on_done_;
 };
-
-}  // namespace
 
 std::unique_ptr<FrameSinkView> FrameSinkView::Create(scenic::ViewContext context, FrameSink* parent,
                                                      async::Loop* main_loop) {
   return std::unique_ptr<FrameSinkView>(new FrameSinkView(std::move(context), parent, main_loop));
 }
 
-FrameSinkView::~FrameSinkView() { parent_->RemoveFrameSinkView(this); }
+FrameSinkView::~FrameSinkView() {
+  while (!registered_frames_.empty()) {
+    (*registered_frames_.begin())->CancelFrame();
+  }
+  parent_->RemoveFrameSinkView(this);
+}
 
 void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo,
                              uint64_t vmo_offset,
@@ -133,7 +145,9 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
   };
 
   FX_VLOGS(3) << "#### image_id: " << image_id << " width: " << image_info.width
-              << " height: " << image_info.height << " stride: " << image_info.stride;
+              << " height: " << image_info.height << " stride: " << image_info.stride
+              << " pixel_format: " <<
+              static_cast<std::underlying_type_t<decltype(pixel_format)>>(pixel_format);
 
   ::zx::vmo image_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image_vmo);
@@ -152,31 +166,12 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
   image_pipe_->AddImage(image_id, image_info, std::move(image_vmo), vmo_offset, image_vmo_size,
                         fuchsia::images::MemoryType::HOST_MEMORY);
 
-  ::zx::eventpair release_frame_client;
-  ::zx::eventpair release_frame_server;
-  status = ::zx::eventpair::create(0, &release_frame_client, &release_frame_server);
+  ::zx::event release_frame;
+  status = ::zx::event::create(0, &release_frame);
   if (status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "::zx::eventpair::create() failed";
+    FX_PLOGS(FATAL, status) << "::zx::event::create() failed";
     FX_NOTREACHED();
   }
-
-  // TODO(dustingreen): Stop doing this, or rather, do use eventpair(s) but stop
-  // needing to force-cast them to "event" like this, by changing ImagePipe
-  // interface to take eventpair instead.  Specifically, a release fence that's
-  // just an event hampers detection when Scenic dies, since Scenic dying
-  // doesn't set the release fence. What we're doing here for now is forcing an
-  // eventpair to be treated as an event, and then relying on the eventpair
-  // being closed by Scenic (a short while after it's signalled by Scenic, but
-  // we don't notice the signalling because by then we've closed the handle
-  // under release_frame_server).  The alternative of just using an event and
-  // keeping the event handle locally and trying to notice Scenic dying via
-  // other means seems to have some issues around not necessarily knowing that
-  // everything under Scenic is really done with the frame yet.  The alternative
-  // of cloning the VMO per frame and noticing when all the clones are gone is
-  // perhaps workable, but doesn't seem likely to be as efficient as using
-  // eventpair, and it might not work for all types of VMOs (at least at the
-  // moment).
-  ::zx::event release_frame_server_hack(release_frame_server.release());
 
   // There is no expectation that ~frame would be run from this method, but
   // avoid just having a raw pointer since that may be considered harmful-ish.
@@ -198,15 +193,12 @@ void FrameSinkView::PutFrame(uint32_t image_id, zx_time_t present_time, const zx
     image_pipe_->RemoveImage(image_id);
     on_done();
   };
-  auto frame = std::make_unique<Frame>(main_loop_->dispatcher(), release_frame_client,
+  auto frame = std::make_unique<Frame>(this, main_loop_->dispatcher(), release_frame,
                                        std::move(on_done_wrapper));
 
-  // TODO(dustingreen): When release_frame_server_hack is gone, change these to
-  // use "auto".  For now, we'll leave the types explicit to make the temp hack
-  // as obvious as possible.
   ::std::vector<::zx::event> acquire_fences;
   ::std::vector<::zx::event> release_fences;
-  release_fences.push_back(std::move(release_frame_server_hack));
+  release_fences.push_back(std::move(release_frame));
 
   // For the moment we just display every frame asap.  This will hopefully tend
   // to show frames faster than real-time, and provide some general impression
@@ -268,4 +260,12 @@ void FrameSinkView::OnSceneInvalidated(fuchsia::images::PresentationInfo present
   float half_width = width * 0.5f;
   float half_height = height * 0.5f;
   node_.SetTranslation(half_width, half_height, -kDisplayHeight);
+}
+
+void FrameSinkView::RegisterFrame(Frame* frame) {
+  registered_frames_.insert(frame);
+}
+
+void FrameSinkView::UnregisterFrame(Frame* frame) {
+  registered_frames_.erase(frame);
 }

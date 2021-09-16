@@ -805,22 +805,22 @@ void VideoDecoderRunner::Run() {
 
       const fuchsia::media::Packet& packet = output->packet();
 
+      auto increment_frame_index = fit::defer([&frame_index]{
+        ++frame_index;
+      });
+
       if (!packet.has_header()) {
         // The server should not generate any empty packets.
         Exit("broken server sent packet without header");
       }
 
-      // cleanup can run on any thread, and codec_client.RecycleOutputPacket()
-      // is ok with that.  In addition, cleanup can run after codec_client is
-      // gone, since we don't block return from use_video_decoder() on Scenic
-      // actually freeing up all previously-queued frames.
+      // cleanup can run on any thread, and codec_client.RecycleOutputPacket() is ok with that since
+      // it switches to the dispatcher thread before sending a message.
       auto cleanup =
-          fit::defer([this, packet_header = fidl::Clone(packet.header()), &frame_index]() mutable {
-            // Using an auto call for this helps avoid losing track of the
-            // output_buffer.
+          fit::defer([this, packet_header = fidl::Clone(packet.header())]() mutable {
             codec_client_->RecycleOutputPacket(std::move(packet_header));
-            ++frame_index;
           });
+
       std::shared_ptr<const fuchsia::media::StreamOutputFormat> format = output->format();
 
       if (!packet.has_buffer_index()) {

@@ -15,6 +15,8 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/base_view/base_view.h"
 
+#include <unordered_set>
+
 // Sets up an ImagePipe (including scene graph aspects) such that FrameSink can
 // push frames to all the ImagePipe(s) of all the FrameSinkView(s) that are
 // currently active.
@@ -22,6 +24,7 @@
 // Registers with parent on construction and de-registers on destruction.  Only
 // called on the thread that's running |loop|.
 class FrameSink;
+class Frame;
 class FrameSinkView : public scenic::BaseView {
  public:
   static std::unique_ptr<FrameSinkView> Create(scenic::ViewContext context, FrameSink* parent,
@@ -45,6 +48,10 @@ class FrameSinkView : public scenic::BaseView {
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
+  friend class Frame;
+  void RegisterFrame(Frame* frame);
+  void UnregisterFrame(Frame* frame);
+
   FrameSink* parent_;
 
   async::Loop* main_loop_;
@@ -52,6 +59,8 @@ class FrameSinkView : public scenic::BaseView {
   scenic::ShapeNode node_;
 
   fuchsia::images::ImagePipePtr image_pipe_;
+
+  std::unordered_set<Frame*> registered_frames_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameSinkView);
 };
