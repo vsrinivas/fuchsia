@@ -13,7 +13,10 @@ core_realm("core") {
   package_name = core_name
   testonly = true
   restrict_persistent_storage = false
-  deps = [ "//src/sys/pkg/bin/system-updater:system-updater-core-shard" ]
+  deps = [
+    "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
+    "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+  ]
 }
 
 root_realm("root") {
@@ -39,6 +42,7 @@ assemble_system("overnet") {
     "//src/connectivity/overnet/overnetstack:overnetstack_config",
     "//src/connectivity/overnet/tools/debug-serial",
     "//src/sys/pkg/bin/system-updater",
+    "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
   ]
   bootfs_labels = [

@@ -12,7 +12,10 @@ core_realm("core") {
   package_name = core_name
   testonly = true
   restrict_persistent_storage = false
-  deps = [ "//src/sys/pkg/bin/system-updater:system-updater-core-shard" ]
+  deps = [
+    "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
+    "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+  ]
 }
 
 root_realm("root") {
@@ -37,6 +40,7 @@ assemble_system("guest") {
     "//src/sys/pkg/bin/pkg-cache",
     "//src/sys/pkg/bin/pkg-resolver",
     "//src/sys/pkg/bin/system-updater",
+    "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",

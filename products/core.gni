@@ -36,6 +36,7 @@ core_realm_shards = [
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/developer/remote-control:laboratory-core-shard",
+  "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
   "//src/developer/memory/mem:core_shard",
 
