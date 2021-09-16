@@ -8,9 +8,11 @@
 
 BT_FILE_DEPS=(
   "scripts/fx"
+  "tools/devshell/contrib/ffx"
   "tools/devshell/contrib/lib/symbol-index.sh"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/updates.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
   "tools/devshell/symbolize"
@@ -23,6 +25,7 @@ BT_SET_UP() {
   fx="$(btf::setup_fx)"
   symbolizer="$(btf::make_hosttools_mock symbolizer)"
   symbol_index="$(btf::make_hosttools_mock symbol-index)"
+  ffx="$(btf::make_hosttools_mock ffx)"
 }
 
 TEST_symbolize_local() {

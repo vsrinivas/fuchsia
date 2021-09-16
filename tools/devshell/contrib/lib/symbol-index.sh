@@ -24,11 +24,11 @@ function symbol-index {
 }
 
 function ensure-symbol-index-registered {
-  symbol-index add-all <<EOF
+  symbol-index add-all <<EOF || return $?
 ${FUCHSIA_BUILD_DIR}/.build-id     ${FUCHSIA_BUILD_DIR}
 ${FUCHSIA_DIR}/prebuilt/.build-id
 ${PREBUILT_CLANG_DIR}/lib/debug/.build-id
 ${PREBUILT_RUST_DIR}/lib/debug/.build-id
 EOF
-  return $?
+  fx-command-run ffx debug symbol-index add "${FUCHSIA_BUILD_DIR}/.symbol-index.json" || return $?
 }
