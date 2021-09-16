@@ -44,12 +44,18 @@ type SetDescriptionCommand = struct {
     enable bool;
 };
 
+/// "capture" command shall attempt to capture a frame in the specified stream
+type CaptureCommand = struct {
+    stream_id uint32; // Which stream?
+};
+
 type Command = strict union {
     1: set_config SetConfigCommand;
     2: add_stream AddStreamCommand;
     3: set_crop SetCropCommand;
     4: set_resolution SetResolutionCommand;
     5: set_description SetDescriptionCommand;
+    6: capture CaptureCommand;
 };
 
 @discoverable
