@@ -8,6 +8,7 @@
 .checkstyle
 .classpath
 .config
+.ccls-cache
 .envrc
 .flutter_tool_state
 .fx
