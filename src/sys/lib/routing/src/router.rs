@@ -5,7 +5,7 @@
 use {
     crate::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
-        collection::{RouteExposeFromCollection, RouteOfferFromCollection},
+        collection::CollectionServiceProvider,
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
         },
@@ -387,11 +387,11 @@ where
                 Ok(CapabilitySourceInterface::<C>::Collection {
                     collection_name: collection_name.clone(),
                     source_name: offer_decl.source_name().clone(),
-                    capability_provider: Box::new(RouteOfferFromCollection {
+                    capability_provider: Box::new(CollectionServiceProvider {
                         router: self,
                         collection_name,
                         collection_component: collection_component.as_weak(),
-                        offer_decl,
+                        target_decl: offer_decl,
                         sources: sources.clone(),
                         visitor: visitor.clone(),
                         mapper: mapper.clone(),
@@ -446,11 +446,11 @@ where
             ) => Ok(CapabilitySourceInterface::<C>::Collection {
                 collection_name: collection_name.clone(),
                 source_name: expose_decl.source_name().clone(),
-                capability_provider: Box::new(RouteExposeFromCollection {
+                capability_provider: Box::new(CollectionServiceProvider {
                     router: self,
                     collection_name,
                     collection_component: collection_component.as_weak(),
-                    expose_decl,
+                    target_decl: expose_decl,
                     sources: sources.clone(),
                     visitor: visitor.clone(),
                     mapper: mapper.clone(),
