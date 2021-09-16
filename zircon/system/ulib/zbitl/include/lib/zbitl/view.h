@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
+#include <algorithm>
 #include <functional>
 #include <optional>
 #include <type_traits>
@@ -530,6 +531,18 @@ class View {
       }
     }
     return limit_;
+  }
+
+  /// Looks up an item by type, returning the iterator pointing to the first
+  /// match or else end().
+  ///
+  /// Like begin(), find() resets the internal error state and it is the
+  /// responsibility of the caller to take or ignore that error before calling
+  /// this method.
+  iterator find(uint32_t type) {
+    return std::find_if(begin(), end(), [type = type](const value_type& value) -> bool {
+      return value.header->type == type;
+    });
   }
 
   // Replace an item's header with a new one, using an iterator into this

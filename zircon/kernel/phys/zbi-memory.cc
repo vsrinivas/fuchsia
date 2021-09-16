@@ -15,10 +15,7 @@ void InitMemory(void* zbi) {
   zbitl::View<zbitl::ByteView> view{
       zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi))};
 
-  auto it = view.begin();
-  while (it != view.end() && it->header->type != ZBI_TYPE_MEM_CONFIG) {
-    ++it;
-  }
+  auto it = view.find(ZBI_TYPE_MEM_CONFIG);
   if (auto result = view.take_error(); result.is_error()) {
     zbitl::PrintViewError(std::move(result).error_value());
     ZX_PANIC("error occured while parsing the data ZBI");

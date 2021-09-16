@@ -42,10 +42,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   printf("Scanning ZBI of %zu bytes...\n", zbi.size_bytes());
 
   // Search for a payload of type ZBI_TYPE_STORAGE_RAMDISK.
-  auto it = zbi.begin();
-  while (it != zbi.end() && it->header->type != ZBI_TYPE_STORAGE_RAMDISK) {
-    ++it;
-  }
+  auto it = zbi.find(ZBI_TYPE_STORAGE_RAMDISK);
 
   // Ensure there was no error during iteration.
   if (auto result = zbi.take_error(); result.is_error()) {
