@@ -175,23 +175,22 @@ void main() {
     expect(result, contains('/pkg'));
   });
 
-  // TODO(https://fxbug.dev/84377): Uncomment once session restart is fixed.
-  // test('dm reboot', () async {
-  //   // Launch three instances of component.
-  //   await ermine.launchFromAppLauncher('Terminal');
-  //   await _waitForViews(componentUrl, 1, testForFocus: true);
-  //   await waitForPrompt();
+  test('dm reboot', () async {
+    // Launch three instances of component.
+    await ermine.launchFromAppLauncher('Terminal');
+    await _waitForViews(componentUrl, 1, testForFocus: true);
+    await waitForPrompt();
 
-  //   // Inject 'dm reboot' + ENTER
-  //   await inject('dm reboot');
+    // Inject 'dm reboot' + ENTER
+    await inject('dm reboot');
 
-  //   // Now we wait for the sytem to reboot and reconnect. This logic is taken
-  //   // from `sl4f.reboot()`.
-  //   await sl4f.stopServer();
-  //   await Future.delayed(Duration(seconds: 3));
+    // Now we wait for the sytem to reboot and reconnect. This logic is taken
+    // from `sl4f.reboot()`.
+    await sl4f.stopServer();
+    await Future.delayed(Duration(seconds: 3));
 
-  //   // Try to restart SL4F
-  //   await sl4f.startServer();
-  //   expect(await sl4f.isRunning(), isTrue);
-  // }, timeout: Timeout(Duration(minutes: 2)));
+    // Try to restart SL4F
+    await sl4f.startServer();
+    expect(await sl4f.isRunning(), isTrue);
+  }, timeout: Timeout(Duration(minutes: 2)));
 }
