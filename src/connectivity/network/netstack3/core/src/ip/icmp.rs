@@ -42,8 +42,7 @@ use crate::ip::{
     },
     BufferIpTransportContext, IpDeviceIdContext, IpTransportContext, TransportReceiveError,
 };
-use crate::socket::Socket;
-use crate::transport::ConnAddrMap;
+use crate::socket::{ConnSocketMap, Socket};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// The default number of ICMP error messages to send per second.
@@ -95,7 +94,7 @@ pub struct ShouldSendIcmpv6ErrorInfo {
 }
 
 pub(crate) struct IcmpState<A: IpAddress, Instant, S> {
-    conns: ConnAddrMap<IcmpAddr<A>, IcmpConn<S>>,
+    conns: ConnSocketMap<IcmpAddr<A>, IcmpConn<S>>,
     error_send_bucket: TokenBucket<Instant>,
 }
 
@@ -141,7 +140,7 @@ impl Icmpv4StateBuilder {
     pub(crate) fn build<Instant, S>(self) -> Icmpv4State<Instant, S> {
         Icmpv4State {
             inner: IcmpState {
-                conns: ConnAddrMap::default(),
+                conns: ConnSocketMap::default(),
                 error_send_bucket: TokenBucket::new(self.errors_per_second),
             },
             send_timestamp_reply: self.send_timestamp_reply,
@@ -200,7 +199,7 @@ impl Icmpv6StateBuilder {
     pub(crate) fn build<Instant, S>(self) -> Icmpv6State<Instant, S> {
         Icmpv6State {
             inner: IcmpState {
-                conns: ConnAddrMap::default(),
+                conns: ConnSocketMap::default(),
                 error_send_bucket: TokenBucket::new(self.errors_per_second),
             },
         }
@@ -2101,7 +2100,7 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
 }
 
 fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
-    conns: &mut ConnAddrMap<IcmpAddr<I::Addr>, IcmpConn<S>>,
+    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<S>>,
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
     ip: S,

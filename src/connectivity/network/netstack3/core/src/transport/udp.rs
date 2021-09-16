@@ -26,7 +26,7 @@ use crate::ip::{
     icmp::IcmpIpExt, BufferIpTransportContext, BufferTransportIpContext, IpExt, IpPacketFromArgs,
     IpTransportContext, TransportIpContext, TransportReceiveError,
 };
-use crate::transport::{ConnAddrMap, ListenerAddrMap};
+use crate::socket::{ConnSocketMap, ListenerSocketMap};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
 /// A builder for UDP layer state.
@@ -92,9 +92,9 @@ impl<I: Ip> Default for UdpState<I> {
 /// allocate unused local ports.
 #[derive(Default)]
 struct UdpConnectionState<I: Ip> {
-    conns: ConnAddrMap<Conn<I::Addr>>,
-    listeners: ListenerAddrMap<Listener<I::Addr>>,
-    wildcard_listeners: ListenerAddrMap<NonZeroU16>,
+    conns: ConnSocketMap<Conn<I::Addr>>,
+    listeners: ListenerSocketMap<Listener<I::Addr>>,
+    wildcard_listeners: ListenerSocketMap<NonZeroU16>,
 }
 
 enum LookupResult<I: Ip> {
@@ -138,22 +138,22 @@ impl<I: Ip> UdpConnectionState<I> {
         addrs: impl ExactSizeIterator<Item = &'a SpecifiedAddr<I::Addr>> + Clone,
     ) -> HashSet<NonZeroU16> {
         let mut ports = HashSet::new();
-        ports.extend(self.wildcard_listeners.addr_to_listener.keys());
+        ports.extend(self.wildcard_listeners.iter_addrs());
         if addrs.len() == 0 {
             // For wildcard addresses, collect ALL local ports.
-            ports.extend(self.listeners.addr_to_listener.keys().map(|l| l.port));
-            ports.extend(self.conns.addr_to_id.keys().map(|c| c.local_port));
+            ports.extend(self.listeners.iter_addrs().map(|l| l.port));
+            ports.extend(self.conns.iter_addrs().map(|c| c.local_port));
         } else {
             // If `addrs` is not empty, just collect the ones that use the same
             // local addresses.
-            ports.extend(self.listeners.addr_to_listener.keys().filter_map(|l| {
+            ports.extend(self.listeners.iter_addrs().filter_map(|l| {
                 if addrs.clone().any(|a| a == &l.addr) {
                     Some(l.port)
                 } else {
                     None
                 }
             }));
-            ports.extend(self.conns.addr_to_id.keys().filter_map(|c| {
+            ports.extend(self.conns.iter_addrs().filter_map(|c| {
                 if addrs.clone().any(|a| a == &c.local_ip) {
                     Some(c.local_port)
                 } else {
@@ -180,13 +180,12 @@ impl<I: Ip> UdpConnectionState<I> {
                     self.listeners.get_by_addr(&Listener { addr, port }).is_none()
                         && !self
                             .conns
-                            .addr_to_id
-                            .keys()
+                            .iter_addrs()
                             .any(|c| c.local_ip == addr && c.local_port == port)
                 })
                 .unwrap_or_else(|| {
-                    !(self.listeners.addr_to_listener.keys().any(|l| l.port == port)
-                        || self.conns.addr_to_id.keys().any(|c| c.local_port == port))
+                    !(self.listeners.iter_addrs().any(|l| l.port == port)
+                        || self.conns.iter_addrs().any(|c| c.local_port == port))
                 })
     }
 }
@@ -971,7 +970,7 @@ pub fn remove_udp_listener<I: IcmpIpExt, C: UdpContext<I>>(
             .listeners
             .remove_by_listener(id.id)
             .expect("Invalid UDP listener ID")
-            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
             // always only add a single address, so unwrap the first one.
             .first()
             .expect("Unexpected empty UDP listener")
@@ -982,7 +981,7 @@ pub fn remove_udp_listener<I: IcmpIpExt, C: UdpContext<I>>(
             .wildcard_listeners
             .remove_by_listener(id.id)
             .expect("Invalid UDP listener ID")
-            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
             // always only add a single address, so unwrap the first one.
             .first()
             .expect("Unexpected empty UDP listener")
@@ -1008,7 +1007,7 @@ pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpContext<I>>(
             .listeners
             .get_by_listener(id.id)
             .expect("UDP listener not found")
-            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
             // always only add a single address, so unwrap the first one.
             .first()
             .map(|l| l.clone().into())
@@ -1018,7 +1017,7 @@ pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpContext<I>>(
             .wildcard_listeners
             .get_by_listener(id.id)
             .expect("UDP listener not found")
-            // NOTE(brunodalbo) ListenerAddrMap keeps vecs internally, but we
+            // NOTE(brunodalbo) ListenerSocketMap keeps vecs internally, but we
             // always only add a single address, so unwrap the first one.
             .first()
             .map(|l| l.clone().into())
@@ -1531,12 +1530,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-                .conn_state
-                .conns
-                .addr_to_id
-                .keys()
-                .len(),
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
             0
         );
 
@@ -1554,12 +1548,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-                .conn_state
-                .conns
-                .addr_to_id
-                .keys()
-                .len(),
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
             0
         );
         let frames = ctx.frames();
@@ -1620,12 +1609,7 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call.
         assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-                .conn_state
-                .conns
-                .addr_to_id
-                .keys()
-                .len(),
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
             0
         );
 
@@ -1651,12 +1635,7 @@ mod tests {
         // UDP connection count should be zero before and after `send_udp` call
         // (even in the case of errors).
         assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-                .conn_state
-                .conns
-                .addr_to_id
-                .keys()
-                .len(),
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
             0
         );
     }
