@@ -142,6 +142,8 @@ TEST(vkAppStateTest, EnableComputeQueueOnly)
   ASSERT_FALSE(app.has_debug_report);
   ASSERT_FALSE(app.has_amd_statistics);
   ASSERT_FALSE(app.has_subgroup_size_control);
+
+  vk_app_state_destroy(&app);
 }
 
 TEST(vkAppStateTest, EnableComputeQueueAndSwapchain)
@@ -170,6 +172,8 @@ TEST(vkAppStateTest, EnableComputeQueueAndSwapchain)
   ASSERT_FALSE(app.has_debug_report);
   ASSERT_FALSE(app.has_amd_statistics);
   ASSERT_FALSE(app.has_subgroup_size_control);
+
+  vk_app_state_destroy(&app);
 }
 
 TEST(vkAppStateTest, RequireSwapchain)
@@ -231,6 +235,8 @@ TEST(vkAppStateTest, GetQueueFamiliesCombined)
   vk_queue_families_t families = vk_app_state_get_queue_families(&app);
   ASSERT_EQ(families.count, 1u);
   ASSERT_EQ(families.indices[0], app.qfi);
+
+  vk_app_state_destroy(&app);
 }
 
 TEST(vkAppStateTest, GetQueueFamiliesSingle)
@@ -259,4 +265,6 @@ TEST(vkAppStateTest, GetQueueFamiliesSingle)
       ASSERT_EQ(families.indices[0], app.qfi);
       ASSERT_EQ(families.indices[1], app.compute_qfi);
     }
+
+  vk_app_state_destroy(&app);
 }
