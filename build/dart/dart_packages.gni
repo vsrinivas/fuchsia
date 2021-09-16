@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This exists to allow a soft, coordinated move of FIDL and related Dart
-# packages and tools from topaz to fuchsia.git.
+# This exists to allow for a more complete graph of dart code exposed in
+# the sdk for dartdoc generation.
 # Please also update dart_packages_list below.
 
 dart_package_label = {
@@ -43,5 +43,3 @@ dart_packages_list = [
   dart_package_label.fuchsia_webview_flutter,
   dart_package_label.zircon,
 ]
-
-fidlgen_dart_topaz_output_name = "fidlgen_dart_topaz"

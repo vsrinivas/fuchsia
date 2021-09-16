@@ -80,7 +80,6 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   escher_image_info.sample_count = 1;
   // If this image is shared cross-process these flags (and all other
   // vkCreateImage parameters) need to match those in the other process.
-  // Other locations that need to match: topaz/flutter_runner/vulkan_surface.cc
   escher_image_info.usage =
       vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;

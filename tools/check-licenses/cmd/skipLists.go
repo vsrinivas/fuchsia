@@ -56,8 +56,6 @@ var additionalSkipDirs = []string{
 	"tools/fidl/fidldoc/src/templates/markdown/testdata",
 	"tools/fidl/gidl/mixer/testdata",
 	"tools/testing",
-	"topaz/bin/dart_fidl_json/test",
-	"topaz/public/dart/composition_delegate/test",
 	"zircon/kernel/lib/devicetree/tests",
 	"zircon/system/ulib/bitmap/test",
 	"zircon/system/ulib/elfload/test",

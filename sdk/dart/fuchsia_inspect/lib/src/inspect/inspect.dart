@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library topaz.public.dart.fuchsia_inspect.inspect.inspect;
-
 import 'dart:typed_data';
 
 import 'package:fuchsia_services/services.dart';

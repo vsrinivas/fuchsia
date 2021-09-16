@@ -35,7 +35,6 @@ group("no_e2e_dep") {
     "//src/media/bundles:tools",
     "//third_party/go:tests",
     "//tools",
-    "//topaz/bundles:buildbot",
 
     # The following groups have known e2e tests explicitly excluded.
     "//bundles/fidl:tests_no_e2e",

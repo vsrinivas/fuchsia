@@ -104,8 +104,6 @@ func GetGIStatus(ci *ChangeInfo) (GIStatus, error) {
 	switch ci.Project {
 	case "fuchsia":
 		name = "stem"
-	case "topaz":
-		name = "topaz/minimal"
 	case "experiences":
 		name = "flower"
 	default:

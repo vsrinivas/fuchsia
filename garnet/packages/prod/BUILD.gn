@@ -333,7 +333,7 @@ group("sbase") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
-# WARNING: Known to topaz & vendor.
+# WARNING: Known to vendor.
 group("scenic") {
   public_deps = [ "//src/ui/scenic:runtime" ]
 }

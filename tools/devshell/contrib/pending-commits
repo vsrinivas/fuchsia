@@ -18,7 +18,6 @@ import xml.etree.ElementTree as xml
 
 PETALS = [
     ('experiences', 'https://fuchsia.googlesource.com/integration/+/HEAD/flower?format=TEXT'),
-    ('topaz', 'https://fuchsia.googlesource.com/integration/+/HEAD/topaz/minimal?format=TEXT'),
     ('fuchsia', 'https://fuchsia.googlesource.com/integration/+/HEAD/stem?format=TEXT'),
 ]
 
@@ -27,7 +26,6 @@ PETALS = [
 IGNORED_AUTHORS = [
     'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com',
     'third-party-roller',
-    'topaz-roller',
     'peridot-roller',
     'garnet-roller',
     'zircon-roller',

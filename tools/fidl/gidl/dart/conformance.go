@@ -27,8 +27,8 @@ import 'dart:typed_data';
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_conformance/fidl_async.dart';
 import 'package:test/test.dart';
-import 'package:topaz.lib.gidl/gidl.dart';
-import 'package:topaz.lib.gidl/handles.dart';
+import 'package:sdk.dart.lib.gidl/gidl.dart';
+import 'package:sdk.dart.lib.gidl/handles.dart';
 import 'package:zircon/zircon.dart';
 
 void main() {

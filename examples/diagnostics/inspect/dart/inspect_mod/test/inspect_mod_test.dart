@@ -109,7 +109,7 @@ Future<void> _launchModUnderTest() async {
 Future<FakeVmoHolder> _readInspect() async {
   // WARNING: 0) These paths are extremely fragile.
   var globs = [
-    // TODO(fxb/38305): Address or remove this old TODO, and reenable test in //topaz/BUILD.gn.
+    // TODO(fxb/38305): Address or remove this old TODO, and reenable test in //sdk/dart/BUILD.gn.
     //   CL should have landed so stories reuse session envs. This breaks hardcoded inspect paths.
     //   Old TODO: remove this one once stories reuse session envs.
     '/hub/r/modular_test_harness_*/*/r/session-*/*/r/*/*/c/flutter_*_runner.cmx/*/c/$_testAppName/*/out/{debug,diagnostics}/root.inspect',

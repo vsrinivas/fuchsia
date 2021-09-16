@@ -138,7 +138,6 @@ group("all") {
   ]
 }
 
-# WARNING: Known to topaz.
 group("scenic") {
   testonly = true
   public_deps = [

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:test/test.dart';
-import 'package:topaz.lib.gidl/handles.dart';
+import 'package:sdk.dart.lib.gidl/handles.dart';
 import 'package:zircon/zircon.dart';
 
 void main() {

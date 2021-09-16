@@ -33,7 +33,7 @@ import 'package:fuchsia/fuchsia.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 {{- if .UsesHandles }}
-import 'package:topaz.lib.gidl/handles.dart';
+import 'package:sdk.dart.lib.gidl/handles.dart';
 {{- end }}
 
 typedef _CallbackSetter = void Function(void Function());

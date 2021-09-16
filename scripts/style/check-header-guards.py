@@ -2,7 +2,6 @@
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Script to check C and C++ file header guards.
 
 This script accepts a list of file or directory arguments. If a given
@@ -17,7 +16,6 @@ and
 both want to use LIB_ABC_XYZ_XYZ_H_ as a header guard.
 
 """
-
 
 import argparse
 import collections
@@ -40,11 +38,7 @@ SYSROOT_PREFIXES = [
 sysroot_prefix = re.compile('^(' + '|'.join(SYSROOT_PREFIXES) + ')_')
 
 PUBLIC_PREFIXES = [
-    'ZIRCON_SYSTEM_ULIB_.*_INCLUDE',
-    'GARNET_PUBLIC',
-    'PERIDOT_PUBLIC',
-    'TOPAZ_PUBLIC',
-    'SDK'
+    'ZIRCON_SYSTEM_ULIB_.*_INCLUDE', 'GARNET_PUBLIC', 'PERIDOT_PUBLIC', 'SDK'
 ]
 public_prefix = re.compile('^(' + '|'.join(PUBLIC_PREFIXES) + ')_')
 
@@ -52,6 +46,7 @@ all_header_guards = collections.defaultdict(list)
 
 pragma_once = re.compile('^#pragma once$')
 disallowed_header_characters = re.compile('[^a-zA-Z0-9_]')
+
 
 def adjust_for_location(header_guard):
     """Remove internal location prefix from public headers if applicable."""
@@ -65,7 +60,7 @@ def adjust_for_location(header_guard):
 
 def header_guard_from_path(path):
     """Compute the header guard from the path"""
-    assert(path.startswith(FUCHSIA_ROOT))
+    assert (path.startswith(FUCHSIA_ROOT))
     relative_path = path[len(FUCHSIA_ROOT):].strip('/')
     upper_path = relative_path.upper()
     header_guard = re.sub(disallowed_header_characters, '_', upper_path) + '_'
@@ -146,27 +141,31 @@ def check_file(path, fix_guards=False):
         return True
 
     if not found_ifndef:
-      print('%s did not contain ifndef part of its header guard' % path)
+        print('%s did not contain ifndef part of its header guard' % path)
     elif not found_define:
-      print('%s did not contain define part of its header guard' % path)
+        print('%s did not contain define part of its header guard' % path)
     elif not found_endif:
-      print('%s did not contain endif part of its header guard' % path)
+        print('%s did not contain endif part of its header guard' % path)
     elif fix_guards:
         if found_pragma_once:
             print('%s contained #pragma once instead of a header guard' % path)
         else:
-            print('%s did not contain a header guard or the header guard did '
-                  'not match the file path' % path)
+            print(
+                '%s did not contain a header guard or the header guard did '
+                'not match the file path' % path)
     else:
-        print('%s contained neither a proper header guard nor #pragma once' %
-              path)
+        print(
+            '%s contained neither a proper header guard nor #pragma once' %
+            path)
 
     header_guards_fixed = False
     if fix_guards:
         header_guards_fixed = fix_header_guard(path, header_guard)
 
     if not header_guards_fixed:
-        print('Allowable header guard values are %s' % list(all_header_guards.keys()))
+        print(
+            'Allowable header guard values are %s' %
+            list(all_header_guards.keys()))
 
     return False
 
@@ -182,23 +181,18 @@ def fix_header_guard(path, header_guard):
     fixed_pragma_once = False
 
     for line in fileinput.input(path, inplace=1):
-        (new_line, changes) = re.subn(ifndef,
-                                      '#ifndef %s' % header_guard,
-                                      line)
+        (new_line, changes) = re.subn(ifndef, '#ifndef %s' % header_guard, line)
         if changes:
             fixed_ifndef = True
             sys.stdout.write(new_line)
             continue
-        (new_line, changes) = re.subn(define,
-                                      '#define %s' % header_guard,
-                                      line)
+        (new_line, changes) = re.subn(define, '#define %s' % header_guard, line)
         if changes:
             fixed_define = True
             sys.stdout.write(new_line)
             continue
-        (new_line, changes) = re.subn(endif,
-                                      '#endif  // %s' % header_guard,
-                                      line)
+        (new_line,
+         changes) = re.subn(endif, '#endif  // %s' % header_guard, line)
         if changes:
             fixed_endif = True
             sys.stdout.write(new_line)
@@ -249,9 +243,8 @@ def check_collisions():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fix',
-                        help='Correct wrong header guards',
-                        action='store_true')
+    parser.add_argument(
+        '--fix', help='Correct wrong header guards', action='store_true')
     (arg_results, other_args) = parser.parse_known_args()
     fix_guards = arg_results.fix
     for p in other_args:

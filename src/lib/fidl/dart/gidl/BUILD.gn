@@ -6,7 +6,7 @@ import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
 
 dart_library("gidl") {
-  package_name = "topaz.lib.gidl"
+  package_name = "sdk.dart.lib.gidl"
   sources = [
     "gidl.dart",
     "handles.dart",

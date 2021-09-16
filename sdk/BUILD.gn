@@ -550,9 +550,6 @@ sdk("fuchsia_dart") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
 
     # Direct FIDL deps.
-    # Relying on transitive deps originating in fuchsia.git
-    # makes it impossible to land certain changes without breaking
-    # //topaz.
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
     "//sdk/dart/fidl:fidl_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia:fuchsia_sdk($dart_toolchain)",

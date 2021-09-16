@@ -1,5 +1,5 @@
 if (( $CURRENT == 2 )); then
   local vendors=$(cd ${FUCHSIA_DIR} >/dev/null 2>&1; ls -1d vendor/*(/N) | grep -v third_party)
-  compadd garnet peridot topaz $vendors
+  compadd garnet peridot $vendors
 fi
 

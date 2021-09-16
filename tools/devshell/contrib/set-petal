@@ -6,7 +6,7 @@
 #### CATEGORY=Source tree
 ### configure jiri to manage a specific petal
 
-## usage: fx set-petal none|fuchsia|topaz
+## usage: fx set-petal none|fuchsia
 ##
 ## "none" configures jiri to fetch all repos at the global integration version,
 ## and is the recommended default.
@@ -28,7 +28,6 @@ fi
 petal="$1"
 
 if [[ "${petal}" != "fuchsia" ]] &&
-   [[ "${petal}" != "topaz" ]] &&
    [[ "${petal}" != "none" ]]; then
   fx-command-help
   exit 1

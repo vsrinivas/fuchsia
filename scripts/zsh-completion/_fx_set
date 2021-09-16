@@ -15,7 +15,7 @@ _fx_set__package_caching_policy() {
 
 # complete comma separated bundles labels
 _fx_set__with() {
-  local -a package_patterns=( "//bundles/*" "//garnet/packages/*" "//peridot/packages/*" "//topaz/packages/*" )
+  local -a package_patterns=( "//bundles/*" "//garnet/packages/*" "//peridot/packages/*" )
   for vendor in ${fuchsia_dir}/vendor/*(N/); do
     package_patterns+=( "//vendor/${vendor}/bundles" "//vendor/${vendor}/packages" )
   done

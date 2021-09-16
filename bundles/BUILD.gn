@@ -118,7 +118,6 @@ group("kitchen_sink") {
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
-    "//topaz",
   ]
 }
 
