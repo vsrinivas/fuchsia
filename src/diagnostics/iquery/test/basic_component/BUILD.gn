@@ -25,12 +25,6 @@ rustc_binary("bin") {
   sources = [ "main.rs" ]
 }
 
-fuchsia_component("basic_component_v1") {
-  testonly = true
-  manifest = "meta/basic_component.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("basic_component") {
   testonly = true
   manifest = "meta/basic_component.cml"
