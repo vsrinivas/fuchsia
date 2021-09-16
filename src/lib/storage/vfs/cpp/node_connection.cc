@@ -51,6 +51,15 @@ void NodeConnection::Close(CloseRequestView request, CloseCompleter::Sync& compl
   }
 }
 
+void NodeConnection::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+  auto result = Connection::NodeClose();
+  if (result.is_error()) {
+    completer.ReplyError(result.error());
+  } else {
+    completer.Reply({});
+  }
+}
+
 void NodeConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   auto result = Connection::NodeDescribe();
   if (result.is_error()) {

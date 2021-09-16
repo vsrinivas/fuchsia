@@ -34,6 +34,10 @@ void FileConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::N
 
 void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
+void FileConnection::Close2(Close2Callback callback) {
+  Connection::Close2(vn_, std::move(callback));
+}
+
 void FileConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

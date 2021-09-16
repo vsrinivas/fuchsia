@@ -34,6 +34,10 @@ void NodeConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::N
 
 void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
+void NodeConnection::Close2(Close2Callback callback) {
+  Connection::Close2(vn_, std::move(callback));
+}
+
 void NodeConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

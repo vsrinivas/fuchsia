@@ -37,6 +37,12 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
     zxio_tests::TestFileServerBase::Close(request, completer);
   }
 
+  // Exercised by |zxio_close|.
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    num_close_.fetch_add(1);
+    zxio_tests::TestFileServerBase::Close2(request, completer);
+  }
+
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(

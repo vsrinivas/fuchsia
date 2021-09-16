@@ -25,6 +25,14 @@ void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
   // |this| is destroyed at this point.
 }
 
+void Connection::Close2(Node* vn, fuchsia::io::Node::Close2Callback callback) {
+  zx_status_t status = vn->PreClose(this);
+  callback(status == ZX_OK ? fuchsia::io::Node_Close2_Result::WithResponse({})
+                           : fuchsia::io::Node_Close2_Result::WithErr(std::move(status)));
+  vn->Close(this);
+  // |this| is destroyed at this point.
+}
+
 void Connection::Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback) {
   fuchsia::io::NodeInfo info{};
   vn->Describe(&info);

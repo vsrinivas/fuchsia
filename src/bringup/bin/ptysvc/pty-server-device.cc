@@ -64,6 +64,10 @@ void PtyServerDevice::Close(CloseRequestView request, CloseCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
+void PtyServerDevice::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyServerDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

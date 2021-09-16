@@ -83,6 +83,10 @@ void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

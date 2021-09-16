@@ -32,6 +32,12 @@ class Server final : public fuchsia_io::testing::Node_TestBase {
     completer.Close(ZX_OK);
   }
 
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    EXPECT_OK(completer.Reply({}).status());
+    // FDIO expects the channel to be closed after replying.
+    completer.Close(ZX_OK);
+  }
+
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     ASSERT_TRUE(describe_info_.has_value(), "Describe called more than once");
     EXPECT_OK(completer.Reply(std::move(*describe_info_)).status());

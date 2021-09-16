@@ -35,6 +35,14 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
     completer.Close(ZX_OK);
   }
 
+  // Exercised by |zxio_close|.
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    num_close_.fetch_add(1);
+    completer.Reply({});
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

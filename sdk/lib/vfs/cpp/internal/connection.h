@@ -90,6 +90,7 @@ class Connection {
 
   void Clone(Node* vn, uint32_t flags, zx::channel request, async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
+  void Close2(Node* vn, fuchsia::io::Node::Close2Callback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);

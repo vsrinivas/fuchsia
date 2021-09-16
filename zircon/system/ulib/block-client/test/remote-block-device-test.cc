@@ -96,6 +96,7 @@ class MockBlockDevice {
     }
 
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
+    void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {}
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
     void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
     void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}

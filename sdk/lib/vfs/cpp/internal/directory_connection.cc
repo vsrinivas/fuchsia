@@ -36,6 +36,10 @@ void DirectoryConnection::Close(CloseCallback callback) {
   Connection::Close(vn_, std::move(callback));
 }
 
+void DirectoryConnection::Close2(Close2Callback callback) {
+  Connection::Close2(vn_, std::move(callback));
+}
+
 void DirectoryConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

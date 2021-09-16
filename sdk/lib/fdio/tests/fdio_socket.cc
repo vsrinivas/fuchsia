@@ -46,6 +46,11 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Close(ZX_OK);
   }
 
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    completer.Reply({});
+    completer.Close(ZX_OK);
+  }
+
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
     auto response = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResponse();
     auto result = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResult::WithResponse(

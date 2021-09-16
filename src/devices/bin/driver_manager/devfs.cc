@@ -98,6 +98,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -758,6 +759,10 @@ void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& c
 
 void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void DcIostate::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx::unowned_channel devfs_root_borrow() { return zx::unowned_channel(g_devfs_root); }

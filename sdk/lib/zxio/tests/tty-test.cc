@@ -31,6 +31,12 @@ class WindowSizeTtyServer : public fuchsia_hardware_pty::testing::Device_TestBas
     completer.Close(ZX_OK);
   }
 
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    completer.Reply({});
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);

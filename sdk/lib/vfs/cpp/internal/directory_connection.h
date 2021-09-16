@@ -30,6 +30,7 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   // |fuchsia::io::Directory| Implementation:
   void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
+  void Close2(Close2Callback callback) override;
   void Describe(DescribeCallback callback) override;
   void Sync(SyncCallback callback) override;
   void GetAttr(GetAttrCallback callback) override;
