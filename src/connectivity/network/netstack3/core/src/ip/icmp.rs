@@ -43,7 +43,7 @@ use crate::ip::{
     BufferIpTransportContext, IpDeviceIdContext, IpTransportContext, TransportReceiveError,
 };
 use crate::socket::{ConnSocketMap, Socket};
-use crate::{BufferDispatcher, Context, EventDispatcher};
+use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
 /// The default number of ICMP error messages to send per second.
 ///
@@ -442,7 +442,7 @@ pub(crate) trait Icmpv6SocketContext:
     ) -> (&mut Icmpv6State<Self::Instant, Self::IpSocket>, &<Self::IpSocket as Socket>::UpdateMeta);
 }
 
-impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Context<D> {
+impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Ctx<D> {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, err: Icmpv4ErrorCode) {
         IcmpEventDispatcher::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
     }
@@ -452,7 +452,7 @@ impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Context<D> {
     }
 }
 
-impl<D: EventDispatcher> IcmpSocketContext<Ipv6> for Context<D> {
+impl<D: EventDispatcher> IcmpSocketContext<Ipv6> for Ctx<D> {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, err: Icmpv6ErrorCode) {
         IcmpEventDispatcher::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
     }
@@ -462,19 +462,19 @@ impl<D: EventDispatcher> IcmpSocketContext<Ipv6> for Context<D> {
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpSocketContext<Ipv4, B> for Context<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpSocketContext<Ipv4, B> for Ctx<D> {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, data: B) {
         self.dispatcher_mut().receive_icmp_echo_reply(conn, seq_num, data);
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpSocketContext<Ipv6, B> for Context<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpSocketContext<Ipv6, B> for Ctx<D> {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, data: B) {
         self.dispatcher_mut().receive_icmp_echo_reply(conn, seq_num, data);
     }
 }
 
-impl<D: EventDispatcher> Icmpv4SocketContext for Context<D> {
+impl<D: EventDispatcher> Icmpv4SocketContext for Ctx<D> {
     fn get_state_and_update_meta(
         &mut self,
     ) -> (
@@ -486,7 +486,7 @@ impl<D: EventDispatcher> Icmpv4SocketContext for Context<D> {
     }
 }
 
-impl<D: EventDispatcher> Icmpv6SocketContext for Context<D> {
+impl<D: EventDispatcher> Icmpv6SocketContext for Ctx<D> {
     fn get_state_and_update_meta(
         &mut self,
     ) -> (
@@ -778,8 +778,8 @@ where
 macro_rules! try_send_error {
     ($ctx:expr, $e:expr) => {{
         // TODO(joshlf): Figure out a way to avoid querying for the current time
-        // unconditionally. See the documentation on the `CachedInstantContext`
-        // type for more information.
+        // unconditionally. See the documentation on the `CachedInstantCtx` type
+        // for more information.
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
         let state: &mut IcmpState<_, _, _> = $ctx.get_state_mut();
         if state.error_send_bucket.try_take(&instant_ctx) {
@@ -1975,7 +1975,7 @@ fn receive_icmp_echo_reply<I: IcmpIpExt, B: BufferMut, C: BufferIcmpContext<I, B
 /// `send_icmpv4_echo_request` panics if `conn` is not associated with an ICMPv4
 /// connection.
 pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
@@ -1990,7 +1990,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
 /// `send_icmpv6_echo_request` panics if `conn` is not associated with an ICMPv6
 /// connection.
 pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
@@ -2036,7 +2036,7 @@ where
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns an [`NetstackError`].
 pub fn new_icmpv4_connection<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
@@ -2072,7 +2072,7 @@ fn new_icmpv4_connection_inner<C: Icmpv4SocketContext>(
 /// If a connection with the conflicting parameters already exists, the call
 /// fails and returns an [`NetstackError`].
 pub fn new_icmpv6_connection<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
@@ -2132,11 +2132,11 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::context::testutil::{DummyContext, DummyInstant};
+    use crate::context::testutil::{DummyCtx, DummyInstant};
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
     use crate::ip::gmp::mld::MldPacketHandler;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
-    use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
+    use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketCtx};
     use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
@@ -2146,14 +2146,14 @@ mod tests {
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
         fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
             icmp_id: u16,
         ) -> Result<IcmpConnId<Self>, SocketError>;
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             conn: IcmpConnId<Self>,
             seq_num: u16,
             body: B,
@@ -2162,7 +2162,7 @@ mod tests {
 
     impl TestIpExt for Ipv4 {
         fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
             icmp_id: u16,
@@ -2171,7 +2171,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
             body: B,
@@ -2182,7 +2182,7 @@ mod tests {
 
     impl TestIpExt for Ipv6 {
         fn new_icmp_connection<D: EventDispatcher>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
             icmp_id: u16,
@@ -2191,7 +2191,7 @@ mod tests {
         }
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
-            ctx: &mut Context<D>,
+            ctx: &mut Ctx<D>,
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,
             body: B,
@@ -2849,9 +2849,9 @@ mod tests {
 
     // Tests that only require an ICMP stack. Unlike the preceding tests, these
     // only test the ICMP stack and state, and mock everything else. We define
-    // the `DummyIcmpv4Context` and `DummyIcmpv6Context` types, which we wrap in
-    // a `DummyContext` to provide automatic implementations of a number of
-    // required traits. The rest we implement manually.
+    // the `DummyIcmpv4Ctx` and `DummyIcmpv6Ctx` types, which we wrap in a
+    // `DummyCtx` to provide automatic implementations of a number of required
+    // traits. The rest we implement manually.
 
     // The arguments to `IcmpContext::send_icmp_reply`.
     #[derive(Debug, PartialEq)]
@@ -2898,7 +2898,7 @@ mod tests {
         err: I::ErrorCode,
     }
 
-    struct DummyIcmpContext<I: IcmpIpExt> {
+    struct DummyIcmpCtx<I: IcmpIpExt> {
         // All calls to `IcmpContext::send_icmp_reply`.
         send_icmp_reply: Vec<SendIcmpReplyArgs<I::Addr>>,
         // All calls to `IcmpContext::send_icmp_error_message`.
@@ -2913,24 +2913,24 @@ mod tests {
         receive_icmp_socket_error: Vec<ReceiveIcmpSocketErrorArgs<I>>,
         close_icmp_connection: Vec<CloseIcmpConnectionArgs<I>>,
         pmtu_state: DummyPmtuState<I::Addr>,
-        socket_ctx: DummyIpSocketContext<I>,
+        socket_ctx: DummyIpSocketCtx<I>,
     }
 
-    impl Default for DummyIcmpContext<Ipv4> {
-        fn default() -> DummyIcmpContext<Ipv4> {
-            DummyIcmpContext::new(DummyIpSocketContext::new(DUMMY_CONFIG_V4.local_ip, true))
+    impl Default for DummyIcmpCtx<Ipv4> {
+        fn default() -> DummyIcmpCtx<Ipv4> {
+            DummyIcmpCtx::new(DummyIpSocketCtx::new(DUMMY_CONFIG_V4.local_ip, true))
         }
     }
 
-    impl Default for DummyIcmpContext<Ipv6> {
-        fn default() -> DummyIcmpContext<Ipv6> {
-            DummyIcmpContext::new(DummyIpSocketContext::new(DUMMY_CONFIG_V6.local_ip, true))
+    impl Default for DummyIcmpCtx<Ipv6> {
+        fn default() -> DummyIcmpCtx<Ipv6> {
+            DummyIcmpCtx::new(DummyIpSocketCtx::new(DUMMY_CONFIG_V6.local_ip, true))
         }
     }
 
-    impl<I: IcmpIpExt> DummyIcmpContext<I> {
-        fn new(socket_ctx: DummyIpSocketContext<I>) -> DummyIcmpContext<I> {
-            DummyIcmpContext {
+    impl<I: IcmpIpExt> DummyIcmpCtx<I> {
+        fn new(socket_ctx: DummyIpSocketCtx<I>) -> DummyIcmpCtx<I> {
+            DummyIcmpCtx {
                 send_icmp_reply: Vec::new(),
                 send_icmp_error_message: Vec::new(),
                 receive_icmp_echo_reply: Vec::new(),
@@ -2943,35 +2943,35 @@ mod tests {
         }
     }
 
-    struct DummyIcmpv4Context {
-        inner: DummyIcmpContext<Ipv4>,
+    struct DummyIcmpv4Ctx {
+        inner: DummyIcmpCtx<Ipv4>,
         icmp_state: Icmpv4State<DummyInstant, DummyIpSocket<Ipv4>>,
     }
 
-    struct DummyIcmpv6Context {
-        inner: DummyIcmpContext<Ipv6>,
+    struct DummyIcmpv6Ctx {
+        inner: DummyIcmpCtx<Ipv6>,
         icmp_state: Icmpv6State<DummyInstant, DummyIpSocket<Ipv6>>,
     }
 
-    impl Default for DummyIcmpv4Context {
-        fn default() -> DummyIcmpv4Context {
-            DummyIcmpv4Context {
-                inner: DummyIcmpContext::default(),
+    impl Default for DummyIcmpv4Ctx {
+        fn default() -> DummyIcmpv4Ctx {
+            DummyIcmpv4Ctx {
+                inner: DummyIcmpCtx::default(),
                 icmp_state: Icmpv4StateBuilder::default().build(),
             }
         }
     }
 
-    impl Default for DummyIcmpv6Context {
-        fn default() -> DummyIcmpv6Context {
-            DummyIcmpv6Context {
-                inner: DummyIcmpContext::default(),
+    impl Default for DummyIcmpv6Ctx {
+        fn default() -> DummyIcmpv6Ctx {
+            DummyIcmpv6Ctx {
+                inner: DummyIcmpCtx::default(),
                 icmp_state: Icmpv6StateBuilder::default().build(),
             }
         }
     }
 
-    impl Icmpv4SocketContext for Dummyv4Context {
+    impl Icmpv4SocketContext for Dummyv4Ctx {
         fn get_state_and_update_meta(
             &mut self,
         ) -> (&mut Icmpv4State<DummyInstant, DummyIpSocket<Ipv4>>, &()) {
@@ -2979,7 +2979,7 @@ mod tests {
         }
     }
 
-    impl Icmpv6SocketContext for Dummyv6Context {
+    impl Icmpv6SocketContext for Dummyv6Ctx {
         fn get_state_and_update_meta(
             &mut self,
         ) -> (&mut Icmpv6State<DummyInstant, DummyIpSocket<Ipv6>>, &()) {
@@ -2991,7 +2991,7 @@ mod tests {
     /// context types.
     macro_rules! impl_context_traits {
         ($ip:ident, $inner:ident, $outer:ident, $state:ident, $info_type:ident, $should_send:expr) => {
-            type $outer = DummyContext<$inner>;
+            type $outer = DummyCtx<$inner>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
@@ -3013,14 +3013,14 @@ mod tests {
                 }
             }
 
-            impl AsRef<DummyIpSocketContext<$ip>> for $inner {
-                fn as_ref(&self) -> &DummyIpSocketContext<$ip> {
+            impl AsRef<DummyIpSocketCtx<$ip>> for $inner {
+                fn as_ref(&self) -> &DummyIpSocketCtx<$ip> {
                     &self.inner.socket_ctx
                 }
             }
 
-            impl AsMut<DummyIpSocketContext<$ip>> for $inner {
-                fn as_mut(&mut self) -> &mut DummyIpSocketContext<$ip> {
+            impl AsMut<DummyIpSocketCtx<$ip>> for $inner {
+                fn as_mut(&mut self) -> &mut DummyIpSocketCtx<$ip> {
                     &mut self.inner.socket_ctx
                 }
             }
@@ -3161,22 +3161,22 @@ mod tests {
 
     impl_context_traits!(
         Ipv4,
-        DummyIcmpv4Context,
-        Dummyv4Context,
+        DummyIcmpv4Ctx,
+        Dummyv4Ctx,
         Icmpv4State,
         ShouldSendIcmpv4ErrorInfo,
         |f, s, d, i| { should_send_icmpv4_error(f, s, d, i) }
     );
     impl_context_traits!(
         Ipv6,
-        DummyIcmpv6Context,
-        Dummyv6Context,
+        DummyIcmpv6Ctx,
+        Dummyv6Ctx,
         Icmpv6State,
         ShouldSendIcmpv6ErrorInfo,
         |f, s, d, i| { should_send_icmpv6_error(f, s, d, i) }
     );
 
-    impl NdpPacketHandler<DummyDeviceId> for Dummyv6Context {
+    impl NdpPacketHandler<DummyDeviceId> for Dummyv6Ctx {
         fn receive_ndp_packet<B: ByteSlice>(
             &mut self,
             _device: DummyDeviceId,
@@ -3188,7 +3188,7 @@ mod tests {
         }
     }
 
-    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6Context {
+    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6Ctx {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
             _device: DummyDeviceId,
@@ -3224,7 +3224,7 @@ mod tests {
         fn test_receive_icmpv4_error_helper<
             C: Debug,
             M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + Debug,
-            F: Fn(&Dummyv4Context),
+            F: Fn(&Dummyv4Ctx),
         >(
             original_packet: &mut [u8],
             code: C,
@@ -3234,7 +3234,7 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv4Context::default();
+            let mut ctx = Dummyv4Ctx::default();
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
@@ -3535,7 +3535,7 @@ mod tests {
         fn test_receive_icmpv6_error_helper<
             C: Debug,
             M: for<'a> IcmpMessage<Ipv6, &'a [u8], Code = C> + Debug,
-            F: Fn(&Dummyv6Context),
+            F: Fn(&Dummyv6Ctx),
         >(
             original_packet: &mut [u8],
             code: C,
@@ -3545,7 +3545,7 @@ mod tests {
         ) {
             crate::testutil::set_logger_for_test();
 
-            let mut ctx = Dummyv6Context::default();
+            let mut ctx = Dummyv6Ctx::default();
             // NOTE: This assertion is not a correctness requirement. It's just
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
@@ -3821,7 +3821,7 @@ mod tests {
         crate::testutil::set_logger_for_test();
 
         /// Call `send_icmpv4_ttl_expired` with dummy values.
-        fn send_icmpv4_ttl_expired_helper(ctx: &mut Dummyv4Context) {
+        fn send_icmpv4_ttl_expired_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_ttl_expired(
                 ctx,
                 DummyDeviceId,
@@ -3836,7 +3836,7 @@ mod tests {
         }
 
         /// Call `send_icmpv4_parameter_problem` with dummy values.
-        fn send_icmpv4_parameter_problem_helper(ctx: &mut Dummyv4Context) {
+        fn send_icmpv4_parameter_problem_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_parameter_problem(
                 ctx,
                 DummyDeviceId,
@@ -3852,7 +3852,7 @@ mod tests {
         }
 
         /// Call `send_icmpv4_dest_unreachable` with dummy values.
-        fn send_icmpv4_dest_unreachable_helper(ctx: &mut Dummyv4Context) {
+        fn send_icmpv4_dest_unreachable_helper(ctx: &mut Dummyv4Ctx) {
             send_icmpv4_dest_unreachable(
                 ctx,
                 DummyDeviceId,
@@ -3867,7 +3867,7 @@ mod tests {
         }
 
         /// Call `send_icmpv6_ttl_expired` with dummy values.
-        fn send_icmpv6_ttl_expired_helper(ctx: &mut Dummyv6Context) {
+        fn send_icmpv6_ttl_expired_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_ttl_expired(
                 ctx,
                 DummyDeviceId,
@@ -3881,7 +3881,7 @@ mod tests {
         }
 
         /// Call `send_icmpv6_packet_too_big` with dummy values.
-        fn send_icmpv6_packet_too_big_helper(ctx: &mut Dummyv6Context) {
+        fn send_icmpv6_packet_too_big_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_packet_too_big(
                 ctx,
                 DummyDeviceId,
@@ -3896,7 +3896,7 @@ mod tests {
         }
 
         /// Call `send_icmpv6_parameter_problem` with dummy values.
-        fn send_icmpv6_parameter_problem_helper(ctx: &mut Dummyv6Context) {
+        fn send_icmpv6_parameter_problem_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_parameter_problem(
                 ctx,
                 DummyDeviceId,
@@ -3911,7 +3911,7 @@ mod tests {
         }
 
         /// Call `send_icmpv6_dest_unreachable` with dummy values.
-        fn send_icmpv6_dest_unreachable_helper(ctx: &mut Dummyv6Context) {
+        fn send_icmpv6_dest_unreachable_helper(ctx: &mut Dummyv6Ctx) {
             send_icmpv6_dest_unreachable(
                 ctx,
                 DummyDeviceId,
@@ -3926,7 +3926,7 @@ mod tests {
         // Run tests for each function that sends error messages to make sure
         // they're all properly rate limited.
 
-        fn run_test<C, W: Fn(u64) -> DummyContext<C>, S: Fn(&mut DummyContext<C>)>(
+        fn run_test<C, W: Fn(u64) -> DummyCtx<C>, S: Fn(&mut DummyCtx<C>)>(
             with_errors_per_second: W,
             send: S,
         ) {
@@ -3976,19 +3976,15 @@ mod tests {
             assert_eq!(ctx.get_counter("IcmpContext::send_icmp_error_message"), 0);
         }
 
-        fn with_errors_per_second_v4(errors_per_second: u64) -> Dummyv4Context {
-            Dummyv4Context::with_state(DummyIcmpv4Context::with_errors_per_second(
-                errors_per_second,
-            ))
+        fn with_errors_per_second_v4(errors_per_second: u64) -> Dummyv4Ctx {
+            Dummyv4Ctx::with_state(DummyIcmpv4Ctx::with_errors_per_second(errors_per_second))
         }
         run_test(with_errors_per_second_v4, send_icmpv4_ttl_expired_helper);
         run_test(with_errors_per_second_v4, send_icmpv4_parameter_problem_helper);
         run_test(with_errors_per_second_v4, send_icmpv4_dest_unreachable_helper);
 
-        fn with_errors_per_second_v6(errors_per_second: u64) -> Dummyv6Context {
-            Dummyv6Context::with_state(DummyIcmpv6Context::with_errors_per_second(
-                errors_per_second,
-            ))
+        fn with_errors_per_second_v6(errors_per_second: u64) -> Dummyv6Ctx {
+            Dummyv6Ctx::with_state(DummyIcmpv6Ctx::with_errors_per_second(errors_per_second))
         }
 
         run_test(with_errors_per_second_v6, send_icmpv6_ttl_expired_helper);

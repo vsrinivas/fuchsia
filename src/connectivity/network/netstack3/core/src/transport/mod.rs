@@ -61,7 +61,7 @@ use net_types::ip::{Ipv4, Ipv6};
 
 use crate::ip::icmp::IcmpIpExt;
 use crate::transport::udp::{UdpEventDispatcher, UdpStateBuilder};
-use crate::{Context, EventDispatcher};
+use crate::{Ctx, EventDispatcher};
 
 /// A builder for transport layer state.
 #[derive(Default, Clone)]
@@ -91,7 +91,7 @@ pub(crate) struct TransportLayerState {
 pub(crate) enum TransportLayerTimerId {}
 
 /// Handle a timer event firing in the transport layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(_ctx: &mut Context<D>, id: TransportLayerTimerId) {
+pub(crate) fn handle_timeout<D: EventDispatcher>(_ctx: &mut Ctx<D>, id: TransportLayerTimerId) {
     match id {}
 }
 

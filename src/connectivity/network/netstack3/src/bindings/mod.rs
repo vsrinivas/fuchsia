@@ -48,26 +48,24 @@ use netstack3_core::{
     error::NoRouteError,
     handle_timeout,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
-    initialize_device, remove_device, Context, DeviceId, DeviceLayerEventDispatcher,
-    EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId,
-    TransportLayerEventDispatcher,
+    initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
+    IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
 };
 
 /// A shorthand definition for the rather gnarly type signature of the lock
 /// obtained by the [`Lockable`] trait bound on [`StackContext`] that provides a
-/// [`Context`].
-type LockedStackContext<'a, C> =
-    <C as Lockable<'a, Context<<C as StackContext>::Dispatcher>>>::Guard;
+/// [`Ctx`].
+type LockedStackContext<'a, C> = <C as Lockable<'a, Ctx<<C as StackContext>::Dispatcher>>>::Guard;
 
-/// A StackContext that provides an asynchronous lock to a specified `Context`
-/// to be used in calls into core.
+/// A StackContext that provides an asynchronous lock to a specified `Ctx` to be
+/// used in calls into core.
 // NOTE(brunodalbo): Currently StackContext only provides a cannonball lock on
 // the entire context that is provided to core. The pattern here is expected to
 // expand (possibly by submodules such as posix sockets and icmp). The vision is
 // that we reduce the time that the core context needs to be locked to a
 // minimum, until it eventually becomes slow path only.
 pub(crate) trait StackContext:
-    Send + Sync + 'static + Clone + for<'a> Lockable<'a, Context<<Self as StackContext>::Dispatcher>>
+    Send + Sync + 'static + Clone + for<'a> Lockable<'a, Ctx<<Self as StackContext>::Dispatcher>>
 {
     /// The [`EventDispatcher`] used by this `StackContext`.
     type Dispatcher: StackDispatcher;
@@ -171,9 +169,9 @@ impl StackDispatcher for BindingsDispatcher {
     }
 }
 
-impl<'a> Lockable<'a, Context<BindingsDispatcher>> for Netstack {
-    type Guard = futures::lock::MutexGuard<'a, Context<BindingsDispatcher>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Context<BindingsDispatcher>>;
+impl<'a> Lockable<'a, Ctx<BindingsDispatcher>> for Netstack {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<BindingsDispatcher>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<BindingsDispatcher>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -197,7 +195,7 @@ impl AsMut<IcmpEchoSockets> for BindingsDispatcher {
     }
 }
 
-impl<D> timers::TimerHandler<TimerId> for Context<D>
+impl<D> timers::TimerHandler<TimerId> for Ctx<D>
 where
     D: StackDispatcher,
 {
@@ -214,7 +212,7 @@ impl<C> timers::TimerContext<TimerId> for C
 where
     C: StackContext,
 {
-    type Handler = Context<C::Dispatcher>;
+    type Handler = Ctx<C::Dispatcher>;
 }
 
 impl<D> ConversionContext for D
@@ -359,7 +357,7 @@ impl<I: icmp::IpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsD
 
 impl<B: BufferMut> IpLayerEventDispatcher<B> for BindingsDispatcher {}
 
-/// Utility operations that can be performed on a locked `Context<D>`.
+/// Utility operations that can be performed on a locked `Ctx<D>`.
 trait ContextExt {
     /// Invoke a function on the state associated with the device `id`.
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
@@ -378,7 +376,7 @@ trait ContextExt {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-impl<D: StackDispatcher> ContextExt for Context<D> {
+impl<D: StackDispatcher> ContextExt for Ctx<D> {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
         if let Some(device_info) =
             AsMut::<Devices>::as_mut(self.dispatcher_mut()).get_device_mut(id)
@@ -452,7 +450,7 @@ impl<D: StackDispatcher> ContextExt for Context<D> {
 /// Provides the entry point for creating a netstack to be served as a
 /// component.
 pub struct Netstack {
-    ctx: Arc<Mutex<Context<BindingsDispatcher>>>,
+    ctx: Arc<Mutex<Ctx<BindingsDispatcher>>>,
 }
 
 impl Clone for Netstack {
@@ -473,9 +471,7 @@ impl Netstack {
 
     /// Creates a new netstack with the provided core state builder.
     pub fn new_with_builder(builder: StackStateBuilder) -> Self {
-        Netstack {
-            ctx: Arc::new(Mutex::new(Context::new(builder.build(), BindingsDispatcher::new()))),
-        }
+        Netstack { ctx: Arc::new(Mutex::new(Ctx::new(builder.build(), BindingsDispatcher::new()))) }
     }
 
     /// Starts servicing timers.

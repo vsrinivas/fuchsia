@@ -3674,7 +3674,7 @@ mod tests {
         DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, StepResult,
         TestIpExt, DUMMY_CONFIG_V6,
     };
-    use crate::{Context, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner};
+    use crate::{Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner};
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
 
@@ -3786,7 +3786,7 @@ mod tests {
     ///
     /// By the time this method returns, 3 packets will be sent.
     fn validate_initial_ras_after_enable(
-        ctx: &mut Context<DummyEventDispatcher>,
+        ctx: &mut Ctx<DummyEventDispatcher>,
         device: DeviceId,
         ndp_configs: &NdpConfigurations,
         offset: usize,
@@ -3847,11 +3847,7 @@ mod tests {
     ///
     /// By the time this method returns, `MAX_FINAL_RTR_ADVERTISEMENTS` packets
     /// will be sent.
-    fn validate_final_ras(
-        ctx: &mut Context<DummyEventDispatcher>,
-        device: DeviceId,
-        offset: usize,
-    ) {
+    fn validate_final_ras(ctx: &mut Ctx<DummyEventDispatcher>, device: DeviceId, offset: usize) {
         let count = if let Some(x) = MAX_FINAL_RTR_ADVERTISEMENTS {
             x.get()
         } else {
@@ -4675,7 +4671,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
@@ -5386,7 +5382,7 @@ mod tests {
     fn test_sending_ipv6_packet_after_hop_limit_change() {
         // Sets the hop limit with a router advertisement and sends a packet to
         // make sure the packet uses the new hop limit.
-        fn inner_test(ctx: &mut Context<DummyEventDispatcher>, hop_limit: u8, frame_offset: usize) {
+        fn inner_test(ctx: &mut Ctx<DummyEventDispatcher>, hop_limit: u8, frame_offset: usize) {
             let config = Ipv6::DUMMY_CONFIG;
             let device_id = DeviceId::new_ethernet(0);
             let src_ip = config.remote_mac.to_ipv6_link_local().addr();
@@ -5824,7 +5820,7 @@ mod tests {
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         let device_id =
@@ -5911,7 +5907,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(NonZeroU8::new(2));
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         let device_id =
@@ -6229,7 +6225,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
@@ -6264,7 +6260,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
@@ -6305,7 +6301,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
@@ -6333,7 +6329,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
         let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
@@ -6398,7 +6394,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
-        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
@@ -6524,7 +6520,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
-        fn confirm_dad_frame_timer(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
+        fn confirm_dad_frame_timer(ctx: &mut Ctx<DummyEventDispatcher>, device: DeviceId) {
             assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
             assert_eq!(ctx.dispatcher().timer_events().count(), 1);
             assert_eq!(
@@ -7234,7 +7230,7 @@ mod tests {
     #[test]
     fn test_receiving_neighbor_advertisements() {
         fn test_receiving_na_from_known_neighbor(
-            ctx: &mut Context<DummyEventDispatcher>,
+            ctx: &mut Ctx<DummyEventDispatcher>,
             src_ip: Ipv6Addr,
             dst_ip: SpecifiedAddr<Ipv6Addr>,
             device: DeviceId,
@@ -8844,7 +8840,7 @@ mod tests {
         // 5.5.3.e. Note, the preferred lifetime should always be updated.
 
         fn inner_test(
-            ctx: &mut Context<DummyEventDispatcher>,
+            ctx: &mut Ctx<DummyEventDispatcher>,
             device: DeviceId,
             src_ip: Ipv6Addr,
             dst_ip: SpecifiedAddr<Ipv6Addr>,

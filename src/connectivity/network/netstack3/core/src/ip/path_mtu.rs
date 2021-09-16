@@ -459,24 +459,23 @@ mod tests {
     use net_types::{SpecifiedAddr, Witness};
     use specialize_ip_macro::ip_test;
 
-    use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
+    use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
     use crate::testutil::TestIpExt;
 
     /// A dummy [`PmtuContext`] that stores an [`IpLayerPathMtuCache`].
-    struct DummyPmtuContext<I: Ip> {
+    struct DummyPmtuCtx<I: Ip> {
         cache: IpLayerPathMtuCache<I, DummyInstant>,
     }
 
-    impl<I: Ip> Default for DummyPmtuContext<I> {
+    impl<I: Ip> Default for DummyPmtuCtx<I> {
         fn default() -> Self {
-            DummyPmtuContext { cache: IpLayerPathMtuCache::new() }
+            DummyPmtuCtx { cache: IpLayerPathMtuCache::new() }
         }
     }
 
-    type DummyContext<I> =
-        crate::context::testutil::DummyContext<DummyPmtuContext<I>, PmtuTimerId<I>>;
+    type DummyCtx<I> = crate::context::testutil::DummyCtx<DummyPmtuCtx<I>, PmtuTimerId<I>>;
 
-    impl<I: Ip> StateContext<IpLayerPathMtuCache<I, DummyInstant>> for DummyContext<I> {
+    impl<I: Ip> StateContext<IpLayerPathMtuCache<I, DummyInstant>> for DummyCtx<I> {
         fn get_state_with(&self, _id: ()) -> &IpLayerPathMtuCache<I, DummyInstant> {
             &self.get_ref().cache
         }
@@ -511,7 +510,7 @@ mod tests {
     #[ip_test]
     fn test_ip_path_mtu_cache_ctx<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyContext::<I>::default();
+        let mut ctx = DummyCtx::<I>::default();
 
         // Nothing in the cache yet
         assert_eq!(
@@ -709,7 +708,7 @@ mod tests {
     #[ip_test]
     fn test_ip_pmtu_task<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyContext::<I>::default();
+        let mut ctx = DummyCtx::<I>::default();
 
         // Make sure there are no timers.
         assert_eq!(ctx.timers().len(), 0);

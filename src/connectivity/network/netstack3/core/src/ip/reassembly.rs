@@ -731,26 +731,24 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::context::testutil::DummyTimerContextExt;
+    use crate::context::testutil::DummyTimerCtxExt;
     use crate::testutil::{TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
 
     /// A dummy [`FragmentContext`] that stores an [`IpLayerFragmentCache`].
-    struct DummyFragmentContext<I: Ip> {
+    struct DummyFragmentCtx<I: Ip> {
         cache: IpLayerFragmentCache<I>,
     }
 
-    impl<I: Ip> Default for DummyFragmentContext<I> {
+    impl<I: Ip> Default for DummyFragmentCtx<I> {
         fn default() -> Self {
-            DummyFragmentContext { cache: IpLayerFragmentCache::new() }
+            DummyFragmentCtx { cache: IpLayerFragmentCache::new() }
         }
     }
 
-    type DummyContext<I> = crate::context::testutil::DummyContext<
-        DummyFragmentContext<I>,
-        FragmentCacheKey<<I as Ip>::Addr>,
-    >;
+    type DummyCtx<I> =
+        crate::context::testutil::DummyCtx<DummyFragmentCtx<I>, FragmentCacheKey<<I as Ip>::Addr>>;
 
-    impl<I: Ip> StateContext<IpLayerFragmentCache<I>> for DummyContext<I> {
+    impl<I: Ip> StateContext<IpLayerFragmentCache<I>> for DummyCtx<I> {
         fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
             &self.get_ref().cache
         }
@@ -1033,7 +1031,7 @@ mod tests {
 
     #[test]
     fn test_ipv4_reassembly_not_needed() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         // Test that we don't attempt reassembly if the packet is not
         // fragmented.
@@ -1054,7 +1052,7 @@ mod tests {
         expected = "internal error: entered unreachable code: Should never call this function if the packet does not have a fragment header"
     )]
     fn test_ipv6_reassembly_not_needed() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         // Test that we panic if we call `fragment_data` on a packet that has no
         // fragment data.
@@ -1071,7 +1069,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly<I: Ip>() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 5;
 
         // Test that we properly reassemble fragmented packets.
@@ -1089,7 +1087,7 @@ mod tests {
     #[ip_test]
     fn test_ip_reassemble_with_missing_blocks<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 5;
 
         // Test the error we get when we attempt to reassemble with missing
@@ -1117,7 +1115,7 @@ mod tests {
     #[ip_test]
     fn test_ip_reassemble_after_timer<I: Ip + TestIpExt>() {
         let dummy_config = I::DUMMY_CONFIG;
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 5;
 
         // Make sure no timers in the dispatcher yet.
@@ -1169,7 +1167,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_fragment_cache_oom<I: Ip + TestIpExt>() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let mut fragment_id = 0;
         const THRESHOLD: usize = 8196usize;
 
@@ -1201,7 +1199,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_overlapping_single_fragment<I: Ip>() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 5;
 
         // Test that we error on overlapping/duplicate fragments.
@@ -1215,7 +1213,7 @@ mod tests {
 
     #[test]
     fn test_ipv4_fragment_not_multiple_of_offset_unit() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 0;
 
         assert_eq!(ctx.get_state_mut().cache_size, 0);
@@ -1272,7 +1270,7 @@ mod tests {
 
     #[test]
     fn test_ipv6_fragment_not_multiple_of_offset_unit() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id = 0;
 
         assert_eq!(ctx.get_state_mut().cache_size, 0);
@@ -1339,7 +1337,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_with_multiple_intertwined_packets<I: Ip>() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
 
@@ -1367,7 +1365,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_timer_with_multiple_intertwined_packets<I: Ip>() {
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;

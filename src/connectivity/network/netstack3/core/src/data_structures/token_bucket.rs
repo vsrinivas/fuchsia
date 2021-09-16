@@ -178,7 +178,7 @@ impl<I: crate::Instant> TokenBucket<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::testutil::{DummyInstant, DummyInstantContext};
+    use crate::context::testutil::{DummyInstant, DummyInstantCtx};
     use crate::testutil::benchmarks::{black_box, Bencher};
 
     impl<I: crate::Instant> TokenBucket<I> {
@@ -192,10 +192,10 @@ mod tests {
 
     #[test]
     fn test_token_bucket() {
-        /// Construct a `DummyInstantContext` and a `TokenBucket` with a rate of
-        /// 64 tokens per second, and pass them to `f`.
-        fn test<F: FnOnce(DummyInstantContext, TokenBucket<DummyInstant>)>(f: F) {
-            f(DummyInstantContext::default(), TokenBucket::new(64));
+        /// Construct a `DummyInstantCtx` and a `TokenBucket` with a rate of 64
+        /// tokens per second, and pass them to `f`.
+        fn test<F: FnOnce(DummyInstantCtx, TokenBucket<DummyInstant>)>(f: F) {
+            f(DummyInstantCtx::default(), TokenBucket::new(64));
         }
 
         // Test that, if we consume all of the tokens in the bucket, but do not
@@ -336,7 +336,7 @@ mod tests {
 
     fn bench_try_take<B: Bencher>(b: &mut B, enforced_rate: u64, try_rate: u32) {
         let sleep = SECOND / try_rate;
-        let mut ctx = DummyInstantContext::default();
+        let mut ctx = DummyInstantCtx::default();
         let mut bucket = TokenBucket::new(enforced_rate);
         b.iter(|| {
             ctx.sleep(sleep);

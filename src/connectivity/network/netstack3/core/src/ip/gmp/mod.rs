@@ -19,8 +19,8 @@
 
 /// Assert that the GMP state machine for `$group` is in the given state.
 ///
-/// `$ctx` is a `context::testutil::DummyContext` whose state contains a
-/// `groups: MulticastGroupSet` field.
+/// `$ctx` is a `context::testutil::DummyCtx` whose state contains a `groups:
+/// MulticastGroupSet` field.
 #[cfg(test)]
 macro_rules! assert_gmp_state {
     ($ctx:expr, $group:expr, Delaying) => {

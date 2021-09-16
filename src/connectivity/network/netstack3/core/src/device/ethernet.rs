@@ -44,7 +44,7 @@ use crate::ip::gmp::igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, Igmp
 use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
 use crate::ip::gmp::{GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 #[cfg(test)]
-use crate::Context;
+use crate::Ctx;
 use crate::Instant;
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -1629,20 +1629,20 @@ mod tests {
     };
     use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
-    struct DummyEthernetContext {
+    struct DummyEthernetCtx {
         state: IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
     }
 
-    impl DummyEthernetContext {
-        fn new(mac: Mac, mtu: u32) -> DummyEthernetContext {
-            DummyEthernetContext {
+    impl DummyEthernetCtx {
+        fn new(mac: Mac, mtu: u32) -> DummyEthernetCtx {
+            DummyEthernetCtx {
                 state: IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()),
             }
         }
     }
 
-    type DummyContext = crate::context::testutil::DummyContext<
-        DummyEthernetContext,
+    type DummyCtx = crate::context::testutil::DummyCtx<
+        DummyEthernetCtx,
         EthernetTimerId<DummyDeviceId>,
         DummyDeviceId,
     >;
@@ -1652,7 +1652,7 @@ mod tests {
             IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
             FakeCryptoRng<XorShiftRng>,
             DummyDeviceId,
-        > for DummyContext
+        > for DummyCtx
     {
         fn get_states_with(
             &self,
@@ -1679,11 +1679,11 @@ mod tests {
         }
     }
 
-    impl DeviceIdContext<EthernetLinkDevice> for DummyContext {
+    impl DeviceIdContext<EthernetLinkDevice> for DummyCtx {
         type DeviceId = DummyDeviceId;
     }
 
-    impl IpDeviceIdContext for DummyContext {
+    impl IpDeviceIdContext for DummyCtx {
         type DeviceId = DummyDeviceId;
     }
 
@@ -1692,7 +1692,7 @@ mod tests {
             EthernetLinkDevice,
             EthernetTimerId<DummyDeviceId>,
             EthernetDeviceState<DummyInstant>,
-        > for DummyContext
+        > for DummyCtx
     {
         fn is_router_device<I: Ip>(&self, _device: DummyDeviceId) -> bool {
             unimplemented!()
@@ -1709,11 +1709,11 @@ mod tests {
         // and that we don't send an Ethernet frame whose size is greater than
         // the MTU.
         fn test(size: usize, expect_frames_sent: usize) {
-            let mut ctx = DummyContext::with_state(DummyEthernetContext::new(
+            let mut ctx = DummyCtx::with_state(DummyEthernetCtx::new(
                 DUMMY_CONFIG_V4.local_mac,
                 Ipv6::MINIMUM_LINK_MTU.into(),
             ));
-            <DummyContext as ArpHandler<_, _>>::insert_static_neighbor(
+            <DummyCtx as ArpHandler<_, _>>::insert_static_neighbor(
                 &mut ctx,
                 DummyDeviceId,
                 DUMMY_CONFIG_V4.remote_ip.get(),
@@ -1866,7 +1866,7 @@ mod tests {
     #[ip_test]
     fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
-            ctx: &Context<DummyEventDispatcher>,
+            ctx: &Ctx<DummyEventDispatcher>,
             device: DeviceId,
             expected: bool,
         ) {
@@ -2152,7 +2152,7 @@ mod tests {
     }
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
-        ctx: &mut Context<DummyEventDispatcher>,
+        ctx: &mut Ctx<DummyEventDispatcher>,
         device: DeviceId,
         src_ip: A,
         dst_ip: A,

@@ -492,7 +492,7 @@ mod tests {
     use packet_formats::igmp::messages::IgmpMembershipQueryV2;
     use rand_xorshift::XorShiftRng;
 
-    use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
+    use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
     use crate::context::DualStateContext;
     use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
     use crate::ip::gmp::{Action, GmpAction, MemberState};
@@ -501,15 +501,15 @@ mod tests {
     /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
     /// optional IPv4 address and subnet that may be returned in calls to
     /// [`IgmpContext::get_ip_addr_subnet`].
-    struct DummyIgmpContext {
+    struct DummyIgmpCtx {
         groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
         igmp_enabled: bool,
         addr_subnet: Option<AddrSubnet<Ipv4Addr>>,
     }
 
-    impl Default for DummyIgmpContext {
-        fn default() -> DummyIgmpContext {
-            DummyIgmpContext {
+    impl Default for DummyIgmpCtx {
+        fn default() -> DummyIgmpCtx {
+            DummyIgmpCtx {
                 groups: MulticastGroupSet::default(),
                 igmp_enabled: true,
                 addr_subnet: None,
@@ -517,8 +517,8 @@ mod tests {
         }
     }
 
-    type DummyContext = crate::context::testutil::DummyContext<
-        DummyIgmpContext,
+    type DummyCtx = crate::context::testutil::DummyCtx<
+        DummyIgmpCtx,
         IgmpTimerId<DummyLinkDevice, DummyLinkDeviceId>,
         IgmpPacketMetadata<DummyLinkDeviceId>,
     >;
@@ -528,7 +528,7 @@ mod tests {
             MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
             FakeCryptoRng<XorShiftRng>,
             DummyLinkDeviceId,
-        > for DummyContext
+        > for DummyCtx
     {
         fn get_states_with(
             &self,
@@ -553,7 +553,7 @@ mod tests {
         }
     }
 
-    impl IgmpContext<DummyLinkDevice> for DummyContext {
+    impl IgmpContext<DummyLinkDevice> for DummyCtx {
         fn get_ip_addr_subnet(&self, _device: DummyLinkDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
             self.get_ref().addr_subnet
         }
@@ -646,7 +646,7 @@ mod tests {
     const GROUP_ADDR_2: MulticastAddr<Ipv4Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 4])) };
 
-    fn receive_igmp_query(ctx: &mut DummyContext, resp_time: Duration) {
+    fn receive_igmp_query(ctx: &mut DummyCtx, resp_time: Duration) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             GROUP_ADDR.get(),
             resp_time.try_into().unwrap(),
@@ -655,7 +655,7 @@ mod tests {
         ctx.receive_igmp_packet(DummyLinkDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_general_query(ctx: &mut DummyContext, resp_time: Duration) {
+    fn receive_igmp_general_query(ctx: &mut DummyCtx, resp_time: Duration) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
             Ipv4Addr::new([0, 0, 0, 0]),
             resp_time.try_into().unwrap(),
@@ -664,19 +664,19 @@ mod tests {
         ctx.receive_igmp_packet(DummyLinkDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_report(ctx: &mut DummyContext) {
+    fn receive_igmp_report(ctx: &mut DummyCtx) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR.get());
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
         ctx.receive_igmp_packet(DummyLinkDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
-    fn setup_simple_test_environment() -> DummyContext {
-        let mut ctx = DummyContext::default();
+    fn setup_simple_test_environment() -> DummyCtx {
+        let mut ctx = DummyCtx::default();
         ctx.get_mut().addr_subnet = Some(AddrSubnet::new(MY_ADDR.get(), 24).unwrap());
         ctx
     }
 
-    fn ensure_ttl_ihl_rtr(ctx: &DummyContext) {
+    fn ensure_ttl_ihl_rtr(ctx: &DummyCtx) {
         for (_, frame) in ctx.frames() {
             assert_eq!(frame[8], 1); // TTL,
             assert_eq!(&frame[20..24], &[148, 4, 0, 0]); // RTR
@@ -872,11 +872,11 @@ mod tests {
         // Test that we properly skip executing any `Actions` when IGMP is
         // disabled for the device.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         ctx.get_mut().igmp_enabled = false;
 
         // Assert that no observable effects have taken place.
-        let assert_no_effect = |ctx: &DummyContext| {
+        let assert_no_effect = |ctx: &DummyCtx| {
             assert!(ctx.timers().is_empty());
             assert!(ctx.frames().is_empty());
         };

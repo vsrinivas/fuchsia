@@ -31,7 +31,7 @@ use netstack3_core::{
     icmp::{
         self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
     },
-    Context, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
     IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
 };
 use packet::{Buf, BufferMut, Serializer};
@@ -243,12 +243,12 @@ impl<B: BufferMut> IpLayerEventDispatcher<B> for TestDispatcher {}
 /// implements [`StackContext`] appropriately, using [`TestDispatcher`] as its
 /// Event Dispatcher to allow for special inspection for certain tests.
 pub(crate) struct TestContext {
-    ctx: Arc<Mutex<Context<TestDispatcher>>>,
+    ctx: Arc<Mutex<Ctx<TestDispatcher>>>,
 }
 
 impl TestContext {
     fn new(builder: StackStateBuilder) -> Self {
-        Self { ctx: Arc::new(Mutex::new(Context::new(builder.build(), TestDispatcher::new()))) }
+        Self { ctx: Arc::new(Mutex::new(Ctx::new(builder.build(), TestDispatcher::new()))) }
     }
 }
 
@@ -258,9 +258,9 @@ impl Clone for TestContext {
     }
 }
 
-impl<'a> Lockable<'a, Context<TestDispatcher>> for TestContext {
-    type Guard = futures::lock::MutexGuard<'a, Context<TestDispatcher>>;
-    type Fut = futures::lock::MutexLockFuture<'a, Context<TestDispatcher>>;
+impl<'a> Lockable<'a, Ctx<TestDispatcher>> for TestContext {
+    type Guard = futures::lock::MutexGuard<'a, Ctx<TestDispatcher>>;
+    type Fut = futures::lock::MutexLockFuture<'a, Ctx<TestDispatcher>>;
     fn lock(&'a self) -> Self::Fut {
         self.ctx.lock()
     }
@@ -374,8 +374,8 @@ impl TestStack {
     }
 
     /// Helper function to invoke a closure that provides a locked
-    /// [`Context<TestDispatcher>`] provided by this `TestStack`.
-    pub(crate) async fn with_ctx<R, F: FnOnce(&mut Context<TestDispatcher>) -> R>(
+    /// [`Ctx<TestDispatcher>`] provided by this `TestStack`.
+    pub(crate) async fn with_ctx<R, F: FnOnce(&mut Ctx<TestDispatcher>) -> R>(
         &mut self,
         f: F,
     ) -> R {

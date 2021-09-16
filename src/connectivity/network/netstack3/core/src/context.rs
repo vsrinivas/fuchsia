@@ -42,7 +42,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{Context, EventDispatcher, Instant};
+use crate::{Ctx, EventDispatcher, Instant};
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -63,7 +63,7 @@ pub trait InstantContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> InstantContext for Context<D> {
+impl<D: EventDispatcher> InstantContext for Ctx<D> {
     type Instant = D::Instant;
 
     fn now(&self) -> Self::Instant {
@@ -73,17 +73,17 @@ impl<D: EventDispatcher> InstantContext for Context<D> {
 
 /// An [`InstantContext`] which stores a cached value for the current time.
 ///
-/// `CachedInstantContext`s are constructed via [`new_cached_instant_context`].
-pub(crate) struct CachedInstantContext<I>(I);
+/// `CachedInstantCtx`s are constructed via [`new_cached_instant_context`].
+pub(crate) struct CachedInstantCtx<I>(I);
 
-impl<I: Instant> InstantContext for CachedInstantContext<I> {
+impl<I: Instant> InstantContext for CachedInstantCtx<I> {
     type Instant = I;
     fn now(&self) -> I {
         self.0.clone()
     }
 }
 
-/// Construct a new `CachedInstantContext` from the current time.
+/// Construct a new `CachedInstantCtx` from the current time.
 ///
 /// This is a hack until we figure out a strategy for splitting context objects.
 /// Currently, since most context methods take a `&mut self` argument, lifetimes
@@ -94,8 +94,8 @@ impl<I: Instant> InstantContext for CachedInstantContext<I> {
 /// this exists as a workaround.
 pub(crate) fn new_cached_instant_context<I: InstantContext + ?Sized>(
     ctx: &I,
-) -> CachedInstantContext<I::Instant> {
-    CachedInstantContext(ctx.now())
+) -> CachedInstantCtx<I::Instant> {
+    CachedInstantCtx(ctx.now())
 }
 
 /// A context that supports scheduling timers.
@@ -210,7 +210,7 @@ impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> RngContext for Context<D> {
+impl<D: EventDispatcher> RngContext for Ctx<D> {
     type Rng = D::Rng;
 
     fn rng(&self) -> &D::Rng {
@@ -438,7 +438,7 @@ pub trait CounterContext {
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
-impl<D: EventDispatcher> CounterContext for Context<D> {
+impl<D: EventDispatcher> CounterContext for Ctx<D> {
     // TODO(rheacock): This is tricky because it's used in test only macro
     // code so the compiler thinks `key` is unused. Remove this when this is
     // no longer a problem.
@@ -532,25 +532,25 @@ pub(crate) mod testutil {
     /// A dummy [`InstantContext`] which stores the current time as a
     /// [`DummyInstant`].
     #[derive(Default)]
-    pub struct DummyInstantContext {
+    pub struct DummyInstantCtx {
         time: DummyInstant,
     }
 
-    impl DummyInstantContext {
+    impl DummyInstantCtx {
         /// Advance the current time by the given duration.
         pub(crate) fn sleep(&mut self, dur: Duration) {
             self.time.offset += dur;
         }
     }
 
-    impl InstantContext for DummyInstantContext {
+    impl InstantContext for DummyInstantCtx {
         type Instant = DummyInstant;
         fn now(&self) -> DummyInstant {
             self.time
         }
     }
 
-    impl<T: AsRef<DummyInstantContext>> InstantContext for T {
+    impl<T: AsRef<DummyInstantCtx>> InstantContext for T {
         type Instant = DummyInstant;
         fn now(&self) -> DummyInstant {
             self.as_ref().now()
@@ -590,35 +590,32 @@ pub(crate) mod testutil {
         }
     }
 
-    /// A dummy [`TimerContext`] which stores time as a [`DummyInstantContext`].
-    pub(crate) struct DummyTimerContext<Id> {
-        instant: DummyInstantContext,
+    /// A dummy [`TimerContext`] which stores time as a [`DummyInstantCtx`].
+    pub(crate) struct DummyTimerCtx<Id> {
+        instant: DummyInstantCtx,
         timers: BinaryHeap<InstantAndData<Id>>,
     }
 
-    impl<Id> Default for DummyTimerContext<Id> {
-        fn default() -> DummyTimerContext<Id> {
-            DummyTimerContext {
-                instant: DummyInstantContext::default(),
-                timers: BinaryHeap::default(),
-            }
+    impl<Id> Default for DummyTimerCtx<Id> {
+        fn default() -> DummyTimerCtx<Id> {
+            DummyTimerCtx { instant: DummyInstantCtx::default(), timers: BinaryHeap::default() }
         }
     }
 
-    impl<Id: Clone> DummyTimerContext<Id> {
+    impl<Id: Clone> DummyTimerCtx<Id> {
         /// Get an ordered list of all currently-scheduled timers.
         pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
             self.timers.clone().into_sorted_vec().into_iter().map(|t| (t.0, t.1)).collect()
         }
     }
 
-    impl<Id> AsRef<DummyInstantContext> for DummyTimerContext<Id> {
-        fn as_ref(&self) -> &DummyInstantContext {
+    impl<Id> AsRef<DummyInstantCtx> for DummyTimerCtx<Id> {
+        fn as_ref(&self) -> &DummyInstantCtx {
             &self.instant
         }
     }
 
-    impl<Id: PartialEq> DummyTimerContext<Id> {
+    impl<Id: PartialEq> DummyTimerCtx<Id> {
         // Just like `TimerContext::cancel_timer`, but takes a reference to `Id`
         // rather than a value. This allows us to implement
         // `schedule_timer_instant`, which needs to retain ownership of the
@@ -644,7 +641,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id: PartialEq> TimerContext<Id> for DummyTimerContext<Id> {
+    impl<Id: PartialEq> TimerContext<Id> for DummyTimerCtx<Id> {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             let ret = self.cancel_timer_inner(&id);
             self.timers.push(InstantAndData::new(time, id));
@@ -664,8 +661,8 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) trait DummyTimerContextExt<Id>:
-        AsMut<DummyTimerContext<Id>> + TimerHandler<Id> + Sized
+    pub(crate) trait DummyTimerCtxExt<Id>:
+        AsMut<DummyTimerCtx<Id>> + TimerHandler<Id> + Sized
     {
         /// Trigger the next timer, if any.
         ///
@@ -723,15 +720,15 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id, T: AsMut<DummyTimerContext<Id>> + TimerHandler<Id>> DummyTimerContextExt<Id> for T {}
+    impl<Id, T: AsMut<DummyTimerCtx<Id>> + TimerHandler<Id>> DummyTimerCtxExt<Id> for T {}
 
     /// A dummy [`FrameContext`].
-    pub struct DummyFrameContext<Meta> {
+    pub struct DummyFrameCtx<Meta> {
         frames: Vec<(Meta, Vec<u8>)>,
         should_error_for_frame: Option<Box<dyn Fn(&Meta) -> bool>>,
     }
 
-    impl<Meta> DummyFrameContext<Meta> {
+    impl<Meta> DummyFrameCtx<Meta> {
         /// Closure which can decide to cause an error to be thrown when
         /// handling a frame, based on the metadata.
         pub fn set_should_error_for_frame<F: Fn(&Meta) -> bool + 'static>(&mut self, f: F) {
@@ -739,20 +736,20 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Meta> Default for DummyFrameContext<Meta> {
-        fn default() -> DummyFrameContext<Meta> {
-            DummyFrameContext { frames: Vec::new(), should_error_for_frame: None }
+    impl<Meta> Default for DummyFrameCtx<Meta> {
+        fn default() -> DummyFrameCtx<Meta> {
+            DummyFrameCtx { frames: Vec::new(), should_error_for_frame: None }
         }
     }
 
-    impl<Meta> DummyFrameContext<Meta> {
+    impl<Meta> DummyFrameCtx<Meta> {
         /// Get the frames sent so far.
         pub(crate) fn frames(&self) -> &[(Meta, Vec<u8>)] {
             self.frames.as_slice()
         }
     }
 
-    impl<B: BufferMut, Meta> FrameContext<B, Meta> for DummyFrameContext<Meta> {
+    impl<B: BufferMut, Meta> FrameContext<B, Meta> for DummyFrameCtx<Meta> {
         fn send_frame<S: Serializer<Buffer = B>>(
             &mut self,
             metadata: Meta,
@@ -772,18 +769,18 @@ pub(crate) mod testutil {
 
     /// A dummy [`CounterContext`].
     #[derive(Default)]
-    pub struct DummyCounterContext {
+    pub struct DummyCounterCtx {
         counters: HashMap<&'static str, usize>,
     }
 
-    impl CounterContext for DummyCounterContext {
+    impl CounterContext for DummyCounterCtx {
         fn increment_counter(&mut self, key: &'static str) {
             let val = self.counters.entry(key).or_insert(0);
             *val += 1;
         }
     }
 
-    impl<T: AsMut<DummyCounterContext>> CounterContext for T {
+    impl<T: AsMut<DummyCounterCtx>> CounterContext for T {
         // TODO(rheacock): This is tricky because it's used in test only macro
         // code so the compiler thinks `key` is unused. Remove this when this is
         // no longer a problem.
@@ -793,39 +790,38 @@ pub(crate) mod testutil {
         }
     }
 
-    /// A wrapper for a [`DummyTimerContext`] and some other state.
+    /// A wrapper for a [`DummyTimerCtx`] and some other state.
     ///
-    /// `DummyContext` pairs some arbitrary state, `S`, with a
-    /// `DummyTimerContext`, a `DummyFrameContext`, and a `DummyCounterContext`.
-    /// It implements [`InstantContext`], [`TimerContext`], [`FrameContext`],
-    /// and [`CounterContext`]. It also provides getters for `S`. If the type,
-    /// `S`, is meant to implement some other trait, then the caller is advised
-    /// to instead implement that trait for `DummyContext<S, Id, Meta>`. This
-    /// allows for full test mocks to be written with a minimum of boilerplate
-    /// code.
-    pub(crate) struct DummyContext<S, Id = (), Meta = ()> {
+    /// `DummyCtx` pairs some arbitrary state, `S`, with a `DummyTimerCtx`, a
+    /// `DummyFrameCtx`, and a `DummyCounterCtx`. It implements
+    /// [`InstantContext`], [`TimerContext`], [`FrameContext`], and
+    /// [`CounterContext`]. It also provides getters for `S`. If the type, `S`,
+    /// is meant to implement some other trait, then the caller is advised to
+    /// instead implement that trait for `DummyCtx<S, Id, Meta>`. This allows
+    /// for full test mocks to be written with a minimum of boilerplate code.
+    pub(crate) struct DummyCtx<S, Id = (), Meta = ()> {
         state: S,
-        timers: DummyTimerContext<Id>,
-        frames: DummyFrameContext<Meta>,
-        counters: DummyCounterContext,
+        timers: DummyTimerCtx<Id>,
+        frames: DummyFrameCtx<Meta>,
+        counters: DummyCounterCtx,
         rng: FakeCryptoRng<XorShiftRng>,
     }
 
-    impl<S: Default, Id, Meta> Default for DummyContext<S, Id, Meta> {
-        fn default() -> DummyContext<S, Id, Meta> {
-            DummyContext::with_state(S::default())
+    impl<S: Default, Id, Meta> Default for DummyCtx<S, Id, Meta> {
+        fn default() -> DummyCtx<S, Id, Meta> {
+            DummyCtx::with_state(S::default())
         }
     }
 
-    impl<S, Id, Meta> DummyContext<S, Id, Meta> {
-        /// Constructs a `DummyContext` with the given state and default
-        /// `DummyTimerContext`, `DummyFrameContext`, and `DummyCounterContext`.
-        pub(crate) fn with_state(state: S) -> DummyContext<S, Id, Meta> {
-            DummyContext {
+    impl<S, Id, Meta> DummyCtx<S, Id, Meta> {
+        /// Constructs a `DummyCtx` with the given state and default
+        /// `DummyTimerCtx`, `DummyFrameCtx`, and `DummyCounterCtx`.
+        pub(crate) fn with_state(state: S) -> DummyCtx<S, Id, Meta> {
+            DummyCtx {
                 state,
-                timers: DummyTimerContext::default(),
-                frames: DummyFrameContext::default(),
-                counters: DummyCounterContext::default(),
+                timers: DummyTimerCtx::default(),
+                frames: DummyFrameCtx::default(),
+                counters: DummyCounterCtx::default(),
                 rng: FakeCryptoRng::new_xorshift(0),
             }
         }
@@ -839,7 +835,7 @@ pub(crate) mod testutil {
         /// timers.
         ///
         /// If any timers are scheduled to fire in the given duration, future
-        /// use of this `DummyContext` may have surprising or buggy behavior.
+        /// use of this `DummyCtx` may have surprising or buggy behavior.
         pub(crate) fn sleep_skip_timers(&mut self, duration: Duration) {
             self.timers.instant.sleep(duration);
         }
@@ -848,9 +844,9 @@ pub(crate) mod testutil {
         ///
         /// This method is provided instead of an [`AsRef`] impl to avoid
         /// conflicting with user-provided implementations of `AsRef<T> for
-        /// DummyContext<S, Id, Meta>` for other types, `T`. It is named
-        /// `get_ref` instead of `as_ref` so that programmer doesn't need to
-        /// specify which `as_ref` method is intended.
+        /// DummyCtx<S, Id, Meta>` for other types, `T`. It is named `get_ref`
+        /// instead of `as_ref` so that programmer doesn't need to specify which
+        /// `as_ref` method is intended.
         pub(crate) fn get_ref(&self) -> &S {
             &self.state
         }
@@ -873,44 +869,44 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id: Clone, Meta> DummyContext<S, Id, Meta> {
+    impl<S, Id: Clone, Meta> DummyCtx<S, Id, Meta> {
         /// Get an ordered list of all currently-scheduled timers.
         pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
             self.timers.timers()
         }
     }
 
-    impl<S, Id, Meta> AsRef<DummyInstantContext> for DummyContext<S, Id, Meta> {
-        fn as_ref(&self) -> &DummyInstantContext {
+    impl<S, Id, Meta> AsRef<DummyInstantCtx> for DummyCtx<S, Id, Meta> {
+        fn as_ref(&self) -> &DummyInstantCtx {
             self.timers.as_ref()
         }
     }
 
-    impl<S, Id, Meta> AsRef<DummyTimerContext<Id>> for DummyContext<S, Id, Meta> {
-        fn as_ref(&self) -> &DummyTimerContext<Id> {
+    impl<S, Id, Meta> AsRef<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta> {
+        fn as_ref(&self) -> &DummyTimerCtx<Id> {
             &self.timers
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyTimerContext<Id>> for DummyContext<S, Id, Meta> {
-        fn as_mut(&mut self) -> &mut DummyTimerContext<Id> {
+    impl<S, Id, Meta> AsMut<DummyTimerCtx<Id>> for DummyCtx<S, Id, Meta> {
+        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
             &mut self.timers
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyFrameContext<Meta>> for DummyContext<S, Id, Meta> {
-        fn as_mut(&mut self) -> &mut DummyFrameContext<Meta> {
+    impl<S, Id, Meta> AsMut<DummyFrameCtx<Meta>> for DummyCtx<S, Id, Meta> {
+        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
             &mut self.frames
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyCounterContext> for DummyContext<S, Id, Meta> {
-        fn as_mut(&mut self) -> &mut DummyCounterContext {
+    impl<S, Id, Meta> AsMut<DummyCounterCtx> for DummyCtx<S, Id, Meta> {
+        fn as_mut(&mut self) -> &mut DummyCounterCtx {
             &mut self.counters
         }
     }
 
-    impl<S, Id: PartialEq, Meta> TimerContext<Id> for DummyContext<S, Id, Meta> {
+    impl<S, Id: PartialEq, Meta> TimerContext<Id> for DummyCtx<S, Id, Meta> {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             self.timers.schedule_timer_instant(time, id)
         }
@@ -928,7 +924,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<B: BufferMut, S, Id, Meta> FrameContext<B, Meta> for DummyContext<S, Id, Meta> {
+    impl<B: BufferMut, S, Id, Meta> FrameContext<B, Meta> for DummyCtx<S, Id, Meta> {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
             metadata: Meta,
@@ -938,7 +934,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta> RngContext for DummyContext<S, Id, Meta> {
+    impl<S, Id, Meta> RngContext for DummyCtx<S, Id, Meta> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
         fn rng(&self) -> &Self::Rng {
@@ -950,7 +946,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta> DualStateContext<S, FakeCryptoRng<XorShiftRng>> for DummyContext<S, Id, Meta> {
+    impl<S, Id, Meta> DualStateContext<S, FakeCryptoRng<XorShiftRng>> for DummyCtx<S, Id, Meta> {
         fn get_states_with(&self, _id0: (), _id1: ()) -> (&S, &FakeCryptoRng<XorShiftRng>) {
             (&self.state, &self.rng)
         }
@@ -975,7 +971,7 @@ pub(crate) mod testutil {
     type PendingFrame<ContextId, DeviceId, Meta> =
         InstantAndData<PendingFrameData<ContextId, DeviceId, Meta>>;
 
-    /// A dummy network, composed of many `DummyContext`s.
+    /// A dummy network, composed of many `DummyCtx`s.
     ///
     /// Provides a utility to have many contexts keyed by `ContextId` that can
     /// exchange frames.
@@ -983,7 +979,7 @@ pub(crate) mod testutil {
     where
         Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId>,
     {
-        contexts: HashMap<ContextId, DummyContext<S, TimerId, SendMeta>>,
+        contexts: HashMap<ContextId, DummyCtx<S, TimerId, SendMeta>>,
         current_time: DummyInstant,
         pending_frames: BinaryHeap<PendingFrame<ContextId, DeviceId, RecvMeta>>,
         links: Links,
@@ -1068,19 +1064,17 @@ pub(crate) mod testutil {
     {
         /// Creates a new `DummyNetwork`.
         ///
-        /// Creates a new `DummyNetwork` with the collection of `DummyContext`s
-        /// in `contexts`. `Context`s are named by type parameter `ContextId`.
+        /// Creates a new `DummyNetwork` with the collection of `DummyCtx`s in
+        /// `contexts`. `Ctx`s are named by type parameter `ContextId`.
         ///
         /// # Panics
         ///
-        /// Calls to `new` will panic if given a `DummyContext` with timer
-        /// events. `DummyContext`s given to `DummyNetwork` **must not** have
-        /// any timer events already attached to them, because `DummyNetwork`
-        /// maintains all the internal timers in dispatchers in sync to enable
-        /// synchronous simulation steps.
-        pub(crate) fn new<
-            I: IntoIterator<Item = (ContextId, DummyContext<S, TimerId, SendMeta>)>,
-        >(
+        /// Calls to `new` will panic if given a `DummyCtx` with timer events.
+        /// `DummyCtx`s given to `DummyNetwork` **must not** have any timer
+        /// events already attached to them, because `DummyNetwork` maintains
+        /// all the internal timers in dispatchers in sync to enable synchronous
+        /// simulation steps.
+        pub(crate) fn new<I: IntoIterator<Item = (ContextId, DummyCtx<S, TimerId, SendMeta>)>>(
             contexts: I,
             links: Links,
         ) -> Self {
@@ -1107,22 +1101,22 @@ pub(crate) mod testutil {
             ret
         }
 
-        /// Retrieves a `DummyContext` named `context`.
+        /// Retrieves a `DummyCtx` named `context`.
         pub(crate) fn context<K: Into<ContextId>>(
             &mut self,
             context: K,
-        ) -> &mut DummyContext<S, TimerId, SendMeta> {
+        ) -> &mut DummyCtx<S, TimerId, SendMeta> {
             self.contexts.get_mut(&context.into()).unwrap()
         }
 
         /// Performs a single step in network simulation.
         ///
         /// `step` performs a single logical step in the collection of
-        /// `Context`s held by this `DummyNetwork`. A single step consists of
+        /// `Ctx`s held by this `DummyNetwork`. A single step consists of
         /// the following operations:
         ///
-        /// - All pending frames, kept in each `DummyContext`, are mapped to
-        ///   their destination context/device pairs and moved to an internal
+        /// - All pending frames, kept in each `DummyCtx`, are mapped to their
+        ///   destination context/device pairs and moved to an internal
         ///   collection of pending frames.
         /// - The collection of pending timers and scheduled frames is inspected
         ///   and a simulation time step is retrieved, which will cause a next
@@ -1148,12 +1142,12 @@ pub(crate) mod testutil {
         /// panic when trying to route frames to their context/device
         /// destinations.
         pub(crate) fn step<
-            FH: FrameHandler<DummyContext<S, TimerId, SendMeta>, DeviceId, RecvMeta, Buf<Vec<u8>>>,
+            FH: FrameHandler<DummyCtx<S, TimerId, SendMeta>, DeviceId, RecvMeta, Buf<Vec<u8>>>,
         >(
             &mut self,
         ) -> StepResult
         where
-            DummyContext<S, TimerId, SendMeta>: TimerHandler<TimerId>,
+            DummyCtx<S, TimerId, SendMeta>: TimerHandler<TimerId>,
             TimerId: core::fmt::Debug,
         {
             self.collect_frames();
@@ -1316,14 +1310,14 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl TimerHandler<usize> for DummyContext<Vec<(usize, DummyInstant)>, usize> {
+            impl TimerHandler<usize> for DummyCtx<Vec<(usize, DummyInstant)>, usize> {
                 fn handle_timer(&mut self, id: usize) {
                     let now = self.now();
                     self.get_mut().push((id, now));
                 }
             }
 
-            let mut ctx = DummyContext::<Vec<(usize, DummyInstant)>, usize>::default();
+            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize>::default();
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.

@@ -286,7 +286,7 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, H: ArpHandler<D, P>>(
 /// level. We implement `TimerHandler` and `FrameHandler` for
 /// `ArpTimerFrameHandler` rather than just provide the top-level `handle_timer`
 /// and `receive_frame` functions so that `ArpTimerFrameHandler` can be used in
-/// tests with the `DummyTimerContextExt` trait and with the `DummyNetwork`
+/// tests with the `DummyTimerCtxExt` trait and with the `DummyNetwork`
 /// type.
 struct ArpTimerFrameHandler<D: ArpDevice, P> {
     _marker: PhantomData<(D, P)>,
@@ -727,7 +727,7 @@ mod tests {
     use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType, ArpPacketBuilder};
 
     use super::*;
-    use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerContextExt};
+    use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerCtxExt};
     use crate::context::InstantContext;
     use crate::device::ethernet::EthernetLinkDevice;
 
@@ -739,7 +739,7 @@ mod tests {
 
     /// A dummy `ArpContext` that stores frames, address resolution events, and
     /// address resolution failure events.
-    struct DummyArpContext {
+    struct DummyArpCtx {
         proto_addr: Option<Ipv4Addr>,
         hw_addr: Mac,
         addr_resolved: Vec<(Ipv4Addr, Mac)>,
@@ -748,9 +748,9 @@ mod tests {
         arp_state: ArpState<EthernetLinkDevice, Ipv4Addr>,
     }
 
-    impl Default for DummyArpContext {
-        fn default() -> DummyArpContext {
-            DummyArpContext {
+    impl Default for DummyArpCtx {
+        fn default() -> DummyArpCtx {
+            DummyArpCtx {
                 proto_addr: Some(TEST_LOCAL_IPV4),
                 hw_addr: TEST_LOCAL_MAC,
                 addr_resolved: Vec::new(),
@@ -761,17 +761,17 @@ mod tests {
         }
     }
 
-    type DummyContext = crate::context::testutil::DummyContext<
-        DummyArpContext,
+    type DummyCtx = crate::context::testutil::DummyCtx<
+        DummyArpCtx,
         ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
         ArpFrameMetadata<EthernetLinkDevice, ()>,
     >;
 
-    impl ArpDeviceIdContext<EthernetLinkDevice> for DummyContext {
+    impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx {
         type DeviceId = ();
     }
 
-    impl ArpContext<EthernetLinkDevice, Ipv4Addr> for DummyContext {
+    impl ArpContext<EthernetLinkDevice, Ipv4Addr> for DummyCtx {
         fn get_protocol_addr(&self, _device_id: ()) -> Option<Ipv4Addr> {
             self.get_ref().proto_addr
         }
@@ -793,7 +793,7 @@ mod tests {
         }
     }
 
-    impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>> for DummyContext {
+    impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>> for DummyCtx {
         fn get_state_with(&self, _id: ()) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
             &self.get_ref().arp_state
         }
@@ -804,7 +804,7 @@ mod tests {
     }
 
     fn send_arp_packet(
-        ctx: &mut DummyContext,
+        ctx: &mut DummyCtx,
         op: ArpOp,
         sender_ipv4: Ipv4Addr,
         target_ipv4: Ipv4Addr,
@@ -843,7 +843,7 @@ mod tests {
     // Validate that we've sent `total_frames` frames in total, and that the
     // most recent one was sent to `dst` with the given ARP packet contents.
     fn validate_last_arp_packet(
-        ctx: &DummyContext,
+        ctx: &DummyCtx,
         total_frames: usize,
         dst: Mac,
         op: ArpOp,
@@ -861,18 +861,18 @@ mod tests {
     // Validate that `ctx` contains exactly one installed timer with the given
     // instant and ID.
     fn validate_single_timer(
-        ctx: &DummyContext,
+        ctx: &DummyCtx,
         instant: Duration,
         id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
     ) {
         assert_eq!(ctx.timers().as_slice(), [(DummyInstant::from(instant), id)]);
     }
 
-    fn validate_single_retry_timer(ctx: &DummyContext, instant: Duration, addr: Ipv4Addr) {
+    fn validate_single_retry_timer(ctx: &DummyCtx, instant: Duration, addr: Ipv4Addr) {
         validate_single_timer(ctx, instant, ArpTimerId::new_request_retry((), addr))
     }
 
-    fn validate_single_entry_timer(ctx: &DummyContext, instant: Duration, addr: Ipv4Addr) {
+    fn validate_single_entry_timer(ctx: &DummyCtx, instant: Duration, addr: Ipv4Addr) {
         validate_single_timer(ctx, instant, ArpTimerId::new_entry_expiration((), addr))
     }
 
@@ -881,7 +881,7 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         send_arp_packet(
             &mut ctx,
             ArpOp::Request,
@@ -902,7 +902,7 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
         send_arp_packet(
             &mut ctx,
             ArpOp::Response,
@@ -924,7 +924,7 @@ mod tests {
         // a gratuitous ARP for the same host, we cancel the timer and notify
         // the device layer.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
@@ -963,17 +963,17 @@ mod tests {
         // Cancelling timers matches on the DeviceId, so setup a context that
         // uses IDs. The test doesn't use the context functions, so it's okay
         // that they return the same info.
-        type DummyContext2 = crate::context::testutil::DummyContext<
-            DummyArpContext,
+        type DummyCtx2 = crate::context::testutil::DummyCtx<
+            DummyArpCtx,
             ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>,
             ArpFrameMetadata<EthernetLinkDevice, usize>,
         >;
 
-        impl ArpDeviceIdContext<EthernetLinkDevice> for DummyContext2 {
+        impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx2 {
             type DeviceId = usize;
         }
 
-        impl ArpContext<EthernetLinkDevice, Ipv4Addr> for DummyContext2 {
+        impl ArpContext<EthernetLinkDevice, Ipv4Addr> for DummyCtx2 {
             fn get_protocol_addr(&self, _device_id: usize) -> Option<Ipv4Addr> {
                 self.get_ref().proto_addr
             }
@@ -995,7 +995,7 @@ mod tests {
             }
         }
 
-        impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for DummyContext2 {
+        impl StateContext<ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for DummyCtx2 {
             fn get_state_with(&self, _id: usize) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
                 &self.get_ref().arp_state
             }
@@ -1009,7 +1009,7 @@ mod tests {
         }
 
         // Setup up a dummy context and trigger a timer with a lookup
-        let mut ctx = DummyContext2::default();
+        let mut ctx = DummyCtx2::default();
 
         let device_id_0: usize = 0;
         let device_id_1: usize = 1;
@@ -1033,7 +1033,7 @@ mod tests {
         // Test that, when we perform a lookup that fails, we send an ARP
         // request and install a timer to retry.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         // Perform the lookup.
         assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
@@ -1079,7 +1079,7 @@ mod tests {
         // Test that, when we perform a lookup that succeeds, we do not send an
         // ARP request or install a retry timer.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         // Perform a gratuitous ARP to populate the cache.
         send_arp_packet(
@@ -1105,7 +1105,7 @@ mod tests {
         // Test that, after performing a certain number of ARP request retries,
         // we give up and don't install another retry timer.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
@@ -1172,7 +1172,7 @@ mod tests {
         // Test that, when we receive an ARP request, we cache the sender's
         // address information and send an ARP response.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         send_arp_packet(
             &mut ctx,
@@ -1221,14 +1221,14 @@ mod tests {
         //    updated, a new entry expiration timer is installed, and the device
         //    layer is notified of the resolution.
 
-        let local = DummyContext::default();
-        let mut remote = DummyContext::default();
+        let local = DummyCtx::default();
+        let mut remote = DummyCtx::default();
         remote.get_mut().hw_addr = TEST_REMOTE_MAC;
         remote.get_mut().proto_addr = Some(TEST_REMOTE_IPV4);
 
         let mut network = DummyNetwork::new(
             vec![("local", local), ("remote", remote)],
-            |ctx, _state: &DummyArpContext, _meta| {
+            |ctx, _state: &DummyArpCtx, _meta| {
                 if ctx == "local" {
                     ("remote", (), (), None)
                 } else {
@@ -1380,7 +1380,7 @@ mod tests {
         // Test that, if we insert a static entry while a request retry timer is
         // installed, that timer is canceled, and the device layer is notified.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         // Perform a lookup in order to kick off a request and install a retry
         // timer.
@@ -1409,7 +1409,7 @@ mod tests {
         // Test that, if we insert a static entry that overrides an existing
         // dynamic entry, the dynamic entry's expiration timer is canceled.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1430,7 +1430,7 @@ mod tests {
         // Test that, if a dynamic entry is installed, it is removed after the
         // appropriate amount of time.
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1463,7 +1463,7 @@ mod tests {
         // 4. Check whether the entry disappears at instant
         //    (DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + 5)
 
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
@@ -1510,7 +1510,7 @@ mod tests {
     fn test_arp_table_dynamic_after_static_should_not_set_timer() {
         // Test that, if a static entry exists, attempting to insert a dynamic
         // entry for the same address will not cause a timer to be scheduled.
-        let mut ctx = DummyContext::default();
+        let mut ctx = DummyCtx::default();
 
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
         assert_eq!(ctx.timers().len(), 0);

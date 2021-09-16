@@ -207,27 +207,27 @@ impl<D: EventDispatcher> Default for StackState<D> {
 
 /// Context available during the execution of the netstack.
 ///
-/// `Context` provides access to the state of the netstack and to an event
+/// `Ctx` provides access to the state of the netstack and to an event
 /// dispatcher which can be used to emit events and schedule timeouts. A mutable
-/// reference to a `Context` is passed to every function in the netstack.
+/// reference to a `Ctx` is passed to every function in the netstack.
 #[derive(Default)]
-pub struct Context<D: EventDispatcher> {
+pub struct Ctx<D: EventDispatcher> {
     state: StackState<D>,
     dispatcher: D,
 }
 
-impl<D: EventDispatcher> Context<D> {
-    /// Construct a new `Context`.
-    pub fn new(state: StackState<D>, dispatcher: D) -> Context<D> {
-        Context { state, dispatcher }
+impl<D: EventDispatcher> Ctx<D> {
+    /// Constructs a new `Ctx`.
+    pub fn new(state: StackState<D>, dispatcher: D) -> Ctx<D> {
+        Ctx { state, dispatcher }
     }
 
-    /// Construct a new `Context` using the default `StackState`.
-    pub fn with_default_state(dispatcher: D) -> Context<D> {
-        Context { state: StackState::default(), dispatcher }
+    /// Constructs a new `Ctx` using the default `StackState`.
+    pub fn with_default_state(dispatcher: D) -> Ctx<D> {
+        Ctx { state: StackState::default(), dispatcher }
     }
 
-    /// Get the stack state immutably.
+    /// Gets the stack state immutably.
     pub fn state(&self) -> &StackState<D> {
         &self.state
     }
@@ -257,10 +257,10 @@ impl<D: EventDispatcher> Context<D> {
     }
 }
 
-impl<D: EventDispatcher + Default> Context<D> {
-    /// Construct a new `Context` using the default dispatcher.
-    pub fn with_default_dispatcher(state: StackState<D>) -> Context<D> {
-        Context { state, dispatcher: D::default() }
+impl<D: EventDispatcher + Default> Ctx<D> {
+    /// Construct a new `Ctx` using the default dispatcher.
+    pub fn with_default_dispatcher(state: StackState<D>) -> Ctx<D> {
+        Ctx { state, dispatcher: D::default() }
     }
 }
 
@@ -290,7 +290,7 @@ impl From<DeviceLayerTimerId> for TimerId {
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
 
 /// Handle a generic timer event.
-pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
+pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
     trace!("handle_timeout: dispatching timerid: {:?}", id);
 
     match id {
@@ -418,7 +418,7 @@ pub trait EventDispatcher:
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant>;
 }
 
-impl<D: EventDispatcher> TimerContext<TimerId> for Context<D> {
+impl<D: EventDispatcher> TimerContext<TimerId> for Ctx<D> {
     fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
@@ -442,7 +442,7 @@ impl<D: EventDispatcher> TimerContext<TimerId> for Context<D> {
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
 pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
-    ctx: &'a Context<D>,
+    ctx: &'a Ctx<D>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
     let addr_v4 = crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
@@ -455,7 +455,7 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
 
 /// Set the IP address and subnet for a device.
 pub fn add_ip_addr_subnet<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
 ) -> error::Result<()> {
@@ -468,7 +468,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher>(
 
 /// Delete an IP address on a device.
 pub fn del_ip_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     device: DeviceId,
     addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
 ) -> error::Result<()> {
@@ -481,7 +481,7 @@ pub fn del_ip_addr<D: EventDispatcher>(
 
 /// Adds a route to the forwarding table.
 pub fn add_route<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     entry: EntryEither<DeviceId>,
 ) -> Result<(), error::NetstackError> {
     let (subnet, dest) = entry.into_subnet_dest();
@@ -506,7 +506,7 @@ pub fn add_route<D: EventDispatcher>(
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
 pub fn del_device_route<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     subnet: SubnetEither,
 ) -> error::Result<()> {
     map_addr_version!(subnet: SubnetEither; crate::ip::del_device_route(ctx, subnet))
@@ -515,7 +515,7 @@ pub fn del_device_route<D: EventDispatcher>(
 
 /// Get all the routes.
 pub fn get_all_routes<'a, D: EventDispatcher>(
-    ctx: &'a Context<D>,
+    ctx: &'a Ctx<D>,
 ) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
     let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
     let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);

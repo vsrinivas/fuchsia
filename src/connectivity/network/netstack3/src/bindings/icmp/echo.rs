@@ -22,7 +22,7 @@ use fidl_fuchsia_net_icmp::{
 
 use net_types::ip::{Ipv4, Ipv6};
 use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
-use netstack3_core::{BufferDispatcher, Context};
+use netstack3_core::{BufferDispatcher, Ctx};
 use packet::{Buf, BufferMut};
 
 use super::{IcmpStackContext, InnerIcmpConnId, RX_BUFFER_SIZE};
@@ -193,7 +193,7 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnI
 
     fn send_request<B: BufferMut, D: BufferDispatcher<B>>(
         &self,
-        ctx: &mut Context<D>,
+        ctx: &mut Ctx<D>,
         seq_num: u16,
         payload: B,
     ) {

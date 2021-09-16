@@ -14,7 +14,7 @@ use packet_formats::ipv6::Ipv6Packet;
 use zerocopy::ByteSlice;
 
 use crate::device::{DeviceId, FrameDestination};
-use crate::{Context, EventDispatcher};
+use crate::{Ctx, EventDispatcher};
 
 /// What to do with an IPv6 packet after parsing an extension header.
 #[derive(Debug, PartialEq, Eq)]
@@ -43,7 +43,7 @@ pub(crate) enum Ipv6PacketAction {
 /// hop-by-hop extension header (which MUST be the first extension header if
 /// present) as per RFC 8200 section 4.
 pub(crate) fn handle_extension_headers<D: EventDispatcher, B: ByteSlice>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
     packet: &Ipv6Packet<B>,
@@ -120,7 +120,7 @@ fn handle_hop_by_hop_options_ext_hdr<
     B: ByteSlice,
     I: Iterator<Item = ExtensionHeaderOption<HopByHopOptionData<'a>>>,
 >(
-    _ctx: &mut Context<D>,
+    _ctx: &mut Ctx<D>,
     _device: DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
@@ -144,7 +144,7 @@ fn handle_hop_by_hop_options_ext_hdr<
 /// Handles a routing extension header for a `packet`.
 // TODO(rheacock): Remove `_` prefix when this is used.
 fn _handle_routing_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
-    _ctx: &mut Context<D>,
+    _ctx: &mut Ctx<D>,
     _device: DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
@@ -158,7 +158,7 @@ fn _handle_routing_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
 
 /// Handles a fragment extension header for a `packet`.
 fn handle_fragment_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
-    _ctx: &mut Context<D>,
+    _ctx: &mut Ctx<D>,
     _device: DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,
@@ -178,7 +178,7 @@ fn handle_destination_options_ext_hdr<
     B: ByteSlice,
     I: Iterator<Item = ExtensionHeaderOption<DestinationOptionData<'a>>>,
 >(
-    _ctx: &mut Context<D>,
+    _ctx: &mut Ctx<D>,
     _device: DeviceId,
     _frame_dst: FrameDestination,
     _packet: &Ipv6Packet<B>,

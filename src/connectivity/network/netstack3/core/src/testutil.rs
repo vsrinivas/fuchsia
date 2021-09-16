@@ -32,7 +32,7 @@ use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher
 use crate::ip::IpLayerEventDispatcher;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder, TimerId};
+use crate::{handle_timeout, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
 /// Utilities to allow running benchmarks as tests.
 ///
@@ -203,7 +203,7 @@ pub(crate) fn set_logger_for_test() {
 ///
 /// Returns the `TimerId` if a timer was triggered, `None` if there were no
 /// timers waiting to be triggered.
-pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> Option<TimerId> {
+pub(crate) fn trigger_next_timer(ctx: &mut Ctx<DummyEventDispatcher>) -> Option<TimerId> {
     match ctx.dispatcher.timer_events.pop() {
         Some(InstantAndData(t, id)) => {
             ctx.dispatcher.current_time = t;
@@ -218,7 +218,7 @@ pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> Opt
 /// then, inclusive.
 ///
 /// Returns the `TimerId` of the timer events triggered.
-pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duration) -> Vec<TimerId> {
+pub(crate) fn run_for(ctx: &mut Ctx<DummyEventDispatcher>, duration: Duration) -> Vec<TimerId> {
     let end_time = ctx.dispatcher.now() + duration;
     let mut timer_ids = Vec::new();
 
@@ -250,7 +250,7 @@ pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duratio
 /// true to exit `trigger_timer_until`. 1,000,000 limit is set to avoid an
 /// endless loop.
 pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
-    ctx: &mut Context<DummyEventDispatcher>,
+    ctx: &mut Ctx<DummyEventDispatcher>,
     f: F,
 ) {
     for _ in 0..1_000_000 {
@@ -269,7 +269,7 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str) -> usize {
+pub(crate) fn get_counter_val(ctx: &mut Ctx<DummyEventDispatcher>, key: &str) -> usize {
     *ctx.state.test_counters.get(key)
 }
 
@@ -465,23 +465,23 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Build a `Context` from the present configuration with a default
+    /// Build a `Ctx` from the present configuration with a default
     /// dispatcher, and stack state set to disable NDP's Duplicate Address
     /// Detection by default.
-    pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
+    pub(crate) fn build<D: EventDispatcher + Default>(self) -> Ctx<D> {
         self.build_with_modifications(|_| {})
     }
 
     /// `build_with_modifications` is equivalent to `build`, except that after
     /// the `StackStateBuilder` is initialized, it is passed to `f` for further
-    /// modification before the `Context` is constructed.
+    /// modification before the `Ctx` is constructed.
     pub(crate) fn build_with_modifications<
         D: EventDispatcher + Default,
         F: FnOnce(&mut StackStateBuilder),
     >(
         self,
         f: F,
-    ) -> Context<D> {
+    ) -> Ctx<D> {
         let mut stack_builder = StackStateBuilder::default();
 
         // Most tests do not need NDP's DAD or router solicitation so disable it
@@ -495,14 +495,14 @@ impl DummyEventDispatcherBuilder {
         self.build_with(stack_builder, D::default())
     }
 
-    /// Build a `Context` from the present configuration with a caller-provided
+    /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
     pub(crate) fn build_with<D: EventDispatcher>(
         self,
         state_builder: StackStateBuilder,
         dispatcher: D,
-    ) -> Context<D> {
-        let mut ctx = Context::new(state_builder.build(), dispatcher);
+    ) -> Ctx<D> {
+        let mut ctx = Ctx::new(state_builder.build(), dispatcher);
 
         let DummyEventDispatcherBuilder {
             devices,
@@ -854,7 +854,7 @@ struct PendingFrameData<N> {
 
 type PendingFrame<N> = InstantAndData<PendingFrameData<N>>;
 
-/// A dummy network, composed of many `Context`s backed by
+/// A dummy network, composed of many `Ctx`s backed by
 /// `DummyEventDispatcher`s.
 ///
 /// Provides a quick utility to have many contexts keyed by `N` that can
@@ -865,7 +865,7 @@ pub(crate) struct DummyNetwork<
     N: Eq + Hash + Clone,
     F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
 > {
-    contexts: HashMap<N, Context<DummyEventDispatcher>>,
+    contexts: HashMap<N, Ctx<DummyEventDispatcher>>,
     mapper: F,
     current_time: DummyInstant,
     pending_frames: BinaryHeap<PendingFrame<N>>,
@@ -917,21 +917,21 @@ where
 {
     /// Creates a new `DummyNetwork`.
     ///
-    /// Creates a new `DummyNetwork` with the collection of `Context`s in
-    /// `contexts`. `Context`s are named by type parameter `N`. `mapper` is used
-    /// to route frames from one pair of (named `Context`, `DeviceId`) to
+    /// Creates a new `DummyNetwork` with the collection of `Ctx`s in
+    /// `contexts`. `Ctx`s are named by type parameter `N`. `mapper` is used
+    /// to route frames from one pair of (named `Ctx`, `DeviceId`) to
     /// another.
     ///
     /// # Panics
     ///
     /// `mapper` must map to a valid name, otherwise calls to `step` will panic.
     ///
-    /// Calls to `new` will panic if given a `Context` with timer events.
-    /// `Context`s given to `DummyNetwork` **must not** have any timer events
+    /// Calls to `new` will panic if given a `Ctx` with timer events.
+    /// `Ctx`s given to `DummyNetwork` **must not** have any timer events
     /// already attached to them, because `DummyNetwork` maintains all the
     /// internal timers in dispatchers in sync to enable synchronous simulation
     /// steps.
-    pub(crate) fn new<I: Iterator<Item = (N, Context<DummyEventDispatcher>)>>(
+    pub(crate) fn new<I: Iterator<Item = (N, Ctx<DummyEventDispatcher>)>>(
         contexts: I,
         mapper: F,
     ) -> Self {
@@ -957,19 +957,19 @@ where
         ret
     }
 
-    /// Retrieves a `Context` named `context`.
-    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut Context<DummyEventDispatcher> {
+    /// Retrieves a `Ctx` named `context`.
+    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut Ctx<DummyEventDispatcher> {
         self.contexts.get_mut(&context.into()).unwrap()
     }
 
     /// Performs a single step in network simulation.
     ///
-    /// `step` performs a single logical step in the collection of `Context`s
+    /// `step` performs a single logical step in the collection of `Ctx`s
     /// held by this `DummyNetwork`. A single step consists of the following
     /// operations:
     ///
     /// - All pending frames, kept in `frames_sent` of `DummyEventDispatcher`
-    /// are mapped to their destination `Context`/`DeviceId` pairs and moved to
+    /// are mapped to their destination `Ctx`/`DeviceId` pairs and moved to
     /// an internal collection of pending frames.
     /// - The collection of pending timers and scheduled frames is inspected and
     /// a simulation time step is retrieved, which will cause a next event
@@ -991,7 +991,7 @@ where
     /// # Panics
     ///
     /// If `DummyNetwork` was set up with a bad `mapper`, calls to `step` may
-    /// panic when trying to route frames to their `Context`/`DeviceId`
+    /// panic when trying to route frames to their `Ctx`/`DeviceId`
     /// destinations.
     pub(crate) fn step(&mut self) -> StepResult {
         self.collect_frames();
@@ -1058,7 +1058,7 @@ where
     /// Collects all queued frames.
     ///
     /// Collects all pending frames and schedules them for delivery to the
-    /// destination `Context`/`DeviceId` based on the result of `mapper`. The
+    /// destination `Ctx`/`DeviceId` based on the result of `mapper`. The
     /// collected frames are queued for dispatching in the `DummyNetwork`,
     /// ordered by their scheduled delivery time given by the latency result
     /// provided by `mapper`.
@@ -1191,9 +1191,9 @@ where
 
 /// Convenience function to create `DummyNetwork`s
 ///
-/// `new_dummy_network_from_config` creates a `DummyNetwork` with two `Context`s
-/// named `a` and `b`. `Context` `a` is created from the configuration provided
-/// in `cfg`, and `Context` `b` is created from the symmetric configuration
+/// `new_dummy_network_from_config` creates a `DummyNetwork` with two `Ctx`s
+/// named `a` and `b`. `Ctx` `a` is created from the configuration provided
+/// in `cfg`, and `Ctx` `b` is created from the symmetric configuration
 /// generated by `DummyEventDispatcherConfig::swap`. A default `mapper` function
 /// is provided that maps all frames from (`a`, ethernet device `1`) to
 /// (`b`, ethernet device `1`) and vice-versa.
@@ -1509,7 +1509,7 @@ mod tests {
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>() {
         fn send_packet<A: IpAddress>(
-            ctx: &mut Context<DummyEventDispatcher>,
+            ctx: &mut Ctx<DummyEventDispatcher>,
             src_ip: SpecifiedAddr<A>,
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,

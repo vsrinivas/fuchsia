@@ -18,7 +18,7 @@ use crate::device::{AddressEntry, DeviceId};
 use crate::error::NoRouteError;
 use crate::ip::forwarding::ForwardingTable;
 use crate::socket::Socket;
-use crate::{BufferDispatcher, Context, EventDispatcher};
+use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
 /// A socket identifying a connection between a local and remote IP host.
 pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = NoRouteError> {
@@ -274,7 +274,7 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv4 sockets.
 pub(crate) fn apply_ipv4_socket_update<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv4>,
 ) {
     crate::ip::icmp::apply_ipv4_socket_update(ctx, update);
@@ -286,7 +286,7 @@ pub(crate) fn apply_ipv4_socket_update<D: EventDispatcher>(
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv6 sockets.
 pub(crate) fn apply_ipv6_socket_update<D: EventDispatcher>(
-    ctx: &mut Context<D>,
+    ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv6>,
 ) {
     crate::ip::icmp::apply_ipv6_socket_update(ctx, update);
@@ -297,7 +297,7 @@ pub(crate) fn apply_ipv6_socket_update<D: EventDispatcher>(
 // the caller. We will still need to have a separate enforcement mechanism for
 // raw IP sockets once we support those.
 
-impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
+impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
     type IpSocket = IpSock<Ipv4, DeviceId>;
 
     type Builder = Ipv4SocketBuilder;
@@ -357,7 +357,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
     }
 }
 
-impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
+impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
     type IpSocket = IpSock<Ipv6, DeviceId>;
 
     type Builder = Ipv6SocketBuilder;
@@ -549,7 +549,7 @@ fn select_ipv6_source_address_cmp<Instant>(
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Context<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ctx<D> {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
         socket: &IpSock<Ipv4, DeviceId>,
@@ -585,7 +585,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Co
     }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Context<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ctx<D> {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
         socket: &IpSock<Ipv6, DeviceId>,
@@ -625,7 +625,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Co
 #[cfg(test)]
 pub(crate) mod testutil {
     use super::*;
-    use crate::context::testutil::DummyContext;
+    use crate::context::testutil::DummyCtx;
 
     /// A dummy implementation of [`IpSocket`].
     #[derive(Clone)]
@@ -676,9 +676,9 @@ pub(crate) mod testutil {
 
     /// A dummy implementation of [`IpSocketContext`].
     ///
-    /// `IpSocketContext` is implemented for any `DummyContext<S>` where `S`
-    /// implements `AsRef` and `AsMut` for `DummyIpSocketContext`.
-    pub(crate) struct DummyIpSocketContext<I: Ip> {
+    /// `IpSocketContext` is implemented for any `DummyCtx<S>` where `S`
+    /// implements `AsRef` and `AsMut` for `DummyIpSocketCtx`.
+    pub(crate) struct DummyIpSocketCtx<I: Ip> {
         // The default value to use if `new_ip_socket` is called with a
         // `local_ip` of `None`.
         default_local_ip: SpecifiedAddr<I::Addr>,
@@ -686,8 +686,8 @@ pub(crate) mod testutil {
         routable_at_creation: bool,
     }
 
-    impl<I: Ip> DummyIpSocketContext<I> {
-        /// Creates a new `DummyIpSocketContext`.
+    impl<I: Ip> DummyIpSocketCtx<I> {
+        /// Creates a new `DummyIpSocketCtx`.
         ///
         /// `default_local_ip` is the local IP address to use if none is
         /// specified in a request to create a new IP socket.
@@ -696,8 +696,8 @@ pub(crate) mod testutil {
         pub(crate) fn new(
             default_local_ip: SpecifiedAddr<I::Addr>,
             routable_at_creation: bool,
-        ) -> DummyIpSocketContext<I> {
-            DummyIpSocketContext { default_local_ip, routable_at_creation }
+        ) -> DummyIpSocketCtx<I> {
+            DummyIpSocketCtx { default_local_ip, routable_at_creation }
         }
     }
 
@@ -706,12 +706,8 @@ pub(crate) mod testutil {
         ttl: Option<u8>,
     }
 
-    impl<
-            I: IpExt,
-            S: AsRef<DummyIpSocketContext<I>> + AsMut<DummyIpSocketContext<I>>,
-            Id,
-            Meta,
-        > IpSocketContext<I> for DummyContext<S, Id, Meta>
+    impl<I: IpExt, S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>, Id, Meta>
+        IpSocketContext<I> for DummyCtx<S, Id, Meta>
     {
         type IpSocket = DummyIpSocket<I>;
 
@@ -747,10 +743,10 @@ pub(crate) mod testutil {
     impl<
             I: Ip,
             B: BufferMut,
-            S: AsRef<DummyIpSocketContext<I>> + AsMut<DummyIpSocketContext<I>>,
+            S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
             Id,
             Meta,
-        > BufferIpSocketContext<I, B> for DummyContext<S, Id, Meta>
+        > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta>
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
