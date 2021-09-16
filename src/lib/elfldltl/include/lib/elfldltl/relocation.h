@@ -70,13 +70,13 @@ class RelocationInfo {
 
   constexpr RelocationInfo& set_rel(RelTable relocs, size_type relcount) {
     rel_ = relocs;
-    relcount_ = relcount;
+    relcount_ = std::min(relcount, static_cast<size_type>(rel_.size()));
     return *this;
   }
 
   constexpr RelocationInfo& set_rela(RelaTable relocs, size_type relacount) {
     rela_ = relocs;
-    relacount_ = relacount;
+    relacount_ = std::min(relacount, static_cast<size_type>(rela_.size()));
     return *this;
   }
 

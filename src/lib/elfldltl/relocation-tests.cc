@@ -80,6 +80,7 @@ constexpr auto kTestMachine = elfldltl::ElfMachine::kNone;
 using TestType = elfldltl::RelocationTraits<kTestMachine>::Type;
 constexpr uint32_t kRelativeType = static_cast<uint32_t>(TestType::kRelative);
 
+template <bool BadCount = false>
 constexpr auto VisitRelativeRel = [](auto elf) {
   using RelocInfo = elfldltl::RelocationInfo<decltype(elf)>;
   using Rel = typename RelocInfo::Rel;
@@ -90,7 +91,7 @@ constexpr auto VisitRelativeRel = [](auto elf) {
   };
 
   RelocInfo info;
-  info.set_rel(relocs, 2);
+  info.set_rel(relocs, BadCount ? 99 : 2);
 
   EXPECT_TRUE(RelocInfo::template ValidateRelative<kTestMachine>(info.rel_relative()));
 
@@ -111,9 +112,14 @@ constexpr auto VisitRelativeRel = [](auto elf) {
 };
 
 TEST(ElfldltlRelocationTests, VisitRelativeRel) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRel);
+  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRel<>);
 }
 
+TEST(ElfldltlRelocationTests, VisitRelativeBadRelCount) {
+  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRel<true>);
+}
+
+template <bool BadCount = false>
 constexpr auto VisitRelativeRela = [](auto elf) {
   using RelocInfo = elfldltl::RelocationInfo<decltype(elf)>;
   using Rela = typename RelocInfo::Rela;
@@ -124,7 +130,7 @@ constexpr auto VisitRelativeRela = [](auto elf) {
   };
 
   RelocInfo info;
-  info.set_rela(relocs, 2);
+  info.set_rela(relocs, BadCount ? 99 : 2);
 
   EXPECT_TRUE(RelocInfo::template ValidateRelative<kTestMachine>(info.rela_relative()));
 
@@ -148,7 +154,11 @@ constexpr auto VisitRelativeRela = [](auto elf) {
 };
 
 TEST(ElfldltlRelocationTests, VisitRelativeRela) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRela);
+  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRela<>);
+}
+
+TEST(ElfldltlRelocationTests, VisitRelativeBadRelaCount) {
+  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRela<true>);
 }
 
 constexpr auto VisitRelativeRelrSingle = [](auto elf) {
