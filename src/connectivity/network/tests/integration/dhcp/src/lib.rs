@@ -781,11 +781,11 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create server Realm")?;
+        .context("failed to create server realm")?;
 
     let client_realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client Realm")?;
+        .context("failed to create client realm")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let if_name = "testeth";
@@ -920,22 +920,22 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn test_dhcp_server_persistence_mode_persistent<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_dhcp_server_persistence_mode_persistent<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Persistent;
-    Ok(test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await?)
+    test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await
 }
 
 #[variants_test]
-async fn test_dhcp_server_persistence_mode_ephemeral<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_dhcp_server_persistence_mode_ephemeral<E: netemul::Endpoint>(name: &str) {
     let mode = PersistenceMode::Ephemeral;
-    Ok(test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await?)
+    test_dhcp_server_persistence_mode::<E>(&format!("{}_{}", name, mode), mode).await
 }
 
 async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
     name: &str,
     mode: PersistenceMode,
-) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
 
     let server_realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
@@ -953,12 +953,12 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
                 KnownServiceProvider::SecureStash,
             ],
         )
-        .context("failed to create server Realm")?;
+        .expect("failed to create server realm");
 
-    let network = sandbox.create_network(name).await.context("failed to create network")?;
+    let network = sandbox.create_network(name).await.expect("failed to create network");
     let if_name = "testeth";
     let endpoint =
-        network.create_endpoint::<E, _>("server-ep").await.context("failed to create endpoint")?;
+        network.create_endpoint::<E, _>("server-ep").await.expect("failed to create endpoint");
     let _server_ep = server_realm
         .install_endpoint(
             endpoint,
@@ -966,54 +966,54 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
             Some(if_name.to_string()),
         )
         .await
-        .context("failed to create server network endpoint")?;
+        .expect("failed to create server network endpoint");
 
     // Configure the server with parameters and then restart it.
     {
-        let mut settings = test_dhcpd_parameters(if_name.to_string())
-            .context("failed to create test dhcpd params")?;
-        let dhcp_server =
-            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
-        let () = set_server_settings(&dhcp_server, &mut settings, &mut []).await?;
+        let mut settings =
+            test_dhcpd_parameters(if_name.to_string()).expect("failed to create test dhcpd params");
+        let dhcp_server = server_realm
+            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+            .expect("failed to connect to server");
+        let () = set_server_settings(&dhcp_server, &mut settings, &mut [])
+            .await
+            .expect("failed to set server settings");
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
-            .context("failed to stop dhcpd")?;
+            .expect("failed to stop dhcpd");
     }
 
     // Assert that configured parameters after the restart correspond to the persistence mode of the
     // server.
     {
-        let dhcp_server =
-            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let dhcp_server = server_realm
+            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+            .expect("failed to connect to server");
         let dhcp_server = &dhcp_server;
-        let mut params = mode
+        let params = mode
             .dhcpd_params_after_restart(if_name.to_string())
-            .context("failed to create dhcpd params after restart.")?;
-        let () = stream::iter(params.iter_mut())
-            .map(Ok)
-            .try_for_each_concurrent(None, |(name, parameter)| async move {
-                Result::Ok(assert_eq!(
+            .expect("failed to create dhcpd params after restart");
+        let () = stream::iter(params.into_iter())
+            .for_each_concurrent(None, |(name, parameter)| async move {
+                assert_eq!(
                     dhcp_server
-                        .get_parameter(*name)
+                        .get_parameter(name)
                         .await
-                        .with_context(|| {
-                            format!("failed to call dhcp/Server.GetParameter({:?})", name)
-                        })?
-                        .map_err(fuchsia_zircon::Status::from_raw)
-                        .with_context(|| {
-                            format!("dhcp/Server.GetParameter({:?}) returned error", name)
+                        .unwrap_or_else(|e| {
+                            panic!("dhcp/Server.GetParameter({:?}): {:?}", name, e)
                         })
-                        .unwrap(),
-                    *parameter
-                ))
+                        .map_err(fuchsia_zircon::Status::from_raw)
+                        .unwrap_or_else(|e| {
+                            panic!("dhcp/Server.GetParameter({:?}): {:?}", name, e)
+                        }),
+                    parameter
+                )
             })
-            .await
-            .context("failed to get server parameters")?;
+            .await;
         let () = server_realm
             .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
             .await
-            .context("failed to stop dhcpd")?;
+            .expect("failed to stop dhcpd");
     }
-    Ok(())
 }
