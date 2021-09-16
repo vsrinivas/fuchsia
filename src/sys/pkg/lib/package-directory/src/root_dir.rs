@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        meta::Meta,
+        meta_as_dir::MetaAsDir,
+        meta_as_file::MetaAsFile,
         meta_file::{MetaFile, MetaFileLocation},
         meta_subdir::MetaSubdir,
         non_meta_subdir::NonMetaSubdir,
@@ -15,7 +16,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileProxy, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
     },
     fuchsia_archive::AsyncReader,
@@ -151,7 +153,25 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         let canonical_path = path.as_ref().strip_suffix("/").unwrap_or_else(|| path.as_ref());
 
         if canonical_path == "meta" {
-            let () = Arc::new(Meta::new(self)).open(scope, flags, mode, VfsPath::dot(), server_end);
+            // This branch is done here instead of in MetaAsDir so that Clone'ing MetaAsDir yields
+            // MetaAsDir. See the MetaAsDir::open impl for more.
+            if open_meta_as_file(flags, mode) {
+                let () = Arc::new(MetaAsFile::new(self)).open(
+                    scope,
+                    flags,
+                    mode,
+                    VfsPath::dot(),
+                    server_end,
+                );
+            } else {
+                let () = Arc::new(MetaAsDir::new(self)).open(
+                    scope,
+                    flags,
+                    mode,
+                    VfsPath::dot(),
+                    server_end,
+                );
+            }
             return;
         }
 
@@ -275,6 +295,15 @@ impl vfs::directory::entry_container::Directory for RootDir {
     }
 }
 
+// Behavior copied from pkgfs.
+fn open_meta_as_file(flags: u32, mode: u32) -> bool {
+    let mode_type = mode & MODE_TYPE_MASK;
+    let open_as_file = mode_type == MODE_TYPE_FILE;
+    let open_as_dir = mode_type == MODE_TYPE_DIRECTORY
+        || flags & (OPEN_FLAG_DIRECTORY | OPEN_FLAG_NODE_REFERENCE) != 0;
+    open_as_file || !open_as_dir
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -288,6 +317,7 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         matches::assert_matches,
+        proptest::{prelude::ProptestConfig, prop_assert, proptest},
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 
@@ -579,6 +609,14 @@ mod tests {
                 io_util::file::read(&proxy).await.unwrap(),
                 root_dir.hash.to_string().as_bytes()
             );
+
+            // Cloning meta_as_file yields meta_as_file
+            let (cloned_proxy, server_end) = create_proxy::<FileMarker>().unwrap();
+            let () = proxy.clone(OPEN_RIGHT_READABLE, server_end.into_channel().into()).unwrap();
+            assert_eq!(
+                io_util::file::read(&cloned_proxy).await.unwrap(),
+                root_dir.hash.to_string().as_bytes()
+            );
         }
     }
 
@@ -601,6 +639,31 @@ mod tests {
 
             assert_eq!(
                 files_async::readdir(&proxy).await.unwrap(),
+                vec![
+                    files_async::DirEntry {
+                        name: "contents".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                    files_async::DirEntry {
+                        name: "dir".to_string(),
+                        kind: files_async::DirentKind::Directory
+                    },
+                    files_async::DirEntry {
+                        name: "file".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                    files_async::DirEntry {
+                        name: "package".to_string(),
+                        kind: files_async::DirentKind::File
+                    },
+                ]
+            );
+
+            // Cloning meta_as_dir yields meta_as_dir
+            let (cloned_proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+            let () = proxy.clone(0, server_end.into_channel().into()).unwrap();
+            assert_eq!(
+                files_async::readdir(&cloned_proxy).await.unwrap(),
                 vec![
                     files_async::DirEntry {
                         name: "contents".to_string(),
@@ -716,5 +779,39 @@ mod tests {
         let mut buf = [0u8; 8];
         vmo.read(&mut buf, 0).unwrap();
         assert_eq!(buf, fuchsia_archive::MAGIC_INDEX_VALUE);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            failure_persistence:
+                Some(Box::new(proptest::test_runner::FileFailurePersistence::Off)),
+            ..ProptestConfig::default()
+        })]
+        #[test]
+        fn open_meta_as_file_file_first_priority(flags: u32, mode: u32) {
+            let mode_with_file = (mode & !MODE_TYPE_MASK) | MODE_TYPE_FILE;
+            prop_assert!(open_meta_as_file(flags, mode_with_file));
+        }
+
+        #[test]
+        fn open_meta_as_file_dir_second_priority(flags: u32, mode: u32) {
+            let mode_with_dir = (mode & !MODE_TYPE_MASK) | MODE_TYPE_DIRECTORY;
+            prop_assert!(!open_meta_as_file(flags, mode_with_dir));
+
+            let mode_without_file = if mode & MODE_TYPE_MASK == MODE_TYPE_FILE {
+                mode & !MODE_TYPE_FILE
+            } else {
+                mode
+            };
+            prop_assert!(!open_meta_as_file(flags | OPEN_FLAG_DIRECTORY, mode_without_file));
+            prop_assert!(!open_meta_as_file(flags | OPEN_FLAG_NODE_REFERENCE, mode_without_file));
+        }
+
+        #[test]
+        fn open_meta_as_file_file_fallback(mut flags: u32, mut mode: u32) {
+            mode = mode & !(MODE_TYPE_FILE | MODE_TYPE_DIRECTORY);
+            flags = flags & !(OPEN_FLAG_DIRECTORY | OPEN_FLAG_NODE_REFERENCE);
+            prop_assert!(open_meta_as_file(flags, mode));
+        }
     }
 }

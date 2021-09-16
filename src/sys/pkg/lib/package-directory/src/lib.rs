@@ -13,7 +13,8 @@ use {
     },
 };
 
-mod meta;
+mod meta_as_dir;
+mod meta_as_file;
 mod meta_file;
 mod meta_subdir;
 mod non_meta_subdir;
