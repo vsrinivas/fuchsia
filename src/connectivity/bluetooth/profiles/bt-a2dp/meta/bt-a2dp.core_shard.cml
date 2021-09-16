@@ -24,7 +24,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Discovery",
@@ -37,6 +36,11 @@
             from: "#appmgr",
             to: [ "#bt-a2dp" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: [ "#bt-a2dp" ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],

@@ -38,7 +38,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
                 "fuchsia.factory.MiscFactoryStoreProvider",
@@ -53,7 +52,6 @@
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
-                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.power.manager.DriverManagerRegistration",
@@ -666,7 +664,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.exception.Handler",
                 "fuchsia.factory.MiscFactoryStoreProvider",
@@ -681,7 +678,6 @@
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
-                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.power.manager.DriverManagerRegistration",

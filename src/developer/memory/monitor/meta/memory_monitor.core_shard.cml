@@ -23,13 +23,17 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "#appmgr",
             to: "#memory_monitor",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: "#memory_monitor",
         },
         {
             protocol: [

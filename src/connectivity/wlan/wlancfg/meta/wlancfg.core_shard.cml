@@ -43,9 +43,8 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
-            from: "#appmgr",
+            from: "#cobalt",
             to: "#wlancfg",
-            dependency: "weak_for_migration",
         },
         {
             directory: "config-data",

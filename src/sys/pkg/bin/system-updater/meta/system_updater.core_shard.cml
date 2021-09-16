@@ -14,9 +14,8 @@
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#appmgr",
+            from: "#cobalt",
             to: "#system-updater",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.pkg.PackageResolver",

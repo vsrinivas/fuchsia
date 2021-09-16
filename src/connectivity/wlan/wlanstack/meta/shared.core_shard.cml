@@ -26,9 +26,8 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
-            from: "#appmgr",
+            from: "#cobalt",
             to: "#wlanstack",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.wlan.device.service.DeviceService" ],

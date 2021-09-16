@@ -29,9 +29,8 @@
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-            from: "#appmgr",
+            from: "#cobalt",
             to: "#wlandevicemonitor",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.wlan.device.service.DeviceMonitor",

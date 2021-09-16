@@ -90,11 +90,9 @@
         {
             protocol: [
                 "fuchsia.amber.Control",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hwinfo.Device",
-                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.process.Resolver",
                 "fuchsia.settings.Input",
                 "fuchsia.sys.Environment",

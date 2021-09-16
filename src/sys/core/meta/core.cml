@@ -988,6 +988,10 @@
             from: "#session-manager",
         },
         {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#cobalt",
+        },
+        {
             protocol: [ "fuchsia.component.Binder" ],
             from: "#detect",
             as: "fuchsia.component.DetectBinder",
