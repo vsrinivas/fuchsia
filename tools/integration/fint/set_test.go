@@ -80,19 +80,27 @@ func TestRunSteps(t *testing.T) {
 
 	t.Run("skips gn gen", func(t *testing.T) {
 		staticSpec := proto.Clone(staticSpec).(*fintpb.Static)
-		staticSpec.Incremental = true
-		runner := &fakeSubprocessRunner{}
+		staticSpec.AutomaticGen = true
+		runner := &fakeSubprocessRunner{
+			mockStdout: []byte("some stdout"),
+			fail:       true,
+		}
 		ninjaFile := filepath.Join(contextSpec.BuildDir, "build.ninja")
 		if err := ioutil.WriteFile(ninjaFile, []byte("abc"), 0o600); err != nil {
 			t.Fatalf("failed to write to %s", ninjaFile)
 		}
 		t.Cleanup(func() { os.Remove(ninjaFile) })
 		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		// Even though the runner is set to fail, the runner should never
+		// execute when `gn gen` is skipped, and thus we do not expect an error.
 		if err != nil {
 			t.Fatalf("Unexpected error from runSteps: %s", err)
 		}
 		if artifacts.GnTracePath != "" {
 			t.Errorf("Unexpected non-empty gn_trace_path")
+		}
+		if artifacts.FailureSummary != "" {
+			t.Errorf("Unexpected failure summary when `gn gen` should have been skipped")
 		}
 	})
 
