@@ -6,7 +6,7 @@ library fuchsia.process.lifecycle;
 /// A component can implement the Lifecycle protocol to be notified of lifecycle
 /// events. The ELF Runner uses this protocol to communicate lifecycle changes
 /// to the component, for more details on how it uses this protocol see:
-/// https://fuchsia.dev/fuchsia-src/concepts/components/v2/elf_runner?hl=en#lifecycle
+/// https://fuchsia.dev/fuchsia-src/concepts/components/v2/elf_runner#lifecycle
 protocol Lifecycle {
     /// The process must clean up its state in preparation for termination, and
     /// must close the channel hosting the `Lifecycle` protocol when it is
