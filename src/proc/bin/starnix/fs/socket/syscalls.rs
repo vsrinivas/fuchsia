@@ -85,6 +85,14 @@ pub fn sys_connect(
     let node = parent.lookup(&mut LookupContext::default(), ctx.task, basename)?;
     let second_socket_node = node.entry.node.clone();
 
+    if let Some(socket) = second_socket_node.socket() {
+        if !socket.lock().accepts_connections() {
+            return error!(ECONNREFUSED);
+        }
+    } else {
+        return error!(ECONNREFUSED);
+    }
+
     Socket::connect(first_socket_file.node(), &second_socket_node)
         .expect("socket connect failed, even after sockets were checked.");
 

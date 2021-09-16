@@ -45,6 +45,9 @@ pub struct Socket {
     // TODO: Extract the byte-shuffling code from Pipe, and reuse that here. This will allow us to
     // send `control_message` in-band, support datagrams, etc.
     read_pipe: Pipe,
+
+    /// Whether or not the socket accepts incoming connections.
+    accepts_connections: bool,
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`. This is used to share sockets
@@ -65,6 +68,9 @@ impl Socket {
     ///
     /// Returns an error if any of the sockets are already connected.
     pub fn connect(first_node: &FsNodeHandle, second_node: &FsNodeHandle) -> Result<(), Errno> {
+        assert!(first_node.socket().is_some());
+        assert!(second_node.socket().is_some());
+
         // Sort the nodes to determine which order to lock them in.
         let mut ordered_nodes: [&FsNodeHandle; 2] = [first_node, second_node];
         sort_for_locking(&mut ordered_nodes, |node| node.socket().unwrap());
@@ -73,7 +79,7 @@ impl Socket {
         let second_node = ordered_nodes[1];
 
         // Lock the sockets in a consistent order.
-        let mut first_socket = first_node.socket().ok_or(ENOTSOCK)?.lock();
+        let mut first_socket = first_node.socket().unwrap().lock();
         if first_socket.connected_node.upgrade().is_some() {
             return error!(EISCONN);
         }
@@ -86,7 +92,7 @@ impl Socket {
             return Ok(());
         }
 
-        let mut second_socket = second_node.socket().ok_or(ENOTSOCK)?.lock();
+        let mut second_socket = second_node.socket().unwrap().lock();
         if second_socket.connected_node.upgrade().is_some() {
             return error!(EISCONN);
         }
@@ -139,6 +145,11 @@ impl Socket {
 
     pub fn connected_socket(&self) -> Option<SocketHandle> {
         self.connected_node.upgrade().and_then(|node| node.socket().map(|s| s.clone()))
+    }
+
+    /// Returns whether or not this socket is configured to accept connections.
+    pub fn accepts_connections(&self) -> bool {
+        self.accepts_connections
     }
 
     pub fn pipe(&mut self) -> &mut Pipe {
