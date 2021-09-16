@@ -4046,7 +4046,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                             )),
                     )
                     .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env_b"))
-                    .add_child(ChildDeclBuilder::new_lazy_child("d").environment("env_b"))
+                    .add_child(ChildDeclBuilder::new_lazy_child("d"))
                     .add_child(ChildDeclBuilder::new_lazy_child("e").environment("env_b"))
                     .build(),
             ),
@@ -4121,18 +4121,19 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .await;
     }
 
-    ///   a
-    ///    \
-    ///     b
-    ///    /  \
-    ///   c    d
+    ///    a
+    ///     \
+    ///      b
+    ///     / \
+    ///    c   d
     ///         \
     ///          e
-    /// b: provides d with the service policy which denies it.
-    /// b: provides c with the service policy which allows it.
+    /// b: defines an environment with a debug protocols exposed by d, 1 allowed and 1 not allowed
+    /// b: provides c with the environment
     /// c: uses service svc_allowed as /svc/hippo.
-    /// b: offers services using environment.
-    /// e: exposes the service to b
+    /// c: uses service svc_not_allowed as /svc/hippo_not_allowed
+    /// d: exposes the service to b
+    /// e: exposes the service to d
     /// Tests component provided debug caps in the middle of a path
     pub async fn test_use_protocol_component_provided_debug_capability_policy_from_grandchild(
         &self,
@@ -4174,8 +4175,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                             )),
                     )
                     .add_child(ChildDeclBuilder::new_lazy_child("c").environment("env_b"))
-                    .add_child(ChildDeclBuilder::new_lazy_child("d").environment("env_b"))
-                    .add_child(ChildDeclBuilder::new_lazy_child("e").environment("env_b"))
+                    .add_child(ChildDeclBuilder::new_lazy_child("d"))
                     .build(),
             ),
             (
@@ -4187,17 +4187,17 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "svc_allowed".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Debug,
+                        source_name: "svc_not_allowed".into(),
+                        target_path: CapabilityPath::try_from("/svc/hippo_not_allowed").unwrap(),
+                    }))
                     .build(),
             ),
             (
                 "d",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Debug,
-                        source_name: "svc_not_allowed".into(),
-                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                    }))
                     .expose(cm_rust::ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Child("e".into()),
                         source_name: "svc_allowed".into(),
@@ -4253,9 +4253,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
 
         model
             .check_use(
-                vec!["b:0", "d:0"].into(),
+                vec!["b:0", "c:0"].into(),
                 CheckUse::Protocol {
-                    path: default_service_capability(),
+                    path: "/svc/hippo_not_allowed".try_into().unwrap(),
                     expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
                 },
             )

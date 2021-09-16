@@ -325,23 +325,66 @@ struct ValidationContext<'a> {
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_ids: IdMap<'a>,
     errors: Vec<Error>,
-    // Set of all children which use from child with dependency_type=strong.
-    // Used for preventing use/offer cycles.
-    use_from_child_strong: HashSet<&'a str>,
 }
 
 /// A node in the DependencyGraph. The first string describes the type of node and the second
 /// string is the name of the node.
 #[derive(Copy, Clone, Hash, Ord, Debug, PartialOrd, PartialEq, Eq)]
 enum DependencyNode<'a> {
+    Self_,
     Child(&'a str),
+    Collection(&'a str),
     Environment(&'a str),
+}
+
+impl<'a> DependencyNode<'a> {
+    fn try_from_ref(ref_: Option<&'a fsys::Ref>) -> Option<DependencyNode<'a>> {
+        if ref_.is_none() {
+            return None;
+        }
+        match ref_.unwrap() {
+            fsys::Ref::Child(fsys::ChildRef { name, .. }) => {
+                Some(DependencyNode::Child(name.as_str()))
+            }
+            fsys::Ref::Collection(fsys::CollectionRef { name, .. }) => {
+                Some(DependencyNode::Collection(name.as_str()))
+            }
+            fsys::Ref::Capability(fsys::CapabilityRef { .. }) => {
+                // Any references to a declared capability come from self, because we declared the
+                // capability.
+                Some(DependencyNode::Self_)
+            }
+            fsys::Ref::Self_(_) => Some(DependencyNode::Self_),
+            fsys::Ref::Parent(_) => {
+                // We don't care about dependency cycles with the parent, as any potential issues
+                // with that are resolved by cycle detection in the parent's manifest.
+                None
+            }
+            fsys::Ref::Framework(_) => {
+                // We don't care about dependency cycles with the framework, as the framework
+                // always outlives the component.
+                None
+            }
+            fsys::Ref::Debug(_) => {
+                // We don't care about dependency cycles with any debug capabilities from the
+                // environment, as those are put there by our parent, and any potential cycles with
+                // our parent are handled by cycle detection in the parent's manifest.
+                None
+            }
+            fsys::RefUnknown!() => {
+                // We were unable to understand this FIDL value
+                None
+            }
+        }
+    }
 }
 
 impl<'a> fmt::Display for DependencyNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            DependencyNode::Self_ => write!(f, "self"),
             DependencyNode::Child(name) => write!(f, "child {}", name),
+            DependencyNode::Collection(name) => write!(f, "collection {}", name),
             DependencyNode::Environment(name) => write!(f, "environment {}", name),
         }
     }
@@ -427,7 +470,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Check that there are no strong cyclical dependencies between children and environments
+        // Check that there are no strong cyclical dependencies
         if let Err(e) = self.strong_dependencies.topological_sort() {
             self.errors.push(Error::dependency_cycle(e.format_cycle()));
         }
@@ -799,8 +842,7 @@ impl<'a> ValidationContext<'a> {
 
     // disallow (use from #child dependency=strong) && (offer to #child from self)
     // - err: `use` must have dependency=weak to prevent cycle
-    // disallow (use from <not-#child> dependency=weak)
-    // - err: a `use` dependency=`weak` is only valid if from children
+    // add strong dependencies to dependency graph, so we can check for cycles
     fn validate_use_source(
         &mut self,
         source: Option<&'a fsys::Ref>,
@@ -814,6 +856,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Debug(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Capability(capability)) => {
+                // TODO: find the capability source, and add an edge
                 if !self.all_capability_ids.contains(capability.name.as_str()) {
                     self.errors.push(Error::invalid_capability(decl, field, &capability.name));
                 }
@@ -822,7 +865,9 @@ impl<'a> ValidationContext<'a> {
                 if !self.all_children.contains_key(&child.name as &str) {
                     self.errors.push(Error::invalid_child(decl, field, &child.name));
                 } else if dependency_type == Some(&fsys::DependencyType::Strong) {
-                    self.use_from_child_strong.insert(&child.name);
+                    let source = DependencyNode::Child(child.name.as_str());
+                    let target = DependencyNode::Self_;
+                    self.strong_dependencies.add_edge(source, target);
                 }
             }
             Some(_) => {
@@ -881,8 +926,6 @@ impl<'a> ValidationContext<'a> {
             if !self.all_collections.insert(name) {
                 self.errors.push(Error::duplicate_field("CollectionDecl", "name", name));
             }
-            // If there is an environment, we don't need to account for it in the dependency
-            // graph because a collection is always a sink node.
         }
         if collection.durability.is_none() {
             self.errors.push(Error::missing_field("CollectionDecl", "durability"));
@@ -895,6 +938,11 @@ impl<'a> ValidationContext<'a> {
                     "environment",
                     environment,
                 ));
+            }
+            if let Some(name) = collection.name.as_ref() {
+                let source = DependencyNode::Environment(environment.as_str());
+                let target = DependencyNode::Collection(name.as_str());
+                self.strong_dependencies.add_edge(source, target);
             }
         }
     }
@@ -933,7 +981,7 @@ impl<'a> ValidationContext<'a> {
 
         if let Some(debugs) = environment.debug_capabilities.as_ref() {
             for debug in debugs {
-                self.validate_environment_debug_registration(debug);
+                self.validate_environment_debug_registration(debug, name.clone());
             }
         }
     }
@@ -1018,19 +1066,21 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Child(child_ref)) => {
                 // Make sure the child is valid.
-                if self.validate_child_ref(ty, "source", &child_ref) {
-                    // Ensure there are no cycles, such as a resolver in an environment being
-                    // assigned to a child which the resolver depends on.
-                    let source = DependencyNode::Child(child_ref.name.as_str());
-                    let target = DependencyNode::Environment(environment_name.unwrap().as_str());
-                    self.strong_dependencies.add_edge(source, target);
-                }
+                self.validate_child_ref(ty, "source", &child_ref);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(ty, "source"));
             }
             None => {
                 self.errors.push(Error::missing_field(ty, "source"));
+            }
+        }
+
+        let source = DependencyNode::try_from_ref(source);
+        if let Some(source) = source {
+            if let Some(env_name) = &environment_name {
+                let target = DependencyNode::Environment(env_name);
+                self.strong_dependencies.add_edge(source, target);
             }
         }
     }
@@ -1136,6 +1186,14 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
             self.all_storage_and_sources.insert(name, source_child_name);
+
+            let source = DependencyNode::try_from_ref(storage.source.as_ref());
+            if let Some(source) = source {
+                if source != DependencyNode::Self_ {
+                    let target = DependencyNode::Self_;
+                    self.strong_dependencies.add_edge(source, target);
+                }
+            }
         }
         if storage.storage_id.is_none() {
             self.errors.push(Error::missing_field("StorageDecl", "storage_id"));
@@ -1191,6 +1249,61 @@ impl<'a> ValidationContext<'a> {
                 );
             }
         }
+    }
+
+    fn validate_environment_debug_registration(
+        &mut self,
+        debug: &'a fsys::DebugRegistration,
+        environment_name: Option<&'a String>,
+    ) {
+        match debug {
+            fsys::DebugRegistration::Protocol(o) => {
+                let decl = "DebugProtocolRegistration";
+                self.validate_environment_debug_fields(
+                    decl,
+                    o.source.as_ref(),
+                    o.source_name.as_ref(),
+                    o.target_name.as_ref(),
+                );
+
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
+                    if !self.all_protocols.contains(&name as &str) {
+                        self.errors.push(Error::invalid_field(decl, "source"));
+                    }
+                }
+
+                let source = DependencyNode::try_from_ref(o.source.as_ref());
+                if let Some(source) = source {
+                    if let Some(env_name) = &environment_name {
+                        let target = DependencyNode::Environment(env_name);
+                        self.strong_dependencies.add_edge(source, target);
+                    }
+                }
+            }
+            fsys::DebugRegistrationUnknown!() => {
+                self.errors.push(Error::invalid_field("EnvironmentDecl", "debug"));
+            }
+        }
+    }
+
+    fn validate_environment_debug_fields(
+        &mut self,
+        decl: &str,
+        source: Option<&fsys::Ref>,
+        source_name: Option<&String>,
+        target_name: Option<&'a String>,
+    ) {
+        // We don't support "source" from "capability" for now.
+        match source {
+            Some(fsys::Ref::Parent(_)) => {}
+            Some(fsys::Ref::Self_(_)) => {}
+            Some(fsys::Ref::Framework(_)) => {}
+            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
+            None => self.errors.push(Error::missing_field(decl, "source")),
+        }
+        check_name(source_name, decl, "source_name", &mut self.errors);
+        check_name(target_name, decl, "target_name", &mut self.errors);
     }
 
     fn validate_event_decl(&mut self, event: &'a fsys::EventDecl) {
@@ -1446,16 +1559,18 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn add_strong_dep(&mut self, from: Option<&'a fsys::Ref>, to: Option<&'a fsys::Ref>) {
-        if let Some(fsys::Ref::Child(fsys::ChildRef { name: source, .. })) = from {
-            if let Some(fsys::Ref::Child(fsys::ChildRef { name: target, .. })) = to {
-                if source == target {
-                    // This is already its own error, don't report this as a cycle.
-                } else {
-                    let source = DependencyNode::Child(source.as_str());
-                    let target = DependencyNode::Child(target.as_str());
-                    self.strong_dependencies.add_edge(source, target);
-                }
-            }
+        let source = DependencyNode::try_from_ref(from);
+        if source.is_none() {
+            return;
+        }
+        let target = DependencyNode::try_from_ref(to);
+        if target.is_none() {
+            return;
+        }
+        if source == target {
+            // This is already its own error, don't report this as a cycle.
+        } else {
+            self.strong_dependencies.add_edge(source.unwrap(), target.unwrap());
         }
     }
 
@@ -1664,19 +1779,6 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_name(target_name, decl, "target_name", &mut self.errors);
-        if let (Some(fsys::Ref::Self_(_)), Some(fsys::Ref::Child(c))) = (source, target) {
-            match (c.collection.as_ref(), &c.name) {
-                (None, child_name) => {
-                    if self.use_from_child_strong.get(child_name as &str).is_some() {
-                        self.errors.push(Error::dependency_cycle(format!(
-                            "use from #{} (dependency_type: strong) and offer to #{} from self",
-                            child_name, child_name
-                        )))
-                    }
-                }
-                _ => {}
-            }
-        }
     }
 
     fn validate_storage_offer_fields(
@@ -1701,7 +1803,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         }
-        self.validate_storage_target(decl, source_name.map(|n| n.as_str()), target);
+        self.validate_storage_target(decl, target);
     }
 
     fn validate_event_offer_fields(&mut self, event: &'a fsys::OfferEventDecl) {
@@ -1735,49 +1837,6 @@ impl<'a> ValidationContext<'a> {
 
         check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
         check_events_mode(&event.mode, "OfferEventDecl", "mode", &mut self.errors);
-    }
-
-    fn validate_environment_debug_registration(&mut self, debug: &'a fsys::DebugRegistration) {
-        match debug {
-            fsys::DebugRegistration::Protocol(o) => {
-                let decl = "DebugProtocolRegistration";
-                self.validate_environment_debug_fields(
-                    decl,
-                    o.source.as_ref(),
-                    o.source_name.as_ref(),
-                    o.target_name.as_ref(),
-                );
-
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_protocols.contains(&name as &str) {
-                        self.errors.push(Error::invalid_field(decl, "source"));
-                    }
-                }
-            }
-            fsys::DebugRegistrationUnknown!() => {
-                self.errors.push(Error::invalid_field("EnvironmentDecl", "debug"));
-            }
-        }
-    }
-
-    fn validate_environment_debug_fields(
-        &mut self,
-        decl: &str,
-        source: Option<&fsys::Ref>,
-        source_name: Option<&String>,
-        target_name: Option<&'a String>,
-    ) {
-        // We don't support "source" from "capability" for now.
-        match source {
-            Some(fsys::Ref::Parent(_)) => {}
-            Some(fsys::Ref::Self_(_)) => {}
-            Some(fsys::Ref::Framework(_)) => {}
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
-            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
-            None => self.errors.push(Error::missing_field(decl, "source")),
-        }
-        check_name(source_name, decl, "source_name", &mut self.errors);
-        check_name(target_name, decl, "target_name", &mut self.errors);
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -1903,23 +1962,10 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_storage_target(
-        &mut self,
-        decl: &str,
-        storage_source_name: Option<&'a str>,
-        target: Option<&'a fsys::Ref>,
-    ) {
+    fn validate_storage_target(&mut self, decl: &str, target: Option<&'a fsys::Ref>) {
         match target {
             Some(fsys::Ref::Child(c)) => {
-                if !self.validate_child_ref(decl, "target", &c) {
-                    return;
-                }
-                let name = &c.name;
-                if let Some(source_name) = storage_source_name {
-                    if self.all_storage_and_sources.get(source_name) == Some(&Some(name)) {
-                        self.errors.push(Error::offer_target_equals_source(decl, name));
-                    }
-                }
+                self.validate_child_ref(decl, "target", &c);
             }
             Some(fsys::Ref::Collection(c)) => {
                 self.validate_collection_ref(decl, "target", &c);
@@ -2988,7 +3034,374 @@ mod tests {
                 }
             },
             result = Err(ErrorList::new(vec![
-                Error::dependency_cycle("use from #child (dependency_type: strong) and offer to #child from self".to_string()),
+                Error::dependency_cycle("{{self -> child child -> self}}".to_string()),
+            ])),
+        },
+        test_validate_storage_strong_cycle_between_children => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef { name: "child1".to_string(), collection: None} )),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        })
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("data".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            target_name: Some("data".to_string()),
+                            ..OfferStorageDecl::EMPTY
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{self -> child child2 -> child child1 -> self}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_between_children_through_environment_debug => {
+            input = {
+                ComponentDecl {
+                    environments: Some(vec![
+                        EnvironmentDecl {
+                            name: Some("env".to_string()),
+                            extends: Some(EnvironmentExtends::Realm),
+                            debug_capabilities: Some(vec![
+                                DebugRegistration::Protocol(DebugProtocolRegistration {
+                                    source: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                                    source_name: Some("fuchsia.foo.Bar".to_string()),
+                                    target_name: Some("fuchsia.foo.Bar".to_string()),
+                                    ..DebugProtocolRegistration::EMPTY
+                                }),
+                            ]),
+                            ..EnvironmentDecl::EMPTY
+                        },
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            environment: Some("env".to_string()),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{child child1 -> environment env -> child child2 -> child child1}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_between_children_through_environment_runner => {
+            input = {
+                ComponentDecl {
+                    environments: Some(vec![
+                        EnvironmentDecl {
+                            name: Some("env".to_string()),
+                            extends: Some(EnvironmentExtends::Realm),
+                            runners: Some(vec![
+                                RunnerRegistration {
+                                    source: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                                    source_name: Some("coff".to_string()),
+                                    target_name: Some("coff".to_string()),
+                                    ..RunnerRegistration::EMPTY
+                                }
+                            ]),
+                            ..EnvironmentDecl::EMPTY
+                        },
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            environment: Some("env".to_string()),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{child child1 -> environment env -> child child2 -> child child1}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_between_children_through_environment_resolver => {
+            input = {
+                ComponentDecl {
+                    environments: Some(vec![
+                        EnvironmentDecl {
+                            name: Some("env".to_string()),
+                            extends: Some(EnvironmentExtends::Realm),
+                            resolvers: Some(vec![
+                                ResolverRegistration {
+                                    resolver: Some("gopher".to_string()),
+                                    source: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                                    scheme: Some("gopher".to_string()),
+                                    ..ResolverRegistration::EMPTY
+                                }
+                            ]),
+                            ..EnvironmentDecl::EMPTY
+                        },
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            environment: Some("env".to_string()),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{child child1 -> environment env -> child child2 -> child child1}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_between_self_and_two_children => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Protocol(ProtocolDecl {
+                            name: Some("fuchsia.foo.Bar".to_string()),
+                            source_path: Some("/svc/fuchsia.foo.Bar".to_string()),
+                            ..ProtocolDecl::EMPTY
+                        })
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("fuchsia.foo.Bar".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("fuchsia.foo.Bar".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..OfferProtocolDecl::EMPTY
+                        }),
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            source_name: Some("fuchsia.bar.Baz".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child2".to_string(), collection: None })),
+                            target_name: Some("fuchsia.bar.Baz".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..OfferProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child2".to_string(), collection: None})),
+                            source_name: Some("fuchsia.baz.Foo".to_string()),
+                            target_path: Some("/svc/fuchsia.baz.Foo".to_string()),
+                            dependency_type: Some(DependencyType::Strong),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{self -> child child1 -> child child2 -> self}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_with_self_storage => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        }),
+                        CapabilityDecl::Directory(DirectoryDecl {
+                            name: Some("minfs".to_string()),
+                            source_path: Some("/minfs".to_string()),
+                            rights: Some(fio2::RW_STAR_DIR),
+                            ..DirectoryDecl::EMPTY
+                        }),
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("data".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                            target_name: Some("data".to_string()),
+                            ..OfferStorageDecl::EMPTY
+                        }),
+                    ]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("fuchsia.foo.Bar".to_string()),
+                            target_path: Some("/svc/fuchsia.foo.Bar".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            ..ChildDecl::EMPTY
+                        },
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{self -> child child -> self}}".to_string()),
+            ])),
+        },
+        test_validate_strong_cycle_with_self_storage_admin_protocol => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        }),
+                        CapabilityDecl::Directory(DirectoryDecl {
+                            name: Some("minfs".to_string()),
+                            source_path: Some("/minfs".to_string()),
+                            rights: Some(fio2::RW_STAR_DIR),
+                            ..DirectoryDecl::EMPTY
+                        }),
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: Some(Ref::Capability(CapabilityRef { name: "data".to_string() })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                            target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..OfferProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("fuchsia.foo.Bar".to_string()),
+                            target_path: Some("/svc/fuchsia.foo.Bar".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            ..ChildDecl::EMPTY
+                        },
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("{{self -> child child -> self}}".to_string()),
             ])),
         },
         test_validate_use_from_child_offer_to_child_weak_cycle => {
@@ -4661,7 +5074,7 @@ mod tests {
                 ..new_component_decl()
             },
             result = Err(ErrorList::new(vec![
-                Error::offer_target_equals_source("OfferStorageDecl", "logger"),
+                Error::dependency_cycle("{{self -> child logger -> self}}".to_string()),
             ])),
         },
         test_validate_offers_invalid_child => {
