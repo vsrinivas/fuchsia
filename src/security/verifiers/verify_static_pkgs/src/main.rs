@@ -5,20 +5,15 @@
 use {
     anyhow::{anyhow, Context, Result},
     clap::{App, Arg},
-    regex::Regex,
     scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_plugins::devmgr_config::DevmgrConfigCollection,
-    scrutiny_utils::{
-        golden::{CompareResult, GoldenFile},
-        key_value::parse_key_value,
-    },
+    scrutiny_plugins::static_pkgs::StaticPkgsCollection,
+    scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
     std::{
-        collections::HashMap,
         fs::{self, File},
         io::Write,
-        path::Path,
+        path::PathBuf,
     },
 };
 
@@ -55,112 +50,52 @@ impl VerifyStaticPkgs {
     /// the list of static_packages. This list is compared against the golden file.
     pub fn verify(&self) -> Result<()> {
         let config = Config::run_command_with_runtime(
-            CommandBuilder::new("devmgr.config").build(),
+            CommandBuilder::new("static.pkgs").build(),
             RuntimeConfig {
-                model: ModelConfig { zbi_path: self.zbi_path.clone(), ..ModelConfig::minimal() },
+                model: ModelConfig {
+                    zbi_path: self.zbi_path.clone(),
+                    blob_manifest_path: PathBuf::from(self.manifest_path.clone()),
+                    ..ModelConfig::minimal()
+                },
                 logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
-                plugin: PluginConfig { plugins: vec!["DevmgrConfigPlugin".to_string()] },
+                plugin: PluginConfig {
+                    plugins: vec!["DevmgrConfigPlugin".to_string(), "StaticPkgsPlugin".to_string()],
+                },
                 ..RuntimeConfig::minimal()
             },
         );
 
-        // Retrieve the system_image merkle from the devmgr configuration.
-        let devmgr_config_result: DevmgrConfigCollection = serde_json::from_str(
-            &launcher::launch_from_config(config).context("Failed to run devmgr.config")?,
-        )
-        .context("Failed to parse devmgr.config JSON output as structured devmgr config")?;
-        if devmgr_config_result.errors.len() > 0 {
-            return Err(anyhow!(
-                "devmgr.config reported errors: {:#?}",
-                devmgr_config_result.errors
-            ));
+        let scrutiny_output =
+            launcher::launch_from_config(config).context("Failed to run static.pkgs")?;
+        let static_pkgs_result: StaticPkgsCollection = serde_json::from_str(&scrutiny_output)
+            .context(format!(
+                "Failed to parse static.pkgs JSON output as structured static packages list: {}",
+                scrutiny_output
+            ))?;
+        if static_pkgs_result.errors.len() > 0 {
+            return Err(anyhow!("static.pkgs reported errors: {:#?}", static_pkgs_result.errors));
         }
-        if devmgr_config_result.devmgr_config.is_none() {
-            return Err(anyhow!("devmgr.config returned empty result"));
+        if static_pkgs_result.static_pkgs.is_none() {
+            return Err(anyhow!("static.pkgs returned empty result"));
         }
-        let devmgr_config = devmgr_config_result.devmgr_config.unwrap();
-        let mut deps: Vec<String> = devmgr_config_result.deps.clone();
+        let static_pkgs = static_pkgs_result.static_pkgs.unwrap();
 
-        let pkgfs_cmd = devmgr_config
-            .get("zircon.system.pkgfs.cmd")
-            .ok_or(anyhow!("Failed to find zircon.system.pkgfs.cmd in bootfs devmgr config"))?;
-        if pkgfs_cmd.len() < 2 || &pkgfs_cmd[0] != "bin/pkgsvr" || pkgfs_cmd.len() != 2 {
-            return Err(anyhow!(
-                "Expected pkgfs command like [bin/pkgfs, <system-image-hash>], but found {:#?}",
-                pkgfs_cmd
-            ));
-        }
-        let system_image_merkle = &pkgfs_cmd[1];
-
-        // Extract the system_image package.
-        let blob_manifest = parse_key_value(
-            fs::read_to_string(&self.manifest_path).context("Failed to read manifest_path")?,
-        )
-        .context("Failed to parse blobfs manifest")?;
-        let blob_directory = Path::new(&self.manifest_path)
-            .parent()
-            .context("Blob manifest file isn't in a directory")?;
-        let system_image_blob_path = blob_directory
-            .join(
-                &blob_manifest
-                    .get(system_image_merkle)
-                    .ok_or(anyhow!("Couldn't find system_image_merkle in blob_manifest"))?,
-            )
-            .into_os_string()
-            .into_string()
-            .map_err(|_| anyhow!("Failed to convert system_image_path to a string"))?;
-        deps.push(system_image_blob_path.clone());
-        let config = Config::run_command_with_runtime(
-            CommandBuilder::new("tool.far.extract.meta")
-                .param("input", system_image_blob_path)
-                .build(),
-            RuntimeConfig {
-                logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
-                plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
-                ..RuntimeConfig::minimal()
-            },
-        );
-        let system_image_meta: HashMap<String, String> = serde_json::from_str(
-            &launcher::launch_from_config(config).context("Failed to run tool.far.extract.meta")?,
-        )?;
-
-        // Retrieve the static_package merkle from the meta/contents.
-        let meta_contents = parse_key_value(system_image_meta["meta/contents"].clone())
-            .context("Failed to parse meta/contents from system image")?;
-        let static_package_merkle = meta_contents
-            .get("data/static_packages")
-            .context("No static packages in system image")?
-            .clone();
-        let static_package_blob_path = blob_directory
-            .join(
-                &blob_manifest
-                    .get(&static_package_merkle)
-                    .ok_or(anyhow!("Merkle for `data/static_packages` in system image, {}, not found in blob manifest at {}", &static_package_merkle, &self.manifest_path))?,
-            )
-            .into_os_string()
-            .into_string()
-            .map_err(|_| anyhow!("Failed to convert path to static packages list into string"))?;
-        deps.push(static_package_blob_path.clone());
-
-        // Extract all of the static packages which are in the form
-        // fuchsia-pkg://fuchsia.com/foo/0=merkle_root.
-        let full_static_package_urls: Vec<String> = fs::read_to_string(static_package_blob_path)
-            .context("Failed to read static package blob path")?
-            .trim()
-            .split("\n")
-            .map(String::from)
+        // Drop trailing "/0" from package URLs; skip any that do not follow this convention.
+        let static_package_urls: Vec<String> = static_pkgs
+            .into_iter()
+            .filter_map(|(mut url, _)| {
+                if url.ends_with("/0") {
+                    url.truncate(url.len() - 2);
+                    Some(url)
+                } else {
+                    None
+                }
+            })
             .collect();
-        // Shortened names in the form of fuchsia-pkg://fuchsia.com/foo.
-        let mut static_package_urls: Vec<String> = Vec::new();
-        let re = Regex::new(r"/[0-9]=[0-9a-f]+").unwrap();
-        for full_url in full_static_package_urls.iter() {
-            let short_url = re.replace_all(full_url, "");
-            static_package_urls.push(short_url.to_string());
-        }
 
         // Write out the depfile.
         let mut depfile = File::create(&self.depfile_path).context("Failed to read dep file")?;
-        write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
+        write!(depfile, "{}: {}", self.stamp_path, static_pkgs_result.deps.join(" "))
             .context("Failed to write to dep file")?;
 
         let golden_file =

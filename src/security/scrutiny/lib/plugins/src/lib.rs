@@ -6,6 +6,7 @@ pub mod core;
 pub mod devmgr_config;
 pub mod engine;
 pub mod search;
+pub mod static_pkgs;
 pub mod sys;
 pub mod toolkit;
 pub mod verify;
