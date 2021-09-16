@@ -1293,20 +1293,9 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID* PciId, UINT32 Register, UIN
  */
 
 ACPI_STATUS AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue) {
-  /* The upstream ACPICA code expects that AcpiHwLegacySleep() is invoked with interrupts
-   * disabled.  It requires this because the last steps of going to sleep is writing to a few
-   * registers, flushing the caches (so we don't lose data if the caches are dropped), and then
-   * writing to a register to enter the sleep.  If we were to take an interrupt after the cache
-   * flush but before entering sleep, we could have inconsistent memory after waking up.*/
-
-  /* In Fuchsia, ACPICA runs in usermode and we don't expose a mechanism for it to disable
-   * interrupts.  For full shutdown (sleep state 5) this does not matter as any cache corruption
-   * will be trumped by full power loss. Any other sleep state becomes forbidden. */
-  if (SleepState == ACPI_STATE_S5) {
-    return (AE_OK);
-  } else {
-    return (AE_ERROR);
-  }
+  // We have no need to deny any particular sleep states, so just return OK and let the sleep
+  // happen.
+  return (AE_OK);
 }
 
 /**
