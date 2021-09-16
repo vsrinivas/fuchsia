@@ -5,9 +5,9 @@
 use {
     anyhow::{format_err, Result},
     ffx_core::ffx_plugin,
+    ffx_driver::get_device_info,
     ffx_driver_dump_args::DriverDumpCommand,
-    fidl_fuchsia_driver_development::DriverDevelopmentProxy,
-    fuchsia_zircon_status as zx,
+    fidl_fuchsia_driver_development as fdd,
     std::collections::{BTreeMap, VecDeque},
 };
 
@@ -18,19 +18,10 @@ fn extract_name<'a>(topo_path: &'a str) -> &'a str {
 
 #[ffx_plugin(
     "driver_enabled",
-    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
+    fdd::DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
-pub async fn dump(service: DriverDevelopmentProxy, cmd: DriverDumpCommand) -> Result<()> {
-    let device_info = service
-        .get_device_info(&mut [].iter().map(String::as_str))
-        .await
-        .map_err(|err| format_err!("FIDL call to get device info failed: {}", err))?
-        .map_err(|err| {
-            format_err!(
-                "FIDL call to get device info returned an error: {}",
-                zx::Status::from_raw(err)
-            )
-        })?;
+pub async fn dump(service: fdd::DriverDevelopmentProxy, cmd: DriverDumpCommand) -> Result<()> {
+    let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
 
     let device_map = device_info
         .iter()

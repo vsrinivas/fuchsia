@@ -1712,6 +1712,29 @@ zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
   return zx::ok(std::move(driver_info_vec));
 }
 
+namespace {
+class DriverInfoIterator : public fidl::WireServer<fuchsia_driver_development::DriverInfoIterator> {
+ public:
+  explicit DriverInfoIterator(std::unique_ptr<fidl::Arena<512>> arena,
+                              std::vector<fdd::wire::DriverInfo> list)
+      : arena_(std::move(arena)), list_(std::move(list)) {}
+
+  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
+    constexpr size_t kMaxEntries = 100;
+    auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
+    offset_ += result.size();
+
+    completer.Reply(
+        fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(result.data(), result.size()));
+  }
+
+ private:
+  size_t offset_ = 0;
+  std::unique_ptr<fidl::Arena<512>> arena_;
+  std::vector<fdd::wire::DriverInfo> list_;
+};
+}  // namespace
+
 void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
                                 GetDriverInfoCompleter::Sync& completer) {
   std::vector<const Driver*> driver_list;
@@ -1749,17 +1772,19 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   // If we have driver filters check that we found one driver per filter.
   if (!request->driver_filter.empty()) {
     if (driver_list.size() != request->driver_filter.count()) {
-      completer.ReplyError(ZX_ERR_NOT_FOUND);
+      request->iterator.Close(ZX_ERR_NOT_FOUND);
       return;
     }
   }
 
-  fidl::Arena allocator;
-  auto result = GetDriverInfo(allocator, driver_list);
+  auto arena = std::make_unique<fidl::Arena<512>>();
+  auto result = GetDriverInfo(*arena, driver_list);
   if (result.is_error()) {
-    completer.ReplyError(result.status_value());
+    request->iterator.Close(result.status_value());
+    return;
   }
-  completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
+  auto iterator = std::make_unique<DriverInfoIterator>(std::move(arena), std::move(*result));
+  fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
 void Coordinator::Register(RegisterRequestView request, RegisterCompleter::Sync& completer) {
@@ -1889,6 +1914,29 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
   return zx::ok(std::move(device_info_vec));
 }
 
+namespace {
+class DeviceInfoIterator : public fidl::WireServer<fuchsia_driver_development::DeviceInfoIterator> {
+ public:
+  explicit DeviceInfoIterator(std::unique_ptr<fidl::Arena<512>> arena,
+                              std::vector<fdd::wire::DeviceInfo> list)
+      : arena_(std::move(arena)), list_(std::move(list)) {}
+
+  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
+    constexpr size_t kMaxEntries = 100;
+    auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
+    offset_ += result.size();
+
+    completer.Reply(
+        fidl::VectorView<fdd::wire::DeviceInfo>::FromExternal(result.data(), result.size()));
+  }
+
+ private:
+  size_t offset_ = 0;
+  std::unique_ptr<fidl::Arena<512>> arena_;
+  std::vector<fdd::wire::DeviceInfo> list_;
+};
+}  // namespace
+
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                                 GetDeviceInfoCompleter::Sync& completer) {
   std::vector<fbl::RefPtr<Device>> device_list;
@@ -1902,20 +1950,22 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
       std::string path(device_path.data(), device_path.size());
       zx_status_t status = devfs_walk(root_device_->devnode(), path.c_str(), &device);
       if (status != ZX_OK) {
-        completer.ReplyError(status);
+        request->iterator.Close(status);
         return;
       }
       device_list.push_back(std::move(device));
     }
   }
 
-  fidl::Arena allocator;
-  auto result = GetDeviceInfo(allocator, device_list);
+  auto arena = std::make_unique<fidl::Arena<512>>();
+  auto result = GetDeviceInfo(*arena, device_list);
   if (result.is_error()) {
-    completer.ReplyError(result.status_value());
-  } else {
-    completer.ReplySuccess(fidl::VectorView<fdd::wire::DeviceInfo>::FromExternal(*result));
+    request->iterator.Close(result.status_value());
+    return;
   }
+
+  auto iterator = std::make_unique<DeviceInfoIterator>(std::move(arena), std::move(*result));
+  fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
 void Coordinator::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {

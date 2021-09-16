@@ -11,8 +11,8 @@ ffx_plugin("ffx_driver_debug_bind") {
 
   deps = [
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//src/developer/ffx/plugins/driver/common:ffx_driver",
     "//src/devices/lib/bind",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
   ]
 
   args_sources = [ "src/args.rs" ]

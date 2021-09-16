@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Result},
+    anyhow::Result,
     ffx_core::ffx_plugin,
+    ffx_driver::get_device_info,
     ffx_driver_list_devices_args::DriverListDevicesCommand,
     fidl_fuchsia_driver_development::{DeviceFlags, DriverDevelopmentProxy},
-    fuchsia_zircon_status as zx,
 };
 
 #[ffx_plugin(
@@ -19,14 +19,9 @@ pub async fn list_devices(
     cmd: DriverListDevicesCommand,
 ) -> Result<()> {
     let device_info = match cmd.device {
-        Some(device) => service.get_device_info(&mut [device].iter().map(String::as_str)),
-        None => service.get_device_info(&mut [].iter().map(String::as_str)),
-    }
-    .await
-    .map_err(|err| format_err!("FIDL call to get device info failed: {}", err))?
-    .map_err(|err| {
-        format_err!("FIDL call to get device info returned an error: {}", zx::Status::from_raw(err))
-    })?;
+        Some(device) => get_device_info(&service, &mut [device].iter().map(String::as_str)).await?,
+        None => get_device_info(&service, &mut [].iter().map(String::as_str)).await?,
+    };
 
     if cmd.verbose {
         for device in device_info {

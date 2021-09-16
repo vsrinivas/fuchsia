@@ -57,11 +57,13 @@ class StringBindTest : public testing::Test {
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(StringBindTest, DriverBytecode) {
-  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
-  ASSERT_EQ(ZX_OK, driver_dev_->GetDriverInfo({kStringBindDriverLibPath}, &result));
-  ASSERT_TRUE(result.is_response());
-  ASSERT_EQ(result.response().drivers.size(), 1u);
-  auto bytecode = result.response().drivers[0].bind_rules().bytecode_v2();
+  fuchsia::driver::development::DriverInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(ZX_OK, driver_dev_->GetDriverInfo({kStringBindDriverLibPath}, iterator.NewRequest()));
+
+  std::vector<fuchsia::driver::development::DriverInfo> drivers;
+  ASSERT_EQ(iterator->GetNext(&drivers), ZX_OK);
+  ASSERT_EQ(drivers.size(), 1u);
+  auto bytecode = drivers[0].bind_rules().bytecode_v2();
 
   const uint8_t kExpectedBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0,  0x0,  0x0,               // Bind header
@@ -89,10 +91,11 @@ TEST_F(StringBindTest, DriverBytecode) {
 }
 
 TEST_F(StringBindTest, DeviceProperties) {
-  fuchsia::driver::development::DriverDevelopment_GetDeviceInfo_Result result;
-  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({kChildDevicePath}, &result));
+  fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({kChildDevicePath}, iterator.NewRequest()));
 
-  ASSERT_TRUE(result.is_response());
+  std::vector<fuchsia::driver::development::DeviceInfo> devices;
+  ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);
 
   constexpr zx_device_prop_t kExpectedProps[] = {
       {BIND_PROTOCOL, 0, 3},
@@ -100,8 +103,8 @@ TEST_F(StringBindTest, DeviceProperties) {
       {BIND_PCI_DID, 0, 1234},
   };
 
-  ASSERT_EQ(result.response().devices.size(), 1u);
-  auto props = result.response().devices[0].property_list().props;
+  ASSERT_EQ(devices.size(), 1u);
+  auto props = devices[0].property_list().props;
   ASSERT_EQ(props.size(), countof(kExpectedProps));
   for (size_t i = 0; i < props.size(); i++) {
     ASSERT_EQ(props[i].id, kExpectedProps[i].id);
@@ -109,7 +112,7 @@ TEST_F(StringBindTest, DeviceProperties) {
     ASSERT_EQ(props[i].value, kExpectedProps[i].value);
   }
 
-  auto& str_props = result.response().devices[0].property_list().str_props;
+  auto& str_props = devices[0].property_list().str_props;
   ASSERT_EQ(static_cast<size_t>(2), str_props.size());
 
   ASSERT_STREQ("stringbind.lib.kinglet", str_props[0].key.data());

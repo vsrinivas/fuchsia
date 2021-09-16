@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context, Result},
+    anyhow::{format_err, Result},
     ffx_core::ffx_plugin,
+    ffx_driver::get_device_info,
     ffx_driver_list_hosts_args::DriverListHostsCommand,
     fidl_fuchsia_driver_development::DriverDevelopmentProxy,
-    fuchsia_zircon_status as zx,
     std::collections::{BTreeMap, BTreeSet},
 };
 
@@ -19,16 +19,7 @@ pub async fn list_hosts(
     service: DriverDevelopmentProxy,
     _cmd: DriverListHostsCommand,
 ) -> Result<()> {
-    let device_info = service
-        .get_device_info(&mut [].iter().map(String::as_str))
-        .await
-        .context("FIDL call to get device info failed")?
-        .map_err(|err| {
-            format_err!(
-                "FIDL call to get device info returned an error: {}",
-                zx::Status::from_raw(err)
-            )
-        })?;
+    let device_info = get_device_info(&service, &mut [].iter().map(String::as_str)).await?;
 
     let mut driver_hosts = BTreeMap::new();
 

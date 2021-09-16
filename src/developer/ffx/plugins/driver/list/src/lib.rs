@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Result},
+    anyhow::Result,
     ffx_core::ffx_plugin,
+    ffx_driver::get_driver_info,
     ffx_driver_list_args::DriverListCommand,
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
-    fuchsia_zircon_status as zx,
 };
 
 #[ffx_plugin(
@@ -15,16 +15,7 @@ use {
     DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
 )]
 pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Result<()> {
-    let driver_info = service
-        .get_driver_info(&mut [].iter().map(String::as_str))
-        .await
-        .map_err(|err| format_err!("FIDL call to get driver info failed: {}", err))?
-        .map_err(|err| {
-            format_err!(
-                "FIDL call to get driver info returned an error: {}",
-                zx::Status::from_raw(err)
-            )
-        })?;
+    let driver_info = get_driver_info(&service, &mut [].iter().map(String::as_str)).await?;
 
     if cmd.verbose {
         for driver in driver_info {

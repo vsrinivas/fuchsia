@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <sched.h>
 #include <unistd.h>
 #include <zircon/threads.h>
@@ -264,27 +265,45 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
     return drivers;
   }
 
-  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
-      std::move(driver_index_client.value()), dispatcher_);
-  auto info_result = driver_index->GetDriverInfo_Sync(fidl::VectorView<fidl::StringView>());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_driver_development::DriverInfoIterator>();
+  if (endpoints.is_error()) {
+    LOGF(ERROR, "fidl::CreateEndpoints failed: %s\n", endpoints.status_string());
+    return drivers;
+  }
+
+  auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
+  auto info_result = driver_index.GetDriverInfo(fidl::VectorView<fidl::StringView>(),
+                                                std::move(endpoints->server));
 
   // There are still some environments where we can't connect to DriverIndex.
   if (info_result.status() != ZX_OK) {
     LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
     return drivers;
   }
-  if (info_result->result.is_err()) {
-    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
-    return drivers;
-  }
-  for (auto driver : info_result->result.response().drivers) {
-    if (!driver.has_url()) {
-      continue;
+
+  auto iterator = fidl::BindSyncClient(std::move(endpoints->client));
+  for (;;) {
+    auto next_result = iterator.GetNext();
+    if (!next_result.ok()) {
+      // This is likely a pipelined error from the GetDriverInfo call above. We unfortunately
+      // cannot read the epitaph without using an async call.
+      LOGF(ERROR, "DriverInfoIterator.GetNext failed: %s\n",
+           next_result.FormatDescription().c_str());
+      break;
     }
-    std::string url(driver.url().data(), driver.url().size());
-    const Driver* drv = LoadDriverUrl(url);
-    if (drv) {
-      drivers.push_back(drv);
+    if (next_result->drivers.count() == 0) {
+      // When we receive 0 responses, we are done iterating.
+      break;
+    }
+    for (auto driver : next_result->drivers) {
+      if (!driver.has_url()) {
+        continue;
+      }
+      std::string url(driver.url().data(), driver.url().size());
+      const Driver* drv = LoadDriverUrl(url);
+      if (drv) {
+        drivers.push_back(drv);
+      }
     }
   }
 

@@ -8,9 +8,9 @@ use {
     bind::compiler::instruction::DeviceProperty,
     bind::debugger,
     ffx_core::ffx_plugin,
+    ffx_driver::{get_device_info, get_driver_info},
     ffx_driver_debug_bind_args::DriverDebugBindCommand,
     fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
-    fuchsia_zircon_status as zx,
 };
 
 #[ffx_plugin(
@@ -29,16 +29,8 @@ pub async fn debug_bind_impl<W: std::io::Write>(
     cmd: DriverDebugBindCommand,
     writer: &mut W,
 ) -> Result<()> {
-    let driver_info = service
-        .get_driver_info(&mut [cmd.driver_path].iter().map(String::as_str))
-        .await
-        .map_err(|err| format_err!("FIDL call to get bind rules failed: {}", err))?
-        .map_err(|err| {
-            format_err!(
-                "FIDL call to get bind rules returned an error: {}",
-                zx::Status::from_raw(err)
-            )
-        })?;
+    let driver_info =
+        get_driver_info(&service, &mut [cmd.driver_path].iter().map(String::as_str)).await?;
 
     if driver_info.len() != 1 {
         return Err(format_err!(
@@ -55,16 +47,8 @@ pub async fn debug_bind_impl<W: std::io::Write>(
             }
         };
 
-    let mut device_info = service
-        .get_device_info(&mut [cmd.device_path].iter().map(String::as_str))
-        .await
-        .map_err(|err| format_err!("FIDL call to get device properties failed: {}", err))?
-        .map_err(|err| {
-            format_err!(
-                "FIDL call to get device properties returned an error: {}",
-                zx::Status::from_raw(err)
-            )
-        })?;
+    let mut device_info =
+        get_device_info(&service, &mut [cmd.device_path].iter().map(String::as_str)).await?;
 
     if device_info.len() != 1 {
         return Err(format_err!(

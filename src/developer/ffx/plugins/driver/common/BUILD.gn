@@ -2,19 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/developer/ffx/build/ffx_plugin.gni")
+import("//build/rust/rustc_library.gni")
 
-ffx_plugin("ffx_driver_list_devices") {
+rustc_library("ffx_driver") {
+  name = "ffx_driver"
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
 
   deps = [
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
-    "//src/developer/ffx/plugins/driver/common:ffx_driver",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
   ]
-
-  args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
 }

@@ -20,6 +20,7 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 mod package_resolver;
 
@@ -324,7 +325,8 @@ impl Indexer {
             .map(|driver| driver.create_matched_driver())
             .collect())
     }
-    fn get_driver_info(&self, driver_filter: Vec<String>) -> fdd::DriverIndexGetDriverInfoResult {
+
+    fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
         let mut driver_info = Vec::new();
 
         for driver in &self.boot_repo {
@@ -346,8 +348,36 @@ impl Indexer {
             }
         }
 
-        Ok(driver_info)
+        driver_info
     }
+}
+
+async fn run_driver_info_iterator_server(
+    driver_info: Arc<Mutex<Vec<fdd::DriverInfo>>>,
+    stream: fdd::DriverInfoIteratorRequestStream,
+) -> Result<(), anyhow::Error> {
+    stream
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async {
+            let driver_info_clone = driver_info.clone();
+            match request {
+                fdd::DriverInfoIteratorRequest::GetNext { responder } => {
+                    let result = {
+                        let mut driver_info = driver_info_clone.lock().unwrap();
+                        let len = driver_info.len();
+                        driver_info.split_off(len - std::cmp::min(100, len))
+                    };
+
+                    responder
+                        .send(&mut result.into_iter())
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to GetDriverInfo")?;
+                }
+            }
+            Ok(())
+        })
+        .await?;
+    Ok(())
 }
 
 async fn run_driver_development_server(
@@ -359,11 +389,15 @@ async fn run_driver_development_server(
         .try_for_each(|request| async {
             let indexer = indexer.clone();
             match request {
-                fdd::DriverIndexRequest::GetDriverInfo { driver_filter, responder } => {
-                    responder
-                        .send(&mut indexer.get_driver_info(driver_filter))
-                        .or_else(ignore_peer_closed)
-                        .context("error responding to GetDriverInfo")?;
+                fdd::DriverIndexRequest::GetDriverInfo { driver_filter, iterator, .. } => {
+                    let driver_info = Arc::new(Mutex::new(indexer.get_driver_info(driver_filter)));
+                    let iterator = iterator.into_stream()?;
+                    fasync::Task::spawn(async move {
+                        run_driver_info_iterator_server(driver_info, iterator)
+                            .await
+                            .expect("Failed to run driver info iterator");
+                    })
+                    .detach();
                 }
             }
             Ok(())

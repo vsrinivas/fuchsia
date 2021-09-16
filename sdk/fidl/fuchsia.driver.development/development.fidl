@@ -96,6 +96,13 @@ type DeviceInfo = table {
     9: flags DeviceFlags;
 };
 
+protocol DriverInfoIterator {
+    /// Return 0 drivers when no more entries left.
+    GetNext() -> (struct {
+        drivers vector<DriverInfo>:MAX;
+    });
+};
+
 /// Interface for developing and debugging drivers.
 /// This interface should only be used for development and disabled in release builds.
 @discoverable
@@ -103,15 +110,23 @@ protocol DriverIndex {
     /// Returns a list of all drivers that are known to the system.
     /// If a |driver_filter| is provided, the returned list will be filtered to
     /// only include drivers specified in the filter.
+    ///
+    /// |iterator| is closed with following epitaphs on error:
     /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path for at least
     /// one driver in |driver_filter|.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
     /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
-    GetDriverInfo(struct {
+    GetDriverInfo(resource struct {
         driver_filter vector<string:MAX>:MAX;
-    }) -> (struct {
-        drivers vector<DriverInfo>:MAX;
-    }) error zx.status;
+        iterator server_end:DriverInfoIterator;
+    });
+};
+
+protocol DeviceInfoIterator {
+    /// Return 0 devices when no more entries left.
+    GetNext() -> (struct {
+        drivers vector<DeviceInfo>:MAX;
+    });
 };
 
 /// Interface for developing and debugging drivers.
@@ -131,12 +146,13 @@ protocol DriverDevelopment {
     /// only include devices specified in the filter.
     /// ZX_ERR_NOT_FOUND indicates that there is no device matching the given path for at least one
     /// device in |device_filter|.
+    ///
+    /// |iterator| is closed with following epitaphs on error:
     /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
     /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
-    GetDeviceInfo(struct {
+    GetDeviceInfo(resource struct {
         device_filter vector<string:MAX>:MAX;
-    }) -> (struct {
-        devices vector<DeviceInfo>:MAX;
-    }) error zx.status;
+        iterator server_end:DeviceInfoIterator;
+    });
 };

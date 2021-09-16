@@ -92,19 +92,23 @@ class BindCompilerV2Test : public testing::Test {
 
 // Check that calling GetDriverInfo with an invalid driver path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerV2Test, InvalidDriver) {
-  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
-  ASSERT_EQ(driver_dev_->GetDriverInfo({"abc"}, &result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
+  fuchsia::driver::development::DriverInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(driver_dev_->GetDriverInfo({"abc"}, iterator.NewRequest()), ZX_OK);
+
+  std::vector<fuchsia::driver::development::DriverInfo> drivers;
+  ASSERT_NE(iterator->GetNext(&drivers), ZX_OK);
 }
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(BindCompilerV2Test, ValidDriver) {
-  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
-  ASSERT_EQ(driver_dev_->GetDriverInfo({kDriverUrl}, &result), ZX_OK);
-  ASSERT_TRUE(result.is_response());
-  ASSERT_EQ(result.response().drivers.size(), 1u);
-  auto bytecode = result.response().drivers[0].bind_rules().bytecode_v2();
+  fuchsia::driver::development::DriverInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(driver_dev_->GetDriverInfo({kDriverUrl}, iterator.NewRequest()), ZX_OK);
+
+  std::vector<fuchsia::driver::development::DriverInfo> drivers;
+  ASSERT_EQ(iterator->GetNext(&drivers), ZX_OK);
+
+  ASSERT_EQ(drivers.size(), 1u);
+  auto bytecode = drivers[0].bind_rules().bytecode_v2();
 
   uint8_t expected_bytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
@@ -122,22 +126,23 @@ TEST_F(BindCompilerV2Test, ValidDriver) {
 
 // Check that calling GetDeviceInfo with an invalid device path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerV2Test, InvalidDevice) {
-  fuchsia::driver::development::DriverDevelopment_GetDeviceInfo_Result result;
-  ASSERT_EQ(driver_dev_->GetDeviceInfo({"abc"}, &result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
+  fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(driver_dev_->GetDeviceInfo({"abc"}, iterator.NewRequest()), ZX_OK);
+  std::vector<fuchsia::driver::development::DeviceInfo> devices;
+  ASSERT_NE(iterator->GetNext(&devices), ZX_OK);
 }
 
 // Get the properties of the test driver's child device and check that they are as expected.
 TEST_F(BindCompilerV2Test, ValidDevice) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
-  fuchsia::driver::development::DriverDevelopment_GetDeviceInfo_Result result;
-  ASSERT_EQ(driver_dev_->GetDeviceInfo({child_device_path}, &result), ZX_OK);
+  fuchsia::driver::development::DeviceInfoIteratorSyncPtr iterator;
+  ASSERT_EQ(driver_dev_->GetDeviceInfo({child_device_path}, iterator.NewRequest()), ZX_OK);
 
-  ASSERT_TRUE(result.is_response());
-  ASSERT_EQ(result.response().devices.size(), 1u);
-  auto props = result.response().devices[0].property_list().props;
+  std::vector<fuchsia::driver::development::DeviceInfo> devices;
+  ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);
+  ASSERT_EQ(devices.size(), 1u);
+  auto props = devices[0].property_list().props;
 
   zx_device_prop_t expected_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
