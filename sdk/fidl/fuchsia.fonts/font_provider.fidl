@@ -8,7 +8,6 @@ library fuchsia.fonts;
 using fuchsia.mem;
 
 /// Deprecated. See `GenericFontFamily`.
-@transitional
 type FallbackGroup = strict enum {
     NONE = 0;
     SERIF = 1;
