@@ -758,11 +758,13 @@ void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& c
 }
 
 void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(ZX_OK);
+  completer.Close(ZX_OK);
 }
 
 void DcIostate::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply({});
+  completer.Close(ZX_OK);
 }
 
 zx::unowned_channel devfs_root_borrow() { return zx::unowned_channel(g_devfs_root); }
