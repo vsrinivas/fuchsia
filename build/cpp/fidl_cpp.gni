@@ -238,29 +238,6 @@ template("fidl_cpp_codegen") {
   }
 }
 
-# Utility template to generate a forwarding header.
-#
-# Parameters#
-#   forwarding_header (required)
-#     Location of forwarding header to generate
-#
-#   target_header (required)
-#     String with the name of the header to #include
-#
-template("_fidl_llcpp_forwarding_header") {
-  forwarding_header = invoker.forwarding_header
-  target_header = invoker.target_header
-
-  action(target_name) {
-    outputs = [ forwarding_header ]
-    script = "//build/cpp/gen_forwarding_header.py"
-    args = [
-      rebase_path(forwarding_header),
-      target_header,
-    ]
-  }
-}
-
 template("_fidl_cpp_library_impl") {
   config_target_name = "${target_name}__config"
 
@@ -274,37 +251,7 @@ template("_fidl_cpp_library_impl") {
 
   include_base =
       "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
-  extra_public_deps = []
-  extra_sources = []
   if (invoker.bindings_flavor == "llcpp") {
-    main_forwarding_header =
-        include_base + "/" + string_replace(library_name, ".", "/") +
-        "/llcpp/fidl.h"
-    test_forwarding_header =
-        include_base + "/" + string_replace(library_name, ".", "/") +
-        "/llcpp/fidl_test_base.h"
-
-    _fidl_llcpp_forwarding_header(
-        "${target_name}__llcpp_main_forwarding_header") {
-      forwarding_header = main_forwarding_header
-      target_header = "fidl/$library_name/cpp/wire.h"
-    }
-
-    _fidl_llcpp_forwarding_header(
-        "${target_name}__llcpp_test_forwarding_header") {
-      forwarding_header = test_forwarding_header
-      target_header = "fidl/$library_name/cpp/wire_test_base.h"
-    }
-
-    extra_public_deps += [
-      ":${target_name}__llcpp_main_forwarding_header($default_toolchain)",
-      ":${target_name}__llcpp_test_forwarding_header($default_toolchain)",
-    ]
-    extra_sources += [
-      main_forwarding_header,
-      test_forwarding_header,
-    ]
-
     include_stem = "fidl/" + library_name + "/" + invoker.output_stem
   } else {
     include_stem =
@@ -378,9 +325,6 @@ template("_fidl_cpp_library_impl") {
     if (defined(invoker.deps)) {
       public_deps += invoker.deps
     }
-
-    public_deps += extra_public_deps
-    sources += extra_sources
   }
 }
 
