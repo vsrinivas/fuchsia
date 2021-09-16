@@ -67,7 +67,7 @@ impl Waiter {
                     return error!(EINTR);
                 }
             },
-            Err(zx::Status::TIMED_OUT) => Ok(()),
+            Err(zx::Status::TIMED_OUT) => error!(ETIMEDOUT),
             Err(errno) => Err(impossible_error(errno)),
         }
     }
@@ -168,12 +168,13 @@ impl ObserverList {
     ///
     /// The waiters will wake up on their own threads to handle these events.
     /// They are not called synchronously by this function.
-    pub fn notify(&mut self, events: u32) {
+    pub fn notify(&mut self, events: u32, mut limit: usize) {
         self.observers = std::mem::take(&mut self.observers)
             .into_iter()
             .filter(|observer| {
-                if observer.events & events != 0 {
+                if limit > 0 && observer.events & events != 0 {
                     observer.waiter.wake();
+                    limit -= 1;
                     return observer.persistent;
                 }
                 return true;
@@ -240,5 +241,56 @@ mod tests {
 
         let read_mem_valid = &read_mem[0..read_size];
         assert_eq!(*&read_mem_valid, test_string.as_bytes());
+    }
+
+    #[test]
+    fn test_observer_list() {
+        let mut list = ObserverList::default();
+
+        let waiter0 = Waiter::new();
+        let waiter1 = Waiter::new();
+        let waiter2 = Waiter::new();
+
+        list.wait_async(&waiter0, 1);
+        list.wait_async(&waiter1, 1);
+        list.wait_async(&waiter2, 1);
+
+        list.notify(1, 2);
+        assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
+
+        list.notify(1, usize::MAX);
+        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
+
+        list.notify(1, 3);
+        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
+    }
+
+    #[test]
+    fn test_observer_list_mask() {
+        let mut list = ObserverList::default();
+
+        let waiter0 = Waiter::new();
+        let waiter1 = Waiter::new();
+        let waiter2 = Waiter::new();
+
+        list.wait_async(&waiter0, 0x13);
+        list.wait_async(&waiter1, 0x11);
+        list.wait_async(&waiter2, 0x12);
+
+        list.notify(0x2, 2);
+        assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
+
+        list.notify(0x1, usize::MAX);
+        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
     }
 }
