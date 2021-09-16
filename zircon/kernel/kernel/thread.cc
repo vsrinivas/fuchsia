@@ -382,7 +382,7 @@ zx_status_t Thread::Suspend() {
       // The following call is not essential.  It just makes the
       // thread suspension happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(scheduler_state_.curr_cpu_), 0);
+      mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(scheduler_state_.curr_cpu_));
       break;
     case THREAD_SUSPENDED:
       // thread is suspended already
@@ -646,7 +646,7 @@ void Thread::Kill() {
       // The following call is not essential.  It just makes the
       // thread termination happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(scheduler_state_.curr_cpu_), 0);
+      mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(scheduler_state_.curr_cpu_));
       break;
     case THREAD_SUSPENDED:
       // thread is suspended, resume it so it can get the kill signal
