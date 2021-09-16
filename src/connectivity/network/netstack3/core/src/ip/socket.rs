@@ -632,8 +632,8 @@ pub(crate) mod testutil {
     pub(crate) struct DummyIpSocket<I: IpExt> {
         local_ip: SpecifiedAddr<I::Addr>,
         remote_ip: SpecifiedAddr<I::Addr>,
-        proto: I::Proto,
-        ttl: u8,
+        _proto: I::Proto,
+        _ttl: u8,
         unroutable_behavior: UnroutableBehavior,
         // Guaranteed to be `true` if `unroutable_behavior` is `Close`.
         routable: bool,
@@ -736,8 +736,8 @@ pub(crate) mod testutil {
             Ok(DummyIpSocket {
                 local_ip: local_ip.unwrap_or(ctx.default_local_ip),
                 remote_ip,
-                proto,
-                ttl: builder.ttl.unwrap_or(crate::ip::DEFAULT_TTL.get()),
+                _proto: proto,
+                _ttl: builder.ttl.unwrap_or(crate::ip::DEFAULT_TTL.get()),
                 unroutable_behavior,
                 routable: true,
             })
