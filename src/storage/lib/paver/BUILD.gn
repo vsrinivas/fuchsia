@@ -6,10 +6,13 @@ import("//build/unification/zx_library.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "test:paver-fuzzers",
-    "test:paver-test",
-  ]
+  deps = [ "test:paver-fuzzers" ]
+
+  # TODO(fxbug.dev/84624): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    deps += [ "test:paver-test" ]
+  }
 }
 
 # Core paver implementation shared between all implementations.
