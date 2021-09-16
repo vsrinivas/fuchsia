@@ -344,7 +344,7 @@ void VkCopyTest::Elapsed(uint32_t kBufferSize, uint32_t kIterations) {
 }
 
 int main() {
-  constexpr uint32_t kBufferSize = 60 * kMB;
+  constexpr uint32_t kBufferSize = 6 * kMB;
   constexpr uint32_t kIterations = 1000;
 
   VkCopyTest app(kBufferSize);
