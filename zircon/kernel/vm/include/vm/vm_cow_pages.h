@@ -445,7 +445,7 @@ class VmCowPages final
   // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
   // the page queue to track which ones were recently accessed for the purposes of eviction. In
   // terms of functional correctness this never has to be called.
-  void UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+  void UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) TA_REQ(lock_);
 
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the
   // VmObjectPaged backlink can be moved from this to the child, keeping all page offsets, sizes and

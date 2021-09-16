@@ -1502,14 +1502,21 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
   return page;
 }
 
-void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
+void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) {
   // The only kinds of pages where there is anything to update on an access is pager backed pages.
-  // To that end we first want to determine, with certainty, that the provided page is in fact in
-  // the pager backed queue.
-
-  if (page == vm_get_zero_page()) {
+  // To that end we can skip pages not directly backed by a pager.
+  if (!page_source_) {
     return;
   }
+
+  // Don't make the page accessed for hardware faults. These accesses, if any actually end up
+  // happening, will be detected by the accessed bits in the page tables.
+  // For non hardware faults, the kernel might use the page directly through the physmap, which will
+  // not cause accessed information to be updated and so we consider it accessed at this point.
+  if (pf_flags & VMM_PF_FLAG_HW_FAULT) {
+    return;
+  }
+
   pmm_page_queues()->MarkAccessed(page);
 }
 
@@ -1573,19 +1580,19 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
   out->num_pages = 0;
 
   // Helper to find contiguous runs of pages in a page list and add them to the output pages.
-  auto collect_pages = [out](VmCowPages* cow, uint64_t offset, uint64_t max_len) {
+  auto collect_pages = [out, pf_flags](VmCowPages* cow, uint64_t offset, uint64_t max_len) {
     DEBUG_ASSERT(max_len > 0);
 
     AssertHeld(cow->lock_);
     cow->page_list_.ForEveryPageAndGapInRange(
-        [out, cow](const VmPageOrMarker* page, uint64_t off) {
+        [out, cow, pf_flags](const VmPageOrMarker* page, uint64_t off) {
           if (page->IsMarker()) {
             // Never pre-map in zero pages.
             return ZX_ERR_STOP;
           }
           vm_page_t* p = page->Page();
           AssertHeld(cow->lock_);
-          cow->UpdateOnAccessLocked(p, off);
+          cow->UpdateOnAccessLocked(p, pf_flags);
           out->add_page(p->paddr());
           return ZX_ERR_NEXT;
         },
@@ -1608,7 +1615,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     // This is the common case where we have the page and don't need to do anything more, so
     // return it straight away, collecting any additional pages if possible.
     vm_page_t* p = page_or_mark->Page();
-    UpdateOnAccessLocked(p, offset);
+    UpdateOnAccessLocked(p, pf_flags);
     out->writable = true;
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
@@ -1690,7 +1697,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
   // It's possible that we are going to fork the page, and the user isn't actually going to directly
   // use `p`, but creating the fork still uses `p` so we want to consider it accessed.
   AssertHeld(page_owner->lock_);
-  page_owner->UpdateOnAccessLocked(p, owner_offset);
+  page_owner->UpdateOnAccessLocked(p, pf_flags);
 
   if (!writing) {
     // If we're read-only faulting, return the page so they can map or read from it directly,
@@ -3137,7 +3144,7 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     // usage. A possible approach might involve moving to a separate queue when we skip the page for
     // eviction. Pages move out of said queue when accessed, and continue aging as other pages.
     // Pages in the queue are considered for eviction pre-OOM, but ignored otherwise.
-    UpdateOnAccessLocked(page, offset);
+    UpdateOnAccessLocked(page, VMM_PF_FLAG_SW_FAULT);
     return false;
   }
 
