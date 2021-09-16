@@ -243,7 +243,6 @@ protocol Node {
     /// Terminates connection with object.
     ///
     /// This method does not require any rights.
-    @transitional
     @selector("fuchsia.io/Node.Close")
     Close2() -> (struct {}) error zx.status;
 
