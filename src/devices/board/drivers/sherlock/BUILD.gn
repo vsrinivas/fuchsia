@@ -195,6 +195,41 @@ driver_bind_rules("sherlock-cpu-bind") {
   ]
 }
 
+driver_bind_rules("sherlock-emmc-bind") {
+  rules = "bind/sherlock-emmc.bind"
+  header_output = "sherlock-emmc-bind.h"
+  bind_output = "sherlock-emmc-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("sherlock-nna-bind") {
+  rules = "bind/sherlock-nna.bind"
+  header_output = "sherlock-nna-bind.h"
+  bind_output = "sherlock-nna-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("sherlock-securemem-bind") {
+  rules = "bind/sherlock-securemem.bind"
+  header_output = "sherlock-securemem-bind.h"
+  bind_output = "sherlock-securemem-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -258,9 +293,12 @@ template("sherlock_driver") {
       ":sherlock-buttons-bind_header",
       ":sherlock-cpu-bind_header",
       ":sherlock-display-bind_header",
+      ":sherlock-emmc-bind_header",
       ":sherlock-hevc-enc-bind_header",
       ":sherlock-mali-bind_header",
+      ":sherlock-nna-bind_header",
       ":sherlock-pwm-bind_header",
+      ":sherlock-securemem-bind_header",
       ":sherlock-spi-bind_header",
       ":sherlock-tee-bind_header",
       ":sherlock-video-bind_header",

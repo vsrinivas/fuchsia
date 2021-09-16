@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-securemem-bind.h"
 
 namespace sherlock {
 
@@ -32,28 +33,12 @@ static const pbus_dev_t secure_mem_dev = []() {
   return dev;
 }();
 
-constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-constexpr zx_bind_inst_t tee_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEE),
-};
-constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-constexpr device_fragment_part_t tee_fragment[] = {
-    {countof(tee_match), tee_match},
-};
-constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"tee", countof(tee_fragment), tee_fragment},
-};
-
 zx_status_t Sherlock::SecureMemInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &secure_mem_dev, reinterpret_cast<uint64_t>(fragments), countof(fragments), nullptr);
+  zx_status_t status =
+      pbus_.AddComposite(&secure_mem_dev, reinterpret_cast<uint64_t>(aml_secure_mem_fragments),
+                         countof(aml_secure_mem_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
     return status;
   }
   return ZX_OK;

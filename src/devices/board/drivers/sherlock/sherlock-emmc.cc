@@ -19,6 +19,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-emmc-bind.h"
 
 namespace sherlock {
 
@@ -114,17 +115,6 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_EMMC_RST),
-};
-static const device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
-};
-static const device_fragment_t fragments[] = {
-    {"gpio", countof(gpio_fragment), gpio_fragment},
-};
-
 }  // namespace
 
 zx_status_t Sherlock::EmmcInit() {
@@ -163,10 +153,11 @@ zx_status_t Sherlock::EmmcInit() {
     emmc_dev.metadata_count = countof(luis_emmc_metadata);
   }
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status =
+      pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(sherlock_emmc_fragments),
+                         countof(sherlock_emmc_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
     return status;
   }
 
