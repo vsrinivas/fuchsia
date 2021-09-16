@@ -11,6 +11,7 @@
 
 #include <object/dispatcher.h>
 #include <object/handle.h>
+#include <object/pager_proxy.h>
 #include <object/port_dispatcher.h>
 
 class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_PAGER_RIGHTS> {
@@ -20,9 +21,9 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
 
   zx_status_t CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key,
                            fbl::RefPtr<PageSource>* src);
-  // Drop and return this object's reference to |src|. Must be called under
-  // |src|'s lock to prevent races with dispatcher teardown.
-  fbl::RefPtr<PageSource> ReleaseSource(PageSource* src);
+  // Drop and return this object's reference to |proxy|. Must be called under
+  // |proxy|'s lock to prevent races with dispatcher teardown.
+  fbl::RefPtr<PagerProxy> ReleaseProxy(PagerProxy* proxy) TA_REQ(proxy->mtx_);
 
   zx_status_t RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t length,
                       uint64_t data);
@@ -35,7 +36,7 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
   explicit PagerDispatcher();
 
   mutable DECLARE_MUTEX(PagerDispatcher) lock_;
-  fbl::DoublyLinkedList<fbl::RefPtr<PageSource>> srcs_ TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<fbl::RefPtr<PagerProxy>> proxies_ TA_GUARDED(lock_);
   // Track whether zero handles has been triggered. This prevents race conditions where we might
   // create new sources after on_zero_handles has been called.
   bool triggered_zero_handles_ TA_GUARDED(lock_) = false;

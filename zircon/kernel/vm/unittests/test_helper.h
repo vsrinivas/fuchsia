@@ -106,7 +106,6 @@ class StubPageProvider : public PageProvider {
   }
   void OnDetach() override {}
   void OnClose() override {}
-  void OnDispatcherClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
   void Dump() override {}
 };

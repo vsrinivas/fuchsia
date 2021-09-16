@@ -65,16 +65,6 @@ void PageSource::Close() {
   page_provider_->OnClose();
 }
 
-void PageSource::OnPageProviderDispatcherClose() {
-  canary_.Assert();
-  LTRACEF("%p\n", this);
-
-  // Cleanup from the VMO side.
-  Close();
-  // Cleanup from the backing source side.
-  page_provider_->OnDispatcherClose();
-}
-
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);

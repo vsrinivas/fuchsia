@@ -34,7 +34,7 @@ PagerDispatcher::PagerDispatcher() : SoloDispatcher() {
 }
 
 PagerDispatcher::~PagerDispatcher() {
-  DEBUG_ASSERT(srcs_.is_empty());
+  DEBUG_ASSERT(proxies_.is_empty());
   kcounter_add(dispatcher_pager_destroy_count, 1);
 }
 
@@ -48,45 +48,51 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
     return ZX_ERR_BAD_STATE;
   }
 
+  // We are going to setup two objects that both need to point to each other. As such one of the
+  // pointers must be bound 'late' and not in the constructor.
   fbl::AllocChecker ac;
   auto proxy = fbl::MakeRefCountedChecked<PagerProxy>(&ac, this, ktl::move(port), key);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  auto proxy_ptr = proxy.get();
+  auto src = fbl::MakeRefCountedChecked<PageSource>(&ac, proxy);
 
-  auto src = fbl::MakeRefCountedChecked<PageSource>(&ac, ktl::move(proxy));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  // Now that PageSource has been created and has a reference to proxy we must setup expected
+  // backlink in proxy. As such there must never be an early return added between here and
+  // SetPagerSourceUnchecked.
 
-  proxy_ptr->page_source_ = src.get();
+  // Setting this creates a RefPtr cycle between the PagerProxy and PageSource, however we guarantee
+  // we will call proxy->OnDispatcherClose at some point to break the cycle.
+  proxy->SetPageSourceUnchecked(src);
 
-  srcs_.push_front(src);
+  proxies_.push_front(ktl::move(proxy));
   *src_out = ktl::move(src);
   return ZX_OK;
 }
 
-fbl::RefPtr<PageSource> PagerDispatcher::ReleaseSource(PageSource* src) {
+fbl::RefPtr<PagerProxy> PagerDispatcher::ReleaseProxy(PagerProxy* proxy) {
   Guard<Mutex> guard{&lock_};
-  // src might not be in the container since we could be racing with a call to on_zero_handles, but
-  // that should only happen if we have triggered_zero_handles_. In particular the caller should not
-  // be trying to release a source that it knows is not here.
-  DEBUG_ASSERT(src->InContainer() != triggered_zero_handles_);
-  return src->InContainer() ? srcs_.erase(*src) : nullptr;
+  // proxy might not be in the container since we could be racing with a call to on_zero_handles,
+  // but that should only happen if we have triggered_zero_handles_. In particular the caller should
+  // not be trying to release a proxy that it knows is not here.
+  DEBUG_ASSERT(proxy->InContainer() != triggered_zero_handles_);
+  return proxy->InContainer() ? proxies_.erase(*proxy) : nullptr;
 }
 
 void PagerDispatcher::on_zero_handles() {
   Guard<Mutex> guard{&lock_};
   DEBUG_ASSERT(!triggered_zero_handles_);
   triggered_zero_handles_ = true;
-  while (!srcs_.is_empty()) {
-    fbl::RefPtr<PageSource> src = srcs_.pop_front();
+  while (!proxies_.is_empty()) {
+    fbl::RefPtr<PagerProxy> proxy = proxies_.pop_front();
 
-    // Call unlocked to prevent a double-lock if PagerDispatcher::ReleaseSource is called,
+    // Call unlocked to prevent a double-lock if PagerDispatcher::ReleaseProxy is called,
     // and to preserve the lock order that PagerProxy locks are acquired before the
     // list lock.
-    guard.CallUnlocked([&src]() mutable { src->OnPageProviderDispatcherClose(); });
+    guard.CallUnlocked([proxy = ktl::move(proxy)]() mutable { proxy->OnDispatcherClose(); });
   }
 }
 

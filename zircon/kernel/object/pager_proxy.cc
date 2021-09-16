@@ -122,47 +122,69 @@ void PagerProxy::OnDetach() {
 }
 
 void PagerProxy::OnClose() {
+  fbl::RefPtr<PagerProxy> self_ref;
   fbl::RefPtr<PageSource> self_src;
-
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
   closed_ = true;
   if (!complete_pending_) {
     // We know PagerDispatcher::on_zero_handles hasn't been invoked, since that would
-    // have already closed this pager proxy.
-    DEBUG_ASSERT(page_source_);
-    self_src = pager_->ReleaseSource(page_source_);
-  }  // else this is released in PagerProxy::Free
+    // have already closed this pager proxy via OnDispatcherClose. Therefore we are free to
+    // immediately clean up.
+    self_ref = pager_->ReleaseProxy(this);
+    self_src = ktl::move(page_source_);
+  } else {
+    // There are still pending messages that we would like to wait to be received and so we do not
+    // perform CancelQueued like OnDispatcherClose does. However, we must leave the reference to
+    // ourselves in pager_ so that OnDispatcherClose (and the forced packet cancelling) can happen
+    // if needed.
+    // Otherwise final delayed cleanup will happen in ::Free
+  }
 }
 
 void PagerProxy::OnDispatcherClose() {
+  fbl::RefPtr<PageSource> self_src;
   // The pager dispatcher's reference to this object is the only one we completely control. Now
   // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
   // to packet_ if all external RefPtrs to this object go away.
   Guard<Mutex> guard{&mtx_};
 
+  if (!closed_) {
+    // Close the page source from our end.
+    DEBUG_ASSERT(page_source_);
+    self_src = page_source_;
+    // Call Close without the lock to
+    //  * Not violate lock ordering
+    //  * Allow it to call back into ::OnClose
+    guard.CallUnlocked([&self_src]() mutable { self_src->Close(); });
+  }
+
+  // As the Pager dispatcher is going away, we are not content to keep these objects alive
+  // indefinitely until messages are read, instead we want to cancel everything as soon as possible
+  // to avoid memory leaks. Therefore we will attempt to cancel any queued final packet.
   if (complete_pending_) {
     if (port_->CancelQueued(&packet_)) {
       // We successfully cancelled the message, so we don't have to worry about
-      // PagerProxy::Free being called.
+      // PagerProxy::Free being called, and can immediately break the refptr cycle.
       complete_pending_ = false;
     } else {
-      // If we failed to cancel the message, then there is a pending call to
-      // PagerProxy::Free. We need to make sure the object isn't deleted too early,
-      // so have it keep a reference to itself, which PagerProxy::Free will then
-      // clean up.
-      DEBUG_ASSERT(page_source_);
-      self_src_ref_ = fbl::RefPtr(page_source_);
+      // If we failed to cancel the message, then there is a pending call to PagerProxy::Free. It
+      // will cleanup the RefPtr cycle, although only if closed_ is true, which should be the case
+      // since we performed the Close step earlier.
+      DEBUG_ASSERT(closed_);
     }
   } else {
     // Either the complete message had already been dispatched when this object was closed or
     // PagerProxy::Free was called between this object being closed and this method taking the
-    // lock. In either case, the port no longer has a reference and cleanup is already done.
+    // lock. In either case, the port no longer has a reference, any RefPtr cycles have been broken
+    // and cleanup is already done.
+    DEBUG_ASSERT(!page_source_);
   }
 }
 
 void PagerProxy::Free(PortPacket* packet) {
+  fbl::RefPtr<PagerProxy> self_ref;
   fbl::RefPtr<PageSource> self_src;
 
   Guard<Mutex> guard{&mtx_};
@@ -172,16 +194,18 @@ void PagerProxy::Free(PortPacket* packet) {
     VM_KTRACE_FLOW_END(1, "page_request_queue", reinterpret_cast<uintptr_t>(packet));
     OnPacketFreedLocked();
   } else {
+    // Freeing the complete_request_ indicates we have completed a pending action that might have
+    // been delaying cleanup.
     complete_pending_ = false;
     if (closed_) {
-      // If the source is closed, we need to do delayed cleanup. If the dispatcher has already been
-      // torn down, then there's a self-reference to our PageSource we need to clean up. Otherwise,
-      // clean up the dispatcher's reference to our PageSource.
-      self_src = ktl::move(self_src_ref_);
-      if (!self_src) {
-        DEBUG_ASSERT(page_source_);
-        self_src = pager_->ReleaseSource(page_source_);
-      }
+      // If the source is closed, we need to do delayed cleanup. Make sure we are not still in the
+      // pagers proxy list, and then break our refptr cycle.
+      DEBUG_ASSERT(page_source_);
+      // self_ref could be a nullptr if we have ended up racing with pager dispatcher tear down.
+      // This is fine as OnDispatcherClose will notice closed_ is true and complete_pending_ is true
+      // and do no work.
+      self_ref = pager_->ReleaseProxy(this);
+      self_src = ktl::move(page_source_);
     }
   }
 }
@@ -192,6 +216,14 @@ void PagerProxy::OnPacketFreedLocked() {
   if (!list_is_empty(&pending_requests_)) {
     QueuePacketLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
   }
+}
+
+void PagerProxy::SetPageSourceUnchecked(fbl::RefPtr<PageSource> src) {
+  // SetPagerSource is a private function and is only called by the PagerDispatcher just after
+  // construction, unfortunately it needs to be called under the PagerDispatcher lock and lock
+  // ordering is always PagerProxy->PagerDispatcher, and so we cannot acquire the lock here.
+  auto func = [this, &src]() TA_NO_THREAD_SAFETY_ANALYSIS { page_source_ = ktl::move(src); };
+  func();
 }
 
 zx_status_t PagerProxy::WaitOnEvent(Event* event) {
@@ -221,27 +253,30 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
     if (gBootOptions->userpager_overtime_timeout_seconds > 0 &&
         waited * gBootOptions->userpager_overtime_wait_seconds >=
             gBootOptions->userpager_overtime_timeout_seconds) {
+      Guard<Mutex> guard{&mtx_};
       printf("ERROR Page source %p has been blocked for %" PRIu64
              " seconds. Page request timed out.\n",
-             page_source_, gBootOptions->userpager_overtime_timeout_seconds);
+             page_source_.get(), gBootOptions->userpager_overtime_timeout_seconds);
       dump_thread(Thread::Current::Get(), false);
       kcounter_add(dispatcher_pager_timed_out_request_count, 1);
       return ZX_ERR_TIMED_OUT;
     }
 
     // Determine whether we have any requests that have not yet been received off of the port.
+    fbl::RefPtr<PageSource> src;
     bool active;
     {
       Guard<Mutex> guard{&mtx_};
       active = !!active_request_;
+      src = page_source_;
     }
     printf("WARNING Page source %p has been blocked for %" PRIu64
            " seconds with%s message waiting on port.\n",
-           page_source_, waited * gBootOptions->userpager_overtime_wait_seconds,
-           active ? "" : " no");
+           src.get(), waited * gBootOptions->userpager_overtime_wait_seconds, active ? "" : " no");
     // Dump out the rest of the state of the oustanding requests.
-    DEBUG_ASSERT(page_source_);
-    page_source_->Dump();
+    if (src) {
+      src->Dump();
+    }
   }
 
   if (result == ZX_OK) {
@@ -261,7 +296,7 @@ void PagerProxy::Dump() {
   printf(
       "pager_proxy %p pager_dispatcher %p page_source %p key %lu\n"
       "  closed %d packet_busy %d complete_pending %d\n",
-      this, pager_, page_source_, key_, closed_, packet_busy_, complete_pending_);
+      this, pager_, page_source_.get(), key_, closed_, packet_busy_, complete_pending_);
 
   if (active_request_) {
     printf("  active request on pager port [0x%lx, 0x%lx)\n", active_request_->offset,

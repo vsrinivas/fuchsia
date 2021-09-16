@@ -24,7 +24,9 @@
 // PortAllocator). However, if the dispatcher is destroyed, if we can't revoke the port's reference
 // to packet_, then we end up making the PagerProxy keep a reference to the containing PageSource
 // until the packet is freed.
-class PagerProxy : public PageProvider, public PortAllocator {
+class PagerProxy : public PageProvider,
+                   public PortAllocator,
+                   public fbl::DoublyLinkedListable<fbl::RefPtr<PagerProxy>> {
  public:
   PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
   ~PagerProxy() override;
@@ -49,10 +51,15 @@ class PagerProxy : public PageProvider, public PortAllocator {
   void OnClose() final;
   void OnDetach() final;
   zx_status_t WaitOnEvent(Event* event) final;
-  // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
-  // reference to the containing PageSource object.
-  void OnDispatcherClose() final;
   void Dump() final;
+
+  // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
+  // reference to any in flight packets.
+  void OnDispatcherClose();
+
+  // Called by the page dispatcher to set the PageSource reference. This is guaranteed to happen
+  // exactly once just after construction.
+  void SetPageSourceUnchecked(fbl::RefPtr<PageSource> src);
 
   PagerDispatcher* const pager_;
   const fbl::RefPtr<PortDispatcher> port_;
@@ -65,8 +72,6 @@ class PagerProxy : public PageProvider, public PortAllocator {
   // last message sent). This flag is used to delay cleanup if PagerProxy::Close is called
   // while the port still has a reference to packet_.
   bool complete_pending_ TA_GUARDED(mtx_) = false;
-  // Ref to keep the object alive in certain circumstances - see PagerDispatcher::on_zero_handles.
-  fbl::RefPtr<PageSource> self_src_ref_ TA_GUARDED(mtx_);
 
   // PortPacket used for sending all page requests to the pager service. The pager
   // dispatcher serves as packet_'s allocator. This informs the dispatcher when
@@ -92,7 +97,11 @@ class PagerProxy : public PageProvider, public PortAllocator {
   };
 
   // Back pointer to the PageSource that owns this instance.
-  PageSource* page_source_ = nullptr;
+  // The PageSource also has a RefPtr to this object, and so with this being a RefPtr there exists
+  // a cycle. This is deliberate and allows this object to control when deletion happens to ensure
+  // deletion doesn't happen whilst port packets are queued. The cycle will be explicitly cut during
+  // the graceful destruction triggered by OnDispatcherClose or OnClose.
+  fbl::RefPtr<PageSource> page_source_ TA_GUARDED(mtx_);
 
   // Queues the page request, either sending it to the port or putting it in pending_requests_.
   void QueuePacketLocked(page_request_t* request) TA_REQ(mtx_);

@@ -9,7 +9,6 @@
 
 #include <zircon/types.h>
 
-#include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -55,12 +54,6 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
   virtual void OnClose() = 0;
 
-  // Called from the backing source dispatcher when it is going away, in order to perform any
-  // cleanup as required. The difference between this call and OnDetach/OnClose is that typically
-  // OnDetach/OnClose are called from the VMO side, whereas OnDispatcherClose is called from the
-  // backing source side (e.g. a pager).
-  virtual void OnDispatcherClose() = 0;
-
   // Waits on an |event| associated with a page request.
   virtual zx_status_t WaitOnEvent(Event* event) = 0;
 
@@ -94,8 +87,7 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
 //      point the requested page will be present.
 
 // Object which provides pages to a vm_object.
-class PageSource : public fbl::RefCounted<PageSource>,
-                   public fbl::DoublyLinkedListable<fbl::RefPtr<PageSource>> {
+class PageSource : public fbl::RefCounted<PageSource> {
  public:
   PageSource() = delete;
   explicit PageSource(fbl::RefPtr<PageProvider>&& page_provider);
@@ -144,10 +136,6 @@ class PageSource : public fbl::RefCounted<PageSource>,
   // Closes the source. Will call Detach() if the source is not already detached. All pending
   // transactions will be aborted and all future calls will fail.
   void Close();
-
-  // Called when the PageProvider's backing dispatcher (e.g. a pager dispatcher) is being torn down.
-  // See PagerDispatcher::on_zero_handles().
-  void OnPageProviderDispatcherClose();
 
   void Dump() const;
 
