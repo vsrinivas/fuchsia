@@ -12,13 +12,14 @@
             protocol: [
                 "fuchsia.settings.Accessibility",
                 "fuchsia.settings.Audio",
-                "fuchsia.settings.Device",
                 "fuchsia.settings.Display",
                 "fuchsia.settings.DoNotDisturb",
                 "fuchsia.settings.FactoryReset",
                 "fuchsia.settings.Input",
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Light",
                 "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
                 "fuchsia.settings.Privacy",
                 "fuchsia.settings.Setup",
                 "fuchsia.settings.System",
@@ -28,62 +29,45 @@
     use: [
         {
             protocol: [
-                "fuchsia.accessibility.SettingsManager",
+                // TODO(fxb/84709): Remove this once fxb/77094 is done.
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.deprecatedtimezone.Timezone",
-                "fuchsia.hardware.light.Light",
                 "fuchsia.hardware.power.statecontrol.Admin",
-                "fuchsia.input.report.InputDevice",
-                "fuchsia.media.audio.VolumeControl",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sounds.Player",
                 "fuchsia.media.UsageReporter",
-                "fuchsia.netstack.Netstack",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.stash.Store",
-                "fuchsia.sys.Environment",
-                "fuchsia.timezone.Timezone",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
-            from: "parent",
         },
+
+        // Device directories.
         {
             directory: "dev-input-report",
-            from: "parent",
             rights: [ "r*" ],
             path: "/dev/class/input-report",
         },
         {
             directory: "dev-light",
-            from: "parent",
             rights: [ "r*" ],
             path: "/dev/class/light",
         },
 
-        // features: build-info
-        {
-            directory: "config-build-info",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/config/build-info",
-        },
-
-        // features: config-data
+        // Features: config-data.
         {
             directory: "config-data",
-            from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
         },
 
-        // features: isolated-persistent-storage
+        // Features: isolated-persistent-storage.
         {
-            directory: "data",
-            from: "parent",
-            rights: [ "rw*" ],
+            storage: "data",
             path: "/data",
         },
     ],
@@ -92,13 +76,14 @@
             protocol: [
                 "fuchsia.settings.Accessibility",
                 "fuchsia.settings.Audio",
-                "fuchsia.settings.Device",
                 "fuchsia.settings.Display",
                 "fuchsia.settings.DoNotDisturb",
                 "fuchsia.settings.FactoryReset",
                 "fuchsia.settings.Input",
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Light",
                 "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
                 "fuchsia.settings.Privacy",
                 "fuchsia.settings.Setup",
                 "fuchsia.settings.System",
