@@ -5,10 +5,6 @@
 import("//build/host.gni")
 import("//build/zircon/migrated_targets.gni")
 
-# TODO(fxbug.dev/83607): temporary during soft transition
-_changelog_lines = read_file("src/CHANGELOG", "list lines")
-old_zstd = _changelog_lines[0] == "v1.4.8  (Dec 18, 2020)"
-
 zstd_common_sources = [
   "src/lib/common/bitstream.h",
   "src/lib/common/compiler.h",
@@ -113,10 +109,6 @@ config("public.config") {
   visibility = [ ":*" ]
 
   include_dirs = [ "include" ]
-
-  if (old_zstd) {
-    defines = [ "_TEMPORARY_ZSTD_148" ]
-  }
 }
 
 config("internal.config") {
