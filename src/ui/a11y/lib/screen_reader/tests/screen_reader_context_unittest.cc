@@ -108,10 +108,16 @@ TEST_F(ScreenReaderContextTest, FallbackToEnglishWhenLocaleIsUnknown) {
   auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
       &mock_focus_requester_, &mock_focus_registry_, &mock_focus_highlight_manager_);
 
-  // If the context is built successfully, this means that it loaded the English strings, as they
-  // are the only ones present in the test package and the fallback worked.
   screen_reader_context_ = std::make_unique<a11y::ScreenReaderContext>(
       std::move(a11y_focus_manager), &tts_manager_, &mock_semantics_source_, "sr-RS");
+
+  // Because the provided locale does not exist, check that it used en-US as a fallback.
+  icu::Locale locale("en-US");
+  EXPECT_EQ(screen_reader_context_->speaker()
+                ->message_generator_for_test()
+                ->message_formatter_for_test()
+                ->locale(),
+            locale);
 }
 }  // namespace
 }  // namespace accessibility_test

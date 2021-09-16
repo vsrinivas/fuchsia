@@ -56,6 +56,8 @@ class ScreenReaderMessageGenerator {
   // parameter here because not all UTF-8 grapheme clusters can be represented in a char.
   virtual UtteranceAndContext FormatCharacterForSpelling(const std::string& character);
 
+  i18n::MessageFormatter* message_formatter_for_test() { return message_formatter_.get(); }
+
  protected:
   // Constructor for mock only.
   ScreenReaderMessageGenerator() = default;

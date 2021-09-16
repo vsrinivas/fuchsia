@@ -41,6 +41,9 @@ class MessageFormatter {
       const uint64_t id, const std::vector<std::string>& arg_names = std::vector<std::string>(),
       const std::vector<std::string>& arg_values = std::vector<std::string>());
 
+  // Returns the icu locale used to format messages.
+  const icu::Locale& locale() const { return locale_; }
+
  protected:
   // For mocks.
   MessageFormatter() = default;

@@ -78,6 +78,11 @@ class Speaker {
   // Sets a message to be spoken just before this object is destroyed.
   virtual void set_epitaph(fuchsia::intl::l10n::MessageIds epitaph) { epitaph_ = epitaph; }
 
+  // For tests only
+  ScreenReaderMessageGenerator* message_generator_for_test() {
+    return screen_reader_message_generator_.get();
+  }
+
  protected:
   // For mocks.
   Speaker() = default;

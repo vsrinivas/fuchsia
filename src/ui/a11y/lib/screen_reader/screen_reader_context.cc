@@ -28,10 +28,19 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
 
   // Note that en-US is passed here so that we can fallback to use it in case the first locale is
   // not available.
-  auto result = intl::Lookup::New({locale_id_, "en-US"});
-  FX_CHECK(result.is_ok()) << "Load of l10n resources failed.";
+  auto result = intl::Lookup::New({locale_id_});
+  if (result.is_error()) {
+    // Try to fallback to en-US when the locale is unknown.
+    locale_id_ = "en-US";
+    result = intl::Lookup::New({locale_id_});
+    FX_CHECK(result.is_ok()) << "Load of l10n resources failed.";
+  }
+  UErrorCode icu_status = U_ZERO_ERROR;
+  auto icu_locale = icu::Locale::forLanguageTag(locale_id_, icu_status);
+  FX_CHECK(!U_FAILURE(icu_status)) << "Could not create an icu Locale for a11y generate messages.";
+
   auto message_formatter =
-      std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
+      std::make_unique<i18n::MessageFormatter>(std::move(icu_locale), result.take_value());
   auto screen_reader_message_generator =
       std::make_unique<ScreenReaderMessageGenerator>(std::move(message_formatter));
   speaker_ = std::make_unique<Speaker>(&executor_, &tts_engine_ptr_,
