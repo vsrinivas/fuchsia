@@ -123,7 +123,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.hardware.display.Provider",
 
                 // TODO(fxbug.dev/83029): Package these `hwinfo` protocols better.
                 "fuchsia.hwinfo.Board",

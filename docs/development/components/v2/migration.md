@@ -373,7 +373,6 @@ realm with the following services:
 
 | Service                             | Description                           |
 | ----------------------------------- | ------------------------------------- |
-| `fuchsia.hardware.display.Provider` | Provider for display controllers      |
 | `fuchsia.scheduler.ProfileProvider` | Profile provider for scheduler        |
 | `fuchsia.sysmem.Allocator`          | Allocates system memory buffers       |
 | `fuchsia.tracing.provider.Registry` | Register to trace provider            |

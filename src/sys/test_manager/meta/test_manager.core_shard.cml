@@ -65,7 +65,6 @@
         },
         {
             protocol: [
-                "fuchsia.hardware.display.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
