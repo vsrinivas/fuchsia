@@ -5,6 +5,10 @@
 import("//build/host.gni")
 import("//build/zircon/migrated_targets.gni")
 
+# TODO(fxbug.dev/83607): temporary during soft transition
+_changelog_lines = read_file("src/CHANGELOG", "list lines")
+old_zstd = _changelog_lines[0] == "v1.4.8  (Dec 18, 2020)"
+
 zstd_common_sources = [
   "src/lib/common/bitstream.h",
   "src/lib/common/compiler.h",
@@ -81,13 +85,8 @@ zstd_decompress_sources = [
 # or optimize=debug (-O0 currently); enable default optimizations for just
 # this library to speed up builds.
 if (is_host) {
-  if (zircon_toolchain == false) {
-    _config = "//build/config"
-  } else {
-    _config = "//build/config"
-  }
-  remove_opt_configs = [ "$_config:default_optimize" ]
-  add_opt_configs = [ "$_config:optimize_speed" ]
+  remove_opt_configs = [ "//build/config:default_optimize" ]
+  add_opt_configs = [ "//build/config:optimize_speed" ]
 } else {
   remove_opt_configs = []
   add_opt_configs = []
@@ -114,6 +113,10 @@ config("public.config") {
   visibility = [ ":*" ]
 
   include_dirs = [ "include" ]
+
+  if (old_zstd) {
+    defines = [ "_TEMPORARY_ZSTD_148" ]
+  }
 }
 
 config("internal.config") {
@@ -167,6 +170,9 @@ static_library("zstd-decompress-standalone") {
     "ZSTD_malloc(s)=((void)(s),NULL)",
     "ZSTD_calloc(n,s)=((void)((n)*(s)),NULL)",
     "ZSTD_free(p)=(void)(p)",
+
+    # Avoids some weak symbol references that require GOT slots.
+    "ZSTD_NO_TRACE",
   ]
 
   if (is_kernel) {
