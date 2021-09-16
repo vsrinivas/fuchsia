@@ -144,6 +144,119 @@
       {
         "properties": {
           "type": {
+            "pattern": "CpuManager"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "clusters": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "handler": {
+                      "type": "string"
+                    },
+                    "logical_cpu_numbers": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "perfs_per_ghz": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "handler",
+                  "logical_cpu_numbers",
+                  "perfs_per_ghz"
+                ]
+              },
+              "thermal_states": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "cluster_pstates": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "min_performance_perfs": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "static_power_w": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "watts_per_perf": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "cluster_pstates",
+                  "min_performance_perfs",
+                  "static_power_w",
+                  "watts_per_perf"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "clusters",
+              "thermal_states"
+            ]
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "cpu_stats_handler": {
+                "type": "string"
+              },
+              "cpu_device_handlers": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cpu_stats_handler",
+              "cpu_device_handlers"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      },      {
+        "properties": {
+          "type": {
             "pattern": "CpuStatsHandler"
           },
           "name": {

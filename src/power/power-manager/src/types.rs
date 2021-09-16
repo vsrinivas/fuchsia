@@ -10,10 +10,10 @@
 /// interpret exponents applied to different unit types.
 use std::ops;
 
-/// Defines a new measurement unit, with an underlying scalar type. mul_scalar and div_scalar are
-/// defined to eliminate some common needs for shedding the unit type.
-macro_rules! define_unit {
-    ( $unit_type:ident, $scalar_type: ident ) => {
+/// Defines aspects of a measurement unit that are applicable regardless of the scalar type.
+/// mul_scalar and div_scalar are defined to eliminate some common needs for shedding the unit type.
+macro_rules! define_unit_base {
+    ( $unit_type:ident, $scalar_type:ident ) => {
         #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
         pub struct $unit_type(pub $scalar_type);
 
@@ -29,7 +29,39 @@ macro_rules! define_unit {
     };
 }
 
-// Unit definitions
+/// Defines a measurement unit with an underlying float scalar type. This allows definition of
+/// associated functions that delegate to those of the underlying type.
+macro_rules! define_float_unit {
+    ( $unit_type:ident, $scalar_type: ident ) => {
+        define_unit_base!($unit_type, $scalar_type);
+
+        #[allow(dead_code)]
+        impl $unit_type {
+            pub fn min(a: Self, b: Self) -> Self {
+                Self($scalar_type::min(a.0, b.0))
+            }
+
+            pub fn max(a: Self, b: Self) -> Self {
+                Self($scalar_type::max(a.0, b.0))
+            }
+        }
+    };
+}
+
+/// Defines a measurement unit, with an underlying scalar type.
+macro_rules! define_unit {
+    ( $unit_type:ident, f32 ) => {
+        define_float_unit!($unit_type, f32);
+    };
+    ( $unit_type:ident, f64 ) => {
+        define_float_unit!($unit_type, f64);
+    };
+    ( $unit_type:ident, $scalar_type:ident ) => {
+        define_unit_base!($unit_type, $scalar_type);
+    };
+}
+
+// Standard unit types.
 define_unit!(Celsius, f64);
 define_unit!(Farads, f64);
 define_unit!(Hertz, f64);
@@ -43,6 +75,10 @@ define_unit!(Milliseconds, i64);
 // An unsigned integer in the range [0 - x], where x is an upper bound defined by the
 // thermal_limiter crate.
 define_unit!(ThermalLoad, u32);
+
+// Normalized performance units. The normalization is chosen such that 1 NormPerf is equivalent to a
+// performance scale of 1.0 with respect to the Fuchsia kernel scheduler.
+define_unit!(NormPerfs, f64);
 
 // Addition and subtraction is implemented for types for which it is useful. Some, but not all,
 // other unit types could reasonably support these operations.
@@ -67,14 +103,20 @@ macro_rules! define_arithmetic {
                 Self(self.0 - other.0)
             }
         }
+
+        impl std::iter::Sum for $unit_type {
+            fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+                iter.fold(Self::default(), |a, b| a + b)
+            }
+        }
     };
 
-    ( $unit_type:ident, $($more:ident),+) => {
+    ( $unit_type:ident, $($more:ident),+ ) => {
         define_arithmetic!($unit_type);
         define_arithmetic!($($more),+);
     };
 }
-define_arithmetic!(Seconds, Nanoseconds, Celsius, Watts);
+define_arithmetic!(Seconds, Nanoseconds, Celsius, NormPerfs, Watts);
 
 impl From<Nanoseconds> for Seconds {
     fn from(nanos: Nanoseconds) -> Self {
@@ -164,4 +206,34 @@ impl ops::Div<Hertz> for f64 {
 pub struct PState {
     pub frequency: Hertz,
     pub voltage: Volts,
+}
+
+// Representation of a CPU performance scale in fixed-point form, suitable for input to the kernel.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CpuPerformanceScale {
+    pub integer_part: u32,
+    pub fractional_part: u32,
+}
+
+// NormPerfs are normalized to the same scale used by the kernel scheduler. Hence, they are the
+// units from which a `CpuPerformanceScale` should generally be created.
+impl std::convert::TryFrom<NormPerfs> for CpuPerformanceScale {
+    type Error = anyhow::Error;
+
+    fn try_from(value: NormPerfs) -> Result<Self, Self::Error> {
+        let (fraction, integer) = libm::modf(value.0);
+        if integer > std::u32::MAX as f64 {
+            anyhow::bail!("Integer part {} exceeds std::u32::MAX", integer);
+        }
+        let integer_part = integer as u32;
+        let fractional_part = libm::ldexp(fraction, 32) as u32;
+        Ok(CpuPerformanceScale { integer_part, fractional_part })
+    }
+}
+
+// Single element of input for a zx_system_get_set_performance_info syscall.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CpuPerformanceInfo {
+    pub logical_cpu_number: u32,
+    pub performance_scale: CpuPerformanceScale,
 }

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::shutdown_request::ShutdownRequest;
-use crate::types::{Celsius, Nanoseconds, PState, ThermalLoad, Watts};
+use crate::types::{Celsius, CpuPerformanceInfo, Nanoseconds, PState, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum Message {
     /// Read the temperature
@@ -24,6 +24,9 @@ pub enum Message {
 
     /// Get all performance states for the handler's CPU domain
     GetCpuPerformanceStates,
+
+    // Issues the zx_system_get_set_performance_info syscall.
+    GetSetCpuPerformanceInfo(Vec<CpuPerformanceInfo>),
 
     /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
     /// Arg: the max number of watts that the component should be allowed to consume
@@ -92,6 +95,9 @@ pub enum MessageReturn {
     /// Arg: all performance states for the CPU domain seviced by the message handler.
     GetCpuPerformanceStates(Vec<PState>),
 
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    GetSetCpuPerformanceInfo,
+
     /// Arg: the max number of watts that the component will use. This number should typically be at
     /// or below the number that was specified in the Message, but there may be cases where it
     /// actually exceeds that number (e.g., a CPU that cannot operate below the requested power
@@ -131,3 +137,5 @@ pub enum MessageReturn {
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     LogThrottleEndShutdown,
 }
+
+pub type MessageResult = Result<MessageReturn, crate::error::PowerManagerError>;
