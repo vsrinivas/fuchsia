@@ -336,6 +336,14 @@ class _FileConnection extends File {
   }
 
   @override
+  Future<void> close2() async {
+    var status = await close();
+    if (status != ZX.OK) {
+      throw fidl.MethodException(status);
+    }
+  }
+
+  @override
   Future<NodeInfo> describe() async {
     return _describe();
   }

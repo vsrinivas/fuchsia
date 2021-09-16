@@ -44,6 +44,11 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
+  Future<void> close2() async {
+    throw MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
   Future<NodeInfo> describe() async {
     throw UnsupportedError('ErrorNodeForSendingEvent.describe is unreachable.');
   }

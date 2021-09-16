@@ -373,6 +373,11 @@ class _DirConnection extends Directory {
     return ZX.OK;
   }
 
+  @override
+  Future<void> close2() async {
+    await close();
+  }
+
   void closeBinding() {
     _binding.close();
     _isClosed = true;
@@ -491,8 +496,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> rename2(String src, Handle dstParentToken, String dst) async {
-    return ZX.ERR_NOT_SUPPORTED;
+  Future<void> rename2(String src, Handle dstParentToken, String dst) async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
@@ -512,8 +517,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> unlink(String name, io2_fidl.UnlinkOptions options) async {
-    return ZX.ERR_NOT_SUPPORTED;
+  Future<void> unlink(String name, io2_fidl.UnlinkOptions options) async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
@@ -537,7 +542,9 @@ class _DirConnection extends Directory {
     var index = startIndex;
     buf.setUint64(index, inodeNumber, Endian.little);
     index += 8;
-    buf..setUint8(index++, charBytes.length)..setUint8(index++, type);
+    buf
+      ..setUint8(index++, charBytes.length)
+      ..setUint8(index++, type);
     for (int i = 0; i < charBytes.length; i++) {
       buf.setUint8(index++, charBytes[i]);
     }
