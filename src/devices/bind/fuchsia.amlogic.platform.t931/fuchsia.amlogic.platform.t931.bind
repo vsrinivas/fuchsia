@@ -19,6 +19,11 @@ extend uint fuchsia.BIND_PWM_ID {
     PWM_AO_D = 9,
 };
 
+extend uint fuchsia.BIND_POWER_DOMAIN {
+  ARM_CORE_BIG = 0,
+  ARM_CORE_LITTLE = 1,
+};
+
 uint GPIOZ_PIN_ID {
     PIN_1 = 1,
     PIN_2 = 2,

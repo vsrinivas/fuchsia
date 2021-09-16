@@ -167,6 +167,34 @@ driver_bind_rules("sherlock-hevc-enc-bind") {
   ]
 }
 
+driver_bind_rules("luis-cpu-bind") {
+  rules = "bind/luis-cpu.bind"
+  header_output = "luis-cpu-bind.h"
+  bind_output = "luis-cpu-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.power",
+    "//src/devices/bind/fuchsia.thermal",
+  ]
+}
+
+driver_bind_rules("sherlock-cpu-bind") {
+  rules = "bind/sherlock-cpu.bind"
+  header_output = "sherlock-cpu-bind.h"
+  bind_output = "sherlock-cpu-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.thermal",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -224,9 +252,11 @@ template("sherlock_driver") {
     ]
 
     deps = [
+      ":luis-cpu-bind_header",
       ":sherlock-backlight-bind_header",
       ":sherlock-bluetooth-bind_header",
       ":sherlock-buttons-bind_header",
+      ":sherlock-cpu-bind_header",
       ":sherlock-display-bind_header",
       ":sherlock-hevc-enc-bind_header",
       ":sherlock-mali-bind_header",

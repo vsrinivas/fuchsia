@@ -14,6 +14,7 @@
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-cpu-bind.h"
 
 namespace {
 
@@ -51,29 +52,13 @@ constexpr pbus_dev_t cpu_dev = []() {
   return result;
 }();
 
-// The CPU device must bind to a legacy thermal driver to which DVFS commands are forwarded.
-// We need to specify the PLL sensor to ensure the correct bind, as there is a non-legacy thermal
-// device controlling the DDR sensor.
-constexpr zx_bind_inst_t thermal_match[] = {
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_PLL),
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_THERMAL),
-};
-
-constexpr device_fragment_part_t thermal_fragment[] = {
-    {countof(thermal_match), thermal_match},
-};
-
-constexpr device_fragment_t fragments[] = {
-    {"thermal", countof(thermal_fragment), thermal_fragment},
-};
-
 }  // namespace
 
 namespace sherlock {
 
 zx_status_t Sherlock::SherlockCpuInit() {
-  zx_status_t result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), "thermal");
+  zx_status_t result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(aml_cpu_fragments),
+                                          countof(aml_cpu_fragments), "thermal");
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);
