@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -151,7 +151,7 @@ def button(idx):
     ascii = ord('A') + idx - 35
   elif 61 <= idx <= 75:
     ascii = ord('!') + idx - 61
-  return str(unichr(ascii))
+  return str(chr(ascii))
 
 
 def get_button():  # Unix way
