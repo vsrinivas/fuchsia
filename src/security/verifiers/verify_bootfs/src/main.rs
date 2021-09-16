@@ -45,12 +45,12 @@ impl VerifyBootfs {
                 ..RuntimeConfig::minimal()
             },
         );
-        let bootfs_files: Vec<String> = serde_json::from_str(
-            &launcher::launch_from_config(config).context("failed to launch scrutiny")?,
-        )
-        .context("failed to deserialize scrutiny output")?;
+        let scrutiny_output =
+            launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+        let bootfs_files: Vec<String> = serde_json::from_str(&scrutiny_output)
+            .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
         let golden_file =
-            GoldenFile::open(self.golden_path.clone()).context("failed to open the golden file")?;
+            GoldenFile::open(self.golden_path.clone()).context("Failed to open the golden file")?;
         match golden_file.compare(bootfs_files) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {

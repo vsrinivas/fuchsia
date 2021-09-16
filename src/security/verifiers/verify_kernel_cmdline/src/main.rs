@@ -45,15 +45,15 @@ impl VerifyKernelCmdline {
                 ..RuntimeConfig::minimal()
             },
         );
-        let kernel_cmdline: String = serde_json::from_str(
-            &launcher::launch_from_config(config).context("failed to launch scrutiny")?,
-        )
-        .context("failed to deserialize scrutiny output")?;
+        let scrutiny_output =
+            launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+        let kernel_cmdline: String = serde_json::from_str(&scrutiny_output)
+            .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
         let mut sorted_cmdline =
             kernel_cmdline.split(' ').map(ToString::to_string).collect::<Vec<String>>();
         sorted_cmdline.sort();
         let golden_file =
-            GoldenFile::open(self.golden_path.clone()).context("failed to open golden file")?;
+            GoldenFile::open(self.golden_path.clone()).context("Failed to open golden file")?;
         match golden_file.compare(sorted_cmdline) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {

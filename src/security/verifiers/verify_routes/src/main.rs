@@ -43,7 +43,7 @@ impl VerifyRoutes {
     /// all non-allowlisted errors.
     fn verify(&self) -> Result<()> {
         VerifyRoutes::generate_depfile(&self.stamp_path, &self.depfile_path)
-            .context("failed to generate depfile")?;
+            .context("Failed to generate depfile")?;
         let mut config = Config::run_command_with_plugins(
             CommandBuilder::new("verify.capability_routes")
                 .param("capability_types", "directory protocol")
@@ -51,18 +51,18 @@ impl VerifyRoutes {
                 .build(),
             vec!["CorePlugin", "VerifyPlugin"],
         );
-        let current_dir = env::current_dir().context("get current directory")?;
+        let current_dir = env::current_dir().context("Failed to get current directory")?;
         config.runtime.model.build_path = current_dir.clone();
         config.runtime.model.repository_path = current_dir.join(AMBER_PATH);
         config.runtime.logging.silent_mode = true;
 
-        let results = &launcher::launch_from_config(config).context("failed to launch scrutiny")?;
-        let route_analysis: Vec<ResultsForCapabilityType> =
-            serde_json5::from_str(results).context("deserialize verify routes results")?;
+        let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+        let route_analysis: Vec<ResultsForCapabilityType> = serde_json5::from_str(&results)
+            .context(format!("Failed to deserialize verify routes results: {}", results))?;
         let allowlist: Vec<ResultsForCapabilityType> = serde_json5::from_str(
-            &fs::read_to_string(&self.allowlist_path).context("failed to read allowlist")?,
+            &fs::read_to_string(&self.allowlist_path).context("Failed to read allowlist")?,
         )
-        .context("failed to deserialize allowlist")?;
+        .context("Failed to deserialize allowlist")?;
         let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis, allowlist);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
