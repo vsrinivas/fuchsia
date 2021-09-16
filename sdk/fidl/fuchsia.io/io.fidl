@@ -958,7 +958,6 @@ protocol Directory {
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
     @selector("fuchsia.io/Directory.Unlink")
-    @transitional
     Unlink(struct {
         name fuchsia.io2.Name;
         options fuchsia.io2.UnlinkOptions;
