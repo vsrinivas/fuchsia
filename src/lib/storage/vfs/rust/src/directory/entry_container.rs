@@ -7,7 +7,7 @@
 
 use crate::{
     common::IntoAny,
-    directory::{dirents_sink, entry::DirectoryEntry, traversal_position::TraversalPosition},
+    directory::{dirents_sink, traversal_position::TraversalPosition},
     execution_scope::ExecutionScope,
     filesystem::Filesystem,
 };
@@ -17,42 +17,13 @@ use {
     fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
-    futures::future::BoxFuture,
-    std::sync::Arc,
+    std::{any::Any, sync::Arc},
 };
-
-pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
-
-pub enum AsyncGetEntry<'a> {
-    Immediate(GetEntryResult),
-    Future(BoxFuture<'a, GetEntryResult>),
-}
-
-impl<'a> From<Status> for AsyncGetEntry<'a> {
-    fn from(status: Status) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::Immediate(Err(status))
-    }
-}
-
-impl<'a> From<Arc<dyn DirectoryEntry>> for AsyncGetEntry<'a> {
-    fn from(entry: Arc<dyn DirectoryEntry>) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::Immediate(Ok(entry))
-    }
-}
-
-impl<'a> From<BoxFuture<'a, GetEntryResult>> for AsyncGetEntry<'a> {
-    fn from(future: BoxFuture<'a, GetEntryResult>) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::Future(future)
-    }
-}
 
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
 #[async_trait]
 pub trait Directory: IntoAny + Send + Sync {
-    /// Returns a reference to a contained directory entry.  Used when linking entries.
-    fn get_entry(self: Arc<Self>, name: &str) -> AsyncGetEntry;
-
     /// Reads directory entries starting from `pos` by adding them to `sink`.
     /// Once finished, should return a sealed sink.
     // The lifetimes here are because of https://github.com/rust-lang/rust/issues/63033.
@@ -91,10 +62,17 @@ pub trait Directory: IntoAny + Send + Sync {
 /// This trait must be implemented to use a `MutableConnection`, however, a directory could also
 /// implement the `DirectlyMutable` type, which provides a blanket implementation of this trait.
 #[async_trait]
-pub trait MutableDirectory: Directory {
-    /// Adds a child entry to this directory, even if it already exists.  The target is discarded
-    /// if it exists.
-    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
+pub trait MutableDirectory: Directory + Send + Sync {
+    /// Adds a child entry to this directory.  If the target exists, it should fail with
+    /// ZX_ERR_ALREADY_EXISTS.
+    async fn link(
+        self: Arc<Self>,
+        _name: String,
+        _source_dir: Arc<dyn Any + Send + Sync>,
+        _source_name: &str,
+    ) -> Result<(), Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
 
     /// Set the attributes of this directory based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.

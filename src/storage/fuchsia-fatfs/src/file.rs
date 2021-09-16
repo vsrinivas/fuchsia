@@ -369,10 +369,6 @@ impl DirectoryEntry for FatFile {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_FILE)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[cfg(test)]

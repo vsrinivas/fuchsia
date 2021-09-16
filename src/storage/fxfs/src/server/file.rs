@@ -230,10 +230,6 @@ impl DirectoryEntry for FxFile {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(self.object_id(), fio::DIRENT_TYPE_FILE)
     }
-
-    fn can_hardlink(&self) -> bool {
-        true
-    }
 }
 
 #[async_trait]

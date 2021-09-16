@@ -33,9 +33,7 @@ use {
     },
     thiserror::Error,
     vfs::directory::{
-        entry::DirectoryEntry,
-        entry_container::{AsyncGetEntry, Directory},
-        helper::DirectlyMutable as _,
+        entry::DirectoryEntry, helper::DirectlyMutable as _,
         mutable::simple::Simple as SimpleMutableDir,
     },
 };
@@ -701,16 +699,6 @@ async fn open_or_create_dir(
     root: Arc<SimpleMutableDir>,
     path: &std::path::Path,
 ) -> Result<Arc<SimpleMutableDir>> {
-    async fn get_entry(
-        dir: Arc<impl Directory>,
-        entry: &str,
-    ) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
-        match dir.get_entry(entry) {
-            AsyncGetEntry::Immediate(result) => result,
-            AsyncGetEntry::Future(future) => future.await,
-        }
-    }
-
     let root = futures::stream::iter(path.components())
         .map(Ok)
         .try_fold(root, |root, component| async move {
@@ -721,14 +709,14 @@ async fn open_or_create_dir(
                 component => component.as_os_str().to_str().context("invalid path component"),
             }?;
             // Get a handle to the entry, and create it if it doesn't already exist.
-            let entry = match get_entry(root.clone(), entry).await {
+            let entry = match root.get_entry(entry) {
                 Ok(entry) => entry,
                 Err(status) => match status {
                     zx::Status::NOT_FOUND => {
                         let () = root
                             .add_entry(entry, vfs::directory::mutable::simple::simple())
                             .context("failed to add directory entry")?;
-                        get_entry(root, entry).await.context("failed to get directory entry")?
+                        root.get_entry(entry).context("failed to get directory entry")?
                     }
                     status => {
                         return Err(anyhow!(

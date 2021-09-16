@@ -214,10 +214,6 @@ impl DirectoryEntry for DropAndSignal {
         }
     }
 
-    fn can_hardlink(&self) -> bool {
-        false
-    }
-
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }

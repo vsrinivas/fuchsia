@@ -155,10 +155,6 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 /// A directory entry representing a service with a collection as its source.

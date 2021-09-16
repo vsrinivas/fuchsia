@@ -112,10 +112,6 @@ impl vfs::directory::entry::DirectoryEntry for MetaFile {
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
@@ -380,13 +376,6 @@ mod tests {
             DirectoryEntry::entry_info(&meta_file),
             EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entry_can_hardlink() {
-        let (_env, meta_file) = TestEnv::new().await;
-
-        assert_eq!(DirectoryEntry::can_hardlink(&meta_file), false);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

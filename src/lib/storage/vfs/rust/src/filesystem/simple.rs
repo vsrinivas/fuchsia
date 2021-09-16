@@ -48,9 +48,11 @@ where
             // `src_parent` and `dst_parent` and we are calling `rename_from` as `src_parent` has a
             // smaller memory address than the `dst_parent`.
             unsafe {
-                src_parent.rename_from(
+                src_parent.clone().rename_from(
                     src.into_string(),
-                    Box::new(move |entry| dst_parent.link(dst.into_string(), entry)),
+                    Box::new(move |entry| {
+                        dst_parent.add_entry_impl(dst.into_string(), entry, true)
+                    }),
                 )
             }
         } else if src_order == dst_order {

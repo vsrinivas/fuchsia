@@ -18,7 +18,6 @@ use crate::{
 use crate::{
     directory::{
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{AsyncGetEntry, Directory},
         helper::DirectlyMutable,
         immutable::Simple,
         test_utils::{run_server_client, DirentsSameInodeBuilder},
@@ -732,22 +731,13 @@ async fn directories_remove_nested() {
             "subdir" => pseudo_directory! {},   // To be removed below.
         },
     };
-    let dir_entry = match root.get_entry("dir") {
-        AsyncGetEntry::Immediate(result) => result,
-        AsyncGetEntry::Future(result) => result.await,
-    }
-    .expect("Failed to get directory entry!");
+    let dir_entry = root.get_entry("dir").expect("Failed to get directory entry!");
     // Remove subdir from dir.
     let downcasted_dir = dir_entry.into_any().downcast::<Simple>().expect("Downcast failed!");
     downcasted_dir.remove_entry("subdir", true).expect("Failed to remove directory entry!");
 
     // Ensure it was actually removed.
-    let subdir_entry = match downcasted_dir.get_entry("subdir") {
-        AsyncGetEntry::Immediate(result) => result,
-        AsyncGetEntry::Future(result) => result.await,
-    }
-    .err();
-    assert_eq!(subdir_entry, Some(Status::NOT_FOUND));
+    assert_eq!(downcasted_dir.get_entry("subdir").err(), Some(Status::NOT_FOUND));
 }
 
 #[test]

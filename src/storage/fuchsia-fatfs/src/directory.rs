@@ -39,7 +39,7 @@ use {
             connection::{io1::DerivedConnection, util::OpenDirectory},
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::{AsyncGetEntry, Directory, MutableDirectory},
+            entry_container::{Directory, MutableDirectory},
             traversal_position::TraversalPosition,
             watchers::{
                 event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -480,10 +480,6 @@ impl Debug for FatDirectory {
 
 #[async_trait]
 impl MutableDirectory for FatDirectory {
-    async fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        Err(Status::NOT_SUPPORTED)
-    }
-
     async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let parent = self.borrow_dir(&fs_lock)?;
@@ -589,27 +585,10 @@ impl DirectoryEntry for FatDirectory {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
 impl Directory for FatDirectory {
-    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
-        let mut closer = Closer::new(&self.filesystem);
-        match self.open_child(name, 0, 0, &mut closer) {
-            Ok(FatNode::Dir(child)) => {
-                AsyncGetEntry::Immediate(Ok(child as Arc<dyn DirectoryEntry>))
-            }
-            Ok(FatNode::File(child)) => {
-                AsyncGetEntry::Immediate(Ok(child as Arc<dyn DirectoryEntry>))
-            }
-            Err(e) => AsyncGetEntry::Immediate(Err(e)),
-        }
-    }
-
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -801,16 +780,10 @@ mod tests {
         let dir = fs.get_fatfs_root();
         dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
         defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
-        if let AsyncGetEntry::Immediate { 0: entry } = dir.clone().get_entry("test_file") {
-            let entry = entry.expect("Getting test file");
-
-            assert_eq!(
-                dir.link("test2".to_owned(), entry).await.unwrap_err(),
-                Status::NOT_SUPPORTED
-            );
-        } else {
-            panic!("Unsupported AsyncGetEntry type");
-        }
+        assert_eq!(
+            dir.clone().link("test2".to_owned(), dir.clone(), "test3").await.unwrap_err(),
+            Status::NOT_SUPPORTED
+        );
     }
 
     #[derive(Clone)]

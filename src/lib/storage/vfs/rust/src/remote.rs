@@ -139,8 +139,4 @@ impl DirectoryEntry for Remote {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, self.dirent_type)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }

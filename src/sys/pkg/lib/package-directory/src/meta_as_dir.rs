@@ -18,7 +18,6 @@ use {
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             entry::EntryInfo,
-            entry_container::AsyncGetEntry,
             immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
             traversal_position::TraversalPosition,
         },
@@ -112,19 +111,10 @@ impl vfs::directory::entry::DirectoryEntry for MetaAsDir {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
 impl vfs::directory::entry_container::Directory for MetaAsDir {
-    // Used for linking which is not supported.
-    fn get_entry<'a>(self: Arc<Self>, _: &'a str) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::from(zx::Status::NOT_SUPPORTED)
-    }
-
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -321,25 +311,6 @@ mod tests {
             DirectoryEntry::entry_info(&meta_as_dir),
             EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
         );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entry_can_hardlink() {
-        let (_env, meta_as_dir) = TestEnv::new().await;
-
-        assert_eq!(DirectoryEntry::can_hardlink(&meta_as_dir), false);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_get_entry_not_supported() {
-        let (_env, meta_as_dir) = TestEnv::new().await;
-
-        match Directory::get_entry(Arc::new(meta_as_dir), "") {
-            AsyncGetEntry::Future(_) => panic!("MetaAsDir::get_entry should immediately fail"),
-            AsyncGetEntry::Immediate(res) => {
-                assert_eq!(res.err().unwrap(), zx::Status::NOT_SUPPORTED)
-            }
-        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

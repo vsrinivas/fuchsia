@@ -1070,9 +1070,9 @@ protocol Directory {
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/Directory.Link")
     Link(resource struct {
-        src string:MAX_PATH;
+        src string:MAX_FILENAME;
         dst_parent_token zx.handle;
-        dst string:MAX_PATH;
+        dst string:MAX_FILENAME;
     }) -> (struct {
         s zx.status;
     });

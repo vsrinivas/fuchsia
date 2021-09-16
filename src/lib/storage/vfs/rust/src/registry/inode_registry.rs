@@ -164,10 +164,6 @@ mod tests {
             fn entry_info(&self) -> EntryInfo {
                 EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
             }
-
-            fn can_hardlink(&self) -> bool {
-                true
-            }
         }
     }
 }

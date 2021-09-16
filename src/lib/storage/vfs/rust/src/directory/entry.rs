@@ -107,12 +107,4 @@ pub trait DirectoryEntry: IntoAny + Sync + Send {
 
     /// This method is used to populate ReadDirents() output.
     fn entry_info(&self) -> EntryInfo;
-
-    /// Indicates if this entry can be connected via hard links into multiple locations in the
-    /// directory tree.  Note that this is only checked for client operations via the FIDL
-    /// protocol.  Server operations (such as
-    /// [`crate::directory::helper::DirectlyMutable::add_entry`] are not checked at all.
-    ///
-    /// Currently, only files are allowed to be linked into multiple locations.
-    fn can_hardlink(&self) -> bool;
 }

@@ -12,10 +12,10 @@ use crate::{
         connection::{io1::DerivedConnection, util::OpenDirectory},
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{AsyncGetEntry, Directory},
+        entry_container::Directory,
         helper::DirectlyMutable,
-        immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
-        mutable::connection::io1::{MutableConnection, MutableConnectionClient},
+        immutable::connection::io1::ImmutableConnection,
+        mutable::connection::io1::MutableConnection,
         traversal_position::TraversalPosition,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -115,7 +115,7 @@ where
         })
     }
 
-    fn get_entry(
+    fn get_or_insert_entry(
         self: Arc<Self>,
         scope: ExecutionScope,
         flags: u32,
@@ -157,6 +157,20 @@ where
         let mut this = self.not_found_handler.lock();
         this.replace(handler);
     }
+
+    /// Returns the entry identified by `name`.
+    pub fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 > MAX_NAME_LENGTH {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let this = self.inner.lock();
+        match this.entries.get(name) {
+            Some(entry) => Ok(entry.clone()),
+            None => Err(Status::NOT_FOUND),
+        }
+    }
 }
 
 impl<Connection> DirectoryEntry for Simple<Connection>
@@ -180,14 +194,14 @@ where
                 if self.mutable {
                     MutableConnection::create_connection(
                         scope,
-                        OpenDirectory::new(self as Arc<dyn MutableConnectionClient>),
+                        OpenDirectory::new(self),
                         flags,
                         server_end,
                     );
                 } else {
                     ImmutableConnection::create_connection(
                         scope,
-                        OpenDirectory::new(self as Arc<dyn ImmutableConnectionClient>),
+                        OpenDirectory::new(self),
                         flags,
                         server_end,
                     );
@@ -205,7 +219,7 @@ where
         // may turn out to be a recursive call, in case the directory contains itself directly or
         // through a number of other directories.  `get_entry` is responsible for locking `self`
         // and it will unlock it before returning.
-        let found = match self.get_entry(scope.clone(), flags, mode, name, path_ref) {
+        let found = match self.get_or_insert_entry(scope.clone(), flags, mode, name, path_ref) {
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
                 false
@@ -227,10 +241,6 @@ where
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
@@ -238,19 +248,6 @@ impl<Connection> Directory for Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
-        assert_eq_size!(u64, usize);
-        if name.len() as u64 > MAX_NAME_LENGTH {
-            return Status::INVALID_ARGS.into();
-        }
-
-        let this = self.inner.lock();
-        match this.entries.get(name) {
-            Some(entry) => entry.clone().into(),
-            None => Status::NOT_FOUND.into(),
-        }
-    }
-
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
@@ -358,7 +355,12 @@ impl<Connection> DirectlyMutable for Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+    fn add_entry_impl(
+        &self,
+        name: String,
+        entry: Arc<dyn DirectoryEntry>,
+        overwrite: bool,
+    ) -> Result<(), Status> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 > MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
@@ -369,7 +371,7 @@ where
 
         let mut this = self.inner.lock();
 
-        if this.entries.contains_key(&name) {
+        if !overwrite && this.entries.contains_key(&name) {
             return Err(Status::ALREADY_EXISTS);
         }
 
@@ -404,19 +406,6 @@ where
                 }
             }
         }
-    }
-
-    fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        if name.len() as u64 >= MAX_NAME_LENGTH {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        let mut this = self.inner.lock();
-
-        this.watchers.send_event(&mut SingleNameEventProducer::added(&name));
-
-        let _ = this.entries.insert(name, entry);
-        Ok(())
     }
 
     unsafe fn rename_from(

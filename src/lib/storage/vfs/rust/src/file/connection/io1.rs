@@ -636,10 +636,6 @@ mod tests {
         fn entry_info(&self) -> crate::directory::entry::EntryInfo {
             todo!();
         }
-
-        fn can_hardlink(&self) -> bool {
-            todo!();
-        }
     }
 
     /// Only the init operation will succeed, all others fail.

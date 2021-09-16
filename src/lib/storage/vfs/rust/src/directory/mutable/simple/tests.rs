@@ -12,11 +12,11 @@ use super::simple;
 
 // Macros are exported into the root of the crate.
 use crate::{
-    assert_close, assert_event, assert_get_token, assert_get_token_err, assert_link,
-    assert_link_err, assert_read, assert_read_dirents, assert_rename, assert_rename_err,
-    assert_unlink, assert_unlink_err, assert_watch, assert_watcher_one_message_watched_events,
-    assert_write, open_as_directory_assert_err, open_as_file_assert_err,
-    open_get_directory_proxy_assert_ok, open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
+    assert_close, assert_event, assert_get_token, assert_get_token_err, assert_link_err,
+    assert_read, assert_read_dirents, assert_rename, assert_rename_err, assert_unlink,
+    assert_unlink_err, assert_watch, assert_watcher_one_message_watched_events,
+    open_as_directory_assert_err, open_as_file_assert_err, open_get_directory_proxy_assert_ok,
+    open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -24,7 +24,7 @@ use crate::{
         mutable::simple::tree_constructor,
         test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
     },
-    file::{vmo::asynchronous::read_only_static, vmo::asynchronous::test_utils::simple_read_write},
+    file::vmo::asynchronous::read_only_static,
     registry::token_registry,
 };
 
@@ -39,7 +39,7 @@ use {
         atomic::{AtomicU8, Ordering},
         Arc,
     },
-    vfs_macros::{mut_pseudo_directory, pseudo_directory},
+    vfs_macros::mut_pseudo_directory,
 };
 
 #[test]
@@ -529,314 +529,9 @@ fn rename_fails_for_read_only_source() {
 }
 
 #[test]
-fn link_file_within_directory() {
+fn hardlink_not_supported() {
     let root = mut_pseudo_directory! {
-        "file" => simple_read_write(
-            b"Initial",
-            b"Updated twice",
-            // 0         1
-            // 123456789012
-        ),
-    };
-
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
-        async move {
-            let watcher_client = {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-
-                let watcher_client = assert_watch!(proxy, mask);
-
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { EXISTING, "." },
-                    { EXISTING, "file" },
-                );
-                watcher_client
-            };
-
-            // `simple_read_write` that is used to create the VMO file is overly strict, expecting
-            // every open to request both read and write permissions.
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-
-            // We need to obtain a connection to the file before we call
-            // `open_as_file_assert_content!` as the later will immediately close the connection,
-            // and if no connections exist the VMO is recycled and the assertion is invoked to
-            // check if the VMO content matches the final expected state.
-            let file = open_get_vmo_file_proxy_assert_ok!(&proxy, flags, "file");
-
-            open_as_vmo_file_assert_content!(&proxy, flags, "file", "Initial");
-
-            let root_token = assert_get_token!(&proxy);
-            assert_link!(&proxy, "file", root_token, "same-file");
-
-            assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "same-file" });
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected
-                    .add(DIRENT_TYPE_DIRECTORY, b".")
-                    .add(DIRENT_TYPE_FILE, b"file")
-                    .add(DIRENT_TYPE_FILE, b"same-file");
-
-                assert_read_dirents!(proxy, 1000, expected.into_vec());
-            }
-
-            let same_file = open_get_vmo_file_proxy_assert_ok!(&proxy, flags, "same-file");
-            assert_write!(file, "------- twice");
-            assert_write!(same_file, "Updated");
-
-            open_as_vmo_file_assert_content!(&proxy, flags, "file", "Updated twice");
-
-            drop(watcher_client);
-            assert_close!(file);
-            assert_close!(same_file);
-            assert_close!(proxy);
-        }
-    })
-    .token_registry(token_registry::Simple::new())
-    .run();
-}
-
-#[test]
-fn link_file_across_directories() {
-    let root = mut_pseudo_directory! {
-        "etc" => mut_pseudo_directory! {
-            "passwd" => simple_read_write(
-                b"secret",
-                b"modified twice",
-                // 0         1
-                // 1234567890123
-            ),
-        },
-        "tmp" => mut_pseudo_directory! { },
-    };
-
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
-        async move {
-            // `simple_read_write` that is used to create the VMO file is overly strict, expecting
-            // every open to request both read and write permissions.
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-
-            let etc = open_get_directory_proxy_assert_ok!(&proxy, flags, "etc");
-            let tmp = open_get_directory_proxy_assert_ok!(&proxy, flags, "tmp");
-
-            let tmp_watcher_client = {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(tmp, mask);
-                assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
-                watcher_client
-            };
-
-            // We need to obtain a connection to the file before we call
-            // `open_as_file_assert_content!` as the later will immediately close the connection,
-            // and if no connections exist the VMO is recycled and the assertion is invoked to
-            // check if the VMO content matches the final expected state.
-            let passwd = open_get_vmo_file_proxy_assert_ok!(&etc, flags, "passwd");
-
-            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "secret");
-
-            let tmp_token = assert_get_token!(&tmp);
-            assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
-
-            assert_watcher_one_message_watched_events!(
-                tmp_watcher_client,
-                { ADDED, "linked-passwd" },
-            );
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"passwd");
-
-                assert_read_dirents!(etc, 1000, expected.into_vec());
-            }
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"linked-passwd");
-
-                assert_read_dirents!(tmp, 1000, expected.into_vec());
-            }
-
-            let linked_passwd = open_get_vmo_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
-            assert_write!(passwd, "-------- twice");
-            assert_write!(linked_passwd, "modified");
-
-            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "modified twice");
-
-            drop(tmp_watcher_client);
-            assert_close!(passwd);
-            assert_close!(linked_passwd);
-            assert_close!(tmp);
-            assert_close!(etc);
-            assert_close!(proxy);
-        }
-    })
-    .token_registry(token_registry::Simple::new())
-    .run();
-}
-
-#[test]
-fn link_to_self_triggers_watcher_added() {
-    let root = mut_pseudo_directory! {
-        "file" => read_only_static(b"Content"),
-    };
-
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
-        async move {
-            let watcher_client = {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-
-                let watcher_client = assert_watch!(proxy, mask);
-
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { EXISTING, "." },
-                    { EXISTING, "file" },
-                );
-                watcher_client
-            };
-
-            let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-
-            // We need to obtain a connection to the file before we call
-            // `open_as_file_assert_content!` as the later will immediately close the connection,
-            // and if no connections exist the VMO is recycled and the assertion is invoked to
-            // check if the VMO content matches the final expected state.
-            let file = open_get_vmo_file_proxy_assert_ok!(&proxy, ro_flags, "file");
-
-            let root_token = assert_get_token!(&proxy);
-            assert_link!(&proxy, "file", root_token, "file");
-
-            assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "file" });
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"file");
-
-                assert_read_dirents!(proxy, 1000, expected.into_vec());
-            }
-
-            drop(watcher_client);
-            assert_close!(file);
-            assert_close!(proxy);
-        }
-    })
-    .token_registry(token_registry::Simple::new())
-    .run();
-}
-
-#[test]
-fn link_from_immutable_to_mutable() {
-    let root = mut_pseudo_directory! {
-        "etc" => pseudo_directory! {
-            "passwd" => simple_read_write(
-                b"secret",
-                b"modified twice",
-                // 0         1
-                // 1234567890123
-            ),
-        },
-        "tmp" => mut_pseudo_directory! { },
-    };
-
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
-        async move {
-            // `simple_read_write` that is used to create the VMO file is overly strict, expecting
-            // every open to request both read and write permissions.
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-
-            let etc = open_get_directory_proxy_assert_ok!(&proxy, flags, "etc");
-            let tmp = open_get_directory_proxy_assert_ok!(&proxy, flags, "tmp");
-
-            let tmp_watcher_client = {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(tmp, mask);
-                assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
-                watcher_client
-            };
-
-            // We need to obtain a connection to the file before we call
-            // `open_as_file_assert_content!` as the later will immediately close the connection,
-            // and if no connections exist the VMO is recycled and the assertion is invoked to
-            // check if the VMO content matches the final expected state.
-            let passwd = open_get_vmo_file_proxy_assert_ok!(&etc, flags, "passwd");
-
-            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "secret");
-
-            let tmp_token = assert_get_token!(&tmp);
-            assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
-
-            assert_watcher_one_message_watched_events!(
-                tmp_watcher_client,
-                { ADDED, "linked-passwd" },
-            );
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"passwd");
-
-                assert_read_dirents!(etc, 1000, expected.into_vec());
-            }
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"linked-passwd");
-
-                assert_read_dirents!(tmp, 1000, expected.into_vec());
-            }
-
-            let linked_passwd = open_get_vmo_file_proxy_assert_ok!(&tmp, flags, "linked-passwd");
-            assert_write!(passwd, "-------- twice");
-            assert_write!(linked_passwd, "modified");
-
-            open_as_vmo_file_assert_content!(&etc, flags, "passwd", "modified twice");
-
-            drop(tmp_watcher_client);
-            assert_close!(passwd);
-            assert_close!(linked_passwd);
-            assert_close!(tmp);
-            assert_close!(etc);
-            assert_close!(proxy);
-        }
-    })
-    .token_registry(token_registry::Simple::new())
-    .run();
-}
-
-#[test]
-fn link_fails_for_read_only_source() {
-    let root = mut_pseudo_directory! {
-        "etc" => mut_pseudo_directory! {
-            "fstab" => read_only_static(b"/dev/fs /"),
-        },
-        "tmp" => mut_pseudo_directory! {},
-    };
-
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
-        let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-
-        let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
-
-        let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
-        let tmp_token = assert_get_token!(&tmp);
-
-        assert_link_err!(&etc, "fstab", tmp_token, "fstab", Status::BAD_HANDLE);
-
-        assert_close!(etc);
-        assert_close!(tmp);
-        assert_close!(proxy);
-    })
-    .token_registry(token_registry::Simple::new())
-    .run();
-}
-
-#[test]
-fn can_not_hardlink_directories() {
-    let root = mut_pseudo_directory! {
-        "etc" => mut_pseudo_directory! {
-            "fstab" => read_only_static(b"/dev/fs /"),
-        },
+        "test" => read_only_static(b"hello"),
         "tmp" => mut_pseudo_directory! {},
     };
 
@@ -846,7 +541,7 @@ fn can_not_hardlink_directories() {
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, flags, "tmp");
         let tmp_token = assert_get_token!(&tmp);
 
-        assert_link_err!(&proxy, "etc", tmp_token, "linked-etc", Status::NOT_FILE);
+        assert_link_err!(&proxy, "test", tmp_token, "linked-test", Status::NOT_SUPPORTED);
 
         assert_close!(tmp);
         assert_close!(proxy);

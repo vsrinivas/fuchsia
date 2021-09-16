@@ -26,23 +26,24 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
-        DIRENT_TYPE_FILE, MAX_FILENAME, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
-        WATCH_MASK_EXISTING,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, MAX_FILENAME,
+        MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
+        MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    futures::FutureExt,
-    std::sync::{Arc, Mutex},
+    std::{
+        any::Any,
+        sync::{Arc, Mutex},
+    },
     vfs::{
         common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::{AsyncGetEntry, Directory, MutableDirectory},
+            entry_container::{Directory, MutableDirectory},
             mutable::connection::io1::MutableConnection,
             traversal_position::TraversalPosition,
             watchers::{event_producers::SingleNameEventProducer, Watchers},
@@ -316,15 +317,23 @@ impl FxNode for FxDirectory {
 
 #[async_trait]
 impl MutableDirectory for FxDirectory {
-    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        if name.contains('/') {
-            return Err(Status::INVALID_ARGS);
-        }
+    async fn link(
+        self: Arc<Self>,
+        name: String,
+        source_dir: Arc<dyn Any + Send + Sync>,
+        source_name: &str,
+    ) -> Result<(), Status> {
+        let source_dir = source_dir.downcast::<Self>().unwrap();
         let store = self.store();
         let fs = store.filesystem().clone();
+        // new_transaction will dedupe the locks if necessary.  In theory we only need a read lock
+        // for the source directory, but we can leave that optimisation for now.
         let mut transaction = fs
             .new_transaction(
-                &[LockKey::object(store.store_object_id(), self.object_id())],
+                &[
+                    LockKey::object(store.store_object_id(), self.object_id()),
+                    LockKey::object(store.store_object_id(), source_dir.object_id()),
+                ],
                 Options::default(),
             )
             .await
@@ -332,24 +341,20 @@ impl MutableDirectory for FxDirectory {
         if self.is_deleted() {
             return Err(Status::ACCESS_DENIED);
         }
-        let entry_info = entry.entry_info();
+        let source_id =
+            match source_dir.directory.lookup(source_name).await.map_err(map_to_status)? {
+                Some((object_id, ObjectDescriptor::File)) => object_id,
+                None => return Err(Status::NOT_FOUND),
+                _ => return Err(Status::NOT_SUPPORTED),
+            };
         if self.directory.lookup(&name).await.map_err(map_to_status)?.is_some() {
             return Err(Status::ALREADY_EXISTS);
         }
         self.directory
-            .insert_child(
-                &mut transaction,
-                &name,
-                entry_info.inode(),
-                match entry_info.type_() {
-                    DIRENT_TYPE_FILE => ObjectDescriptor::File,
-                    DIRENT_TYPE_DIRECTORY => ObjectDescriptor::Directory,
-                    _ => panic!("Unexpected type: {}", entry_info.type_()),
-                },
-            )
+            .insert_child(&mut transaction, &name, source_id, ObjectDescriptor::File)
             .await
             .map_err(map_to_status)?;
-        store.adjust_refs(&mut transaction, entry_info.inode(), 1).await.map_err(map_to_status)?;
+        store.adjust_refs(&mut transaction, source_id, 1).await.map_err(map_to_status)?;
         transaction.commit_with_callback(|_| self.did_add(&name)).await.map_err(map_to_status)?;
         Ok(())
     }
@@ -482,26 +487,10 @@ impl DirectoryEntry for FxDirectory {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(self.object_id(), fio::DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
 impl Directory for FxDirectory {
-    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::Future(
-            async move {
-                self.lookup(0, 0, Path::validate_and_split(name)?)
-                    .await
-                    .map(|n| (*n).clone().try_into_directory_entry().unwrap())
-                    .map_err(map_to_status)
-            }
-            .boxed(),
-        )
-    }
-
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,

@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <optional>
+#include <random>
 #include <vector>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
@@ -290,6 +291,42 @@ TEST_P(HardLinkTest, Errors) {
 
   ASSERT_EQ(unlink(new_path.c_str()), 0);
   ASSERT_EQ(unlink(old_path.c_str()), 0);
+}
+
+TEST_P(HardLinkTest, UnlinkRace) {
+  const std::string file = GetPath("a");
+  const char* filename = file.c_str();
+
+  std::random_device random;
+  std::uniform_int_distribution distribution(0, 1000);
+
+  for (int i = 0; i < 100; ++i) {
+    {
+      fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT | O_EXCL, 0644));
+      ASSERT_TRUE(fd);
+      EXPECT_EQ(write(fd.get(), "hello", 5), 5);
+    }
+
+    std::thread thread([&] {
+      const std::string file2 = GetPath("b");
+      const char* filename2 = file2.c_str();
+      if (link(filename, filename2) == 0) {
+        // The link succeeded
+        fbl::unique_fd fd(open(filename2, O_RDONLY));
+        ASSERT_TRUE(fd);
+        char buf[5];
+        EXPECT_EQ(read(fd.get(), buf, 5), 5);
+        EXPECT_EQ(memcmp(buf, "hello", 5), 0);
+        EXPECT_EQ(unlink(filename2), 0);
+      } else {
+        ASSERT_EQ(errno, ENOENT);
+      }
+    });
+    int time = distribution(random);
+    usleep(time);
+    EXPECT_EQ(unlink(filename), 0) << "errno: " << errno;
+    thread.join();
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(

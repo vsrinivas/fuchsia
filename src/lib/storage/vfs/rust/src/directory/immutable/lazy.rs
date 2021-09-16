@@ -15,7 +15,7 @@ use crate::{
         connection::{io1::DerivedConnection, util::OpenDirectory},
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, Directory},
+        entry_container::Directory,
         immutable::connection::io1::ImmutableConnection,
         traversal_position::TraversalPosition,
     },
@@ -34,7 +34,6 @@ use {
     futures::{
         channel::mpsc::{self, UnboundedSender},
         stream::Stream,
-        FutureExt,
     },
     std::{
         fmt::{self, Debug, Formatter},
@@ -220,22 +219,10 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
     }
-
-    fn can_hardlink(&self) -> bool {
-        false
-    }
 }
 
 #[async_trait]
 impl<T: LazyDirectory> Directory for Lazy<T> {
-    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> entry_container::AsyncGetEntry<'a> {
-        // Can not use `into()` here.  Could not find a good `From` definition to be provided in
-        // `directory/entry_container.rs` so that just a plain `.into()` would work here.
-        entry_container::AsyncGetEntry::Future(
-            async move { self.inner.get_entry(name).await }.boxed(),
-        )
-    }
-
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,

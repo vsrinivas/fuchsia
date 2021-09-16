@@ -33,7 +33,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
         Name: Into<String>,
         Self: Sized,
     {
-        self.add_entry_impl(name.into(), entry)
+        self.add_entry_impl(name.into(), entry, false)
     }
 
     /// Adds a child entry to this directory.
@@ -42,8 +42,13 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ///   * `ZX_ERR_INVALID_ARGS` if `name` exceeds [`fidl_fuchsia_io::MAX_FILENAME`] bytes in
     ///     length, or if `name` includes a path separator ('/') character.
     ///   * `ZX_ERR_ALREADY_EXISTS` if an entry with the same name is already present in the
-    ///     directory.
-    fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
+    ///     directory, and `overwrite` is false.
+    fn add_entry_impl(
+        &self,
+        name: String,
+        entry: Arc<dyn DirectoryEntry>,
+        overwrite: bool,
+    ) -> Result<(), Status>;
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
     /// found, the entry will be returned to the caller.  If `must_be_directory` is true, an error
@@ -75,10 +80,6 @@ pub trait DirectlyMutable: Directory + Send + Sync {
         name: String,
         must_be_directory: bool,
     ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>;
-
-    /// Add a child entry to this directory, even if it already exists.  The target is discarded,
-    /// if it exists.
-    fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
 
     /// Renaming needs to be atomic, even accross two distinct directories.  So we need a special
     /// API to handle that.
@@ -131,10 +132,6 @@ pub trait DirectlyMutable: Directory + Send + Sync {
 
 #[async_trait]
 impl<T: DirectlyMutable> MutableDirectory for T {
-    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        (self as &dyn DirectlyMutable).link(name, entry)
-    }
-
     async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         match self.remove_entry_impl(name.into(), must_be_directory) {
             Ok(Some(_)) => Ok(()),

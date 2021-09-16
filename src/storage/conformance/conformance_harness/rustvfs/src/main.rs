@@ -96,7 +96,8 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     no_vmofile: Some(false),
                     no_get_buffer: Some(false),
                     no_rename: Some(false),
-                    no_link: Some(false),
+                    // Link is actually supported, but not using a pseudo filesystem.
+                    no_link: Some(true),
                     no_remote_dir: Some(false),
                     no_get_token: Some(false),
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?

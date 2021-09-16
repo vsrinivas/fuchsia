@@ -270,7 +270,7 @@ mod tests {
             directory::{
                 dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
-                entry_container::{AsyncGetEntry, Directory, MutableDirectory},
+                entry_container::{Directory, MutableDirectory},
                 traversal_position::TraversalPosition,
             },
             execution_scope::ExecutionScope,
@@ -309,18 +309,10 @@ mod tests {
             fn entry_info(&self) -> EntryInfo {
                 EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
             }
-
-            fn can_hardlink(&self) -> bool {
-                false
-            }
         }
 
         #[async_trait]
         impl Directory for MockDirectory {
-            fn get_entry<'a>(self: Arc<Self>, _name: &'a str) -> AsyncGetEntry<'a> {
-                panic!("Not implemented!")
-            }
-
             async fn read_dirents<'a>(
                 &'a self,
                 _pos: &'a TraversalPosition,
@@ -353,14 +345,6 @@ mod tests {
 
         #[async_trait]
         impl MutableDirectory for MockDirectory {
-            async fn link(
-                &self,
-                _name: String,
-                _entry: Arc<dyn DirectoryEntry>,
-            ) -> Result<(), Status> {
-                panic!("Not implemented!")
-            }
-
             async fn unlink(&self, _name: &str, _must_be_directory: bool) -> Result<(), Status> {
                 panic!("Not implemented!")
             }

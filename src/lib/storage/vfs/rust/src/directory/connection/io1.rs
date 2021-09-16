@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
+    common::{inherit_rights_for_clone, send_on_open_with_error, IntoAny, GET_FLAGS_VISIBLE},
     directory::{
-        common::check_child_connection_flags,
-        connection::util::OpenDirectory,
-        entry::DirectoryEntry,
-        entry_container::{AsyncGetEntry, Directory},
-        read_dirents,
+        common::check_child_connection_flags, connection::util::OpenDirectory,
+        entry::DirectoryEntry, entry_container::Directory, read_dirents,
         traversal_position::TraversalPosition,
     },
     execution_scope::ExecutionScope,
@@ -399,14 +396,18 @@ where
 
     async fn handle_link<R>(
         &self,
-        src: &str,
-        dst_parent_token: Handle,
-        dst: String,
+        source_name: &str,
+        target_parent_token: Handle,
+        target_name: String,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
+        if source_name.contains('/') || target_name.contains('/') {
+            return responder(Status::INVALID_ARGS);
+        }
+
         let token_registry = match self.scope.token_registry() {
             None => return responder(Status::NOT_SUPPORTED),
             Some(registry) => registry,
@@ -416,30 +417,14 @@ where
             return responder(Status::BAD_HANDLE);
         }
 
-        let res = {
-            let directory = self.directory.clone();
-            match directory.get_entry(src) {
-                AsyncGetEntry::Immediate(res) => res,
-                AsyncGetEntry::Future(fut) => fut.await,
-            }
-        };
-
-        let entry = match res {
-            Err(status) => return responder(status),
-            Ok(entry) => entry,
-        };
-
-        if !entry.can_hardlink() {
-            return responder(Status::NOT_FILE);
-        }
-
-        let dst_parent = match token_registry.get_container(dst_parent_token) {
+        let target_parent = match token_registry.get_container(target_parent_token) {
             Err(status) => return responder(status),
             Ok(None) => return responder(Status::NOT_FOUND),
             Ok(Some(entry)) => entry,
         };
 
-        match dst_parent.link(dst, entry).await {
+        match target_parent.link(target_name, self.directory.clone().into_any(), source_name).await
+        {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }

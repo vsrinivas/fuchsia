@@ -408,20 +408,10 @@ mod tests {
         fn entry_info(&self) -> EntryInfo {
             EntryInfo::new(0, DIRENT_TYPE_DIRECTORY)
         }
-
-        fn can_hardlink(&self) -> bool {
-            // So we can use "self" in Directory::get_entry()
-            // and expect link() to succeed.
-            true
-        }
     }
 
     #[async_trait]
     impl Directory for MockDirectory {
-        fn get_entry<'a>(self: Arc<Self>, _name: &'a str) -> AsyncGetEntry<'a> {
-            AsyncGetEntry::Immediate(Ok(self))
-        }
-
         async fn read_dirents<'a>(
             &'a self,
             _pos: &'a TraversalPosition,
@@ -454,7 +444,12 @@ mod tests {
 
     #[async_trait]
     impl MutableDirectory for MockDirectory {
-        async fn link(&self, path: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+        async fn link(
+            self: Arc<Self>,
+            path: String,
+            _source_dir: Arc<dyn Any + Send + Sync>,
+            _source_name: &str,
+        ) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
