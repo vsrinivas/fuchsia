@@ -11,15 +11,13 @@ use std::sync::{Arc, Once};
 use anyhow::{format_err, Context as _, Error};
 use fidl::encoding::Decodable;
 use fidl_fuchsia_net as fidl_net;
-use fidl_fuchsia_net_icmp as fidl_icmp;
 use fidl_fuchsia_net_stack::{self as fidl_net_stack, AdministrativeStatus, PhysicalStatus};
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use futures::{lock::Mutex, Future, StreamExt as _};
-use log::debug;
+use futures::{lock::Mutex, Future};
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
@@ -28,9 +26,7 @@ use net_types::{
 use netstack3_core::{
     context::{InstantContext, RngContext},
     error::NoRouteError,
-    icmp::{
-        self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
-    },
+    icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
     Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
     IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
 };
@@ -39,7 +35,6 @@ use packet::{Buf, BufferMut, Serializer};
 use crate::bindings::{
     context::Lockable,
     devices::DeviceInfo,
-    icmp::InnerIcmpConnId,
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, LockedStackContext, StackContext, StackDispatcher,
 };
@@ -88,16 +83,11 @@ pub(crate) struct TestDispatcher {
     /// A oneshot signal that is hit whenever changes to interface status occur
     /// and it is set.
     status_changed_signal: Option<futures::channel::oneshot::Sender<()>>,
-    /// An optional interceptor for all ICMP responses.
-    /// If it is set, ICMP responses will be directed to the provided channel
-    /// instead of flowing through the ICMP sockets module.
-    pub(crate) icmp_responses:
-        Option<futures::channel::mpsc::UnboundedSender<(InnerIcmpConnId, u16, Vec<u8>)>>,
 }
 
 impl TestDispatcher {
     fn new() -> Self {
-        Self { disp: BindingsDispatcher::new(), status_changed_signal: None, icmp_responses: None }
+        Self { disp: BindingsDispatcher::new(), status_changed_signal: None }
     }
 }
 
@@ -222,17 +212,11 @@ impl<I: IcmpIpExt> IcmpEventDispatcher<I> for TestDispatcher {
 
 impl<I, B> BufferIcmpEventDispatcher<I, B> for TestDispatcher
 where
-    I: crate::bindings::icmp::IpExt,
+    I: IcmpIpExt,
     B: BufferMut,
 {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
-        if let Some(ch) = self.icmp_responses.as_mut() {
-            let () = ch
-                .unbounded_send((conn.into(), seq_num, data.as_ref().to_owned()))
-                .expect("Failed to send on icmp_responses channel");
-        } else {
-            self.disp.receive_icmp_echo_reply(conn, seq_num, data)
-        }
+        self.disp.receive_icmp_echo_reply(conn, seq_num, data)
     }
 }
 
@@ -297,14 +281,6 @@ impl TestStack {
         >()?;
         crate::bindings::socket::SocketProviderWorker::spawn(self.ctx.clone(), rs);
         Ok(stack)
-    }
-
-    /// Connects to the `fuchsia.net.icmp.Provider` service.
-    pub(crate) fn connect_icmp_provider(&self) -> Result<fidl_icmp::ProviderProxy, Error> {
-        let (provider, rs) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_icmp::ProviderMarker>()?;
-        crate::bindings::icmp::IcmpProviderWorker::spawn(self.ctx.clone(), rs);
-        Ok(provider)
     }
 
     /// Waits for interface with given `if_id` to come online.
@@ -404,11 +380,6 @@ impl TestSetup {
     /// Gets the [`TestStack`] at index `i`.
     pub(crate) fn get(&mut self, i: usize) -> &mut TestStack {
         &mut self.stacks[i]
-    }
-
-    /// Clones the [`TestContext`] at index `i`.
-    pub(crate) fn clone_ctx(&self, i: usize) -> TestContext {
-        self.stacks[i].ctx.clone()
     }
 
     /// Acquires a lock on the [`TestContext`] at index `i`.
@@ -684,66 +655,6 @@ async fn configure_endpoint_address(
         .context("Add forwarding entry")?;
 
     Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_ping() {
-    const ALICE_IP: [u8; 4] = [192, 168, 0, 1];
-    const BOB_IP: [u8; 4] = [192, 168, 0, 2];
-    // simple test to ping between two stacks:
-    let mut t = TestSetupBuilder::new()
-        .add_named_endpoint("bob")
-        .add_named_endpoint("alice")
-        .add_stack(
-            StackSetupBuilder::new()
-                .add_named_endpoint("alice", Some(new_ipv4_addr_subnet(ALICE_IP, 24))),
-        )
-        .add_stack(
-            StackSetupBuilder::new()
-                .add_named_endpoint("bob", Some(new_ipv4_addr_subnet(BOB_IP, 24))),
-        )
-        .build()
-        .await
-        .expect("Test Setup succeeds");
-
-    const ICMP_ID: u16 = 1;
-
-    debug!("creating icmp connection");
-    // create icmp connection on alice:
-    let conn_id = core_icmp::new_icmpv4_connection(
-        t.ctx(0).await.deref_mut(),
-        Some(SpecifiedAddr::new(ALICE_IP.into()).unwrap()),
-        SpecifiedAddr::new(BOB_IP.into()).unwrap(),
-        ICMP_ID,
-    )
-    .unwrap();
-
-    let ping_bod = [1, 2, 3, 4, 5, 6];
-
-    let (sender, mut recv) = futures::channel::mpsc::unbounded();
-
-    t.ctx(0).await.dispatcher_mut().icmp_responses = Some(sender);
-
-    // alice will ping bob 4 times:
-    for seq in 1..=4 {
-        debug!("sending ping seq {}", seq);
-        // send ping request:
-        core_icmp::send_icmpv4_echo_request(
-            t.ctx(0).await.deref_mut(),
-            conn_id,
-            seq,
-            Buf::new(ping_bod.to_vec(), ..),
-        )
-        .unwrap();
-
-        // wait until the response comes along:
-        let (rsp_id, rsp_seq, rsp_bod) = recv.next().await.unwrap();
-        debug!("Received ping seq {}", rsp_seq);
-        // validate seq and body:
-        assert_eq!(rsp_id, conn_id.into());
-        assert_eq!(rsp_seq, seq);
-        assert_eq!(&rsp_bod, &ping_bod);
-    }
 }
 
 #[fasync::run_singlethreaded(test)]

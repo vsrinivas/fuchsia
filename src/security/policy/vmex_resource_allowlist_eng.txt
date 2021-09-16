@@ -27,7 +27,6 @@ fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx
 fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netstack3-tests#meta/netemul-sandbox.cmx
-fuchsia-pkg://fuchsia.com/ping3-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/termina_integration_tests#meta/termina_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/virtualization-block-tests#meta/virtualization_block_tests.cmx
 fuchsia-pkg://fuchsia.com/virtualization-core-tests#meta/virtualization_core_tests.cmx

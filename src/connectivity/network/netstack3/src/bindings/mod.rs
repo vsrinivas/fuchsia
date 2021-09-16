@@ -15,7 +15,6 @@ mod integration_tests;
 mod context;
 mod devices;
 mod ethernet_worker;
-mod icmp;
 mod socket;
 mod stack_fidl_worker;
 mod timers;
@@ -25,7 +24,6 @@ use std::convert::TryFrom as _;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fidl_fuchsia_net_icmp as fidl_icmp;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
@@ -39,7 +37,6 @@ use util::ConversionContext;
 
 use context::Lockable;
 use devices::{DeviceInfo, Devices, ToggleError};
-use icmp::IcmpEchoSockets;
 use socket::udp::UdpSocketCollection;
 use timers::TimerDispatcher;
 
@@ -61,7 +58,7 @@ type LockedStackContext<'a, C> = <C as Lockable<'a, Ctx<<C as StackContext>::Dis
 /// used in calls into core.
 // NOTE(brunodalbo): Currently StackContext only provides a cannonball lock on
 // the entire context that is provided to core. The pattern here is expected to
-// expand (possibly by submodules such as posix sockets and icmp). The vision is
+// expand (possibly by submodules such as posix sockets). The vision is
 // that we reduce the time that the core context needs to be locked to a
 // minimum, until it eventually becomes slow path only.
 pub(crate) trait StackContext:
@@ -119,7 +116,6 @@ pub(crate) struct BindingsDispatcher {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId>,
     rng: OsRng,
-    icmp_echo_sockets: icmp::IcmpEchoSockets,
     udp_sockets: socket::udp::UdpSocketCollection,
 }
 
@@ -128,7 +124,6 @@ impl BindingsDispatcher {
         BindingsDispatcher {
             devices: Devices::default(),
             timers: timers::TimerDispatcher::new(),
-            icmp_echo_sockets: Default::default(),
             // TODO(joshlf): Is unwrapping safe here? Alternatively,
             // wait until we upgrade to rand 0.7, where OsRng is an
             // empty struct.
@@ -186,12 +181,6 @@ impl AsRef<UdpSocketCollection> for BindingsDispatcher {
 impl AsMut<UdpSocketCollection> for BindingsDispatcher {
     fn as_mut(&mut self) -> &mut UdpSocketCollection {
         &mut self.udp_sockets
-    }
-}
-
-impl AsMut<IcmpEchoSockets> for BindingsDispatcher {
-    fn as_mut(&mut self) -> &mut IcmpEchoSockets {
-        &mut self.icmp_echo_sockets
     }
 }
 
@@ -318,40 +307,20 @@ impl TransportLayerEventDispatcher<Ipv6> for BindingsDispatcher {}
 
 impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BindingsDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
-        // TODO(joshlf)
+        // TODO(https://fxbug.dev/47321): implement.
         warn!("IcmpEventDispatcher::receive_icmp_error unimplemented; ignoring error");
     }
 
     fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
-        // TODO(joshlf)
+        // TODO(https://fxbug.dev/47321): implement.
         unimplemented!()
     }
 }
 
-impl<I: icmp::IpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
+impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsDispatcher {
+    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, seq_num: u16, data: B) {
+        // TODO(https://fxbug.dev/47321): implement.
         trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
-
-        let socket = match I::get_icmp_echo_sockets(self).get_mut(&conn) {
-            Some(socket) => socket,
-            None => {
-                panic!("Received ICMP echo reply for unknown socket w/ id: {:?}", conn);
-            }
-        };
-
-        let packet =
-            fidl_icmp::EchoPacket { sequence_num: seq_num, payload: data.as_ref().to_vec() };
-
-        // TODO(fxbug.dev/39186): Consider not dropping ICMP replies when the channel is full.
-        match socket.try_send(packet) {
-            Ok(()) => {
-                trace!("Processed ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
-            }
-            Err(e) => {
-                // Channel is full or disconnected.
-                debug!("Unable to handle ICMP echo reply: {:?}", e);
-            }
-        }
     }
 }
 
@@ -489,9 +458,6 @@ impl Netstack {
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
             .dir("svc")
-            .add_fidl_service(|rs: fidl_fuchsia_net_icmp::ProviderRequestStream| {
-                icmp::IcmpProviderWorker::spawn(self.clone(), rs)
-            })
             .add_fidl_service(|rs: fidl_fuchsia_net_stack::StackRequestStream| {
                 stack_fidl_worker::StackFidlWorker::spawn(self.clone(), rs)
             })

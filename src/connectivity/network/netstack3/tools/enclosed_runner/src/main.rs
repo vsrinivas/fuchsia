@@ -5,7 +5,6 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_icmp;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker};
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_posix_socket;
@@ -82,9 +81,6 @@ async fn main() -> Result<(), Error> {
     let _: &mut ServiceFs<_> = services
         .add_proxy_service_to::<StackMarker, _>(directory_request.clone())
         .add_proxy_service_to::<fidl_fuchsia_posix_socket::ProviderMarker, _>(
-            directory_request.clone(),
-        )
-        .add_proxy_service_to::<fidl_fuchsia_net_icmp::ProviderMarker, _>(
             directory_request.clone(),
         );
     let env = services.create_nested_environment("netstack3-env").context("create environment")?;

@@ -121,9 +121,6 @@ At present, these are the libraries considered in this document:
    + needs rework in consideration of `NETLINK_NETFILTER` (undocumented?)
 - `fuchsia.net.http`
    + out of scope of this document, not maintained by networking
-- fuchsia.net.icmp
-   + not planned for SDK inclusion
-   + can possibly be removed in favor of fuchsia.posix.socket
 - `fuchsia.net.mdns`
    + out of scope of this document. do we need to bring it in scope?
 - `fuchsia.net.name`
