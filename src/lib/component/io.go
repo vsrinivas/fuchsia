@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package component
@@ -62,7 +63,7 @@ type Node interface {
 
 // TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type Service struct {
-	*fidlio.NodeWithCtxTransitionalBase
+	*fidlio.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	// AddFn is called serially with an incoming request. It must not block, and
 	// is expected to handle incoming calls on the request.
 	AddFn func(context.Context, zx.Channel) error
@@ -92,6 +93,10 @@ func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxIn
 
 func (s *Service) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
+}
+
+func (s *Service) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
 func (s *Service) Describe(fidl.Context) (fidlio.NodeInfo, error) {
@@ -186,7 +191,7 @@ var _ fidlio.DirectoryWithCtx = (*directoryState)(nil)
 
 // TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type directoryState struct {
-	*fidlio.DirectoryWithCtxTransitionalBase
+	*fidlio.DirectoryWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*DirectoryWrapper
 
 	reading bool
@@ -199,6 +204,10 @@ func (dirState *directoryState) Clone(ctx fidl.Context, flags uint32, req fidlio
 
 func (dirState *directoryState) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
+}
+
+func (dirState *directoryState) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
 func (dirState *directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
@@ -416,7 +425,7 @@ type Reader interface {
 
 // TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type fileState struct {
-	*fidlio.FileWithCtxTransitionalBase
+	*fidlio.FileWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*FileWrapper
 	reader Reader
 	size   uint64
@@ -429,6 +438,10 @@ func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWi
 
 func (fState *fileState) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
+}
+
+func (fState *fileState) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
 func (fState *fileState) Describe(fidl.Context) (fidlio.NodeInfo, error) {

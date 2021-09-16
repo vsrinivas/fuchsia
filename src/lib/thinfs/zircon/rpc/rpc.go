@@ -162,6 +162,19 @@ func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
+func (d *directoryWrapper) Close2(fidl.Context) (io.NodeClose2Result, error) {
+	status := int32(errorToZx(d.dir.Close()))
+
+	d.cancel()
+	d.clearCookie()
+
+	if status == 0 {
+		return io.NodeClose2ResultWithResponse(io.NodeClose2Response{}), nil
+	} else {
+		return io.NodeClose2ResultWithErr(status), nil
+	}
+}
+
 func (d *directoryWrapper) ListInterfaces(fidl.Context) ([]string, error) {
 	return nil, nil
 }
@@ -478,6 +491,18 @@ func (f *fileWrapper) Close(fidl.Context) (int32, error) {
 	f.cancel()
 
 	return int32(errorToZx(err)), nil
+}
+
+func (f *fileWrapper) Close2(fidl.Context) (io.NodeClose2Result, error) {
+	status := int32(errorToZx(f.file.Close()))
+
+	f.cancel()
+
+	if status == 0 {
+		return io.NodeClose2ResultWithResponse(io.NodeClose2Response{}), nil
+	} else {
+		return io.NodeClose2ResultWithErr(status), nil
+	}
 }
 
 func (f *fileWrapper) ListInterfaces(fidl.Context) ([]string, error) {

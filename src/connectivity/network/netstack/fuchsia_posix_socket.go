@@ -313,7 +313,7 @@ func (t *terminalError) setConsumedLockedInner(err tcpip.Error) <-chan tcpip.Err
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
 	// TODO(https://fxbug.dev/37419): Remove TransitionalBase after methods landed.
-	*fidlio.NodeWithCtxTransitionalBase
+	*fidlio.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 
 	wq *waiter.Queue
 	ep tcpip.Endpoint
@@ -1706,6 +1706,12 @@ func (s *datagramSocket) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
+func (s *datagramSocket) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
+	s.close()
+	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
+}
+
 func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
@@ -1939,6 +1945,12 @@ func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
 	s.close()
 	return int32(zx.ErrOk), nil
+}
+
+func (s *streamSocketImpl) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
+	s.close()
+	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
 func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
