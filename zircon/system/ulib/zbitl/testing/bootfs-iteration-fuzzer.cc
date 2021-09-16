@@ -37,15 +37,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     printf("error: %s", zbitl::BootfsErrorString(result.error_value()).c_str());
   }
 
-  if ((dirname.empty() || (dirname.front() != '/' && dirname.back() != '/')) &&
-      (filename.empty() || filename.front() != '/')) {
+  constexpr auto valid_path_part = [](std::string_view part) -> bool {
+    return !part.empty() && part.front() != '/' && part.back() != '/';
+  };
+
+  if (valid_path_part(dirname) && valid_path_part(filename)) {
     if (auto it = bootfs.find({dirname, filename}); it != bootfs.end()) {
-      std::string expected(dirname);
-      if (!expected.empty()) {
-        expected += '/';
-      }
-      expected += filename;
-      ZX_ASSERT(it->name == expected);
+      ZX_ASSERT(it->name == dirname + '/' + filename);
     }
 
     bootfs.ignore_error();
