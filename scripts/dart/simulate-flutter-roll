@@ -1,0 +1,20 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../tools/devshell/lib/vars.sh || exit $?
+export INTEGRATION_DIR="$FUCHSIA_DIR/integration" && pwd
+export ROLL_SCRIPT="$FUCHSIA_DIR/scripts/dart/simulate-flutter-roll.py"
+cd "$INTEGRATION_DIR" || exit
+
+INTEGRATION_BRANCH="flutter_roll"
+INTEGRATION_DIR_EXISTS_IN_LOCAL=$(git branch --list ${INTEGRATION_BRANCH})
+
+if [[ ${INTEGRATION_DIR_EXISTS_IN_LOCAL} ]]; then
+    :
+else
+    git checkout -b $INTEGRATION_BRANCH
+fi
+
+python3 "$ROLL_SCRIPT" "$@"
