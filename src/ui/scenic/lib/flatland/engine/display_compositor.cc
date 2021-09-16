@@ -228,7 +228,13 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     return false;
   }
 
-  if (import_mode_ == BufferCollectionImportMode::RendererOnly) {
+  // ImportBufferImage() might be called to import client images or display images that we use as
+  // render targets. For the second case, we still want to import image into the display. These
+  // images have |buffer_collection_supports_display_| set as true in AddDisplay().
+  if (import_mode_ == BufferCollectionImportMode::RendererOnly &&
+      (buffer_collection_supports_display_.find(metadata.collection_id) ==
+           buffer_collection_supports_display_.end() ||
+       !buffer_collection_supports_display_[metadata.collection_id])) {
     buffer_collection_supports_display_[metadata.collection_id] = false;
     return true;
   }
