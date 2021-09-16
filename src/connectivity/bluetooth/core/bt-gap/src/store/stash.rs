@@ -336,10 +336,9 @@ impl StashInner {
         Ok(StashInner { proxy: accessor, bonding_data, host_data, inspect })
     }
 
-    fn process_loaded_bonds(
+    fn deserialize_bonds(
         raw_bonds: Vec<KeyValue>,
-        seen_addresses: &mut HashMap<(Address, Address), BondingData>,
-        duplicate_ids: &mut Vec<PeerId>,
+        seen_addresses: &mut HashMap<(Address, Address), Vec<BondingData>>,
     ) -> Result<(), Error> {
         for key_value in raw_bonds {
             let bond = if let Value::Stringval(json) = key_value.val {
@@ -348,22 +347,8 @@ impl StashInner {
                 error!("stash malformed: bonding data should be a string");
                 Err(format_err!("failed to initialize stash"))
             }?;
-            if let Some((dupe, dupe_id)) =
-                seen_addresses.get(&(bond.local_address, bond.address)).map(|b| (b, b.identifier))
-            {
-                // Generally, Fuchsia disallows restoration of multiple BondingDatas from the same
-                // local address to the same peer address. However, some system bootstrap flows cause
-                // the same underlying bond (i.e. security keys + local-peer address tuple) to be
-                // restored more than once under different Peer IDs. To be resilient to this flow,
-                // we deduplicate bonds which differ only in their PeerId from the Store as a
-                // special case.
-                if !is_duplicate_bond(&bond, dupe) {
-                    warn!("stash malformed: cannot load multiple distinct bonds for same peer (address: {:?})", bond.address);
-                    return Err(format_err!("multiple distinct bonds for same peer in store"));
-                }
-                duplicate_ids.push(dupe_id);
-            }
-            let _ = seen_addresses.insert((bond.local_address, bond.address), bond);
+            let existing = seen_addresses.entry((bond.local_address, bond.address)).or_default();
+            existing.push(bond);
         }
         Ok(())
     }
@@ -378,21 +363,36 @@ impl StashInner {
 
         let mut bonding_map = HashMap::new();
         let mut seen_addresses = HashMap::new();
-        let mut duplicate_ids = Vec::new();
         loop {
             let next = iter.get_next().await?;
             if next.is_empty() {
                 break;
             }
-            Self::process_loaded_bonds(next, &mut seen_addresses, &mut duplicate_ids)?;
+            Self::deserialize_bonds(next, &mut seen_addresses)?;
         }
-        let bonds = seen_addresses.into_values().collect();
-        insert_inspectable_bonds(&mut bonding_map, &inspect, bonds);
-        for id in duplicate_ids {
-            info!("removing duplicate bond for peer id {:?} from store", id);
-            accessor.delete_value(&bonding_data_key(id))?;
+        let mut bonds_to_store = Vec::new();
+        for mut bonds in seen_addresses.into_values() {
+            let last = bonds.pop().ok_or(format_err!("unexpected empty bond list"))?;
+            // Generally, Fuchsia disallows restoration of multiple BondingDatas from the same local
+            // address to the same peer address. However, some system bootstrap flows cause the same
+            // underlying bond (i.e. security keys + local-peer address tuple) to be restored more
+            // than once under different Peer IDs. To be resilient to this flow, we deduplicate
+            // bonds which differ only in their PeerId from the Store as a special case.
+            if !bonds.iter().fold(true, |accum, b| accum && is_duplicate_bond(b, &last)) {
+                return Err(format_err!(
+                    "multiple distinct bonds found for peer address {:?}, failing to load",
+                    last.address
+                ));
+            }
+            for bond in bonds {
+                info!("removing duplicate bond for peer id {:?} from store", bond.identifier);
+                accessor.delete_value(&bonding_data_key(bond.identifier))?;
+            }
+            bonds_to_store.push(last);
         }
         accessor.flush().await?.map_err(|e| format_err!("Failed to flush to stash: {:?}", e))?;
+
+        insert_inspectable_bonds(&mut bonding_map, &inspect, bonds_to_store);
         Ok(bonding_map)
     }
 
