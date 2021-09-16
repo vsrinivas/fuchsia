@@ -198,6 +198,11 @@ The Vulkan loader service retrieves the ICDs from packages and advertises them
 to Vulkan clients. The ICD must be packaged with metadata and manifest JSON
 files, as described in the [loader service documentation][loader-readme].
 
+If the ICD package is included in [universe][package-deployment] it can be
+reloaded by doing `fx shell killall vulkan_loader.cm`. Components launched
+afterwards will get the new ICD package, while older components will either use
+the old ICD or may fail when creating Vulkan instances.
+
 The ICD must export a certain set of symbols - see
 [the Vulkan ABI definition][icdabi]. You should implement them at this point.
 
@@ -331,3 +336,4 @@ the system driver using the Zircon DDK.
 [loader-readme]: /src/graphics/bin/vulkan_loader/README.md
 [extmemoryspec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_memory.html
 [extsemaphorespec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_semaphore.html
+[package-deployment]: /docs/development/build/fx.md#package_deployment_options
