@@ -20,6 +20,7 @@ If any of the above assumptions do not hold, then bypass wrapping.
 """
 
 import argparse
+import filecmp
 import os
 import shutil
 import subprocess
@@ -45,14 +46,8 @@ def _partition(
 
 def files_match(file1: str, file2: str):
     """Compares two files, returns True if they both exist and match."""
-    # Silence "Files x and y differ" message.
-    # cmp is faster than diff, because it compares bytes without trying to
-    # compute a difference.
-    # TODO(fangism): can use faster diff-ing strategies, e.g. file size
-    return subprocess.call(
-        ["cmp", "--silent", file1, file2],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL) == 0
+    # filecmp.cmp does not invoke any subprocesses.
+    return filecmp.cmp(file1, file2, shallow=False)
 
 
 def move_if_different(src: str, dest: str, verbose: bool = False):
