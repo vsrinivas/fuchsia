@@ -44,11 +44,13 @@ def _partition(
 
 
 def files_match(file1: str, file2: str):
-    """`diff`s two files, returns True if they both exist and match."""
+    """Compares two files, returns True if they both exist and match."""
     # Silence "Files x and y differ" message.
+    # cmp is faster than diff, because it compares bytes without trying to
+    # compute a difference.
     # TODO(fangism): can use faster diff-ing strategies, e.g. file size
     return subprocess.call(
-        ["diff", "-q", file1, file2],
+        ["cmp", "--silent", file1, file2],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL) == 0
 
