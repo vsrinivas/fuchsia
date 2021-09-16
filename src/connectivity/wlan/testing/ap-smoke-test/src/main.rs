@@ -15,8 +15,10 @@ use fuchsia_zircon as zx;
 use ieee80211::Ssid;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::process;
 use structopt::StructOpt;
+use wlan_common::scan::ScanResult;
 
 #[allow(dead_code)]
 type WlanService = DeviceServiceProxy;
@@ -168,7 +170,20 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .context("scan failed")?;
                 let bss_description = networks
                     .into_iter()
-                    .filter(|scan_result| scan_result.ssid.as_slice() == &target_ssid)
+                    .filter(
+                        // TODO(fxbug.dev/83708): Until the error produced by
+                        // ScanResult::TryFrom includes some details about the
+                        // scan result which failed conversion, scan_result must
+                        // be cloned for debug logging if conversion fails.
+                        |scan_result| match ScanResult::try_from(scan_result.clone()) {
+                            Ok(scan_result) => scan_result.bss_description.ssid == target_ssid,
+                            Err(e) => {
+                                fx_log_err!("Failed to convert ScanResult: {:?}", e);
+                                fx_log_err!("  {:?}", scan_result);
+                                false
+                            }
+                        },
+                    )
                     .map(|scan_result| scan_result.bss_description)
                     .next()
                     .ok_or_else(|| format_err!("no station responding for SSID"))?;

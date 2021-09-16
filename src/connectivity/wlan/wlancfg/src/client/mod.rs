@@ -484,7 +484,7 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
-        wlan_common::{assert_variant, fake_fidl_bss_description},
+        wlan_common::{assert_variant, random_fidl_bss_description},
     };
 
     /// Only used to tell us what disconnect request was given to the IfaceManager so that we
@@ -568,7 +568,7 @@ mod tests {
             let bss_description = connect_req
                 .target
                 .bss_description
-                .unwrap_or_else(|| fake_fidl_bss_description!(Wpa2, ssid: ssid.clone()));
+                .unwrap_or_else(|| random_fidl_bss_description!(Wpa2, ssid: ssid.clone()));
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.to_vec(),
                 bss_description,

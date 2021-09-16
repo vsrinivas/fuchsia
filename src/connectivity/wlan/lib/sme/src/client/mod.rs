@@ -49,15 +49,13 @@ use {
         channel::Channel,
         hasher::WlanHasher,
         ie::{self, rsn::rsne, wsc},
+        scan::ScanResult,
         RadioConfig,
     },
     wlan_rsn::auth,
 };
 
-pub use self::{
-    info::InfoEvent,
-    scan::{ScanResult, ScanResultList},
-};
+pub use self::info::InfoEvent;
 
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,
@@ -111,23 +109,11 @@ impl ClientConfig {
     pub fn create_scan_result(
         &self,
         bss: &BssDescription,
-        wmm_param: Option<ie::WmmParam>,
         device_info: &fidl_mlme::DeviceInfo,
     ) -> ScanResult {
         ScanResult {
-            bssid: bss.bssid,
-            ssid: bss.ssid.clone(),
-            rssi_dbm: bss.rssi_dbm,
-            snr_db: bss.snr_db,
-            signal_report_time: zx::Time::ZERO,
-            channel: Channel::from(bss.channel),
-            protection: bss.protection(),
-            ht_cap: bss.raw_ht_cap(),
-            vht_cap: bss.raw_vht_cap(),
-            probe_resp_wsc: bss.probe_resp_wsc(),
-            wmm_param,
             compatible: self.is_bss_compatible(bss, device_info),
-            bss_description: bss.clone().into(),
+            bss_description: bss.clone(),
         }
     }
 
@@ -192,7 +178,7 @@ impl ClientConfig {
 pub struct ClientSme {
     cfg: ClientConfig,
     state: Option<ClientState>,
-    scan_sched: ScanScheduler<Responder<ScanResultList>>,
+    scan_sched: ScanScheduler<Responder<Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>>>,
     wmm_status_responders: Vec<Responder<fidl_sme::ClientSmeWmmStatusResult>>,
     context: Context,
 }
@@ -460,7 +446,9 @@ impl ClientSme {
             ClientSme {
                 cfg,
                 state: Some(ClientState::new(cfg)),
-                scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
+                scan_sched: <ScanScheduler<
+                    Responder<Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>>,
+                >>::new(Arc::clone(&device_info)),
                 wmm_status_responders: vec![],
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
@@ -560,7 +548,8 @@ impl ClientSme {
     pub fn on_scan_command(
         &mut self,
         scan_request: fidl_sme::ScanRequest,
-    ) -> oneshot::Receiver<ScanResultList> {
+    ) -> oneshot::Receiver<Result<Vec<wlan_common::scan::ScanResult>, fidl_mlme::ScanResultCode>>
+    {
         info!("SME received a scan command, initiating a discovery scan");
         let (responder, receiver) = Responder::new();
         let scan = DiscoveryScan::new(responder, scan_request);
@@ -618,7 +607,6 @@ impl super::Station for ClientSme {
                                     .map(|bss_description| {
                                         self.cfg.create_scan_result(
                                             &bss_description,
-                                            None,
                                             &self.context.device_info,
                                         )
                                     })
@@ -791,9 +779,7 @@ mod tests {
     use fuchsia_inspect as finspect;
     use ieee80211::MacAddr;
     use wlan_common::{
-        assert_variant,
-        channel::Cbw,
-        fake_bss_description, fake_fidl_bss_description,
+        assert_variant, fake_bss_description, fake_fidl_bss_description,
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
         test_utils::fake_stas::IesOverrides,
         RadioConfig,
@@ -880,26 +866,9 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
+        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
 
-        assert_eq!(
-            scan_result,
-            ScanResult {
-                bssid: Bssid([0u8; 6]),
-                ssid: Ssid::empty(),
-                rssi_dbm: -30,
-                snr_db: 0,
-                signal_report_time: zx::Time::ZERO,
-                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
-                protection: BssProtection::Wpa2Personal,
-                compatible: true,
-                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
-                probe_resp_wsc: None,
-                wmm_param: None,
-                bss_description: bss_description.into(),
-            }
-        );
+        assert_eq!(scan_result, ScanResult { compatible: true, bss_description: bss_description });
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
@@ -913,30 +882,14 @@ mod tests {
                 secondary80: 0,
                 cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
+            wmm_param: Some(wmm_param),
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, Some(wmm_param), &device_info);
+        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
 
-        assert_eq!(
-            scan_result,
-            ScanResult {
-                bssid: Bssid([0u8; 6]),
-                ssid: Ssid::empty(),
-                rssi_dbm: -30,
-                snr_db: 0,
-                signal_report_time: zx::Time::ZERO,
-                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
-                protection: BssProtection::Wpa2Personal,
-                compatible: true,
-                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
-                probe_resp_wsc: None,
-                wmm_param: Some(wmm_param),
-                bss_description: bss_description.into(),
-            }
-        );
+        assert_eq!(scan_result, ScanResult { compatible: true, bss_description: bss_description });
 
         let bss_description = fake_bss_description!(Wep,
             ssid: Ssid::empty(),
@@ -952,25 +905,8 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
-        assert_eq!(
-            scan_result,
-            ScanResult {
-                bssid: Bssid([0u8; 6]),
-                ssid: Ssid::empty(),
-                rssi_dbm: -30,
-                snr_db: 0,
-                signal_report_time: zx::Time::ZERO,
-                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
-                protection: BssProtection::Wep,
-                compatible: false,
-                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
-                probe_resp_wsc: None,
-                wmm_param: None,
-                bss_description: bss_description.into(),
-            },
-        );
+        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
+        assert_eq!(scan_result, ScanResult { compatible: false, bss_description: bss_description },);
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         let bss_description = fake_bss_description!(Wep,
@@ -987,24 +923,10 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
+        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
         assert_eq!(
             scan_result,
-            ScanResult {
-                bssid: Bssid([0u8; 6]),
-                ssid: Ssid::empty(),
-                rssi_dbm: -30,
-                snr_db: 0,
-                signal_report_time: zx::Time::ZERO,
-                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
-                protection: BssProtection::Wep,
-                compatible: true,
-                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
-                probe_resp_wsc: None,
-                wmm_param: None,
-                bss_description: bss_description.into(),
-            },
+            wlan_common::scan::ScanResult { compatible: true, bss_description: bss_description },
         );
     }
 
@@ -1627,7 +1549,10 @@ mod tests {
 
         // check that both BSS are received at the end of a scan
         assert_variant!(recv.try_recv(), Ok(Some(Ok(scan_result_list))) => {
-            let mut reported_ssid = scan_result_list.into_iter().map(|scan_result| (scan_result.ssid, scan_result.bssid)).collect::<Vec<_>>();
+            let mut reported_ssid = scan_result_list
+                .into_iter()
+                .map(|scan_result| (scan_result.bss_description.ssid.clone(), scan_result.bss_description.bssid))
+                .collect::<Vec<_>>();
             reported_ssid.sort();
             assert_eq!(reported_ssid, vec![(Ssid::from("foo"), Bssid([3; 6])), (Ssid::from("foo"), Bssid([4; 6]))]);
         })

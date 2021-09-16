@@ -14,6 +14,8 @@ use fuchsia_zircon as zx;
 use ieee80211::Ssid;
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::convert::TryInto;
+use wlan_common::scan::ScanResult;
 
 // WlanFacade: proxies commands from sl4f test to proper fidl APIs
 //
@@ -71,16 +73,17 @@ impl WlanFacade {
             .context("Scan: failed to get client iface sme proxy")?;
 
         // start the scan
-        let results =
+        let scan_result_list =
             wlan_service_util::client::passive_scan(&sme_proxy).await.context("Scan failed")?;
 
         // send the ssids back to the test
-        let mut ssids = Vec::new();
-        for entry in &results {
-            let ssid = String::from_utf8_lossy(&entry.ssid).into_owned();
-            ssids.push(ssid);
+        let mut ssid_list = Vec::new();
+        for scan_result in &scan_result_list {
+            let scan_result: ScanResult = scan_result.clone().try_into()?;
+            let ssid = String::from_utf8_lossy(&scan_result.bss_description.ssid).into_owned();
+            ssid_list.push(ssid);
         }
-        Ok(ssids)
+        Ok(ssid_list)
     }
 
     pub async fn scan_for_bss_info(
@@ -92,14 +95,15 @@ impl WlanFacade {
             .context("Scan: failed to get client iface sme proxy")?;
 
         // start the scan
-        let mut results =
+        let mut scan_result_list =
             wlan_service_util::client::passive_scan(&sme_proxy).await.context("Scan failed")?;
 
         // send the bss descriptions back to the test
         let mut hashmap = HashMap::new();
-        for bss in results.drain(..) {
-            let entry = hashmap.entry(Ssid::from(bss.ssid)).or_insert(vec![]);
-            entry.push(Box::new(bss.bss_description));
+        for scan_result in scan_result_list.drain(..) {
+            let scan_result: ScanResult = scan_result.try_into()?;
+            let entry = hashmap.entry(scan_result.bss_description.ssid.clone()).or_insert(vec![]);
+            entry.push(Box::new(scan_result.bss_description.into()));
         }
 
         Ok(hashmap)

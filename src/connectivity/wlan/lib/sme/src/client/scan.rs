@@ -51,8 +51,6 @@ pub struct ScanResult {
     pub wmm_param: Option<ie::WmmParam>,
 }
 
-pub type ScanResultList = Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>;
-
 // A "user"-initiated scan request for the purpose of discovering available networks
 #[derive(Debug, PartialEq)]
 pub struct DiscoveryScan<T> {

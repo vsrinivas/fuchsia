@@ -75,16 +75,16 @@ impl fmt::Display for Protection {
         match self {
             Protection::Unknown => write!(f, "{}", "Unknown"),
             Protection::Open => write!(f, "{}", "Open"),
-            Protection::Wep => write!(f, "{}", "Wep"),
-            Protection::Wpa1 => write!(f, "{}", "Wpa1"),
-            Protection::Wpa1Wpa2PersonalTkipOnly => write!(f, "{}", "Wpa1Wpa2PersonalTkipOnly"),
-            Protection::Wpa2PersonalTkipOnly => write!(f, "{}", "Wpa2PersonalTkipOnly"),
-            Protection::Wpa1Wpa2Personal => write!(f, "{}", "Wpa1Wpa2Personal"),
-            Protection::Wpa2Personal => write!(f, "{}", "Wpa2Personal"),
-            Protection::Wpa2Wpa3Personal => write!(f, "{}", "Wpa2Wpa3Personal"),
-            Protection::Wpa3Personal => write!(f, "{}", "Wpa3Personal"),
-            Protection::Wpa2Enterprise => write!(f, "{}", "Wpa2Enterprise"),
-            Protection::Wpa3Enterprise => write!(f, "{}", "Wpa3Enterprise"),
+            Protection::Wep => write!(f, "{}", "WEP"),
+            Protection::Wpa1 => write!(f, "{}", "WPA1"),
+            Protection::Wpa1Wpa2PersonalTkipOnly => write!(f, "{}", "WPA1/2 PSK TKIP"),
+            Protection::Wpa2PersonalTkipOnly => write!(f, "{}", "WPA2 PSK TKIP"),
+            Protection::Wpa1Wpa2Personal => write!(f, "{}", "WPA1/2 PSK"),
+            Protection::Wpa2Personal => write!(f, "{}", "WPA2 PSK"),
+            Protection::Wpa2Wpa3Personal => write!(f, "{}", "WPA2/3 PSK"),
+            Protection::Wpa3Personal => write!(f, "{}", "WPA3 PSK"),
+            Protection::Wpa2Enterprise => write!(f, "{}", "WPA2 802.1X"),
+            Protection::Wpa3Enterprise => write!(f, "{}", "WPA3 802.1X"),
         }
     }
 }
@@ -489,6 +489,8 @@ impl From<BssDescription> for fidl_internal::BssDescription {
     }
 }
 
+// TODO(fxbug.dev/83708): The error printed should include a minimal amount of information
+// about the BSS Description that could not be converted to aid debugging.
 impl TryFrom<fidl_internal::BssDescription> for BssDescription {
     type Error = anyhow::Error;
 

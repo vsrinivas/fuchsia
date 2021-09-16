@@ -990,7 +990,7 @@ mod tests {
         fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
         std::{cmp::min, pin::Pin},
-        wlan_common::{fake_bss_description, ie::IeType, test_utils::fake_stas::IesOverrides},
+        wlan_common::{ie::IeType, random_bss_description, test_utils::fake_stas::IesOverrides},
     };
 
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
@@ -999,7 +999,7 @@ mod tests {
     #[fuchsia::test]
     fn test_stat_cycles() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
@@ -1169,7 +1169,7 @@ mod tests {
     #[fuchsia::test]
     fn test_connected_counters_increase_when_connected() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
@@ -1261,7 +1261,7 @@ mod tests {
     #[fuchsia::test]
     fn test_counters_connect_then_disconnect() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
@@ -1311,7 +1311,7 @@ mod tests {
     #[fuchsia::test]
     fn test_downtime_no_saved_neighbor_duration_counter() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
 
         // Disconnect and track downtime.
@@ -1439,7 +1439,7 @@ mod tests {
     #[fuchsia::test]
     fn test_disconnect_count_counter() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         assert_data_tree!(test_helper.inspector, root: {
@@ -1491,7 +1491,7 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_tx_counters_no_issue() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1533,7 +1533,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1577,7 +1577,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1620,7 +1620,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1652,7 +1652,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1676,7 +1676,7 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_uptime_ratio_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(12.hours(), test_fut.as_mut());
@@ -1717,7 +1717,7 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_disconnect_per_day_connected_cobalt_metric() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
@@ -1762,7 +1762,7 @@ mod tests {
         test_helper.cobalt_events.clear();
 
         // Connect for another 1 day to dilute the 7d ratio
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1829,7 +1829,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1859,7 +1859,7 @@ mod tests {
         // log to Cobalt.
         let (mut test_helper, mut test_fut) = setup_test();
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
@@ -1884,7 +1884,7 @@ mod tests {
     fn test_log_hourly_fleetwise_uptime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -1981,7 +1981,7 @@ mod tests {
                 .expect("expect sending IfaceStats response to succeed");
         }));
 
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -2014,7 +2014,7 @@ mod tests {
     fn test_log_disconnect_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.advance_by(3.hours(), test_fut.as_mut());
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.hours(), test_fut.as_mut());
@@ -2025,7 +2025,7 @@ mod tests {
             cbw: fidl_common::ChannelBandwidth::Cbw20,
             secondary80: 0,
         };
-        let latest_ap_state = fake_bss_description!(Wpa2, channel: channel);
+        let latest_ap_state = random_bss_description!(Wpa2, channel: channel);
         let info = DisconnectInfo {
             connected_duration: 5.hours(),
             reason_code: 3,
@@ -2078,7 +2078,7 @@ mod tests {
     #[fuchsia::test]
     fn test_log_downtime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let info = DisconnectInfo {
@@ -2111,7 +2111,7 @@ mod tests {
 
         test_helper.advance_by(7.minutes(), test_fut.as_mut());
         // Reconnect
-        test_helper.send_connected_event(fake_bss_description!(Wpa2));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let breakdowns_by_reason = test_helper
@@ -2143,7 +2143,7 @@ mod tests {
             0x08, // BSS transition supported
             0x00, 0x00, 0x00, 0x00, 0x40
         ];
-        let bss_description = fake_bss_description!(Wpa2,
+        let bss_description = random_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .remove(IeType::WMM_PARAM)
                 .set(IeType::WMM_INFO, wmm_info)
@@ -2204,7 +2204,7 @@ mod tests {
     fn test_log_device_connected_cobalt_metrics_ap_features_not_supported() {
         let (mut test_helper, mut test_fut) = setup_test();
 
-        let bss_description = fake_bss_description!(Wpa2,
+        let bss_description = random_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .remove(IeType::WMM_PARAM)
                 .remove(IeType::WMM_INFO)
@@ -2560,7 +2560,7 @@ mod tests {
             is_sme_reconnecting: fidl_disconnect_info.is_sme_reconnecting,
             reason_code: fidl_disconnect_info.reason_code,
             disconnect_source: fidl_disconnect_info.disconnect_source,
-            latest_ap_state: fake_bss_description!(Wpa2),
+            latest_ap_state: random_bss_description!(Wpa2),
         }
     }
 }

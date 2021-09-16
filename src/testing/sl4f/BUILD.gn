@@ -102,6 +102,7 @@ rustc_library("lib") {
     "//src/connectivity/bluetooth/testing/test-rfcomm-client",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/connectivity/lowpan/tools/lowpanctl",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/wlan-service-util",
     "//src/lib/async-utils",

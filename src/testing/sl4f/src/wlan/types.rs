@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use serde::{Deserialize, Serialize};
+use {
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    serde::{Deserialize, Serialize},
+};
 
 /// Enums and structs for wlan client status.
 /// These definitions come from fuchsia.wlan.policy/client_provider.fidl
@@ -97,31 +99,6 @@ impl From<fidl_sme::Protection> for Protection {
             fidl_sme::Protection::Wpa3Personal => Protection::Wpa3Personal,
             fidl_sme::Protection::Wpa2Enterprise => Protection::Wpa2Enterprise,
             fidl_sme::Protection::Wpa3Enterprise => Protection::Wpa3Enterprise,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ScanResult {
-    pub bssid: [u8; 6],
-    pub ssid: Vec<u8>,
-    pub rssi_dbm: i8,
-    pub snr_db: i8,
-    pub channel: u8,
-    pub protection: Protection,
-    pub compatible: bool,
-}
-
-impl From<fidl_sme::ScanResult> for ScanResult {
-    fn from(bss_info: fidl_sme::ScanResult) -> Self {
-        ScanResult {
-            bssid: bss_info.bssid,
-            ssid: bss_info.ssid,
-            rssi_dbm: bss_info.rssi_dbm,
-            snr_db: bss_info.snr_db,
-            channel: bss_info.channel.primary,
-            protection: Protection::from(bss_info.protection),
-            compatible: bss_info.compatible,
         }
     }
 }

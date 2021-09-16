@@ -1230,12 +1230,6 @@ mod tests {
         compatible: bool,
     ) -> fidl_sme::ScanResult {
         fidl_sme::ScanResult {
-            bssid,
-            ssid: ssid.to_vec(),
-            rssi_dbm,
-            snr_db,
-            channel,
-            protection,
             compatible,
             bss_description: fake_fidl_bss_description!(
                 protection => protection,
