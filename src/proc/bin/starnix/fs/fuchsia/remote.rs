@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon::{self as zx, HandleBased};
+use log::warn;
+use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Arc;
+use syncio::{
+    zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
+};
+
 use crate::errno;
 use crate::error;
 use crate::fd_impl_directory;
@@ -13,13 +21,7 @@ use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-use fuchsia_zircon::{self as zx, HandleBased};
-use log::warn;
-use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
-use std::sync::Arc;
-use syncio::{
-    zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
-};
+
 pub struct RemoteFs;
 impl FileSystemOps for RemoteFs {
     fn generate_node_ids(&self) -> bool {
