@@ -37,13 +37,23 @@ if (target_cpu == "x64") {
     group("libvulkan_intel_gen") {
     }
   } else {
+    libvulkan_intel_deps = [
+      ":libvulkan_intel_config_resource",
+      ":vulkan_metadata",
+      "//third_party/mesa:magma_vulkan",
+    ]
     fuchsia_package_with_single_component("libvulkan_intel_gen") {
       component_name = "vulkan"
-      deps = [
-        ":libvulkan_intel_config_resource",
-        ":vulkan_metadata",
-        "//third_party/mesa:magma_vulkan",
-      ]
+      deps = libvulkan_intel_deps
+      manifest = "meta/vulkan.cml"
+    }
+
+    # This package will override the normal libvulkan_intel_gen package. It can be included in
+    # universe_package_labels to allow hot-reloading of the ICD, even if libvulkan_intel_gen is in
+    # base_package_labels and can't be updated without a reboot.
+    fuchsia_package_with_single_component("libvulkan_intel_gen_test") {
+      component_name = "vulkan"
+      deps = libvulkan_intel_deps
       manifest = "meta/vulkan.cml"
     }
   }
