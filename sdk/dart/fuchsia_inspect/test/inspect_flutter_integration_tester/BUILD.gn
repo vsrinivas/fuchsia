@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/dart/dart_test_component.gni")
-import("//build/dart/fidl_move.gni")
 import("//build/flutter/flutter_app.gni")
 
 flutter_app("inspect_flutter_integration_tester") {

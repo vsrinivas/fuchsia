@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/dart/dart_test_component.gni")
-import("//build/dart/fidl_move.gni")
 
 dart_test_component("integration-test-component") {
   component_name = "fuchsia-logger-integration-tests"
