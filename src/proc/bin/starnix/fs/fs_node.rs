@@ -26,7 +26,7 @@ pub struct FsNode {
     fs: Weak<FileSystem>,
 
     /// The tasks waiting on signals (e.g., POLLIN, POLLOUT) from this FsNode.
-    pub observers: ObserverList,
+    pub observers: Mutex<ObserverList>,
 
     /// The inode number for this FsNode.
     pub inode_num: ino_t,
@@ -246,7 +246,7 @@ impl FsNode {
         };
         Self {
             ops,
-            observers: ObserverList::default(),
+            observers: Default::default(),
             fs,
             inode_num,
             fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
@@ -406,6 +406,10 @@ impl FsNode {
 
     pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
         self.ops().set_xattr(name, value, op)
+    }
+
+    pub fn notify(&self, events: FdEvents) {
+        self.observers.lock().notify(events.mask())
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {

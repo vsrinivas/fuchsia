@@ -111,7 +111,7 @@ impl Socket {
         let connected_node = self.connected_node.upgrade();
         connected_node.as_ref().map(|node| {
             node.socket().map(|s| s.lock().read_pipe.remove_writer());
-            node.observers.notify(FdEvents::POLLHUP.mask());
+            node.notify(FdEvents::POLLHUP);
         });
         self.connected_node = Weak::new();
         connected_node

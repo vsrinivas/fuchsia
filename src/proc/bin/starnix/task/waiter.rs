@@ -132,7 +132,7 @@ impl Waiter {
 #[derive(Default)]
 pub struct ObserverList {
     /// The list of observers.
-    observers: Mutex<Vec<Observer>>,
+    observers: Vec<Observer>,
 }
 
 /// An entry in an ObserverList.
@@ -156,9 +156,8 @@ impl ObserverList {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the "wait" function on the waiter.
-    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: u32) {
-        let mut observers = self.observers.lock();
-        (*observers).push(Observer { waiter: Arc::clone(waiter), events, persistent: false });
+    pub fn wait_async(&mut self, waiter: &Arc<Waiter>, events: u32) {
+        self.observers.push(Observer { waiter: Arc::clone(waiter), events, persistent: false });
     }
 
     /// Notify any observers that the given events have occurred.
@@ -169,9 +168,8 @@ impl ObserverList {
     ///
     /// The waiters will wake up on their own threads to handle these events.
     /// They are not called synchronously by this function.
-    pub fn notify(&self, events: u32) {
-        let mut observers = self.observers.lock();
-        *observers = std::mem::take(&mut *observers)
+    pub fn notify(&mut self, events: u32) {
+        self.observers = std::mem::take(&mut self.observers)
             .into_iter()
             .filter(|observer| {
                 if observer.events & events != 0 {
