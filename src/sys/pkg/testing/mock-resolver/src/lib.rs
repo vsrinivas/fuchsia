@@ -134,6 +134,10 @@ pub fn handle_package_directory_stream(
                     // Don't do anything with this for now.
                     responder.send(Status::OK.into_raw()).expect("send Close response")
                 }
+                DirectoryRequest::Close2 { responder } => {
+                    // Don't do anything with this for now.
+                    responder.send(&mut Ok(())).expect("send Close response")
+                }
                 other => panic!("unhandled request type: {:?}", other),
             }
         }

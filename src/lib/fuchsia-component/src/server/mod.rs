@@ -1165,6 +1165,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok((None, ConnectionState::Closed));
             }
+            DirectoryRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
+                return Ok((None, ConnectionState::Closed));
+            }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 if path == "." {
                     let object = handle_potentially_unsupported_flags(
@@ -1272,7 +1276,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
-            _ => {}
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok((None, ConnectionState::Open))
     }
@@ -1293,6 +1297,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             FileRequest::Close { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
+                return Ok(ConnectionState::Closed);
+            }
+            FileRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }
             FileRequest::Describe { responder } => {
@@ -1369,7 +1377,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
             FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
-            _ => {}
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok(ConnectionState::Open)
     }
@@ -1397,6 +1405,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
+            NodeRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
+                return Ok(ConnectionState::Closed);
+            }
             NodeRequest::Describe { responder } => {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
@@ -1407,7 +1419,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            _ => {}
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok(ConnectionState::Open)
     }

@@ -323,6 +323,11 @@ impl FailingWriteFileStreamHandler {
                         let backing_file_close_response = self.backing_file.close().await.unwrap();
                         responder.send(backing_file_close_response).unwrap();
                     }
+                    FileRequest::Close2 { responder } => {
+                        let mut backing_file_close_response =
+                            self.backing_file.close2().await.unwrap();
+                        responder.send(&mut backing_file_close_response).unwrap();
+                    }
                     other => {
                         panic!("unhandled request type for path {:?}: {:?}", self.path, other);
                     }
@@ -404,6 +409,10 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                     DirectoryRequest::Close { responder } => {
                         let status = tempdir_proxy.close().await.unwrap();
                         responder.send(status).unwrap();
+                    }
+                    DirectoryRequest::Close2 { responder } => {
+                        let mut result = tempdir_proxy.close2().await.unwrap();
+                        responder.send(&mut result).unwrap();
                     }
                     DirectoryRequest::GetToken { responder } => {
                         let (status, handle) = tempdir_proxy.get_token().await.unwrap();

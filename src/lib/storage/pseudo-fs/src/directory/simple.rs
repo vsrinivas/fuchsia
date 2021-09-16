@@ -175,6 +175,13 @@ impl<'entries> Simple<'entries> {
                     may_affect_children,
                 });
             }
+            DirectoryRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
+                return Ok(HandleRequestResult {
+                    connection_state: ConnectionState::Closed,
+                    may_affect_children,
+                });
+            }
             DirectoryRequest::Describe { responder } => {
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
@@ -250,7 +257,7 @@ impl<'entries> Simple<'entries> {
                     responder.send(status.into_raw())?;
                 }
             }
-            _ => {}
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok(HandleRequestResult { connection_state: ConnectionState::Alive, may_affect_children })
     }

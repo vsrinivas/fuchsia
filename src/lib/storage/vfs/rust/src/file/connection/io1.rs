@@ -208,6 +208,11 @@ impl<T: 'static + File> FileConnection<T> {
                 let _ = responder.send(status.into_raw());
                 return Ok(ConnectionState::Closed);
             }
+            FileRequest::Close2 { responder } => {
+                fuchsia_trace::duration!("storage", "File::Close2");
+                responder.send(&mut self.file.close().await.map_err(|status| status.into_raw()))?;
+                return Ok(ConnectionState::Closed);
+            }
             FileRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 let mut info = NodeInfo::File(FileObject { event: None, stream: None });

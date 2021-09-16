@@ -400,6 +400,11 @@ where
                             responder_send!(responder, zx::Status::OK.into_raw());
                             return Ok(());
                         }
+                        psocket::DatagramSocketRequest::Close2 { responder } => {
+                            let () = self.make_handler().await.close();
+                            responder_send!(responder, &mut Ok(()));
+                            return Ok(());
+                        }
                         psocket::DatagramSocketRequest::Sync { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }

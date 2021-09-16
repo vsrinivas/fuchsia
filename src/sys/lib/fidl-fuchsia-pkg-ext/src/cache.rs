@@ -1042,6 +1042,9 @@ mod tests {
                 Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
+                Some(Ok(FileRequest::Close2 { responder })) => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
                 r => panic!("Unexpected request: {:?}", r),
             }
         }

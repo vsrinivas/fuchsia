@@ -282,6 +282,9 @@ impl MockBlob {
             Some(Ok(FileRequest::Close { responder })) => {
                 let _ = responder.send(Status::OK.into_raw());
             }
+            Some(Ok(FileRequest::Close2 { responder })) => {
+                let _ = responder.send(&mut Ok(()));
+            }
             Some(other) => panic!("unexpected request: {:?}", other),
         }
     }
@@ -312,6 +315,9 @@ impl MockBlob {
             match self.stream.next().await {
                 Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
+                }
+                Some(Ok(FileRequest::Close2 { responder })) => {
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }

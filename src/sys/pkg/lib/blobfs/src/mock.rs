@@ -319,6 +319,10 @@ impl Blob {
                 let _ = responder.send(Status::OK.into_raw());
                 self.expect_done().await;
             }
+            Some(Ok(FileRequest::Close2 { responder })) => {
+                let _ = responder.send(&mut Ok(()));
+                self.expect_done().await;
+            }
             Some(other) => panic!("unexpected request: {:?}", other),
         }
     }
@@ -368,6 +372,9 @@ impl Blob {
             Some(Ok(FileRequest::Close { responder })) => {
                 let _ = responder.send(Status::OK.into_raw());
             }
+            Some(Ok(FileRequest::Close2 { responder })) => {
+                let _ = responder.send(&mut Ok(()));
+            }
             Some(other) => panic!("unexpected request: {:?}", other),
         }
     }
@@ -404,6 +411,10 @@ impl Blob {
                 }
                 Some(Ok(FileRequest::Close { responder })) => {
                     let _ = responder.send(Status::OK.into_raw());
+                    return;
+                }
+                Some(Ok(FileRequest::Close2 { responder })) => {
+                    let _ = responder.send(&mut Ok(()));
                     return;
                 }
                 None => {
@@ -489,6 +500,9 @@ impl Blob {
             match self.stream.next().await {
                 Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
+                }
+                Some(Ok(FileRequest::Close2 { responder })) => {
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }

@@ -142,6 +142,10 @@ impl Connection {
                 responder.send(ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
+            FileRequest::Close2 { responder } => {
+                responder.send(&mut Ok(()))?;
+                return Ok(ConnectionState::Closed);
+            }
             FileRequest::Describe { responder } => {
                 let mut info = NodeInfo::Service(Service {});
                 responder.send(&mut info)?;
@@ -196,7 +200,7 @@ impl Connection {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
             // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-            _ => {}
+            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
         }
         Ok(ConnectionState::Alive)
     }

@@ -182,6 +182,11 @@ where
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
+            DirectoryAdminRequest::Close2 { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Close2");
+                responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
+                return Ok(ConnectionState::Closed);
+            }
             DirectoryAdminRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
                 let mut info = NodeInfo::Directory(DirectoryObject);

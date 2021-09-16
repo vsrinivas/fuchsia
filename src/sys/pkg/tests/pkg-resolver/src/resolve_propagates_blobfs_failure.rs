@@ -196,6 +196,9 @@ async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: FileRequ
         FileRequest::Close { responder } => {
             let _ = responder.send(Status::OK.into_raw());
         }
+        FileRequest::Close2 { responder } => {
+            let _ = responder.send(&mut Ok(()));
+        }
         req => panic!("should only receive truncate requests: {:?}", req),
     }
 }
@@ -207,6 +210,9 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest
         }
         FileRequest::Close { responder } => {
             let _ = responder.send(Status::OK.into_raw());
+        }
+        FileRequest::Close2 { responder } => {
+            let _ = responder.send(&mut Ok(()));
         }
         FileRequest::Write { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);

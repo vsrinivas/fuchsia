@@ -28,6 +28,10 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
                         let () =
                             responder.send(zx::Status::OK.into_raw()).expect("send Close response");
                     }
+                    fidl_fuchsia_posix_socket::StreamSocketRequest::Close2 { responder } => {
+                        let () = responder.control_handle().shutdown();
+                        let () = responder.send(&mut Ok(())).expect("send Close response");
+                    }
                     fidl_fuchsia_posix_socket::StreamSocketRequest::Describe { responder } => {
                         let (s0, _s1) =
                             zx::Socket::create(zx::SocketOpts::STREAM).expect("create zx socket");

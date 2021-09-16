@@ -41,8 +41,8 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileCloseResponder, FileRequest, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,
-        MODE_PROTECTION_MASK, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+        FileClose2Responder, FileCloseResponder, FileRequest, NodeMarker, DIRENT_TYPE_FILE,
+        INO_UNKNOWN, MODE_PROTECTION_MASK, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
     },
     fuchsia_zircon::Status,
     futures::{
@@ -191,12 +191,17 @@ where
     )
 }
 
+enum ResponderType {
+    Io1(FileCloseResponder),
+    Io2(FileClose2Responder),
+}
+
 struct OnWriteFuture<OnWriteRes>
 where
     OnWriteRes: Future<Output = Result<(), Status>> + Send,
 {
     res: OnWriteRes,
-    responder: Option<FileCloseResponder>,
+    responder: Option<ResponderType>,
 }
 
 impl<OnWriteRes> OnWriteFuture<OnWriteRes>
@@ -208,9 +213,9 @@ where
     unsafe_pinned!(res: OnWriteRes);
     // unsafe: `responder` is not referenced by any other field in the `OnWriteFuture`, so it is
     // safe to get a mutable reference from a pinned one.
-    unsafe_unpinned!(responder: Option<FileCloseResponder>);
+    unsafe_unpinned!(responder: Option<ResponderType>);
 
-    pub fn new(res: OnWriteRes, responder: Option<FileCloseResponder>) -> Self {
+    pub fn new(res: OnWriteRes, responder: Option<ResponderType>) -> Self {
         OnWriteFuture { res, responder }
     }
 }
@@ -226,14 +231,21 @@ where
             Poll::Ready(Ok(())) => {
                 if let Some(responder) = self.as_mut().responder().take() {
                     // If the responder fails here we have no recourse.
-                    let _ = responder.send(Status::OK.into_raw());
+                    let _ = match responder {
+                        ResponderType::Io1(responder) => responder.send(Status::OK.into_raw()),
+                        ResponderType::Io2(responder) => responder.send(&mut Ok(())),
+                    };
                 }
                 Poll::Ready(())
             }
             Poll::Ready(Err(e)) => {
                 if let Some(responder) = self.as_mut().responder().take() {
+                    let status = e.into_raw();
                     // If the responder fails here we have no recourse.
-                    let _ = responder.send(e.into_raw());
+                    let _ = match responder {
+                        ResponderType::Io1(responder) => responder.send(status),
+                        ResponderType::Io2(responder) => responder.send(&mut Err(status)),
+                    };
                 }
                 Poll::Ready(())
             }
@@ -344,7 +356,14 @@ where
                 })
             }
             FileRequest::Close { responder } => {
-                self.handle_close(connection, Some(responder))?;
+                self.handle_close(connection, Some(ResponderType::Io1(responder)))?;
+                Ok(HandleRequestResult {
+                    connection_state: ConnectionState::Closed,
+                    added_new_connection: false,
+                })
+            }
+            FileRequest::Close2 { responder } => {
+                self.handle_close(connection, Some(ResponderType::Io2(responder)))?;
                 Ok(HandleRequestResult {
                     connection_state: ConnectionState::Closed,
                     added_new_connection: false,
@@ -375,7 +394,7 @@ where
     fn handle_close(
         &mut self,
         connection: &mut FileConnection,
-        responder: Option<FileCloseResponder>,
+        responder: Option<ResponderType>,
     ) -> Result<(), fidl::Error> {
         if let Some(on_write) = &mut self.on_write {
             if let Some(fut) = connection.handle_close(|buf| Some(on_write(buf)), None) {
@@ -385,7 +404,10 @@ where
         }
 
         if let Some(responder) = responder {
-            responder.send(Status::OK.into_raw())
+            match responder {
+                ResponderType::Io1(responder) => responder.send(Status::OK.into_raw()),
+                ResponderType::Io2(responder) => responder.send(&mut Ok(())),
+            }
         } else {
             Ok(())
         }

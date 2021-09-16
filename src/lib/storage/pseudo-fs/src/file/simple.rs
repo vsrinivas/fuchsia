@@ -333,12 +333,20 @@ where
         connection: &mut FileConnection,
     ) -> Result<ConnectionState, Error> {
         match req {
+            // TODO(https://fxbug.dev/77623): Migrate Clone.
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(connection.flags, flags, object);
                 Ok(ConnectionState::Alive)
             }
             FileRequest::Close { responder } => {
                 self.handle_close(connection, |status| responder.send(status.into_raw()))?;
+                Ok(ConnectionState::Closed)
+            }
+            FileRequest::Close2 { responder } => {
+                self.handle_close(connection, |status| {
+                    let result: Result<(), Status> = status.into();
+                    responder.send(&mut result.map_err(|status| status.into_raw()))
+                })?;
                 Ok(ConnectionState::Closed)
             }
             _ => {

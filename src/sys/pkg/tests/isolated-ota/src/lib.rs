@@ -520,6 +520,9 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::Close { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing close")?
             }
+            DirectoryAdminRequest::Close2 { responder } => {
+                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
+            }
             DirectoryAdminRequest::Describe { responder } => {
                 responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
             }

@@ -888,9 +888,19 @@ async fn serve_write_blob(
                     let _ = responder.send(Status::OK.into_raw());
                     return Ok(());
                 }
+                (FileRequest::Close2 { responder }, State::ExpectClose) => {
+                    close().await;
+                    let _ = responder.send(&mut Ok(()));
+                    return Ok(());
+                }
                 (FileRequest::Close { responder }, _) => {
                     close().await;
                     let _ = responder.send(Status::OK.into_raw());
+                    return Err(ServeWriteBlobError::UnexpectedClose);
+                }
+                (FileRequest::Close2 { responder }, _) => {
+                    close().await;
+                    let _ = responder.send(&mut Ok(()));
                     return Err(ServeWriteBlobError::UnexpectedClose);
                 }
 

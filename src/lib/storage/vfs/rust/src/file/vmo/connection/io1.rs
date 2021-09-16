@@ -371,6 +371,17 @@ impl VmoFileConnection {
                 let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
                 return Ok(ConnectionState::Closed);
             }
+            FileRequest::Close2 { responder } => {
+                // We are going to close the connection anyways, so there is no way to handle this
+                // error.
+                let _ = self
+                    .handle_close(|status| {
+                        let result: Result<(), zx::Status> = status.into();
+                        responder.send(&mut result.map_err(|status| status.into_raw()))
+                    })
+                    .await;
+                return Ok(ConnectionState::Closed);
+            }
             FileRequest::Describe { responder } => match self.get_node_info().await {
                 Ok(mut info) => responder.send(&mut info)?,
                 Err(status) => {
