@@ -102,6 +102,9 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
     constraints.usage.cpu =
         fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
     constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+    // Disabling CPU domain to validate coherency domain in test HandleGetImageInfo
+    constraints.buffer_memory_constraints.cpu_domain_supported = false;
     constraints.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[0];
@@ -341,7 +344,8 @@ class VirtioMagmaTest : public TestWithDevice {
     EXPECT_EQ(response.hdr.flags, 0u);
   }
 
-  void CreateImage(uint64_t connection, magma_buffer_t* image_out) {
+  void CreateImage(uint64_t connection, magma_image_create_info_t* create_info,
+                   magma_buffer_t* image_out) {
     virtio_magma_virt_create_image_ctrl_t request = {
         .hdr =
             {
@@ -349,18 +353,10 @@ class VirtioMagmaTest : public TestWithDevice {
             },
         .connection = connection,
     };
-    magma_image_create_info_t create_image = {
-        .drm_format = DRM_FORMAT_ARGB8888,
-        .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
-        .width = 1920,
-        .height = 1080,
-        // Presentable causes VirtioMagma to register buffer collection with scenic
-        .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE,
-    };
 
-    std::vector<uint8_t> request_buffer(sizeof(request) + sizeof(create_image));
+    std::vector<uint8_t> request_buffer(sizeof(request) + sizeof(*create_info));
     memcpy(request_buffer.data(), &request, sizeof(request));
-    memcpy(request_buffer.data() + sizeof(request), &create_image, sizeof(create_image));
+    memcpy(request_buffer.data() + sizeof(request), create_info, sizeof(*create_info));
 
     virtio_magma_virt_create_image_resp_t response{};
     uint16_t descriptor_id{};
@@ -382,6 +378,43 @@ class VirtioMagmaTest : public TestWithDevice {
     ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
     EXPECT_NE(response.image_out, 0u);
     *image_out = response.image_out;
+  }
+
+  void GetImageInfo(uint64_t connection, magma_buffer_t image, magma_image_info_t* image_info_out) {
+    virtio_magma_virt_get_image_info_ctrl_t request = {
+        .hdr =
+            {
+                .type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
+            },
+        .connection = connection,
+        .image = image,
+    };
+
+    // Must use a writeable descriptor for the request because the queue copies readable
+    // descriptors.
+    void* request_ptr;
+
+    virtio_magma_virt_get_image_info_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(
+        DescriptorChainBuilder(out_queue_)
+            .AppendWritableDescriptor(&request_ptr, sizeof(request) + sizeof(magma_image_info_t))
+            .AppendWritableDescriptor(&response_ptr, sizeof(response))
+            .Build(&descriptor_id),
+        ZX_OK);
+    memcpy(request_ptr, &request, sizeof(request));
+    magma_->NotifyQueue(0);
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+    memcpy(image_info_out, reinterpret_cast<uint8_t*>(request_ptr) + sizeof(request),
+           sizeof(magma_image_info_t));
   }
 
  protected:
@@ -510,14 +543,49 @@ TEST_F(VirtioMagmaTest, HandleReadNotificationChannel2) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
+TEST_F(VirtioMagmaTest, HandleGetImageInfo) {
+  magma_device_t device{};
+  ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
+  uint64_t connection{};
+  ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
+
+  magma_image_create_info_t create_info = {
+      .drm_format = DRM_FORMAT_ARGB8888,
+      .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
+      .width = 1920,
+      .height = 1080,
+      // Presentable causes VirtioMagma to register buffer collection with scenic
+      .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE,
+  };
+  magma_buffer_t image{};
+  ASSERT_NO_FATAL_FAILURE(CreateImage(connection, &create_info, &image));
+
+  magma_image_info_t info{};
+  ASSERT_NO_FATAL_FAILURE(GetImageInfo(connection, image, &info));
+
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, info.coherency_domain);
+
+  ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, image));
+  ASSERT_NO_FATAL_FAILURE(ReleaseConnection(connection));
+  ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
+}
+
 TEST_F(VirtioMagmaTest, HandleImportExport) {
   magma_device_t device{};
   ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
   uint64_t connection{};
   ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
 
+  magma_image_create_info_t create_info = {
+      .drm_format = DRM_FORMAT_ARGB8888,
+      .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
+      .width = 1920,
+      .height = 1080,
+      // Presentable causes VirtioMagma to register buffer collection with scenic
+      .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE,
+  };
   magma_buffer_t image{};
-  ASSERT_NO_FATAL_FAILURE(CreateImage(connection, &image));
+  ASSERT_NO_FATAL_FAILURE(CreateImage(connection, &create_info, &image));
 
   {
     virtio_magma_export_ctrl_t request{};

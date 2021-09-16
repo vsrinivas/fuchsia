@@ -169,6 +169,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
+      EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
 
       buffer_id = magma_get_buffer_id(image);
 
@@ -202,6 +203,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
+      EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
 
       EXPECT_EQ(buffer_id, magma_get_buffer_id(image));
 

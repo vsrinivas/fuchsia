@@ -34,6 +34,7 @@ TEST_F(MagmaImageTesting, SpecifyLinear) {
   EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, image_info.drm_format_modifier);
   EXPECT_EQ(kWidth * 4u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
 }
 
@@ -57,6 +58,7 @@ TEST_F(MagmaImageTesting, SpecifyIntelX) {
   EXPECT_EQ(I915_FORMAT_MOD_X_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
 }
 
@@ -80,6 +82,7 @@ TEST_F(MagmaImageTesting, SpecifyIntelY) {
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
 }
 
@@ -125,6 +128,7 @@ TEST_F(MagmaImageTesting, IntelMany) {
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
 }
 
@@ -148,6 +152,7 @@ TEST_F(MagmaImageTesting, IntelNone) {
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
 }
 
@@ -172,5 +177,6 @@ TEST_F(MagmaImageTesting, IntelNonePresentable) {
     EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_X_TILED);
   EXPECT_EQ(0u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
+  EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_TRUE(token);
 }

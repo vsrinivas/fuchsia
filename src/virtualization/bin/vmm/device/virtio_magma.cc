@@ -24,6 +24,7 @@
 static constexpr const char* kDeviceDir = "/dev/class/gpu";
 
 #if VIRTMAGMA_DEBUG
+#include <lib/syslog/global.h>
 #define LOG_VERBOSE(msg, ...) _FX_LOGF(FX_LOG_INFO, "virtio_magma", msg, ##__VA_ARGS__)
 #else
 #define LOG_VERBOSE(msg, ...)
@@ -643,7 +644,9 @@ zx_status_t VirtioMagma::Handle_virt_get_image_info(
 
   auto& map = connection_image_map_[connection];
 
-  auto iter = map.find(request->image);
+  const magma_buffer_t image = request->image;
+
+  auto iter = map.find(image);
   if (iter == map.end()) {
     response->result_return = MAGMA_STATUS_INVALID_ARGS;
     return ZX_OK;

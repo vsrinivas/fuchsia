@@ -487,6 +487,22 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     image_info_out->drm_format_modifier = DRM_FORMAT_MOD_LINEAR;
   }
 
+  switch (collection_info.settings.buffer_settings.coherency_domain) {
+    case fuchsia_sysmem::wire::CoherencyDomain::kCpu:
+      image_info_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_CPU;
+      break;
+    case fuchsia_sysmem::wire::CoherencyDomain::kRam:
+      image_info_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_RAM;
+      break;
+    case fuchsia_sysmem::wire::CoherencyDomain::kInaccessible:
+      image_info_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_INACCESSIBLE;
+      break;
+    default:
+      LOG_VERBOSE("Unhandled coherency domain: %u",
+                  collection_info.settings.buffer_settings.coherency_domain);
+      return ZX_ERR_INTERNAL;
+  }
+
   *vmo_out = std::move(collection_info.buffers[0].vmo);
   *token_out = std::move(scenic_import_token_.value);
 

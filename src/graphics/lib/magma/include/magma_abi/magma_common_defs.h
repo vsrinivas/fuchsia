@@ -343,6 +343,7 @@ typedef struct {
   uint64_t plane_strides[MAGMA_MAX_IMAGE_PLANES];
   uint32_t plane_offsets[MAGMA_MAX_IMAGE_PLANES];
   uint64_t drm_format_modifier;
+  uint32_t coherency_domain;
 } magma_image_info_t;
 
 #if defined(__cplusplus)
