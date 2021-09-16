@@ -546,6 +546,27 @@ async fn test_repo() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_repo_show() {
+    let env = TestEnv::new();
+
+    // Add two repos, then verify we can get the details from the one we request.
+    env.add_repository(
+        RepositoryConfigBuilder::new(RepoUrl::new("z.com".to_string()).expect("valid url")).build(),
+    );
+    let repo =
+        RepositoryConfigBuilder::new(RepoUrl::new("a.com".to_string()).expect("valid url")).build();
+    env.add_repository(repo.clone());
+
+    // The JSON conversion does not contain the trailing newline that we get when actually running
+    // the command on the command line.
+    let expected = serde_json::to_string_pretty(&repo).expect("valid json") + "\n";
+    let output = env.run_pkgctl(vec!["repo", "show", "fuchsia-pkg://a.com"]).await;
+
+    assert_stdout(&output, &expected);
+    env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::List]);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_repo_sorts_lines() {
     let env = TestEnv::new();
     env.add_repository(

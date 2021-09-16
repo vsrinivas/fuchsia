@@ -7,8 +7,8 @@ use {
         Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
         ExperimentSubCommand, GcCommand, GetHashCommand, OpenCommand, PkgStatusCommand,
         RepoAddCommand, RepoAddFileCommand, RepoAddSubCommand, RepoAddUrlCommand, RepoCommand,
-        RepoConfigFormat, RepoRemoveCommand, RepoSubCommand, ResolveCommand, RuleClearCommand,
-        RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
+        RepoConfigFormat, RepoRemoveCommand, RepoShowCommand, RepoSubCommand, ResolveCommand,
+        RuleClearCommand, RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
         RuleReplaceFileCommand, RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
     },
     crate::v1repoconf::{validate_host, SourceConfig},
@@ -282,6 +282,20 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                     let () = res.map_err(zx::Status::from_raw)?;
 
                     Ok(0)
+                }
+
+                Some(RepoSubCommand::Show(RepoShowCommand { repo_url })) => {
+                    let repos = fetch_repos(repo_manager).await?;
+                    for repo in repos.into_iter() {
+                        if repo.repo_url().to_string() == repo_url {
+                            let s = serde_json::to_string_pretty(&repo).expect("valid json");
+                            println!("{}", s);
+                            return Ok(0);
+                        }
+                    }
+
+                    println!("Package repository not found: {:?}", repo_url);
+                    Ok(1)
                 }
             }
         }

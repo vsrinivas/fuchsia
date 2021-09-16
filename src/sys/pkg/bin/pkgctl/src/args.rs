@@ -77,6 +77,7 @@ pub struct RepoCommand {
 pub enum RepoSubCommand {
     Add(RepoAddCommand),
     Remove(RepoRemoveCommand),
+    Show(RepoShowCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -150,6 +151,14 @@ pub struct RepoAddUrlCommand {
 #[argh(subcommand, name = "rm")]
 /// Remove a configured source repository.
 pub struct RepoRemoveCommand {
+    #[argh(positional)]
+    pub repo_url: String,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "show")]
+/// Show JSON-formatted details of a configured source repository.
+pub struct RepoShowCommand {
     #[argh(positional)]
     pub repo_url: String,
 }
@@ -513,6 +522,15 @@ mod tests {
             RepoCommand {
                 verbose: false,
                 subcommand: Some(RepoSubCommand::Remove(RepoRemoveCommand {
+                    repo_url: REPO_URL.to_string(),
+                })),
+            },
+        );
+        check(
+            &["repo", "show", REPO_URL],
+            RepoCommand {
+                verbose: false,
+                subcommand: Some(RepoSubCommand::Show(RepoShowCommand {
                     repo_url: REPO_URL.to_string(),
                 })),
             },
