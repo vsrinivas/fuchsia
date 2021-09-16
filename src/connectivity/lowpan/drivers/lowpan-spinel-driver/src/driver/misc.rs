@@ -60,6 +60,17 @@ impl<'a> std::ops::Drop for ApiTaskLock<'a> {
 
 /// Miscellaneous private methods
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
+    pub(super) fn prepare_for_init(&self) {
+        self.frame_handler.clear();
+        let maybe_old_state = self.driver_state.lock().prepare_for_init();
+        self.driver_state_change.trigger();
+
+        if let Some(old_state) = maybe_old_state {
+            // Make sure we signal a connectivity state change.
+            self.on_connectivity_state_change(ConnectivityState::Attaching, old_state);
+        }
+    }
+
     /// This method is called whenever it is observed that the
     /// NCP is acting in a weird or spurious manner. This could
     /// be due to timeouts or bad byte packing, for example.
@@ -67,9 +78,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         fx_log_err!("NCP is misbehaving.");
 
         // TODO: Add a counter?
-
-        self.driver_state.lock().prepare_for_init();
-        self.driver_state_change.trigger();
+        self.prepare_for_init();
     }
 
     /// Waits for all of the returned values from

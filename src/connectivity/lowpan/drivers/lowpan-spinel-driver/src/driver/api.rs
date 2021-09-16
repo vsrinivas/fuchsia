@@ -271,9 +271,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         let ret = self.apply_standard_combinators(task.boxed()).await;
 
         // Clear the frame handler prepare for (re)initialization.
+        self.prepare_for_init();
         self.frame_handler.clear();
-        self.driver_state.lock().prepare_for_init();
-        self.driver_state_change.trigger();
 
         ret
     }
@@ -825,8 +824,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         fx_log_info!("Got API request to reset");
 
         // Clear the frame handler one more time and prepare for (re)initialization.
-        self.driver_state.lock().prepare_for_init();
-        self.driver_state_change.trigger();
+        self.prepare_for_init();
         self.frame_handler.clear();
 
         // Wait for initialization to complete.
@@ -1483,7 +1481,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         if res.tx_counters.len() != 17 || res.rx_counters.len() != 17 {
             fx_log_err!(
                 "get_counters: Unexpected counter length: {} tx counters and \
-                        {} rx counters",
+                 {} rx counters",
                 res.tx_counters.len(),
                 res.rx_counters.len()
             );

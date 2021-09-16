@@ -98,12 +98,20 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                         {
                             let mut driver_state = self.driver_state.lock();
                             if driver_state.init_state != InitState::WaitingForReset {
-                                driver_state.prepare_for_init();
+                                let maybe_old_state = driver_state.prepare_for_init();
 
                                 // Avoid holding the mutex for longer than we need to.
                                 std::mem::drop(driver_state);
 
                                 self.driver_state_change.trigger();
+
+                                if let Some(old_state) = maybe_old_state {
+                                    // Make sure we signal a connectivity state change.
+                                    self.on_connectivity_state_change(
+                                        ConnectivityState::Attaching,
+                                        old_state,
+                                    );
+                                }
                             }
                         }
                         self.ncp_did_reset.trigger();

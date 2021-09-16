@@ -188,6 +188,11 @@ impl DriverState {
     }
 
     /// Prepares the driver state for (re-)initialization.
+    ///
+    /// If the current connectivity state is not valid for initialization, then
+    /// the connectivity state will be changed to `ConnectivityState::Attaching`
+    /// and the old connectivity state will be reflected in the return value as
+    /// `Some(old_connectivity_state)`. Otherwise, returns `None`.
     pub fn prepare_for_init(&mut self) -> Option<ConnectivityState> {
         let old_state = self.connectivity_state;
 
