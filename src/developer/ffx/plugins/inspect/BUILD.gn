@@ -16,5 +16,5 @@ ffx_plugin("ffx_inspect") {
 
   args_deps = [ "//src/diagnostics/iquery:lib" ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

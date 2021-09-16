@@ -20,5 +20,5 @@ ffx_plugin("ffx_repository") {
     "target:ffx_repository_target",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

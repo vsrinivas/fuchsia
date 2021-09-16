@@ -14,5 +14,5 @@ ffx_plugin("ffx_debug_plugin") {
     "zxdb:ffx_debug_zxdb",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

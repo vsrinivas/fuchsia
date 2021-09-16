@@ -9,5 +9,5 @@ ffx_plugin("ffx_platform") {
   edition = "2018"
   with_unit_tests = true
   plugin_deps = [ "preflight:ffx_preflight" ]
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

@@ -13,7 +13,7 @@ ffx_plugin("ffx_repository_target") {
     "register:ffx_repository_target_register",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }
 
 group("tests") {

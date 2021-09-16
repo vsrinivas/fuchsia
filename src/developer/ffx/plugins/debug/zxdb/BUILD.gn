@@ -8,5 +8,5 @@ ffx_plugin("ffx_debug_zxdb") {
   version = "0.1.0"
   edition = "2018"
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

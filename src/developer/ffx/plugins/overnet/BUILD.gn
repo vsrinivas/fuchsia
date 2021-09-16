@@ -13,8 +13,7 @@ ffx_plugin("ffx_overnet_plugin") {
   deps = [ ONET_TOOL ]
   args_deps = [ ONET_TOOL ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

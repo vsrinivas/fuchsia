@@ -16,5 +16,5 @@ ffx_plugin("ffx_daemon_plugin") {
     "stop:ffx_daemon_stop",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

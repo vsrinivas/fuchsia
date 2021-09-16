@@ -20,8 +20,7 @@ ffx_plugin("ffx_debug_fidlcat") {
     "//third_party/rust_crates:signal-hook",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

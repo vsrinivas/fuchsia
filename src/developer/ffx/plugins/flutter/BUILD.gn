@@ -9,5 +9,5 @@ ffx_plugin("ffx_flutter") {
   edition = "2021"
   with_unit_tests = false
   plugin_deps = [ "tunnel:ffx_flutter_tunnel" ]
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

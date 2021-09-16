@@ -40,8 +40,7 @@ ffx_plugin("ffx_log") {
     "//third_party/rust_crates:termion",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

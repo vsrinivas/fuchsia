@@ -13,8 +13,7 @@ ffx_plugin("ffx_component_run") {
     "//src/developer/ffx/plugins/component/common:ffx_component",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

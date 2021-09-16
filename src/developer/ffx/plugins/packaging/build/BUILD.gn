@@ -17,8 +17,7 @@ ffx_plugin("ffx_packaging_build") {
 
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

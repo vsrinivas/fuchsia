@@ -20,7 +20,7 @@ ffx_plugin("ffx_component") {
     "stop:ffx_component_stop",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }
 
 group("tests") {

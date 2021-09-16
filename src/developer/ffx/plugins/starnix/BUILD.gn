@@ -12,5 +12,5 @@ ffx_plugin("ffx_starnix") {
     "start:ffx_starnix_start",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

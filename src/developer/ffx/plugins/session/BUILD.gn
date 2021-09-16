@@ -15,7 +15,7 @@ ffx_plugin("ffx_session") {
     "restart:ffx_session_restart",
     "show:ffx_session_show",
   ]
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }
 
 group("tests") {

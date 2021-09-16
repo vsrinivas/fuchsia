@@ -13,8 +13,7 @@ ffx_plugin("ffx_driver_restart") {
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

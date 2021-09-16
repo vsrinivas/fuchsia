@@ -19,10 +19,9 @@ ffx_plugin("ffx_driver_lspci") {
 
   args_deps = [ "//src/devices/pci/bin/lspci:lib" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 
   inputs = [ "//third_party/pciids/pci.ids.zst" ]
 }

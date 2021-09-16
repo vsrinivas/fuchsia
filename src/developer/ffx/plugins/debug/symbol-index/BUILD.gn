@@ -54,8 +54,9 @@ ffx_plugin("ffx_debug_symbol_index") {
     "//third_party/rust_crates:tempfile",
   ]
 
+  args_sources = [ "src/args.rs" ]
+
   sources = [
-    "src/args.rs",
     "src/lib.rs",
     "src/symbol_index.rs",
   ]

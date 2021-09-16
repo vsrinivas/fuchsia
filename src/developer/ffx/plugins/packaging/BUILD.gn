@@ -15,5 +15,5 @@ ffx_plugin("ffx_packaging") {
     "import:ffx_packaging_import",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

@@ -24,8 +24,7 @@ ffx_plugin("ffx_inspect_selectors") {
 
   args_deps = [ "//src/diagnostics/iquery:lib" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

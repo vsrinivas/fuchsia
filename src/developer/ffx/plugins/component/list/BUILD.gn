@@ -16,8 +16,7 @@ ffx_plugin("ffx_component_list") {
 
   args_deps = [ "//src/lib/component_hub" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

@@ -11,7 +11,7 @@ ffx_plugin("ffx_cpu") {
 
   with_unit_tests = true
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }
 
 group("tests") {

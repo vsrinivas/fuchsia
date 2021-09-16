@@ -19,5 +19,5 @@ ffx_plugin("ffx_scrutiny_list") {
   ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

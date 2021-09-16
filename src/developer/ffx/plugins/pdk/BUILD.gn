@@ -13,5 +13,5 @@ ffx_plugin("ffx_pdk") {
     "update:ffx_pdk_update",
   ]
 
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

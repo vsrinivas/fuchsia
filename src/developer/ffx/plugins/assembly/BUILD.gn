@@ -9,6 +9,8 @@ ffx_plugin("ffx_assembly") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
+
+  args_sources = [ "src/args.rs" ]
   sources = [
     "src/args.rs",
     "src/base_package.rs",

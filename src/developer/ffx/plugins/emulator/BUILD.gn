@@ -8,9 +8,10 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 ffx_plugin("ffx_emulator") {
   version = "0.1.0"
   edition = "2018"
+
+  args_sources = [ "src/args.rs" ]
   with_unit_tests = true
   sources = [
-    "src/args.rs",
     "src/cipd.rs",
     "src/graphic_utils.rs",
     "src/images.rs",

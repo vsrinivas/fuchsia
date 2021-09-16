@@ -10,8 +10,7 @@ ffx_plugin("ffx_packaging_download") {
   with_unit_tests = true
   deps = [ "//src/developer/ffx/lib/pkg:pkg" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

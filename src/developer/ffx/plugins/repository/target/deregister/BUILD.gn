@@ -14,8 +14,7 @@ ffx_plugin("ffx_repository_target_deregister") {
     "//third_party/rust_crates:futures",
   ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }

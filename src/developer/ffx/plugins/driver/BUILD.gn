@@ -20,5 +20,5 @@ ffx_plugin("ffx_driver") {
     "register:ffx_driver_register",
     "restart:ffx_driver_restart",
   ]
-  sources = [ "src/args.rs" ]
+  args_sources = [ "src/args.rs" ]
 }

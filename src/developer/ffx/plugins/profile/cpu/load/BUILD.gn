@@ -12,8 +12,7 @@ ffx_plugin("ffx_cpu_load") {
 
   deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc" ]
 
-  sources = [
-    "src/args.rs",
-    "src/lib.rs",
-  ]
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
 }
