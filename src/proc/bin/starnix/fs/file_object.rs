@@ -103,7 +103,7 @@ pub trait FileOps: Send + Sync + AsAny {
         events: FdEvents,
         _handler: Option<WaitHandler>,
     ) {
-        file.node().observers.wait_async(waiter, events)
+        file.node().observers.wait_async(waiter, events.mask())
     }
 
     fn ioctl(

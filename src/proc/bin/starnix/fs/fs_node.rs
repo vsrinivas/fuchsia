@@ -12,7 +12,7 @@ use crate::error;
 use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
 use crate::fs::*;
-use crate::task::Task;
+use crate::task::*;
 use crate::types::*;
 
 pub struct FsNode {

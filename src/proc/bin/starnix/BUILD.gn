@@ -96,7 +96,6 @@ if (target_cpu == "x64") {
       "fs/mod.rs",
       "fs/namespace.rs",
       "fs/null_file.rs",
-      "fs/observer_list.rs",
       "fs/path.rs",
       "fs/pipe.rs",
       "fs/proc/fs.rs",

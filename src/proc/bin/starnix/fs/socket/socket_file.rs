@@ -26,9 +26,9 @@ impl FileOps for SocketFile {
         let mut it = UserBufferIterator::new(data);
         let bytes_read = pipe.read(task, &mut it)?;
         if bytes_read > 0 {
-            file.node().observers.notify(FdEvents::POLLOUT);
+            file.node().observers.notify(FdEvents::POLLOUT.mask());
             socket.connected_node().map(|connected_node| {
-                connected_node.observers.notify(FdEvents::POLLOUT);
+                connected_node.observers.notify(FdEvents::POLLOUT.mask());
             });
         }
 
@@ -53,7 +53,7 @@ impl FileOps for SocketFile {
                 actual += match connected_socket.pipe().write(task, &mut it) {
                     Ok(chunk) => {
                         if chunk > 0 {
-                            connected_node.observers.notify(FdEvents::POLLIN);
+                            connected_node.observers.notify(FdEvents::POLLIN.mask());
                         }
                         chunk
                     }

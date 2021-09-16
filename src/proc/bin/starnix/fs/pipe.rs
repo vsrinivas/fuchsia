@@ -93,7 +93,7 @@ impl Pipe {
             events
         };
         if events != FdEvents::empty() {
-            node.observers.notify(events);
+            node.observers.notify(events.mask());
         }
         Box::new(PipeFileObject { pipe: Arc::clone(pipe) })
     }
@@ -362,7 +362,7 @@ impl FileOps for PipeFileObject {
             events
         };
         if events != FdEvents::empty() {
-            file.node().observers.notify(events);
+            file.node().observers.notify(events.mask());
         }
     }
 
@@ -370,7 +370,7 @@ impl FileOps for PipeFileObject {
         let mut it = UserBufferIterator::new(data);
         let actual = self.pipe.lock().read(task, &mut it)?;
         if actual > 0 {
-            file.node().observers.notify(FdEvents::POLLOUT);
+            file.node().observers.notify(FdEvents::POLLOUT.mask());
         }
         Ok(actual)
     }
@@ -385,7 +385,7 @@ impl FileOps for PipeFileObject {
                 actual += match self.pipe.lock().write(task, &mut it) {
                     Ok(chunk) => {
                         if chunk > 0 {
-                            file.node().observers.notify(FdEvents::POLLIN);
+                            file.node().observers.notify(FdEvents::POLLIN.mask());
                         }
                         chunk
                     }

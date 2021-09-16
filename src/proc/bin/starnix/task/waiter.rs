@@ -123,6 +123,67 @@ impl Waiter {
     }
 }
 
+/// A list of waiters waiting for some event.
+///
+/// For events that are generated inside Starnix, we walk the observer list
+/// on the thread that triggered the event to notify the waiters that the event
+/// has occurred. The waiters will then wake up on their own thread to handle
+/// the event.
+#[derive(Default)]
+pub struct ObserverList {
+    /// The list of observers.
+    observers: Mutex<Vec<Observer>>,
+}
+
+/// An entry in an ObserverList.
+struct Observer {
+    /// The waiter that is waking for the FdEvent.
+    waiter: Arc<Waiter>,
+
+    /// The bitmask that the waiter is waiting for.
+    events: u32,
+
+    /// Whether the observer wishes to remain in the ObserverList after one of
+    /// the events that the waiter is waiting for occurs.
+    persistent: bool,
+}
+
+impl ObserverList {
+    /// Establish a wait for the given events.
+    ///
+    /// The waiter will be notified when an event matching the events mask
+    /// occurs.
+    ///
+    /// This function does not actually block the waiter. To block the waiter,
+    /// call the "wait" function on the waiter.
+    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: u32) {
+        let mut observers = self.observers.lock();
+        (*observers).push(Observer { waiter: Arc::clone(waiter), events, persistent: false });
+    }
+
+    /// Notify any observers that the given events have occurred.
+    ///
+    /// Walks the observer list and wakes each observer that is waiting on an
+    /// event that matches the given mask. Persistent observers remain in the
+    /// list. Non-persistent observers are removed.
+    ///
+    /// The waiters will wake up on their own threads to handle these events.
+    /// They are not called synchronously by this function.
+    pub fn notify(&self, events: u32) {
+        let mut observers = self.observers.lock();
+        *observers = std::mem::take(&mut *observers)
+            .into_iter()
+            .filter(|observer| {
+                if observer.events & events != 0 {
+                    observer.waiter.wake();
+                    return observer.persistent;
+                }
+                return true;
+            })
+            .collect();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
