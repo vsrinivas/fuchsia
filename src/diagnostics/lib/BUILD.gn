@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "cpp-log-decoder:tests",
     "inspect-fetcher:tests",
     "inspect-fidl-load:tests",
     "sampler-config:tests",

@@ -43,7 +43,7 @@ pub struct Message {
     pub id: MessageId,
 
     #[serde(flatten)]
-    data: LogsData,
+    pub data: LogsData,
 }
 
 #[derive(Clone, Serialize)]

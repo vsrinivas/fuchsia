@@ -1,0 +1,49 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test.gni")
+
+executable("cpp-log-decoder-unittest") {
+  testonly = true
+  sources = [ "test.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}
+
+rustc_staticlib("lib") {
+  name = "archivist_c_lib"
+  with_unit_tests = true
+  edition = "2018"
+  sources = [ "src/lib.rs" ]
+  public = [ "log_decoder.h" ]
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/lib/diagnostics/log/message/rust",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+  testonly = true
+}
+
+fuchsia_unittest_package("cpp-log-decoder-tests") {
+  deps = [ ":cpp-log-decoder-unittest" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cpp-log-decoder-tests" ]
+}
