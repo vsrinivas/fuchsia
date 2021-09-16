@@ -203,16 +203,18 @@ prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dart format $FILES
 ```
 
 The `dartanalyzer` is run as part of the build, triggered when the [`dart_library`](/build/dart/dart_library.gni) GN template is
-invoked. The [invocation](/build/dart/gen_analyzer_invocation.py) is:
+invoked. The [invocation](/build/dart/run_analysis.py) is:
 
 ```sh
 prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dartanalyzer \
   --packages=$DOT_PACKAGES_FILE \
   --dart-sdk=prebuilt/third_party/dart/${HOST_PLATFORM} \
+  --options=$PACKAGE_ROOT/analysis_options \
   --fatal-warnings \
   --fatal-hints \
   --fatal-lints \
-  --options=$PACKAGE_ROOT/analysis_options \
+  --enable-experiment \
+  non-nullable \
   $FILES
   ```
 
