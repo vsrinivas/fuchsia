@@ -1,39 +1,39 @@
-# Copyright CURRENT_YEAR The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_test.gni")
 
-rustc_test("bin") {
- name = "BINARY_NAME"
- edition = "2018"
- source_root = "src/BINARY_NAME.rs"
- sources = [ "src/BINARY_NAME.rs" ]
+executable("bin") {
+ testonly = true
+ sources = [ "src/echo_server_test.cc" ]
  deps = [
    # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
    # ex: "//examples/components/routing/fidl:echo-rustc",
    {COMPONENT_FIDL_BUILD_TARGET},
-   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-   "//src/lib/fidl/rust/fidl",
-   "//src/lib/fuchsia",
-   "//src/lib/fuchsia-component",
-   "//third_party/rust_crates:anyhow",
-   "//third_party/rust_crates:futures",
-  ]
+   "//garnet/public/lib/gtest",
+   "//sdk/fidl/fuchsia.component",
+   "//sdk/fidl/fuchsia.logger",
+   "//sdk/lib/fidl/cpp",
+   "//sdk/lib/sys/cpp",
+   "//sdk/lib/sys/cpp/testing:realm_builder",
+   "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
+   "//src/lib/fxl/test:gtest_main",
+ ]
 }
 
-fuchsia_component("BINARY_NAME") {
+fuchsia_component(":echo_server_test") {
  testonly = true
- manifest = "meta/BINARY_NAME.cml"
  deps = [ ":bin" ]
+ manifest = "meta/echo_server_test.cml"
+
 }
 
 fuchsia_test_package("integration_test_pkg") {
- package_name = "COMPONENT_NAME"
- test_components = [ ":BINARY_NAME" ]
+ package_name = "echo_server"
+ test_components = [ ":echo_server_test" ]
  deps = [
-   ":BINARY_NAME",
+   ":echo_server_test",
    # Change COMPONENT_BUILD_TARGET to component targets the test use
    # ex: "//examples/components/routing/echo_server:echo_server_component",
    {COMPONENT_BUILD_TARGET},

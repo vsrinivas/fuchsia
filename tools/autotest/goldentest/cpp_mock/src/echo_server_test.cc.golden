@@ -1,0 +1,46 @@
+#include </fidl/examples/routing/echo/cpp/fidl.h>;
+#include <gtest/gtest.h>;
+#include <lib/gtest/real_loop_fixture.h>;
+#include <lib/sys/cpp/testing/realm_builder.h>;
+
+constexpr char COMPONENT_URL[] = "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm";
+
+
+class EchoServerTest: public ::gtest::RealLoopFixture {
+
+ protected:
+  void SetUp() override {
+    context_ = sys::ComponentContext::Create();
+  }
+
+  sys::ComponentContext* context() { return context_.get(); }
+
+  std::unique_ptr<sys::testing::Realm> CreateRealm() {
+
+    auto realm_builder = sys::testing::Realm::Builder::New(context());
+    realm_builder
+      .AddComponent(
+        sys::testing::Moniker{"echo_server"},
+        sys::testing::Component{.source = sys::testing::ComponentUrl {COMPONENT_URL}})
+      .AddRoute(sys::testing::CapabilityRoute {
+        .capability = sys::testing::Protocol {"fuchsia.logger.LogSink"},
+        .source = sys::testing::AboveRoot(),
+        .targets = {sys::testing::Moniker{"echo_server"}, }})
+      .AddRoute(sys::testing::CapabilityRoute {
+        .capability = sys::testing::Protocol {"fidl.examples.routing.echo.Echo"},
+        .source = sys::testing::Moniker{"echo_server"},
+        .targets = {sys::testing::AboveRoot(), }});
+
+    return std::make_unique<sys::testing::Realm>(realm_builder.Build(dispatcher()));
+  }
+
+ private:
+  std::unique_ptr<sys::ComponentContext> context_;
+};
+
+TEST_F(EchoServerTest, Echo) {
+  auto realm = CreateRealm();
+  fidl::examples::routing::echo::Echo proxy;
+  realm -> Connect(proxy.NewRequest());
+}
+

@@ -51,5 +51,8 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":bin_test($host_toolchain)" ]
+  deps = [
+    ":bin_test($host_toolchain)",
+    "//tools/autotest/goldentest:tests",
+  ]
 }

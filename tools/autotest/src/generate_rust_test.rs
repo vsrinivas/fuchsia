@@ -165,7 +165,9 @@ impl TestCodeBuilder for RustTestCode {
                 {}
             ],
         }})?"#,
-            protocol, source_code, targets_code
+            protocol,
+            source_code,
+            targets_code.trim_end()
         ));
         self
     }
@@ -201,7 +203,9 @@ impl TestCodeBuilder for RustTestCode {
                 {}
             ],
         }})?"#,
-            dir_name, dir_path, targets_code
+            dir_name,
+            dir_path,
+            targets_code.trim_end()
         ));
         self
     }
@@ -237,7 +241,9 @@ impl TestCodeBuilder for RustTestCode {
                 {}
             ],
         }})?"#,
-            storage_name, storage_path, targets_code
+            storage_name,
+            storage_path,
+            targets_code.trim_end()
         ));
         self
     }

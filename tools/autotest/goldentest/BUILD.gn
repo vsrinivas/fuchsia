@@ -1,0 +1,171 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("goldentest_lib") {
+  sources = [ "rust_golden_test.go" ]
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":goldentest_cpp_mock($host_toolchain)",
+    ":goldentest_cpp_nomock($host_toolchain)",
+    ":goldentest_rust_mock($host_toolchain)",
+    ":goldentest_rust_nomock($host_toolchain)",
+  ]
+}
+
+# To generate new golden ex: cpp_mock
+# fx set core.qemu-x64 --with //examples/components/echo:echo-example --with //tools/autotest/goldentest:tests
+# fx build
+# ./out/default/host_x64/autotest -l ./out/default/obj/examples/components/routing/echo_server/cml/echo_server_component/echo_server.cm -o tools/autotest/goldentest/cpp_mock -c -m
+if (is_host) {
+  _tools_out = "${target_gen_dir}/goldentest/host_tools"
+  host_test_data("copy_autotest") {
+    sources = [ "${host_tools_dir}/autotest" ]
+    deps = [ "//tools/autotest:host($host_toolchain)" ]
+    outputs = [ "${_tools_out}/{{source_file_part}}" ]
+  }
+
+  _example_out = "${target_gen_dir}/goldentest/echo"
+  host_test_data("copy_example_component") {
+    sources = [ get_label_info(
+                    "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})",
+                    "target_out_dir") +
+                "/cml/echo_server_component/echo_server.cm" ]
+    outputs = [ "${_example_out}/{{source_file_part}}" ]
+    deps = [ "//examples/components/routing/echo_server:echo_server_component(${target_toolchain})" ]
+  }
+
+  _golden_rust_mock_path = "${target_gen_dir}/rust_mock"
+  host_test_data("golden_rust_mock") {
+    sources = [
+      "rust_mock/BUILD.gn.golden",
+      "rust_mock/meta/echo_server_test.cml.golden",
+      "rust_mock/src/echo_server_test.rs.golden",
+    ]
+    outputs = [ "${_golden_rust_mock_path}/{{source_file_part}}" ]
+  }
+
+  _golden_rust_nomock_path = "${target_gen_dir}/rust_nomock"
+  host_test_data("golden_rust_nomock") {
+    sources = [
+      "rust_nomock/BUILD.gn.golden",
+      "rust_nomock/meta/echo_server_test.cml.golden",
+      "rust_nomock/src/echo_server_test.rs.golden",
+    ]
+    outputs = [ "${_golden_rust_nomock_path}/{{source_file_part}}" ]
+  }
+
+  _golden_cpp_nomock_path = "${target_gen_dir}/cpp_nomock"
+  host_test_data("golden_cpp_nomock") {
+    sources = [
+      "cpp_nomock/BUILD.gn.golden",
+      "cpp_nomock/meta/echo_server_test.cml.golden",
+      "cpp_nomock/src/echo_server_test.cc.golden",
+    ]
+    outputs = [ "${_golden_cpp_nomock_path}/{{source_file_part}}" ]
+  }
+
+  _golden_cpp_mock_path = "${target_gen_dir}/cpp_mock"
+  host_test_data("golden_cpp_mock") {
+    sources = [
+      "cpp_mock/BUILD.gn.golden",
+      "cpp_mock/meta/echo_server_test.cml.golden",
+      "cpp_mock/src/echo_server_test.cc.golden",
+    ]
+    outputs = [ "${_golden_cpp_mock_path}/{{source_file_part}}" ]
+  }
+
+  go_test("goldentest_rust_nomock") {
+    output_name = "goldentest_rust_nomock"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/autotest/goldentest" ]
+    deps = [ ":goldentest_lib" ]
+    non_go_deps = [
+      ":copy_autotest",
+      ":copy_example_component",
+      ":golden_rust_nomock",
+    ]
+    args = [
+      "--autotest",
+      rebase_path("${_tools_out}/autotest", root_build_dir),
+      "--cm",
+      rebase_path("${_example_out}/echo_server.cm", root_build_dir),
+      "--golden",
+      rebase_path(_golden_rust_nomock_path, root_build_dir),
+      "--language",
+      "rust",
+    ]
+  }
+
+  go_test("goldentest_rust_mock") {
+    output_name = "goldentest_rust_mock"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/autotest/goldentest" ]
+    deps = [ ":goldentest_lib" ]
+    non_go_deps = [
+      ":copy_autotest",
+      ":copy_example_component",
+      ":golden_rust_mock",
+    ]
+    args = [
+      "--autotest",
+      rebase_path("${_tools_out}/autotest", root_build_dir),
+      "--cm",
+      rebase_path("${_example_out}/echo_server.cm", root_build_dir),
+      "--golden",
+      rebase_path(_golden_rust_mock_path, root_build_dir),
+      "--language",
+      "rust",
+      "--mock",
+    ]
+  }
+
+  go_test("goldentest_cpp_nomock") {
+    output_name = "goldentest_cpp_nomock"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/autotest/goldentest" ]
+    deps = [ ":goldentest_lib" ]
+    non_go_deps = [
+      ":copy_autotest",
+      ":copy_example_component",
+      ":golden_cpp_nomock",
+    ]
+    args = [
+      "--autotest",
+      rebase_path("${_tools_out}/autotest", root_build_dir),
+      "--cm",
+      rebase_path("${_example_out}/echo_server.cm", root_build_dir),
+      "--golden",
+      rebase_path(_golden_cpp_nomock_path, root_build_dir),
+      "--language",
+      "cpp",
+    ]
+  }
+
+  go_test("goldentest_cpp_mock") {
+    output_name = "goldentest_cpp_mock"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/autotest/goldentest" ]
+    deps = [ ":goldentest_lib" ]
+    non_go_deps = [
+      ":copy_autotest",
+      ":copy_example_component",
+      ":golden_cpp_mock",
+    ]
+    args = [
+      "--autotest",
+      rebase_path("${_tools_out}/autotest", root_build_dir),
+      "--cm",
+      rebase_path("${_example_out}/echo_server.cm", root_build_dir),
+      "--golden",
+      rebase_path(_golden_cpp_mock_path, root_build_dir),
+      "--language",
+      "cpp",
+      "--mock",
+    ]
+  }
+}

@@ -578,7 +578,7 @@ mod test {
             capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
             source: RouteEndpoint::component("service_1"),
             targets: vec![
-                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"), 
+                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"),
             ],
         })?
         .add_component("service_2",
@@ -591,7 +591,7 @@ mod test {
             capability: Capability::protocol("fuchsia.metrics.MetricEventLoggerFactory"),
             source: RouteEndpoint::component("service_2"),
             targets: vec![
-                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"), 
+                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"),
             ],
         })?
         .add_route(CapabilityRoute {
@@ -601,7 +601,7 @@ mod test {
                 fio2::RW_STAR_DIR),
             source: RouteEndpoint::above_root(),
             targets: vec![
-                RouteEndpoint::component("foo_bar"), 
+                RouteEndpoint::component("foo_bar"),
             ],
         })?"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);

@@ -1,0 +1,36 @@
+use fidl_fidl_examples_routing_echo::*;
+use fuchsia_component_test::{builder::*, mock::*, RealmInstance};
+
+const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm";
+
+pub async fn create_realm() -> Result<RealmInstance, Error> {
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_component("echo_server", ComponentSource::url(COMPONENT_URL)).await?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::above_root(),
+            targets: vec![
+                RouteEndpoint::component("echo_server"),
+            ],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo_server"),
+            targets: vec![
+                RouteEndpoint::above_root(),
+            ],
+        })?;
+
+
+    let instance = builder.build().create().await?;
+    Ok(instance)
+}
+
+#[fuchsia::test]
+async fn test_echomarker() -> Result<(), Error> {
+    let instance = create_realm().await.expect("created testing realm");
+    let echomarker = instance.root.connect_to_protocol_at_exposed_dir::<EchoMarker>()?;
+    // Add test for the protocol
+    Ok(())
+}

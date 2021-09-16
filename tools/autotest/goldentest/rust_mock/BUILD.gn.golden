@@ -1,4 +1,4 @@
-# Copyright CURRENT_YEAR The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,10 +6,10 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("bin") {
- name = "BINARY_NAME"
+ name = "echo_server_test"
  edition = "2018"
- source_root = "src/BINARY_NAME.rs"
- sources = [ "src/BINARY_NAME.rs" ]
+ source_root = "src/echo_server_test.rs"
+ sources = [ "src/echo_server_test.rs" ]
  deps = [
    # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
    # ex: "//examples/components/routing/fidl:echo-rustc",
@@ -23,17 +23,17 @@ rustc_test("bin") {
   ]
 }
 
-fuchsia_component("BINARY_NAME") {
+fuchsia_component("echo_server_test") {
  testonly = true
- manifest = "meta/BINARY_NAME.cml"
+ manifest = "meta/echo_server_test.cml"
  deps = [ ":bin" ]
 }
 
 fuchsia_test_package("integration_test_pkg") {
- package_name = "COMPONENT_NAME"
- test_components = [ ":BINARY_NAME" ]
+ package_name = "echo_server"
+ test_components = [ ":echo_server_test" ]
  deps = [
-   ":BINARY_NAME",
+   ":echo_server_test",
    # Change COMPONENT_BUILD_TARGET to component targets the test use
    # ex: "//examples/components/routing/echo_server:echo_server_component",
    {COMPONENT_BUILD_TARGET},
