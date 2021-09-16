@@ -108,12 +108,12 @@ impl ClientConfig {
     /// Converts a given BssDescription into a ScanResult.
     pub fn create_scan_result(
         &self,
-        bss: &BssDescription,
+        bss_description: BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
     ) -> ScanResult {
         ScanResult {
-            compatible: self.is_bss_compatible(bss, device_info),
-            bss_description: bss.clone(),
+            compatible: self.is_bss_compatible(&bss_description, device_info),
+            bss_description,
         }
     }
 
@@ -603,10 +603,10 @@ impl super::Station for ClientSme {
                             fidl_mlme::ScanResultCode::Success => {
                                 let scan_result_list: Vec<ScanResult> = scan_end
                                     .bss_description_list
-                                    .iter()
+                                    .into_iter()
                                     .map(|bss_description| {
                                         self.cfg.create_scan_result(
-                                            &bss_description,
+                                            bss_description,
                                             &self.context.device_info,
                                         )
                                     })
@@ -866,9 +866,9 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
+        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
 
-        assert_eq!(scan_result, ScanResult { compatible: true, bss_description: bss_description });
+        assert_eq!(scan_result, ScanResult { compatible: true, bss_description });
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
@@ -887,9 +887,9 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
+        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
 
-        assert_eq!(scan_result, ScanResult { compatible: true, bss_description: bss_description });
+        assert_eq!(scan_result, ScanResult { compatible: true, bss_description });
 
         let bss_description = fake_bss_description!(Wep,
             ssid: Ssid::empty(),
@@ -905,8 +905,8 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
-        assert_eq!(scan_result, ScanResult { compatible: false, bss_description: bss_description },);
+        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
+        assert_eq!(scan_result, ScanResult { compatible: false, bss_description },);
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         let bss_description = fake_bss_description!(Wep,
@@ -923,10 +923,10 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(&bss_description, &device_info);
+        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
         assert_eq!(
             scan_result,
-            wlan_common::scan::ScanResult { compatible: true, bss_description: bss_description },
+            wlan_common::scan::ScanResult { compatible: true, bss_description },
         );
     }
 
