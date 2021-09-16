@@ -298,6 +298,17 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
     zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status.error_value());
   }
 
+  acpi::Manager manager(acpi, acpi_root);
+  auto result = manager.DiscoverDevices();
+  if (result.is_error()) {
+    zxlogf(INFO, "discover devices failed");
+  }
+  result = manager.ConfigureDiscoveredDevices();
+  if (result.is_error()) {
+    zxlogf(INFO, "configure failed");
+  }
+  result = manager.PublishDevices(platform_bus);
+
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.
   // TODO(fxbug.dev/78349): remove this when all drivers are removed from the x86 board driver.
@@ -344,17 +355,6 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
         }
         return acpi::ok();
       });
-
-  acpi::Manager manager(acpi, acpi_root);
-  auto result = manager.DiscoverDevices();
-  if (result.is_error()) {
-    zxlogf(INFO, "discover devices failed");
-  }
-  result = manager.ConfigureDiscoveredDevices();
-  if (result.is_error()) {
-    zxlogf(INFO, "configure failed");
-  }
-  result = manager.PublishDevices(platform_bus);
 
   if (acpi_status.is_error()) {
     return ZX_ERR_BAD_STATE;
