@@ -8,8 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/development/testing/cts/overview.md
-- name: "Contributing"
-  contents:
+- title: "Contributing"
+  section:
   - title: "Contributing Tests"
     path: /docs/development/testing/cts/contributing_tests.md
   - title: "Testing Guidelines"
