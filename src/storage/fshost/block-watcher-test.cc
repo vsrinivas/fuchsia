@@ -363,7 +363,7 @@ TEST(AddDeviceTestCase, MinfsWithNoZxcryptOptionMountsWithoutZxcrypt) {
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   auto minfs_options = MockMinfsDevice::MinfsOptions();
   minfs_options.topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block";
-  minfs_options.partition_name = "minfs";
+  minfs_options.partition_name = kDataPartitionLabel;
   MockMinfsDevice device(minfs_options);
   EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.mounted());
@@ -383,7 +383,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   options = MockMinfsDevice::MinfsOptions();
   options.topological_path = std::string(kBasePath) + "/fvm/minfs-p-2/block";
-  options.partition_name = "minfs";
+  options.partition_name = kDataPartitionLabel;
   MockMinfsDevice device(options);
   EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.mounted());
@@ -420,18 +420,26 @@ TEST(AddDeviceTestCase, MinfsRamdiskWithoutZxcryptAttachOption) {
 }
 
 TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {
-  Config config(TestOptions());
-  for (std::string name : {GUID_DATA_NAME, "data"}) {
-    BlockDeviceManager manager(&config);
-    MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-    EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
-    MockZxcryptDevice zxcrypt_device;
-    EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
-    auto minfs_options = MockMinfsDevice::MinfsOptions();
-    minfs_options.partition_name = name;
-    MockMinfsDevice device(minfs_options);
-    EXPECT_EQ(manager.AddDevice(device), ZX_OK);
-    EXPECT_TRUE(device.mounted());
+  for (int pass = 0; pass < 2; ++pass) {
+    auto options = TestOptions();
+    if (pass == 1)
+      options[Config::kAllowLegacyDataPartitionNames] = std::string();
+    Config config(options);
+    for (const auto& name :
+         {kDataPartitionLabel, std::string_view("minfs"), std::string_view("fuchsia-data")}) {
+      BlockDeviceManager manager(&config);
+      MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
+      EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
+      MockZxcryptDevice zxcrypt_device;
+      EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
+      auto minfs_options = MockMinfsDevice::MinfsOptions();
+      minfs_options.partition_name = name;
+      MockMinfsDevice device(minfs_options);
+      EXPECT_EQ(manager.AddDevice(device), ZX_OK);
+      EXPECT_TRUE(device.mounted());
+      if (pass == 0)
+        break;
+    }
   }
 }
 

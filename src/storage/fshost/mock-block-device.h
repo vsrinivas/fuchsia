@@ -250,7 +250,7 @@ class MockZxcryptDevice : public MockBlockDevice {
         .content_format = DISK_FORMAT_ZXCRYPT,
         .driver_path = kZxcryptDriverPath,
         .topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block",
-        .partition_name = "minfs",
+        .partition_name = std::string(kDataPartitionLabel),
     };
   }
 

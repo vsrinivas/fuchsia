@@ -130,7 +130,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
     auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     storage::FvmOptions options{
-        .name = "minfs",
+        .name = kDataPartitionLabel,
         .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
     };
     auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
@@ -152,7 +152,9 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   ASSERT_TRUE(fvm_fd);
 
   // The minfs partition will be the only one inside FVM.
-  std::string partition_path = fvm_path + "/minfs-p-1/block";
+  std::string partition_path = fvm_path + "/";
+  partition_path.append(kDataPartitionLabel);
+  partition_path.append("-p-1/block");
   fbl::unique_fd partition_fd(open(partition_path.c_str(), O_RDONLY));
   ASSERT_TRUE(partition_fd);
 

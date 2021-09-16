@@ -348,7 +348,13 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
   }
 };
 
-MinfsMatcher::PartitionNames GetMinfsPartitionNames() { return {"minfs", GUID_DATA_NAME, "data"}; }
+MinfsMatcher::PartitionNames GetMinfsPartitionNames(bool include_legacy) {
+  if (include_legacy) {
+    return {std::string(kDataPartitionLabel), "minfs", "fuchsia-data"};
+  } else {
+    return {std::string(kDataPartitionLabel)};
+  }
+}
 
 }  // namespace
 
@@ -398,9 +404,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
       fvm_required = true;
     }
     if (config_.is_set(Config::kMinfs)) {
-      matchers_.push_back(
-          std::make_unique<MinfsMatcher>(*fvm, GetMinfsPartitionNames(), minfs_type_guid,
-                                         MinfsMatcher::GetVariantFromConfig(config_), minfs_limit));
+      matchers_.push_back(std::make_unique<MinfsMatcher>(
+          *fvm, GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
+          minfs_type_guid, MinfsMatcher::GetVariantFromConfig(config_), minfs_limit));
       fvm_required = true;
     }
   }
@@ -416,7 +422,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
 
       if (config_.is_set(Config::kAttachZxcryptToNonRamdisk)) {
         matchers_.push_back(std::make_unique<MinfsMatcher>(
-            *non_ramdisk_fvm, GetMinfsPartitionNames(), minfs_type_guid,
+            *non_ramdisk_fvm,
+            GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
+            minfs_type_guid,
             MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
             minfs_limit));
       }

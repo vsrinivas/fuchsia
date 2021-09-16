@@ -87,6 +87,9 @@ const char Config::kWaitForData[] = "wait-for-data";
 // Use Fxfs instead of Minfs for the data partition.
 const char Config::kUseFxfs[] = "use-fxfs";
 
+// Allow legacy names for the data partition.
+const char Config::kAllowLegacyDataPartitionNames[] = "allow-legacy-data-partition-names";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {
@@ -116,8 +119,13 @@ Config::Options Config::ReadOptions(std::istream& stream) {
 }
 
 Config::Options Config::DefaultOptions() {
-  return {{kBlobfs, {}}, {kBootpart, {}}, {kFvm, {}},
-          {kGpt, {}},    {kMinfs, {}},    {kFormatMinfsOnCorruption, {}}};
+  return {{kBlobfs, {}},
+          {kBootpart, {}},
+          {kFvm, {}},
+          {kGpt, {}},
+          {kMinfs, {}},
+          {kFormatMinfsOnCorruption, {}},
+          {kAllowLegacyDataPartitionNames, {}}};
 }
 
 uint64_t Config::ReadUint64OptionValue(std::string_view key, uint64_t default_value) const {

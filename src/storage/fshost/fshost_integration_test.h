@@ -9,6 +9,8 @@
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 
+#include <string_view>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 

@@ -36,6 +36,9 @@ declare_args() {
   # Set to true to enable fxfs instead of minfs.  If set, any existing minfs partition will be
   # migrated in-place to fxfs when fshost mounts it.
   unstable_feature_use_fxfs = false
+
+  # Set to true to enable legacy data partition names.
+  allow_legacy_data_partition_names = true
 }
 
 group("tests") {
@@ -571,13 +574,16 @@ template("fshost_config") {
       contents += [ "apply-limits-to-ramdisk" ]
     }
 
-    if (defined(invoker.unstable_feature_use_fxfs) &&
-        invoker.unstable_feature_use_fxfs) {
+    if (invoker.unstable_feature_use_fxfs) {
       contents += [ "use-fxfs" ]
     }
 
     if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
       contents += [ "check-filesystems" ]
+    }
+
+    if (invoker.allow_legacy_data_partition_names) {
+      contents += [ "allow-legacy-data-partition-names" ]
     }
 
     output_conversion = "list lines"
@@ -601,13 +607,7 @@ fshost_config("gpt_all") {
 
 # Writes default configuration plus any changes to global variables.
 fshost_config("default_config") {
-  minfs_ramdisk = false
-  gpt_all = false
-  no_minfs_zxcrypt = false
   sandbox_decompression = false
-  if (unstable_feature_use_fxfs) {
-    unstable_feature_use_fxfs = true
-  }
 }
 
 fshost_config("integration_test_config") {

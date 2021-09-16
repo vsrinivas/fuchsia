@@ -12,6 +12,7 @@
 #include <fs-management/admin.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/fshost_integration_test.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/testing/fvm.h"
@@ -44,7 +45,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
     auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     storage::FvmOptions options{
-        .name = "minfs",
+        .name = kDataPartitionLabel,
         .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
     };
     auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
@@ -87,7 +88,7 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
     auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
     storage::FvmOptions options{
-        .name = "minfs",
+        .name = kDataPartitionLabel,
         .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
     };
     auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
