@@ -11,10 +11,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/build"
-	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 )
 
 type fakeBuildModules struct {

@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
@@ -119,6 +120,33 @@ func TestRunNinja(t *testing.T) {
                 FAILED: a.o b.o
                 output line 1
                 output line 2
+            `,
+		},
+		{
+			name: "gn gen fails",
+			fail: true,
+			stdout: `
+				ninja: Entering directory '/usr/me/fuchsia/out/default'
+				[0/1] Regenerating ninja files
+				ERROR at //src/foo/BUILD.gn:41:5: Can't load input file.
+					"//src/bar:tests",
+					^----------------
+				Unable to load:
+				/usr/me/fuchsia/src/bar/BUILD.gn
+				FAILED: build.ninja
+				../../prebuilt/third_party/gn/linux-x64/gn --root=../.. gen .
+				ninja: error: rebuilding 'build.ninja': subcommand failed
+			`,
+			expectedFailureMessage: `
+				[0/1] Regenerating ninja files
+				ERROR at //src/foo/BUILD.gn:41:5: Can't load input file.
+					"//src/bar:tests",
+					^----------------
+				Unable to load:
+				/usr/me/fuchsia/src/bar/BUILD.gn
+				FAILED: build.ninja
+				../../prebuilt/third_party/gn/linux-x64/gn --root=../.. gen .
+				ninja: error: rebuilding 'build.ninja': subcommand failed
             `,
 		},
 		{
@@ -591,5 +619,4 @@ build even more
 			}
 		})
 	}
-
 }

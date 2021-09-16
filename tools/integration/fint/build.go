@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
@@ -75,10 +76,13 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
 
+	artifacts := &fintpb.BuildArtifacts{}
+
 	// Let Ninja determine whether it's necessary to run `gn gen` again first,
 	// because later steps will consume GN-generated files.
-	if err := ninjaGNGen(ctx, runner); err != nil {
-		return nil, err
+	if failureSummary, err := ninjaGNGen(ctx, runner); err != nil {
+		artifacts.FailureSummary = failureSummary
+		return artifacts, err
 	}
 
 	modules, err := build.NewModules(contextSpec.BuildDir)
@@ -86,10 +90,12 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return nil, err
 	}
 
-	targets, artifacts, err := constructNinjaTargets(modules, staticSpec, platform)
+	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, platform)
 	if err != nil {
 		return nil, err
 	}
+	proto.Merge(artifacts, targetArtifacts)
+
 	artifacts.BuiltTargets = targets
 	// The ninja log is generated automatically by Ninja and its path is
 	// constant relative to the build directory.
@@ -239,6 +245,12 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	return artifacts, nil
 }
 
+// constructNinjaTargets determines which targets to build based on the static
+// spec fields and the contents of the build API files. It emits a
+// BuildArtifacts protobuf with only a subset of fields set that should be
+// merged into an existing BuildArtifacts protobuf struct by the caller, since
+// this is more clean than taking a BuildARtifacts pointer as input and
+// modifying it.
 func constructNinjaTargets(
 	modules buildModules,
 	staticSpec *fintpb.Static,

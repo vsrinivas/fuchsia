@@ -177,8 +177,9 @@ type ninjaParser struct {
 	// a line indicating the end of the error).
 	processingFailure bool
 
-	// The previous line that we checked.
-	previousLine string
+	// All lines printed for the rule currently being run, including the first
+	// line that starts with an index like [0/1].
+	currentRuleLines []string
 }
 
 func (p *ninjaParser) parse(ctx context.Context) error {
@@ -201,6 +202,11 @@ func (p *ninjaParser) parseLine(line string) error {
 	// significant, especially for compiler error messages.
 	line = strings.TrimRightFunc(line, unicode.IsSpace)
 
+	if ruleRegex.MatchString(line) {
+		p.currentRuleLines = nil
+	}
+	p.currentRuleLines = append(p.currentRuleLines, line)
+
 	if p.processingFailure {
 		if ruleRegex.MatchString(line) || failureEndRegex.MatchString(line) {
 			// Found the end of the info for this failure (either a new rule
@@ -214,7 +220,7 @@ func (p *ninjaParser) parseLine(line string) error {
 		// We found a line that indicates the start of a build failure error
 		// message. Start recording information about this failure.
 		p.processingFailure = true
-		p.failureOutputLines = append(p.failureOutputLines, p.previousLine, line)
+		p.failureOutputLines = append(p.failureOutputLines, p.currentRuleLines...)
 	} else if errorRegex.MatchString(line) {
 		// An "error" log comes at the end of the output and should only be one
 		// line.
@@ -224,7 +230,6 @@ func (p *ninjaParser) parseLine(line string) error {
 			return err
 		}
 	}
-	p.previousLine = line
 	return nil
 }
 
@@ -232,8 +237,11 @@ func (p *ninjaParser) failureMessage() string {
 	if len(p.failureOutputLines) == 0 {
 		return unrecognizedFailureMsg
 	}
-	// Add a blank line at the end to ensure a trailing newline.
-	lines := append(p.failureOutputLines, "")
+	lines := p.failureOutputLines
+	if p.failureOutputLines[len(p.failureOutputLines)-1] != "" {
+		// Add a blank line at the end to ensure a trailing newline.
+		lines = append(p.failureOutputLines, "")
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -574,6 +582,6 @@ func ninjaCleanDead(ctx context.Context, r ninjaRunner) error {
 
 // ninjaGNGen rebuilds `build.ninja`, this will trigger a `gn gen` if necessary,
 // for example when any .ninja files are out of date.
-func ninjaGNGen(ctx context.Context, r ninjaRunner) error {
-	return r.run(ctx, []string{"build.ninja"}, os.Stdout, os.Stderr)
+func ninjaGNGen(ctx context.Context, r ninjaRunner) (errorMsg string, err error) {
+	return runNinja(ctx, r, []string{"build.ninja"}, false, nil)
 }
