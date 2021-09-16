@@ -81,7 +81,7 @@ func runSteps(
 	}
 
 	var skipGen bool
-	if staticSpec.AutomaticGen {
+	if staticSpec.Incremental {
 		// If the build directory is already seeded, let ninja (when run by
 		//`fint build`) determine whether or not to run `gn gen`. It may not be
 		// necessary for some incremental builds, and skipping it saves time.
