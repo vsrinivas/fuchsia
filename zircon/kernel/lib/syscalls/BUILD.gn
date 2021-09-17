@@ -70,6 +70,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/crypto",
       "//zircon/kernel/lib/fbl",
       "//zircon/kernel/lib/gfxconsole",
+      "//zircon/kernel/lib/io",
       "//zircon/kernel/lib/kpci",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/ktrace",

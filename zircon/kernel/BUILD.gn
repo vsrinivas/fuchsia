@@ -54,9 +54,6 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/lib/ktl:headers.config",
         "//sdk/lib/stdcompat:headers.config",
 
-        # <stdio.h> has #include <lib/io.h>.
-        "//zircon/kernel/lib/io:headers.config",
-
         # <stdlib.h> has #include <lib/heap.h>.
         "//zircon/kernel/lib/heap:headers.config",
 

@@ -12,6 +12,7 @@ zx_library("gfxconsole") {
   deps = [
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/gfx",
+    "//zircon/kernel/lib/io",
   ]
   public_deps = [
     # <lib/gfxconsole.h> has #include <lib/gfx.h>.

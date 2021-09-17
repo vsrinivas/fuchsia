@@ -17,6 +17,7 @@ zx_library("crashlog") {
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
+    "//zircon/kernel/lib/io",
     "//zircon/kernel/lib/version",
     "//zircon/kernel/object:headers",
   ]

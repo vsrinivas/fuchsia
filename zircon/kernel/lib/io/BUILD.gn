@@ -11,7 +11,7 @@ zx_library("io") {
   sources = [ "console.cc" ]
   deps = [
     "tests",
-    "//zircon/kernel/lib/debuglog",
+    "//zircon/kernel/lib/debuglog:headers",
     "//zircon/kernel/lib/persistent-debuglog",
   ]
 }
