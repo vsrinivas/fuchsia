@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::ProtocolMarker,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
-    fidl_fuchsia_data as fdata, fuchsia_async as fasync,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{builder::*, mock, Moniker, RouteBuilder},
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
@@ -61,7 +61,9 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
                     RouteEndpoint::component("parent/echo-client"),
                 ]),
         )?;
-    let _instance = builder.build().create().await?;
+    let instance = builder.build().create().await?;
+
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
@@ -111,8 +113,11 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
                 .targets(vec![RouteEndpoint::component("b")]),
         )?;
 
-    // Create and start the realm
-    let _instance = builder.build().create().await?;
+    // Create the realm
+    let instance = builder.build().create().await?;
+
+    // Start the realm
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     // Wait for the channel we created above to receive a message
     assert!(receive_echo_server_called.next().await.is_some());
@@ -244,7 +249,8 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
                     RouteEndpoint::component("parent-2/echo-server"),
                 ]),
         )?;
-    let _instance = builder.build().create().await?;
+    let instance = builder.build().create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
@@ -285,7 +291,8 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
                     RouteEndpoint::component("echo-server/echo-client"),
                 ]),
         )?;
-    let _instance = builder.build().create().await?;
+    let instance = builder.build().create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
@@ -358,7 +365,8 @@ async fn altered_echo_client_args() -> Result<(), Error> {
         }
     }
     realm.set_component(&"echo_client".into(), echo_client_decl).await?;
-    let _instance = realm.create().await?;
+    let instance = realm.create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
 
@@ -410,6 +418,10 @@ async fn echo_clients() -> Result<(), Error> {
             )?;
 
         let realm_instance = builder.build().create().await?;
+        let _ = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .unwrap();
 
         assert!(
             receive_echo_server_called.next().await.is_some(),
@@ -477,6 +489,11 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
             .create_in_nested_component_manager("#meta/component_manager.cm")
             .await?;
 
+        let _ = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .unwrap();
+
         assert!(
             receive_echo_server_called.next().await.is_some(),
             "failed to observe the mock server report a successful connection from client #{}",
@@ -539,6 +556,10 @@ async fn echo_servers() -> Result<(), Error> {
             )?;
 
         let realm_instance = builder.build().create().await?;
+        let _ = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+            .unwrap();
 
         assert!(
             receive_echo_client_results.next().await.is_some(),
@@ -594,7 +615,8 @@ async fn protocol_with_use_from_url_child_test() -> Result<(), Error> {
                     RouteEndpoint::component("echo-client/echo-server"),
                 ]),
         )?;
-    let _instance = builder.build().create().await?;
+    let instance = builder.build().create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
@@ -641,7 +663,8 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
                     RouteEndpoint::component("echo-client/echo-server"),
                 ]),
         )?;
-    let _instance = builder.build().create().await?;
+    let instance = builder.build().create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
@@ -687,7 +710,8 @@ async fn force_route_echo_server() -> Result<(), Error> {
         )
         .await?;
 
-    let _instance = realm.create().await?;
+    let instance = realm.create().await?;
+    let _ = instance.root.connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>().unwrap();
 
     assert!(receive_echo_client_results.next().await.is_some());
 
@@ -739,6 +763,10 @@ async fn force_route_echo_client() -> Result<(), Error> {
         .await?;
 
     let realm_instance = realm.create().await?;
+    let _ = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+        .unwrap();
 
     assert!(receive_echo_server_called.next().await.is_some());
 
@@ -797,7 +825,11 @@ async fn no_force_doesnt_modify_package_local() -> Result<(), Error> {
         )
         .await?;
 
-    let _realm_instance = realm.create().await?;
+    let realm_instance = realm.create().await?;
+    let _ = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
+        .unwrap();
 
     assert!(receive_echo_client_failed.next().await.is_some());
 

@@ -49,9 +49,6 @@ pub enum Error {
 
     #[error("routes for event capabilities must be provided to a RealmBuilder, not a Realm")]
     EventRoutesOnlySupportedOnBuilder,
-
-    #[error("failed to bind to realm: {0:?}")]
-    FailedToBind(anyhow::Error),
 }
 
 #[derive(Debug, Error)]
