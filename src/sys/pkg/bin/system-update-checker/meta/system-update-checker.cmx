@@ -6,10 +6,6 @@
         "binary": "bin/system_update_checker"
     },
     "sandbox": {
-        "dev": [
-            "class/skip-block",
-            "sys/platform"
-        ],
         "features": [
             "config-data",
             "deprecated-misc-storage"

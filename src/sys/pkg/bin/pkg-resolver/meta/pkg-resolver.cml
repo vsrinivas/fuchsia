@@ -9,15 +9,5 @@
             storage: "data",
             path: "/data",
         },
-        {
-            directory: "skip-block",
-            rights: [ "rw*" ],
-            path: "/dev/class/skip-block",
-        },
-        {
-            directory: "platform",
-            rights: [ "rw*" ],
-            path: "/dev/sys/platform",
-        },
     ],
 }
