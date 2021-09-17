@@ -67,9 +67,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
         source: RouteEndpoint::AboveRoot,
         targets: vec![root.clone()],
     })?;
-    let realm = builder.build().create().await?;
-
-    let _ = realm.root.connect_to_binder()?;
+    let _realm = builder.build().create().await?;
 
     // List the components that we expect to be created.
     // We list the components by monikers which are described at:
