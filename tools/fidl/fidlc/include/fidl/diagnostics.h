@@ -201,6 +201,8 @@ constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
     "calculate the ordinal.");
 constexpr ErrorDef ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
+constexpr ErrorDef ErrFuchsiaIoExplicitOrdinals(
+    "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodParameterName(
     "multiple method parameters named '{}'; previous was at {}");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>

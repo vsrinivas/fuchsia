@@ -4510,6 +4510,13 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
         return Fail(ErrDuplicateMethodNameCanonical, method.name, original_name,
                     previous_span.data(), previous_span, canonical_name);
       }
+      if (!method.generated_ordinal64) {
+        // If a composed method failed to compile, we do not associate have a
+        // generated ordinal, and proceeding leads to a segfault. Instead,
+        // return immediately, without reporting additional errors (the error
+        // emitted when compiliing the composed method is sufficient).
+        return false;
+      }
       if (method.generated_ordinal64->value == 0)
         return Fail(ErrGeneratedZeroValueOrdinal, method.generated_ordinal64->span());
       auto ordinal_result =
@@ -4558,6 +4565,12 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     if (!utils::IsValidIdentifierComponent(selector) &&
         !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
       Fail(ErrInvalidSelectorValue, method.name);
+    }
+    // TODO(fxbug.dev/77623): Remove.
+    if (library_name_.size() == 2 && library_name_[0] == "fuchsia" && library_name_[1] == "io" &&
+        selector.find("/") == selector.npos) {
+      Fail(ErrFuchsiaIoExplicitOrdinals, method.name);
+      return false;
     }
     method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(method_hasher_(
         library_name_, protocol_declaration->name.decl_name(), selector, *method.identifier));

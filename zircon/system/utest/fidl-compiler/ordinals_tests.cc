@@ -226,4 +226,45 @@ protocol protocol {
   EXPECT_EQ(iface->methods[31].generated_ordinal64->value, 0x54fd307bb5bfab2d);
 }
 
+TEST(OrdinalsTests, GoodHackToRenameFuchsiaIoToFuchsiaIoOneNoSelector) {
+  TestLibrary library(R"FIDL(library fuchsia.io;
+
+protocol SomeProtocol {
+    SomeMethod();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFuchsiaIoExplicitOrdinals);
+}
+
+TEST(OrdinalsTests, GoodHackToRenameFuchsiaIoToFuchsiaIoOneHasSelector) {
+  TestLibrary library(R"FIDL(library fuchsia.io;
+
+protocol SomeProtocol {
+    @selector("fuchsia.io1/Node.Open")
+    SomeMethod();
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(OrdinalsTests, WrongComposedMethodDoesNotGetGeneratedOrdinal) {
+  TestLibrary library(R"FIDL(library example;
+
+protocol Node {
+    SomeMethod(struct { id Id; });
+};
+
+protocol Directory {
+    compose Node;
+    Unlink();
+};
+
+protocol DirectoryAdmin {
+    compose Directory;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+}
+
 }  // namespace
