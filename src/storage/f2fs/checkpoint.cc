@@ -189,7 +189,7 @@ void F2fs::AddOrphanInode(nid_t ino) {
     orphan = nullptr;
   }
 
-  // TODO: it never fails
+  // TODO: handle a failing case
   new_entry = new OrphanInodeEntry;
   ZX_ASSERT(new_entry != nullptr);
 
@@ -262,13 +262,17 @@ zx_status_t F2fs::RecoverOrphanInodes() {
     OrphanBlock *orphan_blk;
 
     orphan_blk = static_cast<OrphanBlock *>(PageAddress(page));
-    for (j = 0; j < LeToCpu(orphan_blk->entry_count); j++) {
+    uint32_t entry_count = LeToCpu(orphan_blk->entry_count);
+    // TODO: Need to set NeedChkp flag to repair the fs when fsck repair is available.
+    // For now, we trigger assertion.
+    ZX_ASSERT(entry_count <= kOrphansPerBlock);
+    for (j = 0; j < entry_count; j++) {
       nid_t ino = LeToCpu(orphan_blk->ino[j]);
       RecoverOrphanInode(ino);
     }
     F2fsPutPage(page, 1);
   }
-  /* clear Orphan Flag */
+  // clear Orphan Flag
   GetCheckpoint(&sbi)->ckpt_flags &= (~kCpOrphanPresentFlag);
   sbi.por_doing = 0;
   return ZX_OK;
