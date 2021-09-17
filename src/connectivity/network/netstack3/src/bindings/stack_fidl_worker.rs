@@ -17,7 +17,6 @@ use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, AdministrativeStatus, ForwardingEntry, InterfaceInfo,
     InterfaceProperties, PhysicalStatus, StackRequest, StackRequestStream,
 };
-use fuchsia_async as fasync;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr};
@@ -36,130 +35,125 @@ struct LockedFidlWorker<'a, C: StackContext> {
 }
 
 impl<C: StackContext> StackFidlWorker<C> {
-    pub(crate) fn spawn(ctx: C, mut stream: StackRequestStream) {
-        fasync::Task::spawn(
-            async move {
-                let worker = StackFidlWorker { ctx };
-                while let Some(e) = stream.try_next().await? {
-                    worker.handle_request(e).await;
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| {
-                debug!("Stack Fidl worker finished with error {}", e)
-            }),
-        )
-        .detach();
-    }
-
     async fn lock_worker(&self) -> LockedFidlWorker<'_, C> {
         let ctx = self.ctx.lock().await;
         LockedFidlWorker { ctx, worker: self }
     }
 
-    async fn handle_request(&self, req: StackRequest) {
-        match req {
-            StackRequest::AddInterface { responder, .. } => {
-                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-            }
-            StackRequest::AddEthernetInterface { topological_path, device, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self
-                        .lock_worker()
-                        .await
-                        .fidl_add_ethernet_interface(topological_path, device)
-                        .await
-                );
-            }
-            StackRequest::DelEthernetInterface { id, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_del_ethernet_interface(id)
-                );
-            }
-            StackRequest::ListInterfaces { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_list_interfaces().iter_mut()
-                );
-            }
-            StackRequest::GetInterfaceInfo { id, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_get_interface_info(id)
-                );
-            }
-            StackRequest::EnableInterface { id, responder } => {
-                responder_send!(responder, &mut self.lock_worker().await.fidl_enable_interface(id));
-            }
-            StackRequest::DisableInterface { id, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_disable_interface(id)
-                );
-            }
-            StackRequest::AddInterfaceAddress { id, addr, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_add_interface_address(id, addr)
-                );
-            }
-            StackRequest::DelInterfaceAddress { id, addr, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_del_interface_address(id, addr)
-                );
-            }
-            StackRequest::GetForwardingTable { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_get_forwarding_table().iter_mut()
-                );
-            }
-            StackRequest::AddForwardingEntry { entry, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_add_forwarding_entry(entry)
-                );
-            }
-            StackRequest::DelForwardingEntry { subnet, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.lock_worker().await.fidl_del_forwarding_entry(subnet)
-                );
-            }
-            StackRequest::EnableIpForwarding { responder } => {
-                // TODO(https://fxbug.dev/76987): Support enabling IP forwarding.
-                let () = responder
-                    .control_handle()
-                    .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
-            }
-            StackRequest::DisableIpForwarding { responder } => {
-                // TODO(https://fxbug.dev/76987): Support disabling IP forwarding.
-                let () = responder
-                    .control_handle()
-                    .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
-            }
-            StackRequest::GetInterfaceIpForwarding { id: _, ip_version: _, responder } => {
-                // TODO(https://fxbug.dev/76987): Support querying per-NIC forwarding.
-                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-            }
-            StackRequest::SetInterfaceIpForwarding {
-                id: _,
-                ip_version: _,
-                enabled: _,
-                responder,
-            } => {
-                // TODO(https://fxbug.dev/76987): Support configuring per-NIC forwarding.
-                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-            }
-            StackRequest::GetDnsServerWatcher { watcher, control_handle: _ } => {
-                let () = watcher
-                    .close_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED)
-                    .unwrap_or_else(|e| debug!("failed to close DNS server watcher {:?}", e));
-            }
-        }
+    pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
+        stream
+            .try_fold(Self { ctx }, |worker, req| async {
+                match req {
+                    StackRequest::AddInterface { responder, .. } => {
+                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+                    }
+                    StackRequest::AddEthernetInterface { topological_path, device, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker
+                                .lock_worker()
+                                .await
+                                .fidl_add_ethernet_interface(topological_path, device)
+                                .await
+                        );
+                    }
+                    StackRequest::DelEthernetInterface { id, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_del_ethernet_interface(id)
+                        );
+                    }
+                    StackRequest::ListInterfaces { responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_list_interfaces().iter_mut()
+                        );
+                    }
+                    StackRequest::GetInterfaceInfo { id, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_get_interface_info(id)
+                        );
+                    }
+                    StackRequest::EnableInterface { id, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_enable_interface(id)
+                        );
+                    }
+                    StackRequest::DisableInterface { id, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_disable_interface(id)
+                        );
+                    }
+                    StackRequest::AddInterfaceAddress { id, addr, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_add_interface_address(id, addr)
+                        );
+                    }
+                    StackRequest::DelInterfaceAddress { id, addr, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_del_interface_address(id, addr)
+                        );
+                    }
+                    StackRequest::GetForwardingTable { responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_get_forwarding_table().iter_mut()
+                        );
+                    }
+                    StackRequest::AddForwardingEntry { entry, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_add_forwarding_entry(entry)
+                        );
+                    }
+                    StackRequest::DelForwardingEntry { subnet, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.lock_worker().await.fidl_del_forwarding_entry(subnet)
+                        );
+                    }
+                    StackRequest::EnableIpForwarding { responder } => {
+                        // TODO(https://fxbug.dev/76987): Support enabling IP forwarding.
+                        let () = responder
+                            .control_handle()
+                            .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
+                    }
+                    StackRequest::DisableIpForwarding { responder } => {
+                        // TODO(https://fxbug.dev/76987): Support disabling IP forwarding.
+                        let () = responder
+                            .control_handle()
+                            .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
+                    }
+                    StackRequest::GetInterfaceIpForwarding { id: _, ip_version: _, responder } => {
+                        // TODO(https://fxbug.dev/76987): Support querying per-NIC forwarding.
+                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+                    }
+                    StackRequest::SetInterfaceIpForwarding {
+                        id: _,
+                        ip_version: _,
+                        enabled: _,
+                        responder,
+                    } => {
+                        // TODO(https://fxbug.dev/76987): Support configuring per-NIC forwarding.
+                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+                    }
+                    StackRequest::GetDnsServerWatcher { watcher, control_handle: _ } => {
+                        let () = watcher
+                            .close_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED)
+                            .unwrap_or_else(|e| {
+                                debug!("failed to close DNS server watcher {:?}", e)
+                            });
+                    }
+                }
+                Ok(worker)
+            })
+            .map_ok(|Self { ctx: _ }| ())
+            .await
     }
 }
 

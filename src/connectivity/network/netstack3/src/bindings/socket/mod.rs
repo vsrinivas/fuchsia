@@ -15,8 +15,7 @@ use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{TryFutureExt, TryStreamExt};
-use log::debug;
+use futures::{TryFutureExt as _, TryStreamExt as _};
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use netstack3_core::{
@@ -103,22 +102,6 @@ where
     C: SocketStackContext,
     C::Dispatcher: SocketStackDispatcher,
 {
-    pub(crate) fn spawn(ctx: C, mut rs: psocket::ProviderRequestStream) {
-        fasync::Task::spawn(
-            async move {
-                let worker = SocketProviderWorker { ctx };
-                while let Some(req) = rs.try_next().await? {
-                    worker.handle_fidl_socket_provider_request(req).await;
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| {
-                debug!("SocketProviderWorker finished with error {:?}", e)
-            }),
-        )
-        .detach()
-    }
-
     /// Spawns a socket worker for the given `transport`.
     ///
     /// The created worker will serve the appropriate FIDL protocol over
@@ -142,35 +125,43 @@ where
         }
     }
 
-    /// Handles a `fuchsia.posix.socket.Provider` FIDL request in `req`.
-    async fn handle_fidl_socket_provider_request(&self, req: psocket::ProviderRequest) {
-        match req {
-            psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
-                // TODO(https://fxbug.dev/48969): implement this method.
-                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-            }
-            psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
-                // TODO(https://fxbug.dev/48969): implement this method.
-                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-            }
-            psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
-                // TODO(https://fxbug.dev/48969): implement this method.
-                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-            }
-            psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
-                responder_send!(responder, &mut Err(Errno::Eprotonosupport));
-            }
-            psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.socket::<psocket::DatagramSocketMarker, _>(domain, proto)
-                );
-            }
-            psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
-                // TODO(https://fxbug.dev/54162): implement this method.
-                responder_send!(responder, &mut std::iter::empty());
-            }
-        }
+    pub(crate) async fn serve(
+        ctx: C,
+        stream: psocket::ProviderRequestStream,
+    ) -> Result<(), fidl::Error> {
+        stream
+            .try_fold(Self { ctx }, |worker, req| async {
+                match req {
+                    psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
+                        // TODO(https://fxbug.dev/48969): implement this method.
+                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                    }
+                    psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
+                        // TODO(https://fxbug.dev/48969): implement this method.
+                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                    }
+                    psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
+                        // TODO(https://fxbug.dev/48969): implement this method.
+                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                    }
+                    psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
+                        responder_send!(responder, &mut Err(Errno::Eprotonosupport));
+                    }
+                    psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
+                        responder_send!(
+                            responder,
+                            &mut worker.socket::<psocket::DatagramSocketMarker, _>(domain, proto)
+                        );
+                    }
+                    psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
+                        // TODO(https://fxbug.dev/54162): implement this method.
+                        responder_send!(responder, &mut std::iter::empty());
+                    }
+                }
+                Ok(worker)
+            })
+            .map_ok(|Self { ctx: _ }| ())
+            .await
     }
 
     fn socket<T, P: TryInto<TransProto, Error = Errno>>(

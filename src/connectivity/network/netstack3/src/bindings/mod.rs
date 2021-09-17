@@ -21,13 +21,15 @@ mod timers;
 mod util;
 
 use std::convert::TryFrom as _;
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
+use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
-use futures::{lock::Mutex, StreamExt as _};
+use futures::{lock::Mutex, FutureExt as _, StreamExt as _};
 use log::{debug, error, trace, warn};
 use net_types::ethernet::Mac;
 use net_types::ip::{Ipv4, Ipv6};
@@ -432,6 +434,35 @@ impl StackContext for Netstack {
     type Dispatcher = BindingsDispatcher;
 }
 
+enum IncomingService {
+    Stack(fidl_fuchsia_net_stack::StackRequestStream),
+    Socket(fidl_fuchsia_posix_socket::ProviderRequestStream),
+}
+
+trait RequestStreamExt: RequestStream {
+    fn serve_with<F, Fut>(
+        self,
+        f: F,
+    ) -> futures::future::Map<Fut, fn(Result<(), fidl::Error>) -> ()>
+    where
+        F: FnOnce(Self) -> Fut,
+        Fut: Future<Output = Result<(), fidl::Error>>;
+}
+
+impl<D: DiscoverableProtocolMarker, S: RequestStream<Protocol = D>> RequestStreamExt for S {
+    fn serve_with<F, Fut>(
+        self,
+        f: F,
+    ) -> futures::future::Map<Fut, fn(Result<(), fidl::Error>) -> ()>
+    where
+        F: FnOnce(Self) -> Fut,
+        Fut: Future<Output = Result<(), fidl::Error>>,
+    {
+        f(self)
+            .map(|res| res.unwrap_or_else(|err| log::error!("{} error: {}", D::PROTOCOL_NAME, err)))
+    }
+}
+
 impl Netstack {
     /// Creates a new netstack with default options.
     pub fn new() -> Self {
@@ -458,14 +489,28 @@ impl Netstack {
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
             .dir("svc")
-            .add_fidl_service(|rs: fidl_fuchsia_net_stack::StackRequestStream| {
-                stack_fidl_worker::StackFidlWorker::spawn(self.clone(), rs)
+            .add_fidl_service(IncomingService::Stack)
+            .add_fidl_service(IncomingService::Socket);
+        let () = fs
+            .take_and_serve_directory_handle()
+            .context("directory handle")?
+            .for_each_concurrent(None, |worker| async {
+                match worker {
+                    IncomingService::Stack(stack) => {
+                        stack
+                            .serve_with(|rs| {
+                                stack_fidl_worker::StackFidlWorker::serve(self.clone(), rs)
+                            })
+                            .await
+                    }
+                    IncomingService::Socket(socket) => {
+                        socket
+                            .serve_with(|rs| socket::SocketProviderWorker::serve(self.clone(), rs))
+                            .await
+                    }
+                }
             })
-            .add_fidl_service(|rs: fidl_fuchsia_posix_socket::ProviderRequestStream| {
-                socket::SocketProviderWorker::spawn(self.clone(), rs)
-            });
-        let fs = fs.take_and_serve_directory_handle().context("directory handle")?;
-        let () = fs.collect::<()>().await;
+            .await;
         debug!("Services stream finished");
         Ok(())
     }

@@ -36,7 +36,7 @@ use crate::bindings::{
     context::Lockable,
     devices::DeviceInfo,
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsDispatcher, LockedStackContext, StackContext, StackDispatcher,
+    BindingsDispatcher, LockedStackContext, RequestStreamExt as _, StackContext, StackDispatcher,
 };
 
 /// log::Log implementation that uses stdout.
@@ -268,7 +268,10 @@ impl TestStack {
     pub(crate) fn connect_stack(&self) -> Result<fidl_fuchsia_net_stack::StackProxy, Error> {
         let (stack, rs) =
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_stack::StackMarker>()?;
-        crate::bindings::stack_fidl_worker::StackFidlWorker::spawn(self.ctx.clone(), rs);
+        fasync::Task::spawn(rs.serve_with(|rs| {
+            crate::bindings::stack_fidl_worker::StackFidlWorker::serve(self.ctx.clone(), rs)
+        }))
+        .detach();
         Ok(stack)
     }
 
@@ -279,7 +282,10 @@ impl TestStack {
         let (stack, rs) = fidl::endpoints::create_proxy_and_stream::<
             fidl_fuchsia_posix_socket::ProviderMarker,
         >()?;
-        crate::bindings::socket::SocketProviderWorker::spawn(self.ctx.clone(), rs);
+        fasync::Task::spawn(rs.serve_with(|rs| {
+            crate::bindings::socket::SocketProviderWorker::serve(self.ctx.clone(), rs)
+        }))
+        .detach();
         Ok(stack)
     }
 
