@@ -102,7 +102,7 @@ impl FidlService for TargetCollectionService {
                                     Err(bridge::OpenTargetError::TargetNotFound)
                                 }
                             })
-                            .map_err(Into::into)
+                            .map_err(Into::into);
                     }
                 };
                 let handles = self.target_handles.clone();

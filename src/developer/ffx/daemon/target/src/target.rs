@@ -37,7 +37,7 @@ use {
     usb_bulk::AsyncInterface as Interface,
 };
 
-const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
+const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 10000;
 const DEFAULT_SSH_PORT: u16 = 22;
 
 #[derive(Debug, Clone, Hash)]

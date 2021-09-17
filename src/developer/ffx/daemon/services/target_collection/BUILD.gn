@@ -24,7 +24,15 @@ rustc_library("ffx_daemon_service_target_collection") {
     "//third_party/rust_crates:log",
   ]
 
-  test_deps = [ "//src/developer/ffx/lib/addr:lib" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/connectivity/overnet/lib/stream_link",
+    "//src/developer/ffx/lib/addr:lib",
+    "//src/developer/ffx/lib/rcs:lib",
+  ]
 
   sources = [
     "src/lib.rs",
