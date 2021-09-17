@@ -2,10 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 source_set("common") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "input.cc",
+    "input.h",
     "options.cc",
     "options.h",
     "shared-memory.cc",
@@ -19,12 +23,15 @@ source_set("common") {
     "//sdk/lib/fit",
     "//src/lib/fxl",
   ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("unittests") {
+test("unittests") {
+  output_name = "component_fuzzing_common_unittests"
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "input-unittest.cc",
     "options-unittest.cc",
     "shared-memory-unittest.cc",
     "signal-coordinator-unittest.cc",
@@ -32,7 +39,7 @@ source_set("unittests") {
   deps = [
     ":common",
     "../testing",
-    "//third_party/googletest:gmock",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }

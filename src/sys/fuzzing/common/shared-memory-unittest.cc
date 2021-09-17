@@ -9,15 +9,11 @@
 #include <limits>
 #include <random>
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sanitizer/asan_interface.h>
 
 namespace fuzzing {
 namespace {
-
-using ::testing::Eq;
-using ::testing::Ne;
 
 // Test fixtures.
 
@@ -166,7 +162,7 @@ TEST(SharedMemoryTest, Write) {
   // Either way, the contents make it.
   EXPECT_EQ(other.size(), expected.size());
   std::vector<uint8_t> actual(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Eq(expected));
+  EXPECT_EQ(actual, expected);
 }
 
 TEST(SharedMemoryTest, Update) {
@@ -182,7 +178,7 @@ TEST(SharedMemoryTest, Update) {
   other.LinkMirrored(std::move(buffer));
   EXPECT_EQ(other.size(), expected.size());
   std::vector<uint8_t> actual(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Eq(expected));
+  EXPECT_EQ(actual, expected);
 
   //  Change source data, but don't update. Uses |cksum| to verify |expected| did in fact change.
   auto* begin = expected.data();
@@ -191,12 +187,12 @@ TEST(SharedMemoryTest, Update) {
   PickArray(expected.data(), expected.size());
   EXPECT_NE(cksum, std::accumulate(begin, end, 0, std::bit_xor<>()));
   actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Ne(expected));
+  EXPECT_NE(actual, expected);
 
   //  Now update
   shmem.Update();
   actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Eq(expected));
+  EXPECT_EQ(actual, expected);
 }
 
 TEST(SharedMemoryTest, Clear) {
@@ -210,7 +206,7 @@ TEST(SharedMemoryTest, Clear) {
   SharedMemory other;
   other.LinkReserved(std::move(buffer));
   std::vector<uint8_t> actual(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Eq(expected));
+  EXPECT_EQ(actual, expected);
 
   // Valid
   shmem.Clear();
@@ -220,7 +216,7 @@ TEST(SharedMemoryTest, Clear) {
   expected = PickVector(kCapacity);
   shmem.Write(expected.data(), expected.size());
   actual = std::vector<uint8_t>(other.data(), other.data() + other.size());
-  EXPECT_THAT(actual, Eq(expected));
+  EXPECT_EQ(actual, expected);
 }
 
 TEST(SharedMemoryTest, SetPoisoning) {

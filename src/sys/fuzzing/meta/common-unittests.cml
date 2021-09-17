@@ -7,6 +7,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/component_fuzzing_unittests",
+        binary: "test/component_fuzzing_common_unittests",
     },
 }
