@@ -447,8 +447,8 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
     // Evaluate slot context
     control[0] = 0;
     control[1] = 1;
-    auto slot_context =
-        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size_bytes_);
+    auto slot_context = reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) +
+                                                       slot_size_bytes_);
     slot_context->set_SPEED(speed)
         .set_MULTI_TT(multi_tt)
         .set_HUB(1)
@@ -599,9 +599,14 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request_,
     request.Complete(ZX_ERR_INVALID_ARGS, 0);
     return;
   }
+  auto* state = GetDeviceState(request.request()->header.device_id);
+  if (!state) {
+    request.Complete(ZX_ERR_IO, 0);
+    return;
+  }
   {
-    fbl::AutoLock _(&device_state_[request.request()->header.device_id].transaction_lock());
-    if (!device_state_[request.request()->header.device_id].GetSlot()) {
+    fbl::AutoLock _(&state->transaction_lock());
+    if (!state->GetSlot()) {
       request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
       return;
     }
@@ -1108,8 +1113,8 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
 
     // Initialize input slot context data structure (6.2.2) with 1 context entry
     // Set root hub port number to port number and context entries to 1
-    slot_context =
-        reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) + slot_size_bytes_);
+    slot_context = reinterpret_cast<SlotContext*>(reinterpret_cast<unsigned char*>(control) +
+                                                  slot_size_bytes_);
     context_entries = slot_context->CONTEXT_ENTRIES();
     index = XhciEndpointIndex(ep_desc->b_endpoint_address);
     if (index >= context_entries) {
@@ -1460,7 +1465,10 @@ zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 }
 
 TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address) {
-  auto state = &device_state_[device_id];
+  auto* state = GetDeviceState(device_id);
+  if (!state) {
+    return fpromise::make_error_promise(ZX_ERR_IO);
+  }
   StopEndpoint stop;
   {
     fbl::AutoLock state_lock(&state->transaction_lock());
@@ -1876,7 +1884,6 @@ zx_status_t UsbXhci::Init() {
     zxlogf(ERROR, "DdkAdd() error: %s", zx_status_get_string(status));
   }
   return status;
-
 }
 
 void UsbXhci::DdkInit(ddk::InitTxn txn) {

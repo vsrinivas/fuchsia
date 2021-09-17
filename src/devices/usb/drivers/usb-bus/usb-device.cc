@@ -95,13 +95,17 @@ void UsbDevice::StartCallbackThread() {
 }
 
 void UsbDevice::StopCallbackThread() {
+  bool was_thread_stopped;
   {
     fbl::AutoLock lock(&callback_lock_);
+    was_thread_stopped = callback_thread_stop_;
     callback_thread_stop_ = true;
   }
 
   sync_completion_signal(&callback_thread_completion_);
-  thrd_join(callback_thread_, nullptr);
+  if (!was_thread_stopped) {
+    thrd_join(callback_thread_, nullptr);
+  }
 }
 
 UsbDevice::Endpoint* UsbDevice::GetEndpoint(uint8_t ep_address) {

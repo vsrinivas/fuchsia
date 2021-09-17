@@ -200,6 +200,16 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   CommandRing* GetCommandRing() { return &command_ring_; }
 
   DeviceState* GetDeviceState() { return device_state_.get(); }
+  DeviceState* GetDeviceState(uint32_t device_id) {
+    auto* state = &device_state_[device_id];
+    {
+      fbl::AutoLock _(&state->transaction_lock());
+      if (state->IsDisconnecting()) {
+        return nullptr;
+      }
+    }
+    return state;
+  }
 
   PortState* GetPortState() { return port_state_.get(); }
   // Indicates whether or not the controller supports cache coherency
