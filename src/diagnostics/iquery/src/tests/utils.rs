@@ -48,7 +48,6 @@ impl TestBuilder {
 
     pub async fn start(self) -> TestInExecution {
         let instance = self.builder.build().create().await.expect("create instance");
-        instance.root.start_with_binder_sync().await.expect("connect to Binder");
         TestInExecution { instance }
     }
 

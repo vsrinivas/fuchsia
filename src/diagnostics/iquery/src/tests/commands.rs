@@ -386,7 +386,6 @@ async fn show_archive() {
     .await;
 }
 
-#[ignore]
 #[fuchsia::test]
 async fn list_accessors() {
     let test = TestBuilder::new().await.start().await;
