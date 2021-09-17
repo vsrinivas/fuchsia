@@ -101,10 +101,6 @@ pub enum KnownServiceProvider {
 
 /// Constant properties of components used in networking integration tests, such
 /// as monikers and URLs.
-//
-// TODO(https://fxbug.dev/77202): when migrating netstack integration tests to
-// netemul-v2, include these components in the test package as necessary, and
-// update their URLs here to their v2 versions.
 #[allow(missing_docs)]
 pub mod constants {
     pub mod netstack {
@@ -112,8 +108,8 @@ pub mod constants {
     }
     pub mod netcfg {
         pub const COMPONENT_NAME: &str = "netcfg";
-        // These capability names and filepaths should match the devfs capabilities used by netemul
-        // in its component manifest, i.e. netemul.cml.
+        // These capability names and filepaths should match the devfs capabilities used by netcfg
+        // in its component manifest, i.e. netcfg.cml.
         pub const DEV_CLASS_ETHERNET: &str = "dev-class-ethernet";
         pub const CLASS_ETHERNET_PATH: &str = "class/ethernet";
         pub const DEV_CLASS_NETWORK: &str = "dev-class-network";
