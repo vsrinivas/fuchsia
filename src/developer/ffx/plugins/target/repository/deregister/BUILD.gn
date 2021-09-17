@@ -4,16 +4,15 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_repository_target_list") {
+ffx_plugin("ffx_target_repository_deregister") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/developer/ffx/lib/pkg",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:prettytable-rs",
   ]
-  args_deps =
-      [ "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc" ]
 
   args_sources = [ "src/args.rs" ]
 

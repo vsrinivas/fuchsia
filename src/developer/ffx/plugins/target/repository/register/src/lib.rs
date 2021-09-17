@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
     ffx_core::ffx_plugin,
-    ffx_repository_target_register_args::RegisterCommand,
+    ffx_target_repository_register_args::RegisterCommand,
     fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy, RepositoryTarget},
 };
 

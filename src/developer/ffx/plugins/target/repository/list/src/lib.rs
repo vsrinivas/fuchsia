@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
-    ffx_repository_target_list_args::ListCommand,
+    ffx_target_repository_list_args::ListCommand,
     fidl_fuchsia_developer_bridge::{RepositoryRegistryProxy, RepositoryStorageType},
     prettytable::{cell, row, Table},
     std::{

@@ -17,6 +17,7 @@ ffx_plugin("ffx_target") {
     "off:ffx_off",
     "reboot:ffx_reboot",
     "remove:ffx_target_remove",
+    "repository:ffx_target_repository",
     "show:ffx_target_show",
     "snapshot:ffx_snapshot",
     "update:ffx_update",

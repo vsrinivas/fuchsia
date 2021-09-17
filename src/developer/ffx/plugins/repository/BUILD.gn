@@ -17,7 +17,6 @@ ffx_plugin("ffx_repository") {
     "list:ffx_repository_list",
     "packages:ffx_repository_packages",
     "remove:ffx_repository_remove",
-    "target:ffx_repository_target",
   ]
 
   args_sources = [ "src/args.rs" ]

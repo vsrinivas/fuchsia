@@ -4,13 +4,13 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_repository_target") {
+ffx_plugin("ffx_target_repository") {
   version = "0.1.0"
   edition = "2018"
   plugin_deps = [
-    "deregister:ffx_repository_target_deregister",
-    "list:ffx_repository_target_list",
-    "register:ffx_repository_target_register",
+    "deregister:ffx_target_repository_deregister",
+    "list:ffx_target_repository_list",
+    "register:ffx_target_repository_register",
   ]
 
   args_sources = [ "src/args.rs" ]
@@ -19,5 +19,5 @@ ffx_plugin("ffx_repository_target") {
 group("tests") {
   testonly = true
 
-  deps = [ ":ffx_repository_target_tests" ]
+  deps = [ ":ffx_target_repository_tests" ]
 }
