@@ -88,8 +88,7 @@ async fn reboot_on_terminate_success() {
         "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_success.cm",
     )
     .await;
-    let realm = realm.create().await.unwrap();
-    let _ = realm.root.connect_to_binder().unwrap();
+    let _realm = realm.create().await.unwrap();
 
     // Wait for the test to signal that it received the shutdown request.
     info!("waiting for shutdown request");
@@ -169,8 +168,7 @@ async fn reboot_on_terminate_policy() {
         "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_policy.cm",
     )
     .await;
-    let realm = realm.create().await.unwrap();
-    let _ = realm.root.connect_to_binder().unwrap();
+    let _realm = realm.create().await.unwrap();
 
     // Wait for the test to signal that the security policy was correctly applied.
     info!("waiting for policy error");
