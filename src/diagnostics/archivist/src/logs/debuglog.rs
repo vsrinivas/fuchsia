@@ -124,12 +124,16 @@ pub fn convert_debuglog_to_log_message(
     record: &zx::sys::zx_log_record_t,
 ) -> Option<MessageWithStats> {
     let data_len = record.datalen as usize;
-    let mut contents = match String::from_utf8(record.data[0..data_len].to_vec()) {
+
+    let mut contents = match std::str::from_utf8(&record.data[0..data_len]) {
         Err(e) => {
             warn!(?e, "Received non-UTF8 from the debuglog.");
             return None;
         }
-        Ok(s) => s,
+        Ok(utf8) => {
+            let boxed_utf8: Box<str> = utf8.into();
+            boxed_utf8.into_string()
+        }
     };
     if let Some(b'\n') = contents.bytes().last() {
         contents.pop();
