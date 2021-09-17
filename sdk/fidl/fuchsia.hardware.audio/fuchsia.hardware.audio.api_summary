@@ -15,11 +15,12 @@ protocol/member fuchsia.hardware.audio/Codec.SetBridgedMode(bool enable_bridged_
 protocol/member fuchsia.hardware.audio/Codec.SetDaiFormat(fuchsia.hardware.audio/DaiFormat format) -> (fuchsia.hardware.audio/Codec_SetDaiFormat_Result result)
 protocol/member fuchsia.hardware.audio/Codec.SetGainState(fuchsia.hardware.audio/GainState target_state)
 protocol/member fuchsia.hardware.audio/Codec.Start() -> (int64 start_time)
-protocol/member fuchsia.hardware.audio/Codec.Stop() -> ()
+protocol/member fuchsia.hardware.audio/Codec.Stop() -> (int64 start_time)
 protocol/member fuchsia.hardware.audio/Codec.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
 protocol/member fuchsia.hardware.audio/Codec.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
 protocol fuchsia.hardware.audio/Codec
 table/member fuchsia.hardware.audio/CodecFormatInfo.external_delay int64
+table/member fuchsia.hardware.audio/CodecFormatInfo.turn_off_delay int64
 table/member fuchsia.hardware.audio/CodecFormatInfo.turn_on_delay int64
 table fuchsia.hardware.audio/CodecFormatInfo
 struct/member fuchsia.hardware.audio/CodecInfo.manufacturer string:256
