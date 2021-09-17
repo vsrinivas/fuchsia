@@ -31,6 +31,7 @@
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <lk/init.h>
+#include <phys/handoff.h>
 
 // See note in //zircon/third_party/ulib/boringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
@@ -47,9 +48,7 @@ namespace {
 PRNG* kGlobalPrng = nullptr;
 
 unsigned int IntegrateZbiEntropy() {
-  auto zbi_bytes = zbitl::StorageFromRawHeader(platform_get_zbi());
-  zbitl::View<ktl::span<ktl::byte>> zbi(
-      {const_cast<ktl::byte*>(zbi_bytes.data()), zbi_bytes.size()});
+  zbitl::View zbi(ZbiInPhysmap());
   unsigned int found = 0;
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
     if ((*it).header->type == ZBI_TYPE_SECURE_ENTROPY) {

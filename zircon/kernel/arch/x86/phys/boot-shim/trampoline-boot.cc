@@ -184,7 +184,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   return fitx::ok();
 }
 
-[[noreturn]] void TrampolineBoot::Boot() {
+[[noreturn]] void TrampolineBoot::Boot(ktl::optional<void*> argument) {
   ZX_ASSERT(!MustRelocateDataZbi());
 
   uintptr_t entry = static_cast<uintptr_t>(KernelEntryAddress());
@@ -208,14 +208,14 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
 
   if (!trampoline_) {
     // This is a new-style position-independent kernel.  Boot it where it is.
-    BootZbi::Boot();
+    BootZbi::Boot(argument);
   }
 
   LogAddresses();
   LogFixedAddresses();
   LogBoot(KernelEntryAddress());
 
-  trampoline_->Boot(KernelImage(), KernelLoadSize(), DataZbi().storage().data());
+  trampoline_->Boot(KernelImage(), KernelLoadSize(), argument.value_or(DataZbi().storage().data()));
 }
 
 // This output lines up with what BootZbi::LogAddresses() prints.

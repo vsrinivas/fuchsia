@@ -71,8 +71,6 @@
 
 #define LOCAL_TRACE 0
 
-extern zbi_header_t* _zbi_base;
-
 pc_bootloader_info_t bootloader;
 
 namespace {
@@ -104,10 +102,6 @@ static unsigned pixel_format_fixup(unsigned pf) {
 
 static bool early_console_disabled;
 
-const zbi_header_t* platform_get_zbi(void) {
-  return reinterpret_cast<const zbi_header_t*>(X86_PHYS_TO_VIRT(_zbi_base));
-}
-
 // Copy ranges in the given ZBI into a newly-allocated array of zbi_mem_range_t structs.
 //
 // Allocation takes place from early booth memory, which cannot be released.
@@ -137,18 +131,8 @@ static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
 }
 
 static void platform_save_bootloader_data(void) {
-  // Get the ZBI location and size.
-  //
-  // We drop constness, as we will need to edit CMDLINE items (see below).
-  zbi_header_t* data_zbi = const_cast<zbi_header_t*>(platform_get_zbi());
-  if (data_zbi == nullptr) {
-    return;
-  }
-  size_t size = sizeof(*data_zbi) + data_zbi->length;
-  printf("Data ZBI: @ %p (%zu bytes)\n", data_zbi, size);
-
   // Handle individual ZBI items.
-  ktl::span<ktl::byte> zbi{reinterpret_cast<ktl::byte*>(data_zbi), size};
+  ktl::span<ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
@@ -264,44 +248,18 @@ static void platform_save_bootloader_data(void) {
     return;
   }
 
-  // Save the location of the ZBI, and prevent the early boot allocator from
-  // handing out the memory the ZBI data is located in.
-  auto phys = reinterpret_cast<uintptr_t>(_zbi_base);
+  // Prevent the early boot allocator from handing out the memory the ZBI data
+  // is located in.
+  auto phys = reinterpret_cast<uintptr_t>(view.storage().data());
   boot_alloc_reserve(phys, view.size_bytes());
-  bootloader.ramdisk_base = phys;
-  bootloader.ramdisk_size = view.size_bytes();
 
   // Save memory range information from the ZBI.
   bootloader.memory_ranges = get_memory_ranges(zbi);
 }
 
-static void* ramdisk_base;
-static size_t ramdisk_size;
-
-static void platform_preserve_ramdisk(void) {
-  if (bootloader.ramdisk_size == 0) {
-    return;
-  }
-  if (bootloader.ramdisk_base == 0) {
-    return;
-  }
-
-  size_t pages = ROUNDUP_PAGE_SIZE(bootloader.ramdisk_size) / PAGE_SIZE;
-  ramdisk_base = paddr_to_physmap(bootloader.ramdisk_base);
-  ramdisk_size = pages * PAGE_SIZE;
-
-  // add the ramdisk to the boot reserve list
-  boot_reserve_add_range(bootloader.ramdisk_base, ramdisk_size);
-}
-
-void* platform_get_ramdisk(size_t* size) {
-  if (ramdisk_base) {
-    *size = ramdisk_size;
-    return ramdisk_base;
-  } else {
-    *size = 0;
-    return NULL;
-  }
+static void boot_reserve_zbi() {
+  ktl::span zbi = ZbiInPhysmap();
+  boot_reserve_add_range(physmap_to_paddr(zbi.data()), ROUNDUP_PAGE_SIZE(zbi.size_bytes()));
 }
 
 #include <lib/gfxconsole.h>
@@ -322,7 +280,7 @@ static void platform_early_display_init(void) {
     return;
   }
 
-  if (gBootOptions->gfx_console_early == false) {
+  if (!gBootOptions->gfx_console_early) {
     early_console_disabled = true;
     return;
   }
@@ -625,8 +583,8 @@ void platform_early_init(void) {
   /* initialize the boot memory reservation system */
   boot_reserve_init();
 
-  /* add the ramdisk to the boot reserve list */
-  platform_preserve_ramdisk();
+  // Add the data ZBI to the boot reserve list.
+  boot_reserve_zbi();
 
   /* initialize physical memory arenas */
   pc_mem_init(bootloader.memory_ranges);

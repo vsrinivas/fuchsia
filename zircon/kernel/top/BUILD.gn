@@ -29,5 +29,6 @@ source_set("top") {
     "//zircon/kernel/lib/version",
     "//zircon/kernel/phys:handoff",
     "//zircon/kernel/platform",
+    "//zircon/system/ulib/zbitl",
   ]
 }

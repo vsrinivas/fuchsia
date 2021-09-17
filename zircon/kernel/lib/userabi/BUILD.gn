@@ -233,6 +233,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/counters",
       "//zircon/kernel/lib/crashlog",
       "//zircon/kernel/lib/init",
+      "//zircon/kernel/phys:handoff",
       "//zircon/system/ulib/elf-psabi",
       "//zircon/system/ulib/zircon-internal",
     ]

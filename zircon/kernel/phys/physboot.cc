@@ -189,8 +189,12 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   // more work for the kernel.
   auto handoff = new (handoff_payload.data()) PhysHandoff;
   handoff->times = gBootTimes;
+  handoff->zbi = reinterpret_cast<uintptr_t>(boot.DataZbi().storage().data());
 
-  boot.Boot();
+  // Even though the kernel is still a ZBI and mostly using the ZBI protocol
+  // for booting, the PhysHandoff pointer (physical address) is now the
+  // argument to the kernel, not the data ZBI address.
+  boot.Boot(handoff);
 }
 
 // TODO(fxbug.dev/53593): BootOptions already parsed and redacted, so put it

@@ -6,14 +6,31 @@
 
 #include <lib/arch/ticks.h>
 #include <lib/counters.h>
+#include <lib/zbitl/view.h>
+#include <platform.h>
 
 #include <lk/init.h>
 #include <phys/handoff.h>
 #include <platform/timer.h>
+#include <vm/physmap.h>
 
-// Platform code sets this pointer when it finds the ZBI_TYPE_STORAGE_KERNEL
-// item left by physboot.
 PhysHandoff* gPhysHandoff;
+
+void HandoffFromPhys(paddr_t handoff_paddr) {
+  gPhysHandoff = static_cast<PhysHandoff*>(paddr_to_physmap(handoff_paddr));
+}
+
+ktl::span<ktl::byte> ZbiInPhysmap(bool own) {
+  ZX_ASSERT(gPhysHandoff->zbi != 0);
+  void* data = paddr_to_physmap(gPhysHandoff->zbi);
+  if (own) {
+    gPhysHandoff->zbi = 0;
+  }
+
+  zbitl::ByteView zbi = zbitl::StorageFromRawHeader(static_cast<zbi_header_t*>(data));
+  ZX_ASSERT(!zbi.empty());
+  return {const_cast<ktl::byte*>(zbi.data()), zbi.size()};
+}
 
 namespace {
 

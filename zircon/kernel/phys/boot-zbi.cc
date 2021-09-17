@@ -387,13 +387,12 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   return fitx::ok();
 }
 
-[[noreturn]] void BootZbi::Boot() {
+[[noreturn]] void BootZbi::Boot(ktl::optional<void*> argument) {
   ZX_ASSERT_MSG(KernelCanLoadInPlace(), "Has Load() been called?");
   LogAddresses();
   LogBoot(KernelEntryAddress());
   auto kernel_hdr = const_cast<zircon_kernel_t*>(kernel_);
-  auto data_hdr = reinterpret_cast<zbi_header_t*>(data_.storage().data());
-  arch::ZbiBoot(kernel_hdr, data_hdr);
+  arch::ZbiBoot(kernel_hdr, argument.value_or(data_.storage().data()));
 }
 
 #define ADDR "0x%016" PRIx64

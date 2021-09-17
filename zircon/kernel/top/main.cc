@@ -29,6 +29,7 @@
 #include <kernel/thread.h>
 #include <kernel/topology.h>
 #include <lk/init.h>
+#include <phys/handoff.h>
 #include <vm/init.h>
 #include <vm/vm.h>
 
@@ -59,7 +60,7 @@ bool ConstructorsCalled() { return lk_global_constructors_called(); }
 }  // namespace cxxabi_dynamic_init::internal
 
 // called from arch code
-void lk_main() {
+void lk_main(paddr_t handoff_paddr) {
   // get us into some sort of thread context so Thread::Current works.
   thread_init_early();
 
@@ -103,6 +104,10 @@ void lk_main() {
   // required to get the boot CPU and platform into a known state.
   arch_early_init();
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH_EARLY, LK_INIT_LEVEL_PLATFORM_EARLY - 1);
+
+  // At this point the physmap is available.
+  HandoffFromPhys(handoff_paddr);
+
   platform_early_init();
   lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_ARCH_PREVM - 1);
 

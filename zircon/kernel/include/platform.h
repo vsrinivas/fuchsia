@@ -81,11 +81,6 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
 
-/* returns pointer to ramdisk image, or NULL if none.
- * Sets size to ramdisk size or zero if none.
- */
-void* platform_get_ramdisk(size_t* size);
-
 // Called just before initiating a system suspend to give the platform layer a
 // chance to save state.  Must be called with interrupts disabled.
 void platform_suspend(void);
@@ -104,9 +99,6 @@ bool platform_early_console_enabled(void);
 // by the bootloader.
 void platform_set_hw_reboot_reason(zbi_hw_reboot_reason_t reason);
 zbi_hw_reboot_reason_t platform_hw_reboot_reason(void);
-
-// Fetch the pointer to the ZBI as discovered by the platform.
-const zbi_header_t* platform_get_zbi(void);
 
 __END_CDECLS
 

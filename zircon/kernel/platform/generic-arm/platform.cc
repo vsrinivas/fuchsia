@@ -77,12 +77,6 @@
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
-extern paddr_t zbi_paddr;
-
-static void* ramdisk_base;
-static size_t ramdisk_size;
-
-static zbi_header_t* zbi_root = nullptr;
 
 static bool uart_disabled = false;
 
@@ -96,8 +90,6 @@ static ktl::byte mexec_data_zbi[ZX_PAGE_SIZE];
 
 static ktl::atomic<int> panic_started;
 static ktl::atomic<int> halted;
-
-const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
 
 namespace {
 lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
@@ -147,16 +139,6 @@ void platform_panic_start(void) {
     dlog_bluescreen_init();
     // Attempt to dump the current debug trace buffer, if we have one.
     jtrace_dump(jtrace::TraceBufferType::Current);
-  }
-}
-
-void* platform_get_ramdisk(size_t* size) {
-  if (ramdisk_base) {
-    *size = ramdisk_size;
-    return ramdisk_base;
-  } else {
-    *size = 0;
-    return nullptr;
   }
 }
 
@@ -238,13 +220,6 @@ static void topology_cpu_init(void) {
   auto* warning_thread = Thread::Create("platform-cpu-boot-check-thread", check_cpus_booted,
                                         nullptr, DEFAULT_PRIORITY);
   warning_thread->DetachAndResume();
-}
-
-static inline bool is_zbi_container(void* addr) {
-  DEBUG_ASSERT(addr);
-
-  zbi_header_t* item = (zbi_header_t*)addr;
-  return item->type == ZBI_TYPE_CONTAINER;
 }
 
 static void process_mem_range(const zbi_mem_range_t* mem_range) {
@@ -398,22 +373,16 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
 }
 
 // Called during platform_init_early, the heap is not yet present.
-void ProcessZbiEarly(zbi_header_t* zbi) {
-  DEBUG_ASSERT(zbi);
-
+void ProcessZbiEarly() {
   auto mexec_data_image = GetMexecDataImage();
   // Writable bytes, as we will need to edit CMDLINE items (see below).
-  ktl::span span{reinterpret_cast<ktl::byte*>(zbi), SIZE_MAX};
+  ktl::span span = ZbiInPhysmap();
   zbitl::View view(span);
 
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     bool is_mexec_data = ZBI_TYPE_DRV_METADATA(header->type);
     switch (header->type) {
-      case ZBI_TYPE_STORAGE_KERNEL: {
-        gPhysHandoff = PhysHandoff::FromPayload(payload);
-        break;
-      }
       case ZBI_TYPE_KERNEL_DRIVER:
       case ZBI_TYPE_PLATFORM_ID:
         is_mexec_data = true;
@@ -482,12 +451,11 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
 }
 
 // Called after the heap is up, but before multithreading.
-void ProcessZbiLate(const zbi_header_t* zbi) {
-  DEBUG_ASSERT(zbi);
-
+void ProcessZbiLate() {
   auto mexec_data_image = GetMexecDataImage();
-  zbitl::View view(zbitl::AsBytes(zbi, SIZE_MAX));
 
+  ktl::span<const ktl::byte> zbi = ZbiInPhysmap();
+  zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     bool is_mexec_data = false;
@@ -574,29 +542,8 @@ void ProcessZbiLate(const zbi_header_t* zbi) {
 }
 
 void platform_early_init(void) {
-  // if the zbi_paddr variable is -1, it was not set
-  // in start.S, so we are in a bad place.
-  if (zbi_paddr == -1UL) {
-    panic("no zbi_paddr!\n");
-  }
-
-  void* zbi_vaddr = paddr_to_physmap(zbi_paddr);
-
   // initialize the boot memory reservation system
   boot_reserve_init();
-
-  if (zbi_vaddr && is_zbi_container(zbi_vaddr)) {
-    zbi_header_t* header = (zbi_header_t*)zbi_vaddr;
-
-    ramdisk_base = header;
-    ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
-  } else {
-    panic("no bootdata!\n");
-  }
-
-  if (!ramdisk_base || !ramdisk_size) {
-    panic("no ramdisk!\n");
-  }
 
   // Create an empty ZBI container now, into which ProcessZbi(Early|Late) will
   // append the items for the mexec data ZBI.
@@ -606,16 +553,15 @@ void platform_early_init(void) {
     panic("failed to create mexec Data ZBI\n");
   }
 
-  zbi_root = reinterpret_cast<zbi_header_t*>(ramdisk_base);
   // walk the zbi structure and process all the items
-  ProcessZbiEarly(zbi_root);
+  ProcessZbiEarly();
   FinishBootOptions();
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
 
   // bring up kernel drivers after we have mapped our peripheral ranges
-  pdev_init(zbi_root);
+  pdev_init();
 
   // Serial port should be active now
 
@@ -630,12 +576,13 @@ void platform_early_init(void) {
   // Initialize the PmmChecker now that the cmdline has been parsed.
   pmm_checker_init_from_cmdline();
 
-  // add the ramdisk to the boot reserve memory list
-  paddr_t ramdisk_start_phys = physmap_to_paddr(ramdisk_base);
-  paddr_t ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
+  // Add the data ZBI ramdisk to the boot reserve memory list.
+  ktl::span zbi = ZbiInPhysmap();
+  paddr_t ramdisk_start_phys = physmap_to_paddr(zbi.data());
+  paddr_t ramdisk_end_phys = ramdisk_start_phys + ROUNDUP_PAGE_SIZE(zbi.size_bytes());
   dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n", ramdisk_start_phys,
           ramdisk_end_phys - 1);
-  boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
+  boot_reserve_add_range(ramdisk_start_phys, ramdisk_end_phys - ramdisk_start_phys);
 
   // check if a memory limit was passed in via kernel.memory-limit-mb and
   // find memory ranges to use if one is found.
@@ -672,7 +619,7 @@ void platform_early_init(void) {
 void platform_prevm_init() {}
 
 // Called after the heap is up but before the system is multithreaded.
-void platform_init_pre_thread(uint init_level) { ProcessZbiLate(zbi_root); }
+void platform_init_pre_thread(uint init_level) { ProcessZbiLate(); }
 
 LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread, LK_INIT_LEVEL_VM)
 

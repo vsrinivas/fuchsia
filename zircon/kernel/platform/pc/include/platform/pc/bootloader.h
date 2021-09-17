@@ -25,9 +25,6 @@ struct pc_bootloader_info_t {
 
   ktl::span<zbi_mem_range_t> memory_ranges;
 
-  uint64_t ramdisk_base;
-  size_t ramdisk_size;
-
   zbi_swfb_t fb;
   ktl::variant<ktl::monostate, dcfg_simple_pio_t, dcfg_simple_t> uart;
   zbi_nvram_t nvram;

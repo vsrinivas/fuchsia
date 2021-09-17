@@ -50,11 +50,11 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
 }
 #endif
 
-[[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, zbi_header_t* zbi) {
+[[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, void* arg) {
   auto entry = reinterpret_cast<uintptr_t>(kernel) + kernel->data_kernel.entry;
   uintptr_t raw_entry = static_cast<uintptr_t>(entry);
   ZX_ASSERT(raw_entry == entry);
-  ZbiBootRaw(raw_entry, zbi);
+  ZbiBootRaw(raw_entry, arg);
 }
 
 }  // namespace arch

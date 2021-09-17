@@ -82,8 +82,9 @@ class BootZbi {
                            ktl::optional<uintptr_t> kernel_load_address = {});
 
   // Boot into the kernel loaded by Load(), which must have been called first.
-  // This cannot fail and never returns.
-  [[noreturn]] void Boot();
+  // This cannot fail and never returns.  If the optional pointer argument is
+  // supplied it is given the to the new kernel instead of DataLoadAddress().
+  [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 
   // The Kernel* methods can be used at any time, even before Load().
 

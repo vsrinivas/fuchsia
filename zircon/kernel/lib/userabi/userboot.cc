@@ -36,6 +36,7 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
+#include <phys/handoff.h>
 #include <platform/crashlog.h>
 #include <vm/vm_object_paged.h>
 
@@ -248,11 +249,10 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out, size_t* out_size) {
 }
 
 void bootstrap_vmos(Handle** handles) {
-  size_t rsize;
-  void* rbase = platform_get_ramdisk(&rsize);
-  if (rbase) {
-    dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
-  }
+  ktl::span<ktl::byte> zbi = ZbiInPhysmap(true);
+  void* rbase = zbi.data();
+  size_t rsize = ROUNDUP_PAGE_SIZE(zbi.size_bytes());
+  dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
   // The ZBI.
   fbl::RefPtr<VmObjectPaged> rootfs_vmo;

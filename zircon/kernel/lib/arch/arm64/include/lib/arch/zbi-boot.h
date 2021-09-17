@@ -27,7 +27,7 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
 // must be aligned to 64K and the data ZBI to 4K, as per the ZBI spec.  This
 // can be called in physical address mode or with identity mapping that covers
 // at least the kernel plus its reserve_memory_size and the whole data ZBI.
-[[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, zbi_header_t* zbi) {
+[[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, void* arg) {
   DisableLocalCachesAndMmu();
 
   // Clear the stack and frame pointers and the link register so no misleading
@@ -42,7 +42,7 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
       br %[entry]
       )"""
       :
-      : [entry] "r"(entry), [zbi] "r"(zbi)
+      : [entry] "r"(entry), [zbi] "r"(arg)
       // The compiler gets unhappy if x29 (fp) is a clobber.  It's never going
       // to be the register used for %[entry] anyway.  The memory clobber is
       // probably unnecessary, but it expresses that this constitutes access to

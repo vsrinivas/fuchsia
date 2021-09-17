@@ -51,9 +51,6 @@
 #error "missing -mcx16"
 #endif
 
-/* save a pointer to the bootdata, if present */
-void* _zbi_base;
-
 namespace {
 void EnableLbrs(cpu_mask_t mask) {
   mp_sync_exec(

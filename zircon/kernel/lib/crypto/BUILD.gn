@@ -21,6 +21,7 @@ zx_library("crypto") {
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/unittest",
+    "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/zbitl",
     "//zircon/third_party/ulib/boringssl",

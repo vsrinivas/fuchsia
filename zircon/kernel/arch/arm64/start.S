@@ -33,6 +33,7 @@ cpuid                   .req x21
 page_table0             .req x22
 page_table1             .req x23
 kernel_vaddr            .req x24
+handoff_paddr           .req x25
 
 // Collect timestamp in tmp, tmp2.  Also clobbers tmp3-5.
 .macro sample_ticks
@@ -76,9 +77,9 @@ FUNCTION(_start)
     // Record the entry time stamp.
     store_ticks kernel_entry_ticks
 
-    /* save x0 in zbi_paddr */
-    adrp    tmp, zbi_paddr
-    str     x0, [tmp, #:lo12:zbi_paddr]
+    // Save the x0 argument in a register that won't be clobbered.
+    mov     handoff_paddr, x0
+
     /* save entry point physical address in kernel_entry_paddr */
     adrp    tmp, kernel_entry_paddr
     adr     tmp2, _start
@@ -304,6 +305,7 @@ FUNCTION(_start)
     sample_ticks
     store_ticks kernel_virtual_entry_ticks
 
+    mov x0, handoff_paddr
     bl  lk_main
     b   .
 
@@ -332,9 +334,6 @@ END_FUNCTION(_start)
 DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
 END_DATA(arch_boot_el)
-DATA(zbi_paddr)
-    .quad -1
-END_DATA(zbi_paddr)
 DATA(kernel_entry_paddr)
     .quad -1
 END_DATA(kernel_entry_paddr)

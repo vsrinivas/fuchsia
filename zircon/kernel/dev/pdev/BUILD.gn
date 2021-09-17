@@ -9,7 +9,11 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("pdev") {
   kernel = true
   sources = [ "pdev.cc" ]
-  deps = [ "//zircon/kernel/lib/init" ]
+  deps = [
+    "//zircon/kernel/lib/init",
+    "//zircon/kernel/phys:handoff",
+    "//zircon/system/ulib/zbitl",
+  ]
   public_deps = [
     # <pdev/driver.h> has #include <lib/special-sections/special-sections.h>.
     "//zircon/kernel/lib/special-sections:headers",

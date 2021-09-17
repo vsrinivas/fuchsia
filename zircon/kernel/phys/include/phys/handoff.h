@@ -77,9 +77,28 @@ struct PhysHandoff {
   const uint64_t magic = kMagic;
 
   PhysBootTimes times;
+
+  // Physical address of the data ZBI.
+  uint64_t zbi = 0;
 };
 static_assert(ktl::has_unique_object_representations_v<PhysHandoff>);
 
 extern PhysHandoff* gPhysHandoff;
+
+#ifdef _KERNEL
+
+// These functions relate to PhysHandoff but exist only in the kernel proper.
+
+#include <sys/types.h>
+
+// Called as soon as the physmap is available to set the gPhysHandoff pointer.
+void HandoffFromPhys(paddr_t handoff_paddr);
+
+// This can be used after HandoffFromPhys and before the ZBI is handed off to
+// userboot at the very end of kernel initialization code.  Userboot calls it
+// with true to ensure no later calls will succeed.
+ktl::span<ktl::byte> ZbiInPhysmap(bool own = false);
+
+#endif  // _KERNEL
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_HANDOFF_H_

@@ -57,8 +57,8 @@ FUNCTION_LABEL(_start)
     /* set up a temporary stack pointer */
     mov $PHYS(_kstack_end), %rsp
 
-    // Save off the bootdata pointer in a register that won't get clobbered.
-    mov %rsi, %rbx
+    // Save off the handoff pointer in a register that won't get clobbered.
+    mov %rsi, %r14
 
     // The fixup code in image.S runs in 64-bit mode with paging enabled,
     // so we can't run it too early.  But it overlaps the bss, so we move
@@ -79,8 +79,7 @@ FUNCTION_LABEL(_start)
     xor %eax, %eax
     rep stosb // while (ecx-- > 0) *edi++ = al;
 
-    // _zbi_base is in bss, so now it's safe to set it.
-    mov %rbx, PHYS(_zbi_base)
+    // This is in .bss, so now it's safe to set it.
     mov %r15, PHYS(kernel_entry_ticks)
 
     /* give the boot allocator a chance to compute the physical address of the kernel */
@@ -279,6 +278,7 @@ high_entry:
     sample_ticks kernel_virtual_entry_ticks(%rip)
 
     /* call the main module */
+    mov %r14, %rdi
     call lk_main
 
 0:                          /* just sit around waiting for interrupts */

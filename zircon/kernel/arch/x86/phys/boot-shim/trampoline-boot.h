@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_TRAMPOLINE_BOOT_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_TRAMPOLINE_BOOT_H_
 
+#include <ktl/optional.h>
 #include <phys/boot-zbi.h>
 
 class TrampolineBoot : public BootZbi {
@@ -31,7 +32,7 @@ class TrampolineBoot : public BootZbi {
 
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0);
 
-  [[noreturn]] void Boot();
+  [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 
  private:
   class Trampoline;
