@@ -122,7 +122,7 @@ class FuchsiaVfs : public Vfs {
   // Shuts down a remote filesystem, by sending a |fuchsia.io/DirectoryAdmin.Unmount| request to the
   // filesystem serving |handle| and awaits a response. |deadline| is the deadline for waiting for
   // response.
-  static zx_status_t UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
+  static zx_status_t UnmountHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> handle,
                                    zx::time deadline);
 
   bool IsTokenAssociatedWithVnode(zx::event token) __TA_EXCLUDES(vfs_lock_);

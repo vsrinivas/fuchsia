@@ -127,7 +127,7 @@ class VnodeDir final : public VnodeMemfs {
   // Use the watcher container to implement a directory watcher
   void Notify(std::string_view name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-  zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) final;
 
   // Vnode overrides.
   //

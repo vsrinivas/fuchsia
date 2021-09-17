@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -2179,7 +2180,8 @@ TEST_F(FvmTest, TestMounting) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
@@ -2256,7 +2258,8 @@ TEST_F(FvmTest, TestMkfs) {
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(rootfd);
   fdio_cpp::FdioCaller caller(std::move(rootfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";

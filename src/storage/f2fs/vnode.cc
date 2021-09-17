@@ -562,7 +562,7 @@ void VnodeF2fs::Sync(SyncCallback closure) {
   closure(ZX_OK);
 }
 
-zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo *info) {
+zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) {
   SbInfo &sbi = Vfs()->GetSbInfo();
   *info = {};
   info->block_size = kBlockSize;
@@ -575,9 +575,10 @@ zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo *info) {
   info->used_nodes = sbi.total_valid_inode_count;
 
   constexpr std::string_view kFsName = "f2fs";
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "f2fs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
+                "f2fs name too long");
   info->name[kFsName.copy(reinterpret_cast<char *>(info->name.data()),
-                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
+                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
 
   // TODO(unknown): Fill info->free_shared_pool_bytes using fvm info
 

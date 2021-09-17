@@ -10,9 +10,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryAdminMarker, DirectoryAdminProxy, DirectoryMarker, DirectoryProxy, NodeProxy,
-    },
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeProxy},
+    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminProxy},
     fuchsia_component::server::ServiceFs,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_runtime::{HandleInfo, HandleType},

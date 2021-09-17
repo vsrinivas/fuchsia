@@ -17,11 +17,11 @@ use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryAdminRequest, DirectoryAdminRequestStream, DirectoryObject, NodeAttributes,
-        NodeInfo, NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_RIGHT_WRITABLE,
+        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_io_admin::{DirectoryAdminRequest, DirectoryAdminRequestStream},
     fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},

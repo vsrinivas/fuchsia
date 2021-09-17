@@ -20,6 +20,7 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
+	"fidl/fuchsia/io/admin"
 	"fidl/fuchsia/io2"
 	"fidl/fuchsia/mem"
 
@@ -421,11 +422,11 @@ func (d *directoryWrapper) UnmountNode(fidl.Context) (int32, io.DirectoryWithCtx
 	return int32(zx.ErrNotSupported), io.DirectoryWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(zx.HandleInvalid)}), nil
 }
 
-func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
+func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *admin.FilesystemInfo, error) {
 	totalBytes := uint64(d.vfs.fs.Size())
 	usedBytes := totalBytes - uint64(d.vfs.fs.FreeSize())
 
-	info := io.FilesystemInfo{
+	info := admin.FilesystemInfo{
 		TotalBytes:      totalBytes,
 		UsedBytes:       usedBytes,
 		TotalNodes:      0,

@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/blobfs/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -978,10 +979,11 @@ TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   // Hence we clone the fd into a |canary_channel| which we know will have its peer closed.
   zx::channel canary_channel;
   ASSERT_EQ(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(
-                                                   zx::unowned_channel(canary_channel)))
-                                    .Unmount()
-                                    .status());
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                               zx::unowned_channel(canary_channel)))
+                .Unmount()
+                .status());
   zx_signals_t pending;
   EXPECT_EQ(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending),
             ZX_OK);
@@ -1082,7 +1084,7 @@ TEST_P(BlobfsIntegrationTest, MultipleWrites) {
 
 zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
   fdio_cpp::FdioCaller caller(std::move(directory));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    zx::unowned_channel(caller.borrow_channel())))
                     .GetDevicePath();
   if (result.status() != ZX_OK) {

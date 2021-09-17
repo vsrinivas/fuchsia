@@ -19,7 +19,7 @@ namespace fs {
 namespace internal {
 
 class DirectoryConnection final : public Connection,
-                                  public fidl::WireServer<fuchsia_io::DirectoryAdmin> {
+                                  public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,

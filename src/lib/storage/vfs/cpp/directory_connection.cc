@@ -5,6 +5,7 @@
 #include "src/lib/storage/vfs/cpp/directory_connection.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/io.h>
@@ -97,7 +98,7 @@ namespace internal {
 DirectoryConnection::DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
                                          VnodeProtocol protocol, VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options,
-                 FidlProtocol::Create<fio::DirectoryAdmin>(this)) {}
+                 FidlProtocol::Create<fuchsia_io_admin::DirectoryAdmin>(this)) {}
 
 void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   Connection::NodeClone(request->flags, std::move(request->object));
@@ -115,7 +116,12 @@ void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& 
 void DirectoryConnection::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
-    completer.ReplyError(result.error());
+    // TODO(fxbug.dev/64992) this should just be:
+    //    completer.ReplyError(result.error());
+    // when the bug is fixed. This applies to other error replies in this file.
+    zx_status_t error = result.error();
+    completer.Reply(::fuchsia_io::wire::NodeClose2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&error)));
   } else {
     completer.Reply({});
   }
@@ -259,29 +265,41 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
   FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
                         ", name: ", request->name.data());
 
+  zx_status_t status;
   if (options().flags.node_reference) {
-    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    status = ZX_ERR_BAD_HANDLE;
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
   if (!options().rights.write) {
-    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    status = ZX_ERR_BAD_HANDLE;
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
   std::string_view name_str(request->name.data(), request->name.size());
   if (!IsValidName(name_str)) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    status = ZX_ERR_INVALID_ARGS;
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
-  zx_status_t status =
-      vfs()->Unlink(vnode(), name_str,
-                    request->options.has_flags()
-                        ? static_cast<bool>((request->options.flags() &
-                                             fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
-                        : false);
+  status = vfs()->Unlink(vnode(), name_str,
+                         request->options.has_flags()
+                             ? static_cast<bool>((request->options.flags() &
+                                                  fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
+                             : false);
   if (status == ZX_OK) {
-    completer.ReplySuccess();
+    // TODO(fxbug.dev/64992) this should just be:
+    //    completer.ReplySuccess();
+    // when the bug is fixed. This applies to other success replies in this file.
+    ::fuchsia_io::wire::DirectoryUnlinkResponse response;
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithResponse(
+        fidl::ObjectView<::fuchsia_io::wire::DirectoryUnlinkResponse>::FromExternal(&response)));
   } else {
-    completer.ReplyError(status);
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
   }
 }
 
@@ -357,25 +375,35 @@ void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::
   FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
                         ", src: ", request->src.data(), ", dst: ", request->dst.data());
 
+  zx_status_t status;
   if (request->src.empty() || request->dst.empty()) {
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    status = ZX_ERR_INVALID_ARGS;
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
   if (options().flags.node_reference) {
-    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    status = ZX_ERR_BAD_HANDLE;
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
   if (!options().rights.write) {
-    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    status = ZX_ERR_BAD_HANDLE;
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
     return;
   }
-  zx_status_t status = vfs()->Rename(std::move(request->dst_parent_token), vnode(),
-                                     std::string_view(request->src.data(), request->src.size()),
-                                     std::string_view(request->dst.data(), request->dst.size()));
+  status = vfs()->Rename(std::move(request->dst_parent_token), vnode(),
+                         std::string_view(request->src.data(), request->src.size()),
+                         std::string_view(request->dst.data(), request->dst.size()));
   if (status == ZX_OK) {
-    completer.ReplySuccess();
+    ::fuchsia_io::wire::DirectoryRename2Response response;
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithResponse(
+        fidl::ObjectView<::fuchsia_io::wire::DirectoryRename2Response>::FromExternal(&response)));
   } else {
-    completer.ReplyError(status);
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
   }
 }
 
@@ -422,7 +450,7 @@ void DirectoryConnection::Mount(MountRequestView request, MountCompleter::Sync& 
   if (!options().rights.admin) {
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
-    fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
+    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
     FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
@@ -439,7 +467,7 @@ void DirectoryConnection::MountAndCreate(MountAndCreateRequestView request,
   if (!options().rights.admin) {
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
-    fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
+    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
     FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
@@ -480,11 +508,12 @@ void DirectoryConnection::QueryFilesystem(QueryFilesystemRequestView request,
                                           QueryFilesystemCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our options: ", options());
 
-  fio::wire::FilesystemInfo info;
+  fuchsia_io_admin::wire::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(status, status == ZX_OK
-                              ? fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info)
-                              : nullptr);
+  completer.Reply(
+      status, status == ZX_OK
+                  ? fidl::ObjectView<fuchsia_io_admin::wire::FilesystemInfo>::FromExternal(&info)
+                  : nullptr);
 }
 
 void DirectoryConnection::GetDevicePath(GetDevicePathRequestView request,

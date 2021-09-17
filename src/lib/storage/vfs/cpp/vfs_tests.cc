@@ -71,7 +71,8 @@ TEST(SynchronousVfs, UnmountAndShutdown) {
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   ASSERT_OK(vfs.ServeDirectory(std::move(dir), std::move(remote)));
 
-  auto result = fidl::WireCall<fuchsia_io::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
+  auto result =
+      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_TRUE(vfs.IsTerminating());
@@ -88,7 +89,8 @@ TEST(ManagedVfs, UnmountAndShutdown) {
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   ASSERT_OK(vfs.ServeDirectory(std::move(dir), std::move(remote)));
 
-  auto result = fidl::WireCall<fuchsia_io::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
+  auto result =
+      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_TRUE(vfs.IsTerminating());

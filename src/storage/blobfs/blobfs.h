@@ -61,7 +61,7 @@
 namespace blobfs {
 
 using block_client::BlockDevice;
-using fuchsia_io::wire::FilesystemInfo;
+using fuchsia_io_admin::wire::FilesystemInfo;
 
 constexpr char kOutgoingDataRoot[] = "root";
 

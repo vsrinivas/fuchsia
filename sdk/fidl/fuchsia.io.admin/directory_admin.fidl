@@ -1,0 +1,96 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.io.admin;
+
+using fuchsia.io;
+using zx;
+
+const MOUNT_CREATE_FLAG_REPLACE uint32 = 0x00000001;
+
+const MAX_FS_NAME_BUFFER uint64 = 32;
+
+type FilesystemInfo = struct {
+    /// The number of data bytes which may be stored in a filesystem.
+    total_bytes uint64;
+    /// The number of data bytes which are in use by the filesystem.
+    used_bytes uint64;
+    /// The number of nodes which may be stored in the filesystem.
+    total_nodes uint64;
+    /// The number of nodes used by the filesystem.
+    used_nodes uint64;
+    /// The amount of space which may be allocated from the underlying
+    /// volume manager. If unsupported, this will be zero.
+    free_shared_pool_bytes uint64;
+    /// A unique identifier for this filesystem instance. Will not be preserved
+    /// across reboots.
+    fs_id uint64;
+    /// The size of a single filesystem block.
+    block_size uint32;
+    /// The maximum length of a filesystem name.
+    max_filename_size uint32;
+    /// A unique identifier for the type of the underlying filesystem.
+    fs_type uint32;
+    padding uint32;
+    // TODO(smklein): Replace this field with a string when supported
+    // by the "Simple" interface. At the moment, name is a fixed-size,
+    // null-terminated buffer.
+    name array<int8, MAX_FS_NAME_BUFFER>;
+};
+
+/// DirectoryAdmin defines a directory which is capable of handling
+/// administrator tasks within the filesystem.
+protocol DirectoryAdmin {
+    compose fuchsia.io.Directory;
+
+    /// Mount a channel representing a remote filesystem onto this directory.
+    /// All future requests to this node will be forwarded to the remote filesystem.
+    /// To re-open a node without forwarding to the remote target, the node
+    /// should be opened with `OPEN_FLAG_NO_REMOTE`.
+    @selector("fuchsia.io1/DirectoryAdmin.Mount")
+    Mount(resource struct {
+        remote client_end:fuchsia.io.Directory;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Atomically create a directory with a provided path, and mount the
+    /// remote handle to the newly created directory.
+    @selector("fuchsia.io1/DirectoryAdmin.MountAndCreate")
+    MountAndCreate(resource struct {
+        remote client_end:fuchsia.io.Directory;
+        name string:fuchsia.io.MAX_FILENAME;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Unmount this filesystem. After this function returns successfully,
+    /// all connections to the filesystem will be terminated.
+    @selector("fuchsia.io1/DirectoryAdmin.Unmount")
+    Unmount() -> (struct {
+        s zx.status;
+    });
+
+    /// Detach a node which was previously attached to this directory
+    /// with Mount.
+    @selector("fuchsia.io1/DirectoryAdmin.UnmountNode")
+    UnmountNode() -> (resource struct {
+        s zx.status;
+        remote client_end:<fuchsia.io.Directory, optional>;
+    });
+
+    /// Query the filesystem for filesystem-specific information.
+    @selector("fuchsia.io1/DirectoryAdmin.QueryFilesystem")
+    QueryFilesystem() -> (struct {
+        s zx.status;
+        info box<FilesystemInfo>;
+    });
+
+    /// Acquire the path to the device backing this filesystem, if there is one.
+    @selector("fuchsia.io1/DirectoryAdmin.GetDevicePath")
+    GetDevicePath() -> (struct {
+        s zx.status;
+        path string:<fuchsia.io.MAX_PATH, optional>;
+    });
+};

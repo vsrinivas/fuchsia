@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -2122,8 +2123,7 @@ int shutdown(int fd, int how) {
 
 // The common denominator between the Linux-y fstatfs and the POSIX
 // fstatvfs, which align on most fields. The fs version is more easily
-// computed from the fio::FilesystemInfo, so this takes a struct
-// statfs.
+// computed from the fuchsia_io_admin::FilesystemInfo, so this takes a struct statfs.
 static int fs_stat(int fd, struct statfs* buf) {
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
@@ -2134,7 +2134,7 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  auto directory_admin = fidl::UnownedClientEnd<fio::DirectoryAdmin>(handle);
+  auto directory_admin = fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(handle);
   if (!directory_admin.is_valid()) {
     return ERRNO(ENOTSUP);
   }
@@ -2142,16 +2142,16 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (result.status() != ZX_OK) {
     return ERROR(result.status());
   }
-  fidl::WireResponse<fio::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
+  fidl::WireResponse<fuchsia_io_admin::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return ERROR(response->s);
   }
-  fio::wire::FilesystemInfo* info = response->info.get();
+  fuchsia_io_admin::wire::FilesystemInfo* info = response->info.get();
   if (info == nullptr) {
     return ERRNO(EIO);
   }
 
-  info->name[fio::wire::kMaxFsNameBuffer - 1] = '\0';
+  info->name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
 
   struct statfs stats = {};
 

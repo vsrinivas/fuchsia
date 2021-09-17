@@ -47,10 +47,8 @@ use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
     fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
-    fidl_fuchsia_io::{
-        DirectoryAdminSynchronousProxy, FilesystemInfo, NodeSynchronousProxy,
-        CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
-    },
+    fidl_fuchsia_io::{NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN},
+    fidl_fuchsia_io_admin::{DirectoryAdminSynchronousProxy, FilesystemInfo},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,

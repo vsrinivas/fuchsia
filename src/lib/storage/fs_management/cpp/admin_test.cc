@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 
@@ -54,7 +55,7 @@ class OutgoingDirectoryTest : public testing::Test {
     const char* format_str = disk_format_string(format_);
     zx::channel data_root;
     GetDataRoot(&data_root);
-    fidl::WireSyncClient<fio::DirectoryAdmin> data_client(std::move(data_root));
+    fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
     auto resp = data_client.QueryFilesystem();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);
@@ -81,7 +82,7 @@ class OutgoingDirectoryTest : public testing::Test {
     zx::channel data_root;
     GetDataRoot(&data_root);
 
-    fidl::WireSyncClient<fio::DirectoryAdmin> data_client(std::move(data_root));
+    fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
     auto resp = data_client.Unmount();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);

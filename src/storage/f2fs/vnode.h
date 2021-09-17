@@ -30,7 +30,7 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
   int NeedToSyncDir();
 
-  zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo *info) final;
+  zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) final;
 
   void fbl_recycle() { RecycleNode(); };
 

@@ -5,6 +5,7 @@
 #include "devfs.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
@@ -87,7 +88,7 @@ void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase
 }
 
 class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
-                  public fidl::WireServer<fio::DirectoryAdmin> {
+                  public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
  public:
   explicit DcIostate(Devnode* dn, async_dispatcher_t* dispatcher);
   ~DcIostate();
@@ -112,7 +113,9 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
   }
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
@@ -120,7 +123,9 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
+        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
   }
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -150,7 +155,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   // pointer to our devnode, nullptr if it has been removed
   Devnode* devnode_;
 
-  std::optional<fidl::ServerBindingRef<fio::DirectoryAdmin>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_io_admin::DirectoryAdmin>> binding_;
 
   async_dispatcher_t* dispatcher_;
 
@@ -549,10 +554,10 @@ DcIostate::DcIostate(Devnode* dn, async_dispatcher_t* dispatcher)
 DcIostate::~DcIostate() { DetachFromDevnode(); }
 
 void DcIostate::Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Node> request) {
-  std::optional<fidl::ServerBindingRef<fio::DirectoryAdmin>>* binding = &ios->binding_;
-  *binding =
-      fidl::BindServer(ios->dispatcher_,
-                       fidl::ServerEnd<fio::DirectoryAdmin>(request.TakeChannel()), std::move(ios));
+  std::optional<fidl::ServerBindingRef<fuchsia_io_admin::DirectoryAdmin>>* binding = &ios->binding_;
+  *binding = fidl::BindServer(
+      ios->dispatcher_, fidl::ServerEnd<fuchsia_io_admin::DirectoryAdmin>(request.TakeChannel()),
+      std::move(ios));
 }
 
 void DcIostate::DetachFromDevnode() {
@@ -698,9 +703,11 @@ void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer)
 
 void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
                                 QueryFilesystemCompleter::Sync& completer) {
-  fio::wire::FilesystemInfo info;
-  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::kMaxFsNameBuffer);
-  completer.Reply(ZX_OK, fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info));
+  fuchsia_io_admin::wire::FilesystemInfo info;
+  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs",
+          fuchsia_io_admin::wire::kMaxFsNameBuffer);
+  completer.Reply(ZX_OK,
+                  fidl::ObjectView<fuchsia_io_admin::wire::FilesystemInfo>::FromExternal(&info));
 }
 
 void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {

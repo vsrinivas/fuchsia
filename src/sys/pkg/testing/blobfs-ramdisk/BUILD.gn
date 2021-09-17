@@ -13,6 +13,7 @@ rustc_library("blobfs-ramdisk") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -14,7 +14,8 @@ use crate::{
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
+    fidl_fuchsia_io::NodeAttributes,
+    fidl_fuchsia_io_admin::FilesystemInfo,
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},

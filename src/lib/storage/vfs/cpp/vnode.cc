@@ -297,7 +297,9 @@ zx_status_t Vnode::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::QueryFilesystem(fio::wire::FilesystemInfo* out) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 

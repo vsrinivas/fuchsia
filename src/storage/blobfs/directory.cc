@@ -120,7 +120,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
 
 #ifdef __Fuchsia__
 
-zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }

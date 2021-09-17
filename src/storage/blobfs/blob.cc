@@ -996,7 +996,7 @@ void Blob::SetTargetCompressionSize(uint64_t size) {
 
 #ifdef __Fuchsia__
 
-zx_status_t Blob::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t Blob::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }

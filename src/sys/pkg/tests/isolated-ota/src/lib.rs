@@ -6,9 +6,9 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        self as fio, DirectoryAdminRequest, DirectoryAdminRequestStream, DirectoryMarker,
-        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
+        self as fio, DirectoryMarker, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
     },
+    fidl_fuchsia_io_admin::{DirectoryAdminRequest, DirectoryAdminRequestStream},
     fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,

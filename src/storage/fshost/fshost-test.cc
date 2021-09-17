@@ -139,7 +139,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fidl::WireServer<fio::DirectoryAdmin> {
+class MockDirectoryAdminOpener : public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
  public:
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
     saved_open_flags = request->flags;
@@ -203,7 +203,7 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 
   // Mock out an object that implements DirectoryOpen and records some state;
   // bind it to the server handle.  Install it at /fs.
-  auto admin = fidl::CreateEndpoints<fio::DirectoryAdmin>();
+  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
   ASSERT_OK(admin.status_value());
 
   auto server = std::make_shared<MockDirectoryAdminOpener>();

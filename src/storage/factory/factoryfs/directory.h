@@ -57,7 +57,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
-  zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) final;
   zx::status<std::string> GetDevicePath() const final;
   void Sync(SyncCallback closure) final;
 

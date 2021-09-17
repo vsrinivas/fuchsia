@@ -74,10 +74,11 @@ class MountTestTemplate : public testing::Test {
     // Unmount the filesystem, thereby terminating the minfs instance.
     // TODO(fxbug.dev/34531): After deprecating the DirectoryAdmin interface, switch to unmount
     // using the admin service found within the export directory.
-    EXPECT_EQ(fidl::WireCall<fio::DirectoryAdmin>(zx::unowned_channel(root_client_end()))
-                  .Unmount()
-                  .status(),
-              ZX_OK);
+    EXPECT_EQ(
+        fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel(root_client_end()))
+            .Unmount()
+            .status(),
+        ZX_OK);
     unmounted_ = true;
   }
 

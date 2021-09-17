@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -68,7 +69,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
     return status;
   }
-  fidl::WireSyncClient<fio::DirectoryAdmin> parent_client(std::move(parent));
+  fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> parent_client(std::move(parent));
   auto resp =
       parent_client.MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
   if (!resp.ok()) {
@@ -275,7 +276,8 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const MountOption
   }
 
   fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).Mount(std::move(data_root));
+  auto resp = fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())
+                  .Mount(std::move(data_root));
   caller.release().release();
   if (!resp.ok()) {
     return resp.status();
@@ -294,7 +296,7 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
                           mount_point_server.release())) != ZX_OK) {
     return status;
   }
-  fidl::WireSyncClient<fio::DirectoryAdmin> mount_client(std::move(mount_point));
+  fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> mount_client(std::move(mount_point));
   auto resp = mount_client.Mount(zx::channel(root_handle));
   if (!resp.ok()) {
     return resp.status();
@@ -349,7 +351,7 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df, const Mo
 __EXPORT
 zx_status_t fumount(int mount_fd) {
   fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).UnmountNode();
+  auto resp = fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel()).UnmountNode();
   caller.release().release();
   if (!resp.ok()) {
     return resp.status();
@@ -362,7 +364,7 @@ zx_status_t fumount(int mount_fd) {
   // |fuchsia.io/DirectoryAdmin| protocol.
   // This method will only work if |mount_fd| is backed by a connection
   // that actually speaks the |DirectoryAdmin| protocol.
-  fidl::ClientEnd<fio::DirectoryAdmin> directory_admin_client(
+  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> directory_admin_client(
       std::move(resp.value().remote.channel()));
   return fs::FuchsiaVfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
 }

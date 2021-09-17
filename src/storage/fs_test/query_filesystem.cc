@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/service/llcpp/service.h>
@@ -25,7 +26,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   fbl::unique_fd root_fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(root_fd);
   fdio_cpp::UnownedFdioCaller root_connection(root_fd);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::DirectoryAdmin>(
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    zx::unowned_channel(root_connection.borrow_channel())))
                     .QueryFilesystem();
   ASSERT_TRUE(result.ok());
@@ -65,7 +66,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   std::iota(&buf[0], &buf[buf_size], 0);
   EXPECT_EQ(write(fd.get(), buf.get(), buf_size), static_cast<ssize_t>(buf_size));
 
-  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::DirectoryAdmin>(
+  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                     zx::unowned_channel(root_connection.borrow_channel())))
                      .QueryFilesystem();
   ASSERT_TRUE(result2.ok() && result2->s == ZX_OK);

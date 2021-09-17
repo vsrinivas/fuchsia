@@ -4,6 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/watcher.h>
@@ -424,7 +425,7 @@ zx_status_t FuchsiaVfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name,
           return result;
         } else {
           if (result.vnode->IsRemote()) {
-            if (flags & fio::wire::kMountCreateFlagReplace) {
+            if (flags & fuchsia_io_admin::wire::kMountCreateFlagReplace) {
               // There is an old remote handle on this vnode; shut it down and replace it with our
               // own.
               fidl::ClientEnd<fio::Directory> old_remote;
@@ -432,8 +433,9 @@ zx_status_t FuchsiaVfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name,
               // Passing |zx::time::infinite_past()| results in a fire-and-forget call.
               // TODO(fxbug.dev/42264): Add proper tracking of remote filesystem teardown.
               // Note: this is best-effort, and would fail if the remote endpoint does not speak the
-              // |fuchsia.io/DirectoryAdmin| protocol.
-              fidl::ClientEnd<fio::DirectoryAdmin> old_remote_admin(old_remote.TakeChannel());
+              // |fuchsia.io.admin/DirectoryAdmin| protocol.
+              fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> old_remote_admin(
+                  old_remote.TakeChannel());
               FuchsiaVfs::UnmountHandle(std::move(old_remote_admin), zx::time::infinite_past());
             } else {
               return ZX_ERR_BAD_STATE;
@@ -475,7 +477,8 @@ zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
     if (mount_point) {
       // Note: this is best-effort, and would fail if the remote endpoint does not speak the
       // |fuchsia.io/DirectoryAdmin| protocol.
-      fidl::ClientEnd<fio::DirectoryAdmin> mount_admin(mount_point->ReleaseRemote().TakeChannel());
+      fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> mount_admin(
+          mount_point->ReleaseRemote().TakeChannel());
       FuchsiaVfs::UnmountHandle(std::move(mount_admin), deadline);
     } else {
       return ZX_OK;
@@ -483,9 +486,9 @@ zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
   }
 }
 
-zx_status_t FuchsiaVfs::UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
+zx_status_t FuchsiaVfs::UnmountHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> handle,
                                       zx::time deadline) {
-  fidl::WireResult<fio::DirectoryAdmin::Unmount> result(handle, deadline.get());
+  fidl::WireResult<fuchsia_io_admin::DirectoryAdmin::Unmount> result(handle, deadline.get());
   if (!result.ok()) {
     return result.status();
   }

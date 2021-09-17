@@ -16,10 +16,11 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
-        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
+        self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, WATCH_MASK_EXISTING,
     },
+    fidl_fuchsia_io_admin::FilesystemInfo,
     fuchsia_async as fasync,
     fuchsia_zircon::{AsHandleRef, Status},
     libc::{S_IRUSR, S_IWUSR},

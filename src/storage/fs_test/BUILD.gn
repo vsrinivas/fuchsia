@@ -33,6 +33,7 @@ static_library("fs_test") {
   public_deps = [
     # fs_test.h:
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
     "//src/lib/storage/fs_management",
     "//src/storage/blobfs",
     "//src/storage/testing:storage_driver_test_support",

@@ -45,7 +45,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t VnodeDir::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
   *info = {};
   info->block_size = GetPageSize();
   info->max_filename_size = kDnodeNameMax;
@@ -66,9 +66,10 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   uint64_t ino_count = GetInoCounter();
   ZX_DEBUG_ASSERT(ino_count >= deleted_ino_count);
   info->used_nodes = ino_count - deleted_ino_count;
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Memfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
+                "Memfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
+                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
   return ZX_OK;
 }
 

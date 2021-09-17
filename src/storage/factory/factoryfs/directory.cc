@@ -76,7 +76,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
 
 constexpr std::string_view kFsName = "factoryfs";
 
-zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) {
   *info = {};
   info->block_size = kFactoryfsBlockSize;
   info->max_filename_size = kFactoryfsMaxNameSize;
@@ -86,9 +86,10 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   info->used_bytes = Info().data_blocks * kFactoryfsBlockSize;
   info->total_nodes = Info().directory_entries;
   info->used_nodes = Info().directory_entries;
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Factoryfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
+                "Factoryfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
+                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
   return ZX_OK;
 }
 

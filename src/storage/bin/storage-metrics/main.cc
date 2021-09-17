@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
@@ -212,7 +213,8 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
 
   fdio_cpp::FdioCaller caller(std::move(fd));
 
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .GetDevicePath();
 
   zx_status_t rc;

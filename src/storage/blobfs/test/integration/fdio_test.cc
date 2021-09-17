@@ -61,10 +61,11 @@ void FdioTest::SetUp() {
 void FdioTest::TearDown() {
   zx::channel root_client;
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(fidl::WireCall(fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(root_client)))
-                .Unmount()
-                .status(),
-            ZX_OK);
+  ASSERT_EQ(
+      fidl::WireCall(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>(std::move(root_client)))
+          .Unmount()
+          .status(),
+      ZX_OK);
 }
 
 zx_handle_t FdioTest::export_root() {

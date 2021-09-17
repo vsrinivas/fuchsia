@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -100,11 +101,12 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
   // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
 }
 
-void QueryInfo(const char* path, fio::wire::FilesystemInfo* info) {
+void QueryInfo(const char* path, fuchsia_io_admin::wire::FilesystemInfo* info) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall<fio::DirectoryAdmin>(caller.channel()).QueryFilesystem();
+  auto result =
+      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel()).QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
   ASSERT_NOT_NULL(result.Unwrap()->info);
@@ -129,7 +131,7 @@ TEST(FidlTests, TestFidlQueryFilesystem) {
     ASSERT_GE(fd.get(), 0);
 
     // Sanity checks
-    fio::wire::FilesystemInfo info;
+    fuchsia_io_admin::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURES(QueryInfo("/fidltmp-basic", &info));
 
     // These values are nonsense, but they're the nonsense we expect memfs to generate.

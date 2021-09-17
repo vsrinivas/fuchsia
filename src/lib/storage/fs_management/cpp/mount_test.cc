@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -55,11 +56,12 @@ void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_OK);
-  fio::wire::FilesystemInfo info = *result.value().info;
+  fuchsia_io_admin::wire::FilesystemInfo info = *result.value().info;
   ASSERT_EQ(strncmp(fs_name, reinterpret_cast<char*>(info.name.data()), strlen(fs_name)), 0);
   ASSERT_LE(info.used_nodes, info.total_nodes) << "Used nodes greater than free nodes";
   ASSERT_LE(info.used_bytes, info.total_bytes) << "Used bytes greater than free bytes";
@@ -276,7 +278,8 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_root_fd);
   fdio_cpp::FdioCaller caller(std::move(weak_root_fd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .Unmount();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_ERR_ACCESS_DENIED);
@@ -288,9 +291,9 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   fbl::unique_fd weak_subdir_fd(openat(weak_root_fd.get(), "subdir", O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(weak_subdir_fd);
   caller.reset(std::move(weak_subdir_fd));
-  auto result2 =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-          .Unmount();
+  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                    caller.borrow_channel()))
+                     .Unmount();
   ASSERT_EQ(result2.status(), ZX_OK);
   ASSERT_EQ(result2->s, ZX_ERR_ACCESS_DENIED);
 
@@ -442,7 +445,8 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   fbl::unique_fd mountfd(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   fdio_cpp::FdioCaller caller(std::move(mountfd));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                   caller.borrow_channel()))
                     .GetDevicePath();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
@@ -456,9 +460,9 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  auto result2 =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-          .GetDevicePath();
+  auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                    caller.borrow_channel()))
+                     .GetDevicePath();
   ASSERT_EQ(result2.status(), ZX_OK);
   ASSERT_EQ(result2->s, ZX_OK);
   ASSERT_GT(result2.value().path.size(), 0ul) << "Device path not found";
@@ -467,9 +471,9 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   mountfd.reset(open(mount_path, O_RDONLY));
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
-  auto result3 =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-          .GetDevicePath();
+  auto result3 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                    caller.borrow_channel()))
+                     .GetDevicePath();
   ASSERT_EQ(result3.status(), ZX_OK);
   ASSERT_EQ(result3->s, ZX_ERR_ACCESS_DENIED);
 
@@ -480,8 +484,10 @@ TEST(MountGetDeviceCase, MountGetDevice) {
   ASSERT_TRUE(mountfd);
   caller.reset(std::move(mountfd));
   auto result4 =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-          .GetDevicePath(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()));
+      fidl::WireCall(
+          fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(caller.borrow_channel()))
+          .GetDevicePath(
+              fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(caller.borrow_channel()));
   ASSERT_EQ(result4.status(), ZX_OK);
   ASSERT_EQ(result4->s, ZX_ERR_NOT_SUPPORTED);
 

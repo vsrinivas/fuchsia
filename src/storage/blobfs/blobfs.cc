@@ -759,9 +759,10 @@ void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
   }
 
   static constexpr std::string_view kFsName = "blobfs";
-  static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Blobfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
+                "Blobfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
+                          fuchsia_io_admin::wire::kMaxFsNameBuffer - 1)] = '\0';
 }
 
 zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {

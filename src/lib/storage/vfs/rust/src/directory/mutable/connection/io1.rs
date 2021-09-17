@@ -29,10 +29,11 @@ use {
     either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryAdminMarker, DirectoryAdminRequest, DirectoryObject, NodeAttributes, NodeInfo,
-        NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, NodeAttributes, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
+        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
+    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminRequest},
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,

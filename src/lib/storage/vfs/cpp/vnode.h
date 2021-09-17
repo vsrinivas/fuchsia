@@ -33,6 +33,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 #ifdef __Fuchsia__
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/file-lock/file-lock.h>
@@ -362,7 +363,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
-  virtual zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out);
+  virtual zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out);
 
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx::status<std::string> GetDevicePath() const;

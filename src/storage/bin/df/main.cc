@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <stdalign.h>
@@ -106,7 +107,7 @@ void print_human_readable(int padding, size_t size) {
 }
 
 void print_fs_type(const char* name, const df_options_t* options,
-                   const fio::wire::FilesystemInfo* info, const char* device_path) {
+                   const fuchsia_io_admin::wire::FilesystemInfo* info, const char* device_path) {
   if (options->node_usage) {
     size_t nodes_total = info ? info->total_nodes : 0;
     size_t nodes_used = info ? info->used_nodes : 0;
@@ -174,21 +175,21 @@ int main(int argc, const char** argv) {
       admin = false;
     }
 
-    fio::wire::FilesystemInfo info;
+    fuchsia_io_admin::wire::FilesystemInfo info;
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto result =
-        fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-            .QueryFilesystem();
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                     caller.borrow_channel()))
+                      .QueryFilesystem();
     if (!result.ok() || result->s != ZX_OK) {
       print_fs_type(dirs[i], &options, nullptr, "Unknown; cannot query filesystem");
       continue;
     }
     info = *result->info;
-    info.name[fio::wire::kMaxFsNameBuffer - 1] = '\0';
+    info.name[fuchsia_io_admin::wire::kMaxFsNameBuffer - 1] = '\0';
 
-    auto result2 =
-        fidl::WireCall(fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-            .GetDevicePath();
+    auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                      caller.borrow_channel()))
+                       .GetDevicePath();
     std::string path(std::string("I/O failure: ") + result2.status_string());
     if (result2.ok()) {
       if (result2->s == ZX_OK) {

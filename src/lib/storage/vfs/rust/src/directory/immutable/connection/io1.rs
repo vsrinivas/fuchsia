@@ -26,9 +26,9 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        DirectoryAdminMarker, DirectoryAdminRequest, DirectoryObject, NodeInfo, NodeMarker,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+        DirectoryObject, NodeInfo, NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
     },
+    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminRequest},
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,

@@ -104,6 +104,7 @@ static_library("cpp") {
     public_deps += [
       # <fs/vnode.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.io.admin:fuchsia.io.admin_llcpp",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/lib/file-lock:cpp",
       "//zircon/public/lib/async",

@@ -71,12 +71,13 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
                                inspect::Inspector* inspector) {
   // Note: we are unsafely assuming that the directory also speaks
   // |fuchsia.io/DirectoryAdmin|.
-  fidl::UnownedClientEnd<fio::DirectoryAdmin> dir_admin(dir_chan.channel());
+  fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> dir_admin(dir_chan.channel());
   auto result = fidl::WireCall(dir_admin).QueryFilesystem();
   inspect::Node stats = inspector->GetRoot().CreateChild("stats");
   if (result.status() == ZX_OK) {
-    fidl::WireResponse<fio::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
-    fio::wire::FilesystemInfo* info = response->info.get();
+    fidl::WireResponse<fuchsia_io_admin::DirectoryAdmin::QueryFilesystem>* response =
+        result.Unwrap();
+    fuchsia_io_admin::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
       stats.CreateUint("partition_size_bytes", info->total_bytes, inspector);
       stats.CreateUint("fvm_free_bytes", info->free_shared_pool_bytes, inspector);
