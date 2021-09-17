@@ -641,13 +641,12 @@ async fn configure_endpoint_address(
         .context("Add interface address")?;
 
     // add route to ensure `addr` is valid, the result can be safely discarded
-    let _ = AddrSubnetEither::try_from(addr)
-        .expect("Invalid test subnet configuration")
-        .into_addr_subnet();
+    let _ =
+        AddrSubnetEither::try_from(addr).expect("Invalid test subnet configuration").addr_subnet();
 
     let () = cli
         .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
-            subnet: addr.into_addr_subnet().1.into_fidl(),
+            subnet: addr.addr_subnet().1.into_fidl(),
             destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(if_id),
         })
         .await
@@ -804,7 +803,7 @@ async fn test_list_interfaces() {
         let ep = t.get_endpoint(&ep_name).await.unwrap().into_proxy().unwrap();
         let ep_info = ep.get_info().await.unwrap();
         let mut if_ip = new_ipv4_addr_subnet([192, 168, 0, i as u8], 24).into_fidl();
-        let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().into_addr().ipv6_bytes();
+        let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().addr().ipv6_bytes();
         let if_ipv6_ll = new_ipv6_addr_subnet(if_ipv6_ll, 64).into_fidl();
 
         let ep = t.get_endpoint(&ep_name).await.unwrap();
@@ -860,7 +859,7 @@ async fn test_get_interface_info() {
 
     test_stack.wait_for_interface_online(1).await;
 
-    let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().into_addr().ipv6_bytes();
+    let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().addr().ipv6_bytes();
     let if_ipv6_ll = new_ipv6_addr_subnet(if_ipv6_ll, 64).into_fidl();
 
     // get the interface info:

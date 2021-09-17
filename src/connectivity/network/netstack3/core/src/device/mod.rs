@@ -668,14 +668,14 @@ pub(crate) enum AddrConfigType {
 /// Data associated with an IP addressess on an interface.
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> = SpecifiedAddr<S>> {
+pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> + Copy = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     state: AddressState,
     config_type: AddrConfigType,
     valid_until: Option<Instant>,
 }
 
-impl<S: IpAddress, Instant, A: Witness<S>> AddressEntry<S, Instant, A> {
+impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
     pub(crate) fn new(
         addr_sub: AddrSubnet<S, A>,
         state: AddressState,
@@ -702,7 +702,7 @@ impl<S: IpAddress, Instant, A: Witness<S>> AddressEntry<S, Instant, A> {
     }
 }
 
-impl<S: IpAddress, Instant: Copy, A: Witness<S>> AddressEntry<S, Instant, A> {
+impl<S: IpAddress, Instant: Copy, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
     pub(crate) fn valid_until(&self) -> Option<Instant> {
         self.valid_until
     }

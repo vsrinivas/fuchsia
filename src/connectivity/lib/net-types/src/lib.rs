@@ -69,6 +69,17 @@ pub trait Witness<A>: AsRef<A> + Sized + sealed::Sealed {
     }
 
     /// Consumes this witness and returns the contained `A`.
+    ///
+    /// If `A: Copy`, prefer [`get`] instead of `into_addr`. `get` is idiomatic
+    /// for wrapper types which which wrap `Copy` types (e.g., see
+    /// [`NonZeroUsize::get`] or [`Cell::get`]). `into_xxx` methods are
+    /// idiomatic only when `self` must be consumed by value because the wrapped
+    /// value is not `Copy` (e.g., see [`Cell::into_inner`]).
+    ///
+    /// [`get`]: Witness::get
+    /// [`NonZeroUsize::get`]: core::num::NonZeroUsize::get
+    /// [`Cell::get`]: core::cell::Cell::get
+    /// [`Cell::into_inner`]: core::cell::Cell::into_inner
     fn into_addr(self) -> A;
 }
 
@@ -377,7 +388,6 @@ checking to see if `addr` is actually ", $adj, ".
 It is up to the caller to make sure that `addr` is ", $adj, " to avoid breaking
 the guarantees of `", stringify!($type), "`. See [`", stringify!($type), "`] for
 more details."),
-                #[inline]
                 pub const unsafe fn new_unchecked(addr: A) -> $type<A> {
                     $type(addr)
                 }

@@ -132,7 +132,7 @@ impl<V4, V6> IpAddr<V4, V6> {
 impl<A: IpAddress> From<A> for IpAddr {
     #[inline]
     fn from(addr: A) -> IpAddr {
-        addr.into_ip_addr()
+        addr.to_ip_addr()
     }
 }
 
@@ -503,7 +503,7 @@ pub trait IpAddress:
     fn mask(&self, bits: u8) -> Self;
 
     /// Converts a statically-typed IP address into a dynamically-typed one.
-    fn into_ip_addr(self) -> IpAddr;
+    fn to_ip_addr(&self) -> IpAddr;
 
     /// Is this a loopback address?
     ///
@@ -984,8 +984,8 @@ macro_rules! impl_from_witness {
             fn from(addr: IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>) -> $witness<IpAddr> {
                 unsafe {
                     Witness::new_unchecked(match addr {
-                        IpAddr::V4(addr) => IpAddr::V4(addr.into_addr()),
-                        IpAddr::V6(addr) => IpAddr::V6(addr.into_addr()),
+                        IpAddr::V4(addr) => IpAddr::V4(addr.get()),
+                        IpAddr::V6(addr) => IpAddr::V6(addr.get()),
                     })
                 }
             }
@@ -993,7 +993,7 @@ macro_rules! impl_from_witness {
         impl From<$witness<IpAddr>> for IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
             fn from(addr: $witness<IpAddr>) -> IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
                 unsafe {
-                    match addr.into_addr() {
+                    match addr.get() {
                         IpAddr::V4(addr) => IpAddr::V4(Witness::new_unchecked(addr)),
                         IpAddr::V6(addr) => IpAddr::V6(Witness::new_unchecked(addr)),
                     }
@@ -1004,7 +1004,7 @@ macro_rules! impl_from_witness {
     ($witness:ident, $ipaddr:ident, $new_unchecked:expr) => {
         impl From<$witness<$ipaddr>> for $witness<IpAddr> {
             fn from(addr: $witness<$ipaddr>) -> $witness<IpAddr> {
-                let addr: $ipaddr = addr.into_addr();
+                let addr: $ipaddr = addr.get();
                 let addr: IpAddr = addr.into();
                 #[allow(unused_unsafe)] // For when a closure is passed
                 unsafe {
@@ -1014,7 +1014,7 @@ macro_rules! impl_from_witness {
         }
         impl From<$witness<$ipaddr>> for $ipaddr {
             fn from(addr: $witness<$ipaddr>) -> $ipaddr {
-                addr.into_addr()
+                addr.get()
             }
         }
         impl TryFrom<$ipaddr> for $witness<$ipaddr> {
@@ -1057,7 +1057,7 @@ impl Ipv4Addr {
     /// [`Ipv4::GLOBAL_BROADCAST_ADDRESS`].
     #[inline]
     pub fn is_global_broadcast(self) -> bool {
-        self == Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr()
+        self == Ipv4::GLOBAL_BROADCAST_ADDRESS.get()
     }
 
     /// Is this a Class E address?
@@ -1149,8 +1149,8 @@ impl IpAddress for Ipv4Addr {
     }
 
     #[inline]
-    fn into_ip_addr(self) -> IpAddr {
-        IpAddr::V4(self)
+    fn to_ip_addr(&self) -> IpAddr {
+        IpAddr::V4(*self)
     }
 
     #[inline]
@@ -1403,8 +1403,8 @@ impl IpAddress for Ipv6Addr {
     }
 
     #[inline]
-    fn into_ip_addr(self) -> IpAddr {
-        IpAddr::V6(self)
+    fn to_ip_addr(&self) -> IpAddr {
+        IpAddr::V6(*self)
     }
 
     #[inline]
@@ -1614,8 +1614,8 @@ impl Ipv6SourceAddr {
     /// Converts this `Ipv6SourceAddr` into an `Option<UnicastAddr<Ipv6Addr>>`,
     /// mapping [`Ipv6SourceAddr::Unspecified`] to `None`.
     #[inline]
-    pub fn into_option(self) -> Option<UnicastAddr<Ipv6Addr>> {
-        match self {
+    pub fn to_option(&self) -> Option<UnicastAddr<Ipv6Addr>> {
+        match *self {
             Ipv6SourceAddr::Unicast(addr) => Some(addr),
             Ipv6SourceAddr::Unspecified => None,
         }
@@ -1655,7 +1655,7 @@ impl Witness<Ipv6Addr> for Ipv6SourceAddr {
     #[inline]
     fn into_addr(self) -> Ipv6Addr {
         match self {
-            Ipv6SourceAddr::Unicast(addr) => addr.into_addr(),
+            Ipv6SourceAddr::Unicast(addr) => addr.get(),
             Ipv6SourceAddr::Unspecified => Ipv6::UNSPECIFIED_ADDRESS,
         }
     }
@@ -1682,7 +1682,7 @@ impl LinkLocalAddress for Ipv6SourceAddr {
 
 impl From<Ipv6SourceAddr> for Ipv6Addr {
     fn from(addr: Ipv6SourceAddr) -> Ipv6Addr {
-        addr.into_addr()
+        addr.get()
     }
 }
 
@@ -1710,7 +1710,7 @@ impl TryFrom<Ipv6Addr> for Ipv6SourceAddr {
 
 impl From<Ipv6SourceAddr> for Option<UnicastAddr<Ipv6Addr>> {
     fn from(addr: Ipv6SourceAddr) -> Option<UnicastAddr<Ipv6Addr>> {
-        addr.into_option()
+        addr.to_option()
     }
 }
 
@@ -1776,9 +1776,9 @@ impl UnicastOrMulticastIpv6Addr {
     /// Constructs a new `UnicastOrMulticastIpv6Addr` from a specified address.
     pub fn from_specified(addr: SpecifiedAddr<Ipv6Addr>) -> UnicastOrMulticastIpv6Addr {
         if addr.is_unicast() {
-            UnicastOrMulticastIpv6Addr::Unicast(UnicastAddr(addr.into_addr()))
+            UnicastOrMulticastIpv6Addr::Unicast(UnicastAddr(addr.get()))
         } else {
-            UnicastOrMulticastIpv6Addr::Multicast(MulticastAddr(addr.into_addr()))
+            UnicastOrMulticastIpv6Addr::Multicast(MulticastAddr(addr.get()))
         }
     }
 }
@@ -1799,8 +1799,8 @@ impl Witness<Ipv6Addr> for UnicastOrMulticastIpv6Addr {
     #[inline]
     fn into_addr(self) -> Ipv6Addr {
         match self {
-            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.into_addr(),
-            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.into_addr(),
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.get(),
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.get(),
         }
     }
 }
@@ -1828,7 +1828,7 @@ impl LinkLocalAddress for UnicastOrMulticastIpv6Addr {
 
 impl From<UnicastOrMulticastIpv6Addr> for Ipv6Addr {
     fn from(addr: UnicastOrMulticastIpv6Addr) -> Ipv6Addr {
-        addr.into_addr()
+        addr.get()
     }
 }
 
@@ -2036,9 +2036,9 @@ impl SubnetEither {
         })
     }
 
-    /// Gets the network and prefix for this `SubnetEither`.
+    /// Gets the network and prefix.
     #[inline]
-    pub fn into_net_prefix(self) -> (IpAddr, u8) {
+    pub fn net_prefix(&self) -> (IpAddr, u8) {
         match self {
             SubnetEither::V4(v4) => (v4.network.into(), v4.prefix),
             SubnetEither::V6(v6) => (v6.network.into(), v6.prefix),
@@ -2076,7 +2076,7 @@ pub enum AddrSubnetError {
 /// is the type of the address in the subnet, which is always a witness wrapper
 /// around `S`. By default, it is `SpecifiedAddr<S>`.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub struct AddrSubnet<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
+pub struct AddrSubnet<S: IpAddress, A: Witness<S> + Copy = SpecifiedAddr<S>> {
     // TODO(joshlf): Would it be more performant to store these as just an
     // address and subnet mask? It would make the object smaller and so cheaper
     // to pass around, but it would make certain operations more expensive.
@@ -2084,7 +2084,7 @@ pub struct AddrSubnet<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
     subnet: Subnet<S>,
 }
 
-impl<S: IpAddress, A: Witness<S>> AddrSubnet<S, A> {
+impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
     /// Creates a new `AddrSubnet`.
     ///
     /// `new` is like [`from_witness`], except that it also converts `addr` into
@@ -2122,41 +2122,25 @@ impl<S: IpAddress, A: Witness<S>> AddrSubnet<S, A> {
         self.subnet
     }
 
-    /// Consumes the `AddrSubnet` and returns the address.
-    #[inline]
-    pub fn into_addr(self) -> A {
-        self.addr
-    }
-
-    /// Consumes the `AddrSubnet` and returns the subnet.
-    #[inline]
-    pub fn into_subnet(self) -> Subnet<S> {
-        self.subnet
-    }
-
-    /// Consumes the `AddrSubnet` and returns the address and subnet
-    /// individually.
-    #[inline]
-    pub fn into_addr_subnet(self) -> (A, Subnet<S>) {
-        (self.addr, self.subnet)
-    }
-
-    /// Converts the `AddrSubnet` into an `AddrSubnet` of a different witness
-    /// type.
-    #[inline]
-    pub fn into_witness<B: Witness<S>>(self) -> AddrSubnet<S, B>
-    where
-        A: Into<B>,
-    {
-        AddrSubnet { addr: self.addr.into(), subnet: self.subnet }
-    }
-}
-
-impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
     /// Gets the address.
     #[inline]
     pub fn addr(&self) -> A {
         self.addr
+    }
+
+    /// Gets the address and subnet individually.
+    #[inline]
+    pub fn addr_subnet(self) -> (A, Subnet<S>) {
+        (self.addr, self.subnet)
+    }
+
+    /// Constructs a new `AddrSubnet` of a different witness type.
+    #[inline]
+    pub fn to_witness<B: Witness<S> + Copy>(&self) -> AddrSubnet<S, B>
+    where
+        A: Into<B>,
+    {
+        AddrSubnet { addr: self.addr.into(), subnet: self.subnet }
     }
 }
 
@@ -2170,13 +2154,13 @@ impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
         unsafe { UnicastAddr::new_unchecked(self.addr.get()) }
     }
 
-    /// Converts this `AddrSubnet` into one storing a [`UnicastAddr`] witness.
+    /// Constructs a new `AddrSubnet` which stores a [`UnicastAddr`] witness.
     ///
     /// Since one of the invariants on an `AddrSubnet` is that its contained
-    /// address is unicast in its subnet, `into_unicast` can infallibly convert
+    /// address is unicast in its subnet, `to_unicast` can infallibly convert
     /// its stored address to a `UnicastAddr`.
-    pub fn into_unicast(self) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
-        let AddrSubnet { addr, subnet } = self;
+    pub fn to_unicast(&self) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
+        let AddrSubnet { addr, subnet } = *self;
         let addr = unsafe { UnicastAddr::new_unchecked(addr.get()) };
         AddrSubnet { addr, subnet }
     }
@@ -2195,18 +2179,18 @@ impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
 ///     type V6 = SpecifiedAddr<Ipv6Addr>;
 /// }
 /// ```
-pub trait IpAddrWitness: Witness<IpAddr> {
+pub trait IpAddrWitness: Witness<IpAddr> + Copy {
     /// The IPv4-specific version of `Self`.
     ///
     /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V4 =
     /// SpecifiedAddr<Ipv4Addr>>`.
-    type V4: Witness<Ipv4Addr> + Into<Self>;
+    type V4: Witness<Ipv4Addr> + Into<Self> + Copy;
 
     /// The IPv6-specific version of `Self`.
     ///
     /// For example, `SpecifiedAddr<IpAddr>: IpAddrWitness<V6 =
     /// SpecifiedAddr<Ipv6Addr>>`.
-    type V6: Witness<Ipv6Addr> + Into<Self>;
+    type V6: Witness<Ipv6Addr> + Into<Self> + Copy;
 
     // TODO(https://github.com/rust-lang/rust/issues/44491): Remove these
     // functions once implied where bounds make them unnecessary.
@@ -2262,18 +2246,18 @@ impl<A: IpAddrWitness> AddrSubnetEither<A> {
         })
     }
 
-    /// Gets the contained IP address and prefix in this `AddrSubnetEither`.
+    /// Gets the IP address and prefix.
     #[inline]
-    pub fn into_addr_prefix(self) -> (A, u8) {
+    pub fn addr_prefix(&self) -> (A, u8) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), v4.subnet.prefix),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), v6.subnet.prefix),
         }
     }
 
-    /// Gets the IP address and subnet in this `AddrSubnetEither`.
+    /// Gets the IP address and subnet.
     #[inline]
-    pub fn into_addr_subnet(self) -> (A, SubnetEither) {
+    pub fn addr_subnet(&self) -> (A, SubnetEither) {
         match self {
             AddrSubnetEither::V4(v4) => (v4.addr.into(), SubnetEither::V4(v4.subnet)),
             AddrSubnetEither::V6(v6) => (v6.addr.into(), SubnetEither::V6(v6.subnet)),
@@ -2437,7 +2421,7 @@ mod tests {
         );
         // Global broadcast
         assert!(
-            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr(), 16)
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.get(), 16)
                 == Err(AddrSubnetError::NotUnicastInSubnet)
         );
         // Subnet broadcast
@@ -2503,7 +2487,7 @@ mod tests {
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 3, 0]), 32).unwrap()));
         // Global broadcast (IPv4 only)
         assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
-            .into_addr()
+            .get()
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([128, 0, 0, 0]), 1).unwrap()));
         // Subnet broadcast (IPv4 only)
         assert!(!Ipv4Addr::new([1, 2, 255, 255])

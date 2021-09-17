@@ -1437,7 +1437,8 @@ fn deliver_ipv4<D: EventDispatcher>(
     let dst_ip = dst_ip.get();
 
     crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
-        .map(AddrSubnet::into_addr_subnet)
+        .by_ref()
+        .map(AddrSubnet::addr_subnet)
         .any(|(addr, subnet)| dst_ip == addr.get() || dst_ip == subnet.broadcast())
         || dst_ip.is_global_broadcast()
         || MulticastAddr::new(dst_ip)
@@ -2067,7 +2068,7 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
 
     if let Some(route) = lookup_route(ctx, src_ip) {
         if let Some(local_ip) =
-            crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
+            crate::device::get_ip_addr_subnet(ctx, route.device).as_ref().map(AddrSubnet::addr)
         {
             Some((route.device, local_ip, route.next_hop))
         } else {

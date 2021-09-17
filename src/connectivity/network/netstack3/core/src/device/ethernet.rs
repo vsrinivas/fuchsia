@@ -428,7 +428,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
 
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
-    let addr_sub = state.link().mac.to_ipv6_link_local().into_witness();
+    let addr_sub = state.link().mac.to_ipv6_link_local().to_witness();
     add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfigType::Slaac, None).expect(
         "internal invariant violated: uninitialized device already had IP address assigned",
     );
@@ -622,7 +622,7 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
     #[ipv6addr]
     return Box::new(state.ipv6_addr_sub.iter().filter_map(|a| {
         if a.state().is_assigned() {
-            Some((*a.addr_sub()).into_witness())
+            Some((*a.addr_sub()).to_witness())
         } else {
             None
         }
@@ -761,7 +761,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         let state = ctx.get_state_mut_with(device_id).ip_mut();
 
         state.ipv6_addr_sub.push(AddressEntry::new(
-            addr_sub.into_unicast(),
+            addr_sub.to_unicast(),
             AddressState::Tentative,
             config_type,
             valid_until,
@@ -1435,7 +1435,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         add_ip_addr_subnet_inner(
             self,
             device_id,
-            addr_sub.into_witness(),
+            addr_sub.to_witness(),
             AddrConfigType::Slaac,
             Some(valid_until),
         )

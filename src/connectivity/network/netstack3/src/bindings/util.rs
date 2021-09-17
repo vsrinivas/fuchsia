@@ -241,7 +241,7 @@ impl TryIntoFidl<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
     type Error = Never;
 
     fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Never> {
-        Ok(self.into_addr().into_fidl())
+        Ok(self.get().into_fidl())
     }
 }
 
@@ -257,7 +257,7 @@ impl TryIntoFidl<fidl_net::Subnet> for AddrSubnetEither {
     type Error = Never;
 
     fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
-        let (addr, prefix) = self.into_addr_prefix();
+        let (addr, prefix) = self.addr_prefix();
         Ok(fidl_net::Subnet { addr: addr.into_fidl(), prefix_len: prefix })
     }
 }
@@ -274,7 +274,7 @@ impl TryIntoFidl<fidl_net::Subnet> for SubnetEither {
     type Error = Never;
 
     fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
-        let (net, prefix) = self.into_net_prefix();
+        let (net, prefix) = self.net_prefix();
         Ok(fidl_net::Subnet { addr: net.into_fidl(), prefix_len: prefix })
     }
 }
@@ -461,7 +461,7 @@ impl TryIntoFidlWithContext<fidl_net_stack::ForwardingDestination> for EntryDest
                 fidl_net_stack::ForwardingDestination::DeviceId(device.try_into_fidl_with_ctx(ctx)?)
             }
             EntryDest::Remote { next_hop } => {
-                let next_hop: IpAddr = next_hop.into_addr().into();
+                let next_hop: IpAddr = next_hop.get().into();
                 fidl_net_stack::ForwardingDestination::NextHop(next_hop.into_fidl())
             }
         })

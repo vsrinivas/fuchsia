@@ -209,7 +209,7 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
         // We know the call to `unwrap` will not panic becase we are generating a multicast MAC
         // as defined in RFC 7042 section 2.1.1 and section 2.3.1 for IPv4 and IPv6 addresses,
         // respectively.
-        MulticastAddr::new(Mac::new(match addr.clone().into_addr().into() {
+        MulticastAddr::new(Mac::new(match addr.clone().get().into() {
             IpAddr::V4(addr) => {
                 let ip_bytes = addr.ipv4_bytes();
                 let mut mac_bytes = [0; 6];
@@ -239,7 +239,7 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
 
 impl<W: Witness<Mac>> From<W> for Mac {
     fn from(witness: W) -> Mac {
-        witness.into_addr()
+        witness.get()
     }
 }
 
