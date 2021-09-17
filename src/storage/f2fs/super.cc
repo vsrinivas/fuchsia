@@ -347,7 +347,7 @@ zx_status_t F2fs::FillSuper() {
   if (err)
     goto free_sm;
 
-  node_mgr_ = std::make_unique<NodeMgr>(this);
+  node_mgr_ = std::make_unique<NodeManager>(this);
   err = node_mgr_->BuildNodeManager();
   if (err)
     goto free_nm;

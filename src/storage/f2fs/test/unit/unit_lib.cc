@@ -10,12 +10,11 @@
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
-namespace unittest_lib {
 
 using block_client::FakeBlockDevice;
 
-void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount, uint32_t blockSize,
-                   bool btrim) {
+void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount, uint32_t blockSize,
+                               bool btrim) {
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
       .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
   bool readonly_device = false;
@@ -25,24 +24,24 @@ void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount, uint32_t bl
   ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
 }
 
-void MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
-                      std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs) {
+void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
+                                  std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs) {
   ASSERT_EQ(F2fs::Create(dispatcher, std::move(*bc), options, fs), ZX_OK);
 }
 
-void Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
+void FileTester::Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
   fs->PutSuper();
   fs->ResetBc(bc);
   fs.reset();
 }
 
-void SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
+void FileTester::SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
   SbInfo &sbi = fs->GetSbInfo();
 
   fs->GetVCache().Reset();
 
   // destroy f2fs internal modules
-  fs->Nodemgr().DestroyNodeManager();
+  fs->GetNodeManager().DestroyNodeManager();
   fs->Segmgr().DestroySegmentManager();
 
   delete GetCheckpoint(&sbi);
@@ -50,13 +49,13 @@ void SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
   fs.reset();
 }
 
-void CreateRoot(F2fs *fs, fbl::RefPtr<VnodeF2fs> *out) {
+void FileTester::CreateRoot(F2fs *fs, fbl::RefPtr<VnodeF2fs> *out) {
   ASSERT_EQ(VnodeF2fs::Vget(fs, fs->RawSb().root_ino, out), ZX_OK);
   ASSERT_EQ((*out)->Open((*out)->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
             ZX_OK);
 }
 
-void Lookup(VnodeF2fs *parent, std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
+void FileTester::Lookup(VnodeF2fs *parent, std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
   fbl::RefPtr<fs::Vnode> vn = nullptr;
   if (zx_status_t status = parent->Lookup(name, &vn); status != ZX_OK) {
     *out = nullptr;
@@ -67,21 +66,21 @@ void Lookup(VnodeF2fs *parent, std::string_view name, fbl::RefPtr<fs::Vnode> *ou
   *out = std::move(vn);
 }
 
-void CreateChild(Dir *vn, uint32_t mode, std::string_view name) {
+void FileTester::CreateChild(Dir *vn, uint32_t mode, std::string_view name) {
   fbl::RefPtr<fs::Vnode> tmp_child;
   ASSERT_EQ(vn->Create(name, mode, &tmp_child), ZX_OK);
   ASSERT_EQ(tmp_child->Close(), ZX_OK);
 }
 
-void DeleteChild(Dir *vn, std::string_view name) {
+void FileTester::DeleteChild(Dir *vn, std::string_view name) {
   ASSERT_EQ(vn->Unlink(name, true), ZX_OK);
   // TODO: After EvictInode available, check if nids of the child are correctly freed
 }
 
-void CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
-                    std::vector<uint32_t> &inos, fbl::RefPtr<Dir> &parent, std::string name,
-                    uint32_t inode_cnt) {
-  for (uint32_t i = 0; i < inode_cnt; i++) {
+void FileTester::CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
+                                std::vector<uint32_t> &inos, fbl::RefPtr<Dir> &parent,
+                                std::string name, uint32_t inode_cnt) {
+  for (uint32_t i = 0; i < inode_cnt; ++i) {
     fbl::RefPtr<fs::Vnode> test_file;
 
     name += std::to_string(i);
@@ -93,41 +92,41 @@ void CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
   }
 }
 
-void DeleteChildren(std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes, fbl::RefPtr<Dir> &parent,
-                    uint32_t inode_cnt) {
+void FileTester::DeleteChildren(std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
+                                fbl::RefPtr<Dir> &parent, uint32_t inode_cnt) {
   uint32_t deleted_file_cnt = 0;
   for (const auto &iter : vnodes) {
     ASSERT_EQ(parent->Unlink(iter->GetName(), false), ZX_OK);
-    deleted_file_cnt++;
+    ++deleted_file_cnt;
   }
   ASSERT_EQ(deleted_file_cnt, inode_cnt);
 }
 
-void VnodeWithoutParent(F2fs *fs, uint32_t mode, fbl::RefPtr<VnodeF2fs> &vnode) {
+void FileTester::VnodeWithoutParent(F2fs *fs, uint32_t mode, fbl::RefPtr<VnodeF2fs> &vnode) {
   nid_t inode_nid;
-  ASSERT_TRUE(fs->Nodemgr().AllocNid(&inode_nid));
+  ASSERT_TRUE(fs->GetNodeManager().AllocNid(&inode_nid));
 
   VnodeF2fs::Allocate(fs, inode_nid, S_IFREG, &vnode);
   ASSERT_EQ(vnode->Open(vnode->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
             ZX_OK);
   vnode->UnlockNewInode();
-  fs->Nodemgr().AllocNidDone(vnode->Ino());
+  fs->GetNodeManager().AllocNidDone(vnode->Ino());
 
   fs->InsertVnode(vnode.get());
   vnode->MarkInodeDirty();
 }
 
-void CheckInlineDir(VnodeF2fs *vn) {
+void FileTester::CheckInlineDir(VnodeF2fs *vn) {
   ASSERT_NE(vn->TestFlag(InodeInfoFlag::kInlineDentry), 0);
   ASSERT_EQ(vn->GetSize(), kMaxInlineData);
 }
 
-void CheckNonInlineDir(VnodeF2fs *vn) {
+void FileTester::CheckNonInlineDir(VnodeF2fs *vn) {
   ASSERT_EQ(vn->TestFlag(InodeInfoFlag::kInlineDentry), 0);
   ASSERT_GT(vn->GetSize(), kMaxInlineData);
 }
 
-void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) {
+void FileTester::CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) {
   childs.insert(".");
 
   fs::VdirCookie cookie;
@@ -143,7 +142,7 @@ void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) 
     size_t entry_size = entry->size + sizeof(vdirent_t);
 
     auto iter = childs.begin();
-    for (; iter != childs.end(); iter++) {
+    for (; iter != childs.end(); ++iter) {
       if (memcmp(entry->name, (*iter).c_str(), (*iter).length()) == 0) {
         break;
       }
@@ -159,7 +158,8 @@ void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) 
   ASSERT_TRUE(childs.empty());
 }
 
-void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string> childs) {
+void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
+                                      std::unordered_set<std::string> childs) {
   if (bidx == 0) {
     childs.insert(".");
     childs.insert("..");
@@ -181,7 +181,7 @@ void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string
     uint32_t slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
 
     auto iter = childs.begin();
-    for (; iter != childs.end(); iter++) {
+    for (; iter != childs.end(); ++iter) {
       if (memcmp(dentry_blk->filename[bit_pos], (*iter).c_str(), (*iter).length()) == 0) {
         break;
       }
@@ -198,7 +198,7 @@ void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string
   F2fsPutPage(page, 0);
 }
 
-std::string GetRandomName(unsigned int len) {
+std::string FileTester::GetRandomName(unsigned int len) {
   const char *char_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   auto char_list_len = strlen(char_list);
   auto generator = [&]() { return char_list[rand() % char_list_len]; };
@@ -207,7 +207,7 @@ std::string GetRandomName(unsigned int len) {
   return str;
 }
 
-void AppendToFile(File *file, const void *data, size_t len) {
+void FileTester::AppendToFile(File *file, const void *data, size_t len) {
   size_t end = 0;
   size_t ret = 0;
 
@@ -215,30 +215,29 @@ void AppendToFile(File *file, const void *data, size_t len) {
   ASSERT_EQ(ret, kPageSize);
 }
 
-void CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
+void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
   Page *ipage = nullptr;
-  ASSERT_EQ(fs->Nodemgr().GetNodePage(vn->Ino(), &ipage), ZX_OK);
+  ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
   Inode *inode = &(static_cast<Node *>(PageAddress(ipage))->i);
 
   int i;
-  for (i = 0; i < level; i++)
+  for (i = 0; i < level; ++i)
     ASSERT_NE(inode->i_nid[i], 0U);
 
-  for (; i < kNidsPerInode; i++)
+  for (; i < kNidsPerInode; ++i)
     ASSERT_EQ(inode->i_nid[i], 0U);
 
   F2fsPutPage(ipage, 0);
 }
 
-void CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids) {
-  SbInfo &sbi = fs->GetSbInfo();
-  NmInfo *nm_i = GetNmInfo(&sbi);
+void MapTester::CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids) {
+  NodeManager &nm_i = fs->GetNodeManager();
 
-  std::lock_guard lock(nm_i->free_nid_list_lock);
+  std::lock_guard lock(nm_i.free_nid_list_lock_);
   for (auto nid : nids) {
     bool found = false;
     list_node_t *iter;
-    list_for_every(&nm_i->free_nid_list, iter) {
+    list_for_every(&nm_i.free_nid_list_, iter) {
       FreeNid *fnid = containerof(iter, FreeNid, list);
       if (fnid->nid == nid) {
         found = true;
@@ -249,15 +248,14 @@ void CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids) {
   }
 }
 
-void CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids) {
-  SbInfo &sbi = fs->GetSbInfo();
-  NmInfo *nm_i = GetNmInfo(&sbi);
+void MapTester::CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids) {
+  NodeManager &nm_i = fs->GetNodeManager();
 
-  std::lock_guard lock(nm_i->free_nid_list_lock);
+  std::lock_guard lock(nm_i.free_nid_list_lock_);
   for (auto nid : nids) {
     bool found = false;
     list_node_t *iter;
-    list_for_every(&nm_i->free_nid_list, iter) {
+    list_for_every(&nm_i.free_nid_list_, iter) {
       FreeNid *fnid = containerof(iter, FreeNid, list);
       if (fnid->nid == nid) {
         found = true;
@@ -268,25 +266,25 @@ void CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids) {
   }
 }
 
-void CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
+void MapTester::CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
   SbInfo &sbi = fs->GetSbInfo();
   for (auto blkaddr : blkaddrs) {
     SegEntry *se = fs->Segmgr().GetSegEntry(GetSegNo(&sbi, blkaddr));
     uint32_t offset = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
-    ASSERT_EQ(TestValidBitmap(offset, reinterpret_cast<char *>(se->ckpt_valid_map)), 0);
+    ASSERT_EQ(TestValidBitmap(offset, se->ckpt_valid_map), 0);
   }
 }
 
-void CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
+void MapTester::CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
   SbInfo &sbi = fs->GetSbInfo();
   for (auto blkaddr : blkaddrs) {
     SegEntry *se = fs->Segmgr().GetSegEntry(GetSegNo(&sbi, blkaddr));
     uint32_t offset = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
-    ASSERT_NE(TestValidBitmap(offset, reinterpret_cast<char *>(se->ckpt_valid_map)), 0);
+    ASSERT_NE(TestValidBitmap(offset, se->ckpt_valid_map), 0);
   }
 }
 
-void CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode) {
+void MapTester::CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode) {
   ASSERT_EQ(dn->nid, exp_nid);
   ASSERT_EQ(dn->ofs_in_node, static_cast<uint64_t>(1));
   ASSERT_EQ(dn->data_blkaddr, static_cast<block_t>(0));
@@ -298,23 +296,81 @@ void CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is
   }
 }
 
-bool IsCachedNat(NmInfo *nm_i, nid_t n) {
-  auto ne = nm_i->nat_cache.find(n);
-  return ne != nm_i->nat_cache.end();
+bool MapTester::IsCachedNat(NodeManager &node_manager, nid_t n) {
+  fs::SharedLock nat_lock(node_manager.nat_tree_lock_);
+  auto entry = node_manager.nat_cache_.find(n);
+  return entry != node_manager.nat_cache_.end();
 }
 
-void RemoveTruncatedNode(NmInfo *nm_i, std::vector<nid_t> &nids) {
+void MapTester::RemoveTruncatedNode(NodeManager &node_manager, std::vector<nid_t> &nids) {
+  fs::SharedLock nat_lock(node_manager.nat_tree_lock_);
   for (auto iter = nids.begin(); iter != nids.end();) {
-    auto cache_entry = nm_i->nat_cache.find(*iter);
-    if (cache_entry != nm_i->nat_cache.end()) {
+    auto cache_entry = node_manager.nat_cache_.find(*iter);
+    if (cache_entry != node_manager.nat_cache_.end()) {
       if ((*cache_entry).GetBlockAddress() == kNullAddr) {
         iter = nids.erase(iter);
       } else {
-        iter++;
+        ++iter;
       }
     }
   }
 }
 
-}  // namespace unittest_lib
+void MapTester::DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version) {
+  NodeManager *nm_i = &fs->GetNodeManager();
+  std::unique_ptr<NatEntry> nat_entry = std::make_unique<NatEntry>();
+  auto cache_entry = nat_entry.get();
+
+  cache_entry->SetNid(nid);
+
+  ZX_ASSERT(!(*cache_entry).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
+
+  std::lock_guard nat_lock(nm_i->nat_tree_lock_);
+  nm_i->nat_cache_.insert(std::move(nat_entry));
+
+  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list_.push_back(cache_entry);
+  ++nm_i->nat_entries_count_;
+
+  cache_entry->ClearCheckpointed();
+  cache_entry->SetBlockAddress(blkaddr);
+  cache_entry->SetVersion(version);
+  ZX_ASSERT((*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->clean_nat_list_.erase(*cache_entry);
+  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+  nm_i->dirty_nat_list_.push_back(cache_entry);
+}
+
+void MapTester::ClearAllDirtyNatEntries(NodeManager &manager) {
+  std::lock_guard nat_lock(manager.nat_tree_lock_);
+  for (auto &dirty_entry : manager.dirty_nat_list_) {
+    manager.dirty_nat_list_.erase(dirty_entry);
+    --manager.nat_entries_count_;
+  }
+}
+
+void MapTester::RemoveAllNatEntries(NodeManager &manager) {
+  std::lock_guard nat_lock(manager.nat_tree_lock_);
+  for (auto &nat_entry : manager.nat_cache_) {
+    ZX_ASSERT((nat_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
+    manager.clean_nat_list_.erase(nat_entry);
+    ZX_ASSERT((nat_entry).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
+    --manager.nat_entries_count_;
+  }
+  manager.nat_cache_.clear();
+}
+
+nid_t MapTester::ScanFreeNidList(NodeManager &manager, nid_t start) {
+  // Check initial free list (BuildFreeNids)
+  list_node_t *this_list;
+  std::lock_guard nat_lock(manager.free_nid_list_lock_);
+  list_for_every(&manager.free_nid_list_, this_list) {
+    FreeNid *fi = containerof(this_list, FreeNid, list);
+    ZX_ASSERT(fi->nid == start);
+    ZX_ASSERT(fi->state == static_cast<int>(NidState::kNidNew));
+    ++start;
+  }
+  return start;
+}
+
 }  // namespace f2fs

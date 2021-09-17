@@ -8,7 +8,6 @@
 namespace f2fs {
 
 class VnodeF2fs;
-class NatEntry;
 
 // For checkpoint manager
 enum class MetaBitmap { kNatBitmap, kSitBitmap };
@@ -92,36 +91,6 @@ struct InodeInfo {
   ExtentInfo ext;             // in-memory extent cache entry
 };
 
-struct NmInfo {
-  block_t nat_blkaddr = 0;  // base disk address of NAT
-  nid_t max_nid = 0;        // maximum possible node ids
-  nid_t init_scan_nid = 0;  // the first nid to be scanned
-  nid_t next_scan_nid = 0;  // the next nid to be scanned
-
-  // NAT cache management
-  fs::SharedMutex nat_tree_lock;  // protect nat_tree_lock
-  uint32_t nat_cnt = 0;           // the # of cached nat entries
-
-  using NatTreeTraits = fbl::DefaultKeyedObjectTraits<nid_t, NatEntry>;
-  using NatTree = fbl::WAVLTree<nid_t, std::unique_ptr<NatEntry>, NatTreeTraits>;
-  using NatList = fbl::DoublyLinkedList<NatEntry *>;
-
-  NatTree nat_cache __TA_GUARDED(nat_tree_lock);       // cached nat entries
-  NatList clean_nat_list __TA_GUARDED(nat_tree_lock);  // a list for cached clean nats
-  NatList dirty_nat_list __TA_GUARDED(nat_tree_lock);  // a list for cached dirty nats
-
-  // free node ids management
-  list_node_t free_nid_list;           // a list for free nids
-  fs::SharedMutex free_nid_list_lock;  // protect free nid list
-  uint64_t fcnt = 0;                   // the number of free node id
-  fbl::Mutex build_lock;               // lock for build free nids
-
-  // for checkpoint
-  char *nat_bitmap = nullptr;       // NAT bitmap pointer
-  char *nat_prev_bitmap = nullptr;  // JY: NAT previous checkpoint bitmap pointer
-  int bitmap_size = 0;              // bitmap size
-};
-
 // this structure is used as one of function parameters.
 // all the information are dedicated to a given direct node block determined
 // by the data offset in a file.
@@ -135,15 +104,6 @@ struct DnodeOfData {
   bool inode_page_locked = false;  // inode page is locked or not
   block_t data_blkaddr = 0;        // block address of the node block
 };
-
-static inline void SetNewDnode(DnodeOfData *dn, VnodeF2fs *vnode, Page *ipage, Page *npage,
-                               nid_t nid) {
-  dn->vnode = vnode;
-  dn->inode_page = ipage;
-  dn->node_page = npage;
-  dn->nid = nid;
-  dn->inode_page_locked = 0;
-}
 
 // For SIT manager
 //
@@ -233,14 +193,9 @@ enum class PageType {
 };
 
 struct SbInfo {
-  // super_block *sb;			// pointer to VFS super block
-  // buffer_head *raw_super_buf;	// buffer head of raw sb
   const SuperBlock *raw_super;  // raw super block pointer
   int s_dirty = 0;              // dirty flag for checkpoint
 
-  // for node-related operations
-  NmInfo *nm_info = nullptr;  // node manager
-  // inode *node_inode;		// cache node blocks
   fbl::RefPtr<VnodeF2fs> node_vnode;
 
   // for segment-related operations
@@ -317,8 +272,7 @@ static inline Checkpoint *GetCheckpoint(SbInfo *sbi) {
   return static_cast<Checkpoint *>(sbi->ckpt);
 }
 
-static inline NmInfo *GetNmInfo(SbInfo *sbi) { return sbi->nm_info; }
-
+// TODO: remove it after megring SmInfo to SegMrg
 static inline SmInfo *GetSmInfo(SbInfo *sbi) { return sbi->sm_info; }
 
 static inline SitInfo *GetSitInfo(SbInfo *sbi) {
@@ -457,7 +411,7 @@ static inline block_t DatablockAddr(Page *node_page, uint64_t offset) {
   return LeToCpu(addr_array[offset]);
 }
 
-static inline int TestValidBitmap(uint64_t nr, char *addr) {
+static inline int TestValidBitmap(uint64_t nr, uint8_t *addr) {
   int mask;
 
   addr += (nr >> 3);
@@ -465,7 +419,7 @@ static inline int TestValidBitmap(uint64_t nr, char *addr) {
   return mask & *addr;
 }
 
-static inline int SetValidBitmap(uint64_t nr, char *addr) {
+static inline int SetValidBitmap(uint64_t nr, uint8_t *addr) {
   int mask;
   int ret;
 
@@ -476,7 +430,7 @@ static inline int SetValidBitmap(uint64_t nr, char *addr) {
   return ret;
 }
 
-static inline int ClearValidBitmap(uint64_t nr, char *addr) {
+static inline int ClearValidBitmap(uint64_t nr, uint8_t *addr) {
   int mask;
   int ret;
 

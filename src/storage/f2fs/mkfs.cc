@@ -645,7 +645,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   sum->sit_j.entries[0].segno = ckp->cur_node_segno[0];
   sum->sit_j.entries[0].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegHotNode) << 10) | 1});
-  SetValidBitmap(0, reinterpret_cast<char *>(sum->sit_j.entries[0].se.valid_map));
+  SetValidBitmap(0, sum->sit_j.entries[0].se.valid_map);
   sum->sit_j.entries[1].segno = ckp->cur_node_segno[1];
   sum->sit_j.entries[1].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegWarmNode) << 10)});
@@ -657,7 +657,7 @@ zx_status_t MkfsWorker::WriteCheckPointPack() {
   sum->sit_j.entries[3].segno = ckp->cur_data_segno[0];
   sum->sit_j.entries[3].se.vblocks =
       CpuToLe(uint16_t{(static_cast<uint16_t>(CursegType::kCursegHotData) << 10) | 1});
-  SetValidBitmap(0, reinterpret_cast<char *>(sum->sit_j.entries[3].se.valid_map));
+  SetValidBitmap(0, sum->sit_j.entries[3].se.valid_map);
   sum->sit_j.entries[4].segno = ckp->cur_data_segno[1];
   sum->sit_j.entries[4].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegWarmData) << 10)});

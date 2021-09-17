@@ -592,7 +592,7 @@ retry_dents:
   // POR: we should ensure that there is no dirty node pages
   // until finishing nat/sit flush.
 retry:
-  Nodemgr().SyncNodePages(0, &wbc);
+  GetNodeManager().SyncNodePages(0, &wbc);
 
   mutex_lock_op(&sbi, LockType::kNodeOp);
 
@@ -623,7 +623,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   while (GetPages(&sbi, CountType::kDirtyMeta))
     SyncMetaPages(PageType::kMeta, LONG_MAX);
 
-  Nodemgr().NextFreeNid(&last_nid);
+  GetNodeManager().NextFreeNid(&last_nid);
 
   /*
    * modify checkpoint
@@ -689,7 +689,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   /* update SIT/NAT bitmap */
   Segmgr().GetSitBitmap(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
-  Nodemgr().GetNatBitmap(BitmapPrt(&sbi, MetaBitmap::kNatBitmap));
+  GetNodeManager().GetNatBitmap(BitmapPrt(&sbi, MetaBitmap::kNatBitmap));
 
   crc32 = F2fsCrc32(ckpt, LeToCpu(ckpt->checksum_offset));
   *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(ckpt) +
@@ -778,7 +778,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   ckpt->checkpoint_ver = CpuToLe(static_cast<uint64_t>(++ckpt_ver));
 
   // write cached NAT/SIT entries to NAT/SIT area
-  Nodemgr().FlushNatEntries();
+  GetNodeManager().FlushNatEntries();
   Segmgr().FlushSitEntries();
 
   Segmgr().ResetVictimSegmap();

@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   if (!strcmp(argv[1], "mkfs")) {
     return f2fs::Mkfs(bc.get(), argc, argv);
   } else if (!strcmp(argv[1], "fsck")) {
-    f2fs::fsck::Fsck(bc.get());
+    f2fs::Fsck(bc.get());
   } else if (!strcmp(argv[1], "mount")) {
     f2fs::Mount(options, std::move(bc));
   } else {

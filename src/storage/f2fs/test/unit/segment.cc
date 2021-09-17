@@ -15,28 +15,28 @@ namespace {
 
 TEST(SegmentMgr, BlkChaining) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   // create f2fs and root dir
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
   Page *root_node_page = nullptr;
   SbInfo &sbi = fs->GetSbInfo();
 
   // read the node block where the root inode is stored
-  fs->Nodemgr().GetNodePage(RootIno(&sbi), &root_node_page);
+  fs->GetNodeManager().GetNodePage(RootIno(&sbi), &root_node_page);
   ASSERT_TRUE(root_node_page);
 
   // retrieve the lba for root inode
   std::vector<block_t> blk_chain(0);
   int nwritten = kDefaultBlocksPerSegment * 2;
   NodeInfo ni;
-  fs->Nodemgr().GetNodeInfo(RootIno(&sbi), &ni);
+  fs->GetNodeManager().GetNodeInfo(RootIno(&sbi), ni);
   ASSERT_NE(ni.blk_addr, kNullAddr);
   ASSERT_NE(ni.blk_addr, kNewAddr);
   block_t alloc_addr = ni.blk_addr;
@@ -53,7 +53,7 @@ TEST(SegmentMgr, BlkChaining) {
     blk_chain.push_back(alloc_addr);
     ASSERT_NE(alloc_addr, kNullAddr);
     ASSERT_EQ(fs->GetBc().Readblk(blk_chain[i], read_page->data), ZX_OK);
-    ASSERT_EQ(alloc_addr, fs->Nodemgr().NextBlkaddrOfNode(read_page));
+    ASSERT_EQ(alloc_addr, NodeManager::NextBlkaddrOfNode(*read_page));
     F2fsPutPage(read_page, 0);
   }
 
@@ -61,26 +61,26 @@ TEST(SegmentMgr, BlkChaining) {
   ASSERT_EQ(root->Close(), ZX_OK);
   root = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 }
 
 TEST(SegmentMgr, DirtyToFree) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   // create f2fs and root dir
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
 
   // read the root inode block
   Page *root_node_page = nullptr;
   SbInfo &sbi = fs->GetSbInfo();
-  fs->Nodemgr().GetNodePage(RootIno(&sbi), &root_node_page);
+  fs->GetNodeManager().GetNodePage(RootIno(&sbi), &root_node_page);
   ASSERT_TRUE(root_node_page);
 
   // check the precond. before making dirty segments
@@ -88,7 +88,7 @@ TEST(SegmentMgr, DirtyToFree) {
   int nwritten = kDefaultBlocksPerSegment * 2;
   uint32_t nprefree = 0;
   NodeInfo ni;
-  fs->Nodemgr().GetNodeInfo(RootIno(&sbi), &ni);
+  fs->GetNodeManager().GetNodeInfo(RootIno(&sbi), ni);
   ASSERT_NE(ni.blk_addr, kNullAddr);
   ASSERT_NE(ni.blk_addr, kNewAddr);
   block_t alloc_addr = ni.blk_addr;
@@ -128,7 +128,7 @@ TEST(SegmentMgr, DirtyToFree) {
   ASSERT_EQ(root->Close(), ZX_OK);
   root = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 }
 
 }  // namespace

@@ -18,6 +18,7 @@ inline Page *GrabCachePage(void *vnode, uint32_t nid, pgoff_t index) {
 }
 
 inline void *PageAddress(Page *page) { return (void *)page->data; }
+inline void *PageAddress(Page &page) { return (void *)page.data; }
 inline Page *FindGetPage(/* TODO pgoff_t*/ uint32_t index) { return nullptr; }
 inline int PageUptodate(struct Page *page) { return 0; }
 inline void SetPageUptodate(struct Page *page) {}

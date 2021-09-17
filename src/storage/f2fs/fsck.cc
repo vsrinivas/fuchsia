@@ -7,7 +7,7 @@
 
 #include "src/storage/f2fs/f2fs.h"
 
-namespace f2fs::fsck {
+namespace f2fs {
 
 using Block = FsBlock;
 
@@ -666,7 +666,7 @@ zx_status_t FsckWorker::Init() {
 
   fsck->nr_main_blks = sm_i->main_segments << sbi_.log_blocks_per_seg;
   fsck->main_area_bitmap_sz = (fsck->nr_main_blks + 7) / 8;
-  fsck->main_area_bitmap = new char[fsck->main_area_bitmap_sz];
+  fsck->main_area_bitmap = new uint8_t[fsck->main_area_bitmap_sz];
   ZX_ASSERT(fsck->main_area_bitmap != nullptr);
   memset(fsck->main_area_bitmap, 0, fsck->main_area_bitmap_sz);
 
@@ -1137,36 +1137,28 @@ zx_status_t FsckWorker::SanityCheckCkpt() {
 
 zx_status_t FsckWorker::InitNodeManager() {
   const SuperBlock *sb_raw = RawSuper(&sbi_);
-  NmInfo *nm_i = GetNmInfo(&sbi_);
-  unsigned char *version_bitmap;
   unsigned int nat_segs, nat_blocks;
 
-  nm_i->nat_blkaddr = LeToCpu(sb_raw->nat_blkaddr);
+  node_manager_->SetNatAddress(LeToCpu(sb_raw->nat_blkaddr));
 
   // segment_count_nat includes pair segment so divide to 2.
   nat_segs = LeToCpu(sb_raw->segment_count_nat) >> 1;
   nat_blocks = nat_segs << LeToCpu(sb_raw->log_blocks_per_seg);
-  nm_i->max_nid = kNatEntryPerBlock * nat_blocks;
-  nm_i->fcnt = 0;
-  nm_i->nat_cnt = 0;
-  nm_i->init_scan_nid = LeToCpu(sbi_.ckpt->next_free_nid);
-  nm_i->next_scan_nid = LeToCpu(sbi_.ckpt->next_free_nid);
-
-  nm_i->bitmap_size = BitmapSize(&sbi_, MetaBitmap::kNatBitmap);
-
-  if (nm_i->nat_bitmap = new char[nm_i->bitmap_size]; nm_i->nat_bitmap == nullptr)
+  node_manager_->SetMaxNid(kNatEntryPerBlock * nat_blocks);
+  node_manager_->SetFirstScanNid(LeToCpu(sbi_.ckpt->next_free_nid));
+  node_manager_->SetNextScanNid(LeToCpu(sbi_.ckpt->next_free_nid));
+  if (zx_status_t status = node_manager_->AllocNatBitmap(BitmapSize(&sbi_, MetaBitmap::kNatBitmap));
+      status != ZX_OK) {
     return ZX_ERR_NO_MEMORY;
-  if (version_bitmap = static_cast<uint8_t *>(BitmapPrt(&sbi_, MetaBitmap::kNatBitmap));
-      version_bitmap == nullptr)
-    return ZX_ERR_NO_MEMORY;
+  }
 
   // copy version bitmap
-  memcpy(nm_i->nat_bitmap, version_bitmap, nm_i->bitmap_size);
+  node_manager_->SetNatBitmap(static_cast<uint8_t *>(BitmapPrt(&sbi_, MetaBitmap::kNatBitmap)));
   return ZX_OK;
 }
 
 zx_status_t FsckWorker::BuildNodeManager() {
-  if (sbi_.nm_info = new NmInfo; sbi_.nm_info == nullptr)
+  if (node_manager_ = std::make_unique<NodeManager>(&sbi_); node_manager_ == nullptr)
     return ZX_ERR_NO_MEMORY;
 
   if (zx_status_t err = InitNodeManager(); err != ZX_OK)
@@ -1180,7 +1172,7 @@ zx_status_t FsckWorker::BuildSitInfo() {
   Checkpoint *ckpt = GetCheckpoint(&sbi_);
   SitInfo *sit_i;
   unsigned int sit_segs, start;
-  char *src_bitmap, *dst_bitmap;
+  uint8_t *src_bitmap, *dst_bitmap;
   unsigned int bitmap_size;
 
   if (sit_i = new SitInfo; sit_i == nullptr)
@@ -1200,11 +1192,11 @@ zx_status_t FsckWorker::BuildSitInfo() {
 
   sit_segs = LeToCpu(raw_sb->segment_count_sit) >> 1;
   bitmap_size = BitmapSize(&sbi_, MetaBitmap::kSitBitmap);
-  if (src_bitmap = static_cast<char *>(BitmapPrt(&sbi_, MetaBitmap::kSitBitmap));
+  if (src_bitmap = static_cast<uint8_t *>(BitmapPrt(&sbi_, MetaBitmap::kSitBitmap));
       src_bitmap == nullptr)
     return ZX_ERR_NO_MEMORY;
 
-  if (dst_bitmap = new char[bitmap_size]; dst_bitmap == nullptr)
+  if (dst_bitmap = new uint8_t[bitmap_size]; dst_bitmap == nullptr)
     return ZX_ERR_NO_MEMORY;
 
   memcpy(dst_bitmap, src_bitmap, bitmap_size);
@@ -1431,7 +1423,7 @@ void FsckWorker::CheckBlockCount(uint32_t segno, SitEntry *raw_sit) {
 
   // check bitmap with valid block count
   for (uint64_t i = 0; i < sbi_.blocks_per_seg; i++)
-    if (TestValidBitmap(i, (char *)raw_sit->valid_map))
+    if (TestValidBitmap(i, raw_sit->valid_map))
       valid_blocks++;
   ZX_ASSERT(GetSitVblocks(raw_sit) == valid_blocks);
 }
@@ -1507,7 +1499,6 @@ SegType FsckWorker::GetSumEntry(uint32_t block_address, Summary *sum_entry) {
 
 zx_status_t FsckWorker::GetNatEntry(nid_t nid, RawNatEntry *raw_nat) {
   FsckInfo *fsck = &fsck_;
-  NmInfo *nm_i = GetNmInfo(&sbi_);
   pgoff_t block_off;
   pgoff_t block_addr;
   pgoff_t seg_off;
@@ -1529,10 +1520,11 @@ zx_status_t FsckWorker::GetNatEntry(nid_t nid, RawNatEntry *raw_nat) {
   entry_off = nid % kNatEntryPerBlock;
 
   seg_off = block_off >> sbi_.log_blocks_per_seg;
-  block_addr = (pgoff_t)(nm_i->nat_blkaddr + (seg_off << sbi_.log_blocks_per_seg << 1) +
-                         (block_off & ((1 << sbi_.log_blocks_per_seg) - 1)));
+  block_addr = static_cast<pgoff_t>((node_manager_->GetNatAddress() +
+                                     (seg_off << sbi_.log_blocks_per_seg << 1) +
+                                     (block_off & ((1 << sbi_.log_blocks_per_seg) - 1))));
 
-  if (TestValidBitmap(block_off, nm_i->nat_bitmap))
+  if (TestValidBitmap(block_off, node_manager_->GetNatBitmap()))
     block_addr += sbi_.blocks_per_seg;
 
   ret = ReadBlock(nat_block, block_addr);
@@ -1614,10 +1606,10 @@ void FsckWorker::BuildSitAreaBitmap() {
   uint32_t vblocks = 0;
 
   fsck->sit_area_bitmap_sz = sm_i->main_segments * kSitVBlockMapSize;
-  fsck->sit_area_bitmap = new char[fsck->sit_area_bitmap_sz];
+  fsck->sit_area_bitmap = new uint8_t[fsck->sit_area_bitmap_sz];
   ZX_ASSERT(fsck->sit_area_bitmap_sz == fsck->main_area_bitmap_sz);
   memset(fsck->sit_area_bitmap, 0, fsck->sit_area_bitmap_sz);
-  char *ptr = fsck->sit_area_bitmap;
+  uint8_t *ptr = fsck->sit_area_bitmap;
 
   for (uint32_t segno = 0; segno < sm_i->main_segments; segno++) {
     SegEntry *se = GetSegEntry(segno);
@@ -1675,7 +1667,6 @@ zx::status<int> FsckWorker::LookupNatInJournal(uint32_t nid, RawNatEntry *raw_na
 void FsckWorker::BuildNatAreaBitmap() {
   FsckInfo *fsck = &fsck_;
   const SuperBlock *raw_sb = RawSuper(&sbi_);
-  NmInfo *nm_i = GetNmInfo(&sbi_);
   NatBlock *nat_block;
   uint32_t nid, nr_nat_blks;
 
@@ -1692,16 +1683,17 @@ void FsckWorker::BuildNatAreaBitmap() {
 
   fsck->nr_nat_entries = nr_nat_blks * kNatEntryPerBlock;
   fsck->nat_area_bitmap_sz = (fsck->nr_nat_entries + 7) / 8;
-  fsck->nat_area_bitmap = new char[fsck->nat_area_bitmap_sz];
+  fsck->nat_area_bitmap = new uint8_t[fsck->nat_area_bitmap_sz];
   ZX_ASSERT(fsck->nat_area_bitmap != nullptr);
   memset(fsck->nat_area_bitmap, 0, fsck->nat_area_bitmap_sz);
 
   for (block_off = 0; block_off < nr_nat_blks; block_off++) {
     seg_off = block_off >> sbi_.log_blocks_per_seg;
-    block_addr = (pgoff_t)(nm_i->nat_blkaddr + (seg_off << sbi_.log_blocks_per_seg << 1) +
-                           (block_off & ((1 << sbi_.log_blocks_per_seg) - 1)));
+    block_addr =
+        (pgoff_t)(node_manager_->GetNatAddress() + (seg_off << sbi_.log_blocks_per_seg << 1) +
+                  (block_off & ((1 << sbi_.log_blocks_per_seg) - 1)));
 
-    if (TestValidBitmap(block_off, nm_i->nat_bitmap))
+    if (TestValidBitmap(block_off, node_manager_->GetNatBitmap()))
       block_addr += sbi_.blocks_per_seg;
 
     ret = ReadBlock(nat_block, block_addr);
@@ -1794,11 +1786,9 @@ zx_status_t FsckWorker::DoMount() {
 void FsckWorker::DoUmount() {
   SitInfo *sit_i = GetSitInfo(&sbi_);
   SmInfo *sm_i = GetSmInfo(&sbi_);
-  NmInfo *nm_i = GetNmInfo(&sbi_);
 
-  // free nm_info
-  delete[] nm_i->nat_bitmap;
-  delete sbi_.nm_info;
+  // free node manager
+  node_manager_.reset();
 
   // free sit_info
   for (uint32_t i = 0; i < TotalSegs(&sbi_); i++) {
@@ -1859,4 +1849,4 @@ zx_status_t FsckWorker::Run() {
   return ret;
 }
 
-}  // namespace f2fs::fsck
+}  // namespace f2fs

@@ -22,17 +22,17 @@ constexpr uint32_t kOrphanCnt = 10;
 
 TEST(OrphanInode, RecoverOrphanInode) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   SbInfo &sbi = fs->GetSbInfo();
 
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
   ASSERT_FALSE(GetCheckpoint(&sbi)->ckpt_flags & kCpOrphanPresentFlag);
@@ -45,7 +45,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
   ASSERT_EQ(fs->ValidNodeCount(), static_cast<uint64_t>(1));
   ASSERT_EQ(fs->ValidUserBlocks(), static_cast<uint64_t>(2));
 
-  unittest_lib::CreateChildren(fs.get(), vnodes, inos, root_dir, "orphan_", kOrphanCnt);
+  FileTester::CreateChildren(fs.get(), vnodes, inos, root_dir, "orphan_", kOrphanCnt);
   ASSERT_EQ(vnodes.size(), kOrphanCnt);
   ASSERT_EQ(inos.size(), kOrphanCnt);
 
@@ -59,7 +59,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
 
   // 2. Make orphan inodes
   ASSERT_EQ(fs->GetSbInfo().n_orphans, static_cast<uint64_t>(0));
-  unittest_lib::DeleteChildren(vnodes, root_dir, kOrphanCnt);
+  FileTester::DeleteChildren(vnodes, root_dir, kOrphanCnt);
   ASSERT_EQ(fs->GetSbInfo().n_orphans, kOrphanCnt);
 
   for (const auto &iter : vnodes) {
@@ -78,10 +78,10 @@ TEST(OrphanInode, RecoverOrphanInode) {
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir.reset();
 
-  unittest_lib::SuddenPowerOff(std::move(fs), &bc);
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
 
   // 4. Remount and recover orphan inodes
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   ASSERT_EQ(fs->GetSbInfo().n_orphans, static_cast<uint64_t>(0));
 
@@ -92,11 +92,11 @@ TEST(OrphanInode, RecoverOrphanInode) {
   // Check Orphan nids has been freed
   for (const auto &iter : inos) {
     NodeInfo ni;
-    fs->Nodemgr().GetNodeInfo(iter, &ni);
+    fs->GetNodeManager().GetNodeInfo(iter, ni);
     ASSERT_EQ(ni.blk_addr, kNullAddr);
   }
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 }
 
 }  // namespace

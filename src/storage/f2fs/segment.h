@@ -86,7 +86,7 @@ struct SitInfo {
   block_t sit_base_addr = 0;        /* start block address of SIT area */
   block_t sit_blocks = 0;           /* # of blocks used by SIT area */
   block_t written_valid_blocks = 0; /* # of valid blocks in main area */
-  char *sit_bitmap = nullptr;       /* SIT bitmap pointer */
+  uint8_t *sit_bitmap = nullptr;    /* SIT bitmap pointer */
   uint32_t bitmap_size = 0;         /* SIT bitmap size */
 
   uint64_t *dirty_sentries_bitmap = nullptr; /* bitmap for dirty sentries */

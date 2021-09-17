@@ -20,7 +20,7 @@ inline InlineDentry *GetInlineDentryAddr(Page *page) {
 DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
   Page *node_page = nullptr;
 
-  if (zx_status_t ret = Vfs()->Nodemgr().GetNodePage(Ino(), &node_page); ret != ZX_OK)
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK)
     return nullptr;
 
   f2fs_hash_t namehash = DentryHash(name.data(), static_cast<int>(name.length()));
@@ -67,7 +67,7 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
 DirEntry *Dir::ParentInlineDir(Page **p) {
   Page *node_page = nullptr;
 
-  if (zx_status_t ret = Vfs()->Nodemgr().GetNodePage(Ino(), &node_page); ret != ZX_OK)
+  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK)
     return nullptr;
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(node_page);
@@ -82,7 +82,7 @@ DirEntry *Dir::ParentInlineDir(Page **p) {
 zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent) {
   Page *ipage = nullptr;
 
-  if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
     return err;
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
@@ -145,8 +145,8 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
     return ZX_ERR_NO_MEMORY;
 
   DnodeOfData dn;
-  SetNewDnode(&dn, this, nullptr, nullptr, 0);
-  if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, 0, 0); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, 0, 0); err != ZX_OK)
     return err;
 
   if (dn.data_blkaddr == kNullAddr) {
@@ -174,7 +174,7 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
   // synchronized. So, inode update should run first, then FlushDirtyDataPage will use correct inode
   // information. When pager is available, inode update can run after setting data page dirty
   Page *ipage = nullptr;
-  if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
 
   // clear inline dir and flag after data writeback
@@ -214,7 +214,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   f2fs_hash_t name_hash = DentryHash(name.data(), static_cast<int>(name.length()));
 
   Page *ipage = nullptr;
-  if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
@@ -332,7 +332,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 bool Dir::IsEmptyInlineDir() {
   Page *ipage = nullptr;
 
-  if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return false;
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
@@ -359,7 +359,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
 
   Page *ipage = nullptr;
 
-  if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
 
   const unsigned char *types = kFiletypeTable;

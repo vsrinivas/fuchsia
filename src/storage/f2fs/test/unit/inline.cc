@@ -15,17 +15,17 @@ namespace {
 
 TEST(InlineDirTest, InlineDirCreation) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
 
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
@@ -37,26 +37,26 @@ TEST(InlineDirTest, InlineDirCreation) {
   fbl::RefPtr<VnodeF2fs> inline_child_dir =
       fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
 
-  unittest_lib::CheckInlineDir(inline_child_dir.get());
+  FileTester::CheckInlineDir(inline_child_dir.get());
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 
   // Disable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
   // Check if existing inline dir is still inline regardless of mount option
-  unittest_lib::Lookup(root_dir.get(), inline_dir_name, &inline_child);
+  FileTester::Lookup(root_dir.get(), inline_dir_name, &inline_child);
   inline_child_dir = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
-  unittest_lib::CheckInlineDir(inline_child_dir.get());
+  FileTester::CheckInlineDir(inline_child_dir.get());
 
   // However, newly created dir should be non-inline
   std::string non_inline_dir_name("noninline");
@@ -65,7 +65,7 @@ TEST(InlineDirTest, InlineDirCreation) {
 
   fbl::RefPtr<VnodeF2fs> non_inline_child_dir =
       fbl::RefPtr<VnodeF2fs>::Downcast(std::move(non_inline_child));
-  unittest_lib::CheckNonInlineDir(non_inline_child_dir.get());
+  FileTester::CheckNonInlineDir(non_inline_child_dir.get());
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
@@ -74,23 +74,23 @@ TEST(InlineDirTest, InlineDirCreation) {
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(bc.get()), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDirConvert) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
 
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
@@ -108,61 +108,61 @@ TEST(InlineDirTest, InlineDirConvert) {
   // Since two dentry slots are already allocated for "." and "..", decrease 2 from kNrInlineDentry
   for (; child_count < kNrInlineDentry - 2; ++child_count) {
     uint32_t mode = child_count % 2 == 0 ? S_IFDIR : S_IFREG;
-    unittest_lib::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
-                              std::to_string(child_count));
+    FileTester::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
+                            std::to_string(child_count));
   }
 
   // It should be inline
-  unittest_lib::CheckInlineDir(inline_child_dir.get());
+  FileTester::CheckInlineDir(inline_child_dir.get());
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 
   // Disable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
   // Check if existing inline dir is still inline regardless of mount option
-  unittest_lib::Lookup(root_dir.get(), inline_dir_name, &inline_child);
+  FileTester::Lookup(root_dir.get(), inline_dir_name, &inline_child);
   inline_child_dir = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
-  unittest_lib::CheckInlineDir(inline_child_dir.get());
+  FileTester::CheckInlineDir(inline_child_dir.get());
 
   // If one more dentry is added, it should be converted to non-inline dir
   uint32_t mode = child_count % 2 == 0 ? S_IFDIR : S_IFREG;
-  unittest_lib::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
-                            std::to_string(child_count));
+  FileTester::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
+                          std::to_string(child_count));
 
-  unittest_lib::CheckNonInlineDir(inline_child_dir.get());
+  FileTester::CheckNonInlineDir(inline_child_dir.get());
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(bc.get()), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDentryOps) {
   std::unique_ptr<Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};
   // Enable inline dir option
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
 
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
@@ -179,75 +179,75 @@ TEST(InlineDirTest, InlineDentryOps) {
   Dir *dir_ptr = static_cast<Dir *>(inline_child_dir.get());
 
   for (auto iter : child_set) {
-    unittest_lib::CreateChild(dir_ptr, S_IFDIR, iter);
+    FileTester::CreateChild(dir_ptr, S_IFDIR, iter);
   }
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // remove "b" and "d"
   ASSERT_EQ(dir_ptr->Unlink("b", true), ZX_OK);
   child_set.erase("b");
   ASSERT_EQ(dir_ptr->Unlink("d", true), ZX_OK);
   child_set.erase("d");
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // create "f" and "g"
-  unittest_lib::CreateChild(dir_ptr, S_IFDIR, "f");
+  FileTester::CreateChild(dir_ptr, S_IFDIR, "f");
   child_set.insert("f");
-  unittest_lib::CreateChild(dir_ptr, S_IFDIR, "g");
+  FileTester::CreateChild(dir_ptr, S_IFDIR, "g");
   child_set.insert("g");
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // rename "g" to "h"
   ASSERT_EQ(dir_ptr->Rename(inline_child_dir, "g", "h", true, true), ZX_OK);
   child_set.erase("g");
   child_set.insert("h");
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // fill all inline dentry slots
   auto child_count = child_set.size();
   for (; child_count < kNrInlineDentry - 2; ++child_count) {
-    unittest_lib::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
+    FileTester::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
     child_set.insert(std::to_string(child_count));
   }
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // It should be inline
-  unittest_lib::CheckInlineDir(dir_ptr);
+  FileTester::CheckInlineDir(dir_ptr);
 
   // one more entry
-  unittest_lib::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
+  FileTester::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
   child_set.insert(std::to_string(child_count));
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   // It should be non inline
-  unittest_lib::CheckNonInlineDir(dir_ptr);
+  FileTester::CheckNonInlineDir(dir_ptr);
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 
   // Check dentry after remount
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
-  unittest_lib::Lookup(root_dir.get(), inline_dir_name, &inline_child);
+  FileTester::Lookup(root_dir.get(), inline_dir_name, &inline_child);
   inline_child_dir = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
   dir_ptr = static_cast<Dir *>(inline_child_dir.get());
 
-  unittest_lib::CheckNonInlineDir(dir_ptr);
-  unittest_lib::CheckChildrenFromReaddir(dir_ptr, child_set);
+  FileTester::CheckNonInlineDir(dir_ptr);
+  FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);
 
   ASSERT_EQ(inline_child_dir->Close(), ZX_OK);
   inline_child_dir = nullptr;
   ASSERT_EQ(root_dir->Close(), ZX_OK);
   root_dir = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(bc.get()), ZX_OK);
 }
 
 }  // namespace

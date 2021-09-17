@@ -34,7 +34,7 @@ zx_status_t F2fs::RecoverDentry(Page *ipage, VnodeF2fs *vnode) {
   Page *page;
   zx_status_t err = ZX_OK;
 
-  if (!Nodemgr().IsDentDnode(ipage))
+  if (!GetNodeManager().IsDentDnode(*ipage))
     goto out;
 
   err = VnodeF2fs::Vget(this, LeToCpu(raw_inode->i_pino), &dir_refptr);
@@ -106,26 +106,26 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
       break;
     }
 
-    if (cp_ver != Nodemgr().CpverOfNode(page)) {
+    if (cp_ver != NodeManager::CpverOfNode(*page)) {
       break;
     }
 
-    if (!Nodemgr().IsFsyncDnode(page)) {
+    if (!NodeManager::IsFsyncDnode(*page)) {
       /* check next segment */
-      blkaddr = NodeMgr::NextBlkaddrOfNode(page);
+      blkaddr = NodeManager::NextBlkaddrOfNode(*page);
       ClearPageUptodate(page);
       continue;
     }
 
-    FsyncInodeEntry *entry = GetFsyncInode(head, Nodemgr().InoOfNode(page));
+    FsyncInodeEntry *entry = GetFsyncInode(head, NodeManager::InoOfNode(*page));
     if (entry) {
       entry->blkaddr = blkaddr;
-      if (IsInode(page) && Nodemgr().IsDentDnode(page)) {
+      if (IsInode(page) && NodeManager::IsDentDnode(*page)) {
         entry->vnode->SetFlag(InodeInfoFlag::kIncLink);
       }
     } else {
-      if (IsInode(page) && Nodemgr().IsDentDnode(page)) {
-        if (Nodemgr().RecoverInodePage(page)) {
+      if (IsInode(page) && NodeManager::IsDentDnode(*page)) {
+        if (GetNodeManager().RecoverInodePage(*page)) {
           err = ZX_ERR_NO_MEMORY;
           break;
         }
@@ -134,7 +134,7 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
       // TODO: Without cache, Vget cannot retrieve the node page for the fsyncd file
       // that was created after the last checkpoint before spo. (i.e., IsDentDnode)
       // It expects RecoverInodePage() creates a cached page for the inode.
-      if (err = VnodeF2fs::Vget(this, Nodemgr().InoOfNode(page), &vnode_refptr); err != ZX_OK) {
+      if (err = VnodeF2fs::Vget(this, NodeManager::InoOfNode(*page), &vnode_refptr); err != ZX_OK) {
         break;
       }
 
@@ -161,7 +161,7 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
     }
 
     // get the next block informatio from
-    blkaddr = NodeMgr::NextBlkaddrOfNode(page);
+    blkaddr = NodeManager::NextBlkaddrOfNode(*page);
     ClearPageUptodate(page);
   }
 
@@ -206,7 +206,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   __UNUSED zx_status_t err = 0;
 
   sentry = Segmgr().GetSegEntry(segno);
-  if (!TestValidBitmap(blkoff, reinterpret_cast<char *>(sentry->cur_valid_map)))
+  if (!TestValidBitmap(blkoff, sentry->cur_valid_map))
     return;
 
   /* Get the previous summary */
@@ -228,15 +228,15 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   }
 
   /* Get the node page */
-  err = Nodemgr().GetNodePage(LeToCpu(sum.nid), &node_page);
+  err = GetNodeManager().GetNodePage(LeToCpu(sum.nid), &node_page);
 #ifdef F2FS_BU_DEBUG
   if (err) {
     FX_LOGS(ERROR) << "F2fs::CheckIndexInPrevNodes, GetNodePage Error!!!";
     return;
   }
 #endif
-  bidx = Nodemgr().StartBidxOfNode(node_page) + LeToCpu(sum.ofs_in_node);
-  ino = Nodemgr().InoOfNode(node_page);
+  bidx = NodeManager::StartBidxOfNode(*node_page) + LeToCpu(sum.ofs_in_node);
+  ino = NodeManager::InoOfNode(*node_page);
   F2fsPutPage(node_page, 1);
 
   /* Deallocate previous index in the node page */
@@ -256,22 +256,22 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
   Summary sum;
   NodeInfo ni;
 
-  start = Nodemgr().StartBidxOfNode(page);
+  start = NodeManager::StartBidxOfNode(*page);
   if (IsInode(page)) {
     end = start + kAddrsPerInode;
   } else {
     end = start + kAddrsPerBlock;
   }
 
-  SetNewDnode(&dn, vnode, nullptr, nullptr, 0);
-  if (Nodemgr().GetDnodeOfData(&dn, start, 0))
+  NodeManager::SetNewDnode(dn, vnode, nullptr, nullptr, 0);
+  if (GetNodeManager().GetDnodeOfData(dn, start, 0))
     return;
 
   WaitOnPageWriteback(dn.node_page);
 
-  Nodemgr().GetNodeInfo(dn.nid, &ni);
-  ZX_ASSERT(ni.ino == Nodemgr().InoOfNode(page));
-  ZX_ASSERT(Nodemgr().OfsOfNode(dn.node_page) == Nodemgr().OfsOfNode(page));
+  GetNodeManager().GetNodeInfo(dn.nid, ni);
+  ZX_ASSERT(ni.ino == NodeManager::InoOfNode(*page));
+  ZX_ASSERT(NodeManager::OfsOfNode(*dn.node_page) == NodeManager::OfsOfNode(*page));
 
   for (; start < end; start++) {
     block_t src, dest;
@@ -300,17 +300,17 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
   /* write node page in place */
   Segmgr().SetSummary(&sum, dn.nid, 0, 0);
   if (IsInode(dn.node_page))
-    Nodemgr().SyncInodePage(&dn);
+    GetNodeManager().SyncInodePage(dn);
 
-  Nodemgr().CopyNodeFooter(dn.node_page, page);
-  Nodemgr().FillNodeFooter(dn.node_page, dn.nid, ni.ino, Nodemgr().OfsOfNode(page), false);
+  NodeManager::CopyNodeFooter(*dn.node_page, *page);
+  NodeManager::FillNodeFooter(*dn.node_page, dn.nid, ni.ino, NodeManager::OfsOfNode(*page), false);
 #if 0  // porting needed
   // set_page_dirty(dn.node_page, this);
 #else
   FlushDirtyNodePage(this, dn.node_page);
 #endif
 
-  Nodemgr().RecoverNodePage(dn.node_page, &sum, &ni, blkaddr);
+  GetNodeManager().RecoverNodePage(*dn.node_page, sum, ni, blkaddr);
   F2fsPutDnode(&dn);
 }
 
@@ -339,10 +339,10 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
     if (VnodeF2fs::Readpage(this, page, blkaddr, kReadSync))
       goto out;
 
-    if (cp_ver != Nodemgr().CpverOfNode(page))
+    if (cp_ver != NodeManager::CpverOfNode(*page))
       goto out;
 
-    entry = GetFsyncInode(head, Nodemgr().InoOfNode(page));
+    entry = GetFsyncInode(head, NodeManager::InoOfNode(*page));
     if (!entry)
       goto next;
 
@@ -360,7 +360,7 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
     }
   next:
     /* check next segment */
-    blkaddr = NodeMgr::NextBlkaddrOfNode(page);
+    blkaddr = NodeManager::NextBlkaddrOfNode(*page);
     ClearPageUptodate(page);
   }
 out:

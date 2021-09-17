@@ -56,7 +56,7 @@ zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
 
 void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   // Check if ino is within scope
-  fs->CheckNidRange(ino);
+  fs->GetNodeManager().CheckNidRange(ino);
   if (S_ISDIR(mode)) {
     *out = fbl::MakeRefCounted<Dir>(fs, ino);
   } else {
@@ -74,9 +74,9 @@ void VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   }
 
   /* Check if ino is within scope */
-  fs->CheckNidRange(ino);
+  fs->GetNodeManager().CheckNidRange(ino);
 
-  if (fs->Nodemgr().GetNodePage(ino, &node_page) != ZX_OK) {
+  if (fs->GetNodeManager().GetNodePage(ino, &node_page) != ZX_OK) {
     return;
   }
 
@@ -341,7 +341,7 @@ int VnodeF2fs::WriteInode(WritebackControl *wbc) {
 
   {
     fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kNodeOp)]);
-    if (ret = Vfs()->Nodemgr().GetNodePage(ino_, &node_page); ret != ZX_OK)
+    if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK)
       return ret;
     UpdateInode(node_page);
   }
@@ -391,7 +391,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
 #else
     FlushDirtyNodePage(Vfs(), dn->node_page);
 #endif
-    Vfs()->Nodemgr().SyncInodePage(dn);
+    Vfs()->GetNodeManager().SyncInodePage(*dn);
   }
   dn->ofs_in_node = ofs;
   return nr_free;
@@ -439,8 +439,8 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
     std::lock_guard write_lock(io_lock_);
 
     do {
-      SetNewDnode(&dn, this, nullptr, nullptr, 0);
-      err = Vfs()->Nodemgr().GetDnodeOfData(&dn, free_from, kRdOnlyNode);
+      NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
+      err = Vfs()->GetNodeManager().GetDnodeOfData(dn, free_from, kRdOnlyNode);
       if (err) {
         if (err == ZX_ERR_NOT_FOUND)
           break;
@@ -462,7 +462,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       F2fsPutDnode(&dn);
     } while (false);
 
-    err = Vfs()->Nodemgr().TruncateInodeBlocks(this, free_from);
+    err = Vfs()->GetNodeManager().TruncateInodeBlocks(*this, free_from);
   }
   // lastly zero out the first data page
   TruncatePartialDataPage(from);
@@ -476,8 +476,9 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
   for (index = pg_start; index < pg_end; index++) {
     DnodeOfData dn;
 
-    SetNewDnode(&dn, this, NULL, NULL, 0);
-    if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, kRdOnlyNode); err != ZX_OK) {
+    NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+    if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
+        err != ZX_OK) {
       if (err == ZX_ERR_NOT_FOUND)
         continue;
       return err;
@@ -525,7 +526,7 @@ void VnodeF2fs::EvictVnode() {
 
   {
     fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
-    Vfs()->Nodemgr().RemoveInodePage(this);
+    Vfs()->GetNodeManager().RemoveInodePage(this);
   }
   Vfs()->EvictVnode(this);
   //  no_delete:
@@ -638,19 +639,19 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
     // TODO: it intended to flush all dirty node pages on cache
     // remove it after cache
     Page *node_page = nullptr;
-    int mark = !Vfs()->Nodemgr().IsCheckpointedNode(Ino());
-    if (ret = Vfs()->Nodemgr().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
+    int mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
+    if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
       return ret;
     }
 
-    Vfs()->Nodemgr().SetFsyncMark(node_page, 1);
-    Vfs()->Nodemgr().SetDentryMark(node_page, mark);
+    NodeManager::SetFsyncMark(*node_page, 1);
+    NodeManager::SetDentryMark(*node_page, mark);
 
     UpdateInode(node_page);
     F2fsPutPage(node_page, 1);
 
 #if 0  // porting needed
-    // while (Vfs()->Nodemgr().SyncNodePages(Ino(), &wbc) == 0)
+    // while (Vfs()->GetNodeManager().SyncNodePages(Ino(), &wbc) == 0)
     //   WriteInode(nullptr);
     // filemap_fdatawait_range(nullptr,//sbi->node_inode->i_mapping,
     //           0, LONG_MAX);
@@ -674,7 +675,7 @@ int VnodeF2fs::NeedToSyncDir() {
   // Iput();
 #endif
   ZX_ASSERT(GetParentNid() < kNullIno);
-  return !Vfs()->Nodemgr().IsCheckpointedNode(GetParentNid());
+  return !Vfs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
 }
 
 void VnodeF2fs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }

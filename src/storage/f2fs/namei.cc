@@ -17,7 +17,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
 
   do {
     fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
-    if (!Vfs()->Nodemgr().AllocNid(&ino)) {
+    if (!Vfs()->GetNodeManager().AllocNid(&ino)) {
       Iput(vnode);
       return ZX_ERR_NO_SPACE;
     }
@@ -117,12 +117,12 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
       vnode->ClearNlink();
       vnode->UnlockNewInode();
       Iput(vnode);
-      Vfs()->Nodemgr().AllocNidFailed(vnode->Ino());
+      Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
   }
 
-  Vfs()->Nodemgr().AllocNidDone(vnode->Ino());
+  Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
 #if 0  // porting needed
   // if (!sbi.por_doing)
@@ -273,7 +273,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
 //   //     goto out;
 
 //   //   err = page_symlink(vnode, symname, symlen);
-//   //   Vfs()->Nodemgr().AllocNidDone(vnode->Ino());
+//   //   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
 //   //   // d_instantiate(dentry, vnode);
 //   //   UnlockNewInode(vnode);
@@ -285,7 +285,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
 //   //   vnode->ClearNlink();
 //   //   UnlockNewInode(vnode);
 //   //   // Iput(inode);
-//   //   Vfs()->Nodemgr().AllocNidFailed(vnode->Ino());
+//   //   Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
 //   //   return err;
 // }
 #endif
@@ -313,11 +313,11 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
       vnode->ClearNlink();
       vnode->UnlockNewInode();
       Iput(vnode);
-      Vfs()->Nodemgr().AllocNidFailed(vnode->Ino());
+      Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
   }
-  Vfs()->Nodemgr().AllocNidDone(vnode->Ino());
+  Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
 #if 0  // porting needed
   // d_instantiate(dentry, inode);
@@ -357,7 +357,7 @@ zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
 //   if (err)
 //     goto out;
 
-//   Vfs()->Nodemgr().AllocNidDone(vnode->Ino());
+//   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 //   // d_instantiate(dentry, inode);
 //   UnlockNewInode(vnode);
 
@@ -368,7 +368,7 @@ zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
 //   vnode->ClearNlink();
 //   UnlockNewInode(vnode);
 //   Iput(vnode);
-//   Vfs()->Nodemgr().AllocNidFailed(vnode->Ino());
+//   Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
 //   return err;
 // }
 #endif

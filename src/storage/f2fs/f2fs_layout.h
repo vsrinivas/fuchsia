@@ -451,7 +451,8 @@ enum class FileType {
   kFtFifo,
   kFtSock,
   kFtSymlink,
-  kFtMax
+  kFtMax,
+  kFtOrphan,  // used by fsck
 };
 
 constexpr uint32_t kHashBits = 8;

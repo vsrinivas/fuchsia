@@ -101,7 +101,6 @@ class F2fs : public fs::ManagedVfs {
   void SetQueryService(fbl::RefPtr<QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
-  void CheckNidRange(const nid_t &nid);
   zx_status_t GetFsId(zx::event *out_fs_id) const;
   uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
 
@@ -123,7 +122,7 @@ class F2fs : public fs::ManagedVfs {
   SuperBlock &RawSb() { return *raw_sb_; }
   SbInfo &GetSbInfo() { return *sbi_; }
   SegMgr &Segmgr() { return *seg_mgr_; }
-  NodeMgr &Nodemgr() { return *node_mgr_; }
+  NodeManager &GetNodeManager() { return *node_mgr_; }
 
   // super.cc
   void PutSuper();
@@ -212,7 +211,7 @@ class F2fs : public fs::ManagedVfs {
   std::unique_ptr<SuperBlock> raw_sb_;
   std::unique_ptr<SbInfo> sbi_;
   std::unique_ptr<SegMgr> seg_mgr_;
-  std::unique_ptr<NodeMgr> node_mgr_;
+  std::unique_ptr<NodeManager> node_mgr_;
 
   VnodeCache vnode_cache_{};
 

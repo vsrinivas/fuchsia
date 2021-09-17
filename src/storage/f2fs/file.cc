@@ -31,7 +31,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 //   //   /* block allocation */
 //   //   SetNewDnode(&dn, vnode, NULL, NULL, 0);
-//   //   err = Vfs()->Nodemgr().GetDnodeOfData(&dn, page->index, 0);
+//   //   err = Vfs()->GetNodeManager().GetDnodeOfData(&dn, page->index, 0);
 //   //   if (err) {
 //   //     // mutex_unlock_op(sbi, LockType::kDataNew);
 //   //     goto out;
@@ -180,7 +180,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //     mutex_lock_op(&sbi, LockType::kDataNew);
 
 //     SetNewDnode(&dn, this, NULL, NULL, 0);
-//     ret = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, 0);
+//     ret = Vfs()->GetNodeManager().GetDnodeOfData(&dn, index, 0);
 //     if (ret) {
 //       mutex_unlock_op(&sbi, LockType::kDataNew);
 //       break;

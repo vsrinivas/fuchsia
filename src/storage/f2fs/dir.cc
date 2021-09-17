@@ -300,12 +300,12 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
 #endif
 
   if (vnode->TestFlag(InodeInfoFlag::kNewInode)) {
-    if (zx_status_t err = Vfs()->Nodemgr().NewInodePage(this, vnode); err != ZX_OK)
+    if (zx_status_t err = Vfs()->GetNodeManager().NewInodePage(this, vnode); err != ZX_OK)
       return err;
 
     if (vnode->IsDir()) {
       if (zx_status_t err = MakeEmpty(vnode, this); err != ZX_OK) {
-        Vfs()->Nodemgr().RemoveInodePage(vnode);
+        Vfs()->GetNodeManager().RemoveInodePage(vnode);
         return err;
       }
       // TODO: need to check other points for nlink
@@ -322,7 +322,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
   } else {
     Page *ipage = nullptr;
 
-    if (zx_status_t err = Vfs()->Nodemgr().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
+    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
       return err;
     InitDentInode(vnode, ipage);
     F2fsPutPage(ipage, 1);

@@ -40,7 +40,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 
   SetDataBlkaddr(dn, kNewAddr);
   dn->data_blkaddr = kNewAddr;
-  Vfs()->Nodemgr().SyncInodePage(dn);
+  Vfs()->GetNodeManager().SyncInodePage(*dn);
   return ZX_OK;
 }
 
@@ -93,7 +93,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
   block_t start_blkaddr, end_blkaddr;
 
   ZX_ASSERT(blk_addr != kNewAddr);
-  fofs = Vfs()->Nodemgr().StartBidxOfNode(dn->node_page) + dn->ofs_in_node;
+  fofs = Vfs()->GetNodeManager().StartBidxOfNode(*dn->node_page) + dn->ofs_in_node;
 
   /* Update the page address in the parent node */
   SetDataBlkaddr(dn, blk_addr);
@@ -148,7 +148,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     return;
   } while (false);
 
-  Vfs()->Nodemgr().SyncInodePage(dn);
+  Vfs()->GetNodeManager().SyncInodePage(*dn);
 }
 
 zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, Page **out) {
@@ -165,8 +165,8 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, Page **out) {
   // F2fsPutPage(page, 0);
 #endif
 
-  SetNewDnode(&dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, kRdOnlyNode); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode); err != ZX_OK)
     return err;
   F2fsPutDnode(&dn);
 
@@ -202,8 +202,8 @@ zx_status_t VnodeF2fs::GetLockDataPage(pgoff_t index, Page **out) {
 
   page = nullptr;
 
-  SetNewDnode(&dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, kRdOnlyNode); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode); err != ZX_OK)
     return err;
   F2fsPutDnode(&dn);
 
@@ -242,8 +242,8 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, Page **out
   Page *page;
   DnodeOfData dn;
 
-  SetNewDnode(&dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, 0); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, 0); err != ZX_OK)
     return err;
 
   if (dn.data_blkaddr == kNullAddr) {
@@ -385,7 +385,7 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 //   /* When reading holes, we need its node page */
 //   //TODO(unknown): inode should be replaced with vnodef2fs
 //   //SetNewDnode(&dn, inode, NULL, NULL, 0);
-//   // TODO(unknown): shoud be replaced with NodeMgr->GetDnodeOfData
+//   // TODO(unknown): shoud be replaced with NodeManager->GetDnodeOfData
 //   /*err = get_DnodeOfData(&dn, pgofs, kRdOnlyNode);
 //   if (err)
 //     return (err == ZX_ERR_NOT_FOUND) ? 0 : err; */
@@ -437,14 +437,14 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   block_t old_blk_addr, new_blk_addr;
   DnodeOfData dn;
 
-  SetNewDnode(&dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, page->index, kRdOnlyNode);
+  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, page->index, kRdOnlyNode);
       err != ZX_OK)
     return err;
 
   old_blk_addr = dn.data_blkaddr;
 
-  /* This page is already truncated */
+  // This page is already truncated
   if (old_blk_addr == kNullAddr) {
     F2fsPutDnode(&dn);
     return ZX_OK;
@@ -452,11 +452,10 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
 
   SetPageWriteback(page);
 
-  /*
-   * If current allocation needs SSR,
-   * it had better in-place writes for updated data.
-   */
-  if (old_blk_addr != kNewAddr && !Vfs()->Nodemgr().IsColdData(page) &&
+  // If current allocation needs SSR,
+  // it had better in-place writes for updated data.
+  // TODO: Impl IsCodeData
+  if (old_blk_addr != kNewAddr && /*! NodeManager::IsColdData(*page) &&*/
       Vfs()->Segmgr().NeedInplaceUpdate(this)) {
     Vfs()->Segmgr().RewriteDataPage(page, old_blk_addr);
   } else {
@@ -476,10 +475,8 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
   zx_status_t err;
 
   if (page->index >= end_index) {
-    /*
-     * If the offset is out-of-range of file size,
-     * this page does not have to be written to disk.
-     */
+    // If the offset is out-of-range of file size,
+    // this page does not have to be written to disk.
     offset = GetSize() & (kPageCacheSize - 1);
     if ((page->index >= end_index + 1) || !offset) {
       if (IsDir()) {
@@ -509,7 +506,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
   }
 
 #if 0  // porting needed
-  // if (wbc->for_reclaim && !IsDir() && !Vfs()->Nodemgr().IsColdData(page))
+  // if (wbc->for_reclaim && !IsDir() && !Vfs()->GetNodeManager().IsColdData(page))
   //   goto redirty_out;
 #endif
 
@@ -543,8 +540,8 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     return ZX_OK;
   }
 
-  Vfs()->Nodemgr().ClearColdData(page);
 #if 0  // porting needed
+  Vfs()->GetNodeManager().ClearColdData(*page);
   // unlock_page(page);
 
   // if (!wbc->for_reclaim && !IsDir())
@@ -602,8 +599,8 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
   fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
   std::lock_guard write_lock(io_lock_);
   do {
-    SetNewDnode(&dn, this, NULL, NULL, 0);
-    if (zx_status_t err = Vfs()->Nodemgr().GetDnodeOfData(&dn, index, 0); err != ZX_OK) {
+    NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+    if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, 0); err != ZX_OK) {
       F2fsPutPage(*pagep, 1);
       return err;
     }
@@ -630,7 +627,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
     }
   }
   SetPageUptodate(*pagep);
-  Vfs()->Nodemgr().ClearColdData(*pagep);
+  // Vfs()->GetNodeManager().ClearColdData(*pagep);
   return ZX_OK;
 }
 

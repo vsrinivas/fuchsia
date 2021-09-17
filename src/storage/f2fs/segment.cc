@@ -295,7 +295,7 @@ inline void SegMgr::CheckBlockCount(int segno, SitEntry *raw_sit) {
 
   // check bitmap with valid block count
   for (i = 0; i < sbi.blocks_per_seg; i++) {
-    if (TestValidBitmap(i, reinterpret_cast<char *>(raw_sit->valid_map)))
+    if (TestValidBitmap(i, raw_sit->valid_map))
       valid_blocks++;
   }
   ZX_ASSERT(GetSitVblocks(raw_sit) == valid_blocks);
@@ -404,7 +404,7 @@ void SegMgr::BalanceFs() {
   // with enough free segments. After then, we should do GC.
   if (NeedToFlush()) {
     fs_->SyncDirtyDirInodes();
-    fs_->Nodemgr().SyncNodePages(0, &wbc);
+    fs_->GetNodeManager().SyncNodePages(0, &wbc);
   }
 
   // TODO: need to change after gc IMPL
@@ -554,13 +554,13 @@ void SegMgr::UpdateSitEntry(block_t blkaddr, int del) {
 
   // Update valid block bitmap
   if (del > 0) {
-    if (SetValidBitmap(offset, reinterpret_cast<char *>(se->cur_valid_map)))
+    if (SetValidBitmap(offset, se->cur_valid_map))
       ZX_ASSERT(0);
   } else {
-    if (!ClearValidBitmap(offset, reinterpret_cast<char *>(se->cur_valid_map)))
+    if (!ClearValidBitmap(offset, se->cur_valid_map))
       ZX_ASSERT(0);
   }
-  if (!TestValidBitmap(offset, reinterpret_cast<char *>(se->ckpt_valid_map)))
+  if (!TestValidBitmap(offset, se->ckpt_valid_map))
     se->ckpt_valid_blocks += del;
 
   MarkSitEntryDirty(segno);
@@ -798,8 +798,7 @@ void SegMgr::NextFreeBlkoff(CursegInfo *seg, block_t start) {
   SegEntry *se = GetSegEntry(seg->segno);
   block_t ofs;
   for (ofs = start; ofs < sbi.blocks_per_seg; ofs++) {
-    if (!TestValidBitmap(ofs, reinterpret_cast<char *>(se->ckpt_valid_map)) &&
-        !TestValidBitmap(ofs, reinterpret_cast<char *>(se->cur_valid_map)))
+    if (!TestValidBitmap(ofs, se->ckpt_valid_map) && !TestValidBitmap(ofs, se->cur_valid_map))
       break;
   }
   seg->next_blkoff = static_cast<uint16_t>(ofs);
@@ -1052,7 +1051,7 @@ CursegType SegMgr::GetSegmentType4(Page *page, PageType p_type) {
       return CursegType::kCursegColdData;
     }
   } else {
-    if (fs_->Nodemgr().IS_DNODE(page) && !NodeMgr::IsColdNode(page)) {
+    if (NodeManager::IS_DNODE(*page) && !NodeManager::IsColdNode(*page)) {
       return CursegType::kCursegHotNode;
     } else {
       return CursegType::kCursegColdNode;
@@ -1068,14 +1067,15 @@ CursegType SegMgr::GetSegmentType6(Page *page, PageType p_type) {
 
     if (vnode->IsDir()) {
       return CursegType::kCursegHotData;
-    } else if (NodeMgr::IsColdData(page) || NodeMgr::IsColdFile(vnode)) {
+    } else if (/*NodeManager::IsColdData(*page) ||*/ NodeManager::IsColdFile(*vnode)) {
       return CursegType::kCursegColdData;
     } else {
       return CursegType::kCursegWarmData;
     }
   } else {
-    if (fs_->Nodemgr().IS_DNODE(page)) {
-      return NodeMgr::IsColdNode(page) ? CursegType::kCursegWarmNode : CursegType::kCursegHotNode;
+    if (NodeManager::IS_DNODE(*page)) {
+      return NodeManager::IsColdNode(*page) ? CursegType::kCursegWarmNode
+                                            : CursegType::kCursegHotNode;
     } else {
       return CursegType::kCursegColdNode;
     }
@@ -1134,7 +1134,7 @@ void SegMgr::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr, 
     }
 
     if (p_type == PageType::kNode)
-      fs_->Nodemgr().FillNodeFooterBlkaddr(page, NextFreeBlkAddr(&sbi, curseg));
+      fs_->GetNodeManager().FillNodeFooterBlkaddr(page, NextFreeBlkAddr(&sbi, curseg));
   }
 
   // writeout dirty page into bdev
@@ -1163,7 +1163,7 @@ void SegMgr::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn, block_
   NodeInfo ni;
 
   ZX_ASSERT(old_blkaddr != kNullAddr);
-  fs_->Nodemgr().GetNodeInfo(dn->nid, &ni);
+  fs_->GetNodeManager().GetNodeInfo(dn->nid, ni);
   SetSummary(&sum, dn->nid, dn->ofs_in_node, ni.version);
 
   DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kData);
@@ -1222,7 +1222,7 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
   CursegType type = CursegType::kCursegWarmNode;
   CursegInfo *curseg;
   uint32_t segno, old_cursegno;
-  block_t next_blkaddr = NodeMgr::NextBlkaddrOfNode(page);
+  block_t next_blkaddr = NodeManager::NextBlkaddrOfNode(*page);
   uint32_t next_segno = GetSegNo(&sbi, next_blkaddr);
 
   curseg = CURSEG_I(&sbi, type);
@@ -1362,7 +1362,7 @@ int SegMgr::ReadNormalSummaries(int type) {
         ns->ofs_in_node = 0;
       }
     } else {
-      if (NodeMgr::RestoreNodeSummary(fs_, segno, sum)) {
+      if (NodeManager::RestoreNodeSummary(*fs_, segno, *sum)) {
         F2fsPutPage(new_page, 1);
         return -EINVAL;
       }
@@ -1660,7 +1660,7 @@ zx_status_t SegMgr::BuildSitInfo() {
   Checkpoint *ckpt = GetCheckpoint(&sbi);
   SitInfo *sit_i;
   uint32_t sit_segs, start;
-  char *src_bitmap, *dst_bitmap;
+  uint8_t *src_bitmap, *dst_bitmap;
   uint32_t bitmap_size;
 
   /* allocate memory for SIT information */
@@ -1701,9 +1701,9 @@ zx_status_t SegMgr::BuildSitInfo() {
 
   /* setup SIT bitmap from ckeckpoint pack */
   bitmap_size = BitmapSize(&sbi, MetaBitmap::kSitBitmap);
-  src_bitmap = static_cast<char *>(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
+  src_bitmap = static_cast<uint8_t *>(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
 
-  dst_bitmap = static_cast<char *>(malloc(bitmap_size));
+  dst_bitmap = new uint8_t[bitmap_size];
   memset(dst_bitmap, 0, bitmap_size);
   if (!dst_bitmap)
     return ZX_ERR_NO_MEMORY;
@@ -2078,7 +2078,7 @@ void SegMgr::DestroySitInfo() {
   free(sit_i->dirty_sentries_bitmap);
 
   GetSmInfo(&sbi)->SitInfo = nullptr;
-  free(sit_i->sit_bitmap);
+  delete[] sit_i->sit_bitmap;
   free(sit_i);
 }
 

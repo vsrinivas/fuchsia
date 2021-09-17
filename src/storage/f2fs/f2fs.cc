@@ -222,9 +222,6 @@ uint32_t F2fs::ValidInodeCount() {
   return sbi_->total_valid_inode_count;
 }
 
-// Check whether the given nid is within node id range.
-void F2fs::CheckNidRange(const nid_t& nid) { ZX_ASSERT(nid < sbi_->nm_info->max_nid); }
-
 zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
   SbInfo& sbi = fs->GetSbInfo();
 
@@ -234,7 +231,7 @@ zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
   ZX_ASSERT(page->host == nullptr);
   ZX_ASSERT(page->host_nid == NodeIno(&sbi));
 
-  if (zx_status_t ret = fs->Nodemgr().F2fsWriteNodePage(page, nullptr); ret != ZX_OK) {
+  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(*page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Node page write error " << ret;
     return ret;
   }

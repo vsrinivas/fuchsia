@@ -188,33 +188,6 @@ void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_se
   fs->Segmgr().LocateDirtySegment(old_cursegno);
 }
 
-void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version) {
-  SbInfo &sbi = fs->GetSbInfo();
-  NmInfo *nm_i = GetNmInfo(&sbi);
-  std::unique_ptr<NatEntry> nat_entry = std::make_unique<NatEntry>();
-  auto cache_entry = nat_entry.get();
-
-  memset(cache_entry, 0, sizeof(NatEntry));
-  cache_entry->SetNid(nid);
-
-  ZX_ASSERT(!(*cache_entry).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
-
-  std::lock_guard nat_lock(nm_i->nat_tree_lock);
-  nm_i->nat_cache.insert(std::move(nat_entry));
-
-  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->clean_nat_list.push_back(cache_entry);
-  ++nm_i->nat_cnt;
-
-  cache_entry->ClearCheckpointed();
-  cache_entry->SetBlockAddress(blkaddr);
-  cache_entry->SetVersion(version);
-  ZX_ASSERT((*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->clean_nat_list.erase(*cache_entry);
-  ZX_ASSERT(!(*cache_entry).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-  nm_i->dirty_nat_list.push_back(cache_entry);
-}
-
 bool IsRootInode(CursegType curseg_type, uint32_t offset) {
   return (curseg_type == CursegType::kCursegHotData || curseg_type == CursegType::kCursegHotNode) &&
          offset == 0;
@@ -249,19 +222,6 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   if (pre_bitmap == nullptr)
     pre_bitmap = new uint8_t[cp->nat_ver_bitmap_bytesize]();
 
-  std::string bitmapPrint;
-  for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-    bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(pre_bitmap))[i]).to_string();
-  }
-  FX_LOGS(DEBUG) << std::dec << "CP ver= " << cp->checkpoint_ver
-                 << ",     pre_bitmap = " << bitmapPrint;
-
-  bitmapPrint.clear();
-  for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-    bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(version_bitmap))[i]).to_string();
-  }
-  FX_LOGS(DEBUG) << "CP ver= " << cp->checkpoint_ver << ", version_bitmap = " << bitmapPrint;
-
   // 3. Validate version bitmap
   // Check root dir version bitmap
   ASSERT_EQ((static_cast<uint8_t *>(version_bitmap))[0] & kRootDirNatBit,
@@ -281,12 +241,6 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
 
     ASSERT_EQ((static_cast<uint8_t *>(version_bitmap))[cur_nat_block / 8],
               (static_cast<uint8_t *>(pre_bitmap))[cur_nat_block / 8]);
-
-    for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-      bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(pre_bitmap))[i]).to_string();
-    }
-    FX_LOGS(DEBUG) << std::dec << "CP ver= " << cp->checkpoint_ver
-                   << ", exp pre_bitmap = " << bitmapPrint;
 
     ASSERT_EQ(memcmp(pre_bitmap, version_bitmap, cp->nat_ver_bitmap_bytesize), 0);
   }
@@ -331,19 +285,6 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   if (pre_bitmap == nullptr)
     pre_bitmap = new uint8_t[cp->sit_ver_bitmap_bytesize]();
 
-  std::string bitmapPrint;
-  for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-    bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(pre_bitmap))[i]).to_string();
-  }
-  FX_LOGS(DEBUG) << std::dec << "CP ver= " << cp->checkpoint_ver
-                 << ",     pre_bitmap = " << bitmapPrint;
-
-  bitmapPrint.clear();
-  for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-    bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(version_bitmap))[i]).to_string();
-  }
-  FX_LOGS(DEBUG) << "CP ver= " << cp->checkpoint_ver << ", version_bitmap = " << bitmapPrint;
-
   // 3. Validate version bitmap
   // Check dir and file inode version bitmap
   if (cp->checkpoint_ver == 2) {
@@ -357,12 +298,6 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
 
     ASSERT_EQ((static_cast<uint8_t *>(version_bitmap))[cur_sit_block / 8],
               (static_cast<uint8_t *>(pre_bitmap))[cur_sit_block / 8]);
-
-    for (uint32_t i = 0; i < 8 /*cp->nat_ver_bitmap_bytesize*/; i++) {
-      bitmapPrint += std::bitset<8>((static_cast<uint8_t *>(pre_bitmap))[i]).to_string();
-    }
-    FX_LOGS(DEBUG) << std::dec << "CP ver= " << cp->checkpoint_ver
-                   << ", exp pre_bitmap = " << bitmapPrint;
 
     ASSERT_EQ(memcmp(pre_bitmap, version_bitmap, cp->sit_ver_bitmap_bytesize), 0);
   }
@@ -845,7 +780,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                               bool after_mkfs, std::vector<uint32_t> &nids) {
   SbInfo &sbi = fs->GetSbInfo();
-  NmInfo *nm_i = GetNmInfo(&sbi);
+  NodeManager &node_manager = fs->GetNodeManager();
   Page *cp_page = nullptr;
   CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegHotData);
 
@@ -863,7 +798,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 #ifdef F2FS_BU_DEBUG
     std::cout << "Check Journal, CP ver =" << cp->checkpoint_ver
               << ", NatsInCursum=" << NatsInCursum(curseg->sum_blk)
-              << ", dirty_nat_cnt=" << list_length(&nm_i->dirty_nat_entries) << std::endl;
+              << ", dirty_nat_cnt=" << list_length(&node_manager->dirty_nat_entries_) << std::endl;
 #endif
     SummaryBlock *sum = curseg->sum_blk;
     for (int i = 0; i < NatsInCursum(sum); i++) {
@@ -877,27 +812,20 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     // Clear NAT journal
     if (NatsInCursum(curseg->sum_blk) >= static_cast<int>(kNatJournalEntries)) {
       // Add dummy dirty NAT entries
-      DoWriteNat(fs, kNatJournalEntries + RootIno(&sbi) + 1, kNatJournalEntries,
-                 static_cast<uint8_t>(cp->checkpoint_ver));
+      MapTester::DoWriteNat(fs, kNatJournalEntries + RootIno(&sbi) + 1, kNatJournalEntries,
+                            static_cast<uint8_t>(cp->checkpoint_ver));
 
       // Move journal sentries to dirty sentries
-      ASSERT_TRUE(fs->Nodemgr().FlushNatsInJournal());
+      ASSERT_TRUE(fs->GetNodeManager().FlushNatsInJournal());
 
       // Clear dirty sentries
-      {
-        std::lock_guard nat_lock(nm_i->nat_tree_lock);
-        while (!nm_i->dirty_nat_list.is_empty()) {
-          NatEntry *ne = &nm_i->dirty_nat_list.front();
-          nm_i->dirty_nat_list.erase(*ne);
-          nm_i->nat_cnt--;
-          delete ne;
-        }
-      }
+      MapTester::ClearAllDirtyNatEntries(node_manager);
 
 #ifdef F2FS_BU_DEBUG
       std::cout << "Clear Journal, CP ver =" << cp->checkpoint_ver
                 << ", NatsInCursum=" << NatsInCursum(curseg->sum_blk)
-                << ", dirty_nat_cnt=" << list_length(&nm_i->dirty_nat_entries) << std::endl;
+                << ", dirty_nat_cnt=" << list_length(&node_manager->dirty_nat_entries_)
+                << std::endl;
 #endif
     }
   }
@@ -906,26 +834,14 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // Fill NAT journal
   for (uint32_t i = RootIno(&sbi) + 1; i < kNatJournalEntries + RootIno(&sbi) + 1; i++) {
-    DoWriteNat(fs, i, i, static_cast<uint8_t>(cp->checkpoint_ver));
+    MapTester::DoWriteNat(fs, i, i, static_cast<uint8_t>(cp->checkpoint_ver));
     nids.push_back(i);
   }
+
   ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);
 
   // Flush NAT cache
-  {
-    std::lock_guard nat_lock(nm_i->nat_tree_lock);
-    while (!nm_i->nat_cache.is_empty()) {
-      auto ne = &nm_i->nat_cache.front();
-
-      ZX_ASSERT((*ne).fbl::DoublyLinkedListable<NatEntry *>::InContainer());
-      nm_i->clean_nat_list.erase(*ne);
-
-      ZX_ASSERT((*ne).fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>::InContainer());
-      auto nat_entry = nm_i->nat_cache.erase(*ne);
-      nm_i->nat_cnt--;
-      nat_entry.reset();
-    }
-  }
+  MapTester::RemoveAllNatEntries(node_manager);
   F2fsPutPage(cp_page, 1);
 }
 
@@ -939,12 +855,12 @@ void CheckpointTestMain(uint32_t test) {
   std::vector<uint32_t> prev_values;
   std::unique_ptr<F2fs> fs;
 
-  unittest_lib::MkfsOnFakeDev(&bc, kBlockCount);
+  FileTester::MkfsOnFakeDev(&bc, kBlockCount);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs.get(), &root);
+  FileTester::CreateRoot(fs.get(), &root);
 
   // Validate checkpoint
   for (uint32_t i = 1; i <= kCheckpointLoopCnt + 1; i++) {
@@ -999,7 +915,7 @@ void CheckpointTestMain(uint32_t test) {
   ASSERT_EQ(root->Close(), ZX_OK);
   root = nullptr;
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 
   delete[] pre_bitmap;
 }

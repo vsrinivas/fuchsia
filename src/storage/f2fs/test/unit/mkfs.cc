@@ -475,10 +475,10 @@ TEST(FormatFilesystemTest, BlockSize) {
       std::unique_ptr<F2fs> fs;
       MountOptions options{};
       async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-      unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+      FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
       fbl::RefPtr<VnodeF2fs> root;
-      unittest_lib::CreateRoot(fs.get(), &root);
+      FileTester::CreateRoot(fs.get(), &root);
       fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
       SuperBlock &fsb = fs->RawSb();
@@ -490,8 +490,8 @@ TEST(FormatFilesystemTest, BlockSize) {
       ASSERT_EQ(root_dir->Close(), ZX_OK);
       root_dir.reset();
 
-      unittest_lib::Unmount(std::move(fs), &bc);
-      EXPECT_EQ(fsck::Fsck(bc.get()), ZX_OK);
+      FileTester::Unmount(std::move(fs), &bc);
+      EXPECT_EQ(Fsck(bc.get()), ZX_OK);
     }
   }
 }
@@ -515,12 +515,12 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
     std::unique_ptr<F2fs> fs;
     MountOptions options{};
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
     SuperBlock &fsb = fs->RawSb();
     ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
 
-    unittest_lib::Unmount(std::move(fs), &bc);
+    FileTester::Unmount(std::move(fs), &bc);
   }
 }
 

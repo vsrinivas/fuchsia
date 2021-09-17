@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_F2FS_FSCK_H_
 #define SRC_STORAGE_F2FS_FSCK_H_
 
-namespace f2fs::fsck {
+namespace f2fs {
 
 struct OrphanInfo {
   uint32_t nr_inodes = 0;
@@ -32,10 +32,10 @@ struct FsckInfo {
 
   HardLinkNode *hard_link_list_head = nullptr;
 
-  char *main_seg_usage = nullptr;
-  char *main_area_bitmap = nullptr;
-  char *nat_area_bitmap = nullptr;
-  char *sit_area_bitmap = nullptr;
+  uint8_t *main_seg_usage = nullptr;
+  uint8_t *main_area_bitmap = nullptr;
+  uint8_t *nat_area_bitmap = nullptr;
+  uint8_t *sit_area_bitmap = nullptr;
 
   uint64_t main_area_bitmap_sz = 0;
   uint32_t nat_area_bitmap_sz = 0;
@@ -60,19 +60,6 @@ enum class SegType {
   kSegTypeNode,
   kSegTypeCurNode,
   kSegTypeMax,
-};
-
-enum class FileType {
-  kFtUnknown = 0,
-  kFtRegFile,
-  kFtDir,
-  kFtChrdev,
-  kFtBlkdev,
-  kFtFifo,
-  kFtSock,
-  kFtSymlink,
-  kFtMax,
-  kFtOrphan
 };
 
 #if 0  // porting needed
@@ -228,12 +215,13 @@ class FsckWorker {
  private:
   FsckInfo fsck_;
   SbInfo sbi_;
+  std::unique_ptr<NodeManager> node_manager_;
   Bcache *bc_;
   std::vector<char> tree_mark_;
 };
 
 zx_status_t Fsck(Bcache *bc);
 
-}  // namespace f2fs::fsck
+}  // namespace f2fs
 
 #endif  // SRC_STORAGE_F2FS_FSCK_H_

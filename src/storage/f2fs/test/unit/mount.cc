@@ -56,7 +56,7 @@ void MountTestVerifyOptions(F2fs *fs, MountOptions &options) {
 
 void MountTestDisableExt(F2fs *fs, uint32_t expectation) {
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs, &root);
+  FileTester::CreateRoot(fs, &root);
   Dir *root_dir = static_cast<Dir *>(root.get());
   bool result = (expectation > 0 ? true : false);
 
@@ -67,7 +67,7 @@ void MountTestDisableExt(F2fs *fs, uint32_t expectation) {
     // create regular files with cold file extensions
     ASSERT_EQ(root_dir->Create(name, S_IFREG, &vnode), ZX_OK);
     File *file = static_cast<File *>(vnode.get());
-    ASSERT_EQ(NodeMgr::IsColdFile(file), result);
+    ASSERT_EQ(NodeManager::IsColdFile(*file), result);
     vnode->Close();
   }
 
@@ -93,17 +93,17 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
 
   // Dnode block test
   page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), vn->Ino());
-  fs->Nodemgr().FillNodeFooter(page, static_cast<nid_t>(page->index), vn->Ino(), inode_ofs, true);
-  fs->Nodemgr().SetColdNode(vn, page);
+  NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), inode_ofs, true);
+  NodeManager::SetColdNode(*vn, *page);
   type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
   out.push_back(type);
   F2fsPutPage(page, 1);
 
   // indirect node block test
   page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), nid);
-  fs->Nodemgr().FillNodeFooter(page, static_cast<nid_t>(page->index), vn->Ino(), indirect_node_ofs,
-                               true);
-  fs->Nodemgr().SetColdNode(vn, page);
+  NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), indirect_node_ofs,
+                              true);
+  NodeManager::SetColdNode(*vn, *page);
   type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
   out.push_back(type);
   F2fsPutPage(page, 1);
@@ -112,7 +112,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
 
 void MountTestActiveLogs(F2fs *fs, MountOptions options) {
   fbl::RefPtr<VnodeF2fs> root;
-  unittest_lib::CreateRoot(fs, &root);
+  FileTester::CreateRoot(fs, &root);
   Dir *root_dir = static_cast<Dir *>(root.get());
   const char *filenames[] = {"dir", "warm.exe", "cold.mp4"};
   std::vector<CursegType> results(3, CursegType::kNoCheckType);
@@ -164,11 +164,11 @@ void MountTestActiveLogs(F2fs *fs, MountOptions options) {
 
 void MountTestMain(MountOptions &options, uint32_t test, uint32_t priv) {
   std::unique_ptr<f2fs::Bcache> bc;
-  unittest_lib::MkfsOnFakeDev(&bc);
+  FileTester::MkfsOnFakeDev(&bc);
 
   std::unique_ptr<F2fs> fs;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  unittest_lib::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
   switch (test) {
     case kMountVerifyTest:
@@ -185,7 +185,7 @@ void MountTestMain(MountOptions &options, uint32_t test, uint32_t priv) {
       break;
   };
 
-  unittest_lib::Unmount(std::move(fs), &bc);
+  FileTester::Unmount(std::move(fs), &bc);
 }
 
 TEST(MountTest, Verify) {
