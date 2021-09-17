@@ -65,25 +65,25 @@ void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2
   (*out)->Init();
 }
 
-void VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
+zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   Page *node_page = nullptr;
 
   if (ino == NodeIno(&fs->GetSbInfo()) || ino == MetaIno(&fs->GetSbInfo())) {
     *out = fbl::MakeRefCounted<VnodeF2fs>(fs, ino);
-    return;
+    return ZX_OK;
   }
 
   /* Check if ino is within scope */
   fs->GetNodeManager().CheckNidRange(ino);
 
   if (fs->GetNodeManager().GetNodePage(ino, &node_page) != ZX_OK) {
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
 
   Node *rn = static_cast<Node *>(PageAddress(node_page));
-  Inode *ri = &(rn->i);
+  Inode &ri = rn->i;
 
-  if (S_ISDIR(ri->i_mode)) {
+  if (S_ISDIR(ri.i_mode)) {
     *out = fbl::MakeRefCounted<Dir>(fs, ino);
   } else {
     *out = fbl::MakeRefCounted<File>(fs, ino);
@@ -92,34 +92,45 @@ void VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   VnodeF2fs *vnode = out->get();
 
   vnode->Init();
-  vnode->SetMode(LeToCpu(ri->i_mode));
-  vnode->SetUid(LeToCpu(ri->i_uid));
-  vnode->SetGid(LeToCpu(ri->i_gid));
-  vnode->SetNlink(ri->i_links);
-  vnode->SetSize(LeToCpu(ri->i_size));
-  vnode->SetBlocks(LeToCpu(ri->i_blocks));
-  vnode->SetATime(LeToCpu(ri->i_atime), LeToCpu(ri->i_atime_nsec));
-  vnode->SetCTime(LeToCpu(ri->i_ctime), LeToCpu(ri->i_ctime_nsec));
-  vnode->SetMTime(LeToCpu(ri->i_mtime), LeToCpu(ri->i_mtime_nsec));
-  vnode->SetGeneration(LeToCpu(ri->i_generation));
-  vnode->SetParentNid(LeToCpu(ri->i_pino));
-  vnode->SetCurDirDepth(LeToCpu(ri->i_current_depth));
-  vnode->SetXattrNid(LeToCpu(ri->i_xattr_nid));
-  vnode->SetInodeFlags(LeToCpu(ri->i_flags));
-  vnode->SetDirLevel(ri->i_dir_level);
-#if 0  // porting needed
-  // vnode->fi.data_version = LeToCpu(GetCheckpoint(sbi)->checkpoint_ver) - 1;
-#endif
-  vnode->SetAdvise(ri->i_advise);
-  vnode->GetExtentInfo(ri->i_ext);
-  vnode->SetName(std::string_view(reinterpret_cast<char *>(ri->i_name), ri->i_namelen));
+  vnode->SetMode(LeToCpu(ri.i_mode));
+  vnode->SetUid(LeToCpu(ri.i_uid));
+  vnode->SetGid(LeToCpu(ri.i_gid));
+  vnode->SetNlink(ri.i_links);
+  vnode->SetSize(LeToCpu(ri.i_size));
+  vnode->SetBlocks(LeToCpu(ri.i_blocks));
+  vnode->SetATime(LeToCpu(ri.i_atime), LeToCpu(ri.i_atime_nsec));
+  vnode->SetCTime(LeToCpu(ri.i_ctime), LeToCpu(ri.i_ctime_nsec));
+  vnode->SetMTime(LeToCpu(ri.i_mtime), LeToCpu(ri.i_mtime_nsec));
+  vnode->SetGeneration(LeToCpu(ri.i_generation));
+  vnode->SetParentNid(LeToCpu(ri.i_pino));
+  vnode->SetCurDirDepth(LeToCpu(ri.i_current_depth));
+  vnode->SetXattrNid(LeToCpu(ri.i_xattr_nid));
+  vnode->SetInodeFlags(LeToCpu(ri.i_flags));
+  vnode->SetDirLevel(ri.i_dir_level);
+  vnode->fi_.data_version = LeToCpu(GetCheckpoint(&fs->GetSbInfo())->checkpoint_ver) - 1;
+  vnode->SetAdvise(ri.i_advise);
+  vnode->GetExtentInfo(ri.i_ext);
+  std::string_view name(reinterpret_cast<char *>(ri.i_name), std::min(kMaxNameLen, ri.i_namelen));
+  if (ri.i_namelen != name.length() ||
+      (ino != RootIno(&fs->GetSbInfo()) && !fs::IsValidName(name))) {
+    // TODO: Need to repair the file or set NeedFsck flag when fsck supports repair feature.
+    // For now, we set kBad and clear link, so that it can be deleted without purging.
+    fbl::RefPtr<VnodeF2fs> failed = std::move(*out);
+    failed->ClearNlink();
+    failed->SetFlag(InodeInfoFlag::kBad);
+    out = nullptr;
+    return ZX_ERR_NOT_FOUND;
+  }
 
-  if (ri->i_inline & kInlineDentry)
+  vnode->SetName(name);
+
+  if (ri.i_inline & kInlineDentry)
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
   else
     vnode->ClearFlag(InodeInfoFlag::kInlineDentry);
 
   F2fsPutPage(node_page, 1);
+  return ZX_OK;
 }
 
 zx_status_t VnodeF2fs::OpenNode([[maybe_unused]] ValidatedOptions options,
@@ -250,17 +261,12 @@ zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return ZX_OK;
   }
 
-  Create(fs, ino, &vnode_refptr);
-
-  if (vnode_refptr == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (zx_status_t status = Create(fs, ino, &vnode_refptr); status != ZX_OK) {
+    return status;
   }
 
   if (!(ino == NodeIno(&fs->GetSbInfo()) || ino == MetaIno(&fs->GetSbInfo()))) {
     if (!fs->GetSbInfo().por_doing && vnode_refptr->GetNlink() == 0) {
-#if 0  // porting needed
-      // iget_failed(inode);
-#endif
       return ZX_ERR_NOT_FOUND;
     }
   }

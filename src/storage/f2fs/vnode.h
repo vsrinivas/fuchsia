@@ -21,7 +21,7 @@ class VnodeF2fs : public fs::Vnode,
   ~VnodeF2fs() = default;
 
   static void Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2fs> *out);
-  static void Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out);
+  static zx_status_t Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out);
   void Init();
 
   ino_t GetKey() const { return ino_; }
