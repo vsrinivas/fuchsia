@@ -792,9 +792,10 @@ async fn test_logging_component() {
             .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: my debug message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message \n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: my debug message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -818,8 +819,8 @@ async fn test_logging_component_min_severity() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message \n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -843,7 +844,7 @@ async fn test_stdout_and_log_ansi() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
+[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
 \u{1b}[31mred stdout\u{1b}[0m
@@ -880,7 +881,7 @@ async fn test_stdout_and_log_filter_ansi() {
     drop(ansi_filter);
 
     let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: red log
+[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: red log
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
 red stdout
@@ -921,9 +922,10 @@ async fn test_max_severity(max_severity: Severity) {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message \n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message\n\
 [PASSED]	log_and_exit
 ";
 
@@ -943,8 +945,8 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 logs,
                 vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message ".to_owned(),
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message".to_owned(),
                 ]
             );
         }
@@ -953,7 +955,7 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 run_result.restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
                 vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message".to_owned(),
                 ]
             );
         }
@@ -993,7 +995,7 @@ async fn test_stdout_to_directory() {
     .with_matching_artifact("syslog.txt", directory::ArtifactType::Syslog, |logs| {
         assert_output!(
             logs.as_bytes(),
-            "\n[TIMESTAMP][PID][TID][<root>][stdout_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
+            "\n[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
         );
     })
     .with_case(
@@ -1049,9 +1051,10 @@ async fn test_syslog_to_directory() {
 
     assert_eq!(outcome, Outcome::Failed);
 
-    const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message \n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message \n\
+    const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message\n\
 ";
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed);
     let expected_test_suites = vec![ExpectedSuite::new(

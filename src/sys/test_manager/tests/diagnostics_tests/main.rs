@@ -51,7 +51,7 @@ async fn test_isolated_diagnostics_can_be_read_by_the_test() {
             logs.into_iter().map(|log| log.msg().unwrap().to_owned()).collect::<Vec<_>>();
         assert_eq!(
             messages,
-            vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
+            vec!["Started diagnostics publisher".to_owned(), "Finishing through Stop".to_owned()]
         );
     };
 

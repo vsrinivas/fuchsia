@@ -9,10 +9,9 @@ fn stdout_ansi_test() {
     println!("{}", Red.paint("red stdout"));
 }
 
-#[test]
+#[fuchsia::test]
 fn log_ansi_test() {
-    fuchsia_syslog::init().expect("initializing log");
-    log::info!("{}", Red.paint("red log"));
+    tracing::info!("{}", Red.paint("red log"));
 
     // TODO(fxbug.dev/79121): Component manager may send the Stop event to Archivist before it
     // sends CapabilityRequested. In this case the logs may be lost. This sleep delays

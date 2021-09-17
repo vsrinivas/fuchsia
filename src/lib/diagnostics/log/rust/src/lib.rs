@@ -5,8 +5,8 @@
 
 //! Publish diagnostics as a stream of log messages.
 
-use diagnostics_log_encoding::Severity;
-use fidl_fuchsia_diagnostics::Interest;
+pub use diagnostics_log_encoding::Severity;
+pub use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_component::client::connect_to_protocol;

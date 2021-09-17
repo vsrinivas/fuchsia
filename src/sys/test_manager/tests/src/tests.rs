@@ -504,7 +504,7 @@ async fn collect_isolated_logs_using_default_log_iterator() {
 
     assert_eq!(
         logs,
-        vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
+        vec!["Started diagnostics publisher".to_owned(), "Finishing through Stop".to_owned()]
     );
 }
 
@@ -517,7 +517,7 @@ async fn collect_isolated_logs_using_batch() {
 
     assert_eq!(
         logs,
-        vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
+        vec!["Started diagnostics publisher".to_owned(), "Finishing through Stop".to_owned()]
     );
 }
 
@@ -530,7 +530,7 @@ async fn collect_isolated_logs_using_archive_iterator() {
 
     assert_eq!(
         logs,
-        vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
+        vec!["Started diagnostics publisher".to_owned(), "Finishing through Stop".to_owned()]
     );
 }
 

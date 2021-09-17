@@ -10,14 +10,13 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
-    fuchsia_syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     tracing::info,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init()?;
     info!("Started diagnostics publisher");
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(component::inspector(), &mut fs)?;

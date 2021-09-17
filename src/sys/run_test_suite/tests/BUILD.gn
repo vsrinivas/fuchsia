@@ -33,7 +33,8 @@ rustc_test("error_logging_test_bin") {
   source_root = "error_logging_test.rs"
   name = "error_logging_test"
   deps = [
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:tracing",
   ]
   sources = [ "error_logging_test.rs" ]
@@ -43,7 +44,8 @@ rustc_test("logging_test_bin") {
   source_root = "logging_test.rs"
   name = "logging_test"
   deps = [
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:tracing",
   ]
   sources = [ "logging_test.rs" ]
@@ -53,9 +55,9 @@ rustc_test("stdout_ansi_test_bin") {
   source_root = "stdout_ansi_test.rs"
   name = "stdout_ansi_test"
   deps = [
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:ansi_term",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
   sources = [ "stdout_ansi_test.rs" ]
 }

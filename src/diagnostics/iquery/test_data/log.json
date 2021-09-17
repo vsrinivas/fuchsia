@@ -37,7 +37,7 @@
             "line": null,
             "pid": "PID",
             "severity": "INFO",
-            "size_bytes": 74,
+            "size_bytes": 144,
             "tags": [
                 "iquery_basic_component"
             ],
@@ -48,7 +48,7 @@
         "payload": {
             "root": {
                 "message": {
-                    "value": "Is great to have! "
+                    "value": "Is great to have!"
                 }
             }
         },
