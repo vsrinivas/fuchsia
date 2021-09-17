@@ -114,6 +114,7 @@ group("kitchen_sink") {
     "//garnet/packages/config:openssh_keys",
     "//src/connectivity/telephony",
     "//src/graphics/examples",
+    "//src/lib/ui/carnelian:examples",
     "//src/media/audio/bundles:virtual_audio_driver",
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
