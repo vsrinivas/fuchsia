@@ -5,18 +5,25 @@
 """Wraps a command so that its outputs are timestamp-fresh only if their contents change.
 
 Every declared output is renamed with a temporary suffix in the command.
-If the command succeeds, the temporary file is moved over the original declared output
-if the output did not already exist or the contents are different.
-This conditional move is done for every declared output that appears in the arguments list.
+If the command succeeds, the temporary file is moved over the original declared
+output if the output did not already exist or the contents are different.
+This conditional move is done for every declared output that appears in the
+arguments list.
 
 Assumptions:
-  Output files are their own token in the command's arguments.
-    Limitation: This won't attempt to find/rename outputs in "--flag=out1,out2" (yet),
-      nor outputs whose names appear in some file.
-  If x is a writeable path (output), then x.any_suffix is also writeable.
-  Command being wrapped does not change behavior with the name of its output arguments.
+  Output files can be whole shell tokens in the command's arguments.
+    We also support filenames as lexical substrings in tokens like
+    "--flag=out1,out2" or just "out1,out2".
 
-If any of the above assumptions do not hold, then bypass wrapping.
+  If x is a writeable path (output), then x.any_suffix is also writeable.
+
+  If x is a writeable path (output), then dirname(x) is also writeable.
+
+  Command being wrapped does not change behavior with the name of its output
+  arguments.
+
+If any of the above assumptions do not hold, then we recommend --disable
+wrapping.
 """
 
 import argparse
@@ -68,49 +75,55 @@ def move_if_different(src: str, dest: str, verbose: bool = False):
 class TempFileTransform(object):
     """Represents a file name transform.
 
+     At least temp_dir or suffix or basename_prefix must be non-blank.
+
     temp_dir: Write temporary files in here.
       If blank, paths are relative to working directory.
     suffix: Add this suffix to temporary files, e.g. ".tmp".
-      At least temp_dir or suffix must be non-blank.
+    basename_prefix: Add this prefix to the basename of the path.
+      This can be a good choice over suffix when the underlying tool behavior
+      is sensitive to the output file extension.
+      Example: "foo/bar.txt", with prefix="tmp-" -> foo/tmp-bar.txt
     """
     temp_dir: str = ""
     suffix: str = ""
+    basename_prefix: str = ""
 
     @property
     def valid(self):
-        return self.temp_dir or self.suffix
+        return self.temp_dir or self.suffix or self.basename_prefix
 
     def transform(self, path: str) -> str:
-        return os.path.join(self.temp_dir, path + self.suffix)
+        return os.path.join(
+            self.temp_dir, os.path.dirname(path),
+            self.basename_prefix + os.path.basename(path) + self.suffix)
 
 
-def replace_tokens(
-        command: Iterable[str],
-        transform: Callable[[str],
-                            str]) -> Tuple[Sequence[str], Dict[str, str]]:
-    """Substitutes command tokens with a transformation.
+def split_transform_join(
+        token: str, sep: str, transform: Callable[[str], str]) -> str:
+    return sep.join(transform(x) for x in token.split(sep))
+
+
+def lexically_rewrite_token(token: str, transform: Callable[[str], str]) -> str:
+    """Lexically replaces substrings between delimiters.
+
+    This is useful for transforming substrings of text.
+
+    This can transform "--foo=bar,baz" into
+    f("--foo") + "=" + f("bar") + "," + f("baz")
 
     Args:
-      command: sequence of command tokens, some of which may be substituted.
-      transform: function to substituted command tokens.
+      token: text to transform, like a shell token.
+      transform: text transformation.
 
     Returns:
-      modified command (some tokens replaced),
-      dictionary of text substitutions made (original, new)
+      text with substrings transformed.
     """
-    renamed_tokens = {}
 
-    def replace_token(arg: str):
-        # TODO(fangism): lex a single arg into tokens, substitute, re-assemble
-        #   This would support outputs like "--flag=out1,out2..."
-        new_arg = transform(arg)
-        if new_arg != arg:
-            # record any substitutions made
-            renamed_tokens[arg] = new_arg
-        return new_arg
+    def inner_transform(text: str) -> str:
+        return split_transform_join(text, ",", transform)
 
-    substituted_command = [replace_token(token) for token in command]
-    return substituted_command, renamed_tokens
+    return split_transform_join(token, "=", inner_transform)
 
 
 @dataclasses.dataclass
@@ -123,28 +136,39 @@ class Action(object):
     def run_cached(
             self,
             tempfile_transform: TempFileTransform,
-            verbose: bool = False) -> int:
+            verbose: bool = False,
+            dry_run: bool = False) -> int:
         """Runs a modified command and conditionally moves outputs in-place.
 
         Args:
           tempfile_transform: describes transformation to temporary file name.
-          verbose: If True, print substituted command.
-        """
+          verbose: If True, print substituted command before running it.
+          dry_run: If True, print substituted command and stop.
+    """
 
-        def replace_arg(arg: str):
+        # renamed_outputs: keys: original file names, values: transformed temporary file names
+        renamed_outputs = {}
+
+        def replace_output_filename(arg: str) -> str:
             if arg in self.outputs:
-                return tempfile_transform.transform(arg)
+                new_arg = tempfile_transform.transform(arg)
+                if arg != new_arg:
+                    renamed_outputs[arg] = new_arg
+                return new_arg
             else:
                 return arg
 
-        # Rename output arguments.
-        # renamed_outputs: keys: original file names, values: transformed temporary file names
-        substituted_command, renamed_outputs = replace_tokens(
-            self.command, replace_arg)
+        substituted_command = [
+            lexically_rewrite_token(tok, replace_output_filename)
+            for tok in self.command
+        ]
 
-        if verbose:
+        if verbose or dry_run:
             cmd_str = " ".join(substituted_command)
             print(f"=== substituted command: {cmd_str}")
+
+        if dry_run:
+            return 0
 
         # mkdir when needed.
         if tempfile_transform.temp_dir:
@@ -243,16 +267,22 @@ class Action(object):
           exit code 0 on command success and outputs match, else nonzero.
         """
 
-        def replace_arg(arg: str):
+        # renamed_outputs: keys: original file names, values: transformed temporary file names
+        renamed_outputs = {}
+
+        def replace_output_filename(arg: str) -> str:
             if arg in self.outputs:
-                return tempfile_transform.transform(arg)
+                new_arg = tempfile_transform.transform(arg)
+                if arg != new_arg:
+                    renamed_outputs[arg] = new_arg
+                return new_arg
             else:
                 return arg
 
-        # Rename output arguments.
-        # renamed_outputs: keys: original file names, values: transformed temporary file names
-        substituted_command, renamed_outputs = replace_tokens(
-            self.command, replace_arg)
+        substituted_command = [
+            lexically_rewrite_token(tok, replace_output_filename)
+            for tok in self.command
+        ]
 
         if verbose:
             cmd_str = " ".join(substituted_command)
@@ -282,12 +312,13 @@ class Action(object):
 
 
 def verify_files_match(fileset: Dict[str, str], label: str) -> int:
-    """Compare outputs and report differences.  Remove matching copies.
+    """Compare outputs and report differences.
+
+    Remove matching copies.
 
     Args:
-      fileset: {file: backup} key-value pairs of files to compare.
-        Backup files that match are removed to save space, while the .keys()
-        files are kept.
+      fileset: {file: backup} key-value pairs of files to compare. Backup files
+        that match are removed to save space, while the .keys() files are kept.
       label: An identifier for the action that was run, for diagnostics.
 
     Returns:
@@ -340,8 +371,14 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--temp-suffix",
         type=str,
-        default=".tmp",
+        default="",
         help="Suffix to use for temporary outputs",
+    )
+    parser.add_argument(
+        "--temp-prefix",
+        type=str,
+        default="tmp-",
+        help="Basename prefix to use for temporary outputs",
     )
     parser.add_argument(
         "--temp-dir",
@@ -355,6 +392,12 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Print information about which outputs were renamed/cached.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Show transformed command and exit.",
     )
     parser.add_argument(
         "--disable",
@@ -390,6 +433,7 @@ def main():
     tempfile_transform = TempFileTransform(
         temp_dir=args.temp_dir,
         suffix=args.temp_suffix,
+        basename_prefix=args.temp_prefix,
     )
     if not tempfile_transform.valid:
         raise ValueError(
@@ -441,7 +485,10 @@ def main():
                 tempfile_transform=tempfile_transform, verbose=args.verbose)
 
     return action.run_cached(
-        tempfile_transform=tempfile_transform, verbose=args.verbose)
+        tempfile_transform=tempfile_transform,
+        verbose=args.verbose,
+        dry_run=args.dry_run,
+    )
 
 
 if __name__ == "__main__":

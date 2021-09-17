@@ -23,6 +23,10 @@ class TempFileTransformTests(unittest.TestCase):
         self.assertTrue(
             output_cacher.TempFileTransform(temp_dir="/my_tmp").valid)
 
+    def test_basename_prefix_only(self):
+        self.assertTrue(
+            output_cacher.TempFileTransform(basename_prefix="temp-").valid)
+
     def test_suffix_only(self):
         self.assertTrue(output_cacher.TempFileTransform(suffix=".tmp").valid)
 
@@ -47,24 +51,84 @@ class TempFileTransformTests(unittest.TestCase):
                 temp_dir="/t/m/p", suffix=".foo").transform("foo/bar.o"),
             "/t/m/p/foo/bar.o.foo")
 
+    def test_transform_basename_prefix_only(self):
+        self.assertEqual(
+            output_cacher.TempFileTransform(
+                basename_prefix="fake.").transform("bar.o"),
+            "fake.bar.o")
+        self.assertEqual(
+            output_cacher.TempFileTransform(
+                basename_prefix="fake.").transform("foo/bar.o"),
+            "foo/fake.bar.o")
 
-class ReplaceTokensTest(unittest.TestCase):
+    def test_transform_basename_prefix_and_temp_dir(self):
+        self.assertEqual(
+            output_cacher.TempFileTransform(
+                temp_dir="/t/m/p", basename_prefix="xyz-").transform("foo/bar.o"),
+            "/t/m/p/foo/xyz-bar.o")
+
+
+class SplitTransformJoinTest(unittest.TestCase):
 
     def test_no_change(self):
-        self.assertEqual(
-            output_cacher.replace_tokens(['echo', 'xyzzy'], lambda x: x),
-            (['echo', 'xyzzy'], {}))
+      self.assertEqual(
+          output_cacher.split_transform_join('text', '=', lambda x: x),
+          'text')
 
-    def test_with_substitution(self):
+    def test_repeat(self):
+      self.assertEqual(
+          output_cacher.split_transform_join('text', '=', lambda x: x+x),
+          'texttext')
 
-        def transform(x):
-            return x + x if x.startswith('x') else x
+    def test_with_split(self):
+      self.assertEqual(
+          output_cacher.split_transform_join('a=b', '=', lambda x: x+x),
+          'aa=bb')
 
-        self.assertEqual(
-            output_cacher.replace_tokens(['echo', 'xyz', 'bar'], transform),
-            (['echo', 'xyzxyz', 'bar'], {
-                'xyz': 'xyzxyz'
-            }))
+    def test_with_split_recorded(self):
+      renamed_tokens = {}
+
+      def recorded_transform(x):
+        new_text = x+x
+        renamed_tokens[x] = new_text
+        return new_text
+
+      self.assertEqual(
+          output_cacher.split_transform_join('a=b', '=', recorded_transform),
+          'aa=bb')
+      self.assertEqual(renamed_tokens, {'a': 'aa', 'b': 'bb'})
+
+
+class LexicallyRewriteTokenTest(unittest.TestCase):
+
+    def test_repeat_text(self):
+      self.assertEqual(output_cacher.lexically_rewrite_token('foo',
+                                                             lambda x: x+x),
+                       'foofoo')
+
+    def test_delimters_only(self):
+      self.assertEqual(output_cacher.lexically_rewrite_token(',,==,=,=,',
+                                                             lambda x: x+x),
+                       ',,==,=,=,')
+
+    def test_flag_with_value(self):
+
+      def transform(x):
+        if x.startswith('file'):
+          return 'tmp-' + x
+        else:
+          return x
+
+      self.assertEqual(
+          output_cacher.lexically_rewrite_token('--foo=file1', transform),
+          '--foo=tmp-file1')
+      self.assertEqual(
+          output_cacher.lexically_rewrite_token('notfile,file1,file2,notfile',
+                                                transform),
+          'notfile,tmp-file1,tmp-file2,notfile')
+      self.assertEqual(output_cacher.lexically_rewrite_token('--foo=file1,file2',
+                                                             transform),
+                       '--foo=tmp-file1,tmp-file2')
 
 
 class MoveIfDifferentTests(unittest.TestCase):
@@ -129,6 +193,13 @@ class MoveIfDifferentTests(unittest.TestCase):
 
 
 class ReplaceOutputArgsTest(unittest.TestCase):
+
+    def test_dry_run(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(command=["run.sh"], outputs={})
+        with mock.patch.object(subprocess, "call") as mock_call:
+            self.assertEqual(action.run_cached(transform, dry_run=True), 0)
+        mock_call.assert_not_called()
 
     def test_command_failed(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
