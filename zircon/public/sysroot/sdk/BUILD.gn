@@ -14,6 +14,7 @@ import("//build/sdk/sdk_atom.gni")
 # Collect the metadata for the SDK.
 file_base = "arch/$target_cpu/sysroot"
 sdk_files = []
+sdk_api_contents = []
 
 version_content = {
   root = file_base
@@ -56,6 +57,12 @@ foreach(entry, sysroot_entries) {
             {
               source = "$dir/$file"
               dest = "$file_base/include/$file"
+            },
+          ]
+          sdk_api_contents += [
+            {
+              source = "$dir/$file"
+              dest = "include/$file"
             },
           ]
         }
@@ -140,6 +147,8 @@ meta_outputs = get_target_outputs(":sysroot-meta")
 sdk_atom("sysroot_sdk") {
   id = "sdk://pkg/sysroot"
   category = "partner"
+  api = "sysroot.api"
+  api_contents = sdk_api_contents
 
   non_sdk_deps = [ ":sysroot-meta" ] + sysroot_sdk_deps
 
