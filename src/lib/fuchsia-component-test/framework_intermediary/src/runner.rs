@@ -208,7 +208,8 @@ impl Runner {
             for svc_name in &svc_names {
                 let svc_dir_proxy = Clone::clone(&svc_dir_proxy);
                 let svc_name = svc_name.clone();
-                host_pseudo_dir.clone().add_entry(
+                let svc_name_for_err = svc_name.clone();
+                if let Err(status) = host_pseudo_dir.clone().add_entry(
                     svc_name.clone().as_str(),
                     vfs::remote::remote_boxed(Box::new(
                         move |_scope: ExecutionScope,
@@ -223,7 +224,17 @@ impl Runner {
                             }
                         },
                     )),
-                )?;
+                ) {
+                    if status == fuchsia_zircon::Status::ALREADY_EXISTS {
+                        log::error!(
+                            "Service {} added twice to namespace of component {}",
+                            svc_name_for_err,
+                            legacy_url
+                        );
+                    }
+
+                    return Err(status.into());
+                }
             }
         }
 
