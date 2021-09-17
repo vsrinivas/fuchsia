@@ -4,6 +4,7 @@
 
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
+import("//build/images/fvm.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
@@ -105,6 +106,11 @@ source_set("lib") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxbug.dev/83978): Remove this temporary fix.
+  if (minfs_board_maximum_data_bytes != "") {
+    defines = [ "DATA_PARTITION_SIZE_BYTES=$minfs_board_maximum_data_bytes" ]
+  }
 }
 
 source_set("appmgr_for_test") {

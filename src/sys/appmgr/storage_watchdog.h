@@ -20,9 +20,22 @@ class StorageWatchdog {
       : path_to_watch_(path_to_watch), path_to_clean_(path_to_clean) {}
 
   void Run(async_dispatcher_t* dispatcher);
-  size_t GetStorageUsage();
-  void CheckStorage(async_dispatcher_t* dispatcher);
+  struct StorageUsage {
+    size_t avail = 0;
+    size_t used = 0;
+    size_t percent() const {
+      if (avail > 0) {
+        return used * 100 / avail;
+      }
+      return 0;
+    };
+  };
+  StorageUsage GetStorageUsage();
+  void CheckStorage(async_dispatcher_t* dispatcher,
+                    size_t threshold_purge_percent = kCachePurgeThresholdPct);
   void PurgeCache();
+
+  static constexpr size_t kCachePurgeThresholdPct = 95;
 
  protected:
   virtual zx_status_t GetFilesystemInfo(zx_handle_t directory, fuchsia_io_FilesystemInfo* out_info);

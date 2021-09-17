@@ -96,13 +96,13 @@ void PurgeCacheIn(int dir_fd) {
 
 // GetStorageUsage will return the percentage, from 0 to 100, of used bytes on
 // the disk located at this.path_to_watch_.
-size_t StorageWatchdog::GetStorageUsage() {
+StorageWatchdog::StorageUsage StorageWatchdog::GetStorageUsage() {
   TRACE_DURATION("appmgr", "StorageWatchdog::GetStorageUsage");
   fbl::unique_fd fd;
   fd.reset(open(path_to_watch_.c_str(), O_RDONLY));
   if (!fd) {
     FX_LOGS(WARNING) << "storage_watchdog: could not open target: " << path_to_watch_;
-    return 0;
+    return StorageUsage();
   }
 
   fuchsia_io_FilesystemInfo info;
@@ -110,35 +110,52 @@ size_t StorageWatchdog::GetStorageUsage() {
   zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
-    return 0;
+    return StorageUsage();
   }
   info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
 
+#ifdef DATA_PARTITION_SIZE_BYTES
+  // TODO(fxbug.dev/83978): Remove this temporary fix.
+  size_t total = DATA_PARTITION_SIZE_BYTES;
+#else
   // The number of bytes which may be allocated plus the number of bytes which
   // have been allocated
-  size_t free_plus_allocated = info.free_shared_pool_bytes + info.total_bytes;
+  size_t total = info.free_shared_pool_bytes + info.total_bytes;
+#endif
 
-  if (free_plus_allocated == 0) {
+  if (total == 0) {
     FX_LOGS(WARNING) << "storage_watchdog: unable to determine storage "
                      << "pressure";
-    return 0;
+    return StorageUsage();
+  } else if (total < info.used_bytes) {
+    FX_LOGS(WARNING) << "storage_watchdog: Usage (" << info.used_bytes
+                     << ") exceeds reported total (" << total << ")";
   }
 
-  // The number of used bytes (*100, because we want a percent) over the number
-  // of bytes which may be used
-  size_t use_percentage = info.used_bytes * 100 / free_plus_allocated;
-
-  return use_percentage;
+  return StorageUsage{
+      .avail = total,
+      .used = info.used_bytes,
+  };
 }
 
-void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher) {
-  size_t use_percentage = this->GetStorageUsage();
-
-  if (use_percentage >= 95) {
-    FX_LOGS(INFO) << "storage usage has reached " << use_percentage
-                  << "%% capacity, purging the cache now";
+void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher, size_t threshold_purge_percent) {
+  StorageUsage usage = this->GetStorageUsage();
+  FX_LOGS(INFO) << "storage usage at " << usage.percent() << "\% capacity (" << usage.used
+                << " used, " << usage.avail << " avail)";
+  if (usage.percent() >= threshold_purge_percent) {
+    FX_LOGS(INFO) << "storage usage has reached threshold of " << threshold_purge_percent
+                  << "\%, purging the cache now";
     this->PurgeCache();
+
+    StorageUsage usage_after = this->GetStorageUsage();
+    FX_LOGS(INFO) << "cache purge is complete, new storage usage is at " << usage.percent()
+                  << "\% capacity (" << usage.used << " used, " << usage.avail << " avail)";
+    if (usage_after.percent() >= threshold_purge_percent) {
+      FX_LOGS(WARNING) << "usage still exceeds threshold after purge (" << usage.used << " used, "
+                       << usage.avail << " avail)";
+    }
   }
+
   async::PostDelayedTask(
       dispatcher, [this, dispatcher] { this->CheckStorage(dispatcher); }, zx::sec(60));
 }
@@ -161,9 +178,6 @@ void StorageWatchdog::PurgeCache() {
     return;
   }
   PurgeCacheIn(dir_fd);
-  size_t use_percentage = this->GetStorageUsage();
-  FX_LOGS(INFO) << "cache purge is complete, new storage usage is at " << use_percentage
-                << "%% capacity";
 }
 
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
