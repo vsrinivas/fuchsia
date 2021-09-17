@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/sdmmc/hw.h>
 
 #include <fbl/algorithm.h>
@@ -1493,6 +1494,168 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
+}
+
+TEST_F(SdmmcBlockDeviceTest, Inspect) {
+  AddDevice();
+
+  ASSERT_TRUE(ddk_.GetInspectVmo()->is_valid());
+
+  // IO error count should be zero after initialization.
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 0);
+
+  // IO error count should be a successful block op.
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op1));
+
+  CallbackContext ctx1(1);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx1);
+
+  EXPECT_OK(sync_completion_wait(&ctx1.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_OK(op1->private_storage()->status);
+
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 0);
+
+  // IO error count should be incremented after a failed block op.
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
+                              [](sdmmc_req_t* req) -> void { req->status = ZX_ERR_IO; });
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op2));
+
+  CallbackContext ctx2(1);
+
+  user_.Queue(op2->operation(), OperationCallback, &ctx2);
+
+  EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_NOT_OK(op2->private_storage()->status);
+
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 1);
+}
+
+TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
+  AddDevice();
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
+      .max_transfer_size_non_dma = 0,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  ASSERT_TRUE(ddk_.GetInspectVmo()->is_valid());
+
+  // Transfer failed, stop succeeded, error count should increment.
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
+                              [](sdmmc_req_t* req) -> void { req->status = ZX_ERR_IO; });
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op1));
+
+  CallbackContext ctx1(1);
+
+  user_.Queue(op1->operation(), OperationCallback, &ctx1);
+
+  EXPECT_OK(sync_completion_wait(&ctx1.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_NOT_OK(op1->private_storage()->status);
+
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 1);
+
+  // Transfer succeeded, stop failed, error count should increment.
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
+                              [](sdmmc_req_t* req) -> void { req->status = ZX_OK; });
+  sdmmc_.set_command_callback(SDMMC_STOP_TRANSMISSION,
+                              [](sdmmc_req_t* req) -> void { req->status = ZX_ERR_IO; });
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op2));
+
+  CallbackContext ctx2(1);
+
+  user_.Queue(op2->operation(), OperationCallback, &ctx2);
+
+  EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_OK(op2->private_storage()->status);
+
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 2);
+
+  // Transfer and stop failed, error count should only increase by 1.
+  sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
+                              [](sdmmc_req_t* req) -> void { req->status = ZX_ERR_IO; });
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000, &op3));
+
+  CallbackContext ctx3(1);
+
+  user_.Queue(op3->operation(), OperationCallback, &ctx3);
+
+  EXPECT_OK(sync_completion_wait(&ctx3.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op3->private_storage()->completed);
+  EXPECT_NOT_OK(op3->private_storage()->status);
+
+  inspector.ReadInspect(*ddk_.GetInspectVmo());
+
+  root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
+  ASSERT_NOT_NULL(io_errors);
+
+  EXPECT_EQ(io_errors->value(), 3);
 }
 
 }  // namespace sdmmc

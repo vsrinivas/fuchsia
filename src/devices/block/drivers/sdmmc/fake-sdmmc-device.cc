@@ -17,6 +17,7 @@ zx_status_t Bind::DeviceAdd(__UNUSED zx_driver_t* drv, zx_device_t* parent, devi
   if (parent == fake_ddk::kFakeParent) {
     unbind_ctx_ = args->ctx;
     unbind_op_ = args->ops->unbind;
+    inspect_vmo_.reset(args->inspect_vmo);
     *out = fake_ddk::kFakeDevice;
     add_called_ = true;
   } else if (parent == fake_ddk::kFakeDevice) {

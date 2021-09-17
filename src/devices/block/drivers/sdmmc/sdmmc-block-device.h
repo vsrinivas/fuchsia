@@ -12,6 +12,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/operation/block.h>
 #include <lib/sdmmc/hw.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -216,6 +217,10 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   block_info_t block_info_{};
 
   bool is_sd_ = false;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+  inspect::UintProperty io_errors_;  // Only updated from the worker thread.
 };
 
 }  // namespace sdmmc

@@ -85,6 +85,8 @@ class Bind : public fake_ddk::Bind {
     return fbl::Span(children_props_[index].data(), children_props_[index].size());
   }
 
+  zx::unowned_vmo GetInspectVmo() const { return inspect_vmo_.borrow(); }
+
  private:
   struct ChildOps {
     explicit ChildOps(device_add_args_t* args)
@@ -117,6 +119,7 @@ class Bind : public fake_ddk::Bind {
 
   std::vector<ChildOps> children_ops_;
   std::vector<std::vector<zx_device_prop_t>> children_props_;
+  zx::vmo inspect_vmo_;
 };
 
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
