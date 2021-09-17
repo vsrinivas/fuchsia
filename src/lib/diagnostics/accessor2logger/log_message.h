@@ -17,6 +17,12 @@ fpromise::result<std::vector<fpromise::result<fuchsia::logger::LogMessage, std::
                  std::string>
 ConvertFormattedContentToLogMessages(fuchsia::diagnostics::FormattedContent content);
 
+// Does the same conversion as above, but formats with the same output
+// that you would have on a host system.
+fpromise::result<std::vector<fpromise::result<fuchsia::logger::LogMessage, std::string>>,
+                 std::string>
+ConvertFormattedContentToHostLogMessages(fuchsia::diagnostics::FormattedContent content);
+
 }  // namespace diagnostics::accessor2logger
 
 #endif  // SRC_LIB_DIAGNOSTICS_ACCESSOR2LOGGER_LOG_MESSAGE_H_
