@@ -33,6 +33,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Kernel Objects](/docs/reference/kernel_objects/objects.md)
 + [Kernel Invariants](kernel_invariants.md)
 + [Kernel Scheduling](kernel_scheduling.md)
++ [Kernel Thread Signaling](kernel_thread_signaling.md)
 + [Fair Scheduler](fair_scheduler.md)
 + [Errors](errors.md)
 + [Time](/docs/concepts/kernel/time.md)

@@ -72,3 +72,5 @@ toc:
     path: /docs/concepts/kernel/sysret_problem.md
   - title: "Hardware watchdog timers"
     path: /docs/concepts/kernel/watchdog.md
+  - title: "Kernel Thread Signaling"
+    path: /docs/concepts/kernel/kernel_thread_signaling.md
