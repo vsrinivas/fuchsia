@@ -7,7 +7,7 @@
 //! meaningful differences in File behavior.
 
 use {
-    crate::{dirs_to_test, repeat_by_n, PackageSource},
+    crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, PackageSource},
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -113,7 +113,7 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
 
 #[fuchsia::test]
 async fn read_at() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         read_at_per_package_source(source).await
     }
 }
@@ -218,7 +218,7 @@ async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProx
 
 #[fuchsia::test]
 async fn seek() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         seek_per_package_source(source).await
     }
 }
@@ -312,7 +312,7 @@ async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str) 
 
 #[fuchsia::test]
 async fn get_buffer() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         get_buffer_per_package_source(source).await
     }
 }
@@ -443,7 +443,7 @@ async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
 
 #[fuchsia::test]
 async fn get_flags() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         get_flags_per_package_source(source).await
     }
 }
@@ -531,7 +531,7 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
 
 #[fuchsia::test]
 async fn set_flags() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         set_flags_per_package_source(source).await
     }
 }
@@ -550,7 +550,7 @@ async fn assert_set_flags_meta_file_unsupported(root_dir: &DirectoryProxy, path:
 
 #[fuchsia::test]
 async fn unsupported() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         unsupported_per_package_source(source).await
     }
 }

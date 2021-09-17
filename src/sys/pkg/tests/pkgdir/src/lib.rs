@@ -5,7 +5,7 @@
 use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
-    fidl_test_fidl_pkg::{Backing, ConnectError, HarnessMarker},
+    fidl_test_fidl_pkg::{Backing, HarnessMarker},
     fuchsia_component::client::connect_to_protocol,
     std::fmt::Debug,
 };
@@ -28,8 +28,12 @@ async fn dirs_to_test() -> impl Iterator<Item = PackageSource> {
             PackageSource { dir, backing }
         }
     };
-    // TODO(fxbug.dev/75481): include a pkgdir backed package as well
-    IntoIterator::into_iter([connect(Backing::Pkgfs).await])
+    IntoIterator::into_iter([connect(Backing::Pkgfs).await, connect(Backing::Pkgdir).await])
+}
+
+// TODO(fxbug.dev/75481): migrate all callers to use `dirs_to_test`
+async fn just_pkgfs_for_now() -> impl Iterator<Item = PackageSource> {
+    dirs_to_test().await.filter(|source| source.is_pkgfs())
 }
 
 struct PackageSource {
@@ -46,17 +50,6 @@ impl PackageSource {
     fn is_pkgdir(&self) -> bool {
         self.backing == Backing::Pkgdir
     }
-}
-
-// TODO(fxbug.dev/75481): support pkgdir-backed packages and delete this test.
-#[fuchsia::test]
-async fn unsupported_backing() {
-    let harness = connect_to_protocol::<HarnessMarker>().unwrap();
-    let (_dir, server) = create_proxy::<DirectoryMarker>().unwrap();
-
-    let res = harness.connect_package(Backing::Pkgdir, server).await.unwrap();
-
-    assert_eq!(res, Err(ConnectError::UnsupportedBacking));
 }
 
 macro_rules! flag_list {

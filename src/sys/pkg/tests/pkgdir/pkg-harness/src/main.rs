@@ -7,11 +7,11 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_test_fidl_pkg::{Backing, ConnectError, HarnessRequest, HarnessRequestStream},
+    fidl_test_fidl_pkg::{Backing, HarnessRequest, HarnessRequestStream},
     fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::convert::TryInto,
@@ -41,6 +41,8 @@ async fn main_inner() -> Result<(), Error> {
     test_package.write_to_blobfs_dir(&blobfs_root_dir);
     system_image_package.write_to_blobfs_dir(&blobfs_root_dir);
 
+    let blobfs_client = blobfs.client();
+
     // Spin up a pkgfs.
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
@@ -57,6 +59,17 @@ async fn main_inner() -> Result<(), Error> {
     .await
     .unwrap();
 
+    let (pkgdir_backed_package, dir_request) = fidl::endpoints::create_proxy().unwrap();
+    package_directory::serve(
+        vfs::execution_scope::ExecutionScope::new(),
+        blobfs_client,
+        *test_package.meta_far_merkle_root(),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        dir_request,
+    )
+    .await
+    .expect("serving test_package with pkgdir");
+
     // Set up serving FIDL to expose the test package.
     enum IncomingService {
         Harness(HarnessRequestStream),
@@ -68,8 +81,12 @@ async fn main_inner() -> Result<(), Error> {
         .for_each_concurrent(None, move |svc| {
             match svc {
                 IncomingService::Harness(stream) => Task::spawn(
-                    serve_harness(stream, Clone::clone(&pkgfs_backed_package))
-                        .map(|res| res.context("while serving test.fidl.pkg.Harness")),
+                    serve_harness(
+                        stream,
+                        Clone::clone(&pkgfs_backed_package),
+                        Clone::clone(&pkgdir_backed_package),
+                    )
+                    .map(|res| res.context("while serving test.fidl.pkg.Harness")),
                 ),
             }
             .unwrap_or_else(|e| {
@@ -85,21 +102,13 @@ async fn main_inner() -> Result<(), Error> {
 async fn serve_harness(
     mut stream: HarnessRequestStream,
     pkgfs_backed_package: DirectoryProxy,
+    pkgdir_backed_package: DirectoryProxy,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await.context("while pulling next event")? {
         let HarnessRequest::ConnectPackage { backing, dir, responder } = event;
         let pkg = match backing {
             Backing::Pkgfs => &pkgfs_backed_package,
-            // TODO(fxbug.dev/75481): support pkgdir-backed packages.
-            Backing::Pkgdir => {
-                fx_log_warn!(
-                    "pkgdir-backed packages are not yet supported. See fxbug.dev/75481 for tracking."
-                );
-                responder
-                    .send(&mut Err(ConnectError::UnsupportedBacking))
-                    .context("while sending failure response")?;
-                continue;
-            }
+            Backing::Pkgdir => &pkgdir_backed_package,
         };
 
         let () = pkg

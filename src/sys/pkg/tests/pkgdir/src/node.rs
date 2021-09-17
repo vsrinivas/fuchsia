@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, PackageSource},
+    crate::{dirs_to_test, just_pkgfs_for_now, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
@@ -15,7 +15,7 @@ use {
 
 #[fuchsia::test]
 async fn get_attr() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         get_attr_per_package_source(source).await
     }
 }
@@ -291,7 +291,7 @@ async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error>
 
 #[fuchsia::test]
 async fn node_set_flags() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         node_set_flags_per_package_source(source).await
     }
 }
@@ -329,7 +329,7 @@ async fn verify_node_set_flag_success(node: NodeProxy) -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn set_attr() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         set_attr_per_package_source(source).await
     }
 }

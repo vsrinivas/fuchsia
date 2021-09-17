@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, repeat_by_n, OpenFlags, PackageSource},
+    crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, OpenFlags, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
@@ -31,7 +31,7 @@ use {
 
 #[fuchsia::test]
 async fn open() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         open_per_package_source(source).await
     }
 }
@@ -629,7 +629,7 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
 // TODO(fxbug.dev/81447) enhance Clone tests.
 #[fuchsia::test]
 async fn clone() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         clone_per_package_source(source).await
     }
 }
@@ -955,7 +955,7 @@ async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
 
 #[fuchsia::test]
 async fn get_token() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         get_token_per_package_source(source).await
     }
 }
@@ -976,7 +976,7 @@ async fn get_token_per_package_source(source: PackageSource) {
 
 #[fuchsia::test]
 async fn unsupported() {
-    for source in dirs_to_test().await {
+    for source in just_pkgfs_for_now().await {
         unsupported_per_package_source(source).await
     }
 }
