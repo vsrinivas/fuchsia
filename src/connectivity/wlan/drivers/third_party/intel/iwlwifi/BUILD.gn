@@ -80,7 +80,7 @@ fuchsia_driver_component("iwlwifi_driver") {
 
 all_fw_files = [
   "iwlwifi-7265D-29.ucode",
-  "iwlwifi-8265-36.ucode",
+  "iwlwifi-8265-31.ucode",
 ]
 
 foreach(fw_file, all_fw_files) {
