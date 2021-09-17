@@ -162,4 +162,12 @@ protocol TargetHandle {
     OpenRemoteControl(resource struct {
         remote_control server_end:rc.RemoteControl;
     }) -> ();
+
+    /// Opens a Fastboot controller for a given target.
+    ///
+    /// Returns:
+    /// * Nothing on success.
+    OpenFastboot(resource struct {
+        fastboot server_end:Fastboot;
+    }) -> ();
 };

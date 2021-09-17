@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Context as _, Result},
     ffx_core::TryStreamUtilExt,
     ffx_daemon_events::TargetEvent,
+    ffx_daemon_target::fastboot::Fastboot,
     ffx_daemon_target::target::Target,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
@@ -14,6 +15,7 @@ use {
     std::future::Future,
     std::pin::Pin,
     std::rc::Rc,
+    tasks::TaskManager,
 };
 
 // TODO(awdavies): Abstract this to use similar utilities to an actual service.
@@ -28,7 +30,7 @@ impl TargetHandle {
         cx: Context,
         handle: ServerEnd<bridge::TargetHandleMarker>,
     ) -> Result<Pin<Box<dyn Future<Output = ()>>>> {
-        let inner = TargetHandleInner { target };
+        let inner = TargetHandleInner { target, tasks: Default::default() };
         let stream = handle.into_stream()?;
         let fut = Box::pin(async move {
             let _ = stream
@@ -41,6 +43,7 @@ impl TargetHandle {
 }
 
 struct TargetHandleInner {
+    tasks: TaskManager,
     target: Rc<Target>,
 }
 
@@ -95,6 +98,17 @@ impl TargetHandleInner {
                 // TODO(awdavies): Return this as a specific error to
                 // the client with map_err.
                 rcs.copy_to_channel(remote_control.into_channel())?;
+                responder.send().map_err(Into::into)
+            }
+            bridge::TargetHandleRequest::OpenFastboot { fastboot, responder } => {
+                let mut fastboot_manager = Fastboot::new(self.target.clone());
+                let stream = fastboot.into_stream()?;
+                self.tasks.spawn(async move {
+                    match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
+                        Ok(_) => log::trace!("Fastboot proxy finished - client disconnected"),
+                        Err(e) => log::error!("Handling fastboot requests: {:?}", e),
+                    }
+                });
                 responder.send().map_err(Into::into)
             }
         }

@@ -14,13 +14,10 @@ use {
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
-    fuchsia_async::futures::{future::ready, FutureExt, TryStreamExt},
-    fuchsia_async::Task,
+    fuchsia_async::futures::TryStreamExt,
     services::prelude::*,
-    std::cell::{Cell, RefCell},
-    std::collections::HashMap,
     std::net::SocketAddr,
-    std::rc::Rc,
+    tasks::TaskManager,
 };
 
 mod target_handle;
@@ -28,9 +25,7 @@ mod target_handle;
 #[ffx_service]
 #[derive(Default)]
 pub struct TargetCollectionService {
-    /// Determines the next ID of a target service task to be spawned.
-    next_task_id: Cell<usize>,
-    target_handles: Rc<RefCell<HashMap<usize, Task<()>>>>,
+    tasks: TaskManager,
 }
 
 #[async_trait(?Send)]
@@ -82,8 +77,6 @@ impl FidlService for TargetCollectionService {
                 responder.send().map_err(Into::into)
             }
             bridge::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
-                let task_id = self.next_task_id.get();
-                self.next_task_id.set(task_id + 1);
                 let target = match target_collection.wait_for_match(query).await {
                     Ok(t) => t,
                     Err(e) => {
@@ -105,13 +98,7 @@ impl FidlService for TargetCollectionService {
                             .map_err(Into::into);
                     }
                 };
-                let handles = self.target_handles.clone();
-                let target_handle =
-                    TargetHandle::new(target, cx.clone(), target_handle)?.then(move |_| {
-                        handles.borrow_mut().remove(&task_id);
-                        ready(())
-                    });
-                self.target_handles.borrow_mut().insert(task_id, Task::local(target_handle));
+                self.tasks.spawn(TargetHandle::new(target, cx.clone(), target_handle)?);
                 responder.send(&mut Ok(())).map_err(Into::into)
             }
             bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
@@ -165,5 +152,10 @@ impl FidlService for TargetCollectionService {
             .map_err(|err| anyhow!("{}", err))
             .try_for_each_concurrent_while_connected(None, |req| self.handle(cx, req))
             .await
+    }
+
+    async fn stop(&mut self, _cx: &Context) -> Result<()> {
+        drop(self.tasks.drain());
+        Ok(())
     }
 }

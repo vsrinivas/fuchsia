@@ -12,6 +12,7 @@ if (is_host) {
     "pkg",
     "rcs",
     "services",
+    "tasks",
     "timeout",
   ]
 

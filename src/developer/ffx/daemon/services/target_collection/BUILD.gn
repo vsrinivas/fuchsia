@@ -16,6 +16,7 @@ rustc_library("ffx_daemon_service_target_collection") {
     "//src/developer/ffx/daemon/events:lib",
     "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/services:lib",
+    "//src/developer/ffx/lib/tasks:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
