@@ -82,9 +82,15 @@ fuchsia_test_component("network-device-test") {
   deps = [ "network_device" ]
 }
 
-fuchsia_test_component("sandbox-service") {
+fuchsia_test_component("sandbox-service-legacy") {
   manifest = "meta/sandbox-service.cmx"
+  component_name = "sandbox-service"
   deps = [ "sandbox_service" ]
+}
+
+fuchsia_test_component("sandbox-service") {
+  manifest = "meta/sandbox-service.cml"
+  deps = [ ":sandbox-service-legacy" ]
 }
 
 fuchsia_test("sandbox-service_spec") {
@@ -96,10 +102,16 @@ fuchsia_test("sandbox-service_spec") {
   }
 }
 
-fuchsia_test_component("sandbox-unittest") {
+fuchsia_test_component("sandbox-unittest-legacy") {
   manifest = "meta/sandbox-unittest.cmx"
+  component_name = "sandbox-unittest"
   deps =
       [ "//src/connectivity/network/testing/netemul/runner:sandbox_unittest" ]
+}
+
+fuchsia_test_component("sandbox-unittest") {
+  manifest = "meta/sandbox-unittest.cml"
+  deps = [ ":sandbox-unittest-legacy" ]
 }
 
 fuchsia_test("sandbox-unittest_spec") {
@@ -147,9 +159,15 @@ fuchsia_test_package("netemul-sandbox-test") {
   ]
 }
 
-fuchsia_test_component("guest-test") {
+fuchsia_test_component("guest-test-legacy") {
   manifest = "meta/guest-test.cmx"
+  component_name = "guest-test"
   deps = [ "guest" ]
+}
+
+fuchsia_test_component("guest-test") {
+  manifest = "meta/guest-test.cml"
+  deps = [ ":guest-test-legacy" ]
 }
 
 resource("test_script") {
@@ -167,15 +185,26 @@ resource("setup_linux_router") {
   outputs = [ "data/setup_linux_router.sh" ]
 }
 
-fuchsia_component("grpc-client-stress-test") {
+fuchsia_test_component("grpc-client-stress-test-legacy") {
   manifest = "meta/grpc-client-stress-test.cmx"
-  testonly = true
+  component_name = "grpc-client-stress-test"
   deps = [ "guest_grpc_stress" ]
 }
 
-fuchsia_test_component("multiple-guests-test") {
+fuchsia_test_component("grpc-client-stress-test") {
+  manifest = "meta/grpc-client-stress-test.cml"
+  deps = [ ":grpc-client-stress-test-legacy" ]
+}
+
+fuchsia_test_component("multiple-guests-test-legacy") {
   manifest = "meta/multiple-guests-test.cmx"
+  component_name = "multiple-guests-test"
   deps = [ "multiple_guests" ]
+}
+
+fuchsia_test_component("multiple-guests-test") {
+  manifest = "meta/multiple-guests-test.cml"
+  deps = [ ":multiple-guests-test-legacy" ]
 }
 
 fuchsia_test("guest_test_spec") {
