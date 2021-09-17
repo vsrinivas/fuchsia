@@ -197,12 +197,8 @@ pub(crate) struct IpSock<I: IpExt, D> {
     // even well-defined for IPv4 in the absence of a subnet? B) Presumably we
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    proto: I::Proto,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    unroutable_behavior: UnroutableBehavior,
+    _proto: I::Proto,
+    _unroutable_behavior: UnroutableBehavior,
 
     // This is merely cached and can change.
 
@@ -342,8 +338,8 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Ctx<D> {
                 // invariant on this field.
                 local_ip,
                 remote_ip,
-                proto,
-                unroutable_behavior,
+                _proto: proto,
+                _unroutable_behavior: unroutable_behavior,
                 cached: CachedInfo::Routable {
                     builder: Ipv4PacketBuilder::new(
                         local_ip,
@@ -426,8 +422,8 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
                 // invariant on this field.
                 local_ip: local_ip.into_specified(),
                 remote_ip,
-                proto,
-                unroutable_behavior,
+                _proto: proto,
+                _unroutable_behavior: unroutable_behavior,
                 cached: CachedInfo::Routable {
                     builder: Ipv6PacketBuilder::new(
                         local_ip,
@@ -787,8 +783,8 @@ mod tests {
         let template = IpSock {
             remote_ip: DUMMY_CONFIG_V4.remote_ip,
             local_ip: DUMMY_CONFIG_V4.local_ip,
-            proto: Ipv4Proto::Icmp,
-            unroutable_behavior: UnroutableBehavior::Close,
+            _proto: Ipv4Proto::Icmp,
+            _unroutable_behavior: UnroutableBehavior::Close,
             cached: CachedInfo::Routable {
                 builder: Ipv4PacketBuilder::new(
                     DUMMY_CONFIG_V4.local_ip,
@@ -893,8 +889,8 @@ mod tests {
         let template = IpSock {
             remote_ip: DUMMY_CONFIG_V6.remote_ip,
             local_ip: DUMMY_CONFIG_V6.local_ip,
-            proto: Ipv6Proto::Icmpv6,
-            unroutable_behavior: UnroutableBehavior::Close,
+            _proto: Ipv6Proto::Icmpv6,
+            _unroutable_behavior: UnroutableBehavior::Close,
             cached: CachedInfo::Routable {
                 builder: Ipv6PacketBuilder::new(
                     DUMMY_CONFIG_V6.local_ip,

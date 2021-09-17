@@ -1045,16 +1045,14 @@ pub(crate) mod testutil {
     /// The result of a single step in a `DummyNetwork`
     #[derive(Debug)]
     pub(crate) struct StepResult {
-        // TODO(fxbug.dev/84729)
-        #[allow(unused)]
-        time_delta: Duration,
+        _time_delta: Duration,
         timers_fired: usize,
         frames_sent: usize,
     }
 
     impl StepResult {
         fn new(time_delta: Duration, timers_fired: usize, frames_sent: usize) -> Self {
-            Self { time_delta, timers_fired, frames_sent }
+            Self { _time_delta: time_delta, timers_fired, frames_sent }
         }
 
         fn new_idle() -> Self {

@@ -184,9 +184,7 @@ impl<I: Ip> BindingData<I> {
 /// Information on socket control plane.
 #[derive(Debug)]
 pub struct SocketControlInfo<I: Ip> {
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    properties: SocketWorkerProperties,
+    _properties: SocketWorkerProperties,
     state: SocketState<I>,
 }
 
@@ -880,7 +878,7 @@ impl<I: UdpSocketIpExt> BindingData<I> {
         Self {
             local_event,
             peer_event,
-            info: SocketControlInfo { properties, state: SocketState::Unbound },
+            info: SocketControlInfo { _properties: properties, state: SocketState::Unbound },
             available_data: VecDeque::new(),
             ref_count: 1,
         }
