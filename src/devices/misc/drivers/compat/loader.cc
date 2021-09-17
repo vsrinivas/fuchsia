@@ -38,7 +38,7 @@ void Loader::LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync
   }
 
   auto callback = [completer = completer.ToAsync()](
-                      fidl::WireUnownedResult<fldsvc::Loader::LoadObject>&& result) mutable {
+                      fidl::WireUnownedResult<fldsvc::Loader::LoadObject>& result) mutable {
     if (!result.ok()) {
       completer.Reply(result.status(), {});
       return;
@@ -50,7 +50,7 @@ void Loader::LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync
 
 void Loader::Config(ConfigRequestView request, ConfigCompleter::Sync& completer) {
   auto callback = [completer = completer.ToAsync()](
-                      fidl::WireUnownedResult<fldsvc::Loader::Config>&& result) mutable {
+                      fidl::WireUnownedResult<fldsvc::Loader::Config>& result) mutable {
     if (!result.ok()) {
       completer.Reply(result.status());
       return;

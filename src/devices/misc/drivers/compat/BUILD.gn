@@ -4,6 +4,10 @@
 
 import("//build/components.gni")
 
+group("compat") {
+  # NOTE(abdulla): Intentionally empty until we have the driver module target.
+}
+
 group("tests") {
   testonly = true
   deps = [ ":compat-test" ]

@@ -4,7 +4,7 @@
 
 #include "src/devices/misc/drivers/compat/loader.h"
 
-#include <fuchsia/ldsvc/llcpp/fidl_test_base.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/gtest/test_loop_fixture.h>
 

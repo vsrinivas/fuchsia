@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_MISC_DRIVERS_COMPAT_COMPAT_LOADER_H_
-#define SRC_DEVICES_MISC_DRIVERS_COMPAT_COMPAT_LOADER_H_
+#ifndef SRC_DEVICES_MISC_DRIVERS_COMPAT_LOADER_H_
+#define SRC_DEVICES_MISC_DRIVERS_COMPAT_LOADER_H_
 
 #include <fidl/fuchsia.ldsvc/cpp/wire.h>
 
@@ -39,4 +39,4 @@ class Loader : public fidl::WireServer<fuchsia_ldsvc::Loader> {
 
 }  // namespace compat
 
-#endif  // SRC_DEVICES_MISC_DRIVERS_COMPAT_COMPAT_LOADER_H_
+#endif  // SRC_DEVICES_MISC_DRIVERS_COMPAT_LOADER_H_
