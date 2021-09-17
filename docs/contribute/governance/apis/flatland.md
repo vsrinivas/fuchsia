@@ -115,7 +115,7 @@ Below is a figure that explains how a connected graph that links multiple
 Flatland sessions would work. This is a more complex but common use case.
 
 **Figure 1 - Flatland** ![This figure presents the linking between Flatland
-APIs.](resources/scenic_allocator/figure_1.svg "Figure 1")
+APIs.](resources/flatland/figure_1.svg "Figure 1")
 
 ## Testing
 
