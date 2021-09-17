@@ -51,8 +51,11 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":bin_test($host_toolchain)",
-    "//tools/autotest/goldentest:tests",
-  ]
+  deps = [ ":bin_test($host_toolchain)" ]
+
+  # TODO(fxbug.dev/84878): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    deps += [ "//tools/autotest/goldentest:tests" ]
+  }
 }
