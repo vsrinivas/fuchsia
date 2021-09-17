@@ -386,10 +386,6 @@ pub mod persist {
             self.base.get_service_context()
         }
 
-        pub(crate) fn messenger(&self) -> &Messenger {
-            &self.base.messenger
-        }
-
         pub(crate) async fn notify(&self, event: Event) {
             self.base.notify(event).await;
         }

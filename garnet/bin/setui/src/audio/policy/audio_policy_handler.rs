@@ -77,7 +77,6 @@ use crate::audio::types::{AudioInfo, AudioStream, SetAudioStream};
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
-use crate::config::inspect_logger::InspectConfigLoggerHandle;
 use crate::handler::base::{
     Payload as HandlerPayload, Request as SettingRequest, Response as SettingResponse,
 };
@@ -128,7 +127,6 @@ impl Create for AudioPolicyHandler {
         let transform_config = DefaultSetting::<AudioPolicyConfig, &str>::new(
             Some(AudioPolicyConfig { transforms: Default::default() }),
             "/config/data/audio_policy_configuration.json",
-            Some(InspectConfigLoggerHandle::new().logger),
         )
         .load_default_value()
         .map_err(|_| format_err!("Invalid build time policy config"))?;

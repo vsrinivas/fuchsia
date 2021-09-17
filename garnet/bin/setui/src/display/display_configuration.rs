@@ -42,12 +42,11 @@ mod test {
     use super::*;
     use crate::config::default_settings::DefaultSetting;
 
-    #[test]
-    fn test_display_configuration() {
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_display_configuration() {
         let default_value = DefaultSetting::<DisplayConfiguration, &str>::new(
             None,
             "/config/data/display_configuration.json",
-            None,
         )
         .load_default_value()
         .expect("Invalid display configuration")

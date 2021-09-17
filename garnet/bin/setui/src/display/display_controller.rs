@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call;
 use crate::config::default_settings::DefaultSetting;
-use crate::config::inspect_logger::InspectConfigLoggerHandle;
 use crate::display::display_configuration::{
     ConfigurationThemeMode, ConfigurationThemeType, DisplayConfiguration,
 };
@@ -49,7 +48,6 @@ lazy_static! {
         Mutex::new(DefaultSetting::new(
             None,
             "/config/data/display_configuration.json",
-            Some(InspectConfigLoggerHandle::new().logger),
         ));
 }
 

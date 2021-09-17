@@ -7,7 +7,6 @@ use crate::audio::types::{
 };
 use crate::base::SettingInfo;
 use crate::config::default_settings::DefaultSetting;
-use crate::config::inspect_logger::InspectConfigLoggerHandle;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -44,7 +43,6 @@ lazy_static! {
         Mutex::new(DefaultSetting::new(
             Some(DEFAULT_AUDIO_INFO),
             "/config/data/audio_config_data.json",
-            Some(InspectConfigLoggerHandle::new().logger),
         ));
 }
 
