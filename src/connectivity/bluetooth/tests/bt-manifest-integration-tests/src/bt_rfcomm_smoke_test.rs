@@ -134,9 +134,7 @@ async fn rfcomm_v2_component_topology() {
             ],
         )
         .expect("Failed adding LogSink route to test components");
-    let test_topology = builder.build().create().await.unwrap();
-
-    let _ = test_topology.root.connect_to_binder().unwrap();
+    let _test_topology = builder.build().create().await.unwrap();
 
     // If the routing is correctly configured, we expect two events (in arbitrary order):
     //   1. `bt-rfcomm` connecting to the Profile service provided by `fake-profile`.
