@@ -160,11 +160,12 @@ struct Suite {
     controller: SuiteControllerRequestStream,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 }
-struct TestSuiteBuilder {
+
+struct TestRunBuilder {
     suites: Vec<Suite>,
 }
 
-impl TestSuiteBuilder {
+impl TestRunBuilder {
     async fn run_controller(
         mut controller: RunControllerRequestStream,
         run_task: fasync::Task<()>,
@@ -210,6 +211,7 @@ impl TestSuiteBuilder {
             task.cancel().await;
         }
     }
+
     async fn run(self, controller: RunControllerRequestStream, test_map: Arc<TestMap>) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let task = fuchsia_async::Task::spawn(async move {
@@ -238,8 +240,8 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
     }
 }
 
-/// Enumerates test and return invocations.
-async fn enumerate_tests(
+/// Enumerates test cases and return invocations.
+async fn enumerate_test_cases(
     suite: &ftest::SuiteProxy,
     matcher: Option<CaseMatcher>,
 ) -> Result<Vec<Invocation>, anyhow::Error> {
@@ -339,7 +341,7 @@ async fn run_suite(
             None => None,
         };
 
-        let invocations = match enumerate_tests(&suite, matcher).await {
+        let invocations = match enumerate_test_cases(&suite, matcher).await {
             Ok(i) => i,
             Err(e) => {
                 sender
@@ -350,10 +352,7 @@ async fn run_suite(
             }
         };
         if let Ok(Some(_)) = stop_recv.try_recv() {
-            sender
-                .send(Ok(SuiteEvents::suite_finished(SuiteStatus::Stopped).into()))
-                .await
-                .unwrap();
+            sender.send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into())).await.unwrap();
             return Ok(());
         }
 
@@ -394,7 +393,7 @@ async fn run_suite(
             };
             if res == SuiteStatus::TimedOut {
                 sender
-                    .send(Ok(SuiteEvents::suite_finished(SuiteStatus::TimedOut).into()))
+                    .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::TimedOut).into()))
                     .await
                     .unwrap();
                 return Ok(());
@@ -402,13 +401,13 @@ async fn run_suite(
             suite_status = concat_suite_status(suite_status, res);
             if let Ok(Some(_)) = stop_recv.try_recv() {
                 sender
-                    .send(Ok(SuiteEvents::suite_finished(SuiteStatus::Stopped).into()))
+                    .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into()))
                     .await
                     .unwrap();
                 return Ok(());
             }
         }
-        sender.send(Ok(SuiteEvents::suite_finished(suite_status).into())).await.unwrap();
+        sender.send(Ok(SuiteEvents::suite_stopped(suite_status).into())).await.unwrap();
         Ok(())
     };
     if let Err(e) = fut.await {
@@ -568,7 +567,7 @@ impl SuiteEvents {
         }
     }
 
-    fn suite_finished(status: SuiteStatus) -> Self {
+    fn suite_stopped(status: SuiteStatus) -> Self {
         Self {
             timestamp: zx::Time::get_monotonic().into_nanos(),
             payload: SuiteEventPayload::SuiteStopped(status),
@@ -759,8 +758,8 @@ impl Suite {
         mut controller: SuiteControllerRequestStream,
         stop_sender: oneshot::Sender<()>,
         event_recv: mpsc::Receiver<Result<FidlSuiteEvent, LaunchError>>,
-        mut test_run_task: Option<fasync::Task<()>>,
-        mut running_test: Option<RunningTest>,
+        mut suite_run_task: Option<fasync::Task<()>>,
+        mut running_suite: Option<RunningSuite>,
     ) -> Result<(), Error> {
         let mut event_recv = event_recv.into_stream().fuse();
         let mut stop_sender = Some(stop_sender);
@@ -812,10 +811,10 @@ impl Suite {
                     }
                 }
                 SuiteControllerRequest::Kill { .. } => {
-                    if let Some(t) = test_run_task.take() {
+                    if let Some(t) = suite_run_task.take() {
                         t.cancel().await;
                     }
-                    if let Some(test) = running_test.take() {
+                    if let Some(test) = running_suite.take() {
                         test.destroy().await;
                     }
                     // after this all `senders` go away and subsequent GetEvent call will
@@ -826,19 +825,20 @@ impl Suite {
         }
 
         // cancel running test (if it is still running)
-        if let Some(t) = test_run_task.take() {
+        if let Some(t) = suite_run_task.take() {
             t.cancel().await;
         }
-        if let Some(test) = running_test.take() {
+        if let Some(test) = running_suite.take() {
             test.destroy().await;
         }
         Ok(())
     }
+
     async fn run(self, test_map: Arc<TestMap>) {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
         let (suite, suite_request) = fidl::endpoints::create_proxy().expect("cannot create suite");
-        let test = self.launch_test(sender.clone(), suite_request, test_map.clone()).await;
+        let test = self.launch_suite(sender.clone(), suite_request, test_map.clone()).await;
         let test_name = match &test {
             Some(t) => Some(t.instance.root.child_name().to_string()),
             None => None,
@@ -865,12 +865,12 @@ impl Suite {
         }
     }
 
-    async fn launch_test(
+    async fn launch_suite(
         &self,
         mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
         suite_request: ServerEnd<SuiteMarker>,
         test_map: Arc<TestMap>,
-    ) -> Option<RunningTest> {
+    ) -> Option<RunningSuite> {
         let (log_iterator, syslog) = match self.options.log_iterator {
             Some(ftest_manager::LogsIteratorOption::ArchiveIterator) => {
                 let (proxy, request) =
@@ -888,7 +888,7 @@ impl Suite {
         };
 
         sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
-        match launch_test(
+        match launch_suite(
             &self.test_url,
             suite_request,
             test_map,
@@ -914,7 +914,7 @@ pub async fn run_test_manager(
     test_map: Arc<TestMap>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
-    let mut builder = TestSuiteBuilder { suites: vec![] };
+    let mut builder = TestRunBuilder { suites: vec![] };
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
             ftest_manager::RunBuilderRequest::AddSuite {
@@ -978,7 +978,7 @@ pub async fn run_test_manager_query_server(
                 };
                 let (suite, suite_request) =
                     fidl::endpoints::create_proxy().expect("cannot create suite proxy");
-                match launch_test(
+                match launch_suite(
                     &test_url,
                     suite_request,
                     test_map.clone(),
@@ -988,7 +988,7 @@ pub async fn run_test_manager_query_server(
                 .await
                 {
                     Ok(test) => {
-                        let enumeration_result = enumerate_tests(&suite, None).await;
+                        let enumeration_result = enumerate_test_cases(&suite, None).await;
                         let test_name = test.instance.root.child_name().to_string();
                         let t = fasync::Task::spawn(test.destroy());
                         match enumeration_result {
@@ -1086,7 +1086,7 @@ pub async fn run_test_manager_info_server(
     Ok(())
 }
 
-struct RunningTest {
+struct RunningSuite {
     instance: RealmInstance,
     logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
 
@@ -1094,7 +1094,7 @@ struct RunningTest {
     archive_accessor: Arc<ArchiveAccessorProxy>,
 }
 
-impl RunningTest {
+impl RunningSuite {
     async fn destroy(mut self) {
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
@@ -1114,13 +1114,13 @@ impl RunningTest {
 }
 
 /// Launch test and return the name of test used to launch it in collection.
-async fn launch_test(
+async fn launch_suite(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
     test_map: Arc<TestMap>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     log_iterator: Option<ftest_manager::LogsIterator>,
-) -> Result<RunningTest, LaunchTestError> {
+) -> Result<RunningSuite, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
     let (archive_accessor, archive_accessor_server_end) =
         fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
@@ -1169,7 +1169,7 @@ async fn launch_test(
             .root
             .connect_request_to_protocol_at_exposed_dir(suite_request)
             .map_err(LaunchTestError::ConnectToTestSuite)?;
-        Ok(RunningTest { instance, logs_iterator_task, archive_accessor: archive_accessor_arc })
+        Ok(RunningSuite { instance, logs_iterator_task, archive_accessor: archive_accessor_arc })
     };
 
     let running_test_result = connect_to_instance_services.await;
@@ -1954,7 +1954,7 @@ mod tests {
             }))
         );
 
-        let event = SuiteEvents::suite_finished(SuiteStatus::Failed).into_suite_run_event();
+        let event = SuiteEvents::suite_stopped(SuiteStatus::Failed).into_suite_run_event();
         assert_matches!(event.timestamp, Some(_));
         assert_eq!(
             event.payload,
