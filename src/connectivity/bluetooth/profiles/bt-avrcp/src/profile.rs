@@ -7,9 +7,9 @@ use {
     bitflags::bitflags,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
-    log::{debug, info},
     profile_client::ProfileClient,
     std::fmt::Debug,
+    tracing::{debug, info},
 };
 
 bitflags! {

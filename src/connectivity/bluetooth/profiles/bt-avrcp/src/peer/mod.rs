@@ -11,7 +11,6 @@ use {
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, Future},
-    log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     pin_utils::pin_mut,
@@ -21,6 +20,7 @@ use {
         mem::{discriminant, Discriminant},
         sync::Arc,
     },
+    tracing::{info, trace, warn},
 };
 
 mod controller;

@@ -6,14 +6,13 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fuchsia_async as fasync,
     fuchsia_bluetooth::profile::{psm_from_protocol, Psm},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
     futures::{channel::mpsc, stream::StreamExt, FutureExt},
-    log::{error, info, warn},
     profile_client::ProfileEvent,
+    tracing::{error, info, warn},
 };
 
 mod metrics;
@@ -33,10 +32,8 @@ use crate::{
     profile::AvrcpService,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["avrcp"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["avrcp", "avctp"]).expect("Unable to initialize logger");
-
     // Begin searching for AVRCP target/controller SDP records on newly connected remote peers
     // and register our AVRCP service with the `bredr.Profile` service.
     let (profile_proxy, mut profile_client) =

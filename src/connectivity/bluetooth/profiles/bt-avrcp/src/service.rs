@@ -18,8 +18,8 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
-    log::{info, warn},
     std::collections::VecDeque,
+    tracing::{info, warn},
 };
 
 use crate::{

@@ -10,7 +10,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::Duration,
     futures::future::Either,
-    log::{trace, warn},
     parking_lot::Mutex,
     std::{
         collections::{
@@ -19,6 +18,7 @@ use {
         },
         sync::Arc,
     },
+    tracing::{trace, warn},
 };
 
 pub mod browse_channel;

@@ -10,7 +10,6 @@ use {
         stream::{FusedStream, StreamExt},
         Stream,
     },
-    log::trace,
     packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     std::{
@@ -19,6 +18,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
+    tracing::trace,
 };
 
 use crate::packets::PacketEncodable;

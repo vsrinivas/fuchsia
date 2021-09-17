@@ -5,10 +5,10 @@
 use {
     bt_avctp::{AvcOpCode, AvcPacketType},
     fidl_fuchsia_bluetooth_avrcp::AvcPanelCommand,
-    log::{trace, warn},
     packet_encoding::{Decodable, Encodable},
     std::convert::TryFrom,
     thiserror::Error,
+    tracing::{trace, warn},
 };
 
 use crate::peer::*;

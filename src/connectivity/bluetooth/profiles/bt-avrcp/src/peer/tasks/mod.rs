@@ -11,12 +11,12 @@ use {
         future::FutureExt,
         stream::{SelectAll, StreamExt, TryStreamExt},
     },
-    log::{error, info, trace},
     notification_stream::NotificationStream,
     packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     rand::Rng,
     std::{convert::TryInto, sync::Arc},
+    tracing::{error, info, trace},
 };
 
 mod notification_stream;

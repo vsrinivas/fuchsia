@@ -5,9 +5,9 @@
 use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     futures::channel::mpsc,
-    log::trace,
     packet_encoding::Decodable,
     std::convert::{TryFrom, TryInto},
+    tracing::trace,
 };
 
 use crate::packets::{

@@ -5,9 +5,9 @@
 use {
     bt_avctp::{self as avctp, AvctpCommand},
     futures::{self, Future},
-    log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     std::{convert::TryFrom, sync::Arc},
+    tracing::{info, trace, warn},
 };
 
 use crate::packets::*;
