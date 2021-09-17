@@ -43,6 +43,25 @@ type Result = flexible enum : uint32 {
     TIMEOUT = 8;
 };
 
+/// Provides a |Controller| implementation.
+///
+/// This protocol is implemented by the fuzzer. This capability is *not* routed. Instead, the fuzzer
+/// uses the channel provided by the fuzz-test-runner to send a client end of this interface to the
+/// fuzz-registry via |Registry|.
+protocol ControllerProvider {
+    /// Connects a client to the fuzzer.
+    ///
+    /// Within the component fuzzing framework, the fuzz-manager forawrds |Controller| connection
+    /// requests to the fuzz-registry, which uses clients of this interface provided by the fuzzers
+    /// themselves to perform the connection.
+    ///
+    /// The fuzz-registry will close the channel on error, on a request to stop the fuzzer, or when
+    /// on its own exit. The fuzzer should exit and not attempt to reconnect when on channel close.
+    Connect(resource struct {
+        controller server_end:Controller;
+    });
+};
+
 /// Provides the management interface for fuzzing.
 ///
 /// Within the component test framework, the fuzz_test_runner creates the underlying channel for

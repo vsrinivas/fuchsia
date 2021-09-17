@@ -47,6 +47,7 @@
 ///  * controller.fidl:
 ///    * |Input| structs represent file-like fuzzing inputs that can be transferred over FIDL.
 ///    * Each |Result| enumerates a possible outcome of executing the target with a fuzzing input.
+///    * Implementations of the |ControllerProvider| protocol connect clients to fuzzers.
 ///    * Implementations of the |Controller| protocol allow clients to control fuzzing execution.
 ///  * corpus.fidl:
 ///    * Each |Corpus| enumerates a set of fuzzing inputs.
