@@ -7,6 +7,15 @@ using zx;
 
 const MAX_DEVICE_REPORT_COUNT uint32 = 50;
 
+/// The InputReport field to be populated by InputDevice.GetInputReport.
+type DeviceType = strict enum {
+    MOUSE = 0;
+    SENSOR = 1;
+    TOUCH = 2;
+    KEYBOARD = 3;
+    CONSUMER_CONTROL = 4;
+};
+
 /// Each `InputReportsReader` has its own FIFO of InputReports that it maintains.
 /// When ReadInputReports is called it drains the InputReports FIFO.
 /// If too many InputReports are created before the FIFO is drained, then
@@ -56,4 +65,15 @@ protocol InputDevice {
     SetFeatureReport(struct {
         report FeatureReport;
     }) -> (struct {}) error zx.status;
+
+    /// For general cases, InputReportReader is the preferred way of getting
+    /// InputReports. For devices that don't send InputReports naturally, this
+    /// method can be used to request a report from the device type indicated.
+    /// Does not block, and returns ZX_ERR_NOT_SUPPORTED if `GetInputReport` or
+    /// `device_type` are not supported.
+    GetInputReport(struct {
+        device_type DeviceType;
+    }) -> (struct {
+        report InputReport;
+    }) error zx.status;
 };

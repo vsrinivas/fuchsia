@@ -276,6 +276,9 @@ impl InputDevice {
             Ok(InputDeviceRequest::SetFeatureReport { .. }) => {
                 Some(Err(format_err!("InputDevice does not support SetFeatureReport")))
             }
+            Ok(InputDeviceRequest::GetInputReport { .. }) => {
+                Some(Err(format_err!("InputDevice does not support GetInputReport")))
+            }
             Err(e) => Some(Err(anyhow::Error::from(e).context("while reading InputDeviceRequest"))),
         }
     }

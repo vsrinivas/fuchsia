@@ -62,6 +62,10 @@ class InputReport : public DeviceType,
                         SetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Function for testing that blocks until a new reader is connected.
   zx_status_t WaitForNextReader(zx::duration timeout);

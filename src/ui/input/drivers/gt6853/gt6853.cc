@@ -187,6 +187,10 @@ void Gt6853Device::SetFeatureReport(SetFeatureReportRequestView request,
                                     SetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
+void Gt6853Device::GetInputReport(GetInputReportRequestView request,
+                                  GetInputReportCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
 
 void Gt6853Device::WaitForNextReader() {
   sync_completion_wait(&next_reader_wait_, ZX_TIME_INFINITE);

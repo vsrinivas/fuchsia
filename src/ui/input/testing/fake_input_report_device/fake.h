@@ -50,6 +50,11 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
     callback(
         fuchsia::input::report::InputDevice_SetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
+  void GetInputReport(::fuchsia::input::report::DeviceType device_type,
+                      GetInputReportCallback callback) override {
+    callback(
+        fuchsia::input::report::InputDevice_GetInputReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
 
  private:
   friend class FakeInputReportsReader;

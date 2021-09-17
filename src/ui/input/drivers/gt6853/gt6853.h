@@ -103,6 +103,8 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
                         GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override;
 
   // Visible for testing.
   void WaitForNextReader();

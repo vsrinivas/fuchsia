@@ -40,10 +40,17 @@ struct/member fuchsia.input.report/DeviceInfo.product_id uint32
 struct/member fuchsia.input.report/DeviceInfo.vendor_id uint32
 struct/member fuchsia.input.report/DeviceInfo.version uint32
 struct fuchsia.input.report/DeviceInfo
+enum/member fuchsia.input.report/DeviceType.CONSUMER_CONTROL 4
+enum/member fuchsia.input.report/DeviceType.KEYBOARD 3
+enum/member fuchsia.input.report/DeviceType.MOUSE 0
+enum/member fuchsia.input.report/DeviceType.SENSOR 1
+enum/member fuchsia.input.report/DeviceType.TOUCH 2
+strict enum fuchsia.input.report/DeviceType uint32
 table/member fuchsia.input.report/FeatureReport.sensor fuchsia.input.report/SensorFeatureReport
 table fuchsia.input.report/FeatureReport
 protocol/member fuchsia.input.report/InputDevice.GetDescriptor() -> (fuchsia.input.report/DeviceDescriptor descriptor)
 protocol/member fuchsia.input.report/InputDevice.GetFeatureReport() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)
+protocol/member fuchsia.input.report/InputDevice.GetInputReport(fuchsia.input.report/DeviceType device_type) -> (fuchsia.input.report/InputDevice_GetInputReport_Result result)
 protocol/member fuchsia.input.report/InputDevice.GetInputReportsReader(server_end:fuchsia.input.report/InputReportsReader reader)
 protocol/member fuchsia.input.report/InputDevice.SendOutputReport(fuchsia.input.report/OutputReport report) -> (fuchsia.input.report/InputDevice_SendOutputReport_Result result)
 protocol/member fuchsia.input.report/InputDevice.SetFeatureReport(fuchsia.input.report/FeatureReport report) -> (fuchsia.input.report/InputDevice_SetFeatureReport_Result result)
@@ -53,6 +60,11 @@ struct fuchsia.input.report/InputDevice_GetFeatureReport_Response
 union/member fuchsia.input.report/InputDevice_GetFeatureReport_Result.err int32
 union/member fuchsia.input.report/InputDevice_GetFeatureReport_Result.response fuchsia.input.report/InputDevice_GetFeatureReport_Response
 strict union fuchsia.input.report/InputDevice_GetFeatureReport_Result
+struct/member fuchsia.input.report/InputDevice_GetInputReport_Response.report fuchsia.input.report/InputReport
+struct fuchsia.input.report/InputDevice_GetInputReport_Response
+union/member fuchsia.input.report/InputDevice_GetInputReport_Result.err int32
+union/member fuchsia.input.report/InputDevice_GetInputReport_Result.response fuchsia.input.report/InputDevice_GetInputReport_Response
+strict union fuchsia.input.report/InputDevice_GetInputReport_Result
 struct fuchsia.input.report/InputDevice_SendOutputReport_Response
 union/member fuchsia.input.report/InputDevice_SendOutputReport_Result.err int32
 union/member fuchsia.input.report/InputDevice_SendOutputReport_Result.response fuchsia.input.report/InputDevice_SendOutputReport_Response

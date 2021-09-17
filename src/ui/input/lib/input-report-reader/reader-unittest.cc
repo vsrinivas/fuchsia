@@ -47,6 +47,8 @@ class MouseDevice : public fidl::WireServer<fuchsia_input_report::InputDevice> {
                         GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override;
 
  private:
   sync_completion_t next_reader_wait_;
@@ -95,6 +97,11 @@ void MouseDevice::GetFeatureReport(GetFeatureReportRequestView request,
 
 void MouseDevice::SetFeatureReport(SetFeatureReportRequestView request,
                                    SetFeatureReportCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void MouseDevice::GetInputReport(GetInputReportRequestView request,
+                                 GetInputReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

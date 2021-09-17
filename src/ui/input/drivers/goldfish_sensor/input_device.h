@@ -76,6 +76,11 @@ class InputDevice : public InputDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
