@@ -7,6 +7,66 @@
 //! This crate defines types and operations useful for operating with various
 //! network protocols. Some general utilities are defined in the crate root,
 //! while protocol-specific operations are defined in their own modules.
+//!
+//! # Witness types
+//!
+//! This crate makes heavy use of the "witness type" pattern. A witness type is
+//! one whose existence "bears witness" to a particular property. For example,
+//! the [`UnicastAddr`] type wraps an existing address and guarantees that it
+//! is unicast.
+//!
+//! There are a few components to a witness type.
+//!
+//! First, each property is encoded in a trait. For example, the
+//! [`UnicastAddress`] trait is implemented by any address type which can be
+//! unicast. The [`is_unicast`] method is used to determine whether a given
+//! instance is unicast.
+//!
+//! Second, a witness type wraps an address. For example, `UnicastAddr<A>` can
+//! be used with any `A: UnicastAddress`. There are two ways to obtain an
+//! instance of a witness type. Some constants are constructed as witness types
+//! at compile time, and so provide a static guarantee of the witnessed property
+//! (e.g., [`Ipv6::LOOPBACK_IPV6_ADDRESS`] is a `UnicastAddr`). Otherwise, an
+//! instance can be constructed fallibly at runtime. For example,
+//! [`UnicastAddr::new`] accepts an `A` and returns an `Option<UnicastAddr<A>>`,
+//! returning `Some` if the address passes the `is_unicast` check, and `None`
+//! otherwise.
+//!
+//! Finally, each witness type implements the [`Witness`] trait, which allows
+//! code to be written which is generic over which witness type is used.
+//!
+//! Witness types enable a variety of operations which are only valid on certain
+//! types of addresses. For example, a multicast MAC address can be derived from
+//! a multicast IPv6 address, so the `MulticastAddr<Mac>` type implements
+//! `From<MulticastAddr<Ipv6Addr>>`. Similarly, given an [`Ipv6Addr`], the
+//! [`to_solicited_node_address`] method can be used to construct the address's
+//! solicited-node address, which is a `MulticastAddr<Ipv6Addr>`. Combining
+//! these, it's possible to take an `Ipv6Addr` and compute the solicited node
+//! address's multicast MAC address without performing any runtime validation:
+//!
+//! ```rust
+//! # use net_types::ethernet::Mac;
+//! # use net_types::ip::Ipv6Addr;
+//! # use net_types::MulticastAddr;
+//! fn to_solicited_node_multicast_mac(addr: &Ipv6Addr) -> MulticastAddr<Mac> {
+//!     addr.to_solicited_node_address().into()
+//! }
+//! ```
+//!
+//! # Naming Conventions
+//!
+//! When both types and traits exist which represent the same concept, the
+//! traits will be given a full name - such as [`IpAddress`] or
+//! [`UnicastAddress`] - while the types will be given an abbreviated name -
+//! such as [`IpAddr`], [`Ipv4Addr`], [`Ipv6Addr`], or [`UnicastAddr`].
+//!
+//! [`is_unicast`]: crate::UnicastAddress::is_unicast
+//! [`Ipv6::LOOPBACK_IPV6_ADDRESS`]: crate::ip::Ipv6::LOOPBACK_IPV6_ADDRESS
+//! [`to_solicited_node_address`]: crate::ip::Ipv6Addr::to_solicited_node_address
+//! [`IpAddress`]: crate::ip::IpAddress
+//! [`IpAddr`]: crate::ip::IpAddr
+//! [`Ipv4Addr`]: crate::ip::Ipv4Addr
+//! [`Ipv6Addr`]: crate::ip::Ipv6Addr
 
 #![deny(missing_docs)]
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
@@ -305,7 +365,7 @@ pub trait ScopeableAddress {
     /// for its correctness.
     ///
     /// If this type also implements [`SpecifiedAddress`] then
-    /// `a.scope().can_have_zone()` implies `a.is_specified()`, since the
+    /// `a.scope().can_have_zone()` implies `a.is_specified()`, since
     /// unspecified addresses are always global, and the global scope cannot
     /// have a zone.
     fn scope(&self) -> Self::Scope;
@@ -758,7 +818,7 @@ impl_try_from_witness!(
 pub struct AddrAndZone<A, Z>(A, Z);
 
 impl<A: ScopeableAddress, Z> AddrAndZone<A, Z> {
-    /// Creates a new `AddrAndZone`, returning `Some` only if the provided
+    /// Constructs a new `AddrAndZone`, returning `Some` only if the provided
     /// `addr`'s scope can have a zone (`addr.scope().can_have_zone()`).
     pub fn new(addr: A, zone: Z) -> Option<Self> {
         if addr.scope().can_have_zone() {
@@ -768,9 +828,10 @@ impl<A: ScopeableAddress, Z> AddrAndZone<A, Z> {
         }
     }
 
-    /// Turns this `AddrAndZone` into its forming parts.
+    /// Consumes this `AddrAndZone`, returning the address and zone separately.
     pub fn into_addr_scope_id(self) -> (A, Z) {
-        (self.0, self.1)
+        let AddrAndZone(addr, zone) = self;
+        (addr, zone)
     }
 }
 
@@ -789,8 +850,8 @@ impl<A, Z> AddrAndZone<A, Z> {
 }
 
 impl<A: ScopeableAddress + SpecifiedAddress, Z> AddrAndZone<A, Z> {
-    /// Turns this `AddrAndZone` into its forming parts, providing a safe
-    /// `SpecifiedAddr`.
+    /// Consumes this `AddrAndZone`, returning the address (as a
+    /// [`SpecifiedAddr`]) and zone separately.
     pub fn into_specified_addr_zone(self) -> (SpecifiedAddr<A>, Z) {
         (SpecifiedAddr(self.0), self.1)
     }
@@ -826,8 +887,8 @@ impl<A: ScopeableAddress + SpecifiedAddress, Z> ZonedAddr<A, Z> {
         }
     }
 
-    /// Decomposes this `ZonedAddr` into a `SpecifiedAddr` and an optional scope
-    /// zone.
+    /// Decomposes this `ZonedAddr` into a [`SpecifiedAddr`] and an optional
+    /// scope zone.
     pub fn into_addr_zone(self) -> (SpecifiedAddr<A>, Option<Z>) {
         match self {
             ZonedAddr::Unzoned(addr) => (addr, None),

@@ -4,49 +4,56 @@
 
 // TODO: Edit this doc comment (it's copy+pasted from the Netstack3 core)
 
-//! IP protocol types.
+//! Internet Protocol (IP) types.
 //!
-//! We provide the following types:
+//! This module provides support for various types and traits relating to IPv4
+//! and IPv6, including a number of mechanisms for abstracting over details
+//! which are shared between IPv4 and IPv6.
 //!
-//! # IP Versions
+//! # `Ip` and `IpAddress`
 //!
-//! * [`IpVersion`]: An enum representing IPv4 or IPv6
-//! * [`Ip`]: An IP version trait that can be used write code which is generic
-//!   over both versions of the IP protocol
+//! The most important traits are [`Ip`] and [`IpAddress`].
 //!
-//! # IP Addresses
+//! `Ip` represents a version of the IP protocol - either IPv4 or IPv6 - and is
+//! implemented by [`Ipv4`] and [`Ipv6`]. These types exist only at the type
+//! level - they cannot be constructed at runtime. They provide a place to put
+//! constants and functionality which are not associated with a particular type,
+//! and they allow code to be written which is generic over the version of the
+//! IP protocol. For example:
 //!
-//! * [`Ipv4Addr`]: A concrete IPv4 address
-//! * [`Ipv6Addr`]: A concrete IPv6 address
-//! * [`IpAddr`]: An enum representing either a v4 or v6 address.
-//! * [`IpAddress`]: An IP address trait that can be used to write code which is
-//!   generic over both types of IP address
+//! ```rust
+//! # use net_types::ip::{Ip, IpAddress, Subnet};
+//! struct Entry<A: IpAddress> {
+//!     subnet: Subnet<A>,
+//!     dest: Destination<A>,
+//! }
 //!
-//! # Subnets
+//! enum Destination<A: IpAddress> {
+//!     Local { device_id: usize },
+//!     Remote { dst: A },
+//! }
 //!
-//! * [`Subnet`]: A v4 or v6 subnet, as specified by the type parameter.
-//! * [`SubnetEither`]: An enum of either a v4 subnet or a v6 subnet.
+//! struct ForwardingTable<I: Ip> {
+//!     entries: Vec<Entry<I::Addr>>,
+//! }
+//! ```
 //!
-//! # Address + Subnet Pairs:
+//! See also [`IpVersionMarker`].
 //!
-//! * [`AddrSubnet`]: A v4 or v6 subnet + address pair, as specified by the type
-//!   parameter.
-//! * [`AddrSubnetEither`]: An enum of either a v4 or a v6 subnet + address
-//!   pair.
+//! The `IpAddress` trait is implemented by the concrete [`Ipv4Addr`] and
+//! [`Ipv6Addr`] types.
 //!
-//! [`IpVersion`]: crate::ip::IpVersion
-//! [`Ip`]: crate::ip::Ip
-//! [`Ipv4Addr`]: crate::ip::Ipv4Addr
-//! [`Ipv6Addr`]: crate::ip::Ipv6Addr
-//! [`IpAddr`]: crate::ip::IpAddr
-//! [`IpAddress`]: crate::ip::IpAddress
-//! [`Subnet`]: crate::ip::Subnet
-//! [`SubnetEither`]: crate::ip::SubnetEither
-//! [`AddrSubnet`]: crate::ip::AddrSubnet
-//! [`AddrSubnetEither`]: crate::ip::AddrSubnetEither
-
-// TODO(joshlf): Add RFC references for various standards such as the global
-// broadcast address or the Class E subnet.
+//! # Runtime types
+//!
+//! Sometimes, it is not known at compile time which version of a given type -
+//! IPv4 or IPv6 - is present. For these cases, enums are provided with variants
+//! for both IPv4 and IPv6. These are [`IpAddr`], [`SubnetEither`], and
+//! [`AddrSubnetEither`].
+//!
+//! # Composite types
+//!
+//! This modules also provides composite types such as [`Subnet`] and
+//! [`AddrSubnet`].
 
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Display, Formatter};
@@ -78,12 +85,15 @@ pub enum IpVersion {
     V6,
 }
 
-/// A ZST that carries IP version information.
+/// A zero-sized type that carries IP version information.
 ///
-/// Typically used by types that need to receive external information of which
-/// IP version the type is specialized for, but without any other associated data.
+/// `IpVersionMarker` is typically used by types that are generic over IP
+/// version, but without any other associated data. In this sense,
+/// `IpVersionMarker` behaves similarly to [`PhantomData`].
+///
+/// [`PhantomData`]: core::marker::PhantomData
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct IpVersionMarker<I> {
+pub struct IpVersionMarker<I: Ip> {
     _marker: core::marker::PhantomData<I>,
 }
 
@@ -101,7 +111,7 @@ impl<I: Ip> Debug for IpVersionMarker<I> {
 
 /// An IP address.
 ///
-/// By default, the contained address types are `Ipv4Addr` and `Ipv6Addr`.
+/// By default, the contained address types are [`Ipv4Addr`] and [`Ipv6Addr`].
 /// However, any types can be provided. This is intended to support types like
 /// `IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>`. `From` is
 /// implemented to support conversions in both directions between
@@ -115,10 +125,10 @@ pub enum IpAddr<V4 = Ipv4Addr, V6 = Ipv6Addr> {
 }
 
 impl<V4, V6> IpAddr<V4, V6> {
-    /// Transposes a `IpAddr` of a witness type to a witness type of an
+    /// Transposes an `IpAddr` of a witness type to a witness type of an
     /// `IpAddr`.
     ///
-    /// For example, you could use `transpose` to convert an
+    /// For example, `transpose` can be used to convert an
     /// `IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>` into a
     /// `SpecifiedAddr<IpAddr<Ipv4Addr, Ipv6Addr>>`.
     pub fn transpose<W: IpAddrWitness<V4 = V4, V6 = V6>>(self) -> W {
@@ -184,15 +194,18 @@ impl IpVersion {
 
 /// A trait for IP protocol versions.
 ///
-/// `Ip` encapsulates the details of a version of the IP protocol. It includes
-/// the [`IpVersion`] enum (`VERSION`) and an [`IpAddress`] type (`Addr`). It is
-/// implemented by [`Ipv4`] and [`Ipv6`]. This trait is sealed, and there are
-/// guaranteed to be no other implementors besides these. Code - including
-/// unsafe code - may rely on this assumption for its correctness and soundness.
+/// `Ip` encapsulates the details of a version of the IP protocol. It includes a
+/// runtime representation of the protocol version ([`VERSION`]), the type of
+/// addresses for this version ([`Addr`]), and a number of constants which exist
+/// in both protocol versions. This trait is sealed, and there are guaranteed to
+/// be no other implementors besides these. Code - including unsafe code - may
+/// rely on this assumption for its correctness and soundness.
 ///
-/// Note that the implementors of this trait are not meant to be instantiated
-/// (in fact, they can't be instantiated). They are only meant to exist at the
-/// type level.
+/// Note that the implementors of this trait cannot be instantiated; they only
+/// exist at the type level.
+///
+/// [`VERSION`]: Ip::VERSION
+/// [`Addr`]: Ip::Addr
 pub trait Ip:
     Sized
     + Clone
@@ -222,7 +235,9 @@ pub trait Ip:
     /// The default loopback address.
     ///
     /// When sending packets to a loopback interface, this address is used as
-    /// the source address. It is an address in the loopback subnet.
+    /// the source address. It is an address in the [`LOOPBACK_SUBNET`].
+    ///
+    /// [`LOOPBACK_SUBNET`]: Ip::LOOPBACK_SUBNET
     const LOOPBACK_ADDRESS: SpecifiedAddr<Self::Addr>;
 
     /// The subnet of loopback addresses.
@@ -264,7 +279,7 @@ pub trait Ip:
 
 /// IPv4.
 ///
-/// `Ipv4` implements `Ip` for IPv4.
+/// `Ipv4` implements [`Ip`] for IPv4.
 ///
 /// Note that this type has no value constructor. It is used purely at the type
 /// level. Attempting to construct it by calling `Default::default` will panic.
@@ -281,15 +296,29 @@ impl sealed::Sealed for Ipv4 {}
 
 impl Ip for Ipv4 {
     const VERSION: IpVersion = IpVersion::V4;
+    // TODO(https://fxbug.dev/83331): Document the standard in which this
+    // constant is defined.
     const UNSPECIFIED_ADDRESS: Ipv4Addr = Ipv4Addr::new([0, 0, 0, 0]);
-    // https://tools.ietf.org/html/rfc5735#section-3
+    /// The default IPv4 address used for loopback, defined in [RFC 5735 Section
+    /// 3].
+    ///
+    /// Note that while this address is the most commonly used address for
+    /// loopback traffic, any address in the [`LOOPBACK_SUBNET`] may be used.
+    ///
+    /// [RFC 5735 Section 3]: https://datatracker.ietf.org/doc/html/rfc5735#section-3
+    /// [`LOOPBACK_SUBNET`]: Ipv4::LOOPBACK_SUBNET
     const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv4Addr> =
         unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([127, 0, 0, 1])) };
+    /// The IPv4 loopback subnet, defined in [RFC 1122 Section 3.2.1.3].
+    ///
+    /// [RFC 1122 Section 3.2.1.3]: https://www.rfc-editor.org/rfc/rfc1122.html#section-3.2.1.3
     const LOOPBACK_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
+    // TODO(https://fxbug.dev/83331): Document the standard in which this
+    // constant is defined.
     const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 4 };
-    /// The subnet of link-local unicast addresses, outlined in [RFC 3927
+    /// The subnet of link-local unicast IPv4 addresses, outlined in [RFC 3927
     /// Section 2.1].
     ///
     /// [RFC 3927 Section 2.1]: https://tools.ietf.org/html/rfc3927#section-2.1
@@ -307,12 +336,16 @@ impl Ip for Ipv4 {
 }
 
 impl Ipv4 {
-    /// The global broadcast address.
+    /// The limited broadcast address.
     ///
-    /// This address is considered to be a broadcast address on all networks
-    /// regardless of subnet address. This is distinct from the subnet-specific
-    /// broadcast address (e.g., 192.168.255.255 on the subnet 192.168.0.0/16).
-    pub const GLOBAL_BROADCAST_ADDRESS: SpecifiedAddr<Ipv4Addr> =
+    /// The limited broadcast address is considered to be a broadcast address on
+    /// all networks regardless of subnet address. This is distinct from the
+    /// subnet-specific broadcast address (e.g., 192.168.255.255 on the subnet
+    /// 192.168.0.0/16). It is defined in the [IANA IPv4 Special-Purpose Address
+    /// Registry].
+    ///
+    /// [IANA IPv4 Special-Purpose Address Registry]: https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
+    pub const LIMITED_BROADCAST_ADDRESS: SpecifiedAddr<Ipv4Addr> =
         unsafe { SpecifiedAddr::new_unchecked(Ipv4Addr::new([255, 255, 255, 255])) };
 
     /// The Class E subnet.
@@ -320,9 +353,10 @@ impl Ipv4 {
     /// The Class E subnet is meant for experimental purposes, and should not be
     /// used on the general internet. [RFC 1812 Section 5.3.7] suggests that
     /// routers SHOULD discard packets with a source address in the Class E
-    /// subnet.
+    /// subnet. The Class E subnet is defined in [RFC 1112 Section 4].
     ///
     /// [RFC 1812 Section 5.3.7]: https://tools.ietf.org/html/rfc1812#section-5.3.7
+    /// [RFC 1112 Section 4]: https://datatracker.ietf.org/doc/html/rfc1112#section-4
     pub const CLASS_E_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([240, 0, 0, 0]), prefix: 4 };
 
@@ -333,14 +367,17 @@ impl Ipv4 {
     pub const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
 
-    /// The multicast address subscribed to by all routers on the local network.
+    /// The multicast address subscribed to by all routers on the local network,
+    /// defined in the [IPv4 Multicast Address Space Registry].
+    ///
+    /// [IPv4 Multicast Address Space Registry]: https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml
     pub const ALL_ROUTERS_MULTICAST_ADDRESS: MulticastAddr<Ipv4Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 2])) };
 }
 
 /// IPv6.
 ///
-/// `Ipv6` implements `Ip` for IPv6.
+/// `Ipv6` implements [`Ip`] for IPv6.
 ///
 /// Note that this type has no value constructor. It is used purely at the type
 /// level. Attempting to construct it by calling `Default::default` will panic.
@@ -357,18 +394,63 @@ impl sealed::Sealed for Ipv6 {}
 
 impl Ip for Ipv6 {
     const VERSION: IpVersion = IpVersion::V6;
+    /// The unspecified IPv6 address, defined in [RFC 4291 Section 2.5.2].
+    ///
+    /// Per RFC 4291:
+    ///
+    /// > The address 0:0:0:0:0:0:0:0 is called the unspecified address.  It
+    /// > must never be assigned to any node.  It indicates the absence of an
+    /// > address.  One example of its use is in the Source Address field of any
+    /// > IPv6 packets sent by an initializing host before it has learned its
+    /// > own address.
+    /// >
+    /// > The unspecified address must not be used as the destination address of
+    /// > IPv6 packets or in IPv6 Routing headers.  An IPv6 packet with a source
+    /// > address of unspecified must never be forwarded by an IPv6 router.
+    ///
+    /// [RFC 4291 Section 2.5.2]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.2
     const UNSPECIFIED_ADDRESS: Ipv6Addr = Ipv6Addr::new([0; 8]);
+    /// The loopback IPv6 address, defined in [RFC 4291 Section 2.5.3].
+    ///
+    /// Per RFC 4291:
+    ///
+    /// > The unicast address 0:0:0:0:0:0:0:1 is called the loopback address.
+    /// > It may be used by a node to send an IPv6 packet to itself.  It must
+    /// > not be assigned to any physical interface.  It is treated as having
+    /// > Link-Local scope, and may be thought of as the Link-Local unicast
+    /// > address of a virtual interface (typically called the "loopback
+    /// > interface") to an imaginary link that goes nowhere.
+    /// >
+    /// > The loopback address must not be used as the source address in IPv6
+    /// > packets that are sent outside of a single node.  An IPv6 packet with
+    /// > a destination address of loopback must never be sent outside of a
+    /// > single node and must never be forwarded by an IPv6 router.  A packet
+    /// > received on an interface with a destination address of loopback must
+    /// > be dropped.
+    ///
+    /// [RFC 4291 Section 2.5.3]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.5.3
     const LOOPBACK_ADDRESS: SpecifiedAddr<Ipv6Addr> =
         unsafe { SpecifiedAddr::new_unchecked(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1])) };
+    /// The subnet of loopback IPv6 addresses, defined in [RFC 4291 Section 2.4].
+    ///
+    /// Note that the IPv6 loopback subnet is a /128, meaning that it contains
+    /// only one address - the [`LOOPBACK_ADDRESS`].
+    ///
+    /// [RFC 4291 Section 2.4]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.4
+    /// [`LOOPBACK_ADDRESS`]: Ipv6::LOOPBACK_ADDRESS
     const LOOPBACK_SUBNET: Subnet<Ipv6Addr> =
         Subnet { network: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1]), prefix: 128 };
+    /// The subnet of multicast IPv6 addresses, defined in [RFC 4291 Section
+    /// 2.7].
+    ///
+    /// [RFC 4291 Section 2.7]: https://datatracker.ietf.org/doc/html/rfc4291#section-2.7
     const MULTICAST_SUBNET: Subnet<Ipv6Addr> =
         Subnet { network: Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 0]), prefix: 8 };
     /// The subnet of link-local unicast addresses, defined in [RFC 4291 Section
     /// 2.4].
     ///
-    /// Note that multicast addresses can also be link-local. However, there is no
-    /// single subnet of link-local multicast addresses. For more details on
+    /// Note that multicast addresses can also be link-local. However, there is
+    /// no single subnet of link-local multicast addresses. For more details on
     /// link-local multicast addresses, see [RFC 4291 Section 2.7].
     ///
     /// [RFC 4291 Section 2.4]: https://tools.ietf.org/html/rfc4291#section-2.4
@@ -376,9 +458,9 @@ impl Ip for Ipv6 {
     const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> =
         Subnet { network: Ipv6Addr::new([0xfe80, 0, 0, 0, 0, 0, 0, 0]), prefix: 10 };
     const NAME: &'static str = "IPv6";
-    /// The IPv6 minimum link MTU.
+    /// The IPv6 minimum link MTU, defined in [RFC 8200 Section 5].
     ///
-    /// Per [RFC 8200 Section 5]:
+    /// Per RFC 8200:
     ///
     /// > IPv6 requires that every link in the Internet have an MTU of 1280
     /// > octets or greater. This is known as the IPv6 minimum link MTU. On any
@@ -392,25 +474,24 @@ impl Ip for Ipv6 {
 }
 
 impl Ipv6 {
-    /// The default loopback address.
+    /// The loopback address represented as a [`UnicastAddr`].
     ///
-    /// When sending packets to a loopback interface, this address is used as
-    /// the source address. It is an address in the loopback subnet.
+    /// This is equivalent to [`LOOPBACK_ADDRESS`], except that it is a
+    /// [`UnicastAddr`] witness type.
     ///
-    /// Unlike [`Ip::LOOPBACK_ADDRESS`], `LOOPBACK_IPV6_ADDRESS` is a
-    /// [`UnicastAddr`].
+    /// [`LOOPBACK_ADDRESS`]: Ipv6::LOOPBACK_ADDRESS
     pub const LOOPBACK_IPV6_ADDRESS: UnicastAddr<Ipv6Addr> =
         unsafe { UnicastAddr::new_unchecked(Ipv6::LOOPBACK_ADDRESS.0) };
 
-    /// The IPv6 All Nodes multicast address in link-local scope, as defined in
+    /// The IPv6 All Nodes multicast address in link-local scope, defined in
     /// [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
     pub const ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 1])) };
 
-    /// The IPv6 All Routers multicast address in link-local scope, as defined
-    /// in [RFC 4291 Section 2.7.1].
+    /// The IPv6 All Routers multicast address in link-local scope, defined in
+    /// [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
     pub const ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS: MulticastAddr<Ipv6Addr> =
@@ -439,17 +520,20 @@ impl Ipv6 {
     /// except those that start with the binary value 000, Interface IDs are
     /// required to be 64 bits."
     ///
-    /// Note that, per [RFC 4862 Section 5.5.3], "a future revision of the
-    /// address architecture \[RFC4291\] and a future link-type-specific
-    /// document, which will still be consistent with each other, could
-    /// potentially allow for an interface identifier of length other than the
-    /// value defined in the current documents.  Thus, an implementation should
-    /// not assume a particular constant.  Rather, it should expect any lengths
-    /// of interface identifiers." In other words, this constant may be used to
-    /// generate addresses or subnet prefix lengths, but should *not* be used to
-    /// validate addresses or subnet prefix lengths generated by other software
-    /// or other machines, as it might be valid for other software or other
-    /// machines to use an interface identifier length different from this one.
+    /// Note that, per [RFC 4862 Section 5.5.3]:
+    ///
+    /// > a future revision of the address architecture \[RFC4291\] and a future
+    /// > link-type-specific document, which will still be consistent with each
+    /// > other, could potentially allow for an interface identifier of length
+    /// > other than the value defined in the current documents.  Thus, an
+    /// > implementation should not assume a particular constant.  Rather, it
+    /// > should expect any lengths of interface identifiers.
+    ///
+    /// In other words, this constant may be used to generate addresses or
+    /// subnet prefix lengths, but should *not* be used to validate addresses or
+    /// subnet prefix lengths generated by other software or other machines, as
+    /// it might be valid for other software or other machines to use an
+    /// interface identifier length different from this one.
     ///
     /// [RFC 4291 Section 2.5.1]: https://tools.ietf.org/html/rfc4291#section-2.5.1
     /// [RFC 4862 Section 5.5.3]: https://tools.ietf.org/html/rfc4862#section-5.5.3
@@ -485,7 +569,7 @@ pub trait IpAddress:
 
     /// The IP version type of this address.
     ///
-    /// `Ipv4` for `Ipv4Addr` and `Ipv6` for `Ipv6Addr`.
+    /// [`Ipv4`] for [`Ipv4Addr`] and [`Ipv6`] for [`Ipv6Addr`].
     type Version: Ip<Addr = Self>;
 
     /// Gets the underlying bytes of the address.
@@ -507,8 +591,10 @@ pub trait IpAddress:
 
     /// Is this a loopback address?
     ///
-    /// `is_loopback` returns `true` if this address is a member of the loopback
-    /// subnet.
+    /// `is_loopback` returns `true` if this address is a member of the
+    /// [`LOOPBACK_SUBNET`].
+    ///
+    /// [`LOOPBACK_SUBNET`]: Ip::LOOPBACK_SUBNET
     #[inline]
     fn is_loopback(&self) -> bool {
         Self::Version::LOOPBACK_SUBNET.contains(self)
@@ -519,11 +605,11 @@ pub trait IpAddress:
 
     /// Is this a unicast address contained in the given subnet?
     ///
-    /// `is_unicast_in_subnet` returns `true` if a given subnet contains this
+    /// `is_unicast_in_subnet` returns `true` if the given subnet contains this
     /// address and the address is none of:
     /// - a multicast address
-    /// - the IPv4 global broadcast address
-    /// - the IPv4 subnet-specific broadcast address for the given `subnet`
+    /// - the IPv4 limited broadcast address
+    /// - the IPv4 subnet-specific broadcast address for the given subnet
     /// - an IPv4 address whose host bits (those bits following the network
     ///   prefix) are all 0
     /// - the unspecified address
@@ -548,14 +634,14 @@ pub trait IpAddress:
     /// In earlier standards, an IPv4 address whose bits were all 0 after the
     /// network prefix (e.g., 192.168.0.0 in the subnet 192.168.0.0/16) were a
     /// form of "network-prefix-directed" broadcast addresses. Similarly,
-    /// 0.0.0.0 was considered a form of "limited broadcast address". These have
-    /// since been deprecated (in the case of 0.0.0.0, it is now considered the
-    /// "unspecified" address).
+    /// 0.0.0.0 was considered a form of "limited broadcast address" (equivalent
+    /// to 255.255.255.255). These have since been deprecated (in the case of
+    /// 0.0.0.0, it is now considered the "unspecified" address).
     ///
     /// As evidence that this deprecation is official, consider [RFC 1812
     /// Section 5.3.5]. In reference to these types of addresses, it states that
     /// "packets addressed to any of these addresses SHOULD be silently
-    /// discarded [by routers]". This not only deprecates them as broadcast
+    /// discarded \[by routers\]". This not only deprecates them as broadcast
     /// addresses, but also as unicast addresses (after all, unicast addresses
     /// are not particularly useful if packets destined to them are discarded by
     /// routers).
@@ -590,16 +676,17 @@ pub trait IpAddress:
 impl<A: IpAddress> SpecifiedAddress for A {
     /// Is this an address other than the unspecified address?
     ///
-    /// `is_specified` returns true if `self` is not equal to [`A::Version::UNSPECIFIED_ADDRESS`].
+    /// `is_specified` returns true if `self` is not equal to
+    /// [`A::Version::UNSPECIFIED_ADDRESS`].
     ///
-    /// [`A::Version::UNSPECIFIED_ADDRESS`]: crate::ip::Ip::UNSPECIFIED_ADDRESS
+    /// [`A::Version::UNSPECIFIED_ADDRESS`]: Ip::UNSPECIFIED_ADDRESS
     #[inline]
     fn is_specified(&self) -> bool {
         self != &A::Version::UNSPECIFIED_ADDRESS
     }
 }
 
-/// Map a method over an `IpAddr`, calling it after matching on the type of IP
+/// Maps a method over an `IpAddr`, calling it after matching on the type of IP
 /// address.
 macro_rules! map_ip_addr {
     ($val:expr, $method:ident) => {
@@ -627,7 +714,7 @@ impl<A: IpAddress> MulticastAddress for A {
     /// `is_multicast` returns true if `self` is in
     /// [`A::Version::MULTICAST_SUBNET`].
     ///
-    /// [`A::Version::MULTICAST_SUBNET`]: crate::ip::Ip::MULTICAST_SUBNET
+    /// [`A::Version::MULTICAST_SUBNET`]: Ip::MULTICAST_SUBNET
     #[inline]
     fn is_multicast(&self) -> bool {
         <A as IpAddress>::Version::MULTICAST_SUBNET.contains(self)
@@ -651,9 +738,6 @@ impl LinkLocalAddress for Ipv4Addr {
     /// `is_linklocal` returns true if `self` is in
     /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`] or
     /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`].
-    ///
-    /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`]: crate::ip::Ip::LINK_LOCAL_UNICAST_SUBNET
-    /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`]: crate::ip::Ipv4::LINK_LOCAL_MULTICAST_SUBNET
     #[inline]
     fn is_linklocal(&self) -> bool {
         Ipv4::LINK_LOCAL_UNICAST_SUBNET.contains(self)
@@ -670,16 +754,11 @@ impl LinkLocalAddress for Ipv6Addr {
     /// 4291 Section 2.5.3], the loopback address is considered to have
     /// link-local scope).
     ///
-    /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`]: crate::ip::Ip::LINK_LOCAL_UNICAST_SUBNET
-    /// [`Ipv6::LOOPBACK_ADDRESS`]: crate::ip::Ip::LOOPBACK_ADDRESS
     /// [RFC 4291 Section 2.5.3]: https://tools.ietf.org/html/rfc4291#section-2.5.3
     #[inline]
     fn is_linklocal(&self) -> bool {
-        const LINK_LOCAL_SCOPE: u8 = 0x02;
-        // TODO(joshlf): Stop doing this manually once we have a general-purpose
-        // mechanism for extracting the scope from a multicast address.
         Ipv6::LINK_LOCAL_UNICAST_SUBNET.contains(self)
-            || (self.is_multicast() && self.0[1] & 0x0F == LINK_LOCAL_SCOPE)
+            || (self.is_multicast() && self.scope() == Ipv6Scope::LinkLocal)
             || self == Ipv6::LOOPBACK_ADDRESS.deref()
     }
 }
@@ -796,7 +875,7 @@ impl Scope for Ipv6Scope {
         // zone identifiers on link-local multicast addresses (they are not
         // under the prefix fe80::/10). However, it seems clear that this is not
         // the interpretation that was intended. Link-local multicast addresses
-        // have the same need for a zone-identifier as link-local unicast
+        // have the same need for a zone identifier as link-local unicast
         // addresses, and indeed, real systems like Linux allow link-local
         // multicast addresses to be accompanied by zone identifiers.
         matches!(self, Ipv6Scope::LinkLocal)
@@ -804,46 +883,40 @@ impl Scope for Ipv6Scope {
 }
 
 impl Ipv6Scope {
-    /// The multicast scope ID of an interface-local address.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    /// The multicast scope ID of an interface-local address, defined in [RFC
+    /// 4291 Section 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_INTERFACE_LOCAL: u8 = 1;
 
-    /// The multicast scope ID of a link-local address.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    /// The multicast scope ID of a link-local address, defined in [RFC 4291
+    /// Section 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_LINK_LOCAL: u8 = 2;
 
-    /// The multicast scope ID of an admin-local address.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    /// The multicast scope ID of an admin-local address, defined in [RFC 4291
+    /// Section 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_ADMIN_LOCAL: u8 = 4;
 
-    /// The multicast scope ID of a (deprecated) site-local address.
+    /// The multicast scope ID of a (deprecated) site-local address, defined in
+    /// [RFC 4291 Section 2.7].
     ///
     /// Note that site-local addresses are deprecated.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_SITE_LOCAL: u8 = 5;
 
-    /// The multicast scope ID of an organization-local address.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    /// The multicast scope ID of an organization-local address, defined in [RFC
+    /// 4291 Section 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_ORG_LOCAL: u8 = 8;
 
-    /// The multicast scope ID of global address.
-    ///
-    /// Multicast scope IDs are defined in [RFC 4291 Section 2.7].
+    /// The multicast scope ID of global address, defined in [RFC 4291 Section
+    /// 2.7].
     ///
     /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
     pub const MULTICAST_SCOPE_ID_GLOBAL: u8 = 0xE;
@@ -952,10 +1025,10 @@ impl ScopeableAddress for IpAddr {
     }
 }
 
-/// The definition of each trait for `IpAddr` is equal to the definition of that
-/// trait for whichever of `Ipv4Addr` and `Ipv6Addr` is actually present in the
-/// enum. Thus, we can convert between `$witness<IpvXAddr>`, `$witness<IpAddr>`,
-/// and `IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>` arbitrarily.
+// The definition of each trait for `IpAddr` is equal to the definition of that
+// trait for whichever of `Ipv4Addr` and `Ipv6Addr` is actually present in the
+// enum. Thus, we can convert between `$witness<IpvXAddr>`, `$witness<IpAddr>`,
+// and `IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>>` arbitrarily.
 
 /// Provides various useful `From` impls for an IP address witness type.
 ///
@@ -1034,6 +1107,27 @@ impl_from_witness!(UnicastAddr, Ipv6Addr, UnicastAddr::new_unchecked);
 impl_from_witness!(LinkLocalUnicastAddr, Ipv6Addr, |addr| LinkLocalAddr(UnicastAddr(addr)));
 
 /// An IPv4 address.
+///
+/// # Layout
+///
+/// `Ipv4Addr` has the same layout as `[u8; 4]`, which is the layout that most
+/// protocols use to represent an IPv4 address in their packet formats. This can
+/// be useful when parsing an IPv4 address from a packet. For example:
+///
+/// ```rust
+/// # use net_types::ip::Ipv4Addr;
+/// /// An ICMPv4 Redirect Message header.
+/// ///
+/// /// `Icmpv4RedirectHeader` has the same layout as the header of an ICMPv4
+/// /// Redirect Message.
+/// #[repr(C)]
+/// struct Icmpv4RedirectHeader {
+///     typ: u8,
+///     code: u8,
+///     checksum: [u8; 2],
+///     gateway: Ipv4Addr,
+/// }
+/// ```
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Ipv4Addr([u8; 4]);
@@ -1051,13 +1145,13 @@ impl Ipv4Addr {
         self.0
     }
 
-    /// Is this the global broadcast address?
+    /// Is this the limited broadcast address?
     ///
-    /// `is_global_broadcast` is a shorthand for comparing against
-    /// [`Ipv4::GLOBAL_BROADCAST_ADDRESS`].
+    /// `is_limited_broadcast` is a shorthand for comparing against
+    /// [`Ipv4::LIMITED_BROADCAST_ADDRESS`].
     #[inline]
-    pub fn is_global_broadcast(self) -> bool {
-        self == Ipv4::GLOBAL_BROADCAST_ADDRESS.get()
+    pub fn is_limited_broadcast(self) -> bool {
+        self == Ipv4::LIMITED_BROADCAST_ADDRESS.get()
     }
 
     /// Is this a Class E address?
@@ -1084,10 +1178,12 @@ impl Ipv4Addr {
     /// +--------------------------------------+----+---------------------+
     /// ```
     ///
-    /// Per RFC 4291, "The 'IPv4-Compatible IPv6 address' is now deprecated
-    /// because the current IPv6 transition mechanisms no longer use these
-    /// addresses. New or updated implementations are not required to support
-    /// this address type."
+    /// Per RFC 4291:
+    ///
+    /// > The 'IPv4-Compatible IPv6 address' is now deprecated because the
+    /// > current IPv6 transition mechanisms no longer use these addresses. New
+    /// > or updated implementations are not required to support this address
+    /// > type.
     ///
     /// The more modern embedding format is IPv4-mapped IPv6 addressing - see
     /// [`to_ipv6_mapped`].
@@ -1163,7 +1259,7 @@ impl IpAddress for Ipv4Addr {
     #[inline]
     fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool {
         !self.is_multicast()
-            && !self.is_global_broadcast()
+            && !self.is_limited_broadcast()
             // This clause implements the rules that (the subnet broadcast is
             // not unicast AND the address with an all-zeroes host part is not
             // unicast) UNLESS the prefix length is 31 or 32.
@@ -1218,14 +1314,48 @@ impl Debug for Ipv4Addr {
 }
 
 /// An IPv6 address.
+///
+/// # Layout
+///
+/// `Ipv6Addr` has the same layout as `[u8; 16]`, which is the layout that most
+/// protocols use to represent an IPv6 address in their packet formats. This can
+/// be useful when parsing an IPv6 address from a packet. For example:
+///
+/// ```rust
+/// # use net_types::ip::Ipv6Addr;
+/// /// The fixed part of an IPv6 packet header.
+/// ///
+/// /// `FixedHeader` has the same layout as the fixed part of an IPv6 packet
+/// /// header.
+/// #[repr(C)]
+/// pub struct FixedHeader {
+///     version_tc_flowlabel: [u8; 4],
+///     payload_len: [u8; 2],
+///     next_hdr: u8,
+///     hop_limit: u8,
+///     src_ip: Ipv6Addr,
+///     dst_ip: Ipv6Addr,
+/// }
+/// ```
+///
+/// # `Display`
+///
+/// The [`Display`] impl for `Ipv6Addr` formats according to [RFC 5952].
+///
+/// Where RFC 5952 leaves decisions up to the implementation, `Ipv6Addr` matches
+/// the behavior of [`std::net::Ipv6Addr`] - all IPv6 addresses are formatted
+/// the same by `Ipv6Addr` as by `<std::net::Ipv6Addr as Display>::fmt`.
+///
+/// [RFC 5952]: https://datatracker.ietf.org/doc/html/rfc5952
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Ipv6Addr([u8; 16]);
 
 impl Ipv6Addr {
-    /// Creates a new IPv6 address.
+    /// Creates a new IPv6 address from 16-bit segments.
     #[inline]
     pub const fn new(segments: [u16; 8]) -> Ipv6Addr {
+        #![allow(clippy::many_single_char_names)]
         let [a, b, c, d, e, f, g, h] = segments;
         let [aa, ab] = a.to_be_bytes();
         let [ba, bb] = b.to_be_bytes();
@@ -1238,7 +1368,7 @@ impl Ipv6Addr {
         Ipv6Addr([aa, ab, ba, bb, ca, cb, da, db, ea, eb, fa, fb, ga, gb, ha, hb])
     }
 
-    /// Creates a new IPv6 address from raw bytes.
+    /// Creates a new IPv6 address from bytes.
     #[inline]
     pub const fn from_bytes(bytes: [u8; 16]) -> Ipv6Addr {
         Ipv6Addr(bytes)
@@ -1253,13 +1383,14 @@ impl Ipv6Addr {
     /// Gets the 16-bit segments of the IPv6 address.
     #[inline]
     pub fn segments(&self) -> [u16; 8] {
+        #![allow(clippy::many_single_char_names)]
         let [a, b, c, d, e, f, g, h]: [zerocopy::U16<zerocopy::NetworkEndian>; 8] =
             zerocopy::transmute!(self.ipv6_bytes());
         [a.into(), b.into(), c.into(), d.into(), e.into(), f.into(), g.into(), h.into()]
     }
 
     /// Converts this `Ipv6Addr` to the IPv6 Solicited-Node Address, used in
-    /// Neighbor Discovery. Defined in [RFC 4291 Section 2.7.1].
+    /// Neighbor Discovery, defined in [RFC 4291 Section 2.7.1].
     ///
     /// [RFC 4291 Section 2.7.1]: https://tools.ietf.org/html/rfc4291#section-2.7.1
     #[inline]
@@ -1279,10 +1410,12 @@ impl Ipv6Addr {
         }
     }
 
-    /// Checks whether `self` is a valid unicast address.
+    /// Is this a valid unicast address?
     ///
     /// A valid unicast address is any unicast address that can be bound to an
     /// interface (not the unspecified or loopback addresses).
+    /// `addr.is_valid_unicast()` is equivalent to `!(addr.is_loopback() ||
+    /// !addr.is_specified() || addr.is_multicast())`.
     #[inline]
     pub fn is_valid_unicast(&self) -> bool {
         !(self.is_loopback() || !self.is_specified() || self.is_multicast())
@@ -1299,9 +1432,10 @@ impl Ipv6Addr {
         Ipv6::SITE_LOCAL_UNICAST_SUBNET.contains(self)
     }
 
-    /// Is this address a unicast link-local address?
+    /// Is this a unicast link-local address?
     ///
-    /// Shorthand for `self.is_unicast_in_subnet(Ipv6::LINK_LOCAL_UNICAST_SUBNET)`.
+    /// `addr.is_unicast_linklocal()` is equivalent to
+    /// `addr.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)`.
     #[inline]
     pub fn is_unicast_linklocal(&self) -> bool {
         self.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)
@@ -1324,10 +1458,12 @@ impl Ipv6Addr {
     /// `to_ipv4_compatible` checks to see if `self` is an IPv4-compatible
     /// IPv6 address. If it is, the IPv4 address is extracted and returned.
     ///
-    /// Per RFC 4291, "The 'IPv4-Compatible IPv6 address' is now deprecated
-    /// because the current IPv6 transition mechanisms no longer use these
-    /// addresses. New or updated implementations are not required to support
-    /// this address type."
+    /// Per RFC 4291:
+    ///
+    /// > The 'IPv4-Compatible IPv6 address' is now deprecated because the
+    /// > current IPv6 transition mechanisms no longer use these addresses. New
+    /// > or updated implementations are not required to support this address
+    /// > type.
     ///
     /// The more modern embedding format is IPv4-mapped IPv6 addressing - see
     /// [`to_ipv4_mapped`].
@@ -1425,6 +1561,10 @@ impl IpAddress for Ipv6Addr {
 }
 
 impl UnicastAddress for Ipv6Addr {
+    /// Is this a unicast address?
+    ///
+    /// `addr.is_unicast()` is equivalent to `!addr.is_multicast() &&
+    /// addr.is_specified()`.
     #[inline]
     fn is_unicast(&self) -> bool {
         !self.is_multicast() && self.is_specified()
@@ -1434,28 +1574,33 @@ impl UnicastAddress for Ipv6Addr {
 impl From<[u8; 16]> for Ipv6Addr {
     #[inline]
     fn from(bytes: [u8; 16]) -> Ipv6Addr {
-        Ipv6Addr(bytes)
+        Ipv6Addr::from_bytes(bytes)
     }
 }
 
 #[cfg(feature = "std")]
 impl From<net::Ipv6Addr> for Ipv6Addr {
     #[inline]
-    fn from(ip: net::Ipv6Addr) -> Ipv6Addr {
-        Ipv6Addr(ip.octets())
+    fn from(addr: net::Ipv6Addr) -> Ipv6Addr {
+        Ipv6Addr::from_bytes(addr.octets())
     }
 }
 
 #[cfg(feature = "std")]
 impl From<Ipv6Addr> for net::Ipv6Addr {
     #[inline]
-    fn from(ip: Ipv6Addr) -> net::Ipv6Addr {
-        net::Ipv6Addr::from(ip.0)
+    fn from(addr: Ipv6Addr) -> net::Ipv6Addr {
+        net::Ipv6Addr::from(addr.ipv6_bytes())
     }
 }
 
 impl Display for Ipv6Addr {
     /// Formats an IPv6 address according to [RFC 5952].
+    ///
+    /// Where RFC 5952 leaves decisions up to the implementation, this function
+    /// matches the behavior of [`std::net::Ipv6Addr`] - all IPv6 addresses are
+    /// formatted the same by this function as by `<std::net::Ipv6Addr as
+    /// Display>::fmt`.
     ///
     /// [RFC 5952]: https://datatracker.ietf.org/doc/html/rfc5952
     #[inline]
@@ -1627,8 +1772,7 @@ impl crate::sealed::Sealed for Ipv6SourceAddr {}
 impl Ipv6SourceAddr {
     /// Constructs a new `Ipv6SourceAddr`.
     ///
-    /// `new` constructs a new `Ipv6SourceAddr`, returning `None` if `addr` is
-    /// neither unicast nor unspecified.
+    /// Returns `None` if `addr` is neither unicast nor unspecified.
     #[inline]
     pub fn new(addr: Ipv6Addr) -> Option<Ipv6SourceAddr> {
         if let Some(addr) = UnicastAddr::new(addr) {
@@ -1736,9 +1880,7 @@ impl Display for Ipv6SourceAddr {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Ipv6SourceAddr::Unicast(addr) => write!(f, "{}", addr),
-            // TODO(fxbug.dev/68672): Once we implement canonicalization without
-            // the "std" feature, replace this with `write!(f, "::")`
-            Ipv6SourceAddr::Unspecified => write!(f, "{}", Ipv6::UNSPECIFIED_ADDRESS),
+            Ipv6SourceAddr::Unspecified => write!(f, "::"),
         }
     }
 }
@@ -1767,8 +1909,7 @@ pub enum UnicastOrMulticastIpv6Addr {
 impl UnicastOrMulticastIpv6Addr {
     /// Constructs a new `UnicastOrMulticastIpv6Addr`.
     ///
-    /// `new` constructs a new `UnicastOrMulticastIpv6Addr`, returning `None` if
-    /// `addr` is the unspecified address.
+    /// Returns `None` if `addr` is the unspecified address.
     pub fn new(addr: Ipv6Addr) -> Option<UnicastOrMulticastIpv6Addr> {
         SpecifiedAddr::new(addr).map(UnicastOrMulticastIpv6Addr::from_specified)
     }
@@ -1912,10 +2053,6 @@ pub struct Subnet<A> {
     prefix: u8,
 }
 
-// TODO(joshlf): Currently, we need a separate new_unchecked because trait
-// bounds other than Sized are not supported in const fns. Once that
-// restriction is lifted, we can make new a const fn.
-
 impl<A> Subnet<A> {
     /// Creates a new subnet without enforcing correctness.
     ///
@@ -1954,8 +2091,7 @@ impl<A: IpAddress> Subnet<A> {
 
     /// Gets the network address component of this subnet.
     ///
-    /// `network` returns the network address component of this subnet. Any bits
-    /// beyond the prefix will be zero.
+    /// Any bits beyond the prefix will be zero.
     #[inline]
     pub fn network(&self) -> A {
         self.network
@@ -1969,12 +2105,12 @@ impl<A: IpAddress> Subnet<A> {
 
     /// Tests whether an address is in this subnet.
     ///
-    /// Tests whether `address` is in this subnet by testing whether the prefix
+    /// Tests whether `addr` is in this subnet by testing whether the prefix
     /// bits match the prefix bits of the subnet's network address. This is
-    /// equivalent to `subnet.network() == address.mask(subnet.prefix())`.
+    /// equivalent to `sub.network() == addr.mask(sub.prefix())`.
     #[inline]
-    pub fn contains(&self, address: &A) -> bool {
-        self.network == address.mask(self.prefix)
+    pub fn contains(&self, addr: &A) -> bool {
+        self.network == addr.mask(self.prefix)
     }
 }
 
@@ -2016,7 +2152,7 @@ impl<A: IpAddress> Debug for Subnet<A> {
 ///
 /// `SubnetEither` is an enum of [`Subnet<Ipv4Addr>`] and `Subnet<Ipv6Addr>`.
 ///
-/// [`Subnet<Ipv4Addr>`]: crate::ip::Subnet
+/// [`Subnet<Ipv4Addr>`]: Subnet
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum SubnetEither {
@@ -2071,7 +2207,7 @@ pub enum AddrSubnetError {
 // TODO(joshlf): Is the unicast restriction always necessary, or will some users
 // want the AddrSubnet functionality without that restriction?
 
-/// An address and that address' subnet.
+/// An address and that address's subnet.
 ///
 /// An `AddrSubnet` is a pair of an address and a subnet which maintains the
 /// invariant that the address is guaranteed to be a unicast address in the
@@ -2131,7 +2267,7 @@ impl<S: IpAddress, A: Witness<S> + Copy> AddrSubnet<S, A> {
         self.addr
     }
 
-    /// Gets the address and subnet individually.
+    /// Gets the address and subnet.
     #[inline]
     pub fn addr_subnet(self) -> (A, Subnet<S>) {
         (self.addr, self.subnet)
@@ -2169,7 +2305,7 @@ impl<A: Witness<Ipv6Addr> + Copy> AddrSubnet<Ipv6Addr, A> {
     }
 }
 
-/// A type which is a witness to some property about an `IpAddress`.
+/// A type which is a witness to some property about an [`IpAddress`].
 ///
 /// `IpAddrWitness` extends [`Witness`] of [`IpAddr`] by adding associated types
 /// for the IPv4- and IPv6-specific versions of the same witness type. For
@@ -2222,12 +2358,12 @@ impl_ip_addr_witness!(SpecifiedAddr);
 impl_ip_addr_witness!(MulticastAddr);
 impl_ip_addr_witness!(LinkLocalAddr);
 
-/// An address and that address' subnet, either IPv4 or IPv6.
+/// An address and that address's subnet, either IPv4 or IPv6.
 ///
 /// `AddrSubnetEither` is an enum of [`AddrSubnet<Ipv4Addr>`] and
 /// `AddrSubnet<Ipv6Addr>`.
 ///
-/// [`AddrSubnet<Ipv4Addr>`]: crate::ip::AddrSubnet
+/// [`AddrSubnet<Ipv4Addr>`]: AddrSubnet
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum AddrSubnetEither<A: IpAddrWitness = SpecifiedAddr<IpAddr>> {
@@ -2422,9 +2558,9 @@ mod tests {
                 129,
             ) == Err(AddrSubnetError::PrefixTooLong)
         );
-        // Global broadcast
+        // Limited broadcast
         assert!(
-            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.get(), 16)
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::LIMITED_BROADCAST_ADDRESS.get(), 16)
                 == Err(AddrSubnetError::NotUnicastInSubnet)
         );
         // Subnet broadcast
@@ -2488,8 +2624,8 @@ mod tests {
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 3, 0]), 31).unwrap()));
         assert!(Ipv4Addr::new([1, 2, 3, 0])
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 3, 0]), 32).unwrap()));
-        // Global broadcast (IPv4 only)
-        assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
+        // Limited broadcast (IPv4 only)
+        assert!(!Ipv4::LIMITED_BROADCAST_ADDRESS
             .get()
             .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([128, 0, 0, 0]), 1).unwrap()));
         // Subnet broadcast (IPv4 only)
@@ -2582,7 +2718,7 @@ mod tests {
         // using `new_unchecked` constructors are valid for their witness types.
         assert!(Ipv4::LOOPBACK_ADDRESS.0.is_specified());
         assert!(Ipv6::LOOPBACK_ADDRESS.0.is_specified());
-        assert!(Ipv4::GLOBAL_BROADCAST_ADDRESS.0.is_specified());
+        assert!(Ipv4::LIMITED_BROADCAST_ADDRESS.0.is_specified());
         assert!(Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.0.is_multicast());
         assert!(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());
         assert!(Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.0.is_multicast());

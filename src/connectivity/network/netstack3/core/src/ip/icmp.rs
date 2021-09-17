@@ -1863,10 +1863,10 @@ pub(crate) fn should_send_icmpv4_error(
     // encapsulated in?
     info.fragment_type == Ipv4FragmentType::InitialFragment
         && !(dst_ip.is_multicast()
-            || dst_ip.is_global_broadcast()
+            || dst_ip.is_limited_broadcast()
             || frame_dst.is_broadcast()
             || src_ip.is_loopback()
-            || src_ip.is_global_broadcast()
+            || src_ip.is_limited_broadcast()
             || src_ip.is_multicast()
             || src_ip.is_class_e())
 }
@@ -2616,13 +2616,13 @@ mod tests {
         assert!(!should_send_icmpv4_error(
             frame_dst,
             src_ip,
-            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            Ipv4::LIMITED_BROADCAST_ADDRESS,
             is_initial_fragment
         ));
         assert!(!should_send_icmpv4_error(
             frame_dst,
             src_ip,
-            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            Ipv4::LIMITED_BROADCAST_ADDRESS,
             is_not_initial_fragment
         ));
 
@@ -2663,16 +2663,16 @@ mod tests {
             is_not_initial_fragment
         ));
 
-        // Should not send because from global broadcast addr
+        // Should not send because from limited broadcast addr
         assert!(!should_send_icmpv4_error(
             frame_dst,
-            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            Ipv4::LIMITED_BROADCAST_ADDRESS,
             dst_ip,
             is_initial_fragment
         ));
         assert!(!should_send_icmpv4_error(
             frame_dst,
-            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            Ipv4::LIMITED_BROADCAST_ADDRESS,
             dst_ip,
             is_not_initial_fragment
         ));

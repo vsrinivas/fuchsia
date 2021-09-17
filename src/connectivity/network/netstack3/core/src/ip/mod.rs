@@ -1422,7 +1422,7 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
 // deliver returns true if:
 // - dst_ip is equal to the address set on the device
 // - dst_ip is equal to the broadcast address of the subnet set on the device
-// - dst_ip is equal to the global broadcast address
+// - dst_ip is equal to the limited broadcast address
 // - dst_ip is equal to a mutlicast group that `device` joined
 fn deliver_ipv4<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
@@ -1440,7 +1440,7 @@ fn deliver_ipv4<D: EventDispatcher>(
         .by_ref()
         .map(AddrSubnet::addr_subnet)
         .any(|(addr, subnet)| dst_ip == addr.get() || dst_ip == subnet.broadcast())
-        || dst_ip.is_global_broadcast()
+        || dst_ip.is_limited_broadcast()
         || MulticastAddr::new(dst_ip)
             .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
 }

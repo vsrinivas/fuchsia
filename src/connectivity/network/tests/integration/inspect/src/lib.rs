@@ -535,7 +535,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
 
     const SRC_IP: net_types::ip::Ipv4Addr = net_types::ip::Ipv4::UNSPECIFIED_ADDRESS;
     const DST_IP: net_types::SpecifiedAddr<net_types::ip::Ipv4Addr> =
-        net_types::ip::Ipv4::GLOBAL_BROADCAST_ADDRESS;
+        net_types::ip::Ipv4::LIMITED_BROADCAST_ADDRESS;
 
     for PacketAttributes { ip_proto, port } in &inbound_packets {
         let ser = packet::Buf::new(&mut [], ..)

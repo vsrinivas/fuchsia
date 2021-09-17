@@ -10,8 +10,8 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::ip::{AddrSubnet, IpAddr, IpAddress, Ipv6, Ipv6Addr};
 use crate::{
-    BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, UnicastAddress,
-    Witness,
+    BroadcastAddr, BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress,
+    UnicastAddr, UnicastAddress, Witness,
 };
 
 /// A media access control (MAC) address.
@@ -19,7 +19,26 @@ use crate::{
 /// MAC addresses are used to identify devices in the Ethernet protocol.
 ///
 /// MAC addresses can be derived from multicast IP addresses; see the `From`
-/// implementation for more details..
+/// implementation for more details.
+///
+/// # Layout
+///
+/// `Mac` has the same layout as `[u8; 6]`, which is the layout that most
+/// protocols use to represent a MAC address in their packet formats. This can
+/// be useful when parsing a MAC address from a packet. For example:
+///
+/// ```rust
+/// # use net_types::ethernet::Mac;
+/// /// The header of an Ethernet frame.
+/// ///
+/// /// `EthernetHeader` has the same layout as the header of an Ethernet frame.
+/// #[repr(C)]
+/// struct EthernetHeader {
+///     dst: Mac,
+///     src: Mac,
+///     ethertype: [u8; 2],
+/// }
+/// ```
 #[derive(Copy, Clone, Eq, PartialEq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Mac([u8; 6]);
@@ -182,13 +201,22 @@ impl BroadcastAddress for Mac {
 }
 
 impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
-    /// Convert a multicast IP address to a MAC address.
+    /// Converts a multicast IP address to a MAC address.
     ///
-    /// Calling this method is equivalent to calling the `get` method on the return of
-    /// [`MulticastAddr::<Mac>::from`] for `addr`.
+    /// This method is equivalent to `MulticastAddr::<Mac>::from(addr).get()`.
     #[inline]
     fn from(addr: &'a MulticastAddr<A>) -> Mac {
         MulticastAddr::<Mac>::from(addr).get()
+    }
+}
+
+impl<A: IpAddress> From<MulticastAddr<A>> for Mac {
+    /// Converts a multicast IP address to a MAC address.
+    ///
+    /// This method is equivalent to `(&addr).into()`.
+    #[inline]
+    fn from(addr: MulticastAddr<A>) -> Mac {
+        (&addr).into()
     }
 }
 
@@ -206,10 +234,10 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
     /// [Section 2.3.1]: https://tools.ietf.org/html/rfc7042#section-2.3.1
     #[inline]
     fn from(addr: &'a MulticastAddr<A>) -> MulticastAddr<Mac> {
-        // We know the call to `unwrap` will not panic becase we are generating a multicast MAC
-        // as defined in RFC 7042 section 2.1.1 and section 2.3.1 for IPv4 and IPv6 addresses,
-        // respectively.
-        MulticastAddr::new(Mac::new(match addr.clone().get().into() {
+        // We know the call to `unwrap` will not panic because we are generating
+        // a multicast MAC as defined in RFC 7042 section 2.1.1 and section
+        // 2.3.1 for IPv4 and IPv6 addresses, respectively.
+        MulticastAddr::new(Mac::new(match (*addr).get().into() {
             IpAddr::V4(addr) => {
                 let ip_bytes = addr.ipv4_bytes();
                 let mut mac_bytes = [0; 6];
@@ -237,11 +265,25 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
     }
 }
 
-impl<W: Witness<Mac>> From<W> for Mac {
-    fn from(witness: W) -> Mac {
-        witness.get()
+impl<A: IpAddress> From<MulticastAddr<A>> for MulticastAddr<Mac> {
+    fn from(addr: MulticastAddr<A>) -> MulticastAddr<Mac> {
+        (&addr).into()
     }
 }
+
+macro_rules! impl_from_witness {
+    ($witness:ident) => {
+        impl From<$witness<Mac>> for Mac {
+            fn from(addr: $witness<Mac>) -> Mac {
+                addr.get()
+            }
+        }
+    };
+}
+
+impl_from_witness!(UnicastAddr);
+impl_from_witness!(MulticastAddr);
+impl_from_witness!(BroadcastAddr);
 
 impl Display for Mac {
     #[inline]
