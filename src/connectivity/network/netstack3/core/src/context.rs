@@ -42,7 +42,7 @@ use core::time::Duration;
 use packet::{BufferMut, Serializer};
 use rand::{CryptoRng, RngCore};
 
-use crate::{Ctx, EventDispatcher, Instant};
+use crate::{Ctx, EventDispatcher, Instant, TimerId};
 
 /// A context that provides access to a monotonic clock.
 pub trait InstantContext {
@@ -99,7 +99,7 @@ pub(crate) fn new_cached_instant_context<I: InstantContext + ?Sized>(
 }
 
 /// A context that supports scheduling timers.
-pub(crate) trait TimerContext<Id>: InstantContext {
+pub trait TimerContext<Id>: InstantContext {
     /// Schedule a timer to fire after some duration.
     ///
     /// `schedule_timer` schedules the given timer to be fired after `duration`
@@ -142,6 +142,28 @@ pub(crate) trait TimerContext<Id>: InstantContext {
     /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
     /// timer with the given ID exists, `scheduled_instant` will return `None`.
     fn scheduled_instant(&self, id: Id) -> Option<Self::Instant>;
+}
+
+impl<D: EventDispatcher> TimerContext<TimerId> for Ctx<D> {
+    fn schedule_timer_instant(
+        &mut self,
+        time: Self::Instant,
+        id: TimerId,
+    ) -> Option<Self::Instant> {
+        self.dispatcher_mut().schedule_timer_instant(time, id)
+    }
+
+    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
+        self.dispatcher_mut().cancel_timer(id)
+    }
+
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.dispatcher_mut().cancel_timers_with(f)
+    }
+
+    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
+        self.dispatcher().scheduled_instant(id)
+    }
 }
 
 /// A handler for timer firing events.

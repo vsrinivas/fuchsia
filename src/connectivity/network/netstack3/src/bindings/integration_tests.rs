@@ -24,11 +24,11 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
-    context::{InstantContext, RngContext},
+    context::{InstantContext, RngContext, TimerContext},
     error::NoRouteError,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
-    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher,
-    IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, IpLayerEventDispatcher,
+    StackStateBuilder, TimerId, TransportLayerEventDispatcher,
 };
 use packet::{Buf, BufferMut, Serializer};
 
@@ -165,21 +165,21 @@ impl RngContext for TestDispatcher {
     }
 }
 
-impl EventDispatcher for TestDispatcher {
-    fn schedule_timeout_instant(
+impl TimerContext<TimerId> for TestDispatcher {
+    fn schedule_timer_instant(
         &mut self,
         time: Self::Instant,
         id: TimerId,
     ) -> Option<Self::Instant> {
-        self.disp.schedule_timeout_instant(time, id)
+        self.disp.schedule_timer_instant(time, id)
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.disp.cancel_timeout(id)
+    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
+        self.disp.cancel_timer(id)
     }
 
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.disp.cancel_timeouts_with(f)
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.disp.cancel_timers_with(f)
     }
 
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {

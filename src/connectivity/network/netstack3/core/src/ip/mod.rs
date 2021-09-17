@@ -519,16 +519,16 @@ pub trait IpLayerEventDispatcher<B: BufferMut>:
 /// The identifier for timer events in the IP layer.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum IpLayerTimerId {
-    /// A timer event for IPv4 packet reassembly timeouts.
+    /// A timer event for IPv4 packet reassembly timers.
     ReassemblyTimeoutv4(FragmentCacheKey<Ipv4Addr>),
-    /// A timer event for IPv6 packet reassembly timeouts.
+    /// A timer event for IPv6 packet reassembly timers.
     ReassemblyTimeoutv6(FragmentCacheKey<Ipv6Addr>),
     PmtuTimeout(IpVersion),
 }
 
 impl IpLayerTimerId {
     #[specialize_ip_address]
-    fn new_reassembly_timeout_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
+    fn new_reassembly_timer_id<A: IpAddress>(key: FragmentCacheKey<A>) -> TimerId {
         #[ipv4addr]
         let id = IpLayerTimerId::ReassemblyTimeoutv4(key);
         #[ipv6addr]
@@ -537,13 +537,13 @@ impl IpLayerTimerId {
         TimerId(TimerIdInner::IpLayer(id))
     }
 
-    fn new_pmtu_timeout_timer_id<I: Ip>() -> TimerId {
+    fn new_pmtu_timer_id<I: Ip>() -> TimerId {
         TimerId(TimerIdInner::IpLayer(IpLayerTimerId::PmtuTimeout(I::VERSION)))
     }
 }
 
 /// Handle a timer event firing in the IP layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTimerId) {
     match id {
         IpLayerTimerId::ReassemblyTimeoutv4(key) => ctx.handle_timer(key),
         IpLayerTimerId::ReassemblyTimeoutv6(key) => ctx.handle_timer(key),
@@ -563,11 +563,11 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
         key: FragmentCacheKey<A>,
     ) -> Option<Self::Instant> {
         self.dispatcher_mut()
-            .schedule_timeout_instant(time, IpLayerTimerId::new_reassembly_timeout_timer_id(key))
+            .schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     fn cancel_timer(&mut self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
+        self.dispatcher_mut().cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable,
@@ -583,7 +583,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
             ctx: &mut Ctx<D>,
             mut f: F,
         ) {
-            ctx.dispatcher_mut().cancel_timeouts_with(|id| match id {
+            ctx.dispatcher_mut().cancel_timers_with(|id| match id {
                 #[ipv4addr]
                 TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv4(key))) => f(key),
                 #[ipv6addr]
@@ -596,7 +596,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
     }
 
     fn scheduled_instant(&self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_reassembly_timeout_timer_id(key))
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 }
 
@@ -606,21 +606,20 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Ctx<D> {
         time: Self::Instant,
         _id: PmtuTimerId<I>,
     ) -> Option<Self::Instant> {
-        self.dispatcher_mut()
-            .schedule_timeout_instant(time, IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
+        self.dispatcher_mut().schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timer(&mut self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timeout(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
+        self.dispatcher_mut().cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, _f: F) {
         self.dispatcher_mut()
-            .cancel_timeouts_with(|id| id == &IpLayerTimerId::new_pmtu_timeout_timer_id::<I>());
+            .cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
     }
 
     fn scheduled_instant(&self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_pmtu_timeout_timer_id::<I>())
+        self.dispatcher().scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 }
 
@@ -2623,14 +2622,14 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly_timeout<I: Ip + TestIpExt>() {
+    fn test_ip_packet_reassembly_timer<I: Ip + TestIpExt>() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
 
         // Test to make sure that packets must arrive within the reassembly
-        // timeout.
+        // timer.
 
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
@@ -2641,7 +2640,7 @@ mod tests {
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
 
-        // Trigger the timer (simulate a timeout for the fragmented packet)
+        // Trigger the timer (simulate a timer for the fragmented packet)
         let key = FragmentCacheKey::<_>::new(
             I::DUMMY_CONFIG.remote_ip.get(),
             I::DUMMY_CONFIG.local_ip.get(),
@@ -2649,7 +2648,7 @@ mod tests {
         );
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
-            IpLayerTimerId::new_reassembly_timeout_timer_id(key)
+            IpLayerTimerId::new_reassembly_timer_id(key)
         );
 
         // Make sure no other times exist..
@@ -2660,7 +2659,7 @@ mod tests {
 
         // Make sure no packets got dispatched yet since even though we
         // technically received all the fragments, this fragment (#2) arrived
-        // too late and the reassembly timeout was triggered, causing the prior
+        // too late and the reassembly timer was triggered, causing the prior
         // fragment data to be discarded.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 0);
     }

@@ -237,7 +237,7 @@ impl_timer_context!(
 );
 
 /// Handle a timer event firing in the device layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Ctx<D>, id: DeviceLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: DeviceLayerTimerId) {
     match id.0 {
         DeviceLayerTimerIdInner::Ethernet(id) => ethernet::handle_timer(ctx, id),
     }

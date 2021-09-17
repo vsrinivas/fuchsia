@@ -25,14 +25,14 @@ use packet_formats::ip::IpProto;
 use rand::{self, CryptoRng, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
-use crate::context::{InstantContext, RngContext};
+use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::ip::IpLayerEventDispatcher;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{handle_timeout, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
+use crate::{handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
 /// Utilities to allow running benchmarks as tests.
 ///
@@ -207,7 +207,7 @@ pub(crate) fn trigger_next_timer(ctx: &mut Ctx<DummyEventDispatcher>) -> Option<
     match ctx.dispatcher.timer_events.pop() {
         Some(InstantAndData(t, id)) => {
             ctx.dispatcher.current_time = t;
-            handle_timeout(ctx, id);
+            handle_timer(ctx, id);
             Some(id)
         }
         None => None,
@@ -261,7 +261,7 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
         };
 
         ctx.dispatcher.current_time = t;
-        handle_timeout(ctx, id);
+        handle_timer(ctx, id);
         if f(&id) {
             break;
         }
@@ -800,24 +800,20 @@ impl RngContext for DummyEventDispatcher {
     }
 }
 
-impl EventDispatcher for DummyEventDispatcher {
-    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
-        self.schedule_timeout_instant(self.current_time + duration, id)
+impl TimerContext<TimerId> for DummyEventDispatcher {
+    fn schedule_timer(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
+        self.schedule_timer_instant(self.current_time + duration, id)
     }
 
-    fn schedule_timeout_instant(
-        &mut self,
-        time: DummyInstant,
-        id: TimerId,
-    ) -> Option<DummyInstant> {
-        let ret = self.cancel_timeout(id);
+    fn schedule_timer_instant(&mut self, time: DummyInstant, id: TimerId) -> Option<DummyInstant> {
+        let ret = self.cancel_timer(id);
         self.timer_events.push(PendingTimer::new(time, id));
         ret
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<DummyInstant> {
+    fn cancel_timer(&mut self, id: TimerId) -> Option<DummyInstant> {
         let mut r: Option<DummyInstant> = None;
-        // NOTE(brunodalbo): cancelling timeouts can be made a faster than this
+        // NOTE(brunodalbo): cancelling timers can be made a faster than this
         //  if we kept two data structures and TimerId was Hashable.
         self.timer_events = self
             .timer_events
@@ -835,7 +831,7 @@ impl EventDispatcher for DummyEventDispatcher {
         r
     }
 
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
         self.timer_events =
             self.timer_events.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
     }
@@ -1034,7 +1030,7 @@ where
         // Dispatch all pending timers.
         for (_n, ctx) in self.contexts.iter_mut() {
             // We have to collect the timers before dispatching them, to avoid
-            // an infinite loop in case handle_timeout schedules another timer
+            // an infinite loop in case handle_timer schedules another timer
             // for the same or older DummyInstant.
             let mut timers = Vec::<TimerId>::new();
             while let Some(InstantAndData(t, id)) = ctx.dispatcher.timer_events.peek() {
@@ -1047,7 +1043,7 @@ where
             }
 
             for t in timers {
-                crate::handle_timeout(ctx, t);
+                crate::handle_timer(ctx, t);
                 ret.timers_fired += 1;
             }
         }
@@ -1285,37 +1281,37 @@ mod tests {
         assert_eq!(
             net.context(1)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+                .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context(2)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+                .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context(2)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+                .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
         assert_eq!(
             net.context(1)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
+                .schedule_timer(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
             None
         );
         assert_eq!(
             net.context(1)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
+                .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
             None
         );
         assert_eq!(
             net.context(2)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
+                .schedule_timer(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
             None
         );
 
@@ -1357,19 +1353,19 @@ mod tests {
         assert_eq!(
             net.context(1)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+                .schedule_timer(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context(2)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+                .schedule_timer(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context(2)
                 .dispatcher
-                .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+                .schedule_timer(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
             None
         );
 
@@ -1445,19 +1441,19 @@ mod tests {
         assert_eq!(
             net.context("alice")
                 .dispatcher
-                .schedule_timeout(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
+                .schedule_timer(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
             None
         );
         assert_eq!(
             net.context("bob")
                 .dispatcher
-                .schedule_timeout(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
+                .schedule_timer(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
             None
         );
         assert_eq!(
             net.context("bob")
                 .dispatcher
-                .schedule_timeout(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
+                .schedule_timer(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
             None
         );
 

@@ -208,7 +208,7 @@ impl<D: EventDispatcher> Default for StackState<D> {
 /// Context available during the execution of the netstack.
 ///
 /// `Ctx` provides access to the state of the netstack and to an event
-/// dispatcher which can be used to emit events and schedule timeouts. A mutable
+/// dispatcher which can be used to emit events and schedule timers. A mutable
 /// reference to a `Ctx` is passed to every function in the netstack.
 #[derive(Default)]
 pub struct Ctx<D: EventDispatcher> {
@@ -290,18 +290,18 @@ impl From<DeviceLayerTimerId> for TimerId {
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
 
 /// Handle a generic timer event.
-pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
-    trace!("handle_timeout: dispatching timerid: {:?}", id);
+pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
+    trace!("handle_timer: dispatching timerid: {:?}", id);
 
     match id {
         TimerId(TimerIdInner::DeviceLayer(x)) => {
-            device::handle_timeout(ctx, x);
+            device::handle_timer(ctx, x);
         }
         TimerId(TimerIdInner::_TransportLayer(x)) => {
-            transport::handle_timeout(ctx, x);
+            transport::handle_timer(ctx, x);
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
-            ip::handle_timeout(ctx, x);
+            ip::handle_timer(ctx, x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {
@@ -356,13 +356,14 @@ impl<
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
-/// ability to emit events and schedule timeouts. Each layer of the stack
+/// ability to emit events and schedule timers. Each layer of the stack
 /// provides its own event dispatcher trait which specifies the types of actions
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher:
     InstantContext
     + RngContext
+    + TimerContext<TimerId>
     + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
     + DeviceLayerEventDispatcher<EmptyBuf>
     + IpLayerEventDispatcher<Buf<Vec<u8>>>
@@ -370,74 +371,20 @@ pub trait EventDispatcher:
     + TransportLayerEventDispatcher<Ipv4>
     + TransportLayerEventDispatcher<Ipv6>
 {
-    /// Schedule a callback to be invoked after a timeout.
-    ///
-    /// `schedule_timeout` schedules `f` to be invoked after `duration` has
-    /// elapsed, overwriting any previous timeout with the same ID.
-    ///
-    /// If there was previously a timer with that ID, return the time at which
-    /// is was scheduled to fire.
-    ///
-    /// # Panics
-    ///
-    /// `schedule_timeout` may panic if `duration` is large enough that
-    /// `self.now() + duration` overflows.
-    fn schedule_timeout(&mut self, duration: time::Duration, id: TimerId) -> Option<Self::Instant> {
-        self.schedule_timeout_instant(self.now().checked_add(duration).unwrap(), id)
-    }
-
-    /// Schedule a callback to be invoked at a specific time.
-    ///
-    /// `schedule_timeout_instant` schedules `f` to be invoked at `time`,
-    /// overwriting any previous timeout with the same ID.
-    ///
-    /// If there was previously a timer with that ID, return the time at which
-    /// is was scheduled to fire.
-    fn schedule_timeout_instant(
-        &mut self,
-        time: Self::Instant,
-        id: TimerId,
-    ) -> Option<Self::Instant>;
-
-    /// Cancel a timeout.
-    ///
-    /// Returns true if the timeout was cancelled, false if there was no timeout
-    /// for the given ID.
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant>;
-
-    /// Cancel all timeouts which satisfy a predicate.
-    ///
-    /// `cancel_timeouts_with` calls `f` on each scheduled timer, and cancels
-    /// any timeout for which `f` returns true.
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F);
-
-    /// Get the instant a timer will fire, if one is scheduled.
-    ///
-    /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
-    /// timer with the given ID exists, `scheduled_instant` will return `None`.
-    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant>;
 }
 
-impl<D: EventDispatcher> TimerContext<TimerId> for Ctx<D> {
-    fn schedule_timer_instant(
-        &mut self,
-        time: Self::Instant,
-        id: TimerId,
-    ) -> Option<Self::Instant> {
-        self.dispatcher_mut().schedule_timeout_instant(time, id)
-    }
-
-    fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timeout(id)
-    }
-
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.dispatcher_mut().cancel_timeouts_with(f)
-    }
-
-    fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(id)
-    }
+impl<
+        D: InstantContext
+            + RngContext
+            + TimerContext<TimerId>
+            + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+            + DeviceLayerEventDispatcher<EmptyBuf>
+            + IpLayerEventDispatcher<Buf<Vec<u8>>>
+            + IpLayerEventDispatcher<EmptyBuf>
+            + TransportLayerEventDispatcher<Ipv4>
+            + TransportLayerEventDispatcher<Ipv6>,
+    > EventDispatcher for D
+{
 }
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device

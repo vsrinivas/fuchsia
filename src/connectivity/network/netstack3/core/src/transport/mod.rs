@@ -91,7 +91,7 @@ pub(crate) struct TransportLayerState {
 pub(crate) enum TransportLayerTimerId {}
 
 /// Handle a timer event firing in the transport layer.
-pub(crate) fn handle_timeout<D: EventDispatcher>(_ctx: &mut Ctx<D>, id: TransportLayerTimerId) {
+pub(crate) fn handle_timer<D: EventDispatcher>(_ctx: &mut Ctx<D>, id: TransportLayerTimerId) {
     match id {}
 }
 

@@ -43,9 +43,9 @@ use socket::udp::UdpSocketCollection;
 use timers::TimerDispatcher;
 
 use netstack3_core::{
-    context::{InstantContext, RngContext},
+    context::{InstantContext, RngContext, TimerContext},
     error::NoRouteError,
-    handle_timeout,
+    handle_timer,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
     initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
     IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
@@ -191,7 +191,7 @@ where
     D: StackDispatcher,
 {
     fn handle_expired_timer(&mut self, timer: TimerId) {
-        handle_timeout(self, timer)
+        handle_timer(self, timer)
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
@@ -265,16 +265,16 @@ impl RngContext for BindingsDispatcher {
     }
 }
 
-impl EventDispatcher for BindingsDispatcher {
-    fn schedule_timeout_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
+impl TimerContext<TimerId> for BindingsDispatcher {
+    fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
         self.timers.schedule_timer(id, time)
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<StackTime> {
+    fn cancel_timer(&mut self, id: TimerId) -> Option<StackTime> {
         self.timers.cancel_timer(&id)
     }
 
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
         self.timers.cancel_timers_with(f);
     }
 

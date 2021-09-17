@@ -26,7 +26,7 @@ use packet_formats::ipv4::{
 };
 use rand_xorshift::XorShiftRng;
 
-use crate::context::{InstantContext, RngContext};
+use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
@@ -34,9 +34,7 @@ use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{
-    EventDispatcher, IpLayerEventDispatcher, Ipv4StateBuilder, StackStateBuilder, TimerId,
-};
+use crate::{IpLayerEventDispatcher, Ipv4StateBuilder, StackStateBuilder, TimerId};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
 // added by gating them on the `debug_assertions` configuration option. This
@@ -107,12 +105,12 @@ impl RngContext for BenchmarkEventDispatcher {
     }
 }
 
-impl EventDispatcher for BenchmarkEventDispatcher {
-    fn schedule_timeout(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
+impl TimerContext<TimerId> for BenchmarkEventDispatcher {
+    fn schedule_timer(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
     }
 
-    fn schedule_timeout_instant(
+    fn schedule_timer_instant(
         &mut self,
         _time: DummyInstant,
         _id: TimerId,
@@ -120,11 +118,11 @@ impl EventDispatcher for BenchmarkEventDispatcher {
         unimplemented!()
     }
 
-    fn cancel_timeout(&mut self, _id: TimerId) -> Option<DummyInstant> {
+    fn cancel_timer(&mut self, _id: TimerId) -> Option<DummyInstant> {
         None
     }
 
-    fn cancel_timeouts_with<F: FnMut(&TimerId) -> bool>(&mut self, _f: F) {
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, _f: F) {
         unimplemented!()
     }
 
