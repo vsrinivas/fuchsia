@@ -92,6 +92,7 @@ assemble_system("guest") {
     "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/sysmem/drivers/sysmem",
+    "//src/diagnostics/archivist:default-service-config",
     "//src/diagnostics/bundles:bootstrap",
     "//src/graphics/display/drivers/display",
     "//src/graphics/drivers/virtio:virtio_gpu",
