@@ -1,0 +1,47 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using fuchsia.url;
+using zx;
+
+/// Entry point for users, e.g. `ffx fuzz`, used to start and stop fuzzers. A fuzzer will be started
+/// on the first call to |Connect| with a given URL. Closing the given |Controller| channel does
+/// *not* stop the associated fuzzer. Instead, since fuzzing is meant to be long-running, clients
+/// may drop the connection and re-|Connect| some time later.
+@discoverable
+protocol Manager {
+    /// Connects to a fuzzer that implements the `fuchsia.fuzzer.Controller` protocol.
+    ///
+    /// If the fuzzer is not currently running, it will first start it via the test_manager before
+    /// proceeding. The manager sends the |controller| onto the fuzz-registry which contains the
+    /// |ControllerProviders| that can fulfill the connection request.
+    ///
+    /// See |fuchsia.test.manager.LaunchError| for details on ways test_manager can fail.
+    ///
+    /// Returns ZX_ERR_NO_RESOURCES if test_manager reports needed resources are unavailable.
+    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized by test_manager.
+    /// Returns ZX_ERR_INVALID_ARGS if test_manager reports invalid arguments.
+    /// Returns ZX_ERR_NOT_SUPPORTED if test_manager cannot connect to the test suite.
+    /// Returns ZX_ERR_INTERNAL for other, unspecified test_manager failures.
+    /// Returns ZX_ERR_TIMED_OUT if the fuzzer not present or added to fuzz-registry after starting.
+    /// Returns ZX_ERR_SHOULD_WAIT if another fuzzer is still starting.
+    Connect(resource struct {
+        fuzzer_url fuchsia.url.Url;
+        controller server_end:Controller;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Stops the associated fuzzer.
+    ///
+    /// Returns ZX_OK if a running fuzzer was stopped.
+    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized.
+    Terminate(struct {
+        fuzzer_url fuchsia.url.Url;
+    }) -> (struct {
+        result zx.status;
+    });
+};

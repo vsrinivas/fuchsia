@@ -14,5 +14,8 @@ fidl("fuchsia.fuzzer") {
     "registry.fidl",
     "status.fidl",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.mem" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.url",
+  ]
 }

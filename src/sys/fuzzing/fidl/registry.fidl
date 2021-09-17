@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using fuchsia.url;
+using zx;
+
+/// Entry point for the fuzz_test_runner. It uses this protocol to transfer one end of a channel it
+/// creates to the fuzz_manager. The other end is passed as a startup handle to the fuzzer component
+/// itself, which provides |Controller|s on request.
+@discoverable
+protocol Registry {
+    /// Adds a |ControllerProvider|. This should be called by the fuzzer itself, using the channel
+    /// provided by the fuzz-test-runner, and in response to being started by the fuzz-manager. This
+    /// call will block until the fuzz-manager calls |GetProvider| and supplies the URL to associate
+    /// this fuzzer with.
+    ///
+    /// The registry will close the channel to the fuzzer on error, on a corresponding call to
+    /// |ClearProvider|, or on exit. The fuzzer should exit when the channel closes.
+    Register(resource struct {
+        provider client_end:ControllerProvider;
+    });
+
+    /// Connects the |Controller| to a registered fuzzer at |fuzzer_url|.
+    ///
+    /// Uses a |ControllerProvider| that has been |Register|ed at the given |fuzzer_url| to connect
+    /// the given |controller|. If the associated provider is not available, it assumes it is
+    /// starting and blocks until the fuzzer calls |Register|, or the |timeout| elapses.
+    /// At most one call to |Connect| will block in this manner at a time.
+    ///
+    /// Returns ZX_ERR_TIMED_OUT if |timeout| elapses without the provider becoming available.
+    /// Returns ZX_ERR_SHOULD_WAIT if already waiting for a fuzzer to start.
+    Connect(resource struct {
+        fuzzer_url fuchsia.url.Url;
+        controller server_end:Controller;
+        timeout zx.duration;
+    }) -> (struct {
+        result zx.status;
+    });
+
+    /// Removes the provider associated with the given URL.
+    ///
+    /// Return ZX_ERR_NOT_FOUND if no such provider exists in the registry.
+    Unregister(struct {
+        fuzzer_url fuchsia.url.Url;
+    }) -> (struct {
+        result zx.status;
+    });
+};
