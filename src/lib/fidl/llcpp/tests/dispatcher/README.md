@@ -7,7 +7,6 @@ These cover the client/server message dispatching layer:
  - client internals
    * `fidl::internal::ResponseContext`
    * `fidl::internal::ClientBase`
-   * `fidl::internal::ChannelRefTracker`
  - server binding API
  - server internals
    * `fidl::Transaction`

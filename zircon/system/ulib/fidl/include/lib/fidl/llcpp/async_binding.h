@@ -392,7 +392,6 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 // Client binding specifics
 //
 
-class ChannelRef;
 class ClientBase;
 
 // The async client binding. The client supports both synchronous and
@@ -404,7 +403,7 @@ class ClientBase;
 class AsyncClientBinding final : public AsyncBinding {
  public:
   static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<ChannelRef> channel,
+                                                    std::shared_ptr<zx::channel> channel,
                                                     std::shared_ptr<ClientBase> client,
                                                     AsyncEventHandler* event_handler,
                                                     AnyTeardownObserver&& teardown_observer,
@@ -412,10 +411,10 @@ class AsyncClientBinding final : public AsyncBinding {
 
   virtual ~AsyncClientBinding() = default;
 
-  std::shared_ptr<ChannelRef> GetChannel() const { return channel_; }
+  std::shared_ptr<zx::channel> GetChannel() const { return channel_; }
 
  private:
-  AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
+  AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<zx::channel> channel,
                      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
@@ -423,7 +422,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 
-  std::shared_ptr<ChannelRef> channel_ = nullptr;  // Strong reference to the channel.
+  std::shared_ptr<zx::channel> channel_;
   std::shared_ptr<ClientBase> client_;
   AsyncEventHandler* event_handler_;
   AnyTeardownObserver teardown_observer_;

@@ -197,13 +197,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                 LibfuzzerNeedsNonemptyProtocol>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 

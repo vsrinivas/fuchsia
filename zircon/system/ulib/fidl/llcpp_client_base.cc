@@ -19,10 +19,9 @@ void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
                       AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
-  channel_tracker_.Init(std::move(channel));
-  auto binding =
-      AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
-                                 event_handler, std::move(teardown_observer), threading_policy);
+  auto binding = AsyncClientBinding::Create(
+      dispatcher, std::make_shared<zx::channel>(std::move(channel)), std::move(client),
+      event_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
   dispatcher_ = dispatcher;
   binding->BeginFirstWait();
@@ -31,13 +30,6 @@ void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
 void ClientBase::AsyncTeardown() {
   if (auto binding = binding_.lock())
     binding->StartTeardown(std::move(binding));
-}
-
-zx::channel ClientBase::WaitForChannel() {
-  // Unbind to release the AsyncClientBinding's reference to the channel.
-  AsyncTeardown();
-  // Wait for all references to be released.
-  return channel_tracker_.WaitForChannel();
 }
 
 void ClientBase::PrepareAsyncTxn(ResponseContext* context) {
@@ -105,7 +97,7 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
   if (auto channel = GetChannel()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
-    message.Write(channel->handle());
+    message.Write(channel->get());
     if (!message.ok()) {
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
@@ -119,7 +111,7 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
 fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
   if (auto channel = GetChannel()) {
     message.set_txid(0);
-    message.Write(channel->handle());
+    message.Write(channel->get());
     if (!message.ok()) {
       HandleSendError(message.error());
       return message.error();
@@ -193,29 +185,6 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
   return context->OnRawResult(std::move(msg));
 }
 
-void ChannelRefTracker::Init(zx::channel channel) {
-  std::scoped_lock lock(lock_);
-  channel_weak_ = channel_ = std::make_shared<ChannelRef>(std::move(channel));
-}
-
-zx::channel ChannelRefTracker::WaitForChannel() {
-  std::shared_ptr<ChannelRef> ephemeral_channel_ref = nullptr;
-
-  {
-    std::scoped_lock lock(lock_);
-    // Ensure that only one thread receives the channel.
-    if (unlikely(!channel_))
-      return zx::channel();
-    ephemeral_channel_ref = std::move(channel_);
-  }
-
-  // Allow the |ChannelRef| to be destroyed, and wait for all |ChannelRef|s to be released.
-  zx::channel channel;
-  DestroyAndExtract(std::move(ephemeral_channel_ref),
-                    [&](zx::channel result) { channel = std::move(result); });
-  return channel;
-}
-
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
                             async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
                             AnyTeardownObserver&& teardown_observer,
@@ -231,12 +200,6 @@ void ClientController::Unbind() {
   ZX_ASSERT(client_impl_);
   control_.reset();
   client_impl_->ClientBase::AsyncTeardown();
-}
-
-zx::channel ClientController::WaitForChannel() {
-  ZX_ASSERT(client_impl_);
-  control_.reset();
-  return client_impl_->WaitForChannel();
 }
 
 }  // namespace internal

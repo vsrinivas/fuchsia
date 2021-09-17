@@ -110,8 +110,7 @@ class TestResponseContext : public fidl::internal::ResponseContext {
 
 class ClientBaseChecker {
  public:
-  static std::shared_ptr<fidl::internal::ChannelRef> GetChannel(
-      fidl::internal::ClientBase* client_base) {
+  static std::shared_ptr<zx::channel> GetChannel(fidl::internal::ClientBase* client_base) {
     return client_base->GetChannel();
   }
 };

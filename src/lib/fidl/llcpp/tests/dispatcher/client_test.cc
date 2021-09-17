@@ -282,8 +282,7 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 
   // Check that the channel handle is still valid.
-  EXPECT_OK(
-      zx_object_get_info(channel->handle(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+  EXPECT_OK(zx_object_get_info(channel->get(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
 class OnCanceledTestResponseContext : public internal::ResponseContext {
@@ -420,69 +419,6 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   // Close the server end and wait for on_unbound to run.
   remote.reset();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
-}
-
-TEST(ChannelRefTrackerTestCase, NoWaitNoHandleLeak) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  // Pass ownership of local end of the channel to the ChannelRefTracker.
-  auto channel_tracker = new internal::ChannelRefTracker();
-  channel_tracker->Init(std::move(local));
-
-  // Destroy the ChannelRefTracker. ZX_SIGNAL_PEER_CLOSED should be asserted on remote.
-  delete channel_tracker;
-  EXPECT_OK(remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), nullptr));
-}
-
-TEST(ChannelRefTrackerTestCase, WaitForChannelWithoutRefs) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  auto local_handle = local.get();
-
-  // Pass ownership of local end of the channel to the ChannelRefTracker.
-  internal::ChannelRefTracker channel_tracker;
-  channel_tracker.Init(std::move(local));
-
-  // Retrieve the channel. Check the validity of the handle.
-  local = channel_tracker.WaitForChannel();
-  ASSERT_EQ(local_handle, local.get());
-  ASSERT_OK(local.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-
-  // Ensure that no new references can be created.
-  EXPECT_FALSE(channel_tracker.Get());
-}
-
-TEST(ChannelRefTrackerTestCase, WaitForChannelWithRefs) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  auto local_handle = local.get();
-
-  // Pass ownership of local end of the channel to the ChannelRefTracker.
-  internal::ChannelRefTracker channel_tracker;
-  channel_tracker.Init(std::move(local));
-
-  // Get a new reference.
-  auto channel_ref = channel_tracker.Get();
-  ASSERT_EQ(local_handle, channel_ref->handle());
-
-  // Pass the reference to another thread, then wait for it to be released.
-  // NOTE: This is inherently racy but should never fail regardless of the particular state.
-  sync_completion_t running;
-  std::thread([&running, channel_ref = std::move(channel_ref)]() mutable {
-    sync_completion_signal(&running);  // Let the main thread continue.
-    channel_ref = nullptr;             // Release this reference.
-  }).detach();
-
-  ASSERT_OK(sync_completion_wait(&running, ZX_TIME_INFINITE));
-
-  // Retrieve the channel. Check the validity of the handle.
-  local = channel_tracker.WaitForChannel();
-  ASSERT_EQ(local_handle, local.get());
-  ASSERT_OK(local.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
-
-  // Ensure that no new references can be created.
-  EXPECT_FALSE(channel_tracker.Get());
 }
 
 TEST(WireClient, UseOnDispatcherThread) {

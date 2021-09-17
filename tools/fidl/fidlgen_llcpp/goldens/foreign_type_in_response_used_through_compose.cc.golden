@@ -198,12 +198,12 @@ void fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<
@@ -212,12 +212,12 @@ fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }

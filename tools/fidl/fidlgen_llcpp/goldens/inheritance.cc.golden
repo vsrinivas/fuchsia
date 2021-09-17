@@ -168,10 +168,10 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
     ::fidl::StringView s) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
-                _channel->handle()),
+                _channel->get()),
             s);
       });
 }
@@ -180,10 +180,10 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, s,
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -440,10 +440,10 @@ void fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
 fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
     ::fidl::StringView s) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
-                _channel->handle()),
+                _channel->get()),
             s);
       });
 }
@@ -452,10 +452,10 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
             ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, s,
             _response_buffer.data, _response_buffer.capacity);
       });

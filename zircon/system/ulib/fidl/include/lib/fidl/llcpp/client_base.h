@@ -155,50 +155,6 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   zx_txid_t txid_ = 0;      // Zircon txid of outstanding transaction.
 };
 
-// ChannelRef takes ownership of a channel. It can transfer the channel
-// ownership on destruction with the use of |DestroyAndExtract|.
-// Otherwise, the channel is closed.
-class ChannelRef {
- public:
-  explicit ChannelRef(zx::channel channel) : channel_(ExtractedOnDestruction(std::move(channel))) {}
-  zx_handle_t handle() const { return channel_.get().get(); }
-
- private:
-  template <typename Callback>
-  friend void DestroyAndExtract(std::shared_ptr<ChannelRef>&& object, Callback&& callback);
-
-  ExtractedOnDestruction<zx::channel> channel_;
-};
-
-template <typename Callback>
-void DestroyAndExtract(std::shared_ptr<ChannelRef>&& object, Callback&& callback) {
-  DestroyAndExtract(std::move(object), &ChannelRef::channel_, std::forward<Callback>(callback));
-}
-
-// ChannelRefTracker takes ownership of a channel, wrapping it in a ChannelRef. It is used to create
-// and track one or more strong references to the channel, and supports extracting out its owned
-// channel in a thread-safe manner.
-class ChannelRefTracker {
- public:
-  // Set the given channel as the owned channel.
-  void Init(zx::channel channel) __TA_EXCLUDES(lock_);
-
-  // If the |ChannelRef| is still alive, returns a strong reference to it.
-  std::shared_ptr<ChannelRef> Get() { return channel_weak_.lock(); }
-
-  // Blocks on the release of any outstanding strong references to the channel and returns it. Only
-  // one caller will be able to retrieve the channel. Other calls will return immediately with a
-  // null channel.
-  zx::channel WaitForChannel() __TA_EXCLUDES(lock_);
-
- private:
-  std::mutex lock_;
-  std::shared_ptr<ChannelRef> channel_ __TA_GUARDED(lock_);
-
-  // Weak reference used to access channel without taking locks.
-  std::weak_ptr<ChannelRef> channel_weak_;
-};
-
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
 // handling and teardown, and asynchronous transaction tracking. Users should not directly interact
 // with this class. |ClientBase| objects must be managed via std::shared_ptr.
@@ -225,13 +181,6 @@ class ClientBase {
   // will be notified on a dispatcher thread.
   void AsyncTeardown();
 
-  // Waits for all strong references to the channel to be released, then returns it. This
-  // necessarily triggers teardown first in order to release the binding's reference.
-  //
-  // NOTE: As this returns a zx::channel which owns the handle, only a single call is expected to
-  // succeed. Additional calls will simply return an empty zx::channel.
-  zx::channel WaitForChannel();
-
   // Makes a two-way synchronous call with the channel that is managed by this
   // client.
   //
@@ -247,7 +196,7 @@ class ClientBase {
   template <typename Callable>
   auto MakeSyncCallWith(Callable&& sync_call) {
     using ReturnType = typename fit::callable_traits<Callable>::return_type;
-    std::shared_ptr<ChannelRef> channel = GetChannel();
+    std::shared_ptr<zx::channel> channel = GetChannel();
     if (!channel) {
       return ReturnType(fidl::Result::Unbound());
     }
@@ -357,7 +306,7 @@ class ClientBase {
   // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
   void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
 
-  std::shared_ptr<ChannelRef> GetChannel() {
+  std::shared_ptr<zx::channel> GetChannel() {
     if (auto binding = binding_.lock()) {
       return binding->GetChannel();
     }
@@ -370,8 +319,6 @@ class ClientBase {
   // TODO(fxbug.dev/82085): Instead of protecting methods and adding friends,
   // we should use composition over inheriting from ClientBase.
   friend class ClientController;
-
-  ChannelRefTracker channel_tracker_;
 
   // Weak reference to the internal binding state.
   std::weak_ptr<AsyncClientBinding> binding_;
@@ -426,13 +373,6 @@ class ClientController {
   //
   // |Bind| must have been called before this.
   void Unbind();
-
-  // Blocks the current thread until no nothing is bound to the channel (and no
-  // in-flight uses of the channel exist), then returns the underlying channel.
-  // Unbinds from the dispatcher automatically.
-  //
-  // |Bind| must have been called before this.
-  zx::channel WaitForChannel();
 
   bool is_valid() const { return static_cast<bool>(client_impl_); }
   explicit operator bool() const { return is_valid(); }

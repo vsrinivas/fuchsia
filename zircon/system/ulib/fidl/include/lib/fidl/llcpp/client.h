@@ -269,10 +269,10 @@ fidl::AnyTeardownObserver ShareUntilTeardown(std::shared_ptr<T> object) {
 //
 // ## Thread safety
 //
-// FIDL method calls on this class are thread-safe. |AsyncTeardown|, |Clone|, and
-// |WaitForChannel| are also thread-safe, and may be invoked in parallel with
-// FIDL method calls. However, those operations must be synchronized with
-// operations that consume or mutate the |WireSharedClient| itself:
+// FIDL method calls on this class are thread-safe. |AsyncTeardown| and |Clone|
+// are also thread-safe, and may be invoked in parallel with FIDL method calls.
+// However, those operations must be synchronized with operations that consume
+// or mutate the |WireSharedClient| itself:
 //
 // - Assigning a new value to the |WireSharedClient| variable.
 // - Moving the |WireSharedClient| to a different location.
@@ -429,8 +429,8 @@ class WireSharedClient final {
   // Returns another |WireSharedClient| instance sharing the same channel.
   //
   // Prefer to |Clone| only when necessary e.g. extending the lifetime of a
-  // |WireSharedClient| to a different scope. Any living clone will prevent the
-  // cleanup of the channel, unless one explicitly call |WaitForChannel|.
+  // |SharedClient| to a different scope. Any clone will prevent the cleanup
+  // of the channel while the binding is alive.
   WireSharedClient Clone() { return WireSharedClient(*this); }
 
   // Returns the interface for making outgoing FIDL calls. If the client has

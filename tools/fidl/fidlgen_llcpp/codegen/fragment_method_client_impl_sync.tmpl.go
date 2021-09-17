@@ -47,7 +47,7 @@ const fragmentMethodClientImplSyncTmpl = `
 {{- define "Method:ClientImplSyncCallerAllocate:Source" }}
   {{ EnsureNamespace "" }}
 
-  {{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol) }}
+  {{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_channel->get())" .Protocol) }}
   {{- if .RequestArgs }}
     {{- $base_args = (List $base_args "_request_buffer.data" "_request_buffer.capacity") }}
   {{- end }}
@@ -58,7 +58,7 @@ const fragmentMethodClientImplSyncTmpl = `
   {{ .WireUnownedResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<ChannelRef> _channel) {
+    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<zx::channel> _channel) {
       return {{ .WireUnownedResult }}(
           {{- RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
     });
@@ -75,9 +75,9 @@ const fragmentMethodClientImplSyncTmpl = `
   {{- IfdefFuchsia -}}
   {{ .WireResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
-    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<ChannelRef> _channel) {
+    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<zx::channel> _channel) {
       return {{ .WireResult }}(
-        {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
+        {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->get())" .Protocol)
                                 .RequestArgs }});
     });
   }

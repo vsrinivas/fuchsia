@@ -315,7 +315,7 @@ std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl::IncomingMessage&
 //
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
-    async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
+    async_dispatcher_t* dispatcher, std::shared_ptr<zx::channel> channel,
     std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
     AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   auto ret = std::shared_ptr<AsyncClientBinding>(
@@ -326,12 +326,12 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
 }
 
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
-                                       std::shared_ptr<ChannelRef> channel,
+                                       std::shared_ptr<zx::channel> channel,
                                        std::shared_ptr<ClientBase> client,
                                        AsyncEventHandler* event_handler,
                                        AnyTeardownObserver&& teardown_observer,
                                        ThreadingPolicy threading_policy)
-    : AsyncBinding(dispatcher, zx::unowned_channel(channel->handle()), threading_policy),
+    : AsyncBinding(dispatcher, zx::unowned_channel(channel->get()), threading_policy),
       channel_(std::move(channel)),
       client_(std::move(client)),
       event_handler_(event_handler),

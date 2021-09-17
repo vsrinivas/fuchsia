@@ -307,12 +307,11 @@ void fidl::internal::
 fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
     ResponseMethod_Sync(::zx::socket&& h) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
             ::fidl::UnownedClientEnd<
-                ::fidl_test_protocols::HandleRightsProtocol>(
-                _channel->handle()),
+                ::fidl_test_protocols::HandleRightsProtocol>(_channel->get()),
             std::move(h));
       });
 }
@@ -322,12 +321,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
     ResponseMethod_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
                         ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
             ::fidl::UnownedClientEnd<
-                ::fidl_test_protocols::HandleRightsProtocol>(
-                _channel->handle()),
+                ::fidl_test_protocols::HandleRightsProtocol>(_channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(h),
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -1258,13 +1256,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestEmptyResponse_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 NoRequestEmptyResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 void fidl::internal::WireClientImpl<
@@ -1359,13 +1357,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 NoRequestWithResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<
@@ -1374,13 +1372,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     NoRequestWithResponse_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 NoRequestWithResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -1502,13 +1500,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestEmptyResponse_Sync(::fidl::StringView arg) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 WithRequestEmptyResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()),
+                _channel->get()),
             arg);
       });
 }
@@ -1520,13 +1518,13 @@ fidl::internal::WireClientImpl<
                                   ::fidl::StringView arg,
                                   ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 WithRequestEmptyResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, arg,
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -1627,13 +1625,13 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
     WithRequestWithResponse_Sync(::fidl::StringView arg) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 WithRequestWithResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()),
+                _channel->get()),
             arg);
       });
 }
@@ -1645,13 +1643,13 @@ fidl::internal::WireClientImpl<
                                  ::fidl::StringView arg,
                                  ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithAndWithoutRequestResponse::
                 WithRequestWithResponse>(
             ::fidl::UnownedClientEnd<
                 ::fidl_test_protocols::WithAndWithoutRequestResponse>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, arg,
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -2374,10 +2372,10 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::Transitional>::Request_Sync(int64_t x) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional>(
-                _channel->handle()),
+                _channel->get()),
             x);
       });
 }
@@ -2386,11 +2384,11 @@ fidl::internal::WireClientImpl<
         ::fidl::BufferSpan _request_buffer, int64_t x,
         ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::Transitional::Request>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, x,
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -3199,11 +3197,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     ClientEnds_Sync(
         ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             std::move(in));
       });
 }
@@ -3214,11 +3212,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
         ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(in),
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -3311,11 +3309,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     ServerEnds_Sync(
         ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             std::move(in));
       });
 }
@@ -3326,11 +3324,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
         ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
         ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(in),
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -3429,11 +3427,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
     StructContainingEnds_Sync(::fidl_test_protocols::wire::ProtocolEnds&& in) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             std::move(in));
       });
 }
@@ -3444,11 +3442,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
                               ::fidl_test_protocols::wire::ProtocolEnds&& in,
                               ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(in),
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -4349,11 +4347,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithErrorSyntax>::ResponseAsStruct_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<
@@ -4361,11 +4359,11 @@ fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ResponseAsStruct_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -4452,11 +4450,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitive_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<
@@ -4464,11 +4462,11 @@ fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -4552,22 +4550,22 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnum_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnum_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -4651,11 +4649,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithErrorSyntax>::HandleInResult_Sync() {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()));
+                _channel->get()));
       });
 }
 ::fidl::WireUnownedResult<
@@ -4663,11 +4661,11 @@ fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     HandleInResult_Sync(::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
-                _channel->handle()),
+                _channel->get()),
             _response_buffer.data, _response_buffer.capacity);
       });
 }
@@ -5635,11 +5633,11 @@ fidl::internal::WireClientImpl<
     ::fidl_test_protocols::ChannelProtocol>::MethodB_Sync(int64_t a,
                                                           int64_t b) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::ChannelProtocol::MethodB>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             a, b);
       });
 }
@@ -5648,11 +5646,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MethodB_Sync(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
                  ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::ChannelProtocol::MethodB>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, a, b,
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -5742,11 +5740,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 fidl::internal::WireClientImpl<
     ::fidl_test_protocols::ChannelProtocol>::TakeHandle_Sync(::zx::handle&& h) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             std::move(h));
       });
 }
@@ -5755,11 +5753,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     TakeHandle_Sync(::fidl::BufferSpan _request_buffer, ::zx::handle&& h,
                     ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(h),
             _response_buffer.data, _response_buffer.capacity);
       });
@@ -5849,11 +5847,11 @@ void fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
 fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MutateSocket_Sync(::zx::socket&& a) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireResult<
             ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             std::move(a));
       });
 }
@@ -5862,11 +5860,11 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MutateSocket_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket&& a,
                       ::fidl::BufferSpan _response_buffer) {
   return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<ChannelRef> _channel) {
+      [&](std::shared_ptr<zx::channel> _channel) {
         return ::fidl::WireUnownedResult<
             ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
             ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>(
-                _channel->handle()),
+                _channel->get()),
             _request_buffer.data, _request_buffer.capacity, std::move(a),
             _response_buffer.data, _response_buffer.capacity);
       });

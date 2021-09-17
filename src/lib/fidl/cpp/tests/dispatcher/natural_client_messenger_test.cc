@@ -140,6 +140,12 @@ TEST_F(NaturalClientMessengerTest, TwoWayInvalidMessage) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
   messenger().TwoWay(too_large.type(), too_large.message(), &context());
+
+  {
+    fidl::IncomingMessage incoming = impl()->ReadFromServer();
+    EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
+  }
+
   loop().RunUntilIdle();
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
@@ -148,8 +154,10 @@ TEST_F(NaturalClientMessengerTest, TwoWayInvalidMessage) {
   EXPECT_EQ(fidl::Reason::kEncodeError, context().last_error()->reason());
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, context().last_error()->status());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
-  EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
+  {
+    fidl::IncomingMessage incoming = impl()->ReadFromServer();
+    EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
+  }
 }
 
 TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
@@ -157,6 +165,10 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
 
   controller().Unbind();
   ASSERT_OK(loop().RunUntilIdle());
+
+  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
+
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
@@ -166,9 +178,6 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_TRUE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
   EXPECT_FALSE(context().last_error().has_value());
-
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
-  EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
 }
 
 TEST_F(NaturalClientMessengerTest, OneWay) {
@@ -191,12 +200,20 @@ TEST_F(NaturalClientMessengerTest, OneWayInvalidMessage) {
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   fidl::Result result = messenger().OneWay(too_large.type(), too_large.message());
+
+  {
+    fidl::IncomingMessage incoming = impl()->ReadFromServer();
+    EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
+  }
+
   loop().RunUntilIdle();
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
-  EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
+  {
+    fidl::IncomingMessage incoming = impl()->ReadFromServer();
+    EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
+  }
 }
 
 TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
@@ -204,14 +221,16 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
 
   controller().Unbind();
   ASSERT_OK(loop().RunUntilIdle());
+
+  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
+
   EXPECT_EQ(0, impl()->GetTransactionCount());
   fidl::Result result = messenger().OneWay(good.type(), good.message());
+
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
-
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
-  EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
 }
 
 }  // namespace
