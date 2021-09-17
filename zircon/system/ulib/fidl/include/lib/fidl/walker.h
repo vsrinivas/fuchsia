@@ -117,24 +117,6 @@ enum Result { kContinue, kExit };
     }                                                         \
   }
 
-// Variant of FIDL_STATUS_GUARD that continues in the same scope after a constraint violation,
-// rather than exiting the current function and continuing in the next.
-#define FIDL_CONTINUE_IN_SCOPE_STATUS_GUARD(status)           \
-  if (unlikely((status) != Status::kSuccess)) {               \
-    switch ((status)) {                                       \
-      case Status::kSuccess:                                  \
-        __builtin_unreachable();                              \
-      case Status::kConstraintViolationError:                 \
-        if (VisitorImpl::kContinueAfterConstraintViolation) { \
-          break;                                              \
-        } else {                                              \
-          return Result::kExit;                               \
-        }                                                     \
-      case Status::kMemoryError:                              \
-        return Result::kExit;                                 \
-    }                                                         \
-  }
-
 // Macro to handle exiting if called function signaled exit.
 #define FIDL_RESULT_GUARD(result)            \
   if (unlikely((result) == Result::kExit)) { \
@@ -486,7 +468,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV1(Position envelope_
                                          // casting since |envelope_ptr->data| is always void*
                                          &const_cast<Ptr<void>&>(v1_envelope->data), num_bytes,
                                          kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
-    FIDL_CONTINUE_IN_SCOPE_STATUS_GUARD(status);
+    FIDL_STATUS_GUARD(status);
 
     if (likely(payload_type != nullptr)) {
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
@@ -583,7 +565,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
     auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
                                          PtrTo<void*>(envelope_position), num_bytes,
                                          kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
-    FIDL_CONTINUE_IN_SCOPE_STATUS_GUARD(status);
+    FIDL_STATUS_GUARD(status);
 
     if (likely(payload_type != nullptr)) {
       auto result = WalkInternal(payload_type, obj_position, obj_depth);

@@ -6,6 +6,7 @@
 // and be generated as part of conformance_test.cc in the future.
 
 #include <fidl/fidl.test.misc/cpp/wire.h>
+#include <fidl/manual.conformance.large/cpp/wire.h>
 
 #include <iostream>
 #include <string>
@@ -72,6 +73,7 @@ TEST(InlineXUnionInStruct, Success) {
     ASSERT_EQ(su.i64(), 0xdeadbeef);
   }
 }
+
 TEST(PrimitiveInXUnionInStruct, Success) {
   // clang-format off
   const auto expected = std::vector<uint8_t>{
@@ -120,6 +122,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     ASSERT_EQ(i, integer);
   }
 }
+
 TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   llcpp_misc::wire::InlineXUnionInStruct input = {};
   std::string empty_str = "";
@@ -131,6 +134,7 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable xunion is absent");
   EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
 }
+
 TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
   // clang-format off
   std::vector<uint8_t> encoded_bytes = std::vector<uint8_t>{
@@ -154,6 +158,7 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
   EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable xunion is absent");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
+
 TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
   // clang-format off
   std::vector<uint8_t> encoded_bytes = std::vector<uint8_t>{
@@ -178,6 +183,7 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
   EXPECT_EQ(std::string(decoded.lossy_description()), "xunion with zero as ordinal must be empty");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
+
 // The xunion ordinal hashing algorithm generates 32 bit values. But if it did
 // generate values bigger than that, they would decode successfully
 TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
@@ -203,6 +209,7 @@ TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
       encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   ASSERT_TRUE(decoded.ok());
 }
+
 TEST(ComplexTable, SuccessEmpty) {
   // clang-format off
   const auto expected = std::vector<uint8_t>{
@@ -232,6 +239,7 @@ TEST(ComplexTable, SuccessEmpty) {
     ASSERT_FALSE(msg.has_strings());
   }
 }
+
 TEST(ComplexTable, FailToDecodeAbsentTable) {
   // clang-format off
   auto encoded_bytes = std::vector<uint8_t>{
@@ -247,6 +255,7 @@ TEST(ComplexTable, FailToDecodeAbsentTable) {
             "absent pointer disallowed in non-nullable collection");
   ASSERT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
+
 TEST(ComplexTable, Success) {
   // clang-format off
   const auto expected = std::vector<uint8_t>{
@@ -340,5 +349,33 @@ TEST(ComplexTable, Success) {
     ASSERT_EQ(msg.strings()[0].size(), before.size());
     ASSERT_STREQ(msg.strings()[1].begin(), &after[0]);
     ASSERT_EQ(msg.strings()[1].size(), after.size());
+  }
+}
+
+// TODO(fxbug.dev/82681): we should support large message encoding as part of
+// FIDL-at-rest, at which point this test would be adjusted to check for
+// success.
+TEST(InputExceeds64KiB, EncodeUnsupported) {
+  // We have observed crashes when an envelope header is the first object over
+  // the 64 KiB boundary. It's difficult to place the envelope at exactly that
+  // offset as we evolve through wire formats, hence this test tries through
+  // a range of offsets.
+  for (size_t filler_size = ZX_CHANNEL_MAX_MSG_BYTES - 100; filler_size < ZX_CHANNEL_MAX_MSG_BYTES;
+       filler_size += 8) {
+    fidl::Arena arena;
+    manual_conformance_large::wire::LargeTable table(arena);
+    table.set_filler(arena);
+    table.filler().Allocate(arena, filler_size);
+    table.set_overflow(arena, arena);
+    table.overflow().set_placeholder(arena);
+    static_assert(sizeof(std::remove_reference_t<decltype(table.overflow().placeholder())>) == 100,
+                  "Need a reasonably sized last piece of data to make the whole message reliably "
+                  "go over the 64 KiB limit.");
+
+    fidl::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{&table};
+    EXPECT_FALSE(encoded.ok());
+    // TODO(fxbug.dev/74362): Consistently propagate ZX_ERR_BUFFER_TOO_SMALL.
+    EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
+    EXPECT_STREQ(encoded.lossy_description(), "backing buffer size exceeded");
   }
 }

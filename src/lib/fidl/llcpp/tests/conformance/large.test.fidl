@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library manual.conformance.large;
+
+/// A table with a large field [`filler`] which causes envelopes of the
+/// subsequent tables to cross over 64 KiB.
+type LargeTable = table {
+    1: filler bytes;
+    2: overflow table {
+        1: placeholder array<uint8, 100>;
+    };
+};
