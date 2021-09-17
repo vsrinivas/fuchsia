@@ -80,28 +80,13 @@ func runSteps(
 		EnableRbe: staticSpec.EnableRbe,
 	}
 
-	var skipGen bool
-	if staticSpec.AutomaticGen {
-		// If the build directory is already seeded, let ninja (when run by
-		//`fint build`) determine whether or not to run `gn gen`. It may not be
-		// necessary for some incremental builds, and skipping it saves time.
-		exists, err := osmisc.FileExists(filepath.Join(contextSpec.BuildDir, "build.ninja"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if build.ninja exists: %w", err)
-		}
-		if exists {
-			skipGen = true
-		}
+	if contextSpec.ArtifactDir != "" {
+		artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
 	}
-	if !skipGen {
-		if contextSpec.ArtifactDir != "" {
-			artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
-		}
-		genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
-		if err != nil {
-			artifacts.FailureSummary = genStdout
-			return artifacts, err
-		}
+	genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
+	if err != nil {
+		artifacts.FailureSummary = genStdout
+		return artifacts, err
 	}
 
 	// Only run build graph analysis if the result will be emitted via

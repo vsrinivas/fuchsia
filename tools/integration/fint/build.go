@@ -104,14 +104,6 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)
 
-	if staticSpec.Incremental && !staticSpec.NoCleandead {
-		// If we're building incrementally, we need to clean out any stale files
-		// in the build directory.
-		if err := ninjaCleanDead(ctx, runner); err != nil {
-			return nil, err
-		}
-	}
-
 	ninjaStartTime := time.Now()
 	var ninjaErr error
 	if contextSpec.ArtifactDir == "" {
