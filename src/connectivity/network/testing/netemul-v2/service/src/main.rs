@@ -119,7 +119,8 @@ impl Into<zx::Status> for CreateRealmError {
                     let _: frealmbuilder::RealmBuilderError = e;
                     zx::Status::INTERNAL
                 }
-                fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. }) => {
+                fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. })
+                | fcomponent::error::Error::FailedToBind(anyhow::Error { .. }) => {
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::DestroyWaiterTaken
