@@ -325,7 +325,7 @@ all debug ports and logs. `user` builds restrict all access and logs while
 | ---------   | -----     | -----------               | ------            |
 | ssh         | enabled   | enabled                   | disabled          |
 | serial      | enabled   | r/o bootloader and kernel | r/o in bootloader |
-| debug_agent | enabled   | enabled                   | disabled          |
+| debug_agent | enabled   | disabled                  | disabled          |
 | k commands  | enabled   | disabled                  | disabled          |
 | ffx runtime | enabled   | enabled                   | disabled          |
 
