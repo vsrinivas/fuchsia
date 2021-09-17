@@ -198,40 +198,51 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
+// This test races |kNumberOfAsyncs| number of threads, where one thread closes
+// the connection and all other threads perform a reply. Depending on thread
+// scheduling, zero or more number of replies may be sent, but all client calls
+// must either see a reply or a close and there should not be any thread-related
+// data corruptions.
 TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
   struct AsyncDelayedServer : fidl::WireServer<Simple> {
-    AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
+    AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops, sync_completion_t* done)
+        : loops_(loops), done_(done) {}
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       ADD_FAILURE("Must not call close");
     }
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker->dispatcher(), [request = request->request,
-                                             completer = completer.ToAsync(), this]() mutable {
-        bool signal = false;
-        static std::atomic<int> count;
-        if (++count == kNumberOfAsyncs) {
-          signal = true;
-        }
-        if (signal) {
-          sync_completion_signal(&done_);
-          completer.Close(ZX_OK);  // Peer close.
-        } else {
-          sync_completion_wait(&done_, ZX_TIME_INFINITE);
-          completer.Reply(request);
-        }
-      });
+      // The posted task may run after the server is destroyed. As such, we must
+      // not capture server member fields by reference or capture `this`.
+      async::PostTask(
+          worker->dispatcher(),
+          [request = request->request, completer = completer.ToAsync(), done = done_]() mutable {
+            bool signal = false;
+            static std::atomic<int> count;
+            if (++count == kNumberOfAsyncs) {
+              signal = true;
+            }
+            if (signal) {
+              sync_completion_signal(done);
+              completer.Close(ZX_OK);
+            } else {
+              sync_completion_wait(done, ZX_TIME_INFINITE);
+              completer.Reply(request);
+            }
+          });
       ASSERT_OK(worker->StartThread());
       loops_->push_back(std::move(worker));
     }
-    sync_completion_t done_;
     std::vector<std::unique_ptr<async::Loop>>* loops_;
+    sync_completion_t* done_;
   };
 
-  // Loops must outlive the server, which is destroyed on peer close.
+  // These state must outlive the server, which is destroyed on peer close.
+  sync_completion_t done;
   std::vector<std::unique_ptr<async::Loop>> loops;
+
   // Server launches a thread so we can make sync client calls.
-  auto server = std::make_unique<AsyncDelayedServer>(&loops);
+  auto server = std::make_unique<AsyncDelayedServer>(&loops, &done);
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(main.StartThread());
 
