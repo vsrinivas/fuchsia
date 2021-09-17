@@ -28,6 +28,7 @@ Then run the following on your host machine:
 
 ```
 FILE=some_movie.mp4
+fx shell killall basemgr.cmx
 fx shell mkdir /tmp/r/sys/fuchsia.com:mediaplayer_test_util:0#meta:mediaplayer_test_util.cmx
 fx cp --to-target $FILE /tmp/r/sys/fuchsia.com:mediaplayer_test_util:0#meta:mediaplayer_test_util.cmx/tmpmediafile
 fx shell present_view fuchsia-pkg://fuchsia.com/mediaplayer_test_util#meta/mediaplayer_test_util.cmx --play /tmp/tmpmediafile
