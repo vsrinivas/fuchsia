@@ -6,12 +6,15 @@ source_set("common") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "options.cc",
+    "options.h",
     "shared-memory.cc",
     "shared-memory.h",
     "signal-coordinator.cc",
     "signal-coordinator.h",
   ]
   public_deps = [
+    "../fidl:fuchsia.fuzzer",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fit",
     "//src/lib/fxl",
@@ -22,6 +25,7 @@ source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "options-unittest.cc",
     "shared-memory-unittest.cc",
     "signal-coordinator-unittest.cc",
   ]
