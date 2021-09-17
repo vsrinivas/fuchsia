@@ -575,9 +575,3 @@ func ninjaCompdb(ctx context.Context, r ninjaRunner) (string, error) {
 	}
 	return compdbFile.Name(), nil
 }
-
-// ninjaGNGen rebuilds `build.ninja`, this will trigger a `gn gen` if necessary,
-// for example when any .ninja files are out of date.
-func ninjaGNGen(ctx context.Context, r ninjaRunner) (errorMsg string, err error) {
-	return runNinja(ctx, r, []string{"build.ninja"}, false, nil)
-}

@@ -69,21 +69,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return nil, err
 	}
 
-	runner := ninjaRunner{
-		runner:    &subprocess.Runner{},
-		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
-		buildDir:  contextSpec.BuildDir,
-		jobCount:  int(contextSpec.GomaJobCount),
-	}
-
 	artifacts := &fintpb.BuildArtifacts{}
-
-	// Let Ninja determine whether it's necessary to run `gn gen` again first,
-	// because later steps will consume GN-generated files.
-	if failureSummary, err := ninjaGNGen(ctx, runner); err != nil {
-		artifacts.FailureSummary = failureSummary
-		return artifacts, err
-	}
 
 	modules, err := build.NewModules(contextSpec.BuildDir)
 	if err != nil {
@@ -103,6 +89,13 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// Initialize the map, otherwise it will be nil and attempts to set keys
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)
+
+	runner := ninjaRunner{
+		runner:    &subprocess.Runner{},
+		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
+		buildDir:  contextSpec.BuildDir,
+		jobCount:  int(contextSpec.GomaJobCount),
+	}
 
 	ninjaStartTime := time.Now()
 	var ninjaErr error
