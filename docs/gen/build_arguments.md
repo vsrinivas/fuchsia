@@ -49,6 +49,13 @@ It will be set below and passed to other toolchains through toolchain_args
 
 From //build/config/BUILDCONFIG.gn:1434
 
+### allow_legacy_data_partition_names
+Set to true to enable legacy data partition names.
+
+**Current value (from the default):** `true`
+
+From //src/storage/fshost/BUILD.gn:41
+
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
@@ -3351,7 +3358,7 @@ The directories to search for parts of the SDK.
 By default, we search the public directories for the various layers.
 In the future, we'll search a pre-built SDK as well.
 
-**Current value (from the default):** `["//garnet/public", "//topaz/public"]`
+**Current value (from the default):** `["//garnet/public"]`
 
 From //build/config/fuchsia/sdk.gni:10
 
