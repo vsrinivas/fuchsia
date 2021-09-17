@@ -634,7 +634,7 @@ bool VectorBaseType::ResolveSizeAndNullability(const LibraryMediator& lib,
   } else if (num_constraints == 2) {
     // first constraint must be size, followed by optional
     if (!lib.ResolveSizeBound(constraints.items[0].get(), &out_params->size_resolved))
-      return lib.Fail(ErrCouldNotParseSizeBound, std::nullopt);
+      return lib.Fail(ErrCouldNotParseSizeBound, constraints.items[0]->span);
     out_params->size_raw = constraints.items[0].get();
     if (!lib.ResolveAsOptional(constraints.items[1].get())) {
       return lib.Fail(ErrUnexpectedConstraint, constraints.items[1]->span, layout);
@@ -682,13 +682,13 @@ bool VectorType::ApplyConstraints(const flat::LibraryMediator& lib,
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (element_count != &kMaxSize && out_params->size_resolved)
-    return lib.Fail(ErrCannotBoundTwice, std::nullopt, layout);
+    return lib.Fail(ErrCannotBoundTwice, constraints.span, layout);
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : element_count;
 
   *out_type = std::make_unique<VectorType>(name, element_type, merged_size, merged_nullability);
@@ -723,13 +723,13 @@ bool StringType::ApplyConstraints(const flat::LibraryMediator& lib,
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (max_size != &kMaxSize && out_params->size_resolved)
-    return lib.Fail(ErrCannotBoundTwice, std::nullopt, layout);
+    return lib.Fail(ErrCannotBoundTwice, constraints.span, layout);
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : max_size;
 
   *out_type = std::make_unique<StringType>(name, merged_size, merged_nullability);
@@ -1085,7 +1085,7 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
 
   if (nullability == types::Nullability::kNullable &&
       applied_nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, std::nullopt, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
   auto merged_nullability = nullability;
   if (applied_nullability == types::Nullability::kNullable)
     merged_nullability = applied_nullability;
@@ -5226,18 +5226,18 @@ bool LibraryMediator::ResolveParamAsSize(const flat::TypeTemplate* layout,
     case LayoutParameter::Kind::kLiteral: {
       auto literal_param = static_cast<LiteralLayoutParameter*>(param.get());
       if (!ResolveSizeBound(literal_param->literal.get(), out_size))
-        return library_->Fail(ErrCouldNotParseSizeBound);
+        return library_->Fail(ErrCouldNotParseSizeBound, literal_param->span);
       break;
     }
     case LayoutParameter::kType: {
       auto type_param = static_cast<TypeLayoutParameter*>(param.get());
-      return library_->Fail(ErrExpectedValueButGotType, type_param->type_ctor->name);
+      return library_->Fail(ErrExpectedValueButGotType, type_param->span, type_param->type_ctor->name);
     }
     case LayoutParameter::Kind::kIdentifier: {
       auto ambig_param = static_cast<IdentifierLayoutParameter*>(param.get());
       auto as_constant = ambig_param->AsConstant();
       if (!ResolveSizeBound(as_constant, out_size))
-        return library_->Fail(ErrExpectedValueButGotType, ambig_param->name);
+        return library_->Fail(ErrExpectedValueButGotType, ambig_param->span, ambig_param->name);
       break;
     }
   }
