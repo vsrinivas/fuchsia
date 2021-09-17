@@ -79,7 +79,6 @@ dart_library("zircon") {
   sdk_category = "partner"
 
   package_root = _zircon_pkg_root
-  options_file = "analysis_options.yaml"
 
   abs_sources = get_target_outputs(":copy_lib_sources") +
                 get_target_outputs(":generate_zircon_constants")

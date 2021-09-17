@@ -70,9 +70,6 @@ template("dart_app") {
   assert(defined(_meta.path), "Must define meta[0].path")
   assert(!defined(invoker.pubspec) || invoker.pubspec == "pubspec.yaml",
          "pubspec must be 'pubspec.yaml'")
-  assert(!defined(invoker.options_file) ||
-             invoker.options_file == "analysis_options.yaml",
-         "options_file must be 'analysis_options.yaml'")
   _package_name = target_name
   if (defined(invoker.package_name)) {
     _package_name = invoker.package_name

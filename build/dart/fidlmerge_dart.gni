@@ -120,12 +120,6 @@ template("fidlmerge_dart") {
     outputs = [ "$root_dir/pubspec.yaml" ]
   }
 
-  copy(copy_options_target_name) {
-    sources = [ "//build/dart/analysis_options.yaml" ]
-
-    outputs = [ "$root_dir/analysis_options.yaml" ]
-  }
-
   copy(copy_source_target_name) {
     sources = [ "$file_stem.dart" ]
     outputs = [ "$root_dir/lib/$source_base.dart" ]
@@ -147,7 +141,6 @@ template("fidlmerge_dart") {
     sources = [ "$source_base.dart" ]
 
     deps = [
-      ":$copy_options_target_name",
       ":$copy_pubspec_target_name",
       ":$copy_source_target_name",
       ":$generation_target_name",

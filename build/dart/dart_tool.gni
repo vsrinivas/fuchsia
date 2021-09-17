@@ -166,6 +166,7 @@ template("dart_tool") {
                              "null_safe",
                              "testonly",
                              "visibility",
+                             "options_file",
                            ])
     package_name = package_name
     package_root = package_root

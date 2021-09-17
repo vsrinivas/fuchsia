@@ -55,21 +55,6 @@ def main():
         ),
     )
 
-    options = args.options
-    while True:
-        if not os.path.exists(options):
-            print('Could not find options file: {}'.format(options))
-            return 1
-        args.depfile.write(' {}'.format(options))
-        with open(options, 'r') as options_file:
-            content = yaml.safe_load(options_file)
-            if not 'include' in content:
-                break
-            included = content['include']
-            if not os.path.isabs(included):
-                included = os.path.join(os.path.dirname(options), included)
-            options = included
-
     call_args = [
         args.dartanalyzer,
         '--packages={}'.format(args.dot_packages),

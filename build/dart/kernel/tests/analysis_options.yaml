@@ -1,8 +1,0 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Keeping this simple to keep testing isolated to the BUILD files
-linter:
-  rules:
-    - always_declare_return_types

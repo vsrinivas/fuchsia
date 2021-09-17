@@ -71,11 +71,6 @@ template("flutter_dart_test_component") {
     _pubspec = invoker.pubspec
   }
 
-  _options_file = "${_package_root}/analysis_options.yaml"
-  if (defined(invoker.options_file)) {
-    _options_file = invoker.options_file
-  }
-
   _test_package_name = string_replace(target_name, "-", "_") + "_test_package"
 
   # Create a package containing all of the original test sources
@@ -97,7 +92,9 @@ template("flutter_dart_test_component") {
     package_root = "${_package_root}/test"
     source_dir = "."
     pubspec = _pubspec
-    options_file = _options_file
+    if (defined(invoker.options_file)) {
+      options_file = invoker.options_file
+    }
 
     # TODO(fxbug.dev/71902): replace the enclosing dart_library with an analysis
     # target when they are decoupled.
@@ -164,7 +161,6 @@ template("flutter_dart_test_component") {
 
     package_root = _generated_package_root
     pubspec = _pubspec
-    options_file = _options_file
 
     # speed up compilation times by skipping these checks
     disable_analysis = true

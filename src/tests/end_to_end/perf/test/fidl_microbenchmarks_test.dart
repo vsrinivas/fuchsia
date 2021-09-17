@@ -50,34 +50,33 @@ void main(List<String> args) {
   runPerftestFidlBenchmark('walker_fidl_microbenchmarks');
   runPerftestFidlBenchmark('reference_fidl_microbenchmarks');
 
-  _tests.add(() {
-    test('go_fidl_microbenchmarks', () async {
-      final helper = await PerfTestHelper.make();
-      await helper.runTestCommand((resultsFile) =>
-          '/bin/go_fidl_microbenchmarks --out_file $resultsFile');
-    }, timeout: Timeout.none);
-  });
-
-  _tests.add(() {
-    test('rust_fidl_microbenchmarks', () async {
-      final helper = await PerfTestHelper.make();
-      await helper.runTestCommand(
-          (resultsFile) => '/bin/rust_fidl_microbenchmarks $resultsFile');
-    }, timeout: Timeout.none);
-  });
-
-  _tests.add(() {
-    test('dart_fidl_microbenchmarks', () async {
-      final helper = await PerfTestHelper.make();
-      const resultsFile =
-          '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart-fidl-benchmarks:0#meta:dart-fidl-benchmarks.cmx/results.json';
-      const command = 'run-test-component --realm-label=fidl_benchmarks '
-          'fuchsia-pkg://fuchsia.com/dart-fidl-benchmarks#meta/dart-fidl-benchmarks.cmx';
-      final result = await helper.sl4fDriver.ssh.run(command);
-      expect(result.exitCode, equals(0));
-      await helper.processResults(resultsFile);
-    }, timeout: Timeout.none);
-  });
+  _tests
+    ..add(() {
+      test('go_fidl_microbenchmarks', () async {
+        final helper = await PerfTestHelper.make();
+        await helper.runTestCommand((resultsFile) =>
+            '/bin/go_fidl_microbenchmarks --out_file $resultsFile');
+      }, timeout: Timeout.none);
+    })
+    ..add(() {
+      test('rust_fidl_microbenchmarks', () async {
+        final helper = await PerfTestHelper.make();
+        await helper.runTestCommand(
+            (resultsFile) => '/bin/rust_fidl_microbenchmarks $resultsFile');
+      }, timeout: Timeout.none);
+    })
+    ..add(() {
+      test('dart_fidl_microbenchmarks', () async {
+        final helper = await PerfTestHelper.make();
+        const resultsFile =
+            '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart-fidl-benchmarks:0#meta:dart-fidl-benchmarks.cmx/results.json';
+        const command = 'run-test-component --realm-label=fidl_benchmarks '
+            'fuchsia-pkg://fuchsia.com/dart-fidl-benchmarks#meta/dart-fidl-benchmarks.cmx';
+        final result = await helper.sl4fDriver.ssh.run(command);
+        expect(result.exitCode, equals(0));
+        await helper.processResults(resultsFile);
+      }, timeout: Timeout.none);
+    });
 
   runShardTests(args, _tests);
 }

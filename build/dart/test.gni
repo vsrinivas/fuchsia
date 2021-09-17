@@ -66,6 +66,7 @@ template("dart_test") {
                              "sources",
                              "hermetic_deps",
                              "null_safe",
+                             "options_file",
                            ])
 
     # We want to mimic the package_root being in place of the source_dir. Dart
@@ -79,12 +80,6 @@ template("dart_test") {
     # original package root since we are effectively changing the package_root
     # for this library.
     pubspec = "pubspec.yaml"
-
-    if (!defined(disable_analysis) ||
-        (defined(disable_analysis) && !disable_analysis)) {
-      # analysis is not disabled so include the options file
-      options_file = "analysis_options.yaml"
-    }
 
     infer_package_name = true
     testonly = true

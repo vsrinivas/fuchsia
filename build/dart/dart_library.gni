@@ -100,7 +100,7 @@ declare_args() {
 #     the pubspec.yaml in the package root. It is not common that this value will
 #     need to be set but can be useful for generated code.
 #
-#   options_file (optional)
+#   options_file (optional, deprecated)
 #     Path to the analysis_options.yaml file. If not provided, will default to
 #     looking for the analysis_options.yaml in the package root. It is not common
 #     that this value needs to be set but can be useful for generated code.
@@ -360,9 +360,21 @@ if (current_toolchain == dart_toolchain) {
         !defined(invoker.disable_analysis) || !invoker.disable_analysis
     with_analysis = enable_dart_analysis && with_analysis
     if (with_analysis) {
-      options_file = "$package_root/analysis_options.yaml"
+      # TODO(jayzhuang): Remove `_analysis_options` as soon as we switch to
+      # `dart analyze`.
+      _analysis_options = "//analysis_options.yaml"
       if (defined(invoker.options_file)) {
-        options_file = invoker.options_file
+        # Always append a trailing "/" so both paths consistently ends with a
+        # "/" after get_path_info.
+        _abs_options_file_dir =
+            get_path_info(get_path_info(invoker.options_file, "abspath"),
+                          "dir") + "/"
+        _abs_package_root = get_path_info(package_root + "/", "abspath")
+        assert(
+            _abs_options_file_dir == _abs_package_root,
+            "custom analysis options file must be located in package root ${_abs_package_root}, it's currently located in ${_abs_options_file_dir}")
+
+        _analysis_options = invoker.options_file
       }
 
       dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
@@ -373,6 +385,7 @@ if (current_toolchain == dart_toolchain) {
       # Runs analysis on the sources.
       action(analysis_target_name) {
         forward_variables_from(concurrent_jobs.local, "*")
+        forward_variables_from(invoker, [ "testonly" ])
 
         # This script is built by "//build/dart:run_analysis". However, because
         # that target is not defined in this file we can't use
@@ -388,13 +401,24 @@ if (current_toolchain == dart_toolchain) {
           _pubspec = invoker.pubspec
         }
         inputs = [
+                   "//analysis_options.yaml",
                    _all_deps_sources_file,
                    _packages_path,
                    _pubspec,
                    dart_analyzer_binary,
-                   options_file,
                    source_file,
                  ] + rebase_path(rebased_sources, ".", root_build_dir)
+
+        deps = _dart_deps + dart_sdk_deps + [
+                 ":$_all_deps_sources_target",
+                 ":$_dart_package_config_target_name",
+                 "//build/dart:run_analysis",
+               ]
+
+        if (defined(invoker.options_file)) {
+          inputs += [ invoker.options_file ]
+          deps += [ "//build/dart:custom_analysis_options" ]
+        }
 
         output_file = "$target_gen_dir/$target_name.analyzed"
         outputs = [ output_file ]
@@ -404,12 +428,15 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(source_file, root_build_dir),
           "--dot-packages",
           rebase_path(_packages_path, root_build_dir),
+
+          # TODO(jayzhuang): Remove `--options` flag as soon as we switch to
+          # `dart analyze`.
+          "--options",
+          rebase_path(_analysis_options, root_build_dir),
           "--dartanalyzer",
           rebase_path(dart_analyzer_binary, root_build_dir),
           "--dart-sdk",
           rebase_path(dart_sdk, root_build_dir),
-          "--options",
-          rebase_path(options_file, root_build_dir),
           "--stamp",
           rebase_path(output_file, root_build_dir),
           "--depname",
@@ -419,17 +446,7 @@ if (current_toolchain == dart_toolchain) {
           "--all-deps-sources-file",
           rebase_path(_all_deps_sources_file, root_build_dir),
         ]
-
-        deps = _dart_deps + dart_sdk_deps + [
-                 ":$_all_deps_sources_target",
-                 ":$_dart_package_config_target_name",
-                 "//build/dart:run_analysis",
-               ]
-
-        forward_variables_from(invoker, [ "testonly" ])
       }
-    } else {
-      not_needed(invoker, [ "options_file" ])
     }
 
     ################################

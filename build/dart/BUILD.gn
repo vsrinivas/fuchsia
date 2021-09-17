@@ -128,3 +128,24 @@ group("tests") {
     "tests",
   ]
 }
+
+group("custom_analysis_options") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of dart_libraries with custom analysis options, which
+  # are dart_libraries that set `options_file`.
+  #
+  # Introducing new dart_libraries with custom analysis options is not allowed.
+  # See more details in https://fxbug.dev/84787.
+  visibility = [
+    "//build/flutter/internal/build_test_bootstrap/*",
+    "//src/tests/benchmarks/fidl/dart/*",
+    "//tools/codesize/*",
+  ]
+}

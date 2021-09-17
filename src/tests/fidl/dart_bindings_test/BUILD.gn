@@ -62,7 +62,6 @@ dart_test_component("conformance-component") {
 
   # reuse the pubspec.yaml and analysis_options.yaml from test/
   pubspec = "test/pubspec.yaml"
-  options_file = "test/analysis_options.yaml"
 }
 
 ## Bindings Test

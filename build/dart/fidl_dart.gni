@@ -81,18 +81,11 @@ template("fidl_dart") {
   }
 
   copy_pubspec_target_name = "${target_name}_dart_pubspec"
-  copy_options_target_name = "${target_name}_dart_options"
 
   copy(copy_pubspec_target_name) {
     sources = [ "//build/dart/empty_pubspec.yaml" ]
 
     outputs = [ "$root_dir/pubspec.yaml" ]
-  }
-
-  copy(copy_options_target_name) {
-    sources = [ "//build/dart/analysis_options.yaml" ]
-
-    outputs = [ "$root_dir/analysis_options.yaml" ]
   }
 
   dart_library(main_target_name) {
@@ -118,7 +111,6 @@ template("fidl_dart") {
     ]
 
     deps = [
-      ":$copy_options_target_name",
       ":$copy_pubspec_target_name",
       ":$generation_target_name",
       "//sdk/dart/fidl",

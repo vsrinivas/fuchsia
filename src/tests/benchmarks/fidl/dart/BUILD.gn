@@ -22,12 +22,18 @@ gidl("benchmark_suite") {
   output = benchmark_path
 }
 
+copy("copy_benchmark_component_analysis_options") {
+  sources = [ "analysis_options.yaml" ]
+  outputs = [ "${benchmark_dir}/test/analysis_options.yaml" ]
+}
+
 dart_test_component("benchmark-component") {
   component_name = "dart-fidl-benchmarks"
   manifest = "meta/dart-fidl-benchmarks.cmx"
   package_root = benchmark_dir
   sources = [ benchmark_file ]
   deps = [
+    ":copy_benchmark_component_analysis_options",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia",
     "//sdk/dart/zircon",
@@ -40,7 +46,7 @@ dart_test_component("benchmark-component") {
   non_dart_deps = [ ":benchmark_suite" ]
 
   pubspec = "pubspec.yaml"
-  options_file = "analysis_options.yaml"
+  options_file = "${benchmark_dir}/test/analysis_options.yaml"
 }
 
 fuchsia_test_package("dart-fidl-benchmarks") {

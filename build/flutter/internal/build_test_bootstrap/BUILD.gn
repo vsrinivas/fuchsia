@@ -12,4 +12,6 @@ dart_tool("build_test_bootstrap") {
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/crypto",
   ]
+
+  options_file = "analysis_options.yaml"
 }

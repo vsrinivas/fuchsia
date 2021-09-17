@@ -207,7 +207,9 @@ class Performance {
   Future<bool> runProcess(String executablePath, List<String> args) async {
     _log.info('Performance: Running $executablePath ${args.join(" ")}');
     final ProcessResult results = await Process.run(executablePath, args);
-    _log..info(results.stdout)..info(results.stderr);
+    _log
+      ..info(results.stdout)
+      ..info(results.stderr);
     return results.exitCode == 0;
   }
 
@@ -336,7 +338,7 @@ class Performance {
       bot = 'local-bot';
       master = 'local-master';
       logurl = 'http://ci.example.com/build/300';
-      timestamp = new DateTime.now().millisecondsSinceEpoch;
+      timestamp = DateTime.now().millisecondsSinceEpoch;
       // Disable uploading so that we don't accidentally upload with the
       // dummy values set here.
       uploadEnabled = false;

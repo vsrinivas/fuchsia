@@ -210,9 +210,9 @@ class Input {
       {Duration keyPressDuration = const Duration(milliseconds: 1)}) async {
     const int maxHidUsageId = 0xFFFF;
     if (hidUsageId > maxHidUsageId) {
-      throw new ArgumentError('hidUsageId is too large: $hidUsageId');
+      throw ArgumentError('hidUsageId is too large: $hidUsageId');
     } else if (hidUsageId < 0) {
-      throw new ArgumentError('hidUsageId is negative: $hidUsageId');
+      throw ArgumentError('hidUsageId is negative: $hidUsageId');
     }
 
     final result = await _sl4f.request('input_facade.KeyPress', {

@@ -82,6 +82,8 @@ dart_tool("codesize") {
     "//third_party/dart-pkg/pub/vm_service",
     "//third_party/dart-pkg/pub/watcher",
   ]
+
+  options_file = "analysis_options.yaml"
 }
 
 if (is_host) {

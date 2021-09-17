@@ -85,12 +85,6 @@ if (current_toolchain == dart_toolchain) {
       # for this library.
       pubspec = "pubspec.yaml"
 
-      if (!defined(disable_analysis) ||
-          (defined(disable_analysis) && !disable_analysis)) {
-        # analysis is not disabled so include the options file
-        options_file = "analysis_options.yaml"
-      }
-
       testonly = true
 
       # TODO(fxbug.dev/71902): replace the enclosing dart_library with an analysis
