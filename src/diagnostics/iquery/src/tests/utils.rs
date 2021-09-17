@@ -192,7 +192,7 @@ impl<'a> CommandAssertion<'a> {
     }
 
     pub fn with_retries(&mut self) {
-        self.max_retry_time_seconds = 15;
+        self.max_retry_time_seconds = 120;
     }
 
     pub fn remove_archivist(&mut self) {
