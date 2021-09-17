@@ -1979,8 +1979,11 @@ impl<A: IpAddress> Subnet<A> {
 }
 
 impl Subnet<Ipv4Addr> {
-    // TODO(joshlf): Introduce a `BroadcastAddr` witness type, and have
-    // `broadcast` return `BroadcastAddr<Ipv4Addr>`.
+    // TODO(joshlf): If we introduce a separate type for an address in a subnet
+    // (with fewer requirements than `AddrSubnet` has now so that a broadcast
+    // address is representable), then that type could implement
+    // `BroadcastAddress`, and `broadcast` could return
+    // `BroadcastAddr<Foo<Ipv4Addr>>`.
 
     /// Gets the broadcast address in this IPv4 subnet.
     #[inline]

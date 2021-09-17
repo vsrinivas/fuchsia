@@ -139,6 +139,7 @@ pub trait SpecifiedAddress {
 
 impl_trait_for_witness!(SpecifiedAddress, is_specified, UnicastAddr);
 impl_trait_for_witness!(SpecifiedAddress, is_specified, MulticastAddr);
+impl_trait_for_witness!(SpecifiedAddress, is_specified, BroadcastAddr);
 impl_trait_for_witness!(SpecifiedAddress, is_specified, LinkLocalAddr);
 
 /// Addresses that can be unicast.
@@ -172,6 +173,7 @@ pub trait UnicastAddress {
 
 impl_trait_for_witness!(UnicastAddress, is_unicast, SpecifiedAddr);
 impl_trait_for_witness!(UnicastAddress, is_unicast, MulticastAddr);
+impl_trait_for_witness!(UnicastAddress, is_unicast, BroadcastAddr);
 impl_trait_for_witness!(UnicastAddress, is_unicast, LinkLocalAddr);
 
 /// Addresses that can be multicast.
@@ -201,6 +203,7 @@ pub trait MulticastAddress {
 
 impl_trait_for_witness!(MulticastAddress, is_multicast, SpecifiedAddr);
 impl_trait_for_witness!(MulticastAddress, is_multicast, UnicastAddr);
+impl_trait_for_witness!(MulticastAddress, is_multicast, BroadcastAddr);
 impl_trait_for_witness!(MulticastAddress, is_multicast, LinkLocalAddr);
 
 /// Addresses that can be broadcast.
@@ -255,6 +258,7 @@ pub trait LinkLocalAddress {
 impl_trait_for_witness!(LinkLocalAddress, is_linklocal, SpecifiedAddr);
 impl_trait_for_witness!(LinkLocalAddress, is_linklocal, UnicastAddr);
 impl_trait_for_witness!(LinkLocalAddress, is_linklocal, MulticastAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_linklocal, BroadcastAddr);
 
 /// A scope used by [`ScopeableAddress`]. See that trait's documentation for
 /// more information.
@@ -565,9 +569,11 @@ impl_try_from_witness!(
     [SpecifiedAddr: SpecifiedAddress],
     [UnicastAddr: UnicastAddress],
     [MulticastAddr: MulticastAddress],
+    [BroadcastAddr: BroadcastAddress],
     [LinkLocalAddr: LinkLocalAddress],
     [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
-    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress],
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress]
 );
 
 // UnicastAddr
@@ -577,8 +583,10 @@ impl_nested_witness!(UnicastAddress, UnicastAddr, LinkLocalAddress, LinkLocalAdd
 impl_try_from_witness!(
     [UnicastAddr: UnicastAddress],
     [MulticastAddr: MulticastAddress],
+    [BroadcastAddr: BroadcastAddress],
     [LinkLocalAddr: LinkLocalAddress],
-    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress],
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress]
 );
 
 // MulticastAddr
@@ -600,8 +608,35 @@ impl_into_specified_for_nested_witness!(
 impl_try_from_witness!(
     [MulticastAddr: MulticastAddress],
     [UnicastAddr: UnicastAddress],
+    [BroadcastAddr: BroadcastAddress],
     [LinkLocalAddr: LinkLocalAddress],
-    [LinkLocalUnicastAddr: LinkLocalUnicastAddress]
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress]
+);
+
+// BroadcastAddr
+impl_witness!(BroadcastAddr, "broadcast", BroadcastAddress, is_broadcast);
+impl_into_specified!(BroadcastAddr, BroadcastAddress, is_broadcast);
+impl_nested_witness!(
+    BroadcastAddress,
+    BroadcastAddr,
+    LinkLocalAddress,
+    LinkLocalAddr,
+    new_linklocal
+);
+impl_into_specified_for_nested_witness!(
+    BroadcastAddress,
+    BroadcastAddr,
+    LinkLocalAddress,
+    LinkLocalAddr
+);
+impl_try_from_witness!(
+    [BroadcastAddr: BroadcastAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
 );
 
 // LinkLocalAddr
@@ -615,6 +650,13 @@ impl_nested_witness!(
     MulticastAddr,
     new_multicast
 );
+impl_nested_witness!(
+    LinkLocalAddress,
+    LinkLocalAddr,
+    BroadcastAddress,
+    BroadcastAddr,
+    new_broadcast
+);
 impl_into_specified_for_nested_witness!(
     LinkLocalAddress,
     LinkLocalAddr,
@@ -627,10 +669,17 @@ impl_into_specified_for_nested_witness!(
     MulticastAddress,
     MulticastAddr
 );
+impl_into_specified_for_nested_witness!(
+    LinkLocalAddress,
+    LinkLocalAddr,
+    BroadcastAddress,
+    BroadcastAddr
+);
 impl_try_from_witness!(
     [LinkLocalAddr: LinkLocalAddress],
     [UnicastAddr: UnicastAddress],
-    [MulticastAddr: MulticastAddress]
+    [MulticastAddr: MulticastAddress],
+    [BroadcastAddr: BroadcastAddress]
 );
 
 // NOTE(joshlf): We provide these type aliases both for convenience and also to
@@ -655,25 +704,45 @@ impl<A: LinkLocalAddress + UnicastAddress> LinkLocalUnicastAddress for A {}
 pub trait LinkLocalMulticastAddress: LinkLocalAddress + MulticastAddress {}
 impl<A: LinkLocalAddress + MulticastAddress> LinkLocalMulticastAddress for A {}
 
+/// An address that can be link-local and broadcast.
+///
+/// `LinkLocalBroadcastAddress` is a shorthand for `LinkLocalAddress +
+/// BroadcastAddress`.
+pub trait LinkLocalBroadcastAddress: LinkLocalAddress + BroadcastAddress {}
+impl<A: LinkLocalAddress + BroadcastAddress> LinkLocalBroadcastAddress for A {}
+
 /// A link-local unicast address.
 pub type LinkLocalUnicastAddr<A> = LinkLocalAddr<UnicastAddr<A>>;
 
 /// A link-local multicast address.
 pub type LinkLocalMulticastAddr<A> = LinkLocalAddr<MulticastAddr<A>>;
 
+/// A link-local broadcast address.
+pub type LinkLocalBroadcastAddr<A> = LinkLocalAddr<BroadcastAddr<A>>;
+
 impl_try_from_witness!(
     [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
     [UnicastAddr: UnicastAddress],
     [MulticastAddr: MulticastAddress],
     [LinkLocalAddr: LinkLocalAddress],
-    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress],
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress]
 );
 impl_try_from_witness!(
     [LinkLocalMulticastAddr: LinkLocalMulticastAddress],
     [UnicastAddr: UnicastAddress],
     [MulticastAddr: MulticastAddress],
     [LinkLocalAddr: LinkLocalAddress],
-    [LinkLocalUnicastAddr: LinkLocalUnicastAddress]
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress]
+);
+impl_try_from_witness!(
+    [LinkLocalBroadcastAddr: LinkLocalBroadcastAddress],
+    [UnicastAddr: UnicastAddress],
+    [MulticastAddr: MulticastAddress],
+    [LinkLocalAddr: LinkLocalAddress],
+    [LinkLocalUnicastAddr: LinkLocalUnicastAddress],
+    [LinkLocalMulticastAddr: LinkLocalMulticastAddress]
 );
 
 /// A witness type for an address and a scope zone.
@@ -779,8 +848,10 @@ mod tests {
         Unspecified,
         GlobalUnicast,
         GlobalMulticast,
+        GlobalBroadcast,
         LinkLocalUnicast,
         LinkLocalMulticast,
+        LinkLocalBroadcast,
     }
 
     impl SpecifiedAddress for Address {
@@ -791,19 +862,44 @@ mod tests {
 
     impl UnicastAddress for Address {
         fn is_unicast(&self) -> bool {
-            matches!(self, Address::GlobalUnicast | Address::LinkLocalUnicast)
+            use Address::*;
+            match self {
+                GlobalUnicast | LinkLocalUnicast => true,
+                Unspecified | GlobalMulticast | GlobalBroadcast | LinkLocalMulticast
+                | LinkLocalBroadcast => false,
+            }
         }
     }
 
     impl MulticastAddress for Address {
         fn is_multicast(&self) -> bool {
-            matches!(self, Address::GlobalMulticast | Address::LinkLocalMulticast)
+            use Address::*;
+            match self {
+                GlobalMulticast | LinkLocalMulticast => true,
+                Unspecified | GlobalUnicast | GlobalBroadcast | LinkLocalUnicast
+                | LinkLocalBroadcast => false,
+            }
+        }
+    }
+
+    impl BroadcastAddress for Address {
+        fn is_broadcast(&self) -> bool {
+            use Address::*;
+            match self {
+                GlobalBroadcast | LinkLocalBroadcast => true,
+                Unspecified | GlobalUnicast | GlobalMulticast | LinkLocalUnicast
+                | LinkLocalMulticast => false,
+            }
         }
     }
 
     impl LinkLocalAddress for Address {
         fn is_linklocal(&self) -> bool {
-            matches!(self, Address::LinkLocalUnicast | Address::LinkLocalMulticast)
+            use Address::*;
+            match self {
+                LinkLocalUnicast | LinkLocalMulticast | LinkLocalBroadcast => true,
+                Unspecified | GlobalUnicast | GlobalMulticast | GlobalBroadcast => false,
+            }
         }
     }
 
@@ -867,6 +963,19 @@ mod tests {
     }
 
     #[test]
+    fn test_broadcast_addr() {
+        assert_eq!(
+            BroadcastAddr::new(Address::GlobalBroadcast),
+            Some(BroadcastAddr(Address::GlobalBroadcast))
+        );
+        assert_eq!(BroadcastAddr::new(Address::GlobalUnicast), None);
+        assert_eq!(
+            unsafe { BroadcastAddr::new_unchecked(Address::GlobalBroadcast) },
+            BroadcastAddr(Address::GlobalBroadcast)
+        );
+    }
+
+    #[test]
     fn test_linklocal_addr() {
         assert_eq!(
             LinkLocalAddr::new(Address::LinkLocalUnicast),
@@ -882,10 +991,11 @@ mod tests {
     #[test]
     fn test_nested() {
         // Test UnicastAddr<LinkLocalAddr>, MulticastAddr<LinkLocalAddr>,
-        // LinkLocalAddr<UnicastAddr>, and LinkLocalAddr<MulticastAddr>.
+        // BroadcastAddr<LinkLocalAddr>, LinkLocalAddr<UnicastAddr>,
+        // LinkLocalAddr<MulticastAddr>, LinkLocalAddr<BroadcastAddr>.
 
         macro_rules! test_nested {
-            ($new:expr, $([$input:ident => $output:expr],)*) => {
+            ($new:expr, $($input:ident => $output:expr,)*) => {
                 $(
                     assert_eq!($new(Address::$input), $output);
                 )*
@@ -893,37 +1003,60 @@ mod tests {
         }
 
         // Unicast
-        test_nested!(UnicastAddr::new_linklocal,
-            [Unspecified => None],
-            [GlobalUnicast => None],
-            [GlobalMulticast => None],
-            [LinkLocalUnicast => Some(UnicastAddr(LinkLocalAddr(Address::LinkLocalUnicast)))],
-            [LinkLocalMulticast => None],
+        test_nested!(
+            UnicastAddr::new_linklocal,
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => Some(UnicastAddr(LinkLocalAddr(Address::LinkLocalUnicast))),
+            LinkLocalMulticast => None,
+            LinkLocalBroadcast => None,
         );
 
         // Multicast
         test_nested!(MulticastAddr::new_linklocal,
-            [Unspecified => None],
-            [GlobalUnicast => None],
-            [GlobalMulticast => None],
-            [LinkLocalUnicast => None],
-            [LinkLocalMulticast => Some(MulticastAddr(LinkLocalAddr(Address::LinkLocalMulticast)))],
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => None,
+            LinkLocalMulticast => Some(MulticastAddr(LinkLocalAddr(Address::LinkLocalMulticast))),
+            LinkLocalBroadcast => None,
+        );
+
+        // Broadcast
+        test_nested!(BroadcastAddr::new_linklocal,
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => None,
+            LinkLocalMulticast => None,
+            LinkLocalBroadcast => Some(BroadcastAddr(LinkLocalAddr(Address::LinkLocalBroadcast))),
         );
 
         // Link-local
         test_nested!(LinkLocalAddr::new_unicast,
-            [Unspecified => None],
-            [GlobalUnicast => None],
-            [GlobalMulticast => None],
-            [LinkLocalUnicast => Some(LinkLocalAddr(UnicastAddr(Address::LinkLocalUnicast)))],
-            [LinkLocalMulticast => None],
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => Some(LinkLocalAddr(UnicastAddr(Address::LinkLocalUnicast))),
+            LinkLocalMulticast => None,
+            LinkLocalBroadcast => None,
         );
         test_nested!(LinkLocalAddr::new_multicast,
-            [Unspecified => None],
-            [GlobalUnicast => None],
-            [GlobalMulticast => None],
-            [LinkLocalUnicast => None],
-            [LinkLocalMulticast => Some(LinkLocalAddr(MulticastAddr(Address::LinkLocalMulticast)))],
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => None,
+            LinkLocalMulticast => Some(LinkLocalAddr(MulticastAddr(Address::LinkLocalMulticast))),
+            LinkLocalBroadcast => None,
+        );
+        test_nested!(LinkLocalAddr::new_broadcast,
+            Unspecified => None,
+            GlobalUnicast => None,
+            GlobalMulticast => None,
+            LinkLocalUnicast => None,
+            LinkLocalMulticast => None,
+            LinkLocalBroadcast => Some(LinkLocalAddr(BroadcastAddr(Address::LinkLocalBroadcast))),
         );
     }
 
