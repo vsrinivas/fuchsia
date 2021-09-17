@@ -8,12 +8,12 @@ use {
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
-    fidl::endpoints::{ProtocolMarker, Proxy, ServerEnd},
+    fidl::endpoints::{ProtocolMarker, Proxy},
     fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
     fidl_fuchsia_test_manager as ftest_manager,
-    ftest::{Invocation, SuiteMarker},
+    ftest::Invocation,
     ftest_manager::{
         CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
         SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
@@ -317,101 +317,6 @@ fn get_invocation_options(options: ftest_manager::RunOptions) -> ftest::RunOptio
         parallel: options.parallel,
         arguments: options.arguments,
         ..ftest::RunOptions::EMPTY
-    }
-}
-
-async fn run_suite(
-    test_url: String,
-    suite: ftest::SuiteProxy,
-    options: ftest_manager::RunOptions,
-    mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
-    mut stop_recv: oneshot::Receiver<()>,
-) {
-    debug!("running test suite {}", test_url);
-
-    let fut = async {
-        let matcher = match options.case_filters_to_run.as_ref() {
-            Some(filters) => match CaseMatcher::new(filters) {
-                Ok(p) => Some(p),
-                Err(e) => {
-                    sender.send(Err(LaunchError::InvalidArgs)).await.unwrap();
-                    return Err(e);
-                }
-            },
-            None => None,
-        };
-
-        let invocations = match enumerate_test_cases(&suite, matcher).await {
-            Ok(i) => i,
-            Err(e) => {
-                sender
-                    .send(Err(map_suite_error_epitaph(suite, LaunchError::CaseEnumeration)))
-                    .await
-                    .unwrap();
-                return Err(e);
-            }
-        };
-        if let Ok(Some(_)) = stop_recv.try_recv() {
-            sender.send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into())).await.unwrap();
-            return Ok(());
-        }
-
-        let mut suite_status = SuiteStatus::Passed;
-        let mut invocations_iter = invocations.into_iter();
-        let counter = AtomicU32::new(0);
-        let timeout_time = match options.timeout {
-            Some(t) => zx::Time::after(zx::Duration::from_nanos(t)),
-            None => zx::Time::INFINITE,
-        };
-        let timeout_fut = fasync::Timer::new(timeout_time).shared();
-
-        let run_options = get_invocation_options(options);
-
-        sender.send(Ok(SuiteEvents::suite_started().into())).await.unwrap();
-
-        loop {
-            const INVOCATIONS_CHUNK: usize = 50;
-            let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
-            if chunk.is_empty() {
-                break;
-            }
-            let res = match run_invocations(
-                &suite,
-                chunk,
-                run_options.clone(),
-                &counter,
-                &mut sender,
-                timeout_fut.clone(),
-            )
-            .await
-            .context("Error running test cases")
-            {
-                Ok(success) => success,
-                Err(e) => {
-                    return Err(e);
-                }
-            };
-            if res == SuiteStatus::TimedOut {
-                sender
-                    .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::TimedOut).into()))
-                    .await
-                    .unwrap();
-                return Ok(());
-            }
-            suite_status = concat_suite_status(suite_status, res);
-            if let Ok(Some(_)) = stop_recv.try_recv() {
-                sender
-                    .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into()))
-                    .await
-                    .unwrap();
-                return Ok(());
-            }
-        }
-        sender.send(Ok(SuiteEvents::suite_stopped(suite_status).into())).await.unwrap();
-        Ok(())
-    };
-    if let Err(e) = fut.await {
-        warn!("Error running test {}: {:?}", test_url, e);
     }
 }
 
@@ -757,9 +662,8 @@ impl Suite {
     async fn run_controller(
         mut controller: SuiteControllerRequestStream,
         stop_sender: oneshot::Sender<()>,
+        kill_sender: futures::future::AbortHandle,
         event_recv: mpsc::Receiver<Result<FidlSuiteEvent, LaunchError>>,
-        mut suite_run_task: Option<fasync::Task<()>>,
-        mut running_suite: Option<RunningSuite>,
     ) -> Result<(), Error> {
         let mut event_recv = event_recv.into_stream().fuse();
         let mut stop_sender = Some(stop_sender);
@@ -811,25 +715,12 @@ impl Suite {
                     }
                 }
                 SuiteControllerRequest::Kill { .. } => {
-                    if let Some(t) = suite_run_task.take() {
-                        t.cancel().await;
-                    }
-                    if let Some(test) = running_suite.take() {
-                        test.destroy().await;
-                    }
+                    kill_sender.abort();
                     // after this all `senders` go away and subsequent GetEvent call will
                     // return rest of event. Eventually an empty array and will close the
                     // connection after that.
                 }
             }
-        }
-
-        // cancel running test (if it is still running)
-        if let Some(t) = suite_run_task.take() {
-            t.cancel().await;
-        }
-        if let Some(test) = running_suite.take() {
-            test.destroy().await;
         }
         Ok(())
     }
@@ -837,63 +728,40 @@ impl Suite {
     async fn run(self, test_map: Arc<TestMap>) {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let (suite, suite_request) = fidl::endpoints::create_proxy().expect("cannot create suite");
-        let test = self.launch_suite(sender.clone(), suite_request, test_map.clone()).await;
-        let test_name = match &test {
-            Some(t) => Some(t.instance.root.child_name().to_string()),
-            None => None,
+        let mut instance = self.launch_suite(sender.clone(), test_map).await;
+        let Self { test_url, options, controller, .. } = self;
+
+        let run_test_fut = match instance.as_mut() {
+            Some(instance) => instance.run_tests(options, sender, stop_recv).boxed(),
+            None => futures::future::ready(()).boxed(),
         };
 
-        let task = match &test {
-            Some(_) => Some(fasync::Task::spawn(run_suite(
-                self.test_url.clone(),
-                suite,
-                self.options,
-                sender,
-                stop_recv,
-            ))),
-            None => None,
-        };
-        let controller_ret =
-            Self::run_controller(self.controller, stop_sender, recv, task, test).await;
+        let (run_test_abortable, run_test_abort_handle) = futures::future::abortable(run_test_fut);
 
-        if let Some(test_name) = test_name {
-            test_map.mark_as_stale(&test_name);
-        }
+        let controller_fut =
+            Self::run_controller(controller, stop_sender, run_test_abort_handle, recv);
+        // Okay to ignore error in the run test result as aborted is expected when Kill is called
+        let (_run_test_res, controller_ret): (Result<(), futures::future::Aborted>, _) =
+            futures::future::join(run_test_abortable, controller_fut).await;
+
         if let Err(e) = controller_ret {
-            warn!("Ended test {}: {:?}", self.test_url, e);
+            warn!("Ended test {}: {:?}", test_url, e);
+        }
+
+        if let Some(instance) = instance {
+            instance.destroy().await;
         }
     }
 
     async fn launch_suite(
         &self,
         mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
-        suite_request: ServerEnd<SuiteMarker>,
         test_map: Arc<TestMap>,
     ) -> Option<RunningSuite> {
-        let (log_iterator, syslog) = match self.options.log_iterator {
-            Some(ftest_manager::LogsIteratorOption::ArchiveIterator) => {
-                let (proxy, request) =
-                    fidl::endpoints::create_endpoints().expect("cannot create suite");
-                (
-                    ftest_manager::LogsIterator::Archive(request),
-                    ftest_manager::Syslog::Archive(proxy),
-                )
-            }
-            _ => {
-                let (proxy, request) =
-                    fidl::endpoints::create_endpoints().expect("cannot create suite");
-                (ftest_manager::LogsIterator::Batch(request), ftest_manager::Syslog::Batch(proxy))
-            }
-        };
-
-        sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
-        match launch_suite(
+        match RunningSuite::launch(
             &self.test_url,
-            suite_request,
             test_map,
             self.above_root_capabilities_for_test.clone(),
-            Some(log_iterator),
         )
         .await
         {
@@ -976,21 +844,23 @@ pub async fn run_test_manager_query_server(
                         break;
                     }
                 };
-                let (suite, suite_request) =
-                    fidl::endpoints::create_proxy().expect("cannot create suite proxy");
-                match launch_suite(
+                match RunningSuite::launch(
                     &test_url,
-                    suite_request,
                     test_map.clone(),
                     above_root_capabilities_for_test.clone(),
-                    None,
                 )
                 .await
                 {
-                    Ok(test) => {
+                    Ok(suite_instance) => {
+                        let suite = match suite_instance.connect_to_suite() {
+                            Ok(proxy) => proxy,
+                            Err(e) => {
+                                let _ = responder.send(&mut Err(e.into()));
+                                continue;
+                            }
+                        };
                         let enumeration_result = enumerate_test_cases(&suite, None).await;
-                        let test_name = test.instance.root.child_name().to_string();
-                        let t = fasync::Task::spawn(test.destroy());
+                        let t = fasync::Task::spawn(suite_instance.destroy());
                         match enumeration_result {
                             Ok(invocations) => {
                                 const NAMES_CHUNK: usize = 50;
@@ -1042,7 +912,6 @@ pub async fn run_test_manager_query_server(
                             }
                         }
                         t.await;
-                        test_map.mark_as_stale(&test_name);
                     }
                     Err(e) => {
                         let _ = responder.send(&mut Err(e.into()));
@@ -1086,97 +955,239 @@ pub async fn run_test_manager_info_server(
     Ok(())
 }
 
+/// A |RunningSuite| represents a launched test component.
 struct RunningSuite {
     instance: RealmInstance,
-    logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
-
-    // safe keep archive accessor which tests might use.
+    logs_iterator_task: Option<fasync::Task<Result<(), Error>>>,
+    /// Keep archive accessor which tests might use through weak references.
     archive_accessor: Arc<ArchiveAccessorProxy>,
+    /// Reference to an entry in the TestMap that marks it stale when the RunningSuite
+    /// drops out of scope.
+    test_map_entry: ScopedTestMapEntry,
+}
+
+/// A struct that exists purely to mark the instance in a test map stale when it
+/// goes out of scope. Drop isn't implemented directly on RunningSuite as the destroy
+/// method makes it impossible to implement.
+struct ScopedTestMapEntry(Arc<TestMap>, String);
+
+impl Drop for ScopedTestMapEntry {
+    fn drop(&mut self) {
+        self.0.mark_as_stale(&self.1);
+    }
 }
 
 impl RunningSuite {
+    /// Launch a suite component.
+    async fn launch(
+        test_url: &str,
+        test_map: Arc<TestMap>,
+        above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
+    ) -> Result<Self, LaunchTestError> {
+        // This archive accessor will be served by the embedded archivist.
+        let (archive_accessor, archive_accessor_server_end) =
+            fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
+                .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
+
+        let archive_accessor_arc = Arc::new(archive_accessor);
+        let mut realm = get_realm(
+            Arc::downgrade(&archive_accessor_arc),
+            test_url,
+            above_root_capabilities_for_test,
+        )
+        .await
+        .map_err(LaunchTestError::InitializeTestRealm)?;
+        realm.set_collection_name(TESTS_COLLECTION);
+        let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
+        let test_name = instance.root.child_name().to_string();
+        test_map.insert(test_name.clone(), test_url.to_string());
+        let test_map_clone = test_map.clone();
+        let connect_to_instance_services = async move {
+            instance
+                .root
+                .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
+                    archive_accessor_server_end,
+                )
+                .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
+            Ok(RunningSuite {
+                test_map_entry: ScopedTestMapEntry(
+                    test_map,
+                    instance.root.child_name().to_string(),
+                ),
+                logs_iterator_task: None,
+                instance,
+                archive_accessor: archive_accessor_arc,
+            })
+        };
+
+        let running_test_result = connect_to_instance_services.await;
+        if running_test_result.is_err() {
+            test_map_clone.delete(&test_name);
+        }
+        running_test_result
+    }
+
+    async fn run_tests(
+        &mut self,
+        options: ftest_manager::RunOptions,
+        mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
+        mut stop_recv: oneshot::Receiver<()>,
+    ) {
+        let test_url = self.test_map_entry.1.as_str();
+        debug!("running test suite {}", test_url);
+
+        let (log_iterator, syslog) = match options.log_iterator {
+            Some(ftest_manager::LogsIteratorOption::ArchiveIterator) => {
+                let (proxy, request) =
+                    fidl::endpoints::create_endpoints().expect("cannot create suite");
+                (
+                    ftest_manager::LogsIterator::Archive(request),
+                    ftest_manager::Syslog::Archive(proxy),
+                )
+            }
+            _ => {
+                let (proxy, request) =
+                    fidl::endpoints::create_endpoints().expect("cannot create suite");
+                (ftest_manager::LogsIterator::Batch(request), ftest_manager::Syslog::Batch(proxy))
+            }
+        };
+
+        sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
+
+        let logs_iterator_task_result = match log_iterator {
+            ftest_manager::LogsIterator::Archive(iterator) => {
+                IsolatedLogsProvider::new(self.archive_accessor.clone())
+                    .spawn_iterator_server(iterator)
+                    .map(Some)
+            }
+            ftest_manager::LogsIterator::Batch(iterator) => {
+                IsolatedLogsProvider::new(self.archive_accessor.clone())
+                    .start_streaming_logs(iterator)
+                    .map(|()| None)
+            }
+            _ => Ok(None),
+        };
+        self.logs_iterator_task = match logs_iterator_task_result {
+            Ok(task) => task,
+            Err(e) => {
+                warn!("Error spawning iterator server: {:?}", e);
+                sender.send(Err(LaunchTestError::StreamIsolatedLogs(e).into())).await.unwrap();
+                return;
+            }
+        };
+
+        let fut = async {
+            let matcher = match options.case_filters_to_run.as_ref() {
+                Some(filters) => match CaseMatcher::new(filters) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        sender.send(Err(LaunchError::InvalidArgs)).await.unwrap();
+                        return Err(e);
+                    }
+                },
+                None => None,
+            };
+
+            let suite = self.connect_to_suite()?;
+            let invocations = match enumerate_test_cases(&suite, matcher).await {
+                Ok(i) => i,
+                Err(e) => {
+                    sender
+                        .send(Err(map_suite_error_epitaph(suite, LaunchError::CaseEnumeration)))
+                        .await
+                        .unwrap();
+                    return Err(e);
+                }
+            };
+            if let Ok(Some(_)) = stop_recv.try_recv() {
+                sender
+                    .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into()))
+                    .await
+                    .unwrap();
+                return Ok(());
+            }
+
+            let mut suite_status = SuiteStatus::Passed;
+            let mut invocations_iter = invocations.into_iter();
+            let counter = AtomicU32::new(0);
+            let timeout_time = match options.timeout {
+                Some(t) => zx::Time::after(zx::Duration::from_nanos(t)),
+                None => zx::Time::INFINITE,
+            };
+            let timeout_fut = fasync::Timer::new(timeout_time).shared();
+
+            let run_options = get_invocation_options(options);
+
+            sender.send(Ok(SuiteEvents::suite_started().into())).await.unwrap();
+
+            loop {
+                const INVOCATIONS_CHUNK: usize = 50;
+                let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
+                if chunk.is_empty() {
+                    break;
+                }
+                let res = match run_invocations(
+                    &suite,
+                    chunk,
+                    run_options.clone(),
+                    &counter,
+                    &mut sender,
+                    timeout_fut.clone(),
+                )
+                .await
+                .context("Error running test cases")
+                {
+                    Ok(success) => success,
+                    Err(e) => {
+                        return Err(e);
+                    }
+                };
+                if res == SuiteStatus::TimedOut {
+                    sender
+                        .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::TimedOut).into()))
+                        .await
+                        .unwrap();
+                    return Ok(());
+                }
+                suite_status = concat_suite_status(suite_status, res);
+                if let Ok(Some(_)) = stop_recv.try_recv() {
+                    sender
+                        .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into()))
+                        .await
+                        .unwrap();
+                    return Ok(());
+                }
+            }
+            sender.send(Ok(SuiteEvents::suite_stopped(suite_status).into())).await.unwrap();
+            Ok(())
+        };
+        if let Err(e) = fut.await {
+            warn!("Error running test {}: {:?}", test_url, e);
+        }
+    }
+
+    fn connect_to_suite(&self) -> Result<ftest::SuiteProxy, LaunchTestError> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<ftest::SuiteMarker>().unwrap();
+        self.instance
+            .root
+            .connect_request_to_protocol_at_exposed_dir::<ftest::SuiteMarker>(server_end)
+            .map_err(LaunchTestError::ConnectToTestSuite)?;
+        Ok(proxy)
+    }
+
     async fn destroy(mut self) {
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
+        drop(self.archive_accessor);
         // When serving logs over ArchiveIterator in the host, we should also wait for all logs to
         // be drained.
-        drop(self.archive_accessor);
         if let Some(task) = self.logs_iterator_task {
-            task.await.unwrap_or_else(|err| {
-                error!(?err, "Failed to await for logs streaming task");
-            });
+            task.await.unwrap_or_else(|e| warn!("Error streaming logs: {:?}", e));
         }
-
         destroy_waiter.await.unwrap_or_else(|err| {
             error!(?err, "Failed to destroy instance");
         });
     }
-}
-
-/// Launch test and return the name of test used to launch it in collection.
-async fn launch_suite(
-    test_url: &str,
-    suite_request: ServerEnd<SuiteMarker>,
-    test_map: Arc<TestMap>,
-    above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
-    log_iterator: Option<ftest_manager::LogsIterator>,
-) -> Result<RunningSuite, LaunchTestError> {
-    // This archive accessor will be served by the embedded archivist.
-    let (archive_accessor, archive_accessor_server_end) =
-        fidl::endpoints::create_proxy::<fdiagnostics::ArchiveAccessorMarker>()
-            .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
-
-    let archive_accessor_arc = Arc::new(archive_accessor);
-    let mut realm = get_realm(
-        Arc::downgrade(&archive_accessor_arc),
-        test_url,
-        above_root_capabilities_for_test,
-    )
-    .await
-    .map_err(LaunchTestError::InitializeTestRealm)?;
-    realm.set_collection_name(TESTS_COLLECTION);
-    let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
-    let test_name = instance.root.child_name().to_string();
-    test_map.insert(test_name.clone(), test_url.to_string());
-    let archive_accessor_arc_clone = archive_accessor_arc.clone();
-    let connect_to_instance_services = async move {
-        instance
-            .root
-            .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
-                archive_accessor_server_end,
-            )
-            .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
-
-        let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc_clone);
-        let logs_iterator_task = match log_iterator {
-            None => None,
-            Some(ftest_manager::LogsIterator::Archive(iterator)) => {
-                let task = isolated_logs_provider
-                    .spawn_iterator_server(iterator)
-                    .map_err(LaunchTestError::StreamIsolatedLogs)?;
-                Some(task)
-            }
-            Some(ftest_manager::LogsIterator::Batch(iterator)) => {
-                isolated_logs_provider
-                    .start_streaming_logs(iterator)
-                    .map_err(LaunchTestError::StreamIsolatedLogs)?;
-                None
-            }
-            Some(_) => None,
-        };
-
-        instance
-            .root
-            .connect_request_to_protocol_at_exposed_dir(suite_request)
-            .map_err(LaunchTestError::ConnectToTestSuite)?;
-        Ok(RunningSuite { instance, logs_iterator_task, archive_accessor: archive_accessor_arc })
-    };
-
-    let running_test_result = connect_to_instance_services.await;
-    if running_test_result.is_err() {
-        test_map.delete(&test_name);
-    }
-    running_test_result
 }
 
 async fn get_realm(
@@ -1783,20 +1794,17 @@ mod tests {
     async fn suite_controller_stop_test() {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let task = fasync::Task::spawn(async move {
+        let task = async move {
             stop_recv.await.unwrap();
             // drop event sender so that fake test can end.
             drop(sender);
-        });
+        };
+        let (abortable, abort_handle) = futures::future::abortable(task);
+        let _task = fasync::Task::spawn(abortable);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            recv,
-            Some(task),
-            None,
-        ));
+        let run_controller =
+            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
         proxy.stop().unwrap();
 
         assert_eq!(proxy.get_events().await.unwrap(), Ok(vec![]));
@@ -1808,19 +1816,15 @@ mod tests {
     async fn suite_controller_get_events() {
         let (mut sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let task = fasync::Task::spawn(async move {});
+        let (abortable, abort_handle) = futures::future::abortable(async {});
+        let _task = fasync::Task::spawn(abortable);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
+        let run_controller =
+            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
         sender.send(Ok(SuiteEvents::case_found(1, "case1".to_string()).into())).await.unwrap();
         sender.send(Ok(SuiteEvents::case_found(2, "case2".to_string()).into())).await.unwrap();
 
-        let run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            recv,
-            Some(task),
-            None,
-        ));
         let events = proxy.get_events().await.unwrap().unwrap();
         assert_eq!(events.len(), 2);
         assert_eq!(
@@ -1862,17 +1866,12 @@ mod tests {
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (mut sender, recv) = mpsc::channel(1024);
         let (stop_sender, _stop_recv) = oneshot::channel::<()>();
-        let task = fasync::Task::spawn(async move {});
+        let (abortable, abort_handle) = futures::future::abortable(async {});
+        let _task = fasync::Task::spawn(abortable);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-
-        let _run_controller = fasync::Task::spawn(Suite::run_controller(
-            controller,
-            stop_sender,
-            recv,
-            Some(task),
-            None,
-        ));
+        let _run_controller =
+            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
 
         // send get event call which would hang as there are no events.
         let mut get_events =
