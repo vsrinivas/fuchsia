@@ -155,7 +155,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
           .drm_format_modifiers = {specified_modifier, DRM_FORMAT_MOD_INVALID},
           .width = kWidth,
           .height = kHeight,
-          .flags = 0,
+          .flags = flags,
       };
       magma_buffer_t image;
 
@@ -169,7 +169,11 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
-      EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
+      if (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+        EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, image_info.coherency_domain);
+      } else {
+        EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
+      }
 
       buffer_id = magma_get_buffer_id(image);
 
@@ -203,7 +207,11 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
         EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
       }
       EXPECT_EQ(0u, image_info.plane_offsets[0]);
-      EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
+      if (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+        EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, image_info.coherency_domain);
+      } else {
+        EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
+      }
 
       EXPECT_EQ(buffer_id, magma_get_buffer_id(image));
 
@@ -215,7 +223,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
 };
 
 TEST_P(MagmaImageTestFormats, ImportExportLinear) {
-  constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
+  constexpr uint32_t kFlags = 0;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_LINEAR;
   constexpr uint64_t kExpectedModifier = DRM_FORMAT_MOD_LINEAR;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
@@ -243,4 +251,14 @@ TEST_P(MagmaImageTestFormats, ImportExportPresentableIntel) {
 }
 
 INSTANTIATE_TEST_SUITE_P(MagmaImageTestFormats, MagmaImageTestFormats,
-                         ::testing::Values(DRM_FORMAT_ARGB8888, DRM_FORMAT_XRGB8888));
+                         ::testing::Values(DRM_FORMAT_ARGB8888, DRM_FORMAT_XRGB8888),
+                         [](testing::TestParamInfo<uint64_t> info) {
+                           switch (info.param) {
+                             case DRM_FORMAT_ARGB8888:
+                               return "DRM_FORMAT_ARGB8888";
+                             case DRM_FORMAT_XRGB8888:
+                               return "DRM_FORMAT_XRGB8888";
+                             default:
+                               return "Unknown format";
+                           }
+                         });
