@@ -12,7 +12,7 @@ Currently, we require a x86_64 host Linux system to run starnix.
 In order to run starnix, we need to build `//src/proc`:
 
 ```sh
-$ fx set core.x64 --with //src/proc,//src/proc:tests,//src/proc/tests/hello_starnix:hello-starnix
+$ fx set core.x64 --with //src/proc,//src/proc:tests
 $ fx build
 ```
 
@@ -23,7 +23,22 @@ Run Fuchsia as normal, for example using `fx serve` and `fx emu -N`.
 To monitor starnix, look for log messages with the `starnix` tag:
 
 ```sh
+fx log --tag starnix --hide_metadata --pretty --severity TRACE --select "core/*/starnix*#TRACE"
+```
+
+When running tests, you will need to modify the selector for the logs.
+
+```sh
+fx log --tag starnix --hide_metadata --pretty --severity TRACE --select "core/test*/*/starnix*#TRACE"
+```
+
+The `select` arguments contain the moniker for the starnix instance you want to inspect logs from.
+
+If you do not care about detailed logging, you can leave out the `--severity` and just do:
+
+```
 fx log --tag starnix --hide_metadata --pretty
+
 ```
 
 ### Run a Linux binary
@@ -45,6 +60,13 @@ If everything is working, you should see some log messages like the following:
 [00064.847640][33707][33709][starnix, starnix] INFO: start_component: fuchsia-pkg://fuchsia.com/hello-starnix#meta/hello_starnix.cm
 ```
 
+### Run an interactive Android shell
+
+To run an interactive Android shell, connected to your host machine, run:
+
+```sh
+$ ffx starnix shell
+```
 ### Run a Linux test binary
 
 Linux test binaries can also be run using the Starnix test runner using the
@@ -74,22 +96,6 @@ In the device logs you should see output like:
 [starnix, strace] INFO: 60(0x0, 0x35a3ca6000, 0xe, 0x0, 0x0, 0x0)
 [starnix, starnix_runner::syscalls] INFO: exit: error_code=0
 [starnix, strace] INFO: -> 0x0
-```
-
-### Viewing syscall logs
-
-There are two ways to get syscall logs:
-
-1. Edit starnix/logging.rs and change the strace log level from debug to info.
-2. Increase the log level using fx log flags. It looks like this:
-
-```sh
-$ fx log --severity TRACE --select core/*/starnix*#TRACE
-```
-
-Tests use a different runner with a bit of a different moniker:
-```
-$ fx log --severity TRACE --select core/test*/*/starnix*#TRACE
 ```
 
 ## Testing

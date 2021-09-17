@@ -1,7 +1,0 @@
-{
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
-    program: {
-        binary: "bin/hello_starnix",
-        mounts: [ "/:remotefs:/" ],
-    },
-}

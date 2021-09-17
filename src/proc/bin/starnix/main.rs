@@ -28,7 +28,7 @@ mod testing;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    diagnostics_log::init!();
+    diagnostics_log::init!(&[&"starnix"]);
     info!("main");
 
     let mut fs = ServiceFs::new_local();

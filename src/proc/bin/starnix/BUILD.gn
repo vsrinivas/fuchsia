@@ -175,7 +175,7 @@ if (target_cpu == "x64") {
     deps = [
       ":starnix-test-files",
       ":starnix_runner_bin_test",
-      "//src/proc/tests/hello_starnix:bin",
+      "//src/proc/examples/hello_starnix:bin",
     ]
   }
 }

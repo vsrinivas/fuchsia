@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 group("proc") {
-  deps = [ "bin" ]
+  deps = [
+    "bin",
+    "examples",
+  ]
 }
 
 group("tests") {

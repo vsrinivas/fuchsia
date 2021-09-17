@@ -4,12 +4,6 @@
 
 import("//build/components.gni")
 
-group("tests") {
-  testonly = true
-
-  deps = [ ":hello-starnix-test" ]
-}
-
 config("config") {
   asmflags = [ "-fPIC" ]
 }
@@ -34,16 +28,6 @@ fuchsia_component("hello_starnix") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("hello_starnix_test") {
-  testonly = true
-  deps = [ ":bin" ]
-  manifest = "meta/hello_starnix_test.cml"
-}
-
 fuchsia_package("hello-starnix") {
   deps = [ ":hello_starnix" ]
-}
-
-fuchsia_test_package("hello-starnix-test") {
-  test_components = [ ":hello_starnix_test" ]
 }
