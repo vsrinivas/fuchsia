@@ -196,17 +196,15 @@ void fidl::internal::WireClientImpl<
 fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     LibfuzzerNeedsNonemptyProtocol_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocol>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                LibfuzzerNeedsNonemptyProtocol>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocol>(
+            ::fidl::UnownedClientEnd<
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(
+                _channel->handle()));
+      });
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<

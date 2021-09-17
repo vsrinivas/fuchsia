@@ -261,16 +261,14 @@ void fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
 ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
 fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceive_Sync(const ::fidl_test_emptystruct::wire::Empty& e) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
-            _channel->handle()),
-        e);
-  }
-  return ::fidl::WireResult<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
+            ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
+                _channel->handle()),
+            e);
+      });
 }
 ::fidl::WireUnownedResult<
     ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
@@ -278,17 +276,15 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceive_Sync(::fidl::BufferSpan _request_buffer,
                         const ::fidl_test_emptystruct::wire::Empty& e,
                         ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-        ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, e,
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
+            ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
+                _channel->handle()),
+            _request_buffer.data, _request_buffer.capacity, e,
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::

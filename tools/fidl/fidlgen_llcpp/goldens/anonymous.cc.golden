@@ -244,14 +244,14 @@ void fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
 fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
     SomeMethod_Sync(::fidl_test_anonymous::wire::UnionMember union_member,
                     ::fidl_test_anonymous::wire::TableMember table_member) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-            _channel->handle()),
-        union_member, table_member);
-  }
-  return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+            ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
+                _channel->handle()),
+            union_member, table_member);
+      });
 }
 ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
@@ -259,17 +259,15 @@ fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>::
                     ::fidl_test_anonymous::wire::UnionMember union_member,
                     ::fidl_test_anonymous::wire::TableMember table_member,
                     ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, union_member,
-        table_member, _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+            ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
+                _channel->handle()),
+            _request_buffer.data, _request_buffer.capacity, union_member,
+            table_member, _response_buffer.data, _response_buffer.capacity);
+      });
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::

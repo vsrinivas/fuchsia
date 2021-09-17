@@ -170,28 +170,26 @@ void fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo(
 ::fidl::WireResult<::fidl_test_error::Example::Foo>
 fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo_Sync(
     ::fidl::StringView s) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
-            _channel->handle()),
-        s);
-  }
-  return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<::fidl_test_error::Example::Foo>(
+            ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
+                _channel->handle()),
+            s);
+      });
 }
 ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>
 fidl::internal::WireClientImpl<::fidl_test_error::Example>::Foo_Sync(
     ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
     ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
+            ::fidl::UnownedClientEnd<::fidl_test_error::Example>(
+                _channel->handle()),
+            _request_buffer.data, _request_buffer.capacity, s,
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 
 std::optional<::fidl::UnbindInfo>

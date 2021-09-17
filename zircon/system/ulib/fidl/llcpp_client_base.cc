@@ -109,6 +109,7 @@ void ClientBase::SendTwoWay(::fidl::OutgoingMessage& message, ResponseContext* c
     if (!message.ok()) {
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
+      HandleSendError(message.error());
     }
     return;
   }
@@ -120,11 +121,41 @@ fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message) {
     message.set_txid(0);
     message.Write(channel->handle());
     if (!message.ok()) {
+      HandleSendError(message.error());
       return message.error();
     }
     return fidl::Result::Ok();
   }
   return fidl::Result::Unbound();
+}
+
+void ClientBase::HandleSendError(fidl::Result error) {
+  // Do not immediately teardown the bindings if some FIDL method failed to
+  // write to the transport due to peer closed. The message handler in
+  // |AsyncBinding| will eventually discover that the transport is in the peer
+  // closed state and begin teardown, so we are not ignoring this error just
+  // deferring it.
+  //
+  // To see why this is necessary, consider a FIDL method that is supposed to
+  // shutdown the server connection. Upon processing this FIDL method, the
+  // server may send a reply or a terminal event, and then close their endpoint.
+  // The server might have also sent other replies or events that are waiting to
+  // be read by the client. If the client immediately unbinds on the first call
+  // hitting peer closed, we would be dropping any unread messages that the
+  // server have sent. In other words, whether the terminal events etc. are
+  // surfaced to the user or discarded would depend on whether the user just
+  // happened to make another call after the server closed their endpoint, which
+  // is an undesirable race condition. By deferring the handling of peer closed
+  // errors, we ensure that any messages the server sent prior to closing the
+  // endpoint will be reliably drained by the client and exposed to the user. An
+  // equivalent situation applies in the server bindings in ensuring that client
+  // messages are reliably drained after peer closed.
+  if (error.reason() == fidl::Reason::kPeerClosed) {
+    return;
+  }
+  if (auto binding = binding_.lock()) {
+    binding->StartTeardownWithInfo(std::move(binding), UnbindInfo{error});
+  }
 }
 
 void ClientBase::TryAsyncDeliverError(::fidl::Result error, ResponseContext* context) {

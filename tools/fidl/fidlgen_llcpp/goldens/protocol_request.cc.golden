@@ -354,26 +354,25 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Parent>::GetChild_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_protocolrequest::Parent::GetChild>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
+                _channel->handle()));
+      });
 }
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChild_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_protocolrequest::Parent::GetChild>(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-            _channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_protocolrequest::Parent::GetChild>(::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_protocolrequest::Parent::GetChild>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
+                _channel->handle()),
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChildRequest(::fidl::WireClientCallback<
@@ -454,29 +453,25 @@ void fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
 fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Parent>::GetChildRequest_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<
-      ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
+                _channel->handle()));
+      });
 }
 ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChildRequest>
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChildRequest_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-        ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
-            _channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_protocolrequest::Parent::GetChildRequest>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
+                _channel->handle()),
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 ::fidl::Result
 fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(

@@ -70,6 +70,37 @@ class AsyncBinding : private async_wait_t {
   // perform teardown when this method returns an error.
   zx_status_t CheckForTeardownAndBeginNextWait() __TA_EXCLUDES(lock_);
 
+  // |StartTeardownWithInfo| attempts to post exactly one task to drive the
+  // teardown process. This enum reflects the result of posting the task.
+  enum class TeardownTaskPostingResult {
+    kOk,
+
+    // The binding is already tearing down, so we should not post another.
+    kRacedWithInProgressTeardown,
+
+    // Failed to post the task to the dispatcher. This is usually due to
+    // the dispatcher already shutting down.
+    //
+    // If the user shuts down the dispatcher when the binding is already
+    // established and monitoring incoming messages, then whichever thread
+    // that was monitoring incoming messages would drive the teardown
+    // process.
+    //
+    // If the user calls |BindServer| on a shut-down dispatcher, there is
+    // no available thread to drive the teardown process and report errors.
+    // We consider it a programming error, and panic right away. Note that
+    // this is inherently racy i.e. shutting down dispatchers while trying
+    // to also bind new channels to the same dispatcher, so we may want to
+    // reevaluate whether shutting down the dispatcher is an error whenever
+    // there is any active binding (fxbug.dev/NNNNN).
+    kDispatcherError,
+  };
+
+  // Initiates teardown with the provided |info| as reason.
+  TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                                  UnbindInfo info) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_);
+
   void StartTeardown(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(thread_checker_)
       __TA_EXCLUDES(lock_) {
     StartTeardownWithInfo(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
@@ -117,37 +148,6 @@ class AsyncBinding : private async_wait_t {
   // this |AsyncBinding| object and so must not access its state.
   virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released)
       __TA_REQUIRES(thread_checker_) = 0;
-
-  // |StartTeardownWithInfo| attempts to post exactly one task to drive the
-  // teardown process. This enum reflects the result of posting the task.
-  enum class TeardownTaskPostingResult {
-    kOk,
-
-    // The binding is already tearing down, so we should not post another.
-    kRacedWithInProgressTeardown,
-
-    // Failed to post the task to the dispatcher. This is usually due to
-    // the dispatcher already shutting down.
-    //
-    // If the user shuts down the dispatcher when the binding is already
-    // established and monitoring incoming messages, then whichever thread
-    // that was monitoring incoming messages would drive the teardown
-    // process.
-    //
-    // If the user calls |BindServer| on a shut-down dispatcher, there is
-    // no available thread to drive the teardown process and report errors.
-    // We consider it a programming error, and panic right away. Note that
-    // this is inherently racy i.e. shutting down dispatchers while trying
-    // to also bind new channels to the same dispatcher, so we may want to
-    // reevaluate whether shutting down the dispatcher is an error whenever
-    // there is any active binding (fxbug.dev/NNNNN).
-    kDispatcherError,
-  };
-
-  // Initiates teardown with the provided |info| as reason.
-  TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
-                                                  UnbindInfo info) __TA_EXCLUDES(thread_checker_)
-      __TA_EXCLUDES(lock_);
 
   async_dispatcher_t* dispatcher_ = nullptr;
 

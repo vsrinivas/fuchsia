@@ -33,12 +33,15 @@ class WireClientImpl<TestProtocol> : public ClientBase {
  public:
   void SomeWireMethod() {
     GoodMessage msg;
-    std::shared_ptr channel = ClientBase::GetChannelForSyncCall();
-    zx_status_t status =
-        zx_channel_write_etc(channel->handle(), 0, static_cast<void*>(msg.message().bytes().data()),
-                             msg.message().bytes().actual(), msg.message().handles().data(),
-                             msg.message().handles().actual());
-    EXPECT_OK(status);
+    fidl::Result result = MakeSyncCallWith([&](std::shared_ptr<ChannelRef> channel) {
+      zx_status_t status = zx_channel_write_etc(
+          channel->handle(), 0, static_cast<void*>(msg.message().bytes().data()),
+          msg.message().bytes().actual(), msg.message().handles().data(),
+          msg.message().handles().actual());
+      EXPECT_OK(status);
+      return fidl::Result::Ok();
+    });
+    EXPECT_OK(result.status());
   }
 
  private:

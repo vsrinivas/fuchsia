@@ -273,7 +273,8 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
                                         std::make_unique<EventHandler>(unbound));
 
   // Create a strong reference to the channel.
-  auto channel = client->GetChannelForSyncCall();
+  using ::fidl_testing::ClientBaseChecker;
+  std::shared_ptr channel = ClientBaseChecker::GetChannel(&*client);
 
   // |AsyncTeardown| and the teardown notification should not be blocked by the
   // channel reference.

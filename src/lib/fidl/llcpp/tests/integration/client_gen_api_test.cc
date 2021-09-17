@@ -337,26 +337,24 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fidl::WireSharedClient<Example> client(std::move(endpoints->client), loop.dispatcher());
 
-  auto server = std::make_unique<Server>();
-  auto* server_ptr = server.get();
-  auto server_binding =
-      fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), std::move(server));
+  auto server = std::make_shared<Server>();
+  auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server);
 
   ASSERT_OK(loop.RunUntilIdle());
-  EXPECT_EQ(0, server_ptr->num_one_way());
+  EXPECT_EQ(0, server->num_one_way());
 
   ASSERT_OK(client->OneWay("foo").status());
 
   ASSERT_OK(loop.RunUntilIdle());
-  EXPECT_EQ(1, server_ptr->num_one_way());
+  EXPECT_EQ(1, server->num_one_way());
 
   client.AsyncTeardown();
   ASSERT_OK(loop.RunUntilIdle());
-  EXPECT_EQ(1, server_ptr->num_one_way());
+  EXPECT_EQ(1, server->num_one_way());
 
   ASSERT_EQ(ZX_ERR_CANCELED, client->OneWay("foo").status());
   ASSERT_OK(loop.RunUntilIdle());
-  EXPECT_EQ(1, server_ptr->num_one_way());
+  EXPECT_EQ(1, server->num_one_way());
 }
 
 fidl::Endpoints<Example> CreateEndpointsWithoutClientWriteRight() {
@@ -618,6 +616,107 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
     ep2.signal_peer(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_1);
     ASSERT_OK(ep2.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite(), &observed));
   }
+}
+
+// After the first call fails during sending, the client bindings should
+// teardown thereby disallowing subsequent calls. In addition, the user should
+// receive an error in the event handler.
+TEST(AllClients, SendErrorLeadsToBindingTeardown) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    fidl::Endpoints<Example> endpoints;
+    ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
+    auto [local, remote] = std::move(endpoints);
+
+    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+     public:
+      void on_fidl_error(fidl::UnbindInfo info) override {
+        errored_ = true;
+        EXPECT_STATUS(ZX_ERR_ACCESS_DENIED, info.status());
+        EXPECT_EQ(fidl::Reason::kTransportError, info.reason());
+      }
+
+      bool errored() const { return errored_; }
+
+     private:
+      bool errored_ = false;
+    } event_handler;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher(), &event_handler);
+
+    EXPECT_FALSE(event_handler.errored());
+    client->TwoWay("foo", [](fidl::WireResponse<Example::TwoWay>*) {});
+    loop.RunUntilIdle();
+    EXPECT_TRUE(event_handler.errored());
+
+    bool called = false;
+    client->TwoWay("foo", [&called](fidl::WireUnownedResult<Example::TwoWay>& result) {
+      called = true;
+      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+    });
+    loop.RunUntilIdle();
+    EXPECT_TRUE(called);
+  };
+
+  do_test(fidl::WireClient<Example>{});
+  do_test(fidl::WireSharedClient<Example>{});
+}
+
+// If a call fails due to a peer closed error, the client bindings should still
+// process any remaining messages received on the endpoint before tearing down.
+TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
+  auto do_test = [](auto&& client_instance_indicator) {
+    using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
+    zx::status endpoints = fidl::CreateEndpoints<Example>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    static constexpr char data[] = "test";
+    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+     public:
+      EventHandler() = default;
+
+      bool received() const { return received_; }
+
+      void OnEvent(fidl::WireResponse<Example::OnEvent>* event) override {
+        ASSERT_EQ(strlen(data), event->out.size());
+        EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
+        received_ = true;
+      }
+
+     private:
+      bool received_ = false;
+    } event_handler;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ClientType client(std::move(local), loop.dispatcher(), &event_handler);
+
+    // Send an event and close the server endpoint.
+    ASSERT_OK(fidl::WireEventSender<Example>(std::move(remote)).OnEvent(fidl::StringView(data)));
+    EXPECT_FALSE(event_handler.received());
+
+    // Make a client method call which should fail, but not interfere with
+    // reading the event.
+    {
+      fidl::Result result = client->OneWay("foo");
+      EXPECT_EQ(fidl::Reason::kPeerClosed, result.reason());
+      EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+    }
+    ASSERT_OK(loop.RunUntilIdle());
+    EXPECT_TRUE(event_handler.received());
+
+    // The client binding should still be torn down.
+    {
+      fidl::Result result = client->OneWay("foo");
+      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+    }
+  };
+
+  do_test(fidl::WireClient<Example>{});
+  do_test(fidl::WireSharedClient<Example>{});
 }
 
 }  // namespace

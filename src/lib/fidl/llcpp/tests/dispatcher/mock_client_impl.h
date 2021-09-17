@@ -57,8 +57,9 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
     }
   }
 
-  std::shared_ptr<internal::ChannelRef> GetChannelForSyncCall() {
-    return internal::ClientBase::GetChannelForSyncCall();
+  template <typename Callable>
+  auto MakeSyncCallWith(Callable&& sync_call) {
+    return internal::ClientBase::MakeSyncCallWith(std::forward<Callable>(sync_call));
   }
 
   uint32_t GetEventCount() {
@@ -105,6 +106,14 @@ class TestResponseContext : public fidl::internal::ResponseContext {
 
  private:
   fidl::internal::WireClientImpl<TestProtocol>* client_;
+};
+
+class ClientBaseChecker {
+ public:
+  static std::shared_ptr<fidl::internal::ChannelRef> GetChannel(
+      fidl::internal::ClientBase* client_base) {
+    return client_base->GetChannel();
+  }
 };
 
 }  // namespace fidl_testing

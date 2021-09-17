@@ -184,31 +184,28 @@ void fidl::internal::
 ::fidl::WireResult<::fidl_test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::WireClientImpl<
     ::fidl_test_transitivedependenciescompose::Top>::GetFoo_Sync() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<
-        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_transitivedependenciescompose::Top>(
-            _channel->handle()));
-  }
-  return ::fidl::WireResult<
-      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<
+            ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+            ::fidl::UnownedClientEnd<
+                ::fidl_test_transitivedependenciescompose::Top>(
+                _channel->handle()));
+      });
 }
 ::fidl::WireUnownedResult<
     ::fidl_test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
     GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_transitivedependenciescompose::Top>(_channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<
-      ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_transitivedependenciescompose::Top::GetFoo>(
+            ::fidl::UnownedClientEnd<
+                ::fidl_test_transitivedependenciescompose::Top>(
+                _channel->handle()),
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 
 std::optional<::fidl::UnbindInfo>

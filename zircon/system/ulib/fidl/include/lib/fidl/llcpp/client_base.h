@@ -12,6 +12,7 @@
 #include <lib/fidl/llcpp/internal/client_details.h>
 #include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fit/traits.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -20,6 +21,11 @@
 
 #include <memory>
 #include <mutex>
+
+namespace fidl_testing {
+// Forward declaration of test helpers to support friend declaration.
+class ClientBaseChecker;
+}  // namespace fidl_testing
 
 namespace fidl {
 namespace internal {
@@ -226,6 +232,31 @@ class ClientBase {
   // succeed. Additional calls will simply return an empty zx::channel.
   zx::channel WaitForChannel();
 
+  // Makes a two-way synchronous call with the channel that is managed by this
+  // client.
+  //
+  // It invokes |sync_call| with a strong reference to the channel to prevent
+  // its destruction during a |zx_channel_call|. The |sync_call| callable must
+  // have a return type that could be instantiated with a |fidl::Result| to
+  // propagate failures.
+  //
+  // If the client has been unbound, returns a result type instantiated with
+  // a |fidl::Result::Unbound| error.
+  //
+  // If the client has a valid binding, returns the return value of |sync_call|.
+  template <typename Callable>
+  auto MakeSyncCallWith(Callable&& sync_call) {
+    using ReturnType = typename fit::callable_traits<Callable>::return_type;
+    std::shared_ptr<ChannelRef> channel = GetChannel();
+    if (!channel) {
+      return ReturnType(fidl::Result::Unbound());
+    }
+    // TODO(fxbug.dev/78906): We should report errors to binding teardown
+    // by calling |HandleSendError|. A naive approach of checking the result
+    // here doesn't work because the result must be a temporary.
+    return sync_call(std::move(channel));
+  }
+
  public:
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
@@ -240,13 +271,6 @@ class ClientBase {
   // that is not specific to any single call (e.g. peer closed), all response
   // contexts would be notified of that error.
   void ReleaseResponseContexts(fidl::UnbindInfo info);
-
-  // Returns a strong reference to the channel to prevent its destruction during
-  // a |zx_channel_call|. The caller must release the reference after making the
-  // call, so as not to indefinitely block operations such as |WaitForChannel|.
-  //
-  // If the client has been unbound, returns |nullptr|.
-  std::shared_ptr<ChannelRef> GetChannelForSyncCall() { return GetChannel(); }
 
   // Sends a two way message.
   //
@@ -325,6 +349,10 @@ class ClientBase {
                                                   AsyncEventHandler* maybe_event_handler) = 0;
 
  private:
+  // Handles errors in sending one-way or two-way FIDL requests. This may lead
+  // to binding teardown.
+  void HandleSendError(fidl::Result error);
+
   // Try to asynchronously notify |context| of the |error|. If not possible
   // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
   void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
@@ -335,6 +363,9 @@ class ClientBase {
     }
     return nullptr;
   }
+
+  // Allow unit tests to peek into the internals of this class.
+  friend class ::fidl_testing::ClientBaseChecker;
 
   // TODO(fxbug.dev/82085): Instead of protecting methods and adding friends,
   // we should use composition over inheriting from ClientBase.

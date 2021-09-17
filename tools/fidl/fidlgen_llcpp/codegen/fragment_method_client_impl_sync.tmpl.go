@@ -58,11 +58,10 @@ const fragmentMethodClientImplSyncTmpl = `
   {{ .WireUnownedResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
       {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
-    if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<ChannelRef> _channel) {
       return {{ .WireUnownedResult }}(
           {{- RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
-    }
-    return {{ .WireUnownedResult }}(::fidl::Result::Unbound());
+    });
   }
 
   {{- EndifFuchsia -}}
@@ -76,12 +75,11 @@ const fragmentMethodClientImplSyncTmpl = `
   {{- IfdefFuchsia -}}
   {{ .WireResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
-    if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
+    return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<ChannelRef> _channel) {
       return {{ .WireResult }}(
         {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
                                 .RequestArgs }});
-    }
-    return {{ .WireResult }}(::fidl::Result::Unbound());
+    });
   }
 
   {{- EndifFuchsia -}}

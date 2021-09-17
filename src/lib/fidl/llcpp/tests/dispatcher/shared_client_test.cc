@@ -258,8 +258,9 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
   ASSERT_OK(loop.RunUntilIdle());
   ASSERT_FALSE(observer.IsTeardown());
 
+  using ::fidl_testing::ClientBaseChecker;
   // The channel being managed is still alive.
-  ASSERT_NOT_NULL(clone->GetChannelForSyncCall().get());
+  ASSERT_NOT_NULL(ClientBaseChecker::GetChannel(&*clone).get());
 
   // Now we call |AsyncTeardown| on the main client, the clone would be torn
   // down too.
@@ -267,8 +268,8 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
 
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_TRUE(observer.IsTeardown());
-  EXPECT_NULL(clone->GetChannelForSyncCall().get());
-  EXPECT_NULL(client->GetChannelForSyncCall().get());
+  EXPECT_NULL(ClientBaseChecker::GetChannel(&*clone).get());
+  EXPECT_NULL(ClientBaseChecker::GetChannel(&*client).get());
 }
 
 }  // namespace

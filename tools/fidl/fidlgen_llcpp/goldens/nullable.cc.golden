@@ -199,28 +199,27 @@ void fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
 ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>
 fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
     int32_t a, int32_t b) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
-            _channel->handle()),
-        a, b);
-  }
-  return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
+            ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
+                _channel->handle()),
+            a, b);
+      });
 }
 ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>
 fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
     ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
     ::fidl::BufferSpan _response_buffer) {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannelForSyncCall()) {
-    return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, a, b,
-        _response_buffer.data, _response_buffer.capacity);
-  }
-  return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-      ::fidl::Result::Unbound());
+  return ::fidl::internal::ClientBase::MakeSyncCallWith(
+      [&](std::shared_ptr<ChannelRef> _channel) {
+        return ::fidl::WireUnownedResult<
+            ::fidl_test_nullable::SimpleProtocol::Add>(
+            ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
+                _channel->handle()),
+            _request_buffer.data, _request_buffer.capacity, a, b,
+            _response_buffer.data, _response_buffer.capacity);
+      });
 }
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
