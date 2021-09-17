@@ -137,6 +137,14 @@ pub trait RelativeMonikerBase: Sized {
 
         Ok(Self::new(up_path, down_path))
     }
+
+    fn to_partial(&self) -> PartialRelativeMoniker {
+        let up_path: Vec<PartialChildMoniker> =
+            self.up_path().iter().map(|p| p.to_partial()).collect();
+        let down_path: Vec<PartialChildMoniker> =
+            self.down_path().iter().map(|p| p.to_partial()).collect();
+        PartialRelativeMoniker::new(up_path, down_path)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]

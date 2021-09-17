@@ -293,9 +293,7 @@ mod tests {
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
-        moniker::{
-            AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker,
-        },
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
         std::{
             collections::{HashMap, HashSet},
             convert::TryInto,
@@ -414,13 +412,13 @@ mod tests {
             .await;
 
         test.create_dynamic_child(
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("foo"),
         )
         .await;
         test.create_dynamic_child(
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("bar"),
         )
@@ -512,13 +510,13 @@ mod tests {
             .await;
 
         test.create_dynamic_child(
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("foo"),
         )
         .await;
         test.create_dynamic_child(
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
             "coll",
             ChildDeclBuilder::new_lazy_child("bar"),
         )

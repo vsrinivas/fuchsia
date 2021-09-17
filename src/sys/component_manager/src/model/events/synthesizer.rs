@@ -284,9 +284,9 @@ mod tests {
         let test = setup_synthesis_test().await;
 
         // Bind: b, c, e. We should see Running events only for these.
-        test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
-        test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
-        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["b"].into()).await.expect("bind instance b success");
+        test.bind_instance(&vec!["c"].into()).await.expect("bind instance c success");
+        test.bind_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
 
         let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(CreateStreamArgs {
@@ -298,7 +298,7 @@ mod tests {
         .await;
 
         // Bind f, this will be a Started event.
-        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance success");
+        test.bind_instance(&vec!["c", "f"].into()).await.expect("bind instance success");
 
         let mut result_monikers = HashSet::new();
         while result_monikers.len() < 5 {
@@ -333,17 +333,13 @@ mod tests {
     async fn synthesize_overlapping_scopes() {
         let test = setup_synthesis_test().await;
 
-        test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
-        test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
-        test.bind_instance(&vec!["b:0", "d:0"].into()).await.expect("bind instance d success");
-        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
-        test.bind_instance(&vec!["c:0", "e:0", "g:0"].into())
-            .await
-            .expect("bind instance g success");
-        test.bind_instance(&vec!["c:0", "e:0", "h:0"].into())
-            .await
-            .expect("bind instance h success");
-        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance f success");
+        test.bind_instance(&vec!["b"].into()).await.expect("bind instance b success");
+        test.bind_instance(&vec!["c"].into()).await.expect("bind instance c success");
+        test.bind_instance(&vec!["b", "d"].into()).await.expect("bind instance d success");
+        test.bind_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["c", "e", "g"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["c", "e", "h"].into()).await.expect("bind instance h success");
+        test.bind_instance(&vec!["c", "f"].into()).await.expect("bind instance f success");
 
         // Subscribing with scopes /c, /c/e and /c/e/h
         let registry = test.builtin_environment.event_registry.clone();
@@ -365,9 +361,7 @@ mod tests {
         assert_eq!(expected_monikers, result_monikers);
 
         // Verify we don't get more Running events.
-        test.bind_instance(&vec!["c:0", "f:0", "i:0"].into())
-            .await
-            .expect("bind instance g success");
+        test.bind_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
         let event = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
@@ -382,17 +376,13 @@ mod tests {
     async fn synthesize_non_overlapping_scopes() {
         let test = setup_synthesis_test().await;
 
-        test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
-        test.bind_instance(&vec!["b:0", "d:0"].into()).await.expect("bind instance d success");
-        test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
-        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
-        test.bind_instance(&vec!["c:0", "e:0", "g:0"].into())
-            .await
-            .expect("bind instance g success");
-        test.bind_instance(&vec!["c:0", "e:0", "h:0"].into())
-            .await
-            .expect("bind instance g success");
-        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["b"].into()).await.expect("bind instance b success");
+        test.bind_instance(&vec!["b", "d"].into()).await.expect("bind instance d success");
+        test.bind_instance(&vec!["c"].into()).await.expect("bind instance c success");
+        test.bind_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["c", "e", "g"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["c", "e", "h"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["c", "f"].into()).await.expect("bind instance g success");
 
         // Subscribing with scopes /c, /c/e and c/f/i
         let registry = test.builtin_environment.event_registry.clone();
@@ -414,9 +404,7 @@ mod tests {
         assert_eq!(expected_monikers, result_monikers);
 
         // Verify we don't get more Running events.
-        test.bind_instance(&vec!["c:0", "f:0", "i:0"].into())
-            .await
-            .expect("bind instance g success");
+        test.bind_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
         let event = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
@@ -430,20 +418,14 @@ mod tests {
     async fn synthesize_directory_ready() {
         let test = setup_synthesis_test().await;
 
-        test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
-        test.bind_instance(&vec!["b:0", "d:0"].into()).await.expect("bind instance d success");
-        test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
-        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
-        test.bind_instance(&vec!["c:0", "e:0", "g:0"].into())
-            .await
-            .expect("bind instance g success");
-        test.bind_instance(&vec!["c:0", "e:0", "h:0"].into())
-            .await
-            .expect("bind instance h success");
-        test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance f success");
-        test.bind_instance(&vec!["c:0", "f:0", "i:0"].into())
-            .await
-            .expect("bind instance i success");
+        test.bind_instance(&vec!["b"].into()).await.expect("bind instance b success");
+        test.bind_instance(&vec!["b", "d"].into()).await.expect("bind instance d success");
+        test.bind_instance(&vec!["c"].into()).await.expect("bind instance c success");
+        test.bind_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["c", "e", "g"].into()).await.expect("bind instance g success");
+        test.bind_instance(&vec!["c", "e", "h"].into()).await.expect("bind instance h success");
+        test.bind_instance(&vec!["c", "f"].into()).await.expect("bind instance f success");
+        test.bind_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance i success");
 
         let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(CreateStreamArgs {

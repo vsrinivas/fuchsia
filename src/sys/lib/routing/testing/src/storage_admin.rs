@@ -94,7 +94,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["b:0".into()]),
                     from_cm_namespace: false,
@@ -175,7 +175,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["c:0".into()]),
                     from_cm_namespace: false,
@@ -269,7 +269,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         ];
         let test = T::new("a", components).build().await;
         test.check_use(
-            vec!["b:0"].into(),
+            vec!["b"].into(),
             CheckUse::StorageAdmin {
                 storage_relation: RelativeMoniker::new(vec![], vec!["d:0".into()]),
                 from_cm_namespace: false,
@@ -467,7 +467,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["b:0".into()]),
                     from_cm_namespace: false,
@@ -564,7 +564,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["d:0".into()]),
                     from_cm_namespace: false,
@@ -693,7 +693,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["b:0".into()]),
                     from_cm_namespace: false,
@@ -788,7 +788,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::StorageAdmin {
                     storage_relation: RelativeMoniker::new(vec![], vec!["d:0".into()]),
                     from_cm_namespace: false,

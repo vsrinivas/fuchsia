@@ -794,7 +794,7 @@ mod tests {
             // listed in `routes_to_skip` + `routes_to_verify`.
             json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![],
                     routes_to_verify: vec![],
                 }],
@@ -815,7 +815,7 @@ mod tests {
             // sources on all capabilities used by @two_dir_user_url.
             json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![
                         UseSpec {
                             type_name: CapabilityTypeName::Directory,
@@ -850,7 +850,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![
                     // Skip @root_url -> @two_dir_user_url route.
                     UseSpec {
@@ -872,7 +872,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -920,7 +920,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![
                     // Skip @root_url -> @two_dir_user_url route.
                     UseSpec {
@@ -942,7 +942,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 // Match partial path with some (not all) routed
                                 // subdirs.
@@ -990,7 +990,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![],
                 routes_to_verify: vec![
                     // request.component_routes[0].routes_to_verify[0]:
@@ -1027,7 +1027,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 // Match complete path with routed subdirs.
                                 path_prefix: Some(
@@ -1094,7 +1094,7 @@ mod tests {
                     },
                     // Match all routes used by @two_dir_user_url.
                     RouteSourcesSpec {
-                        target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                        target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                         routes_to_skip: vec![],
                         routes_to_verify: vec![
                     // request.component_routes[1].routes_to_verify[0]:
@@ -1130,7 +1130,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1192,7 +1192,7 @@ mod tests {
             model,
             json!(json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![
                         UseSpec {
                             type_name: CapabilityTypeName::Directory,
@@ -1229,7 +1229,7 @@ mod tests {
             model,
             json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![
                         UseSpec {
                             type_name: CapabilityTypeName::Directory,
@@ -1269,7 +1269,7 @@ mod tests {
             // Skip correct routes, but also one that does not exist.
             json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![
                         UseSpec {
                             type_name: CapabilityTypeName::Directory,
@@ -1308,7 +1308,7 @@ mod tests {
             model,
             json!(RouteSourcesRequest {
                 component_routes: vec![RouteSourcesSpec {
-                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0",]),
+                    target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user",]),
                     routes_to_skip: vec![
                         UseSpec {
                             type_name: CapabilityTypeName::Directory,
@@ -1343,7 +1343,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![UseSpec {
                     type_name: CapabilityTypeName::Directory,
                     path: Some(CapabilityPath::from_str("/data/from/root").unwrap()),
@@ -1357,7 +1357,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1378,7 +1378,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str("/data/to/user").unwrap(),
@@ -1403,7 +1403,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![
                     UseSpec {
                         type_name: CapabilityTypeName::Directory,
@@ -1426,7 +1426,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(
@@ -1454,7 +1454,7 @@ mod tests {
         let controller = RouteSourcesController::default();
         let request = RouteSourcesRequest {
             component_routes: vec![RouteSourcesSpec {
-                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user:0"]),
+                target_node_path: NodePath::absolute_from_vec(vec!["two_dir_user"]),
                 routes_to_skip: vec![
                     // Intentional error: No match for `/data/from/root`. That
                     // way number of routes to skip + number of routes to verify
@@ -1475,7 +1475,7 @@ mod tests {
                             name: None,
                         },
                         source: SourceSpec {
-                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider:0"]),
+                            node_path: NodePath::absolute_from_vec(vec!["one_dir_provider"]),
                             capability: SourceDeclSpec {
                                 path_prefix: Some(
                                     CapabilityPath::from_str(

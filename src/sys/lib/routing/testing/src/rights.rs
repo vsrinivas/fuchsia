@@ -71,7 +71,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
             ),
         ];
         let model = T::new("a", components).build().await;
-        model.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model.check_use(vec!["c"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     }
 
     pub async fn test_offer_incompatible_rights(&self) {
@@ -127,7 +127,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::default_directory(ExpectedResult::Err(zx_status::Status::UNAVAILABLE)),
             )
             .await;
@@ -184,7 +184,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
             ),
         ];
         let model = T::new("a", components).build().await;
-        model.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model.check_use(vec!["c"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     }
 
     pub async fn test_expose_incompatible_rights(&self) {
@@ -240,7 +240,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::default_directory(ExpectedResult::Err(zx_status::Status::UNAVAILABLE)),
             )
             .await;
@@ -297,7 +297,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
             ),
         ];
         let model = T::new("a", components).build().await;
-        model.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model.check_use(vec!["c"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
     }
 
     pub async fn test_capability_incompatible_rights(&self) {
@@ -349,7 +349,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::default_directory(ExpectedResult::Err(zx_status::Status::UNAVAILABLE)),
             )
             .await;
@@ -407,7 +407,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
         model.install_namespace_directory("/offer_from_cm_namespace");
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::default_directory(ExpectedResult::Err(zx_status::Status::UNAVAILABLE)),
             )
             .await;

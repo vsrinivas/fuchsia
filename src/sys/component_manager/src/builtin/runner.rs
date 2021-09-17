@@ -327,7 +327,7 @@ mod tests {
             .await;
 
         // Bind the root component.
-        universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
+        universe.bind_instance(&vec!["b"].into()).await.expect("bind failed");
 
         // Ensure the instances started up.
         mock_runner.wait_for_urls(&["test:///a_resolved", "test:///b_resolved"]).await;

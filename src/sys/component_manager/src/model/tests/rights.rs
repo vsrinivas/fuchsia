@@ -161,7 +161,7 @@ async fn framework_directory_rights() {
             Arc::downgrade(&directory_host) as Weak<dyn Hook>,
         )])
         .await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    test.check_use(vec!["b"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
 }
 
 #[fuchsia::test]
@@ -211,7 +211,7 @@ async fn framework_directory_incompatible_rights() {
         )])
         .await;
     test.check_use(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
     )
     .await;

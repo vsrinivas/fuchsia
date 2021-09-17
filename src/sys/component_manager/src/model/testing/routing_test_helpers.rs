@@ -39,8 +39,8 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker,
-        RelativeMoniker,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker,
+        PartialChildMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
@@ -345,7 +345,7 @@ impl RoutingTest {
     /// Creates a dynamic child `child_decl` in `moniker`'s `collection`.
     pub async fn create_dynamic_child<'a>(
         &'a self,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         collection: &'a str,
         decl: impl Into<ChildDecl>,
     ) {
@@ -364,7 +364,7 @@ impl RoutingTest {
     /// to complete.
     pub async fn destroy_dynamic_child<'a>(
         &'a self,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         collection: &'a str,
         name: &'a str,
     ) {
@@ -382,7 +382,10 @@ impl RoutingTest {
         nf.await.expect("failed to destroy child");
     }
 
-    pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
+    pub async fn bind_and_get_namespace(
+        &self,
+        moniker: PartialAbsoluteMoniker,
+    ) -> Arc<ManagedNamespace> {
         let component_name = self.bind_instance_and_wait_start(&moniker).await.unwrap();
         let component_resolved_url = Self::resolved_url(&component_name);
         let namespace = self
@@ -476,7 +479,7 @@ impl RoutingTest {
     /// `BindChild`.
     pub async fn check_use_realm(
         &self,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
         let component_name =
@@ -547,7 +550,10 @@ impl RoutingTest {
     /// default reason of BindReason::Eager.
     ///
     /// On success, returns the short name of the component.
-    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, ModelError> {
+    pub async fn bind_instance(
+        &self,
+        moniker: &PartialAbsoluteMoniker,
+    ) -> Result<String, ModelError> {
         self.bind_instance_with(moniker, BindReason::Eager, false).await
     }
 
@@ -559,18 +565,18 @@ impl RoutingTest {
     /// On success, returns the short name of the component.
     pub async fn bind_instance_and_wait_start(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
     ) -> Result<String, ModelError> {
         self.bind_instance_with(moniker, BindReason::Eager, true).await
     }
 
     async fn bind_instance_with(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         reason: BindReason,
         wait_for_start: bool,
     ) -> Result<String, ModelError> {
-        self.model.bind(&moniker.to_partial(), &reason).await?;
+        self.model.bind(moniker, &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -584,11 +590,11 @@ impl RoutingTest {
 
     pub async fn bind_and_get_instance<'a>(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
         reason: BindReason,
         wait_for_start: bool,
     ) -> Result<Arc<ComponentInstance>, ModelError> {
-        let instance = self.model.bind(&moniker.to_partial(), &reason).await?;
+        let instance = self.model.bind(moniker, &reason).await?;
         let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
@@ -605,15 +611,14 @@ impl RoutingTest {
     ///
     /// We define "running" as "the components outgoing directory has responded to a simple
     /// request", which the MockRunner supports.
-    pub async fn wait_for_component_start(&self, component: &AbsoluteMoniker) {
+    pub async fn wait_for_component_start(&self, moniker: &PartialAbsoluteMoniker) {
         // Lookup, bind, and open a connection to the component's outgoing directory.
         let (dir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-        let component =
-            self.model.look_up(&component.to_partial()).await.expect("lookup component failed");
+        self.model.look_up(moniker).await.expect("lookup component failed");
         let mut server_end = server_end.into_channel();
         self.model
-            .bind(&component.abs_moniker.to_partial(), &BindReason::Eager)
+            .bind(moniker, &BindReason::Eager)
             .await
             .expect("failed to bind to component")
             .open_outgoing(
@@ -638,7 +643,7 @@ impl RoutingTest {
 impl RoutingTestModel for RoutingTest {
     type C = ComponentInstance;
 
-    async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+    async fn check_use(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
         let component_name = self
             .bind_instance_and_wait_start(&moniker)
             .await
@@ -688,7 +693,7 @@ impl RoutingTestModel for RoutingTest {
                     .root()
                     .try_get_component_id_index()
                     .unwrap()
-                    .look_up_moniker(&moniker.to_partial())
+                    .look_up_moniker(&moniker)
                     .cloned();
 
                 if let Some(relative_moniker) = storage_relation {
@@ -740,13 +745,14 @@ impl RoutingTestModel for RoutingTest {
                 let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
                 let relative_moniker_string = format!("{}", storage_relation);
                 let component_abs_moniker =
-                    AbsoluteMoniker::from_relative(&moniker, &storage_relation).unwrap();
+                    PartialAbsoluteMoniker::from_relative(&moniker, &storage_relation.to_partial())
+                        .unwrap();
                 let component_instance_id = self
                     .model
                     .root()
                     .try_get_component_id_index()
                     .unwrap()
-                    .look_up_moniker(&component_abs_moniker.to_partial())
+                    .look_up_moniker(&component_abs_moniker)
                     .cloned();
                 storage_admin_proxy
                     .open_component_storage(
@@ -809,7 +815,7 @@ impl RoutingTestModel for RoutingTest {
         }
     }
 
-    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+    async fn check_use_exposed_dir(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
         match check {
             CheckUse::Protocol { path, expected_res } => {
                 capability_util::call_echo_svc_from_exposed_dir(
@@ -855,12 +861,12 @@ impl RoutingTestModel for RoutingTest {
 
     async fn look_up_instance(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
     ) -> Result<Arc<ComponentInstance>, anyhow::Error> {
         self.model.look_up(&moniker.to_partial()).await.map_err(|err| anyhow!(err))
     }
 
-    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
+    async fn check_open_file(&self, moniker: PartialAbsoluteMoniker, path: CapabilityPath) {
         let component_name =
             self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
@@ -1282,7 +1288,7 @@ pub mod capability_util {
     pub async fn read_data_from_exposed_dir<'a>(
         path: CapabilityPath,
         file: &Path,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         model: &'a Arc<Model>,
         expected_res: ExpectedResult,
     ) {
@@ -1319,7 +1325,7 @@ pub mod capability_util {
     /// directory.
     pub async fn call_echo_svc_from_exposed_dir<'a>(
         path: CapabilityPath,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         model: &'a Arc<Model>,
         expected_res: ExpectedResult,
     ) {
@@ -1333,7 +1339,7 @@ pub mod capability_util {
         path: CapabilityPath,
         instance: String,
         member: String,
-        abs_moniker: &AbsoluteMoniker,
+        abs_moniker: &PartialAbsoluteMoniker,
         model: &Arc<Model>,
         expected_res: ExpectedResult,
     ) {
@@ -1470,19 +1476,16 @@ pub mod capability_util {
     /// Open the exposed dir for `abs_moniker`.
     async fn open_exposed_dir<'a>(
         path: &'a CapabilityPath,
-        abs_moniker: &'a AbsoluteMoniker,
+        abs_moniker: &'a PartialAbsoluteMoniker,
         model: &'a Arc<Model>,
         open_mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let component = model
-            .look_up(&abs_moniker.to_partial())
+            .look_up(abs_moniker)
             .await
             .expect(&format!("component not found {}", abs_moniker));
-        model
-            .bind(&abs_moniker.to_partial(), &BindReason::Eager)
-            .await
-            .expect("failed to bind instance");
+        model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {

@@ -395,7 +395,7 @@ mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         component_id_index, fidl_fuchsia_io2 as fio2,
         matches::assert_matches,
-        moniker::AbsoluteMonikerBase,
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         rand::{self, distributions::Alphanumeric, Rng},
         std::{
             convert::{TryFrom, TryInto},
@@ -587,7 +587,7 @@ mod tests {
             .set_component_outgoing_host_fn("a", Box::new(|_| {}))
             .build()
             .await;
-        test.bind_instance_and_wait_start(&AbsoluteMoniker::root()).await.unwrap();
+        test.bind_instance_and_wait_start(&PartialAbsoluteMoniker::root()).await.unwrap();
 
         // Try to open the storage. We expect an error.
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);

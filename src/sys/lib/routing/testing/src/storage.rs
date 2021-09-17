@@ -83,7 +83,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
 
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
@@ -144,7 +144,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
@@ -205,7 +205,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
@@ -266,7 +266,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: None,
@@ -343,7 +343,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -422,7 +422,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         model.add_subdir_to_data_directory("subdir_1");
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -505,7 +505,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -580,7 +580,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(
@@ -657,7 +657,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -733,7 +733,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         model.add_subdir_to_data_directory("subdir_1");
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -859,7 +859,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -871,7 +871,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
             .await;
         model
             .check_use(
-                vec!["c:0"].into(),
+                vec!["c"].into(),
                 CheckUse::Storage {
                     path: "/cache".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
@@ -883,7 +883,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
             .await;
         model
             .check_use(
-                vec!["c:0", "d:0"].into(),
+                vec!["c", "d"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(
@@ -898,7 +898,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
             .await;
         model
             .check_use(
-                vec!["c:0", "d:0"].into(),
+                vec!["c", "d"].into(),
                 CheckUse::Storage {
                     path: "/cache".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(
@@ -961,7 +961,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: None,
@@ -1015,7 +1015,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: None,
@@ -1068,7 +1068,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: None,
@@ -1145,7 +1145,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let model = T::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0", "c:0"].into(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: None,
@@ -1219,7 +1219,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
 
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
@@ -1315,7 +1315,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         // instance `b` uses instance-id based paths.
         model
             .check_use(
-                AbsoluteMoniker::parse_string_without_instances("/b").unwrap(),
+                vec!["b"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
@@ -1331,7 +1331,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         let storage_relation = RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()]);
         model
             .check_use(
-                AbsoluteMoniker::parse_string_without_instances("/b/c").unwrap(),
+                vec!["b", "c"].into(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(storage_relation.clone()),

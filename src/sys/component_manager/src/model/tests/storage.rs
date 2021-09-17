@@ -17,10 +17,7 @@ use {
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker,
-        RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
 };
@@ -176,7 +173,7 @@ async fn use_in_collection_from_parent() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         "coll",
         ChildDecl {
             name: "c".into(),
@@ -190,7 +187,7 @@ async fn use_in_collection_from_parent() {
 
     // Use storage and confirm its existence.
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
@@ -201,7 +198,7 @@ async fn use_in_collection_from_parent() {
     )
     .await;
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
             storage_relation: Some(RelativeMoniker::new(vec![], vec!["coll:c:1".into()])),
@@ -232,7 +229,7 @@ async fn use_in_collection_from_parent() {
         .await,
         vec!["coll:c:1".to_string()],
     );
-    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c").await;
+    test.destroy_dynamic_child(vec!["b"].into(), "coll", "c").await;
 
     // Confirm storage no longer exists.
     assert_eq!(
@@ -349,7 +346,7 @@ async fn use_in_collection_from_grandparent() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         "coll",
         ChildDecl {
             name: "c".into(),
@@ -363,7 +360,7 @@ async fn use_in_collection_from_grandparent() {
 
     // Use storage and confirm its existence.
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/data".try_into().unwrap(),
             storage_relation: Some(RelativeMoniker::new(
@@ -377,7 +374,7 @@ async fn use_in_collection_from_grandparent() {
     )
     .await;
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::Storage {
             path: "/cache".try_into().unwrap(),
             storage_relation: Some(RelativeMoniker::new(
@@ -410,7 +407,7 @@ async fn use_in_collection_from_grandparent() {
         .await,
         vec!["coll:c:1".to_string()]
     );
-    test.destroy_dynamic_child(vec!["b:0"].into(), "coll", "c").await;
+    test.destroy_dynamic_child(vec!["b"].into(), "coll", "c").await;
 
     // Confirm storage no longer exists.
     assert_eq!(
@@ -554,14 +551,19 @@ async fn use_restricted_storage_start_failure() {
         .await;
 
     test.bind_instance(
-        &AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
+        &PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
     )
     .await
     .expect("bind to /parent_consumer failed");
 
-    let child_consumer_moniker =
-        AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer").unwrap();
-    let child_bind_result = test.bind_instance(&child_consumer_moniker).await;
+    let child_bind_result = test
+        .bind_instance(
+            &PartialAbsoluteMoniker::parse_string_without_instances(
+                "/parent_consumer/child_consumer",
+            )
+            .unwrap(),
+        )
+        .await;
     assert!(matches!(
         child_bind_result,
         Err(ModelError::RoutingError { err: RoutingError::ComponentNotInIdIndex { moniker: _ } })
@@ -637,7 +639,7 @@ async fn use_restricted_storage_open_failure() {
         .await;
 
     let parent_consumer_moniker =
-        AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
+        PartialAbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
     let parent_consumer_instance = test
         .bind_and_get_instance(&parent_consumer_moniker, BindReason::Eager, false)
         .await
@@ -663,11 +665,7 @@ async fn use_restricted_storage_open_failure() {
 
     // now modify StorageDecl so that it restricts storage
     let provider_instance = test
-        .bind_and_get_instance(
-            &AbsoluteMoniker::parse_string_without_instances("/").unwrap(),
-            BindReason::Eager,
-            false,
-        )
+        .bind_and_get_instance(&PartialAbsoluteMoniker::root(), BindReason::Eager, false)
         .await
         .expect("could not resolve state");
     {

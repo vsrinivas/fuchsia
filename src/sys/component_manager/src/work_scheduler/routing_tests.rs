@@ -23,7 +23,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     std::{convert::TryFrom, ops::Deref, path::Path, sync::Arc},
 };
 
@@ -88,7 +88,7 @@ async fn call_work_scheduler_svc_from_namespace(
 
 async fn check_use_work_scheduler(
     routing_test: &RoutingTest,
-    moniker: AbsoluteMoniker,
+    moniker: PartialAbsoluteMoniker,
     should_succeed: bool,
 ) {
     let component_name =
@@ -131,7 +131,7 @@ async fn call_work_scheduler_control_svc_from_namespace(
 
 async fn check_use_work_scheduler_control(
     routing_test: &RoutingTest,
-    moniker: AbsoluteMoniker,
+    moniker: PartialAbsoluteMoniker,
     path: CapabilityPath,
     should_succeed: bool,
 ) {
@@ -179,7 +179,7 @@ async fn use_work_scheduler_with_expose_to_framework() {
     let work_scheduler = new_work_scheduler().await;
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
-    check_use_work_scheduler(&test, vec!["b:0"].into(), true).await;
+    check_use_work_scheduler(&test, vec!["b"].into(), true).await;
 }
 
 ///   a
@@ -208,7 +208,7 @@ async fn use_work_scheduler_without_expose() {
     let work_scheduler = new_work_scheduler().await;
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
-    check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
+    check_use_work_scheduler(&test, vec!["b"].into(), false).await;
 }
 
 ///   a
@@ -248,7 +248,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
     let work_scheduler = new_work_scheduler().await;
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
-    check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
+    check_use_work_scheduler(&test, vec!["b"].into(), false).await;
 }
 
 ///   a
@@ -297,7 +297,7 @@ async fn use_work_scheduler_control_routed() {
         .build()
         .await;
 
-    check_use_work_scheduler_control(&test, vec!["b:0"].into(), use_path.clone(), true).await;
+    check_use_work_scheduler_control(&test, vec!["b"].into(), use_path.clone(), true).await;
 }
 
 ///   a
@@ -339,5 +339,5 @@ async fn use_work_scheduler_control_error() {
     let test =
         RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
 
-    check_use_work_scheduler_control(&test, vec!["b:0"].into(), use_path.clone(), false).await;
+    check_use_work_scheduler_control(&test, vec!["b"].into(), use_path.clone(), false).await;
 }

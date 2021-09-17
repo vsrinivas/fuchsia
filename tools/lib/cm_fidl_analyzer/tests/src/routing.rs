@@ -29,7 +29,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
     routing::{
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
@@ -263,10 +263,8 @@ impl RoutingTestForAnalyzer {
 impl RoutingTestModel for RoutingTestForAnalyzer {
     type C = ComponentInstanceForAnalyzer;
 
-    async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let target_id = NodePath::new(
-            moniker.path().into_iter().map(|child_moniker| child_moniker.to_partial()).collect(),
-        );
+    async fn check_use(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
+        let target_id = NodePath::new(moniker.path().clone());
         let target = self.model.get_instance(&target_id).expect("target instance not found");
         let target_decl = target.decl().await.expect("target ComponentDecl not found");
 
@@ -301,7 +299,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         }
     }
 
-    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+    async fn check_use_exposed_dir(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
         let target =
             self.model.get_instance(&NodePath::from(moniker)).expect("target instance not found");
         let target_decl = target.decl().await.expect("target ComponentDecl not found");
@@ -341,7 +339,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
 
     async fn look_up_instance(
         &self,
-        moniker: &AbsoluteMoniker,
+        moniker: &PartialAbsoluteMoniker,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, anyhow::Error> {
         self.model.get_instance(&NodePath::from(moniker.clone())).map_err(|err| anyhow!(err))
     }
@@ -350,7 +348,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     //
     // All file and directory operations are no-ops for the static model.
     #[allow(unused_variables)]
-    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {}
+    async fn check_open_file(&self, moniker: PartialAbsoluteMoniker, path: CapabilityPath) {}
 
     #[allow(unused_variables)]
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
@@ -426,7 +424,7 @@ mod tests {
         let model = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Service {
                     path: CapabilityPath::try_from("/foo").unwrap(),
                     instance: "".into(),
@@ -474,7 +472,7 @@ mod tests {
         let model = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Service {
                     path: CapabilityPath::try_from("/foo").unwrap(),
                     instance: "".into(),
@@ -586,7 +584,7 @@ mod tests {
         let model = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
         model
             .check_use(
-                vec!["b:0"].into(),
+                vec!["b"].into(),
                 CheckUse::Service {
                     path: CapabilityPath::try_from("/foo").unwrap(),
                     instance: "".into(),
@@ -647,8 +645,7 @@ mod tests {
         ];
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let c_component =
-            test.look_up_instance(&vec!["b:0", "c:0"].into()).await.expect("c instance");
+        let c_component = test.look_up_instance(&vec!["b", "c"].into()).await.expect("c instance");
 
         assert!(test
             .model
@@ -700,7 +697,7 @@ mod tests {
         ];
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let check_result = test
             .model
             .check_program_runner(
@@ -761,7 +758,7 @@ mod tests {
             ("b", ComponentDeclBuilder::new().use_(use_decl.clone()).build()),
         ];
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let route_map = test
             .model
             .check_use_capability(&use_decl, &b_component)
@@ -772,7 +769,7 @@ mod tests {
             route_map,
             vec![RouteMap::from_segments(vec![
                 RouteSegment::UseBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {
@@ -834,11 +831,11 @@ mod tests {
                     capability: use_decl
                 },
                 RouteSegment::ExposeBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: expose_decl
                 },
                 RouteSegment::DeclareBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: CapabilityDecl::Protocol(protocol_decl)
                 }
             ])]
@@ -960,7 +957,7 @@ mod tests {
         ];
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let c_component = test.look_up_instance(&vec!["c:0"].into()).await.expect("c instance");
+        let c_component = test.look_up_instance(&vec!["c"].into()).await.expect("c instance");
         let route_map = test
             .model
             .check_use_capability(&use_decl, &c_component)
@@ -971,7 +968,7 @@ mod tests {
             route_map,
             vec![RouteMap::from_segments(vec![
                 RouteSegment::UseBy {
-                    node_path: NodePath::absolute_from_vec(vec!["c:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["c"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {
@@ -979,15 +976,15 @@ mod tests {
                     capability: a_offer_decl
                 },
                 RouteSegment::ExposeBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: b_expose_decl
                 },
                 RouteSegment::ExposeBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0", "d:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "d"]),
                     capability: d_expose_decl
                 },
                 RouteSegment::DeclareBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0", "d:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b", "d"]),
                     capability: CapabilityDecl::Directory(directory_decl),
                 }
             ])]
@@ -1031,7 +1028,7 @@ mod tests {
         ];
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let route_map = test
             .model
             .check_program_runner(
@@ -1109,7 +1106,7 @@ mod tests {
         ];
 
         let test = RoutingTestBuilderForAnalyzer::new("a", components).build().await;
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let route_map = test
             .model
             .check_use_capability(&use_storage_decl, &b_component)
@@ -1121,7 +1118,7 @@ mod tests {
             vec![
                 RouteMap::from_segments(vec![
                     RouteSegment::UseBy {
-                        node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                        node_path: NodePath::absolute_from_vec(vec!["b"]),
                         capability: use_storage_decl
                     },
                     RouteSegment::OfferBy {
@@ -1214,7 +1211,7 @@ mod tests {
         builder.set_builtin_capabilities(vec![event_source_decl.clone()]);
         let test = builder.build().await;
 
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let event_route_map = test
             .model
             .check_use_capability(&use_event_decl, &b_component)
@@ -1225,7 +1222,7 @@ mod tests {
             event_route_map,
             vec![RouteMap::from_segments(vec![
                 RouteSegment::UseBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_decl
                 },
                 RouteSegment::OfferBy {
@@ -1246,7 +1243,7 @@ mod tests {
             event_source_route_map,
             vec![RouteMap::from_segments(vec![
                 RouteSegment::UseBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_event_source_decl
                 },
                 RouteSegment::OfferBy {
@@ -1298,7 +1295,7 @@ mod tests {
         let test = builder.build().await;
         test.install_namespace_directory("/offer_from_cm_namespace");
 
-        let b_component = test.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let b_component = test.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let route_map = test
             .model
             .check_use_capability(&use_decl, &b_component)
@@ -1309,7 +1306,7 @@ mod tests {
             route_map,
             vec![RouteMap::from_segments(vec![
                 RouteSegment::UseBy {
-                    node_path: NodePath::absolute_from_vec(vec!["b:0"]),
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
                     capability: use_decl
                 },
                 RouteSegment::OfferBy {

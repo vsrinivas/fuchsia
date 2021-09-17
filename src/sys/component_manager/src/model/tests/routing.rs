@@ -209,7 +209,7 @@ async fn use_framework_service() {
             Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
         )])
         .await;
-    test.check_use_realm(vec!["b:0"].into(), realm_service_host.open_calls()).await;
+    test.check_use_realm(vec!["b"].into(), realm_service_host.open_calls()).await;
 }
 
 ///   a
@@ -287,7 +287,7 @@ async fn capability_requested_event_at_parent() {
         .build()
         .await;
 
-    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
+    let namespace_root = test.bind_and_get_namespace(PartialAbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("capability_requested".into(), EventMode::Async),
@@ -296,7 +296,7 @@ async fn capability_requested_event_at_parent() {
     .await
     .unwrap();
 
-    let namespace_b = test.bind_and_get_namespace(vec!["b:0"].into()).await;
+    let namespace_b = test.bind_and_get_namespace(vec!["b"].into()).await;
     let _echo_proxy = capability_util::connect_to_svc_in_namespace::<echo::EchoMarker>(
         &namespace_b,
         &"/svc/hippo".try_into().unwrap(),
@@ -424,7 +424,7 @@ async fn use_in_collection() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         "coll",
         ChildDecl {
             name: "c".to_string(),
@@ -436,7 +436,7 @@ async fn use_in_collection() {
     )
     .await;
     test.create_dynamic_child(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         "coll",
         ChildDecl {
             name: "d".to_string(),
@@ -447,10 +447,10 @@ async fn use_in_collection() {
         },
     )
     .await;
-    test.check_use(vec!["b:0", "coll:c:1"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+    test.check_use(vec!["b", "coll:c"].into(), CheckUse::default_directory(ExpectedResult::Ok))
         .await;
     test.check_use(
-        vec!["b:0", "coll:d:2"].into(),
+        vec!["b", "coll:d"].into(),
         CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
@@ -525,7 +525,7 @@ async fn use_in_collection_not_offered() {
     ];
     let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
-        vec!["b:0"].into(),
+        vec!["b"].into(),
         "coll",
         ChildDecl {
             name: "c".to_string(),
@@ -537,12 +537,12 @@ async fn use_in_collection_not_offered() {
     )
     .await;
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
     )
     .await;
     test.check_use(
-        vec!["b:0", "coll:c:1"].into(),
+        vec!["b", "coll:c"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
@@ -570,7 +570,7 @@ async fn destroying_instance_kills_framework_service_task() {
     let test = RoutingTest::new("a", components).await;
 
     // Connect to `Realm`, which is a framework service.
-    let namespace = test.bind_and_get_namespace(vec!["b:0"].into()).await;
+    let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
     let proxy = capability_util::connect_to_svc_in_namespace::<fsys::RealmMarker>(
         &namespace,
         &"/svc/fuchsia.sys2.Realm".try_into().unwrap(),
@@ -633,9 +633,9 @@ async fn use_runner_from_parent_environment() {
         .await;
 
     join!(
-        // Bind "b:0". We expect to see a call to our runner service for the new component.
+        // Bind "b". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
+            universe.bind_instance(&vec!["b"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -701,7 +701,7 @@ async fn use_runner_from_environment_in_collection() {
         .await;
     universe
         .create_dynamic_child(
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
             "coll",
             ChildDecl {
                 name: "b".to_string(),
@@ -714,9 +714,9 @@ async fn use_runner_from_environment_in_collection() {
         .await;
 
     join!(
-        // Bind "coll:b:1". We expect to see a call to our runner service for the new component.
+        // Bind "coll:b". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["coll:b:1"].into()).await.unwrap();
+            universe.bind_instance(&vec!["coll:b"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -787,9 +787,9 @@ async fn use_runner_from_grandparent_environment() {
         .await;
 
     join!(
-        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
+            universe.bind_instance(&vec!["b", "c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -857,9 +857,9 @@ async fn use_runner_from_sibling_environment() {
         .await;
 
     join!(
-        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["c:0"].into()).await.unwrap();
+            universe.bind_instance(&vec!["c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -930,9 +930,9 @@ async fn use_runner_from_inherited_environment() {
         .await;
 
     join!(
-        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        // Bind "c". We expect to see a call to our runner service for the new component.
         async move {
-            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
+            universe.bind_instance(&vec!["b", "c"].into()).await.unwrap();
         },
         // Wait for a request, and ensure it has the correct URL.
         async move {
@@ -1057,7 +1057,7 @@ async fn use_runner_from_environment_failed() {
             Arc::downgrade(&runner_host) as Weak<dyn Hook>,
         )])
         .await;
-    let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
+    let namespace_root = test.bind_and_get_namespace(PartialAbsoluteMoniker::root()).await;
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("stopped".into(), EventMode::Async),
@@ -1068,7 +1068,7 @@ async fn use_runner_from_environment_failed() {
 
     // Even though we expect the runner to fail, bind should succeed. This is because the failure
     // is propagated via the controller channel, separately from the Start action.
-    test.bind_instance(&vec!["b:0"].into()).await.unwrap();
+    test.bind_instance(&vec!["b"].into()).await.unwrap();
 
     // Since the controller should have closed, expect a Stopped event.
     let event = match event_stream.next().await {
@@ -1141,9 +1141,9 @@ async fn use_runner_from_environment_not_found() {
         .build()
         .await;
 
-    // Bind "b:0". We expect it to fail because routing failed.
+    // Bind "b". We expect it to fail because routing failed.
     assert_matches!(
-        universe.bind_instance(&vec!["b:0"].into()).await,
+        universe.bind_instance(&vec!["b"].into()).await,
         Err(ModelError::RoutingError {
             err: RoutingError::UseFromEnvironmentNotFound {
                 moniker,
@@ -1231,7 +1231,7 @@ async fn use_with_destroyed_parent() {
 
     // Confirm we can use service from "c".
     test.check_use(
-        vec!["coll:b:1", "c:0"].into(),
+        vec!["coll:b", "c"].into(),
         CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
@@ -1313,7 +1313,7 @@ async fn use_from_destroyed_but_not_removed() {
     ActionSet::register(component_b.clone(), ShutdownAction::new()).await.expect("shutdown failed");
     ActionSet::register(component_b, PurgeAction::new()).await.expect("destroy failed");
     test.check_use(
-        vec!["c:0"].into(),
+        vec!["c"].into(),
         CheckUse::Protocol {
             path: default_service_capability(),
             expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
@@ -1381,12 +1381,9 @@ async fn use_resolver_from_parent_environment() {
         .await;
 
     join!(
-        // Bind "b:0". We expect to see a call to our resolver service for the new component.
+        // Bind "b". We expect to see a call to our resolver service for the new component.
         async move {
-            universe
-                .bind_instance(&vec!["b:0"].into())
-                .await
-                .expect("failed to bind to instance b:0");
+            universe.bind_instance(&vec!["b"].into()).await.expect("failed to bind to instance b");
         },
         // Wait for a request, and resolve it.
         async {
@@ -1466,12 +1463,12 @@ async fn use_resolver_from_grandparent_environment() {
         .await;
 
     join!(
-        // Bind "c:0". We expect to see a call to our resolver service for the new component.
+        // Bind "c". We expect to see a call to our resolver service for the new component.
         async move {
             universe
-                .bind_instance(&vec!["b:0", "c:0"].into())
+                .bind_instance(&vec!["b", "c"].into())
                 .await
-                .expect("failed to bind to instance c:0");
+                .expect("failed to bind to instance c");
         },
         // Wait for a request, and resolve it.
         async {
@@ -1542,9 +1539,9 @@ async fn resolver_is_not_available() {
         .await;
 
     join!(
-        // Bind "c:0". We expect to see a failure that the scheme is not registered.
+        // Bind "c". We expect to see a failure that the scheme is not registered.
         async move {
-            match universe.bind_instance(&vec!["c:0"].into()).await {
+            match universe.bind_instance(&vec!["c"].into()).await {
                 Err(ModelError::ComponentInstanceError {
                     err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
                 }) => {
@@ -1625,9 +1622,9 @@ async fn resolver_component_decl_is_validated() {
         .await;
 
     join!(
-        // Bind "b:0". We expect to see a ResolverError.
+        // Bind "b". We expect to see a ResolverError.
         async move {
-            match universe.bind_instance(&vec!["b:0"].into()).await {
+            match universe.bind_instance(&vec!["b"].into()).await {
                 Err(ModelError::ComponentInstanceError {
                     err: ComponentInstanceError::ResolveFailed { err: resolve_error, .. },
                 }) => {
@@ -1782,19 +1779,19 @@ async fn list_service_instances_from_collection() {
 
     // Start a few dynamic children in the collection "coll".
     test.create_dynamic_child(
-        AbsoluteMoniker::root(),
+        PartialAbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("service_child_a"),
     )
     .await;
     test.create_dynamic_child(
-        AbsoluteMoniker::root(),
+        PartialAbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("non_service_child"),
     )
     .await;
     test.create_dynamic_child(
-        AbsoluteMoniker::root(),
+        PartialAbsoluteMoniker::root(),
         "coll",
         ChildDeclBuilder::new_lazy_child("service_child_b"),
     )
@@ -1946,15 +1943,14 @@ async fn use_service_from_sibling_collection() {
         .await;
 
     // Populate the collection with dynamic children.
-    test.create_dynamic_child(vec!["c:0"].into(), "coll", ChildDeclBuilder::new_lazy_child("foo"))
+    test.create_dynamic_child(vec!["c"].into(), "coll", ChildDeclBuilder::new_lazy_child("foo"))
         .await;
-    test.create_dynamic_child(vec!["c:0"].into(), "coll", ChildDeclBuilder::new_lazy_child("bar"))
+    test.create_dynamic_child(vec!["c"].into(), "coll", ChildDeclBuilder::new_lazy_child("bar"))
         .await;
-    test.create_dynamic_child(vec!["c:0"].into(), "coll", ChildDeclBuilder::new_lazy_child("baz"))
+    test.create_dynamic_child(vec!["c"].into(), "coll", ChildDeclBuilder::new_lazy_child("baz"))
         .await;
 
-    let target: AbsoluteMoniker = vec!["b:0"].into();
-    let namespace = test.bind_and_get_namespace(target.clone()).await;
+    let namespace = test.bind_and_get_namespace(vec!["b"].into()).await;
     let dir = capability_util::take_dir_from_namespace(&namespace, "/svc").await;
     let service_dir = io_util::directory::open_directory(
         &dir,
@@ -1977,7 +1973,7 @@ async fn use_service_from_sibling_collection() {
     join!(
         async move {
             test.check_use(
-                target.clone(),
+                vec!["b"].into(),
                 CheckUse::Service {
                     path: "/svc/my.service.Service".try_into().unwrap(),
                     instance: "foo,default".to_string(),
