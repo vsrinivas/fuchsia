@@ -122,16 +122,17 @@ class F2fs : public fs::ManagedVfs {
   SuperBlock &RawSb() { return *raw_sb_; }
   SbInfo &GetSbInfo() { return *sbi_; }
   SegMgr &Segmgr() { return *seg_mgr_; }
-  NodeManager &GetNodeManager() { return *node_mgr_; }
+  NodeManager &GetNodeManager() { return *node_manager_; }
 
   // super.cc
   void PutSuper();
   zx_status_t SyncFs(int sync);
   zx_status_t SanityCheckRawSuper();
-  int SanityCheckCkpt();
+  zx_status_t SanityCheckCkpt();
   void InitSbInfo();
   zx_status_t FillSuper();
   void ParseOptions();
+  void Reset();
 #if 0  // porting needed
   void InitOnce(void *foo);
   VnodeF2fs *F2fsAllocInode();
@@ -206,19 +207,19 @@ class F2fs : public fs::ManagedVfs {
 
   fbl::RefPtr<VnodeF2fs> root_vnode_;
   fbl::Closure on_unmount_{};
-  MountOptions mount_options_;
+  MountOptions mount_options_{};
 
   std::unique_ptr<SuperBlock> raw_sb_;
   std::unique_ptr<SbInfo> sbi_;
   std::unique_ptr<SegMgr> seg_mgr_;
-  std::unique_ptr<NodeManager> node_mgr_;
+  std::unique_ptr<NodeManager> node_manager_;
 
   VnodeCache vnode_cache_{};
 
   fbl::RefPtr<QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
 
-  zx::event fs_id_;
+  zx::event fs_id_{};
   uint64_t fs_id_legacy_ = 0;
 };
 

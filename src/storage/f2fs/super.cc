@@ -23,7 +23,7 @@ void F2fs::PutSuper() {
 #endif
 
   /* destroy f2fs internal modules */
-  node_mgr_->DestroyNodeManager();
+  node_manager_->DestroyNodeManager();
   seg_mgr_->DestroySegmentManager();
 
   delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
@@ -31,7 +31,7 @@ void F2fs::PutSuper() {
 #if 0  // porting needed
   //   brelse(sbi_->raw_super_buf);
 #endif
-  node_mgr_.reset();
+  node_manager_.reset();
   seg_mgr_.reset();
   raw_sb_.reset();
   sbi_.reset();
@@ -213,7 +213,7 @@ zx_status_t F2fs::SanityCheckRawSuper() {
   return ZX_OK;
 }
 
-int F2fs::SanityCheckCkpt() {
+zx_status_t F2fs::SanityCheckCkpt() {
   unsigned int total, fsmeta;
 
   total = LeToCpu(raw_sb_->segment_count);
@@ -223,9 +223,24 @@ int F2fs::SanityCheckCkpt() {
   fsmeta += LeToCpu(sbi_->ckpt->rsvd_segment_count);
   fsmeta += LeToCpu(raw_sb_->segment_count_ssa);
 
-  if (fsmeta >= total)
-    return 1;
-  return 0;
+  if (fsmeta >= total) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  uint32_t sit_ver_bitmap_bytesize =
+      ((LeToCpu(raw_sb_->segment_count_sit) / 2) << LeToCpu(raw_sb_->log_blocks_per_seg)) / 8;
+  uint32_t nat_ver_bitmap_bytesize =
+      ((LeToCpu(raw_sb_->segment_count_nat) / 2) << LeToCpu(raw_sb_->log_blocks_per_seg)) / 8;
+  block_t nat_blocks = (LeToCpu(raw_sb_->segment_count_nat) >> 1)
+                       << LeToCpu(raw_sb_->log_blocks_per_seg);
+
+  if (sbi_->ckpt->sit_ver_bitmap_bytesize != sit_ver_bitmap_bytesize ||
+      sbi_->ckpt->nat_ver_bitmap_bytesize != nat_ver_bitmap_bytesize ||
+      sbi_->ckpt->next_free_nid >= kNatEntryPerBlock * nat_blocks) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 void F2fs::InitSbInfo() {
@@ -249,81 +264,60 @@ void F2fs::InitSbInfo() {
     AtomicSet(&sbi_->nr_pages[i], 0);
 }
 
+void F2fs::Reset() {
+  if (root_vnode_) {
+    root_vnode_.reset();
+  }
+  if (node_manager_) {
+    node_manager_->DestroyNodeManager();
+    node_manager_.reset();
+  }
+  if (seg_mgr_) {
+    seg_mgr_->DestroySegmentManager();
+    seg_mgr_.reset();
+  }
+  if (sbi_->ckpt) {
+    delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
+  }
+  if (sbi_) {
+    sbi_.reset();
+  }
+}
+
 zx_status_t F2fs::FillSuper() {
-#if 0  // porting needed
-  //   SuperBlock *raw_super;
-  //   buffer_head *raw_super_buf = NULL;
-#endif
-  VnodeF2fs *root;
-  zx_status_t err = ZX_ERR_INVALID_ARGS;
+  zx_status_t err = ZX_OK;
+  auto reset = fit::defer([&] { Reset(); });
 
-  /* allocate memory for f2fs-specific super block info */
-  sbi_ = std::make_unique<SbInfo>();
-  if (!sbi_)
+  // allocate memory for f2fs-specific super block info
+  if (sbi_ = std::make_unique<SbInfo>(); sbi_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
+
   memset(sbi_.get(), 0, sizeof(SbInfo));
-
-#if 0  // porting needed
-  // super_block *sb = sbi_->sb;
-
-  /* set a temporary block size */
-  // if (!SbSetBlocksize(sb, kBlockSize))
-  //  goto free_sbi;
-#endif
-
   ParseOptions();
 
   // sanity checking of raw super
-  if (SanityCheckRawSuper() != ZX_OK) {
-    goto free_sb_buf;
+  if (err = SanityCheckRawSuper(); err != ZX_OK) {
+    return err;
   }
 
-#if 0  // porting needed
-  // sb->s_maxbytes = MaxFileSize(RawSb().log_blocksize);
-  // sb->s_max_links = kLinkMax;
-
-  // For NFS support
-  // get_random_bytes(&sbi->s_next_generation, sizeof(uint32_t));
-
-  // sb->s_op = &f2fs_sops;
-  //  sb->s_xattr = f2fs_xattr_handlers;
-  //  sb->s_export_op = &f2fs_export_ops;
-  // sb->s_magic = kF2fsSuperMagic;
-  // sb->s_fs_info = sbi_.get();
-  // sb->s_time_gran = 1;
-  // sb->s_flags = (sb->s_flags & ~MS_POSIXACL) |
-  //  (TestOpt(sbi_.get(), kMountPosixAcl) ? MS_POSIXACL : 0);
-  // memcpy(&sb->s_uuid, RawSb().uuid, sizeof(RawSb().uuid));
-
-  /* init f2fs-specific super block info */
-  //   sbi->sb = sb;
-#endif
   sbi_->raw_super = raw_sb_.get();
-#if 0  // porting needed
-  //   sbi_->raw_super_buf = raw_super_buf;
-#endif
   sbi_->por_doing = 0;
-#if 0  // porting needed
-  // init_rwsem(&sbi->bio_sem);
-#endif
   InitSbInfo();
 
-  /* get an inode for meta space */
-#if 0  // porting needed
-  // err = VnodeF2fs::Vget(this, MetaIno(sbi_), &sbi_->meta_vnode);
-  // if (err) {
+  // TODO: Create node/meta vnode when impl dirty cache
+  // if (err = VnodeF2fs::Vget(this, MetaIno(sbi_), &sbi_->meta_vnode); err) {
   //   goto free_sb_buf;
   // }
-#endif
 
-  err = GetValidCheckpoint();
-  if (err)
-    goto free_meta_inode;
+  if (err = GetValidCheckpoint(); err != ZX_OK) {
+    return err;
+  }
 
-  /* sanity checking of checkpoint */
-  err = ZX_ERR_INVALID_ARGS;
-  if (SanityCheckCkpt())
-    goto free_cp;
+  // sanity checking of checkpoint
+  if (err = SanityCheckCkpt(); err != ZX_OK) {
+    return err;
+  }
 
   sbi_->total_valid_node_count = LeToCpu(sbi_->ckpt->valid_node_count);
   sbi_->total_valid_inode_count = LeToCpu(sbi_->ckpt->valid_inode_count);
@@ -333,107 +327,58 @@ zx_status_t F2fs::FillSuper() {
   sbi_->alloc_valid_block_count = 0;
   list_initialize(&sbi_->dir_inode_list);
 
-  /* init super block */
-#if 0  // porting needed
-  // if (!SbSetBlocksize(sb, sbi_->blocksize))
-  //  goto free_cp;
-#endif
-
   InitOrphanInfo();
 
-  /* setup f2fs internal modules */
-  seg_mgr_ = std::make_unique<SegMgr>(this);
-  err = seg_mgr_->BuildSegmentManager();
-  if (err)
-    goto free_sm;
+  if (seg_mgr_ = std::make_unique<SegMgr>(this); seg_mgr_ == nullptr) {
+    err = ZX_ERR_NO_MEMORY;
+    return err;
+  }
 
-  node_mgr_ = std::make_unique<NodeManager>(this);
-  err = node_mgr_->BuildNodeManager();
-  if (err)
-    goto free_nm;
+  if (err = seg_mgr_->BuildSegmentManager(); err != ZX_OK) {
+    return err;
+  }
 
-#if 0  // porting needed
+  if (node_manager_ = std::make_unique<NodeManager>(this); node_manager_ == nullptr) {
+    err = ZX_ERR_NO_MEMORY;
+    return err;
+  }
+
+  if (err = node_manager_->BuildNodeManager(); err != ZX_OK) {
+    return err;
+  }
+
+  // TODO: Enable gc after impl dirty data cache
   // BuildGcManager(sbi);
 
-  /* get an inode for node space */
-  // err = VnodeF2fs::Vget(this, NodeIno(sbi_), &sbi_->node_vnode);
-  // if (err) {
-  //   goto free_nm;
-  // }
-#endif
-
-  /* if there are nt orphan nodes free them */
-  err = ZX_ERR_INVALID_ARGS;
-  if (RecoverOrphanInodes() != ZX_OK)
-    goto free_node_inode;
-
-  /* read root inode and dentry */
-  err = VnodeF2fs::Vget(this, RootIno(sbi_.get()), &root_vnode_);
-  if (err) {
-    goto free_node_inode;
+  // if there are nt orphan nodes free them
+  if (err = RecoverOrphanInodes(); err != ZX_OK) {
+    return err;
   }
-  root = root_vnode_.get();
-  if (!root->IsDir() || !root->GetBlocks() || !root->GetSize())
-    goto free_root_inode;
 
-#if 0  // porting needed
-  // sb->s_root = DMakeRoot(root); /* allocate root dentry */
-  // if (!sb->s_root) {
-  //   err = ZX_ERR_NO_MEMORY;
-  //   goto free_root_inode;
-  // }
-#endif
+  // read root inode and dentry
+  if (err = VnodeF2fs::Vget(this, RootIno(sbi_.get()), &root_vnode_); err != ZX_OK) {
+    err = ZX_ERR_NO_MEMORY;
+    return err;
+  }
 
-  // try to recover fsynced data every mount time
+  // root vnode is corrupted
+  if (!root_vnode_->IsDir() || !root_vnode_->GetBlocks() || !root_vnode_->GetSize()) {
+    return err;
+  }
+
+  // TODO: handling dentry cache
+  // TODO: recover fsynced data every mount time
+  // enable roll forward recovery when node dirty cache is impl.
   if (!TestOpt(sbi_.get(), kMountDisableRollForward)) {
     RecoverFsyncData();
   }
 
-#if 0  // porting needed
-  /* After POR, we can run background GC thread */
+  // After POR, we can run background GC thread
+  // TODO: Enable wb thread first, and then impl gc thread
   // err = StartGcThread(sbi);
   // if (err)
   //   goto fail;
-
-  // err = BuildStats(sbi_.get());
-  // if (err)
-  //  goto fail;
-#endif
-
-  return ZX_OK;
-
-#if 0  // porting needed
-fail:
-  // StopGcThread(sbi);
-#endif
-free_root_inode:
-#if 0  // porting needed
-//  dput(sb->s_root);
-//  sb->s_root = NULL;
-#endif
-free_node_inode:
-#if 0  // porting needed
-  // Iput(sbi_->node_inode);
-#endif
-free_nm:
-  node_mgr_->DestroyNodeManager();
-  node_mgr_.reset();
-free_sm:
-  seg_mgr_->DestroySegmentManager();
-  seg_mgr_.reset();
-free_cp:
-  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
-free_meta_inode:
-#if 0  // porting needed
-  // MakeBadInode(sbi_->meta_inode);
-  // Iput(sbi_->meta_inode);
-#endif
-free_sb_buf:
-#if 0  // porting needed
-  //   brelse(raw_super_buf);
-  // free_sbi:
-#endif
-  sbi_.reset();
+  reset.cancel();
   return err;
 }
 

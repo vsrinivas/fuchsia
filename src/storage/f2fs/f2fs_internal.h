@@ -193,8 +193,8 @@ enum class PageType {
 };
 
 struct SbInfo {
-  const SuperBlock *raw_super;  // raw super block pointer
-  int s_dirty = 0;              // dirty flag for checkpoint
+  const SuperBlock *raw_super = nullptr;  // raw super block pointer
+  int s_dirty = 0;                        // dirty flag for checkpoint
 
   fbl::RefPtr<VnodeF2fs> node_vnode;
 
