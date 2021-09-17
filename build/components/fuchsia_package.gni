@@ -198,6 +198,8 @@ template("fuchsia_package") {
           }
         }
         system_image_extra_package_manifest_barrier = []
+        test_component_manifest_barrier = []
+        test_component_manifest_program_barrier = []
       }
       if (!defined(deps)) {
         deps = []

@@ -57,6 +57,7 @@ template("fuchsia_test_component_manifest") {
     } else {
       data_keys = [ "test_component_manifest_cmx" ]
     }
+    walk_keys = [ "test_component_manifest_barrier" ]
     outputs = [ "$target_out_dir/${target_name}.json" ]
     output_conversion = "json"
     testonly = true

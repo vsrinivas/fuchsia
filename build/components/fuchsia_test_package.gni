@@ -114,7 +114,6 @@ template("fuchsia_test_package") {
               }
             },
           ]
-          test_component_manifest_program_barrier = []
           test_component_manifest_cml = [
             {
               include =

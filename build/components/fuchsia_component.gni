@@ -164,6 +164,9 @@ template("fuchsia_component") {
         forward_variables_from(invoker.metadata, "*")
       }
 
+      test_component_manifest_program_barrier = []
+      test_component_manifest_barrier = []
+
       # Don't collect expected includes via transitive deps of components
       expect_includes_barrier = []
     }
