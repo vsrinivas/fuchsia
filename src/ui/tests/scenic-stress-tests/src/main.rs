@@ -29,6 +29,7 @@ pub struct Args {
 
     /// controls delay between each touch operation (down, up)
     #[argh(option, short = 'd', default = "1")]
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     touch_delay_secs: u64,
 
@@ -38,6 +39,7 @@ pub struct Args {
 
     /// flag passed in by rust test runner
     #[argh(switch)]
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     nocapture: bool,
 }

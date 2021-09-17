@@ -223,6 +223,7 @@ pub(crate) struct VulkanImage {
     cb: Cell<Option<vk::CommandBuffer>>,
     queue: Cell<Option<vk::Queue>>,
     fence: Cell<Option<vk::Fence>>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     id: SpinelImage,
 }

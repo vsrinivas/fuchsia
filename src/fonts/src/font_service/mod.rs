@@ -73,6 +73,7 @@ where
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
     /// Holds Inspect data about manifests, families, and the fallback collection.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     inspect_data: inspect::ServiceInspectData,
 

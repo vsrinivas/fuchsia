@@ -90,14 +90,19 @@ impl From<icu::Error> for Error {
 /// remains in scope, the ICU data will not be unloaded.
 #[derive(Debug, Clone)]
 pub struct Loader {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     refs: Arc<udata::UDataMemory>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     vmo_size_bytes: usize,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     file_size_bytes: usize,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     icu_tzdata_dir_path: Option<String>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     icu_data_path: String,
 }

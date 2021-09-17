@@ -15,11 +15,13 @@ use {
 
 #[derive(Debug)]
 pub struct TreeStressorEnvironment {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     test_realm_svc: fsys::RealmProxy,
     tree_actors: Vec<Arc<Mutex<TreeActor>>>,
     time_limit_secs: Option<u64>,
     num_operations: Option<u64>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     seed: u128,
 }

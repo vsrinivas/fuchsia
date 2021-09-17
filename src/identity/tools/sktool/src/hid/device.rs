@@ -81,6 +81,7 @@ pub struct Device<C: Connection, R: Rng> {
     /// The CTAPHID channel to use for all packets.
     channel: u32,
     /// The version of the CTAPHID protocol used by the device.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     ctaphid_version: u8,
     /// The device's capabilities.

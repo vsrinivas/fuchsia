@@ -143,6 +143,7 @@ pub mod touch {
     pub(crate) struct RawContact {
         pub contact_id: u32,
         pub position: IntPoint,
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         pub pressure: Option<i64>,
         pub contact_size: Option<IntSize>,

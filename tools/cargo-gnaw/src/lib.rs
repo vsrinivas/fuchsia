@@ -43,6 +43,7 @@ struct Opt {
 
     /// already generated configs from cargo build scripts
     #[argh(option, short = 'p')]
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     cargo_configs: Option<PathBuf>,
 

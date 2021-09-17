@@ -21,6 +21,7 @@ struct VmoBufferSource {
     vmoid: VmoId,
     // This needs to be 'static because the BufferSource trait requires 'static.
     slice: UnsafeCell<&'static mut [u8]>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     vmo: zx::Vmo,
 }

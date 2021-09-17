@@ -261,8 +261,10 @@ fn add_all_toolchain_suffices(target: &str, targets: &mut Vec<String>) {
 enum OwnersSource {
     /// file is computed from reverse deps and they are listed here
     ReverseDependencies {
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         targets: Vec<String>,
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         deps: BTreeSet<String>,
     },
@@ -278,6 +280,7 @@ impl OwnersSource {
 
 #[derive(Debug)]
 struct OwnersFile {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     path: PathBuf,
     includes: BTreeSet<PathBuf>,
@@ -424,12 +427,14 @@ mod tests {
     #[derive(Debug)]
     struct Paths {
         /// `.../host_x64`
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         test_root_dir: PathBuf,
 
         /// `.../host_x64/test_data`, this is the root of the runfilfes tree, a
         /// path //foo/bar will be copied at `.../host_x64/test_data/foo/bar` for
         /// this test.
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         test_data_dir: PathBuf,
 
@@ -439,6 +444,7 @@ mod tests {
 
         /// `.../host_x64/test_data/tools/auto_owners/runfiles`: this is the directory
         /// where the binary runfiles live.
+        // TODO(fxbug.dev/84729)
         #[allow(unused)]
         runfiles_dir: PathBuf,
 

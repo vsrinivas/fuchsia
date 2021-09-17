@@ -187,8 +187,10 @@ impl std::fmt::Debug for OutputQueue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[derive(Debug)]
         struct OutputFrameView {
+            // TODO(fxbug.dev/84729)
             #[allow(unused)]
             target: RoutingTarget,
+            // TODO(fxbug.dev/84729)
             #[allow(unused)]
             length: usize,
         }

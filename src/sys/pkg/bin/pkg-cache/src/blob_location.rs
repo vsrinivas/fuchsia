@@ -16,6 +16,7 @@ use {
 #[derive(Debug)]
 pub(crate) struct BlobLocation {
     base_blobs: BaseBlobs,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
 }
@@ -23,6 +24,7 @@ pub(crate) struct BlobLocation {
 #[derive(Debug)]
 struct BaseBlobs {
     blobs: InspectableLen<HashSet<Hash>>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
 }

@@ -280,8 +280,10 @@ mod tests {
     fn debug_string() {
         #[derive(Debug)]
         struct Foo {
+            // TODO(fxbug.dev/84729)
             #[allow(unused)]
             bar: u8,
+            // TODO(fxbug.dev/84729)
             #[allow(unused)]
             baz: &'static str,
         }

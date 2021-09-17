@@ -612,8 +612,10 @@ impl MockRetainedPackagesService {
 
 #[derive(Clone)]
 struct CustomEvent {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     metric_id: u32,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     values: Vec<fidl_fuchsia_cobalt::CustomEventValue>,
 }

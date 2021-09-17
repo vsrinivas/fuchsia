@@ -75,6 +75,7 @@ async fn sort_directory(parent: &PathBuf) -> Result<Vec<PathBuf>> {
 #[derive(Debug)]
 struct LogFile {
     path: PathBuf,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     parent: TargetSessionDirectory,
     file: Option<Box<File>>,

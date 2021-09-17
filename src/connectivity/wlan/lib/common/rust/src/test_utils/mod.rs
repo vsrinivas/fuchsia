@@ -172,6 +172,7 @@ mod tests {
         A(u8),
         B {
             named: u8,
+            // TODO(fxbug.dev/84729)
             #[allow(unused)]
             bar: u16,
         },

@@ -137,6 +137,7 @@ pub struct ImageInCollection {
 
 #[derive(Debug)]
 pub struct FrameSet {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     collection_id: CollectionId,
     image_count: usize,

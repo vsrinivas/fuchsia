@@ -37,6 +37,7 @@ use {
 #[derive(Clone)]
 pub struct EventSource {
     /// The component model, needed to route events.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     model: Weak<Model>,
 
@@ -50,6 +51,7 @@ pub struct EventSource {
     /// Used for OpaqueTest:
     /// The implicit static EventStream is dropped when the EventSource goes out of scope.
     /// TODO(fxbug.dev/48245): this shouldn't be done for any EventSource once OpaqueTest goes away.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     resolve_instance_event_stream: Arc<Mutex<Option<fasync::Task<()>>>>,
 

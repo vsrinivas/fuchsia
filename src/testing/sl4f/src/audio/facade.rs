@@ -310,6 +310,7 @@ impl OutputWorker {
 struct VirtualOutput {
     extracted_data: Vec<u8>,
     capturing: Arc<Mutex<bool>>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     have_data: bool,
 
@@ -317,6 +318,7 @@ struct VirtualOutput {
     channels: u8,
     frames_per_second: u32,
 
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     output: Option<OutputProxy>,
     output_sender: Option<mpsc::Sender<ExtractMsg>>,
@@ -780,6 +782,7 @@ struct VirtualAudio {
     output_sample_format: AudioSampleFormat,
     output_channels: u8,
     output_frames_per_second: u32,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     output: Option<OutputProxy>,
 

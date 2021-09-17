@@ -41,11 +41,13 @@ struct Opt {
 
     /// has no effect.
     #[argh(switch, long = "quiet")]
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     quiet: bool,
 
     #[argh(switch, long = "verbose")]
     /// has no effect.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     verbose: bool,
 

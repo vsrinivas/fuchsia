@@ -238,8 +238,10 @@ impl fmt::Debug for ComponentSource {
 
 #[derive(Clone)]
 struct Component {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     source: ComponentSource,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     eager: bool,
 }

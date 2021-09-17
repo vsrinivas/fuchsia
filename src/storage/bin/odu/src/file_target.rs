@@ -32,6 +32,7 @@ pub struct FileIoPacket {
 
     // This value represents the seed used to generate the contents of the
     // IoPacket.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     seed: u64,
 

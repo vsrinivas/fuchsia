@@ -38,16 +38,19 @@ pub struct Element {
     exposed_capabilities: ExposedCapabilities,
 
     /// The component URL used to launch the component.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     url: String,
 
     /// v2 component child name, or empty string if not a child of the realm (such as a CFv1
     /// component).
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     name: String,
 
     /// v2 component child collection name or empty string if not a child of the realm (such as a
     /// CFv1 component).
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     collection: String,
 }

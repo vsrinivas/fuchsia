@@ -13,6 +13,7 @@ use fidl_fuchsia_ui_input3 as input3; // Experimenting with really short aliases
 #[derive(Debug, Clone)]
 pub struct Model {
     /// Auxiliary information for this model.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     metadata: Metadata,
 
@@ -20,6 +21,7 @@ pub struct Model {
     ///
     /// Symbol mappings are tried in the sequence they appear in this vector, and the first one
     /// that is satisfied will be applied.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     symbol_mappings: Vec<SymbolMapping>,
 }
@@ -41,16 +43,19 @@ pub struct Metadata {
 pub struct SymbolMapping {
     /// The set of keys that *must* be actuated for this symbol mapping to take
     /// effect.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     modifiers_armed: Vec<input::Key>,
 
     /// The set of keys that *may* be actuated while `modifiers_armed` are actuated,
     /// for this symbol mapping to take effect.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     modifiers_optional: Vec<input::Key>,
 
     /// When all `modifers_armed` are actuated, and any subset of `modifiers_optional` are
     /// actuated, `mappings` shows how each additional key press maps to a `KeyMeaning`.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     mappings: Vec<SymbolMappingElem>,
 }
@@ -61,10 +66,12 @@ pub struct SymbolMapping {
 #[derive(Debug, Clone)]
 pub struct SymbolMappingElem {
     /// The physical key that was pressed.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     key: input::Key,
 
     /// The translation of `key` into a key meaning.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     key_meaning: input3::KeyMeaning,
 }

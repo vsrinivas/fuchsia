@@ -24,6 +24,7 @@ use {
 struct TraceTask {
     target_query: Option<String>,
     output_file: String,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     config: trace::TraceConfig,
     proxy: trace::ControllerProxy,

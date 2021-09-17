@@ -38,8 +38,10 @@ struct RewriteManagerInspectState {
     dynamic_rules_node: inspect::Node,
     dynamic_rules_states: Vec<RuleInspectState>,
     generation_property: fuchsia_inspect::UintProperty,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     dynamic_rules_path_property: fuchsia_inspect::StringProperty,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: inspect::Node,
 }

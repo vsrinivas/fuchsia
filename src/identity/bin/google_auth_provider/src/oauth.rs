@@ -288,6 +288,7 @@ struct AccessTokenResponseWithoutRefreshToken {
 #[derive(Debug, Deserialize)]
 struct OAuthErrorResponse {
     pub error: String,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     pub error_description: Option<String>,
 }

@@ -54,6 +54,7 @@ pub struct Args {
 
     /// parameter passed in by rust test runner
     #[argh(switch)]
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     nocapture: bool,
 }

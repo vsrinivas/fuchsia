@@ -21,6 +21,7 @@ use {
 pub struct PackageIndex {
     dynamic: DynamicIndex,
     retained: RetainedIndex,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
 }

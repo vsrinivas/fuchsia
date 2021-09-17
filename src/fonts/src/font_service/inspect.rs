@@ -25,23 +25,29 @@ use {
 #[derive(Debug)]
 pub struct ServiceInspectData {
     /// Top node for data about loaded font manifests.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     manifests_node: Node,
     /// List of font manifest file paths.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     manifests: Vec<StringProperty>,
 
     /// Top node for data about all loaded font families.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     families_node: Node,
     /// Data about each loaded font families.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     families: Vec<FamilyInspectData>,
 
     /// Top node for data about the fallback collection.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     fallback_collection_node: Node,
     /// Ordered list of data about all typefaces in the fallback collection.
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     fallback_typefaces: Vec<TypefaceInspectData>,
 }

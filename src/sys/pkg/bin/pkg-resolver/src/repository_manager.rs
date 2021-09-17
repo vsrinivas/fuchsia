@@ -51,12 +51,15 @@ pub struct RepositoryManager {
 
 #[derive(Debug)]
 struct RepositoryManagerInspectState {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: inspect::Node,
     dynamic_configs_node: inspect::Node,
     static_configs_node: inspect::Node,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     dynamic_configs_path_property: inspect::StringProperty,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     persisted_repos_dir_property: inspect::StringProperty,
     stats: Arc<Mutex<Stats>>,
@@ -65,6 +68,7 @@ struct RepositoryManagerInspectState {
 
 #[derive(Debug)]
 pub struct Stats {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: inspect::Node,
 
@@ -90,6 +94,7 @@ impl Stats {
 
 #[derive(Debug)]
 pub struct MirrorStats {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: inspect::Node,
     /// web requests that failed with a network error and then succeeded when retried

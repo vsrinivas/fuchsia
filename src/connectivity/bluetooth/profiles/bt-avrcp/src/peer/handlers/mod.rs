@@ -73,6 +73,7 @@ pub struct ControlChannelHandler {
 
 #[derive(Debug)]
 struct ControlChannelHandlerInner {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     peer_id: PeerId,
     target_delegate: Arc<TargetDelegate>,

@@ -190,14 +190,17 @@ impl FontFamilyBuilder {
 /// Inspect data for a `FontFamily`.
 #[derive(Debug)]
 pub struct FamilyInspectData {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
 
     aliases_node: finspect::Node,
     aliases: Vec<AliasInspectData>,
 
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     typefaces_node: finspect::Node,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     typefaces: Vec<TypefaceInspectData>,
 }
@@ -244,10 +247,13 @@ impl FamilyInspectData {
 /// Inspect data for a single font family alias.
 #[derive(Debug)]
 pub struct AliasInspectData {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     style_overrides: Option<finspect::Node>,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     language_overrides: Option<finspect::StringProperty>,
 }

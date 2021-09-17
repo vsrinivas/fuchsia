@@ -16,8 +16,10 @@ const FINGERPRINT: &'static [u8] = "RIVE".as_bytes();
 #[derive(Debug)]
 pub struct RuntimeHeader {
     major_version: u32,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     minor_version: u32,
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     file_id: u32,
     property_to_field_index: HashMap<u32, u32>,

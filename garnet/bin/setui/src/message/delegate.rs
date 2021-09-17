@@ -14,6 +14,7 @@ use crate::message::messenger::Builder;
 /// to create new messengers.
 #[derive(Clone)]
 pub struct Delegate<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     role_action_tx: role::ActionSender<R>,
     messenger_action_tx: MessengerActionSender<P, A, R>,

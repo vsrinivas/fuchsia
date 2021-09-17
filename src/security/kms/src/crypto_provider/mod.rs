@@ -16,6 +16,7 @@ use std::fmt::Debug;
 /// The general error type returned by crypto provider.
 #[derive(Clone, Debug)]
 pub struct CryptoProviderError {
+    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     error_message: String,
 }
