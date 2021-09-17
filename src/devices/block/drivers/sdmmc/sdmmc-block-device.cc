@@ -29,7 +29,7 @@ inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
   if (txn.node()->complete_cb()) {
     txn.Complete(status);
   } else {
-    zxlogf(DEBUG, "sdmmc: block op %p completion_cb unset!", txn.operation());
+    zxlogf(DEBUG, "block op %p completion_cb unset!", txn.operation());
   }
 }
 
@@ -122,14 +122,14 @@ zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capaci
 void RpmbDevice::RpmbConnectServer(zx::channel server) {
   zx_status_t status;
   if (!loop_started_ && (status = loop_.StartThread("sdmmc-rpmb-thread")) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to start RPMB thread: %d", status);
+    zxlogf(ERROR, "failed to start RPMB thread: %d", status);
   }
 
   loop_started_ = true;
 
   status = fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), this);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to bind channel: %d", status);
+    zxlogf(ERROR, "failed to bind channel: %d", status);
   }
 }
 
@@ -170,7 +170,7 @@ zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdm
   fbl::AllocChecker ac;
   out_dev->reset(new (&ac) SdmmcBlockDevice(parent, sdmmc));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+    zxlogf(ERROR, "failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -181,7 +181,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   // Device must be in TRAN state at this point
   zx_status_t st = WaitForTran();
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: waiting for TRAN state failed, retcode = %d", st);
+    zxlogf(ERROR, "waiting for TRAN state failed, retcode = %d", st);
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -195,7 +195,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
       [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
       this, "sdmmc-block-worker");
   if (rc != thrd_success) {
-    zxlogf(ERROR, "sdmmc: Failed to start worker thread, retcode = %d", st);
+    zxlogf(ERROR, "Failed to start worker thread, retcode = %d", st);
     return thrd_status_to_zx_status(rc);
   }
 
@@ -203,7 +203,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
                   .set_flags(DEVICE_ADD_NON_BINDABLE)
                   .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to add block device, retcode = %d", st);
+    zxlogf(ERROR, "Failed to add block device, retcode = %d", st);
     return st;
   }
 
@@ -213,12 +213,12 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   std::unique_ptr<PartitionDevice> user_partition(
       new (&ac) PartitionDevice(zxdev(), this, block_info_, USER_DATA_PARTITION));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+    zxlogf(ERROR, "failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
   if ((st = user_partition->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add user partition device: %d", st);
+    zxlogf(ERROR, "failed to add user partition device: %d", st);
     return st;
   }
 
@@ -241,26 +241,26 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     std::unique_ptr<PartitionDevice> boot_partition_1(
         new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_1));
     if (!ac.check()) {
-      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      zxlogf(ERROR, "failed to allocate device memory");
       return ZX_ERR_NO_MEMORY;
     }
 
     std::unique_ptr<PartitionDevice> boot_partition_2(
         new (&ac) PartitionDevice(zxdev(), this, boot_info, BOOT_PARTITION_2));
     if (!ac.check()) {
-      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      zxlogf(ERROR, "failed to allocate device memory");
       return ZX_ERR_NO_MEMORY;
     }
 
     if ((st = boot_partition_1->AddDevice()) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
+      zxlogf(ERROR, "failed to add boot partition device: %d", st);
       return st;
     }
 
     dummy = boot_partition_1.release();
 
     if ((st = boot_partition_2->AddDevice()) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d", st);
+      zxlogf(ERROR, "failed to add boot partition device: %d", st);
       return st;
     }
 
@@ -271,12 +271,12 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     std::unique_ptr<RpmbDevice> rpmb_partition(
         new (&ac) RpmbDevice(zxdev(), this, raw_cid_, raw_ext_csd_));
     if (!ac.check()) {
-      zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+      zxlogf(ERROR, "failed to allocate device memory");
       return ZX_ERR_NO_MEMORY;
     }
 
     if ((st = rpmb_partition->DdkAdd("rpmb")) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to add RPMB partition device: %d", st);
+      zxlogf(ERROR, "failed to add RPMB partition device: %d", st);
       return st;
     }
 
@@ -388,7 +388,7 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
     st = mapper.Map(*zx::unowned_vmo(txn.vmo), offset_vmo, length,
                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (st != ZX_OK) {
-      zxlogf(DEBUG, "sdmmc: do_txn vmo map error %d", st);
+      zxlogf(DEBUG, "do_txn vmo map error %d", st);
       return st;
     }
     req->virt_buffer = reinterpret_cast<uint8_t*>(mapper.start());
@@ -397,21 +397,21 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
 
   st = sdmmc_.host().Request(req);
   if (st != ZX_OK) {
-    zxlogf(DEBUG, "sdmmc: do_txn error %d", st);
+    zxlogf(ERROR, "do_txn error %d", st);
     io_errors_.Add(1);
   }
 
   if (st != ZX_OK || ((req->blockcount > 1) && !(req->cmd_flags & SDMMC_CMD_AUTO12))) {
     zx_status_t stop_st = sdmmc_.SdmmcStopTransmission();
     if (stop_st != ZX_OK) {
-      zxlogf(DEBUG, "sdmmc: do_txn stop transmission error %d", stop_st);
+      zxlogf(WARNING, "do_txn stop transmission error %d", stop_st);
       if (st == ZX_OK) {  // Only increment once if either the transfer or stop failed.
         io_errors_.Add(1);
       }
     }
   }
 
-  zxlogf(DEBUG, "sdmmc: do_txn complete");
+  zxlogf(DEBUG, "do_txn complete");
   return st;
 }
 
@@ -439,12 +439,12 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
       .arg = static_cast<uint32_t>(txn.offset_dev),
   };
   if ((status = sdmmc_.host().Request(&discard_start)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to set discard group start: %d", status);
+    zxlogf(ERROR, "failed to set discard group start: %d", status);
     io_errors_.Add(1);
     return status;
   }
   if (discard_start.response[0] & kEraseErrorFlags) {
-    zxlogf(ERROR, "sdmmc: card reported discard group start error: 0x%08x",
+    zxlogf(ERROR, "card reported discard group start error: 0x%08x",
            discard_start.response[0]);
     io_errors_.Add(1);
     return ZX_ERR_IO;
@@ -456,12 +456,12 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
       .arg = static_cast<uint32_t>(txn.offset_dev + txn.length - 1),
   };
   if ((status = sdmmc_.host().Request(&discard_end)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to set discard group end: %d", status);
+    zxlogf(ERROR, "failed to set discard group end: %d", status);
     io_errors_.Add(1);
     return status;
   }
   if (discard_end.response[0] & kEraseErrorFlags) {
-    zxlogf(ERROR, "sdmmc: card reported discard group end error: 0x%08x", discard_end.response[0]);
+    zxlogf(ERROR, "card reported discard group end error: 0x%08x", discard_end.response[0]);
     io_errors_.Add(1);
     return ZX_ERR_IO;
   }
@@ -472,12 +472,12 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
       .arg = MMC_ERASE_DISCARD_ARG,
   };
   if ((status = sdmmc_.host().Request(&discard)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: discard failed: %d", status);
+    zxlogf(ERROR, "discard failed: %d", status);
     io_errors_.Add(1);
     return status;
   }
   if (discard.response[0] & kEraseErrorFlags) {
-    zxlogf(ERROR, "sdmmc: card reported discard error: 0x%08x", discard.response[0]);
+    zxlogf(ERROR, "card reported discard error: 0x%08x", discard.response[0]);
     io_errors_.Add(1);
     return ZX_ERR_IO;
   }
@@ -502,7 +502,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
   fzl::VmoMapper rx_frames_mapper;
   if (!sdmmc_.UseDma()) {
     if ((status = tx_frames_mapper.Map(request.tx_frames.vmo, 0, 0, ZX_VM_PERM_READ)) != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: failed to map RPMB VMO: %d", status);
+      zxlogf(ERROR, "failed to map RPMB VMO: %d", status);
       return status;
     }
 
@@ -510,7 +510,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       status =
           rx_frames_mapper.Map(request.rx_frames.vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "sdmmc: failed to map RPMB VMO: %d", status);
+        zxlogf(ERROR, "failed to map RPMB VMO: %d", status);
         return status;
       }
     }
@@ -522,7 +522,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .arg = MMC_SET_BLOCK_COUNT_RELIABLE_WRITE | static_cast<uint32_t>(tx_frame_count),
   };
   if ((status = sdmmc_.host().Request(&set_tx_block_count)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to set block count for RPMB request: %d", status);
+    zxlogf(ERROR, "failed to set block count for RPMB request: %d", status);
     io_errors_.Add(1);
     return status;
   }
@@ -540,7 +540,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .buf_offset = request.tx_frames.offset,
   };
   if ((status = sdmmc_.host().Request(&write_tx_frames)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to write RPMB frames: %d", status);
+    zxlogf(ERROR, "failed to write RPMB frames: %d", status);
     io_errors_.Add(1);
     return status;
   }
@@ -555,7 +555,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .arg = static_cast<uint32_t>(rx_frame_count),
   };
   if ((status = sdmmc_.host().Request(&set_rx_block_count)) != ZX_OK) {
-    zxlogf(ERROR, "mmc: failed to set block count for RPMB request: %d", status);
+    zxlogf(ERROR, "failed to set block count for RPMB request: %d", status);
     io_errors_.Add(1);
     return status;
   }
@@ -573,7 +573,7 @@ zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
       .buf_offset = request.rx_frames.offset,
   };
   if ((status = sdmmc_.host().Request(&read_rx_frames)) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to read RPMB frames: %d", status);
+    zxlogf(ERROR, "failed to read RPMB frames: %d", status);
     io_errors_.Add(1);
     return status;
   }
@@ -594,7 +594,7 @@ zx_status_t SdmmcBlockDevice::SetPartition(const EmmcPartition partition) {
 
   zx_status_t status = MmcDoSwitch(MMC_EXT_CSD_PARTITION_CONFIG, partition_config_value);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to switch to partition %u", partition);
+    zxlogf(ERROR, "failed to switch to partition %u", partition);
     io_errors_.Add(1);
     return status;
   }
@@ -649,7 +649,7 @@ void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
   using fuchsia_hardware_rpmb::wire::kFrameSize;
 
   if (info.tx_frames.size % kFrameSize != 0) {
-    zxlogf(ERROR, "sdmmc: tx frame buffer size not a multiple of %u", kFrameSize);
+    zxlogf(ERROR, "tx frame buffer size not a multiple of %u", kFrameSize);
     info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -664,7 +664,7 @@ void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
   }
 
   if (tx_frame_count > SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS) {
-    zxlogf(ERROR, "sdmmc: received %lu tx frames, maximum is %u", tx_frame_count,
+    zxlogf(ERROR, "received %lu tx frames, maximum is %u", tx_frame_count,
            SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS);
     info.completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
@@ -672,14 +672,14 @@ void SdmmcBlockDevice::RpmbQueue(RpmbRequestInfo info) {
 
   if (info.rx_frames.vmo.is_valid()) {
     if (info.rx_frames.size % kFrameSize != 0) {
-      zxlogf(ERROR, "sdmmc: rx frame buffer size is not a multiple of %u", kFrameSize);
+      zxlogf(ERROR, "rx frame buffer size is not a multiple of %u", kFrameSize);
       info.completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
 
     const uint64_t rx_frame_count = info.rx_frames.size / kFrameSize;
     if (rx_frame_count > SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS) {
-      zxlogf(ERROR, "sdmmc: received %lu rx frames, maximum is %u", rx_frame_count,
+      zxlogf(ERROR, "received %lu rx frames, maximum is %u", rx_frame_count,
              SDMMC_SET_BLOCK_COUNT_MAX_BLOCKS);
       info.completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -732,7 +732,7 @@ void SdmmcBlockDevice::HandleBlockOps(block::BorrowedOperationQueue<PartitionInf
                     "txn_status", TA_INT32(status));
     } else {
       // should not get here
-      zxlogf(ERROR, "sdmmc: invalid block op %d", kBlockOp(btxn.operation()->command));
+      zxlogf(ERROR, "invalid block op %d", kBlockOp(btxn.operation()->command));
       TRACE_INSTANT("sdmmc", "unknown", TRACE_SCOPE_PROCESS, "command", TA_INT32(bop.rw.command),
                     "txn_status", TA_INT32(status));
       __UNREACHABLE;
@@ -781,7 +781,7 @@ int SdmmcBlockDevice::WorkerThread() {
     }
   }
 
-  zxlogf(DEBUG, "sdmmc: worker thread terminated successfully");
+  zxlogf(DEBUG, "worker thread terminated successfully");
   return thrd_success;
 }
 
@@ -792,7 +792,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
     uint32_t response;
     zx_status_t st = sdmmc_.SdmmcSendStatus(&response);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdmmc: SDMMC_SEND_STATUS error, retcode = %d", st);
+      zxlogf(ERROR, "SDMMC_SEND_STATUS error, retcode = %d", st);
       return st;
     }
 

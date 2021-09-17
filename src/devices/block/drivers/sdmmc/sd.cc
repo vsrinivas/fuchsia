@@ -42,7 +42,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
   // Get the operating conditions from the card.
   uint32_t ocr;
   if ((st = sdmmc_.SdSendOpCond(0, &ocr)) != ZX_OK) {
-    zxlogf(ERROR, "sd: SDMMC_SD_SEND_OP_COND failed, retcode = %d", st);
+    zxlogf(ERROR, "SDMMC_SD_SEND_OP_COND failed, retcode = %d", st);
     return st;
   }
 
@@ -53,14 +53,14 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     const uint32_t flags = kAcmd41FlagSdhcSdxcSupport | kAcmd41FlagVoltageWindowAll;
     uint32_t ocr;
     if ((st = sdmmc_.SdSendOpCond(flags, &ocr)) != ZX_OK) {
-      zxlogf(ERROR, "sd: SD_SEND_OP_COND failed with retcode = %d", st);
+      zxlogf(ERROR, "SD_SEND_OP_COND failed with retcode = %d", st);
       return st;
     }
 
     if (ocr & (1 << 31)) {
       if (!(ocr & kOcrSdhc)) {
         // Card is not an SDHC card. We currently don't support this.
-        zxlogf(ERROR, "sd: unsupported card type, must use sdhc card");
+        zxlogf(ERROR, "unsupported card type, must use sdhc card");
         return ZX_ERR_NOT_SUPPORTED;
       }
       card_supports_18v_signalling = !!((ocr >> 24) & 0x1);
@@ -68,7 +68,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     }
 
     if (++attempt == max_attempts) {
-      zxlogf(ERROR, "sd: too many attempt trying to negotiate card OCR");
+      zxlogf(ERROR, "too many attempt trying to negotiate card OCR");
       return ZX_ERR_TIMED_OUT;
     }
 
@@ -78,7 +78,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
   st = sdmmc_.host().SetBusFreq(25000000);
   if (st != ZX_OK) {
     // This is non-fatal but the card will run slowly.
-    zxlogf(ERROR, "sd: failed to increase bus frequency.");
+    zxlogf(ERROR, "failed to increase bus frequency.");
   }
 
   // TODO(bradenkell): Re-enable support for UHS-I mode once the Mediatek driver supports
@@ -89,42 +89,42 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
   // if (card_supports_18v_signalling) {
   //     st = sdmmc_do_command(sdmmc->host_zxdev, SDMMC_VOLTAGE_SWITCH, 0, setup_txn);
   //     if (st != ZX_OK) {
-  //         zxlogf(ERROR, "sd: failed to send switch voltage command to card, "
+  //         zxlogf(ERROR, "failed to send switch voltage command to card, "
   //                 "retcode = %d\n", st);
   //         goto err;
   //     }
   //
   //     st = sdmmc_set_signal_voltage(&sdmmc->host, SDMMC_VOLTAGE_180);
   //     if (st != ZX_OK) {
-  //         zxlogf(ERROR, "sd: Card supports 1.8v signalling but was unable to "
+  //         zxlogf(ERROR, "Card supports 1.8v signalling but was unable to "
   //                 "switch to 1.8v mode, retcode = %d\n", st);
   //         goto err;
   //     }
   // }
 
   if ((st = sdmmc_.MmcAllSendCid(raw_cid_)) != ZX_OK) {
-    zxlogf(ERROR, "sd: ALL_SEND_CID failed with retcode = %d", st);
+    zxlogf(ERROR, "ALL_SEND_CID failed with retcode = %d", st);
     return st;
   }
 
   uint16_t card_status;
   if ((st = sdmmc_.SdSendRelativeAddr(&card_status)) != ZX_OK) {
-    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with retcode = %d", st);
+    zxlogf(ERROR, "SEND_RELATIVE_ADDR failed with retcode = %d", st);
     return st;
   }
 
   if (card_status & 0xe000) {
-    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed with resp = %d", (card_status & 0xe000));
+    zxlogf(ERROR, "SEND_RELATIVE_ADDR failed with resp = %d", (card_status & 0xe000));
     return ZX_ERR_INTERNAL;
   }
   if ((card_status & (1u << 8)) == 0) {
-    zxlogf(ERROR, "sd: SEND_RELATIVE_ADDR failed. Card not ready.");
+    zxlogf(ERROR, "SEND_RELATIVE_ADDR failed. Card not ready.");
     return ZX_ERR_INTERNAL;
   }
 
   // Determine the size of the card.
   if ((st = sdmmc_.MmcSendCsd(raw_csd_)) != ZX_OK) {
-    zxlogf(ERROR, "sd: failed to send app cmd, retcode = %d", st);
+    zxlogf(ERROR, "failed to send app cmd, retcode = %d", st);
     return st;
   }
 
@@ -142,17 +142,17 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
   const uint32_t c_size = (raw_csd_[6] | (raw_csd_[7] << 8) | (raw_csd_[8] << 16)) & 0x3f'ffff;
   block_info_.block_count = (c_size + 1ul) * 1024ul;
   block_info_.block_size = 512ul;
-  zxlogf(INFO, "sd: found card with capacity = %" PRIu64 "B",
+  zxlogf(INFO, "found card with capacity = %" PRIu64 "B",
          block_info_.block_count * block_info_.block_size);
 
   if ((st = sdmmc_.SdSelectCard()) != ZX_OK) {
-    zxlogf(ERROR, "sd: SELECT_CARD failed with retcode = %d", st);
+    zxlogf(ERROR, "SELECT_CARD failed with retcode = %d", st);
     return st;
   }
 
   std::array<uint8_t, 8> scr;
   if ((st = sdmmc_.SdSendScr(scr)) != ZX_OK) {
-    zxlogf(ERROR, "sd: SEND_SCR failed with retcode = %d", st);
+    zxlogf(ERROR, "SEND_SCR failed with retcode = %d", st);
     return st;
   }
 
@@ -164,12 +164,12 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
     do {
       // First tell the card to go into four bit mode:
       if ((st = sdmmc_.SdSetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
-        zxlogf(ERROR, "sd: failed to set card bus width, retcode = %d", st);
+        zxlogf(ERROR, "failed to set card bus width, retcode = %d", st);
         break;
       }
       st = sdmmc_.host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR);
       if (st != ZX_OK) {
-        zxlogf(ERROR, "sd: failed to set host bus width, retcode = %d", st);
+        zxlogf(ERROR, "failed to set host bus width, retcode = %d", st);
       }
     } while (false);
   }

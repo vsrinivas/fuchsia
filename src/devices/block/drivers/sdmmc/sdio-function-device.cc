@@ -20,7 +20,7 @@ zx_status_t SdioFunctionDevice::Create(zx_device_t* parent, SdioControllerDevice
   fbl::AllocChecker ac;
   out_dev->reset(new (&ac) SdioFunctionDevice(parent, sdio_parent));
   if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory");
+    zxlogf(ERROR, "failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -40,7 +40,7 @@ zx_status_t SdioFunctionDevice::AddDevice(const sdio_func_hw_info_t& hw_info, ui
   snprintf(name, sizeof(name), "sdmmc-sdio-%u", func);
   zx_status_t st = DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d", st);
+    zxlogf(ERROR, "Failed to add sdio device, retcode = %d", st);
   }
 
   function_ = static_cast<uint8_t>(func);
