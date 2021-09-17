@@ -97,151 +97,149 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> final {
   using ResponseType =
       ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>;
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, ::fidl::StringView s)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, s) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, ::fidl::StringView s)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request{s};
-      message_.Encode<WireRequest>(&_request);
-    }
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireRequest* request)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size,
-                                request) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireRequest* request)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      message_.Encode<WireRequest>(request);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(::fidl::StringView s)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        ::fidl::StringView s)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
-    explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        WireRequest* request)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
-        backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
 
  public:
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<
-            ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>> {
-   public:
-    using DecodedMessageBase<::fidl::WireRequest<
-        ::fidl_test_inheritance::Super::Foo>>::DecodedMessageBase;
-
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
-                                                     handles, handle_actual)) {}
-
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  class DecodedMessage;
 
  private:
   void _InitHeader();
+};
+
+class ::fidl::WireRequest<
+    ::fidl_test_inheritance::Super::Foo>::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        ::fidl::StringView s)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, s) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, ::fidl::StringView s)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    FIDL_ALIGNDECL WireRequest _request{s};
+    message_.Encode<WireRequest>(&_request);
+  }
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        WireRequest* request)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, request) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, WireRequest* request)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    message_.Encode<WireRequest>(request);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class ::fidl::WireRequest<
+    ::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(::fidl::StringView s)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      ::fidl::StringView s)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
+  explicit OwnedEncodedMessage(WireRequest* request)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      WireRequest* request)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+      backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::DecodedMessage
+    final : public ::fidl::internal::DecodedMessageBase<
+                ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>> {
+ public:
+  using DecodedMessageBase<::fidl::WireRequest<
+      ::fidl_test_inheritance::Super::Foo>>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
+                                                   handle_actual)) {}
+
+  ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 template <>
 struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
@@ -261,154 +259,151 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, int64_t y)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, y) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, int64_t y)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireResponse _response{y};
-      message_
-          .Encode<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-              &_response);
-    }
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireResponse* response)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size,
-                                response) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireResponse* response)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      message_
-          .Encode<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-              response);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(int64_t y)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
-    explicit OwnedEncodedMessage(
-        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
 
  public:
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<
-            ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>> {
-   public:
-    using DecodedMessageBase<::fidl::WireResponse<
-        ::fidl_test_inheritance::Super::Foo>>::DecodedMessageBase;
-
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
-                                                     handles, handle_actual)) {}
-
-    ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  class DecodedMessage;
 
  private:
   void _InitHeader();
+};
+
+class ::fidl::WireResponse<
+    ::fidl_test_inheritance::Super::Foo>::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        int64_t y)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, y) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, int64_t y)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    FIDL_ALIGNDECL WireResponse _response{y};
+    message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
+        &_response);
+  }
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        WireResponse* response)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, response) {
+  }
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, WireResponse* response)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
+        response);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class ::fidl::WireResponse<
+    ::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(int64_t y)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), y) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), y) {}
+  explicit OwnedEncodedMessage(
+      ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* response)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::DecodedMessage
+    final : public ::fidl::internal::DecodedMessageBase<
+                ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>> {
+ public:
+  using DecodedMessageBase<::fidl::WireResponse<
+      ::fidl_test_inheritance::Super::Foo>>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
+                                                   handle_actual)) {}
+
+  ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 #ifdef __Fuchsia__
 
@@ -779,151 +774,149 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> final {
       ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>;
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, ::fidl::StringView s)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, s) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, ::fidl::StringView s)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireRequest _request{s};
-      message_.Encode<WireRequest>(&_request);
-    }
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireRequest* request)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size,
-                                request) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireRequest* request)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      message_.Encode<WireRequest>(request);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(::fidl::StringView s)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        ::fidl::StringView s)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), s) {}
-    explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        WireRequest* request)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
-        backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
 
  public:
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<
-            ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>> {
-   public:
-    using DecodedMessageBase<::fidl::WireRequest<
-        ::fidl_test_inheritance::Sub::Foo>>::DecodedMessageBase;
-
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
-                                                     handles, handle_actual)) {}
-
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  class DecodedMessage;
 
  private:
   void _InitHeader();
+};
+
+class ::fidl::WireRequest<
+    ::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        ::fidl::StringView s)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, s) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, ::fidl::StringView s)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    FIDL_ALIGNDECL WireRequest _request{s};
+    message_.Encode<WireRequest>(&_request);
+  }
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        WireRequest* request)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, request) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, WireRequest* request)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    message_.Encode<WireRequest>(request);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class ::fidl::WireRequest<
+    ::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(::fidl::StringView s)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      ::fidl::StringView s)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), s) {}
+  explicit OwnedEncodedMessage(WireRequest* request)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      WireRequest* request)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+      backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::DecodedMessage
+    final : public ::fidl::internal::DecodedMessageBase<
+                ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>> {
+ public:
+  using DecodedMessageBase<::fidl::WireRequest<
+      ::fidl_test_inheritance::Sub::Foo>>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
+                                                   handle_actual)) {}
+
+  ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 template <>
 struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
@@ -943,152 +936,151 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kResponse;
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, int64_t y)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size, y) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, int64_t y)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      FIDL_ALIGNDECL WireResponse _response{y};
-      message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-          &_response);
-    }
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireResponse* response)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                _backing_buffer, _backing_buffer_size,
-                                response) {}
-    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireResponse* response)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = _iovec_capacity,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
-      message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-          response);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(int64_t y)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), y) {}
-    explicit OwnedEncodedMessage(
-        ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), response) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
 
  public:
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<
-            ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>> {
-   public:
-    using DecodedMessageBase<::fidl::WireResponse<
-        ::fidl_test_inheritance::Sub::Foo>>::DecodedMessageBase;
-
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
-                                                     handles, handle_actual)) {}
-
-    ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<
-          ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  class DecodedMessage;
 
  private:
   void _InitHeader();
+};
+
+class ::fidl::WireResponse<
+    ::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        int64_t y)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, y) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, int64_t y)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    FIDL_ALIGNDECL WireResponse _response{y};
+    message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
+        &_response);
+  }
+  UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        WireResponse* response)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                              _backing_buffer, _backing_buffer_size, response) {
+  }
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                        uint32_t _backing_buffer_size, WireResponse* response)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = _iovec_capacity,
+            .backing_buffer = _backing_buffer,
+            .backing_buffer_capacity = _backing_buffer_size,
+        }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+    message_.Encode<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
+        response);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class ::fidl::WireResponse<
+    ::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(int64_t y)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), y) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned, int64_t y)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), y) {}
+  explicit OwnedEncodedMessage(
+      ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* response)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), response) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+#ifdef __Fuchsia__
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) {
+    message_.Write(std::forward<ChannelLike>(client));
+  }
+#endif  // __Fuchsia__
+ private:
+  ::fidl::internal::InlineMessageBuffer<24> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::DecodedMessage
+    final : public ::fidl::internal::DecodedMessageBase<
+                ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>> {
+ public:
+  using DecodedMessageBase<::fidl::WireResponse<
+      ::fidl_test_inheritance::Sub::Foo>>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual, handles,
+                                                   handle_actual)) {}
+
+  ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<
+        ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 #ifdef __Fuchsia__
 

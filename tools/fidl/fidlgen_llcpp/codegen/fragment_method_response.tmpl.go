@@ -53,8 +53,18 @@ struct {{ .WireResponse }} final {
   void _CloseHandles();
   {{- end }}
 
-  class UnownedEncodedMessage final {
-   public:
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+
+class {{ .WireResponse }}::UnownedEncodedMessage final {
+  public:
   UnownedEncodedMessage({{- RenderParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .ResponseArgs }})
       : UnownedEncodedMessage({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "_backing_buffer" "_backing_buffer_size" .ResponseArgs }}) {}
   UnownedEncodedMessage({{- RenderParams "uint32_t _iovec_capacity" "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .ResponseArgs }})
@@ -113,16 +123,16 @@ struct {{ .WireResponse }} final {
   void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 {{- EndifFuchsia -}}
 
-   private:
+  private:
   ::fidl::internal::IovecBuffer iovecs_;
   {{- if gt .Response.TypeShapeV1.MaxHandles 0 }}
     zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
   {{- end }}
   ::fidl::OutgoingMessage message_;
-  };
+};
 
-  class OwnedEncodedMessage final {
-   public:
+class {{ .WireResponse }}::OwnedEncodedMessage final {
+  public:
   explicit OwnedEncodedMessage({{ RenderParams .ResponseArgs }})
     : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .ResponseArgs }}) {}
   // Internal constructor.
@@ -154,42 +164,38 @@ struct {{ .WireResponse }} final {
   void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
 {{- EndifFuchsia -}}
 
-   private:
+  private:
   {{ .Response.ServerAllocationV1.BackingBufferType }} backing_buffer_;
   UnownedEncodedMessage message_;
-  };
+};
 
- public:
-  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<{{ .WireResponse }}> {
-   public:
-    using DecodedMessageBase<{{ .WireResponse }}>::DecodedMessageBase;
+class {{ .WireResponse }}::DecodedMessage final :
+  public ::fidl::internal::DecodedMessageBase<{{ .WireResponse }}> {
+  public:
+  using DecodedMessageBase<{{ .WireResponse }}>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-            ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
+                  uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+          ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
 
-    {{- if .Response.IsResource }}
-    ~DecodedMessage() {
-      if (ok() && (PrimaryObject() != nullptr)) {
-        PrimaryObject()->_CloseHandles();
-      }
+  {{- if .Response.IsResource }}
+  ~DecodedMessage() {
+    if (ok() && (PrimaryObject() != nullptr)) {
+      PrimaryObject()->_CloseHandles();
     }
-    {{- end }}
+  }
+  {{- end }}
 
-    {{ .WireResponse }}* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<{{ .WireResponse }}*>(bytes());
-    }
+  {{ .WireResponse }}* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<{{ .WireResponse }}*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles won't be closed
-    // When the object is destroyed.
-    // After calling this method, the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
-
- private:
-  void _InitHeader();
+  // Release the ownership of the decoded message. That means that the handles won't be closed
+  // When the object is destroyed.
+  // After calling this method, the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}

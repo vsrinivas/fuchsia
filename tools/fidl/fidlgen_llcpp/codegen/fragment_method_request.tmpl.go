@@ -59,7 +59,17 @@ struct {{ .WireRequest }} final {
   void _CloseHandles();
   {{- end }}
 
-  class UnownedEncodedMessage final {
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+
+ public:
+  class DecodedMessage;
+
+ private:
+  void _InitHeader();
+};
+
+class {{ .WireRequest}}::UnownedEncodedMessage final {
   public:
   UnownedEncodedMessage(
     {{- RenderParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" .RequestArgs }})
@@ -125,77 +135,73 @@ struct {{ .WireRequest }} final {
     zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
   {{- end }}
   ::fidl::OutgoingMessage message_;
-  };
+};
 
-  class OwnedEncodedMessage final {
+class {{ .WireRequest }}::OwnedEncodedMessage final {
   public:
-    explicit OwnedEncodedMessage({{- RenderParams .RequestArgs }})
-      : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .RequestArgs }}) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage({{- RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" .RequestArgs }})
-      : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .RequestArgs }}) {}
-    explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
-      : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .WireRequest.Self }}* request)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), request) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+  explicit OwnedEncodedMessage({{- RenderParams .RequestArgs }})
+    : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .RequestArgs }}) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage({{- RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" .RequestArgs }})
+    : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "static_cast<uint32_t>(backing_buffer_.size())" .RequestArgs }}) {}
+  explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
+    : message_(1u, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .WireRequest.Self }}* request)
+    : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), static_cast<uint32_t>(backing_buffer_.size()), request) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
-    {{- IfdefFuchsia -}}
-    const char* status_string() const { return message_.status_string(); }
-    {{- EndifFuchsia -}}
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const { return message_.FormatDescription(); }
-    const char* lossy_description() const { return message_.lossy_description(); }
-    const ::fidl::Result& error() const { return message_.error(); }
+  zx_status_t status() const { return message_.status(); }
+  {{- IfdefFuchsia -}}
+  const char* status_string() const { return message_.status_string(); }
+  {{- EndifFuchsia -}}
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-    {{- IfdefFuchsia -}}
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
-    {{- EndifFuchsia -}}
+  {{- IfdefFuchsia -}}
+  template <typename ChannelLike>
+  void Write(ChannelLike&& client) { message_.Write(std::forward<ChannelLike>(client)); }
+  {{- EndifFuchsia -}}
 
   private:
-    {{ .Request.ClientAllocationV1.BackingBufferType }} backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+  {{ .Request.ClientAllocationV1.BackingBufferType }} backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
- public:
-  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<{{ .WireRequest }}> {
-   public:
-    using DecodedMessageBase<{{ .WireRequest }}>::DecodedMessageBase;
+class {{ .WireRequest }}::DecodedMessage final :
+  public ::fidl::internal::DecodedMessageBase<{{ .WireRequest }}> {
+  public:
+  using DecodedMessageBase<{{ .WireRequest }}>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-            ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
+                  uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+          ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
 
-    {{- if .Request.IsResource }}
-    ~DecodedMessage() {
-      if (ok() && (PrimaryObject() != nullptr)) {
-        PrimaryObject()->_CloseHandles();
-      }
+  {{- if .Request.IsResource }}
+  ~DecodedMessage() {
+    if (ok() && (PrimaryObject() != nullptr)) {
+      PrimaryObject()->_CloseHandles();
     }
-    {{- end }}
+  }
+  {{- end }}
 
-    {{ .WireRequest }}* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<{{ .WireRequest }}*>(bytes());
-    }
+  {{ .WireRequest }}* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<{{ .WireRequest }}*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles won't be closed
-    // When the object is destroyed.
-    // After calling this method, the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
-
- private:
-  void _InitHeader();
+  // Release the ownership of the decoded message. That means that the handles won't be closed
+  // When the object is destroyed.
+  // After calling this method, the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}

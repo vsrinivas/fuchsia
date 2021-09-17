@@ -82,135 +82,128 @@ struct Padding7ByteMiddle {
 
   uint64_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding7ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding7ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding7ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding7ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding7ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding7ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding7ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding7ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding7ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding7ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding7ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding7ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding7ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding7ByteMiddle>::DecodedMessageBase;
+class Padding7ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding7ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding7ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding7ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding7ByteMiddle*>(bytes());
-    }
+  Padding7ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding7ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
@@ -227,134 +220,128 @@ struct Padding7ByteEnd {
 
   uint8_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding7ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding7ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding7ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding7ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding7ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding7ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding7ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding7ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding7ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding7ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding7ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding7ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding7ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding7ByteEnd>::DecodedMessageBase;
+class Padding7ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding7ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding7ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding7ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding7ByteEnd*>(bytes());
-    }
+  Padding7ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding7ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
@@ -371,135 +358,128 @@ struct Padding6ByteMiddle {
 
   uint64_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding6ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding6ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding6ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding6ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding6ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding6ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding6ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding6ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding6ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding6ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding6ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding6ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding6ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding6ByteMiddle>::DecodedMessageBase;
+class Padding6ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding6ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding6ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding6ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding6ByteMiddle*>(bytes());
-    }
+  Padding6ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding6ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
@@ -516,134 +496,128 @@ struct Padding6ByteEnd {
 
   uint16_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding6ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding6ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding6ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding6ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding6ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding6ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding6ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding6ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding6ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding6ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding6ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding6ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding6ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding6ByteEnd>::DecodedMessageBase;
+class Padding6ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding6ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding6ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding6ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding6ByteEnd*>(bytes());
-    }
+  Padding6ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding6ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
@@ -662,135 +636,128 @@ struct Padding5ByteMiddle {
 
   uint64_t c = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding5ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding5ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding5ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding5ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding5ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding5ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding5ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding5ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding5ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding5ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding5ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding5ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding5ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding5ByteMiddle>::DecodedMessageBase;
+class Padding5ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding5ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding5ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding5ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding5ByteMiddle*>(bytes());
-    }
+  Padding5ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding5ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
@@ -809,134 +776,128 @@ struct Padding5ByteEnd {
 
   uint8_t c = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding5ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding5ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding5ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding5ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding5ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding5ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding5ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding5ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding5ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding5ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding5ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding5ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding5ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding5ByteEnd>::DecodedMessageBase;
+class Padding5ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding5ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding5ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding5ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding5ByteEnd*>(bytes());
-    }
+  Padding5ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding5ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
@@ -953,135 +914,128 @@ struct Padding4ByteMiddle {
 
   uint64_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding4ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding4ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding4ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding4ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding4ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding4ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding4ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding4ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding4ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding4ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding4ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding4ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding4ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding4ByteMiddle>::DecodedMessageBase;
+class Padding4ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding4ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding4ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding4ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding4ByteMiddle*>(bytes());
-    }
+  Padding4ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding4ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
@@ -1098,134 +1052,128 @@ struct Padding4ByteEnd {
 
   uint32_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding4ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding4ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding4ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding4ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding4ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding4ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding4ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding4ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding4ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding4ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding4ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding4ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding4ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding4ByteEnd>::DecodedMessageBase;
+class Padding4ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding4ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding4ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding4ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding4ByteEnd*>(bytes());
-    }
+  Padding4ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding4ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t
@@ -1247,135 +1195,130 @@ struct Padding4ByteAlignmentLength12 {
 
   uint16_t d = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding4ByteAlignmentLength12* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding4ByteAlignmentLength12* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding4ByteAlignmentLength12>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding4ByteAlignmentLength12::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding4ByteAlignmentLength12* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size,
+                        Padding4ByteAlignmentLength12* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding4ByteAlignmentLength12>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding4ByteAlignmentLength12* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding4ByteAlignmentLength12* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding4ByteAlignmentLength12::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding4ByteAlignmentLength12* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding4ByteAlignmentLength12* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
-                                   Padding4ByteAlignmentLength12> {
-   public:
-    using DecodedMessageBase<Padding4ByteAlignmentLength12>::DecodedMessageBase;
+class Padding4ByteAlignmentLength12::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<
+          Padding4ByteAlignmentLength12> {
+ public:
+  using DecodedMessageBase<Padding4ByteAlignmentLength12>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding4ByteAlignmentLength12* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding4ByteAlignmentLength12*>(bytes());
-    }
+  Padding4ByteAlignmentLength12* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding4ByteAlignmentLength12*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
@@ -1392,135 +1335,128 @@ struct Padding3ByteMiddle {
 
   uint32_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding3ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding3ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding3ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding3ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding3ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding3ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding3ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding3ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding3ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding3ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding3ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding3ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding3ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding3ByteMiddle>::DecodedMessageBase;
+class Padding3ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding3ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding3ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding3ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding3ByteMiddle*>(bytes());
-    }
+  Padding3ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding3ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
@@ -1537,134 +1473,128 @@ struct Padding3ByteEnd {
 
   uint8_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding3ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding3ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding3ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding3ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding3ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding3ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding3ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding3ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding3ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding3ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding3ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding3ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding3ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding3ByteEnd>::DecodedMessageBase;
+class Padding3ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding3ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding3ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding3ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding3ByteEnd*>(bytes());
-    }
+  Padding3ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding3ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
@@ -1681,135 +1611,128 @@ struct Padding2ByteMiddle {
 
   uint32_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding2ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding2ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding2ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding2ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding2ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding2ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding2ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding2ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding2ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding2ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding2ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding2ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding2ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding2ByteMiddle>::DecodedMessageBase;
+class Padding2ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding2ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding2ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding2ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding2ByteMiddle*>(bytes());
-    }
+  Padding2ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding2ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
@@ -1826,134 +1749,128 @@ struct Padding2ByteEnd {
 
   uint16_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding2ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding2ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding2ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding2ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding2ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding2ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding2ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding2ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding2ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding2ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding2ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding2ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding2ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding2ByteEnd>::DecodedMessageBase;
+class Padding2ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding2ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding2ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding2ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding2ByteEnd*>(bytes());
-    }
+  Padding2ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding2ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t
@@ -1973,135 +1890,130 @@ struct Padding2ByteAlignmentLength6 {
 
   uint8_t c = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding2ByteAlignmentLength6* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding2ByteAlignmentLength6* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding2ByteAlignmentLength6>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding2ByteAlignmentLength6::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding2ByteAlignmentLength6* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size,
+                        Padding2ByteAlignmentLength6* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding2ByteAlignmentLength6>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding2ByteAlignmentLength6* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding2ByteAlignmentLength6* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding2ByteAlignmentLength6::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding2ByteAlignmentLength6* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding2ByteAlignmentLength6* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
-                                   Padding2ByteAlignmentLength6> {
-   public:
-    using DecodedMessageBase<Padding2ByteAlignmentLength6>::DecodedMessageBase;
+class Padding2ByteAlignmentLength6::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<
+          Padding2ByteAlignmentLength6> {
+ public:
+  using DecodedMessageBase<Padding2ByteAlignmentLength6>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding2ByteAlignmentLength6* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding2ByteAlignmentLength6*>(bytes());
-    }
+  Padding2ByteAlignmentLength6* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding2ByteAlignmentLength6*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
@@ -2118,135 +2030,128 @@ struct Padding1ByteMiddle {
 
   uint16_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding1ByteMiddle* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size,
-                          Padding1ByteMiddle* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding1ByteMiddle>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding1ByteMiddle::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding1ByteMiddle* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding1ByteMiddle* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding1ByteMiddle>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding1ByteMiddle* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding1ByteMiddle* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding1ByteMiddle::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding1ByteMiddle* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding1ByteMiddle* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding1ByteMiddle> {
-   public:
-    using DecodedMessageBase<Padding1ByteMiddle>::DecodedMessageBase;
+class Padding1ByteMiddle::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding1ByteMiddle> {
+ public:
+  using DecodedMessageBase<Padding1ByteMiddle>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding1ByteMiddle* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding1ByteMiddle*>(bytes());
-    }
+  Padding1ByteMiddle* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding1ByteMiddle*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
@@ -2263,134 +2168,128 @@ struct Padding1ByteEnd {
 
   uint8_t b = {};
 
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                          Padding1ByteEnd* value)
-        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
-                                backing_buffer, backing_buffer_size, value) {}
-    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                          uint32_t backing_buffer_size, Padding1ByteEnd* value)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = iovec_capacity,
-              .backing_buffer = backing_buffer,
-              .backing_buffer_capacity = backing_buffer_size,
-          }) {
-      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-      message_.Encode<Padding1ByteEnd>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
 
-    zx_status_t status() const { return message_.status(); }
+class Padding1ByteEnd::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Padding1ByteEnd* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Padding1ByteEnd* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Padding1ByteEnd>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
 
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(Padding1ByteEnd* value)
-        : message_(1u, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    // Internal constructor.
-    explicit OwnedEncodedMessage(
-        ::fidl::internal::AllowUnownedInputRef allow_unowned,
-        Padding1ByteEnd* value)
-        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                   static_cast<uint32_t>(backing_buffer_.size()), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+class Padding1ByteEnd::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Padding1ByteEnd* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      Padding1ByteEnd* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
-    zx_status_t status() const { return message_.status(); }
+  zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
+  const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    std::string FormatDescription() const {
-      return message_.FormatDescription();
-    }
-    const char* lossy_description() const {
-      return message_.lossy_description();
-    }
-    const ::fidl::Result& error() const { return message_.error(); }
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
 
-   private:
-    ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
 
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<Padding1ByteEnd> {
-   public:
-    using DecodedMessageBase<Padding1ByteEnd>::DecodedMessageBase;
+class Padding1ByteEnd::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Padding1ByteEnd> {
+ public:
+  using DecodedMessageBase<Padding1ByteEnd>::DecodedMessageBase;
 
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(
-              wire_format_version,
-              ::fidl::IncomingMessage(
-                  bytes, byte_actual, handles, handle_actual,
-                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    DecodedMessage(const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    // Internal constructor for specifying a specific wire format version.
-    DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                   const fidl_incoming_msg_t* c_msg)
-        : DecodedMessage(wire_format_version,
-                         reinterpret_cast<uint8_t*>(c_msg->bytes),
-                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
-    }
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
 
-    Padding1ByteEnd* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<Padding1ByteEnd*>(bytes());
-    }
+  Padding1ByteEnd* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Padding1ByteEnd*>(bytes());
+  }
 
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
 };
 
 }  // namespace wire
