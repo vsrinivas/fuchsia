@@ -51,11 +51,11 @@ TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::DEFAULT_NAVIGATION_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
@@ -80,7 +80,7 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSlide
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::CHARACTER_GRANULARITY, MessageIds::WORD_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
@@ -105,7 +105,7 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSlid
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::WORD_GRANULARITY, MessageIds::CHARACTER_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
@@ -133,7 +133,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
@@ -159,7 +159,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
@@ -192,7 +192,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNodeNoRange
   action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            ScreenReaderContext::SemanticLevel::kDefault);
   EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));

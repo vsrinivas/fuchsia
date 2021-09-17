@@ -40,7 +40,7 @@ constexpr char kInjectPointerEventActionLabel[] = "Inject Pointer Event Action";
 // Returns the appropriate next action based on the semantic level.
 std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
   switch (semantic_level) {
-    case ScreenReaderContext::SemanticLevel::kNormalNavigation:
+    case ScreenReaderContext::SemanticLevel::kDefault:
       return std::string(kNextActionLabel);
     case ScreenReaderContext::SemanticLevel::kAdjustValue:
       return std::string(kIncrementRangeValueActionLabel);
@@ -54,7 +54,7 @@ std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel seman
 // Returns the appropriate previous action based on the semantic level.
 std::string PreviousActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
   switch (semantic_level) {
-    case ScreenReaderContext::SemanticLevel::kNormalNavigation:
+    case ScreenReaderContext::SemanticLevel::kDefault:
       return std::string(kPreviousActionLabel);
     case ScreenReaderContext::SemanticLevel::kAdjustValue:
       return std::string(kDecrementRangeValueActionLabel);
@@ -224,13 +224,17 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerSingleTap recognizer.
-  gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
-      [this](GestureContext context) { ExecuteAction(kExploreActionLabel, std::move(context)); });
+  gesture_bind_status =
+      gesture_handler->BindOneFingerSingleTapAction([this](GestureContext context) {
+        context_->set_semantic_level(ScreenReaderContext::SemanticLevel::kDefault);
+        ExecuteAction(kExploreActionLabel, std::move(context));
+      });
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDrag recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerDragAction(
       [this](GestureContext context) {
+        context_->set_semantic_level(ScreenReaderContext::SemanticLevel::kDefault);
         context_->set_mode(ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
       }, /*on_start*/
       [this](GestureContext context) {

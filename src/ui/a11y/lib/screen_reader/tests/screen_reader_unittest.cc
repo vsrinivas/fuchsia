@@ -214,6 +214,25 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
                   StrEq("Explore Action")));
 }
 
+TEST_F(ScreenReaderTest, ScreenReaderResetsSemanticLevelBeforeExploreAction) {
+  InitializeScreenReader();
+
+  // Set semantic level to something other than kDefault.
+  context_ptr_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kAdjustValue);
+
+  // Perform a single-tap. The screen reader should change the semantic level
+  // back to kDefault before running the action.
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerSingleTap);
+
+  // Verify that the semantic level was reset to kDefault.
+  EXPECT_EQ(context_ptr_->semantic_level(), a11y::ScreenReaderContext::SemanticLevel::kDefault);
+
+  // Repeat the above steps for the one-finger drag gesture.
+  context_ptr_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kAdjustValue);
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDrag);
+  EXPECT_EQ(context_ptr_->semantic_level(), a11y::ScreenReaderContext::SemanticLevel::kDefault);
+}
+
 TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {
   InitializeScreenReader();
   // Trivial actions are not registered in the action registry, but are jusst the callback parked at
@@ -271,8 +290,7 @@ TEST_F(ScreenReaderTest, NextOrPreviousActionInvokesActionsBasedOnTheSemanticLev
 
   // This test makes sure that when the next / previous action is invoked, bound to right / left one
   // finger swipes, it corresponds to the appropriate action to the current semantic level.
-  EXPECT_EQ(context_ptr_->semantic_level(),
-            a11y::ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  EXPECT_EQ(context_ptr_->semantic_level(), a11y::ScreenReaderContext::SemanticLevel::kDefault);
   mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
   mock_gesture_handler_->TriggerGesture(

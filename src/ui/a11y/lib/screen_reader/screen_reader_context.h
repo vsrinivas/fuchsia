@@ -41,7 +41,7 @@ class ScreenReaderContext {
   // logic to use.
   enum class SemanticLevel {
     // Linear Navigation defines what will be the next / previous element.
-    kNormalNavigation,
+    kDefault,
     // Adjusts a value in a slider or range control element.
     kAdjustValue,
     // User is navigating by characters of the text.
@@ -118,7 +118,7 @@ class ScreenReaderContext {
   ScreenReaderMode mode_ = ScreenReaderMode::kNormal;
 
   // Current semantic level.
-  SemanticLevel semantic_level_ = SemanticLevel::kNormalNavigation;
+  SemanticLevel semantic_level_ = SemanticLevel::kDefault;
 
   // Unicode BCP-47 Locale Identifier.
   std::string locale_id_;

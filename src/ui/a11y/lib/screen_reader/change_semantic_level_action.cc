@@ -19,10 +19,10 @@ ScreenReaderContext::SemanticLevel NextSemanticLevelInDirection(
   // kAdjustValue, which is not present if the focused semantic node is a slider.
   // TODO(fxb/63293): Add word and character navigation here when implemented.
   static const std::vector<ScreenReaderContext::SemanticLevel> semantic_level_list = {
-      ScreenReaderContext::SemanticLevel::kNormalNavigation,
+      ScreenReaderContext::SemanticLevel::kDefault,
       ScreenReaderContext::SemanticLevel::kAdjustValue};
   static const std::vector<ScreenReaderContext::SemanticLevel> semantic_level_list_no_sliders = {
-      ScreenReaderContext::SemanticLevel::kNormalNavigation};
+      ScreenReaderContext::SemanticLevel::kDefault};
 
   decltype(semantic_level_list)* semantic_level_list_for_node;
   if (is_slider_focused) {
@@ -87,7 +87,7 @@ fpromise::promise<> ChangeSemanticLevelAction::SpeakSemanticLevelPromise(
     ScreenReaderContext::SemanticLevel semantic_level) {
   fuchsia::intl::l10n::MessageIds message_id;
   switch (semantic_level) {
-    case ScreenReaderContext::SemanticLevel::kNormalNavigation:
+    case ScreenReaderContext::SemanticLevel::kDefault:
       message_id = fuchsia::intl::l10n::MessageIds::DEFAULT_NAVIGATION_GRANULARITY;
       break;
     case ScreenReaderContext::SemanticLevel::kAdjustValue:

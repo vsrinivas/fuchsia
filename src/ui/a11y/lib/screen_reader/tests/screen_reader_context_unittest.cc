@@ -59,7 +59,7 @@ TEST_F(ScreenReaderContextTest, GetSpeaker) { ASSERT_TRUE(screen_reader_context_
 
 TEST_F(ScreenReaderContextTest, SetsSemanticLevel) {
   EXPECT_EQ(screen_reader_context_->semantic_level(),
-            a11y::ScreenReaderContext::SemanticLevel::kNormalNavigation);
+            a11y::ScreenReaderContext::SemanticLevel::kDefault);
   screen_reader_context_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kWord);
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             a11y::ScreenReaderContext::SemanticLevel::kWord);
