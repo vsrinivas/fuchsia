@@ -95,8 +95,12 @@ func BenchmarkWritePacket(b *testing.B) {
 					NIC:         nicid,
 				},
 			})
-			if err := stk.AddAddress(nicid, ipv4.ProtocolNumber, addr); err != nil {
-				b.Fatal(err)
+			protocolAddress := tcpip.ProtocolAddress{
+				Protocol:          ipv4.ProtocolNumber,
+				AddressWithPrefix: addr.WithPrefix(),
+			}
+			if err := stk.AddProtocolAddress(nicid, protocolAddress, stack.AddressProperties{}); err != nil {
+				b.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", nicid, protocolAddress, err)
 			}
 			if err := ep.Connect(tcpip.FullAddress{Port: 8080, Addr: addr, NIC: nicid}); err != nil {
 				b.Fatal(err)

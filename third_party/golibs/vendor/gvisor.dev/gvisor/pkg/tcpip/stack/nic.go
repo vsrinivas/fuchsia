@@ -97,6 +97,8 @@ type packetEndpointList struct {
 	mu sync.RWMutex
 
 	// eps is protected by mu, but the contained PacketEndpoint values are not.
+	//
+	// +checklocks:mu
 	eps []PacketEndpoint
 }
 
@@ -115,6 +117,12 @@ func (p *packetEndpointList) remove(ep PacketEndpoint) {
 			break
 		}
 	}
+}
+
+func (p *packetEndpointList) len() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return len(p.eps)
 }
 
 // forEach calls fn with each endpoints in p while holding the read lock on p.
@@ -157,14 +165,8 @@ func newNIC(stack *Stack, id tcpip.NICID, name string, ep LinkEndpoint, ctx NICC
 
 	resolutionRequired := ep.Capabilities()&CapabilityResolutionRequired != 0
 
-	// Register supported packet and network endpoint protocols.
-	for _, netProto := range header.Ethertypes {
-		nic.packetEPs.eps[netProto] = new(packetEndpointList)
-	}
 	for _, netProto := range stack.networkProtocols {
 		netNum := netProto.Number()
-		nic.packetEPs.eps[netNum] = new(packetEndpointList)
-
 		netEP := netProto.NewEndpoint(nic, nic)
 		nic.networkEndpoints[netNum] = netEP
 
@@ -514,7 +516,7 @@ func (n *nic) getAddressOrCreateTempInner(protocol tcpip.NetworkProtocolNumber, 
 
 // addAddress adds a new address to n, so that it starts accepting packets
 // targeted at the given address (and network protocol).
-func (n *nic) addAddress(protocolAddress tcpip.ProtocolAddress, peb PrimaryEndpointBehavior) tcpip.Error {
+func (n *nic) addAddress(protocolAddress tcpip.ProtocolAddress, properties AddressProperties) tcpip.Error {
 	ep, ok := n.networkEndpoints[protocolAddress.Protocol]
 	if !ok {
 		return &tcpip.ErrUnknownProtocol{}
@@ -525,7 +527,7 @@ func (n *nic) addAddress(protocolAddress tcpip.ProtocolAddress, peb PrimaryEndpo
 		return &tcpip.ErrNotSupported{}
 	}
 
-	addressEndpoint, err := addressableEndpoint.AddAndAcquirePermanentAddress(protocolAddress.AddressWithPrefix, peb, AddressConfigStatic, false /* deprecated */)
+	addressEndpoint, err := addressableEndpoint.AddAndAcquirePermanentAddress(protocolAddress.AddressWithPrefix, properties)
 	if err == nil {
 		// We have no need for the address endpoint.
 		addressEndpoint.DecRef()
@@ -974,7 +976,8 @@ func (n *nic) registerPacketEndpoint(netProto tcpip.NetworkProtocolNumber, ep Pa
 
 	eps, ok := n.packetEPs.eps[netProto]
 	if !ok {
-		return &tcpip.ErrNotSupported{}
+		eps = new(packetEndpointList)
+		n.packetEPs.eps[netProto] = eps
 	}
 	eps.add(ep)
 
@@ -990,6 +993,9 @@ func (n *nic) unregisterPacketEndpoint(netProto tcpip.NetworkProtocolNumber, ep 
 		return
 	}
 	eps.remove(ep)
+	if eps.len() == 0 {
+		delete(n.packetEPs.eps, netProto)
+	}
 }
 
 // isValidForOutgoing returns true if the endpoint can be used to send out a

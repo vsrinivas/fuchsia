@@ -588,8 +588,12 @@ func TestBridge(t *testing.T) {
 			// that constituent links are still routable.
 			bcaddr := tcpip.Address(bytes.Repeat([]byte{4}, testCase.addressSize))
 			bcsubnet := util.PointSubnet(bcaddr)
-			if err := sb.AddAddress(sbEP2NICID, testCase.protocolNumber, bcaddr); err != nil {
-				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
+			bcProtocolAddress := tcpip.ProtocolAddress{
+				Protocol:          testCase.protocolNumber,
+				AddressWithPrefix: bcaddr.WithPrefix(),
+			}
+			if err := sb.AddProtocolAddress(sbEP2NICID, bcProtocolAddress, stack.AddressProperties{}); err != nil {
+				t.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", sbEP2NICID, bcProtocolAddress, err)
 			}
 
 			// Make sure s1 can communicate with all the addresses we configured
@@ -864,8 +868,12 @@ func makeStackWithEndpoint(nicID tcpip.NICID, ep stack.LinkEndpoint, protocolFac
 	if err := s.CreateNIC(nicID, ep); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	if err := s.AddAddress(nicID, protocolNumber, addr); err != nil {
-		return nil, fmt.Errorf("AddAddress failed: %s", err)
+	protocolAddress := tcpip.ProtocolAddress{
+		Protocol:          protocolNumber,
+		AddressWithPrefix: addr.WithPrefix(),
+	}
+	if err := s.AddProtocolAddress(nicID, protocolAddress, stack.AddressProperties{}); err != nil {
+		return nil, fmt.Errorf("AddProtocolAddress(%d, %#v, {}): %s", nicID, protocolAddress, err)
 	}
 	return s, nil
 }
@@ -906,8 +914,12 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkPr
 	if err := stk.CreateNIC(bID, bridgeLinkEP); err != nil {
 		t.Fatalf("CreateNIC failed: %s", err)
 	}
-	if err := stk.AddAddress(bID, protocolNumber, baddr); err != nil {
-		t.Fatalf("AddAddress failed: %s", err)
+	protocolAddress := tcpip.ProtocolAddress{
+		Protocol:          protocolNumber,
+		AddressWithPrefix: baddr.WithPrefix(),
+	}
+	if err := stk.AddProtocolAddress(bID, protocolAddress, stack.AddressProperties{}); err != nil {
+		t.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", bID, protocolAddress, err)
 	}
 
 	return stk, bridgeEP, bID

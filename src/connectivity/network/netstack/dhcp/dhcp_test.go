@@ -168,8 +168,12 @@ func addEndpointToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NIC
 		t.Fatalf("failed CreateNIC(%d, %v): %s", nicid, linkEP, err)
 	}
 	for _, address := range addresses {
-		if err := s.AddAddress(nicid, ipv4.ProtocolNumber, address); err != nil {
-			t.Fatalf("failed AddAddress(%d, %d, %v): %s", nicid, ipv4.ProtocolNumber, address, err)
+		protocolAddress := tcpip.ProtocolAddress{
+			Protocol:          ipv4.ProtocolNumber,
+			AddressWithPrefix: address.WithPrefix(),
+		}
+		if err := s.AddProtocolAddress(nicid, protocolAddress, stack.AddressProperties{}); err != nil {
+			t.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", nicid, protocolAddress, err)
 		}
 	}
 
@@ -361,11 +365,13 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		if err := clientStack.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
+		protocolAddress := tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
 			AddressWithPrefix: info.Acquired,
-		}, stack.NeverPrimaryEndpoint); err != nil {
-			t.Fatalf("failed to add address to stack: %s", err)
+		}
+		properties := stack.AddressProperties{PEB: stack.NeverPrimaryEndpoint}
+		if err := clientStack.AddProtocolAddress(testNICID, protocolAddress, properties); err != nil {
+			t.Fatalf("AddProtocolAddress(%d, %#v, %#v): %s", testNICID, protocolAddress, properties, err)
 		}
 		defer clientStack.RemoveAddress(testNICID, info.Acquired.Address)
 		cfg, err := acquire(ctx, c0, t.Name(), &info)
@@ -527,8 +533,8 @@ func removeLostAddAcquired(t *testing.T, clientStack *stack.Stack, lost, acquire
 			Protocol:          ipv4.ProtocolNumber,
 			AddressWithPrefix: acquired,
 		}
-		if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-			t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+		if err := clientStack.AddProtocolAddress(testNICID, protocolAddress, stack.AddressProperties{}); err != nil {
+			t.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", testNICID, protocolAddress, err)
 		}
 	}
 }
@@ -996,8 +1002,8 @@ func TestRenewRebindBackoff(t *testing.T) {
 						Protocol:          ipv4.ProtocolNumber,
 						AddressWithPrefix: assigned,
 					}
-					if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
-						t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
+					if err := clientStack.AddProtocolAddress(testNICID, protocolAddress, stack.AddressProperties{}); err != nil {
+						t.Fatalf("AddProtocolAddress(%d, %#v, {}): %s", testNICID, protocolAddress, err)
 					}
 				}
 				info.State = tc.state
@@ -1946,8 +1952,12 @@ func TestDecline(t *testing.T) {
 	// Create a misconfigured network where the server owns the address that is
 	// offered to the client. The client should detect that the offered address is
 	// in use when it performs DAD.
-	if err := serverStack.AddAddress(testNICID, ipv4.ProtocolNumber, defaultClientAddrs[0]); err != nil {
-		t.Fatalf("serverStack.AddAddress(%d, %d, %s): %s", testNICID, ipv4.ProtocolNumber, defaultClientAddrs[0], err)
+	protocolAddress := tcpip.ProtocolAddress{
+		Protocol:          ipv4.ProtocolNumber,
+		AddressWithPrefix: defaultClientAddrs[0].WithPrefix(),
+	}
+	if err := serverStack.AddProtocolAddress(testNICID, protocolAddress, stack.AddressProperties{}); err != nil {
+		t.Fatalf("serverStack.AddProtocolAddress(%d, %#v, {}): %s", testNICID, protocolAddress, err)
 	}
 
 	ch := make(chan *stack.PacketBuffer, 3)

@@ -549,8 +549,12 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 		Port: 1,
 	}
 	source := tcpip.Address([]byte{5, 6, 7, 8})
-	if err := ns.stack.AddAddress(ifs.nicid, ipv4.ProtocolNumber, source); err != nil {
-		t.Fatalf("AddAddress(%d, %d, %s) = %s", ifs.nicid, ipv4.ProtocolNumber, source, err)
+	protocolAddress := tcpip.ProtocolAddress{
+		Protocol:          ipv4.ProtocolNumber,
+		AddressWithPrefix: source.WithPrefix(),
+	}
+	if err := ns.stack.AddProtocolAddress(ifs.nicid, protocolAddress, tcpipstack.AddressProperties{}); err != nil {
+		t.Fatalf("AddProtocolAddress(%d, %#v, {}) = %s", ifs.nicid, protocolAddress, err)
 	}
 
 	ns.stack.SetRouteTable([]tcpip.Route{

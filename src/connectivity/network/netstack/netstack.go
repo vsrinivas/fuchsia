@@ -408,7 +408,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		}
 	}
 
-	switch err := ns.stack.AddProtocolAddress(nic, addr); err.(type) {
+	switch err := ns.stack.AddProtocolAddress(nic, addr, stack.AddressProperties{}); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID:
 		return zx.ErrNotFound
@@ -531,10 +531,12 @@ func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config 
 		}
 
 		if acquired != (tcpip.AddressWithPrefix{}) {
-			if err := ifs.ns.stack.AddProtocolAddressWithOptions(ifs.nicid, tcpip.ProtocolAddress{
+			if err := ifs.ns.stack.AddProtocolAddress(ifs.nicid, tcpip.ProtocolAddress{
 				Protocol:          ipv4.ProtocolNumber,
 				AddressWithPrefix: acquired,
-			}, stack.FirstPrimaryEndpoint); err != nil {
+			}, stack.AddressProperties{
+				PEB: stack.CanBePrimaryEndpoint,
+			}); err != nil {
 				_ = syslog.Errorf("NIC %s: failed to add DHCP acquired address %s: %s", name, acquired, err)
 			} else {
 				_ = syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, acquired, config.LeaseLength)
@@ -891,21 +893,24 @@ func (ns *Netstack) addLoopback() error {
 	}
 
 	ipv4LoopbackPrefix := tcpip.AddressMask(net.IP(ipv4Loopback).DefaultMask()).Prefix()
-	ipv4LoopbackAddressWithPrefix := tcpip.AddressWithPrefix{
-		Address:   ipv4Loopback,
-		PrefixLen: ipv4LoopbackPrefix,
+	ipv4LoopbackProtocolAddress := tcpip.ProtocolAddress{
+		Protocol: ipv4.ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   ipv4Loopback,
+			PrefixLen: ipv4LoopbackPrefix,
+		},
 	}
-	ipv4LoopbackRoute := addressWithPrefixRoute(nicid, ipv4LoopbackAddressWithPrefix)
-
-	if err := ns.stack.AddProtocolAddress(nicid, tcpip.ProtocolAddress{
-		Protocol:          ipv4.ProtocolNumber,
-		AddressWithPrefix: ipv4LoopbackAddressWithPrefix,
-	}); err != nil {
-		return fmt.Errorf("error adding address %s to NIC ID %d: %s", ipv4LoopbackAddressWithPrefix, nicid, err)
+	ipv4LoopbackRoute := addressWithPrefixRoute(nicid, ipv4LoopbackProtocolAddress.AddressWithPrefix)
+	if err := ns.stack.AddProtocolAddress(nicid, ipv4LoopbackProtocolAddress, stack.AddressProperties{}); err != nil {
+		return fmt.Errorf("AddProtocolAddress(%d, %#v, {}): %s", nicid, ipv4LoopbackProtocolAddress, err)
 	}
 
-	if err := ns.stack.AddAddress(nicid, ipv6.ProtocolNumber, ipv6Loopback); err != nil {
-		return fmt.Errorf("loopback: adding ipv6 address failed: %s", err)
+	ipv6LoopbackProtocolAddress := tcpip.ProtocolAddress{
+		Protocol:          ipv6.ProtocolNumber,
+		AddressWithPrefix: ipv6Loopback.WithPrefix(),
+	}
+	if err := ns.stack.AddProtocolAddress(nicid, ipv6LoopbackProtocolAddress, stack.AddressProperties{}); err != nil {
+		return fmt.Errorf("AddProtocolAddress(%d, %#v, {}): %s", nicid, ipv6LoopbackProtocolAddress, err)
 	}
 
 	if err := ns.AddRoutes(
