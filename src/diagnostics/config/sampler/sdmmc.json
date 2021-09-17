@@ -11,6 +11,12 @@
             "metric_id": 4,
             "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/sdio_core:rx_errors"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 5,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/sdmmc_core:io_errors"
         }
     ],
     "poll_rate_sec": 1800,
