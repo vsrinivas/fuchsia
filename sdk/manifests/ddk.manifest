@@ -13,6 +13,7 @@ sdk://fidl/fuchsia.hardware.usb.descriptor
 sdk://fidl/fuchsia.hardware.usb.request
 sdk://fidl/zx
 sdk://pkg/async
+sdk://pkg/async-cpp
 sdk://pkg/ddk
 sdk://pkg/ddk-platform-defs
 sdk://pkg/ddktl-experimental-driver-only
@@ -27,6 +28,8 @@ sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
 sdk://pkg/sync
 sdk://pkg/syslog-headers
+sdk://pkg/trace
+sdk://pkg/trace-engine
 sdk://pkg/usb-experimental-driver-only
 sdk://pkg/zx
 sdk://pkg/zx-experimental-driver-only

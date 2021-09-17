@@ -37,6 +37,10 @@ sdk_static_library("ddk") {
     "include/lib/ddk/protodefs.h",
     "include/lib/ddk/trace/event.h",
   ]
+
+  # This header errors out if included directly.
+  non_public_headers = [ "include/lib/ddk/protodefs.h" ]
+
   sources = [
     "io-buffer.c",
     "macros.h",
@@ -52,12 +56,8 @@ sdk_static_library("ddk") {
     "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",
-
-    # TODO(fxbug.dev/3156): Exporting this dependency causes problems in the legacy
-    # build.  Instead, users of the ddk library that actually use this header
-    # have to also express a dependency on the trace library.
-    # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
-    #"//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-engine",
   ]
 
   deps = [ "//zircon/public/lib/sync" ]

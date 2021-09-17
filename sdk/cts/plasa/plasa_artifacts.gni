@@ -23,6 +23,9 @@ import("//sdk/cts/plasa/clang_doc.gni")
 #   all_deps
 #     All dependencies to be used in generating the build artifact.
 #
+#   non_public_headers
+#     Headers that should not be included in the stub generation.
+#
 
 template("plasa_artifacts") {
   forward_variables_from(invoker,
@@ -33,6 +36,7 @@ template("plasa_artifacts") {
                            "main_target_name",
                            "all_deps",
                            "include_base",
+                           "non_public_headers",
                          ])
 
   _cc_stub_file = "$target_gen_dir/${main_target_name}.api_stub.cc"
@@ -40,10 +44,15 @@ template("plasa_artifacts") {
   # Build a stub file that demonstrates the use of the library. This file is
   # an input into API extraction.
   _stub_cc_target_name = "${main_target_name}_cc_stub"
+  if (defined(non_public_headers)) {
+    _includable_headers = all_headers - non_public_headers
+  } else {
+    _includable_headers = all_headers
+  }
   source_set(_stub_cc_target_name) {
     # Write out the stub file that will be compiled thereafter.
     _contents = []
-    foreach(_header, all_headers) {
+    foreach(_header, _includable_headers) {
       _src_dir = rebase_path(".", target_gen_dir)
       _contents += [ "#include \"${_src_dir}/${_header}\"" ]
     }

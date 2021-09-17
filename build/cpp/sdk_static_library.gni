@@ -5,6 +5,8 @@
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
+import("//sdk/cts/plasa/config.gni")
+import("//sdk/cts/plasa/plasa_artifacts.gni")
 
 # A static library that can be exported to an SDK in binary form.
 #
@@ -39,6 +41,13 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     List of labels representing the library's runtime dependencies. This is
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
+#
+#   non_public_headers (optional)
+#     List of header files that are not intended for direct inclusion by users.
+#     Used to help generate stub files, which do not know apriori that a header
+#     is not to be used.  Define these in addition to deps (i.e. repeat them
+#     if they are already mentioned in 'sources').
+#
 
 # The defaults for a sdk_static_library should match that of a shared_library.
 set_defaults("sdk_static_library") {
@@ -47,6 +56,7 @@ set_defaults("sdk_static_library") {
 
 template("sdk_static_library") {
   assert(defined(invoker.category), "Must define an SDK category")
+  not_needed(invoker, [ "non_public_headers" ])
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -151,6 +161,13 @@ template("sdk_static_library") {
   # Identify dependencies and their metadata files.
   sdk_deps = []
   sdk_metas = []
+  all_deps = []
+  if (defined(invoker.deps)) {
+    all_deps += invoker.deps
+  }
+  if (defined(invoker.public_deps)) {
+    all_deps += invoker.public_deps
+  }
 
   if (defined(invoker.public_deps)) {
     foreach(dep, invoker.public_deps) {
@@ -245,6 +262,22 @@ template("sdk_static_library") {
     deps = sdk_deps + [ ":$main_target_name" ]
   }
 
+  if (generate_plasa_artifacts) {
+    _plasa_artifacts_target_name = "${main_target_name}_plasa"
+    plasa_artifacts(_plasa_artifacts_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "source_dir",
+                               "testonly",
+                               "all_deps",
+                               "all_headers",
+                             ])
+      if (defined(invoker.non_public_headers)) {
+        non_public_headers = invoker.non_public_headers
+      }
+    }
+  }
+
   verify_pragma_once(verify_pragma_target_name) {
     headers = all_headers
   }
@@ -282,6 +315,9 @@ template("sdk_static_library") {
     # are generated.
     if (defined(invoker.deps)) {
       non_sdk_deps += invoker.deps
+    }
+    if (generate_plasa_artifacts) {
+      non_sdk_deps += [ ":$_plasa_artifacts_target_name" ]
     }
   }
 

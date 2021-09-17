@@ -7,6 +7,8 @@ import("//build/cpp/verify_pragma_once.gni")
 import("//build/cpp/verify_public_symbols.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
+import("//sdk/cts/plasa/config.gni")
+import("//sdk/cts/plasa/plasa_artifacts.gni")
 
 # A shared library that can be exported to an SDK in binary form.
 #
@@ -146,6 +148,13 @@ template("sdk_shared_library") {
   # Identify dependencies and their metadata files.
   sdk_deps = []
   sdk_metas = []
+  all_deps = []
+  if (defined(invoker.deps)) {
+    all_deps += invoker.deps
+  }
+  if (defined(invoker.public_deps)) {
+    all_deps += invoker.public_deps
+  }
 
   # If a prebuilt library is only provided for packaging purposes (by not
   # exposing headers) then its dependencies need not be included in an SDK.
@@ -154,6 +163,7 @@ template("sdk_shared_library") {
       full_label = get_label_info(dep, "label_no_toolchain")
       sdk_dep = "${full_label}_sdk"
       sdk_deps += [ sdk_dep ]
+      all_deps += [ sdk_dep ]
     }
   }
 
@@ -267,6 +277,19 @@ template("sdk_shared_library") {
     deps = sdk_deps + [ shared_lib_target ]
   }
 
+  if (generate_plasa_artifacts) {
+    _plasa_artifacts_target_name = "${main_target_name}_plasa"
+    plasa_artifacts(_plasa_artifacts_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "source_dir",
+                               "testonly",
+                               "all_headers",
+                               "all_deps",
+                             ])
+    }
+  }
+
   verify_pragma_once(verify_pragma_target_name) {
     headers = all_headers
   }
@@ -328,6 +351,9 @@ template("sdk_shared_library") {
       ":$verify_pragma_target_name",
       shared_lib_target,
     ]
+    if (generate_plasa_artifacts) {
+      non_sdk_deps += [ ":$_plasa_artifacts_target_name" ]
+    }
     if (category == "partner" || category == "public") {
       non_sdk_deps += [ ":$verify_public_symbols_target_name" ]
     }

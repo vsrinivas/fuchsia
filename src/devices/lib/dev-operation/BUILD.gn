@@ -27,7 +27,10 @@ zx_library("dev-operation") {
     "lib/operation/helpers/macros.h",
   ]
   sources = [ "alloc_checker.cc" ]
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [
+    "//src/lib/ddk",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 test("operation-test-bin") {
