@@ -42,7 +42,7 @@ pub enum FfxError {
     FastbootError { target: Option<String>, is_default_target: bool },
 }
 
-fn target_string(matcher: &Option<String>, is_default: &bool) -> String {
+pub fn target_string(matcher: &Option<String>, is_default: &bool) -> String {
     let non_empty_matcher = matcher.as_ref().filter(|s| !s.is_empty());
     format!(
         "\"{}{}\"",

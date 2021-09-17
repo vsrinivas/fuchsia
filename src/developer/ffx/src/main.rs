@@ -13,21 +13,21 @@ use {
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
     ffx_lib_sub_command::Subcommand,
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetControlMarker,
-        TargetControlProxy, VersionInfo,
+        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
+        TargetControlMarker, TargetControlProxy, TargetHandleMarker, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
-    futures::{Future, FutureExt},
+    futures::FutureExt,
     ring::digest::{Context as ShaContext, Digest, SHA256},
     std::default::Default,
-    std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
     std::path::PathBuf,
     std::time::{Duration, Instant},
+    timeout::timeout,
 };
 
 // Config key for event timeout.
@@ -48,23 +48,56 @@ impl Default for Injection {
 
 impl Injection {
     async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
+        let app: Ffx = argh::from_env();
         let daemon_proxy = self.daemon_factory().await?;
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-        let app: Ffx = argh::from_env();
+        let (tc_proxy, tc_server) = create_proxy::<TargetCollectionMarker>()?;
+        let (target_proxy, target_server) = create_proxy::<TargetHandleMarker>()?;
         let target = app.target().await?;
-        let result = daemon_proxy
-            .get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end)
-            .on_timeout(proxy_timeout().await?, || Ok(Err(DaemonError::Timeout)))
-            .await?;
+        let proxy_timeout = proxy_timeout().await?;
 
-        result
-            .map_err(|err| FfxError::DaemonError {
-                err,
-                target,
-                is_default_target: app.target.is_none(),
-            })
-            .map(|_| remote_proxy)
-            .context("init_remote_proxy")
+        let mut connect_to_service_fut = daemon_proxy
+            .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
+            .fuse();
+        let mut open_target_fut =
+            tc_proxy.open_target(target.as_ref().map(|s| s.as_str()), target_server).fuse();
+        // The timeout must be boxed because the future it returns uses GenFuture,
+        // which returns a Future that doesn't implement Unpin, which is
+        // necessary to get `select!` to work. The alternative to boxing is to
+        // wrap the loop in the timeout.
+        let mut open_remote_control_fut =
+            timeout(proxy_timeout, target_proxy.open_remote_control(remote_server_end))
+                .boxed()
+                .fuse();
+        loop {
+            fuchsia_async::futures::select! {
+                res = connect_to_service_fut => {
+                    res?.map_err(|err| FfxError::DaemonError {
+                        err,
+                        target: target.clone(),
+                        is_default_target: app.target.is_none(),
+                    })?;
+                }
+                res = open_target_fut => {
+                    res?.map_err(|err| FfxError::OpenTargetError {
+                        err,
+                        target: target.clone(),
+                        is_default_target: app.target.is_none(),
+                    })?;
+                }
+                // Last result is the one with the timeout attached, and the
+                // only one where we care about completing the round trip.
+                res = open_remote_control_fut => {
+                    res.map_err(|_| FfxError::DaemonError {
+                        err: DaemonError::Timeout,
+                        target: target.clone(),
+                        is_default_target: app.target.is_none(),
+                    })??;
+                    break;
+                }
+            }
+        }
+        Ok(remote_proxy)
     }
 }
 
@@ -195,30 +228,6 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 async fn proxy_timeout() -> Result<Duration> {
     let proxy_timeout: f64 = ffx_config::get(PROXY_TIMEOUT_SECS).await?;
     Ok(Duration::from_secs_f64(proxy_timeout))
-}
-
-#[derive(Debug)]
-struct TimeoutError {}
-impl std::fmt::Display for TimeoutError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "timed out")
-    }
-}
-impl Error for TimeoutError {}
-
-async fn timeout<F, T>(t: Duration, f: F) -> Result<T, TimeoutError>
-where
-    F: Future<Output = T> + Unpin,
-{
-    // TODO(raggi): this could be made more efficient (avoiding the box) with some additional work,
-    // but for the local use cases here it's not sufficiently important.
-    let mut timer = fuchsia_async::Timer::new(t).boxed().fuse();
-    let mut f = f.fuse();
-
-    futures::select! {
-        _ = timer => Err(TimeoutError{}),
-        res = f => Ok(res),
-    }
 }
 
 fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
