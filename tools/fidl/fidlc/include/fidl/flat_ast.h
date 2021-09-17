@@ -1116,11 +1116,17 @@ class Libraries {
 
 class Dependencies {
  public:
-  // Register a dependency to a library. The newly recorded dependent library
-  // will be referenced by its name, and may also be optionally be referenced
-  // by an alias.
-  bool Register(const SourceSpan& span, std::string_view filename, Library* dep_library,
-                const std::unique_ptr<raw::Identifier>& maybe_alias);
+  enum class RegisterResult {
+    kSuccess,
+    kDuplicate,
+    kCollision,
+  };
+
+  // Registers a dependency to a library. The registration name is |maybe_alias|
+  // if provided, otherwise the library's name. Afterwards, Dependencies::Lookup
+  // will return |dep_library| given the registration name.
+  RegisterResult Register(const SourceSpan& span, std::string_view filename, Library* dep_library,
+                          const std::unique_ptr<raw::Identifier>& maybe_alias);
 
   // Returns true if this dependency set contains a library with the given name and filename.
   bool Contains(std::string_view filename, const std::vector<std::string_view>& name);
@@ -1144,22 +1150,25 @@ class Dependencies {
   const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
  private:
+  // A reference to a library, derived from a "using" statement.
   struct LibraryRef {
-    LibraryRef(const SourceSpan span, Library* library) : span_(span), library_(library) {}
+    LibraryRef(SourceSpan span, Library* library) : span(span), library(library) {}
 
-    const SourceSpan span_;
-    Library* library_;
-    bool used_ = false;
+    const SourceSpan span;
+    Library* const library;
+    bool used = false;
   };
 
-  bool InsertByName(std::string_view filename, const std::vector<std::string_view>& name,
-                    LibraryRef* ref);
-
-  using ByName = std::map<std::vector<std::string_view>, LibraryRef*>;
-  using ByFilename = std::map<std::string, std::unique_ptr<ByName>>;
+  // Per-file information about imports.
+  struct PerFile {
+    // References to dependencies, keyed by library name or by alias.
+    std::map<std::vector<std::string_view>, LibraryRef*> refs;
+    // Set containing ref->library for every ref in |refs|.
+    std::set<Library*> libraries;
+  };
 
   std::vector<std::unique_ptr<LibraryRef>> refs_;
-  ByFilename dependencies_;
+  std::map<std::string, std::unique_ptr<PerFile>> by_filename_;
   std::set<Library*> dependencies_aggregate_;
 };
 

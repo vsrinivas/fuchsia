@@ -1845,83 +1845,66 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
   return nullptr;
 }
 
-bool Dependencies::Register(const SourceSpan& span, std::string_view filename, Library* dep_library,
-                            const std::unique_ptr<raw::Identifier>& maybe_alias) {
+Dependencies::RegisterResult Dependencies::Register(
+    const SourceSpan& span, std::string_view filename, Library* dep_library,
+    const std::unique_ptr<raw::Identifier>& maybe_alias) {
   refs_.push_back(std::make_unique<LibraryRef>(span, dep_library));
-  auto ref = refs_.back().get();
+  LibraryRef* ref = refs_.back().get();
 
-  auto library_name = dep_library->name();
-  if (!InsertByName(filename, library_name, ref)) {
-    return false;
+  const std::vector<std::string_view> name =
+      maybe_alias ? std::vector{maybe_alias->span().data()} : dep_library->name();
+  auto iter = by_filename_.find(std::string(filename));
+  if (iter == by_filename_.end()) {
+    iter = by_filename_.emplace(filename, std::make_unique<PerFile>()).first;
   }
-
-  if (maybe_alias) {
-    std::vector<std::string_view> alias_name = {maybe_alias->span().data()};
-    if (!InsertByName(filename, alias_name, ref)) {
-      return false;
-    }
+  PerFile& per_file = *iter->second;
+  if (!per_file.libraries.insert(dep_library).second) {
+    return RegisterResult::kDuplicate;
   }
-
+  if (!per_file.refs.emplace(name, ref).second) {
+    return RegisterResult::kCollision;
+  }
   dependencies_aggregate_.insert(dep_library);
-
-  return true;
-}
-
-bool Dependencies::InsertByName(std::string_view filename,
-                                const std::vector<std::string_view>& name, LibraryRef* ref) {
-  auto iter = dependencies_.find(std::string(filename));
-  if (iter == dependencies_.end()) {
-    dependencies_.emplace(filename, std::make_unique<ByName>());
-  }
-
-  iter = dependencies_.find(std::string(filename));
-  assert(iter != dependencies_.end());
-
-  auto insert = iter->second->emplace(name, ref);
-  return insert.second;
+  return RegisterResult::kSuccess;
 }
 
 bool Dependencies::Contains(std::string_view filename, const std::vector<std::string_view>& name) {
-  auto iter1 = dependencies_.find(std::string(filename));
-  if (iter1 == dependencies_.end()) {
+  const auto iter = by_filename_.find(std::string(filename));
+  if (iter == by_filename_.end()) {
     return false;
   }
-
-  auto iter2 = iter1->second->find(name);
-  return iter2 != iter1->second->end();
+  const PerFile& per_file = *iter->second;
+  return per_file.refs.find(name) != per_file.refs.end();
 }
 
 bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
                           Dependencies::LookupMode mode, Library** out_library) const {
-  auto iter1 = dependencies_.find(std::string(filename));
-  if (iter1 == dependencies_.end()) {
+  auto iter1 = by_filename_.find(std::string(filename));
+  if (iter1 == by_filename_.end()) {
     return false;
   }
 
-  auto iter2 = iter1->second->find(name);
-  if (iter2 == iter1->second->end()) {
+  auto iter2 = iter1->second->refs.find(name);
+  if (iter2 == iter1->second->refs.end()) {
     return false;
   }
 
   auto ref = iter2->second;
   if (mode == Dependencies::LookupMode::kUse) {
-    ref->used_ = true;
+    ref->used = true;
   }
-  *out_library = ref->library_;
+  *out_library = ref->library;
   return true;
 }
 
 bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter) {
   auto checkpoint = reporter->Checkpoint();
-  for (auto by_name_iter = dependencies_.begin(); by_name_iter != dependencies_.end();
-       by_name_iter++) {
-    const auto& by_name = *by_name_iter->second;
-    for (const auto& name_to_ref : by_name) {
-      const auto& ref = name_to_ref.second;
-      if (ref->used_)
-        continue;
-      reporter->Report(ErrUnusedImport, ref->span_, for_library.name(), ref->library_->name(),
-                       ref->library_->name());
+  for (const auto& [filename, per_file] : by_filename_) {
+    for (const auto& [name, ref] : per_file->refs) {
+      if (!ref->used) {
+        reporter->Report(ErrUnusedImport, ref->span, for_library.name(), ref->library->name(),
+                         ref->library->name());
+      }
     }
   }
   return checkpoint.NoNewErrors();
@@ -2259,11 +2242,23 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     return;
   }
 
-  auto filename = using_directive->span().source_file().filename();
-  if (!dependencies_.Register(using_directive->span(), filename, dep_library,
-                              using_directive->maybe_alias)) {
-    Fail(ErrDuplicateLibraryImport, library_name);
-    return;
+  const auto filename = using_directive->span().source_file().filename();
+  const auto result = dependencies_.Register(using_directive->span(), filename, dep_library,
+                                             using_directive->maybe_alias);
+  switch (result) {
+    case Dependencies::RegisterResult::kSuccess:
+      break;
+    case Dependencies::RegisterResult::kDuplicate:
+      Fail(ErrDuplicateLibraryImport, library_name);
+      return;
+    case Dependencies::RegisterResult::kCollision:
+      if (using_directive->maybe_alias) {
+        Fail(ErrConflictingLibraryImportAlias, library_name,
+             using_directive->maybe_alias->span().data());
+        return;
+      }
+      Fail(ErrConflictingLibraryImport, library_name);
+      return;
   }
 
   // Import declarations, and type aliases of dependent library.
