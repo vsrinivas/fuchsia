@@ -12,7 +12,6 @@ ffx_plugin("ffx_assembly") {
 
   args_sources = [ "src/args.rs" ]
   sources = [
-    "src/args.rs",
     "src/base_package.rs",
     "src/blobfs.rs",
     "src/config.rs",

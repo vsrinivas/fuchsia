@@ -4,7 +4,6 @@
 
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
-mod args;
 mod base_package;
 mod blobfs;
 mod config;
