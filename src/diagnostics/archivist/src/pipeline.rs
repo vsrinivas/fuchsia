@@ -14,6 +14,7 @@ use {
         },
         moniker_rewriter::MonikerRewriter,
         repository::DataRepo,
+        ImmutableString,
     },
     anyhow::Error,
     diagnostics_hierarchy::InspectHierarchyMatcher,
@@ -54,7 +55,7 @@ pub struct Pipeline {
     log_redactor: Arc<Redactor>,
 
     /// A hierarchy matcher for any selector present in the static selectors.
-    moniker_to_static_matcher_map: HashMap<String, InspectHierarchyMatcher>,
+    moniker_to_static_matcher_map: HashMap<ImmutableString, InspectHierarchyMatcher>,
 
     /// The data repository.
     data_repo: DataRepo,
@@ -229,7 +230,7 @@ impl Pipeline {
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
-        self.moniker_to_static_matcher_map.remove(&relative_moniker.join("/"));
+        self.moniker_to_static_matcher_map.remove(relative_moniker.join("/").as_str());
     }
 
     pub fn add_inspect_artifacts(&mut self, relative_moniker: &[String]) -> Result<(), Error> {
@@ -247,7 +248,7 @@ impl Pipeline {
                 populated_vec => {
                     let hierarchy_matcher = (populated_vec).try_into()?;
                     self.moniker_to_static_matcher_map
-                        .insert(relative_moniker.join("/"), hierarchy_matcher);
+                        .insert(relative_moniker.join("/").into_boxed_str(), hierarchy_matcher);
                 }
             }
         }

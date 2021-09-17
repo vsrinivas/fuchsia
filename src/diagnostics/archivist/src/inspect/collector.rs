@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::ImmutableString,
     anyhow::{format_err, Error},
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
@@ -23,7 +24,7 @@ use {
 
 /// Mapping from a diagnostics filename to the underlying encoding of that
 /// diagnostics data.
-pub type DataMap = HashMap<String, InspectData>;
+pub type DataMap = HashMap<ImmutableString, InspectData>;
 
 pub type Moniker = String;
 
@@ -153,7 +154,7 @@ impl InspectDataCollector {
     /// nothing.
     fn maybe_add(&mut self, key: impl Into<String>, value: InspectData) {
         if let Some(map) = self.inspect_data_map.lock().as_mut() {
-            map.insert(key.into(), value);
+            map.insert(key.into().into_boxed_str(), value);
         };
     }
 

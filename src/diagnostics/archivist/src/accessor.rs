@@ -12,6 +12,7 @@ use {
         lifecycle::LifecycleServer,
         moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
+        ImmutableString,
     },
     anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},
@@ -295,17 +296,26 @@ pub struct BatchIterator {
 // Checks if a given schema is within a components budget, and if it is, updates the budget,
 // then returns true. Otherwise, if the schema is not within budget, returns false.
 fn maybe_update_budget(
-    budget_map: &mut HashMap<String, usize>,
-    moniker: &String,
+    budget_map: &mut HashMap<ImmutableString, usize>,
+    moniker: &str,
     bytes: usize,
     byte_limit: usize,
 ) -> bool {
-    let remaining_budget = budget_map.entry(moniker.to_string()).or_insert(0);
-    if *remaining_budget + bytes > byte_limit {
-        false
+    if let Some(remaining_budget) = budget_map.get_mut(moniker) {
+        if *remaining_budget + bytes > byte_limit {
+            false
+        } else {
+            *remaining_budget += bytes;
+            true
+        }
     } else {
-        *remaining_budget += bytes;
-        true
+        if bytes > byte_limit {
+            budget_map.insert(moniker.to_string().into_boxed_str(), 0);
+            false
+        } else {
+            budget_map.insert(moniker.to_string().into_boxed_str(), bytes);
+            true
+        }
     }
 }
 
@@ -323,7 +333,7 @@ impl BatchIterator {
     {
         let result_stats = stats.clone();
 
-        let mut budget_tracker: HashMap<String, usize> = HashMap::new();
+        let mut budget_tracker: HashMap<ImmutableString, usize> = HashMap::new();
 
         let truncation_counter = SchemaTruncationCounter::new();
         let stream_owned_counter = truncation_counter.clone();

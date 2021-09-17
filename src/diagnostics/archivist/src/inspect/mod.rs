@@ -10,6 +10,7 @@ use {
         diagnostics::BatchIteratorConnectionStats,
         inspect::container::UnpopulatedInspectDataContainer,
         moniker_rewriter::OutputRewriter,
+        ImmutableString,
     },
     anyhow::Error,
     collector::Moniker,
@@ -36,7 +37,7 @@ use container::PopulatedInspectDataContainer;
 /// populate a diagnostics schema for that node hierarchy.
 pub struct NodeHierarchyData {
     // Name of the file that created this snapshot.
-    filename: String,
+    filename: ImmutableString,
     // Timestamp at which this snapshot resolved or failed.
     timestamp: zx::Time,
     // Errors encountered when processing this snapshot.

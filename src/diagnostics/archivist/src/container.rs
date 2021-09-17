@@ -14,6 +14,7 @@ use {
             multiplex::PinStream, stats::LogStreamStats,
         },
         repository::MultiplexerBroker,
+        ImmutableString,
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
@@ -239,7 +240,7 @@ impl ComponentDiagnostics {
 /// populate a diagnostics schema for that snapshot.
 pub struct SnapshotData {
     // Name of the file that created this snapshot.
-    pub filename: String,
+    pub filename: ImmutableString,
     // Timestamp at which this snapshot resolved or failed.
     pub timestamp: zx::Time,
     // Errors encountered when processing this snapshot.
@@ -251,7 +252,7 @@ pub struct SnapshotData {
 
 impl SnapshotData {
     // Constructs packet that timestamps and packages inspect snapshot for exfiltration.
-    pub fn successful(snapshot: ReadSnapshot, filename: String) -> SnapshotData {
+    pub fn successful(snapshot: ReadSnapshot, filename: ImmutableString) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),
@@ -261,7 +262,7 @@ impl SnapshotData {
     }
 
     // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    pub fn failed(error: schema::Error, filename: String) -> SnapshotData {
+    pub fn failed(error: schema::Error, filename: ImmutableString) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),

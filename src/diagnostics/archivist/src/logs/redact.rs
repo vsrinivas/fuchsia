@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
+use crate::ImmutableString;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -120,7 +121,7 @@ struct RedactionPattern {
 }
 
 struct RedactionIdCache {
-    values: HashMap<String, String>,
+    values: HashMap<ImmutableString, ImmutableString>,
 }
 
 impl RedactionIdCache {
@@ -128,9 +129,13 @@ impl RedactionIdCache {
         Self { values: HashMap::new() }
     }
 
-    fn get_id<'a>(&'a mut self, value: String) -> &'a str {
-        let next_id = self.values.len() + 1;
-        self.values.entry(value).or_insert_with(|| format!("{}", next_id))
+    fn get_id<'a>(&'a mut self, value: &str) -> &'a str {
+        if !self.values.contains_key(value) {
+            let next_id = self.values.len() + 1;
+            self.values
+                .insert(value.to_string().into_boxed_str(), next_id.to_string().into_boxed_str());
+        }
+        self.values.get(value).unwrap()
     }
 }
 
@@ -219,7 +224,7 @@ fn redact_ipv4(ip: &str, redaction_cache: &Mutex<RedactionIdCache>, replacement:
         ip.to_string()
     } else {
         let mut cache = redaction_cache.lock();
-        let id = cache.get_id(ip.to_string());
+        let id = cache.get_id(ip);
         replacement.replace("{}", id)
     }
 }
@@ -238,7 +243,7 @@ fn redact_ipv6(ip: &str, redaction_cache: &Mutex<RedactionIdCache>, replacement:
         None
     };
     let mut cache = redaction_cache.lock();
-    let id = cache.get_id(ip.to_string());
+    let id = cache.get_id(ip);
     if let Some((prefix, label)) = special_redact {
         format!("{}:<{}: {}>", prefix, label, id)
     } else {
@@ -280,7 +285,7 @@ impl Redactor {
                     MapType::ReplaceAll => {
                         replacer.matcher.replace_all(&redacted, |captures: &'_ Captures<'_>| {
                             let mut cache = self.redaction_cache.lock();
-                            let id = cache.get_id(captures[0].to_string());
+                            let id = cache.get_id(&captures[0]);
                             replacer.replacement.replace("{}", id)
                         })
                     }
@@ -288,7 +293,7 @@ impl Redactor {
                         replacer.matcher.replace_all(&redacted, |captures: &'_ Captures<'_>| {
                             let oui = captures.name("oui");
                             let mut cache = self.redaction_cache.lock();
-                            let id = cache.get_id(captures[0].to_string());
+                            let id = cache.get_id(&captures[0]);
                             format!(
                                 "{}<{}{}>",
                                 oui.map_or("regex error", |o| o.as_str()),

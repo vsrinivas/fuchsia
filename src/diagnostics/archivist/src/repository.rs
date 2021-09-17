@@ -17,6 +17,7 @@ use {
             message::MessageWithStats,
             multiplex::{Multiplexer, MultiplexerHandle},
         },
+        ImmutableString,
     },
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{
@@ -466,7 +467,7 @@ impl DataRepoState {
     pub fn fetch_inspect_data(
         &self,
         component_selectors: &Option<Vec<Arc<Selector>>>,
-        moniker_to_static_matcher_map: Option<&HashMap<String, InspectHierarchyMatcher>>,
+        moniker_to_static_matcher_map: Option<&HashMap<ImmutableString, InspectHierarchyMatcher>>,
     ) -> Vec<UnpopulatedInspectDataContainer> {
         return self
             .data_directories
@@ -488,7 +489,11 @@ impl DataRepoState {
                 let optional_hierarchy_matcher = match moniker_to_static_matcher_map {
                     Some(map) => {
                         match map.get(
-                            &diagnostics_artifacts_container.identity.relative_moniker.join("/"),
+                            diagnostics_artifacts_container
+                                .identity
+                                .relative_moniker
+                                .join("/")
+                                .as_str(),
                         ) {
                             Some(inspect_matcher) => Some(inspect_matcher),
                             // Return early if there were static selectors, and none were for this

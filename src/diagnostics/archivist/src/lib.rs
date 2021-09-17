@@ -18,3 +18,5 @@ pub mod logs;
 pub(crate) mod moniker_rewriter;
 pub mod pipeline;
 pub mod repository;
+
+pub type ImmutableString = Box<str>;

@@ -14,6 +14,7 @@ use {
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_zircon::{self as zx, DurationNum},
     inspect_fidl_load as deprecated_inspect,
+    lazy_static::lazy_static,
     std::convert::TryFrom,
     std::sync::Arc,
     tracing::warn,
@@ -42,6 +43,10 @@ pub struct PopulatedInspectDataContainer {
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
+}
+
+lazy_static! {
+    static ref NO_FILE_SUCCEEDED: &'static str = "NO_FILE_SUCCEEDED";
 }
 
 impl PopulatedInspectDataContainer {
@@ -134,7 +139,7 @@ impl PopulatedInspectDataContainer {
                                     unpopulated.identity.relative_moniker
                                 ),
                             },
-                            "NO_FILE_SUCCEEDED".to_string(),
+                            NO_FILE_SUCCEEDED.to_string().into_boxed_str(),
                         )];
                         PopulatedInspectDataContainer {
                             identity: unpopulated.identity.clone(),
@@ -152,7 +157,7 @@ impl PopulatedInspectDataContainer {
                             &unpopulated.identity.relative_moniker, e
                         ),
                     },
-                    "NO_FILE_SUCCEEDED".to_string(),
+                    NO_FILE_SUCCEEDED.to_string().into_boxed_str(),
                 )];
                 PopulatedInspectDataContainer {
                     identity: unpopulated.identity.clone(),
@@ -199,7 +204,7 @@ impl UnpopulatedInspectDataContainer {
                     inspect_matcher: this.inspect_matcher.clone(),
                     snapshots: vec![SnapshotData::failed(
                         schema::Error { message: error_string },
-                        "NO_FILE_SUCCEEDED".to_string(),
+                        NO_FILE_SUCCEEDED.to_string().into_boxed_str(),
                     )],
                 }
             })
