@@ -73,6 +73,18 @@ source_set("stub_mvm") {
   ]
 }
 
+# Test for the driver inspector.
+executable("driver_inspector_test") {
+  output_name = "driver_inspector_test"
+  testonly = true
+  sources = [ "driver-inspector-test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:driver_inspector",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
 # The dummy code for developer to start a new test.
 executable("dummy_test") {
   output_name = "dummy_test"
@@ -295,6 +307,7 @@ executable("utils_test") {
 }
 
 _tests = [
+  "driver_inspector_test",
   "dummy_test",
   "fw_test",
   "iwl_phy_db_test",

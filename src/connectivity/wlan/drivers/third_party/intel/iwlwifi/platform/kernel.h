@@ -34,14 +34,6 @@ typedef char* acpi_string;
 
 #define iwl_assert_lock_held(x) ZX_DEBUG_ASSERT(mtx_trylock(x) == thrd_busy)
 
-// NEEDS_PORTING
-#define WARN(x, y, z...) \
-  do {                   \
-  } while (0)
-#define WARN_ON(x) (!!(x))
-#define WARN_ON_ONCE(x) (!!(x))
-#define BUILD_BUG_ON(x) ZX_ASSERT(!(x))
-
 // NEEDS_TYPES: need protection while accessing the variable.
 #define rcu_dereference(p) (p)
 #define rcu_dereference_protected(p, c) (p)
@@ -90,6 +82,7 @@ typedef char* acpi_string;
 
 struct zx_device;
 struct async_dispatcher;
+struct driver_inspector;
 
 // This struct is analogous to the Linux device struct, and contains all the Fuchsia-specific data
 // fields relevant to generic device functionality.
@@ -105,6 +98,9 @@ struct device {
   // context.  Fuchsia drivers have no separate interrupt context, but to maintain similar
   // performance characteristics we will maintain a dedicated work queue dispatcher here.
   struct async_dispatcher* task_dispatcher;
+
+  // The inspector used to publish the component inspection tree from the driver.
+  struct driver_inspector* inspector;
 };
 
 // This struct is analogous to the Linux pci_device_id struct, and contains PCI device ID values.

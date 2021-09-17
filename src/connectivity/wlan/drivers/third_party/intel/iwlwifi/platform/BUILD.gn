@@ -28,6 +28,7 @@ source_set("platform") {
     "pci.h",
   ]
   deps = [
+    ":driver_inspector",
     "//garnet/lib/wlan/protocol:protocol",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/system/ulib/sync",
@@ -40,6 +41,18 @@ source_set("platform") {
   ]
   public_configs = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:fuchsia_config",
+  ]
+}
+
+# Support for exporting driver data from the Inspect tree.
+source_set("driver_inspector") {
+  sources = [ "driver-inspector.cc" ]
+  public = [ "driver-inspector.h" ]
+  deps = [ "//sdk/lib/fit-promise" ]
+  public_deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/system/public",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
@@ -64,6 +77,7 @@ source_set("fuchsia_device") {
     "wlanphy-impl-device.h",
   ]
   deps = [
+    ":driver_inspector",
     ":fuchsia_bind",
     ":platform",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",

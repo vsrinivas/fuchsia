@@ -19,6 +19,8 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/entry.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/driver-inspector.h"
+
 #if !CPTCFG_IWLMVM
 #error "PcieDevice requires support for MVM firmwares."
 #endif  // CPTCFG_IWLMVM
@@ -40,7 +42,10 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = device->DdkAdd("iwlwifi-wlanphyimpl")) != ZX_OK) {
+  device->driver_inspector_ = std::make_unique<DriverInspector>();
+  if ((status = device->DdkAdd(::ddk::DeviceAddArgs("iwlwifi-wlanphyimpl")
+                                   .set_inspect_vmo(device->driver_inspector_->GetVmoView()))) !=
+      ZX_OK) {
     IWL_ERR(device->drvdata(), "%s() failed device add: %s", __func__,
             zx_status_get_string(status));
     return status;
@@ -68,6 +73,7 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
     // Fill in the relevant Fuchsia-specific fields in our driver interface struct.
     pci_dev_.dev.zxdev = zxdev();
     pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
+    pci_dev_.dev.inspector = static_cast<struct driver_inspector*>(driver_inspector_.get());
 
     if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI,
                                                &pci_dev_.proto)) != ZX_OK) {

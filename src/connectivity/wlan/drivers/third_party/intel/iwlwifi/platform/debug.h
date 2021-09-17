@@ -11,15 +11,16 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif  // defined(__cplusplus)
 
+struct device;
+
 // NEEDS_TYPES
-#define WARN(x, y, z...) \
-  do {                   \
-  } while (0)
+#define WARN(cond, y, z...) (!!(cond))
 #define WARN_ON(x) (!!(x))
 #define WARN_ON_ONCE(x) (!!(x))
 #define BUILD_BUG_ON(x) ZX_ASSERT(!(x))
@@ -49,6 +50,11 @@ extern "C" {
 #define __iwl_crit(dev, fmt, args...) IWL_ZXLOGF(ERROR, fmt, ##args)
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
   IWL_ZXLOGF(TRACE, "(%s): " fmt, function, ##args)
+
+// Publish a core dump.
+zx_status_t iwl_debug_core_dump(struct device* dev, const char* core_dump_name,
+                                const char** core_dump_ptrs, size_t* core_dump_sizes,
+                                size_t core_dump_count);
 
 // Hex dump function
 //
