@@ -361,8 +361,6 @@ constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
 
 // other
-// TODO(fxbug.dev/764629): when we allow non-handle resources, this will become just ErrNotResource
-constexpr ErrorDef<flat::Name> ErrHandleNotResource("{} is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 // TODO(fxbug.dev/75112): add these errors back by adding support in ResolveAs for
 // storing errors

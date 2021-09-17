@@ -448,7 +448,7 @@
         "length": 7
       },
       "partial_type_ctor": {
-        "name": "handle",
+        "name": "fidl.test.typealiases/handle",
         "args": [],
         "nullable": false
       }
@@ -462,7 +462,7 @@
         "length": 16
       },
       "partial_type_ctor": {
-        "name": "handle",
+        "name": "fidl.test.typealiases/handle",
         "args": [],
         "nullable": false
       }

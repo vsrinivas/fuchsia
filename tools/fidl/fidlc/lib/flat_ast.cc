@@ -452,8 +452,7 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
     reporter_->Report(ErrAnonymousNameReference, name.span(), name);
     return false;
   }
-  return type_template->Create(lib,
-                               {.name = name, .parameters = parameters, .constraints = constraints},
+  return type_template->Create(lib, {.parameters = parameters, .constraints = constraints},
                                out_type, out_params);
 }
 
@@ -485,14 +484,6 @@ template <typename... Args>
 bool TypeTemplate::Fail(const ErrorDef<Args...>& err, const Args&... args) const {
   reporter_->Report(err, args...);
   return false;
-}
-
-bool TypeTemplate::GetResource(const LibraryMediator& lib, const Name& name,
-                               Resource** out_resource) const {
-  assert(false &&
-         "Only the HandleTypeTemplate should ever need to do this, because of hardcoding in the "
-         "parser");
-  __builtin_unreachable();
 }
 
 bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nullptr; }
@@ -738,51 +729,25 @@ bool StringType::ApplyConstraints(const flat::LibraryMediator& lib,
 
 class HandleTypeTemplate final : public TypeTemplate {
  public:
-  HandleTypeTemplate(Typespace* typespace, Reporter* reporter)
-      : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, reporter) {}
-
-  // Currently we take a name as parameter, but the parser restricts this name to be
-  // something that ends in "handle".
-  // In a more general implementation, we would add such an entry at "Consume" time of
-  // the resource in question, allowing us to set a pointer to the Resource declaration
-  // on the HandleTypeTemplate itself. We can't currently do this because we don't have
-  // access to the definition of "handle" when we insert it into the root typespace, so we
-  // need to resort to looking it up and doing validation at runtime.
-  bool GetResource(const LibraryMediator& lib, const Name& name,
-                   Resource** out_resource) const override {
-    Decl* handle_decl = lib.LookupDeclByName(name);
-    if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-      return Fail(ErrHandleNotResource, name);
-    }
-
-    auto* resource = static_cast<Resource*>(handle_decl);
-    if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
-      reporter_->Report(ErrResourceMustBeUint32Derived, resource->name);
-      return false;
-    }
-
-    *out_resource = resource;
-    return true;
-  }
+  HandleTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Resource* resource_decl_)
+      : TypeTemplate(std::move(name), typespace, reporter), resource_decl_(resource_decl_) {}
 
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    Resource* handle_resource_decl = nullptr;
-    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
-      return false;
-
     size_t num_params = !unresolved_args.parameters->items.empty();
     if (num_params) {
       return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
                   num_params);
     }
 
-    HandleType type(name_, handle_resource_decl);
+    HandleType type(name_, resource_decl_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
   }
 
  private:
   const static HandleRights kSameRights;
+
+  Resource* resource_decl_;
 };
 
 const HandleRights HandleType::kSameRights = HandleRights(kHandleSameRights);
@@ -1233,7 +1198,6 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
   add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
   add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
   add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
                                                            TransportSide::kServer));
   add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
@@ -2129,6 +2093,13 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
+    case Decl::Kind::kResource: {
+      auto resource_decl = static_cast<Resource*>(decl_ptr);
+      auto type_template =
+          std::make_unique<HandleTypeTemplate>(name, typespace_, reporter_, resource_decl);
+      typespace_->AddTemplate(std::move(type_template));
+      break;
+    }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template =
@@ -2137,7 +2108,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
       break;
     }
     case Decl::Kind::kConst:
-    case Decl::Kind::kResource:
       break;
   }  // switch
   return true;

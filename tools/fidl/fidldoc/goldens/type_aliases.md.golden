@@ -125,13 +125,13 @@ Type: <code>uint32</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="alias_of_channel">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=23">alias_of_channel</a></td>
             <td>
-                <code>handle</code></td>
+                <code>fidl.test.typealiases/handle</code></td>
             <td>
 </td>
         </tr><tr id="channel">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=22">channel</a></td>
             <td>
-                <code>handle</code></td>
+                <code>fidl.test.typealiases/handle</code></td>
             <td>
 </td>
         </tr><tr id="u32">

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <locale.h>
-
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
 #include <fidl/source_file.h>
+#include <locale.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -183,11 +183,7 @@ type MyStruct = struct {
     h handle<vmo>;
 };
 )FIDL");
-  // TODO(fxbug.dev/77101): provide a less confusing error
-  // NOTE(fxbug.dev/72924): the old syntax returns a different error because
-  // it tries to resolve the parameters before checking that handle points to
-  // a resource definition
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -351,7 +347,7 @@ type MyStruct = resource struct {
     h handle;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraints) {
@@ -362,7 +358,7 @@ type MyStruct = resource struct {
     h handle:VMO;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {
@@ -375,7 +371,7 @@ type MyStruct = resource struct {
     h my_handle:VMO;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
 }  // namespace

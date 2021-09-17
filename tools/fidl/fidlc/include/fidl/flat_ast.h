@@ -903,22 +903,12 @@ class TypeTemplate {
   const Name& name() const { return name_; }
 
   struct ParamsAndConstraints {
-    // Type templates should not need to know the name of the layout and should
-    // only require a span for reporting errors, since any logic related to the
-    // name itself should be encapsulated in the layout resolution process. However,
-    // currently an exception must be made for handles so that we can double check
-    // whether the name actual refers to a Resource at runtime (see
-    // TypeTemplate::GetResource for details).
-    const Name& name;
     const std::unique_ptr<LayoutParameterList>& parameters;
     const std::unique_ptr<TypeConstraints>& constraints;
   };
 
   virtual bool Create(const LibraryMediator& lib, const ParamsAndConstraints& args,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const = 0;
-
-  virtual bool GetResource(const LibraryMediator& lib, const Name& name,
-                           Resource** out_resource) const;
 
   bool HasGeneratedName() const;
 

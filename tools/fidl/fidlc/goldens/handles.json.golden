@@ -1583,7 +1583,7 @@
         "length": 20
       },
       "partial_type_ctor": {
-        "name": "handle",
+        "name": "fidl.test.handles/handle",
         "args": [],
         "nullable": false
       }
@@ -1597,7 +1597,7 @@
         "length": 22
       },
       "partial_type_ctor": {
-        "name": "handle",
+        "name": "fidl.test.handles/handle",
         "args": [],
         "nullable": false
       }
@@ -1611,7 +1611,7 @@
         "length": 21
       },
       "partial_type_ctor": {
-        "name": "handle",
+        "name": "fidl.test.handles/handle",
         "args": [],
         "nullable": false,
         "handle_rights": {

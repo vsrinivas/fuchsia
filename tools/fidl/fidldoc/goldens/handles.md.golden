@@ -472,19 +472,19 @@ Type: <code>uint32</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="aliased_plain_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=50">aliased_plain_handle</a></td>
             <td>
-                <code>handle</code></td>
+                <code>fidl.test.handles/handle</code></td>
             <td>
 </td>
         </tr><tr id="aliased_rights_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=52">aliased_rights_handle</a></td>
             <td>
-                <code>handle</code></td>
+                <code>fidl.test.handles/handle</code></td>
             <td>
 </td>
         </tr><tr id="aliased_subtype_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=51">aliased_subtype_handle</a></td>
             <td>
-                <code>handle</code></td>
+                <code>fidl.test.handles/handle</code></td>
             <td>
 </td>
         </tr></table>
