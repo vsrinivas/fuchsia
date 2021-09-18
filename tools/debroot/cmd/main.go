@@ -32,11 +32,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// gpg keyring file generated using:
-//   export KEYS="46925553 2B90D010 518E17E1 1A7B6500"
-//   gpg --keyserver keys.gnupg.net --recv-keys $KEYS
-//   gpg --output ./debian-archive-stretch-stable.gpg --export $KEYS
-
 const (
 	aptRepo = "http://http.us.debian.org/debian"
 )
