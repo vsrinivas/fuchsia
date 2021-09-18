@@ -15,7 +15,6 @@
 
 use crate::accessibility::types::AccessibilityInfo;
 use crate::audio::types::AudioInfo;
-use crate::device::types::DeviceInfo;
 use crate::display::types::{DisplayInfo, LightData};
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::factory_reset::types::FactoryResetInfo;
@@ -41,7 +40,6 @@ pub enum SettingType {
     Unknown,
     Accessibility,
     Audio,
-    Device,
     Display,
     DoNotDisturb,
     FactoryReset,
@@ -129,7 +127,6 @@ generate_inspect_with_info! {
         Accessibility(AccessibilityInfo),
         Audio(AudioInfo),
         Brightness(DisplayInfo),
-        Device(DeviceInfo),
         FactoryReset(FactoryResetInfo),
         Light(LightInfo),
         LightSensor(LightData),
@@ -174,7 +171,6 @@ conversion_impls! {
     Accessibility(AccessibilityInfo) => Accessibility,
     Audio(AudioInfo) => Audio,
     Brightness(DisplayInfo) => Display,
-    Device(DeviceInfo) => Device,
     FactoryReset(FactoryResetInfo) => FactoryReset,
     Light(LightInfo) => Light,
     LightSensor(LightData) => LightSensor,
@@ -194,7 +190,6 @@ impl From<&SettingInfo> for SettingType {
             SettingInfo::Accessibility(_) => SettingType::Accessibility,
             SettingInfo::Audio(_) => SettingType::Audio,
             SettingInfo::Brightness(_) => SettingType::Display,
-            SettingInfo::Device(_) => SettingType::Device,
             SettingInfo::DoNotDisturb(_) => SettingType::DoNotDisturb,
             SettingInfo::FactoryReset(_) => SettingType::FactoryReset,
             SettingInfo::Input(_) => SettingType::Input,
@@ -225,7 +220,6 @@ pub(crate) trait Merge<Other = Self> {
 pub fn get_default_interfaces() -> HashSet<fidl::InterfaceSpec> {
     array::IntoIter::new([
         fidl::InterfaceSpec::Accessibility,
-        fidl::InterfaceSpec::Device,
         fidl::InterfaceSpec::Intl,
         fidl::InterfaceSpec::Privacy,
         fidl::InterfaceSpec::Setup,
@@ -240,7 +234,6 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
     array::IntoIter::new([
         SettingType::Accessibility,
         SettingType::Audio,
-        SettingType::Device,
         SettingType::Display,
         SettingType::DoNotDisturb,
         SettingType::FactoryReset,
@@ -257,8 +250,9 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
 
 #[cfg(test)]
 mod testing {
-    use super::{SettingInfo, UnknownInfo};
     use crate::handler::device_storage::DeviceStorageCompatible;
+
+    use super::{SettingInfo, UnknownInfo};
 
     impl DeviceStorageCompatible for UnknownInfo {
         const KEY: &'static str = "unknown_info";

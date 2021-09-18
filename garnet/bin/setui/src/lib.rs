@@ -12,7 +12,6 @@ use crate::audio::audio_controller::AudioController;
 use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;
 use crate::base::{Dependency, Entity, SettingType};
 use crate::config::base::{AgentType, ControllerFlag};
-use crate::device::device_controller::DeviceController;
 use crate::display::display_controller::{DisplayController, ExternalBrightnessControl};
 use crate::display::light_sensor_controller::LightSensorController;
 use crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController;
@@ -58,7 +57,6 @@ use std::sync::Arc;
 mod accessibility;
 mod audio;
 mod clock;
-mod device;
 mod display;
 mod do_not_disturb;
 mod event;
@@ -560,15 +558,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             SettingType::Audio,
             AudioController,
             DataHandler::<AudioController>::spawn
-        );
-        // Device
-        register_handler!(
-            components,
-            storage_factory,
-            factory_handle,
-            SettingType::Device,
-            DeviceController,
-            Handler::<DeviceController>::spawn
         );
         // Display
         register_handler!(
