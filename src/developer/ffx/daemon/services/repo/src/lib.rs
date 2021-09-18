@@ -43,10 +43,37 @@ struct ServerInfo {
     task: fasync::Task<()>,
 }
 
+enum ServerState {
+    Running(ServerInfo),
+    Stopped(net::SocketAddr),
+    Unconfigured,
+}
+
+impl ServerState {
+    fn take_running(&mut self) -> Option<ServerInfo> {
+        match std::mem::replace(self, ServerState::Unconfigured) {
+            ServerState::Running(x) => {
+                *self = ServerState::Stopped(x.addr.clone());
+                Some(x)
+            }
+            ServerState::Stopped(x) => {
+                *self = ServerState::Stopped(x);
+                None
+            }
+            ServerState::Unconfigured => None,
+        }
+    }
+}
+
+// TODO: Whatever has to be done to make this private again.
+pub struct RepoInner {
+    manager: Arc<RepositoryManager>,
+    server: ServerState,
+}
+
 #[ffx_service]
 pub struct Repo<T: EventHandlerProvider = RealEventHandlerProvider> {
-    manager: Arc<RepositoryManager>,
-    server: RwLock<Option<ServerInfo>>,
+    inner: Arc<RwLock<RepoInner>>,
     event_handler_provider: T,
 }
 
@@ -58,7 +85,7 @@ enum SaveConfig {
 
 #[async_trait::async_trait(?Send)]
 pub trait EventHandlerProvider {
-    async fn setup_event_handlers(&self, cx: Context, manager: Arc<RepositoryManager>);
+    async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>);
 }
 
 #[derive(Default)]
@@ -66,9 +93,9 @@ pub struct RealEventHandlerProvider;
 
 #[async_trait::async_trait(?Send)]
 impl EventHandlerProvider for RealEventHandlerProvider {
-    async fn setup_event_handlers(&self, cx: Context, manager: Arc<RepositoryManager>) {
+    async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
         let q = cx.daemon_event_queue().await;
-        q.add_handler(DaemonEventHandler { cx, manager }).await;
+        q.add_handler(DaemonEventHandler { cx, inner }).await;
     }
 }
 
@@ -76,7 +103,7 @@ async fn add_repository(
     repo_name: &str,
     repo_spec: RepositorySpec,
     save_config: SaveConfig,
-    manager: Arc<RepositoryManager>,
+    inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), bridge::RepositoryError> {
     log::info!("Adding repository {} {:?}", repo_name, repo_spec);
 
@@ -102,7 +129,9 @@ async fn add_repository(
     }
 
     // Finally add the repository.
-    manager.add(Arc::new(repo));
+    let mut inner = inner.write().await;
+    inner.manager.add(Arc::new(repo));
+    inner.start_server_warn().await;
 
     Ok(())
 }
@@ -111,7 +140,7 @@ async fn register_target(
     cx: &Context,
     target_info: RepositoryTarget,
     save_config: SaveConfig,
-    manager: Arc<RepositoryManager>,
+    inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), bridge::RepositoryError> {
     log::info!(
         "Registering repository {:?} for target {:?}",
@@ -119,7 +148,10 @@ async fn register_target(
         target_info.target_identifier
     );
 
-    let repo = manager
+    let repo = inner
+        .read()
+        .await
+        .manager
         .get(&target_info.repo_name)
         .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
 
@@ -313,18 +345,15 @@ async fn remove_aliases(
     Ok(())
 }
 
-impl<T: EventHandlerProvider> Repo<T> {
-    async fn start_server(&self, addr: net::SocketAddr) -> Result<(), anyhow::Error> {
-        log::info!("Starting repository server on {}", addr);
-
-        let mut server_locked = self.server.write().await;
-
+impl RepoInner {
+    async fn start_server(&mut self) -> Result<(), anyhow::Error> {
         // Exit early if we're already running on this address.
-        if let Some(server) = &*server_locked {
-            if server.addr == addr {
-                return Ok(());
-            }
-        }
+        let addr = match self.server {
+            ServerState::Running(_) | ServerState::Unconfigured => return Ok(()),
+            ServerState::Stopped(addr) => addr.clone(),
+        };
+
+        log::info!("Starting repository server on {}", addr);
 
         let (server_fut, server) = RepositoryServer::builder(addr, Arc::clone(&self.manager))
             .start()
@@ -336,11 +365,40 @@ impl<T: EventHandlerProvider> Repo<T> {
         // Spawn the server future in the background to process requests from clients.
         let task = fasync::Task::local(server_fut);
 
-        *server_locked = Some(ServerInfo { server, addr, task });
+        self.server = ServerState::Running(ServerInfo { server, addr, task });
 
         Ok(())
     }
 
+    async fn start_server_warn(&mut self) {
+        if let Err(err) = self.start_server().await {
+            log::warn!("Failed to start repository server: {:#?}", err);
+        }
+    }
+
+    async fn stop_server(&mut self) {
+        log::info!("Stopping repository service");
+
+        let server_info = self.server.take_running();
+        if let Some(server_info) = server_info {
+            server_info.server.stop();
+
+            futures::select! {
+                () = server_info.task.fuse() => {},
+                () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
+                    log::error!("Timed out waiting for the repository server to shut down");
+                },
+            }
+        }
+
+        // Drop all repositories.
+        self.manager.clear();
+
+        log::info!("Repository service has been stopped");
+    }
+}
+
+impl<T: EventHandlerProvider> Repo<T> {
     async fn remove_repository(&self, cx: &Context, repo_name: &str) -> bool {
         log::info!("Removing repository {:?}", repo_name);
 
@@ -381,7 +439,14 @@ impl<T: EventHandlerProvider> Repo<T> {
         }
 
         // Finally, stop serving the repository.
-        self.manager.remove(repo_name)
+        let mut inner = self.inner.write().await;
+        let ret = inner.manager.remove(repo_name);
+
+        if inner.manager.repositories().next().is_none() {
+            inner.stop_server().await;
+        }
+
+        ret
     }
 
     /// Deregister the repository from the target.
@@ -397,6 +462,9 @@ impl<T: EventHandlerProvider> Repo<T> {
         log::info!("Deregistering repository {:?} from target {:?}", repo_name, target_identifier);
 
         let repo = self
+            .inner
+            .read()
+            .await
             .manager
             .get(&repo_name)
             .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
@@ -485,7 +553,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             }
         };
 
-        let repo = if let Some(r) = self.manager.get(&name) {
+        let repo = if let Some(r) = self.inner.read().await.manager.get(&name) {
             r
         } else {
             return Err(bridge::RepositoryError::NoMatchingRepository);
@@ -547,7 +615,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             }
         };
 
-        let repo = if let Some(r) = self.manager.get(&repository_name) {
+        let repo = if let Some(r) = self.inner.read().await.manager.get(&repository_name) {
             r
         } else {
             return Err(bridge::RepositoryError::NoMatchingRepository);
@@ -597,8 +665,10 @@ impl<T: EventHandlerProvider> Repo<T> {
 impl<T: EventHandlerProvider + Default> Default for Repo<T> {
     fn default() -> Self {
         Repo {
-            manager: RepositoryManager::new(),
-            server: RwLock::new(None),
+            inner: Arc::new(RwLock::new(RepoInner {
+                manager: RepositoryManager::new(),
+                server: ServerState::Unconfigured,
+            })),
             event_handler_provider: T::default(),
         }
     }
@@ -618,13 +688,8 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
             bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
                 let mut res = match repository.try_into() {
                     Ok(repo_spec) => {
-                        add_repository(
-                            &name,
-                            repo_spec,
-                            SaveConfig::Save,
-                            Arc::clone(&self.manager),
-                        )
-                        .await
+                        add_repository(&name, repo_spec, SaveConfig::Save, Arc::clone(&self.inner))
+                            .await
                     }
                     Err(err) => Err(err.into()),
                 };
@@ -639,13 +704,8 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
             bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 let mut res = match RepositoryTarget::try_from(target_info) {
                     Ok(target_info) => {
-                        register_target(
-                            cx,
-                            target_info,
-                            SaveConfig::Save,
-                            Arc::clone(&self.manager),
-                        )
-                        .await
+                        register_target(cx, target_info, SaveConfig::Save, Arc::clone(&self.inner))
+                            .await
                     }
                     Err(err) => Err(err.into()),
                 };
@@ -686,6 +746,9 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
             bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
                 let mut values = self
+                    .inner
+                    .read()
+                    .await
                     .manager
                     .repositories()
                     .map(|x| bridge::RepositoryConfig {
@@ -762,17 +825,10 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
     async fn start(&mut self, cx: &Context) -> Result<(), anyhow::Error> {
         log::info!("Starting repository service");
 
-        load_repositories_from_config(&self.manager).await;
-
-        self.event_handler_provider
-            .setup_event_handlers(cx.clone(), Arc::clone(&self.manager))
-            .await;
-
         match listen_addr().await {
             Ok(Some(addr)) => {
-                if let Err(err) = self.start_server(addr).await {
-                    log::warn!("Failed to start repository server: {:#?}", err);
-                }
+                let mut inner = self.inner.write().await;
+                inner.server = ServerState::Stopped(addr);
             }
             Ok(None) => {
                 log::warn!("repository.server.listen_addr not configured, not starting server");
@@ -782,45 +838,30 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlService for Repo<T
             }
         }
 
+        load_repositories_from_config(&self.inner).await;
+
+        self.event_handler_provider.setup_event_handlers(cx.clone(), Arc::clone(&self.inner)).await;
+
         Ok(())
     }
 
     async fn stop(&mut self, _cx: &Context) -> Result<(), anyhow::Error> {
-        log::info!("Stopping repository service");
-
-        let server_info = self.server.write().await.take();
-        if let Some(server_info) = server_info {
-            server_info.server.stop();
-
-            futures::select! {
-                () = server_info.task.fuse() => {},
-                () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
-                    log::error!("Timed out waiting for the repository server to shut down");
-                },
-            }
-        }
-
-        // Drop all repositories.
-        self.manager.clear();
-
-        log::info!("Repository service has been stopped");
-
+        self.inner.write().await.stop_server().await;
         Ok(())
     }
 }
 
-async fn load_repositories_from_config(manager: &Arc<RepositoryManager>) {
+async fn load_repositories_from_config(inner: &Arc<RwLock<RepoInner>>) {
     for (name, repo_spec) in pkg::config::get_repositories().await {
-        if manager.get(&name).is_some() {
+        if inner.read().await.manager.get(&name).is_some() {
             continue;
         }
 
         // Add the repository.
         if let Err(err) =
-            add_repository(&name, repo_spec, SaveConfig::DoNotSave, Arc::clone(&manager)).await
+            add_repository(&name, repo_spec, SaveConfig::DoNotSave, Arc::clone(inner)).await
         {
             log::warn!("failed to add the repository {:?}: {:?}", name, err);
-            continue;
         }
     }
 }
@@ -828,7 +869,7 @@ async fn load_repositories_from_config(manager: &Arc<RepositoryManager>) {
 #[derive(Clone)]
 struct DaemonEventHandler {
     cx: Context,
-    manager: Arc<RepositoryManager>,
+    inner: Arc<RwLock<RepoInner>>,
 }
 
 impl DaemonEventHandler {
@@ -867,12 +908,8 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                     return Ok(EventStatus::Waiting);
                 };
                 let (t, q) = self.cx.get_target_event_queue(Some(matcher)).await?;
-                q.add_handler(TargetEventHandler::new(
-                    self.cx.clone(),
-                    Arc::clone(&self.manager),
-                    t,
-                ))
-                .await;
+                q.add_handler(TargetEventHandler::new(self.cx.clone(), Arc::clone(&self.inner), t))
+                    .await;
             }
             _ => {}
         }
@@ -883,13 +920,13 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 #[derive(Clone)]
 struct TargetEventHandler {
     cx: Context,
-    manager: Arc<RepositoryManager>,
+    inner: Arc<RwLock<RepoInner>>,
     target: Rc<Target>,
 }
 
 impl TargetEventHandler {
-    fn new(cx: Context, manager: Arc<RepositoryManager>, target: Rc<Target>) -> Self {
-        Self { cx, manager, target }
+    fn new(cx: Context, inner: Arc<RwLock<RepoInner>>, target: Rc<Target>) -> Self {
+        Self { cx, inner, target }
     }
 }
 
@@ -901,7 +938,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
         }
 
         // Make sure we pick up any repositories that have been added since the last event.
-        load_repositories_from_config(&self.manager).await;
+        load_repositories_from_config(&self.inner).await;
 
         let source_nodename = if let Some(n) = self.target.nodename() {
             n
@@ -921,7 +958,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
                     &self.cx,
                     target_info,
                     SaveConfig::DoNotSave,
-                    Arc::clone(&self.manager),
+                    Arc::clone(&self.inner),
                 )
                 .await
                 {
@@ -1180,12 +1217,9 @@ mod tests {
 
     #[async_trait::async_trait(?Send)]
     impl EventHandlerProvider for TestEventHandlerProvider {
-        async fn setup_event_handlers(&self, cx: Context, manager: Arc<RepositoryManager>) {
-            let handler = TargetEventHandler::new(
-                cx,
-                manager,
-                Target::new_named(TARGET_NODENAME.to_string()),
-            );
+        async fn setup_event_handlers(&self, cx: Context, inner: Arc<RwLock<RepoInner>>) {
+            let handler =
+                TargetEventHandler::new(cx, inner, Target::new_named(TARGET_NODENAME.to_string()));
             handler.on_event(TargetEvent::RcsActivated).await.unwrap();
         }
     }
