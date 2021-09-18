@@ -64,6 +64,12 @@ toc:
     path: /docs/concepts/kernel/time.md
   - title: "Clock transformations"
     path: /docs/concepts/kernel/clock_transformations.md
+- title: "Tracing"
+  section:
+  - title: "Fuchsia tracing system"
+    path: /docs/concepts/kernel/tracing-system.md
+  - title: "Tracing provider buffering modes"
+    path: /docs/concepts/kernel/tracing-provider-buffering-modes.md
 - title: "Advanced"
   section:
   - title: "Kernel invariants"

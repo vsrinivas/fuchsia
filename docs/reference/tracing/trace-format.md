@@ -6,7 +6,7 @@ You can use this document to search for detailed information
 about each field in the Fuchsia trace format.
 
 Note: For information about the Fuchsia tracing system,
-see [Fuchsia tracing system](/docs/concepts/tracing/README.md).
+see [Fuchsia tracing system](/docs/concepts/kernel/tracing-system.md).
 
 ## Overview
 

@@ -61,7 +61,7 @@ Trace providers (components being traced) only write to trace buffers.
 If a trace provider's trace buffer becomes full while a trace is running, the
 buffering mode determines the behavior for the trace provider. For more
 information on buffering modes, see
-[tracing provider buffering modes](/docs/concepts/tracing/tracing-provider-buffering-modes.md).
+[tracing provider buffering modes](/docs/concepts/kernel/tracing-provider-buffering-modes.md).
 
 ### Trace client {#trace-client}
 
@@ -148,7 +148,7 @@ terminate abnormally as long as they managed to store some data into their
 trace buffers. If a trace provider's trace buffer becomes
 full while a trace is running, the buffering mode determines the behavior for
 the trace provider. For more information, see
-[Tracing provider buffering modes](/docs/concepts/tracing/tracing-provider-buffering-modes.md).
+[Tracing provider buffering modes](/docs/concepts/kernel/tracing-provider-buffering-modes.md).
 
 The trace manager delivers the resulting trace archive to its client through
 a socket. This data is formed according to the

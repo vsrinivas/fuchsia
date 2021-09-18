@@ -77,7 +77,7 @@ to send it to a file and then view it in your editor or whatever.
 Fuchsia's tracing system supports collecting kernel trace records through
 the `ktrace_provider` trace provider.
 For documentation of Fuchsia's tracing system see the documentation in
-[Fuchsia tracing system](/docs/concepts/tracing/README.md).
+[Fuchsia tracing system](/docs/concepts/kernel/tracing-system.md).
 
 ## More information
 

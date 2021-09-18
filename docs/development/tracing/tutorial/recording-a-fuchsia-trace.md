@@ -3,7 +3,7 @@
 This document describes how to record a trace with Fuchsia's tracing system.
 
 Note: For more information on the Fuchsia tracing system, see
-[Fuchsia tracing system](/docs/concepts/tracing/README.md).
+[Fuchsia tracing system](/docs/concepts/kernel/tracing-system.md).
 
 ## Prerequisites
 

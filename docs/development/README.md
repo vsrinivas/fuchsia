@@ -85,7 +85,7 @@ This section covers Fuchsia-wide conventions and best practices.
 
 ## Tracing
 
- - [Fuchsia tracing system](/docs/concepts/tracing/README.md)
+ - [Fuchsia tracing system](/docs/concepts/kernel/tracing-system.md)
  - [Tracing guides](/docs/development/tracing/README.md)
 
 ## Internationalization

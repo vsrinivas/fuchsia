@@ -70,7 +70,7 @@ file:
 ```
 
 The `fuchsia.tracing.provider.Registry` service may optionally be included to
-allow the client driver to report [trace events](/docs/concepts/tracing/README.md).
+allow the client driver to report [trace events](/docs/concepts/kernel/tracing-system.md).
 `fuchsia.logger.LogSink` is also
 recommended to allow logs from the client driver to appear in the [system
 log](/docs/development/diagnostics/logs/viewing.md).

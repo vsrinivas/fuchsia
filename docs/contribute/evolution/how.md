@@ -263,7 +263,7 @@ platform interfaces are observed and respected.
 [syscalls]: /docs/concepts/kernel/concepts.md#system_calls
 [test-double]: /docs/contribute/testing/principles.md#test_doubles_stubs_mocks_fakes
 [topology]: /docs/concepts/components/v2/topology.md
-[tracing]: /docs/concepts/tracing/README.md
+[tracing]: /docs/concepts/kernel/tracing-system.md
 [trf]: /docs/concepts/testing/v2/test_runner_framework.md
 [vdso]: /docs/concepts/kernel/vdso.md
 [vdso-enforcement]: /docs/concepts/kernel/vdso.md#enforcement
