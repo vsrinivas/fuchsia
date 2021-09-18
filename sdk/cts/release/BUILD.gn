@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+python_host_test("verify_release_test") {
+  main_source = "verify_release.py"
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":verify_release_test($host_toolchain)" ]
+}
