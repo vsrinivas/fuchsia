@@ -304,12 +304,12 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned i
 #define FH_MEM_RCSR_CHNL0_RBDCB_WPTR (FH_MEM_RCSR_CHNL0 + 0x8)
 #define FH_MEM_RCSR_CHNL0_FLUSH_RB_REQ (FH_MEM_RCSR_CHNL0 + 0x10)
 
-#define FH_RCSR_CHNL0_RX_CONFIG_RB_TIMEOUT_MSK (0x00000FF0) /* bits 4-11 */
-#define FH_RCSR_CHNL0_RX_CONFIG_IRQ_DEST_MSK (0x00001000) /* bits 12 */
+#define FH_RCSR_CHNL0_RX_CONFIG_RB_TIMEOUT_MSK (0x00000FF0)   /* bits 4-11 */
+#define FH_RCSR_CHNL0_RX_CONFIG_IRQ_DEST_MSK (0x00001000)     /* bits 12 */
 #define FH_RCSR_CHNL0_RX_CONFIG_SINGLE_FRAME_MSK (0x00008000) /* bit 15 */
-#define FH_RCSR_CHNL0_RX_CONFIG_RB_SIZE_MSK (0x00030000) /* bits 16-17 */
-#define FH_RCSR_CHNL0_RX_CONFIG_RBDBC_SIZE_MSK (0x00F00000) /* bits 20-23 */
-#define FH_RCSR_CHNL0_RX_CONFIG_DMA_CHNL_EN_MSK (0xC0000000) /* bits 30-31*/
+#define FH_RCSR_CHNL0_RX_CONFIG_RB_SIZE_MSK (0x00030000)      /* bits 16-17 */
+#define FH_RCSR_CHNL0_RX_CONFIG_RBDBC_SIZE_MSK (0x00F00000)   /* bits 20-23 */
+#define FH_RCSR_CHNL0_RX_CONFIG_DMA_CHNL_EN_MSK (0xC0000000)  /* bits 30-31*/
 
 #define FH_RCSR_RX_CONFIG_RBDCB_SIZE_POS (20)
 #define FH_RCSR_RX_CONFIG_REG_IRQ_RBTH_POS (4)
@@ -442,8 +442,8 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned i
 #define RFH_RXF_DMA_MIN_RB_SIZE_POS 24
 #define RFH_RXF_DMA_MIN_RB_4_8 (3 << RFH_RXF_DMA_MIN_RB_SIZE_POS)
 #define RFH_RXF_DMA_DROP_TOO_LARGE_MASK (0x04000000) /* bit 26 */
-#define RFH_RXF_DMA_SINGLE_FRAME_MASK (0x20000000) /* bit 29 */
-#define RFH_DMA_EN_MASK (0xC0000000) /* bits 30-31*/
+#define RFH_RXF_DMA_SINGLE_FRAME_MASK (0x20000000)   /* bit 29 */
+#define RFH_DMA_EN_MASK (0xC0000000)                 /* bits 30-31*/
 #define RFH_DMA_EN_ENABLE_VAL BIT(31)
 
 #define RFH_RXF_RXQ_ACTIVE 0xA0980C
@@ -456,7 +456,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned i
 #define RFH_GEN_CFG_RB_CHUNK_SIZE_64 0
 /* the driver assumes everywhere that the default RXQ is 0 */
 #define RFH_GEN_CFG_DEFAULT_RXQ_NUM 0xF00
-#define RFH_GEN_CFG_VAL(_n, _v) FIELD_PREP(RFH_GEN_CFG_##_n, _v)
+#define RFH_GEN_CFG_VAL(_n, _v) ((_v) << __builtin_ctz(RFH_GEN_CFG_##_n))
 
 /* end of 9000 rx series registers */
 

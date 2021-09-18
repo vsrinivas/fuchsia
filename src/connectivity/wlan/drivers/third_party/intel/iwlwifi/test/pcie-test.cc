@@ -401,6 +401,52 @@ TEST_F(PcieTest, RxInit) {
   iwl_pcie_rx_free(trans_);
 }
 
+// Test the multipe Rx queues initialization.
+TEST_F(PcieTest, MqRxInit) {
+  cfg_.mq_rx_supported = true;
+  trans_->num_rx_queues = 16;
+  trans_pcie_->rx_buf_size = IWL_AMSDU_2K;
+
+  // This is the value we get when we call io_buffer_phys() in the fake environment.
+  const size_t kFakePhys = FAKE_BTI_PHYS_ADDR;
+
+  // Set expectation for register accesses.
+  mock_write_prph_.ExpectCall(RFH_RXF_DMA_CFG, 0);
+  mock_write_prph_.ExpectCall(RFH_RXF_RXQ_ACTIVE, 0);
+  for (int i = 0; i < trans_->num_rx_queues; i++) {
+    mock_write_prph_.ExpectCall(RFH_Q_FRBDCB_BA_LSB(i), kFakePhys);
+    mock_write_prph_.ExpectCall(RFH_Q_FRBDCB_BA_LSB(i) + 4, 0);  // MSB of a 64-bit
+    mock_write_prph_.ExpectCall(RFH_Q_URBDCB_BA_LSB(i), kFakePhys);
+    mock_write_prph_.ExpectCall(RFH_Q_URBDCB_BA_LSB(i) + 4, 0);  // MSB of a 64-bit
+    mock_write_prph_.ExpectCall(RFH_Q_URBD_STTS_WPTR_LSB(i), kFakePhys);
+    mock_write_prph_.ExpectCall(RFH_Q_URBD_STTS_WPTR_LSB(i) + 4, 0);  // MSB of a 64-bit
+    mock_write_prph_.ExpectCall(RFH_Q_FRBDCB_WIDX(i), 0);
+    mock_write_prph_.ExpectCall(RFH_Q_FRBDCB_RIDX(i), 0);
+    mock_write_prph_.ExpectCall(RFH_Q_URBDCB_WIDX(i), 0);
+  }
+
+  mock_write_prph_.ExpectCall(
+      RFH_RXF_DMA_CFG, RFH_DMA_EN_ENABLE_VAL | RFH_RXF_DMA_RB_SIZE_2K | RFH_RXF_DMA_MIN_RB_4_8 |
+                           RFH_RXF_DMA_DROP_TOO_LARGE_MASK | RFH_RXF_DMA_RBDCB_SIZE_512);
+
+  mock_write_prph_.ExpectCall(RFH_GEN_CFG,
+                              RFH_GEN_CFG_RFH_DMA_SNOOP | RFH_GEN_CFG_VAL(DEFAULT_RXQ_NUM, 0) |
+                                  RFH_GEN_CFG_SERVICE_DMA_SNOOP |
+                                  RFH_GEN_CFG_VAL(RB_CHUNK_SIZE, RFH_GEN_CFG_RB_CHUNK_SIZE_128));
+
+  // BIT(i) and BIT(i+16) for each i in trans_->num_rx_queues
+  mock_write_prph_.ExpectCall(RFH_RXF_RXQ_ACTIVE, 0xffffffff);
+
+  // Run it!
+  iwl_pcie_rx_init(trans_);
+
+  // Check results.
+  EXPECT_NOT_NULL(trans_pcie_->rxq->rb_status);
+  mock_write_prph_.VerifyAndClear();
+
+  iwl_pcie_rx_free(trans_);
+}
+
 TEST_F(PcieTest, IctTable) {
   ASSERT_OK(iwl_pcie_alloc_ict(trans_));
 

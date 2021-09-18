@@ -401,20 +401,18 @@ static void iwl_pcie_free_rxq_dma(struct iwl_trans* trans, struct iwl_rxq* rxq) 
   iwl_iobuf_release(rxq->rb_status);
   rxq->rb_status = NULL;
 
-  // The following code is only used for the 22560+ device families. Which are not currently
-  // supported.
-#if 0   // NEEDS_PORTING
-  bool use_rx_td = (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560);
-  if (rxq->used_bd)
-    dma_free_coherent(trans->dev, (use_rx_td ? sizeof(*rxq->cd) : sizeof(__le32)) * rxq->queue_size,
-                      rxq->used_bd, rxq->used_bd_dma);
-  rxq->used_bd_dma = 0;
-  rxq->used_bd = NULL;
+  if (rxq->used_descriptors) {
+    iwl_iobuf_release(rxq->used_descriptors);
+  }
+  rxq->used_descriptors = NULL;
 
   if (trans->cfg->device_family < IWL_DEVICE_FAMILY_22560) {
     return;
   }
 
+  // The following code is only used for the 22560+ device families. Which are not currently
+  // supported.
+#if 0   // NEEDS_PORTING
   if (rxq->tr_tail) {
     dma_free_coherent(dev, sizeof(__le16), rxq->tr_tail, rxq->tr_tail_dma);
   }
@@ -454,22 +452,20 @@ static zx_status_t iwl_pcie_alloc_rxq_dma(struct iwl_trans* trans, struct iwl_rx
     goto err;
   }
 
-#if 0  // NEEDS_PORTING
   if (trans->cfg->mq_rx_supported) {
-    rxq->used_bd =
-        dma_zalloc_coherent(dev, (use_rx_td ? sizeof(*rxq->cd) : sizeof(__le32)) * rxq->queue_size,
-                            &rxq->used_bd_dma, GFP_KERNEL);
-    if (!rxq->used_bd) {
+    status = iwl_iobuf_allocate_contiguous(
+        &trans_pcie->pci_dev->dev,
+        (use_rx_td ? sizeof(*rxq->cd) : sizeof(__le32)) * rxq->queue_size, &rxq->used_descriptors);
+    if (status != ZX_OK) {
       goto err;
     }
+    rxq->used_bd = iwl_iobuf_virtual(rxq->used_descriptors);
   }
-#endif
 
   /* Allocate the driver's pointer to receive buffer status */
   status = iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev,
                                          use_rx_td ? sizeof(__le16) : sizeof(struct iwl_rb_status),
                                          &rxq->rb_status);
-
   if (status != ZX_OK) {
     goto err;
   }
@@ -602,7 +598,6 @@ static void iwl_pcie_rx_hw_init(struct iwl_trans* trans, struct iwl_rxq* rxq) {
   }
 }
 
-#if 0   // NEEDS_PORTING
 static void iwl_pcie_rx_mq_hw_init(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   uint32_t rb_size, enabled = 0;
@@ -638,11 +633,14 @@ static void iwl_pcie_rx_mq_hw_init(struct iwl_trans* trans) {
 
   for (i = 0; i < trans->num_rx_queues; i++) {
     /* Tell device where to find RBD free table in DRAM */
-    iwl_write_prph64_no_grab(trans, RFH_Q_FRBDCB_BA_LSB(i), trans_pcie->rxq[i].bd_dma);
+    iwl_write_prph64_no_grab(trans, RFH_Q_FRBDCB_BA_LSB(i),
+                             iwl_iobuf_physical(trans_pcie->rxq[i].descriptors));
     /* Tell device where to find RBD used table in DRAM */
-    iwl_write_prph64_no_grab(trans, RFH_Q_URBDCB_BA_LSB(i), trans_pcie->rxq[i].used_bd_dma);
+    iwl_write_prph64_no_grab(trans, RFH_Q_URBDCB_BA_LSB(i),
+                             iwl_iobuf_physical(trans_pcie->rxq[i].used_descriptors));
     /* Tell device where in DRAM to update its Rx status */
-    iwl_write_prph64_no_grab(trans, RFH_Q_URBD_STTS_WPTR_LSB(i), trans_pcie->rxq[i].rb_stts_dma);
+    iwl_write_prph64_no_grab(trans, RFH_Q_URBD_STTS_WPTR_LSB(i),
+                             iwl_iobuf_physical(trans_pcie->rxq[i].rb_status));
     /* Reset device indice tables */
     iwl_write_prph_no_grab(trans, RFH_Q_FRBDCB_WIDX(i), 0);
     iwl_write_prph_no_grab(trans, RFH_Q_FRBDCB_RIDX(i), 0);
@@ -682,6 +680,7 @@ static void iwl_pcie_rx_mq_hw_init(struct iwl_trans* trans) {
   iwl_write8(trans, CSR_INT_COALESCING, IWL_HOST_INT_TIMEOUT_DEF);
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_pcie_dummy_napi_poll(struct napi_struct* napi, int budget) {
   WARN_ON(1);
   return 0;
@@ -770,19 +769,15 @@ zx_status_t iwl_pcie_rx_init(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   int ret = _iwl_pcie_rx_init(trans);
 
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
-#if 0   // NEEDS_PORTING
   if (trans->cfg->mq_rx_supported) {
     iwl_pcie_rx_mq_hw_init(trans);
   } else {
-#endif  // NEEDS_PORTING
-  iwl_pcie_rx_hw_init(trans, trans_pcie->rxq);
-#if 0   // NEEDS_PORTING
+    iwl_pcie_rx_hw_init(trans, trans_pcie->rxq);
   }
-#endif  // NEEDS_PORTING
 
   iwl_pcie_rxq_restock(trans, trans_pcie->rxq);
 
@@ -952,9 +947,6 @@ static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struc
     return rxb;
   }
 
-  // The following code is only used for the 22560+ device families. Which are not currently
-  // supported.
-#if 0   // NEEDS_PORTING
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   uint16_t vid;
 
@@ -985,9 +977,8 @@ static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struc
   return rxb;
 
 out_err:
-  WARN(1, "Invalid rxb from HW %u\n", (uint32_t)vid);
+  IWL_WARN(trans, "Invalid rxb from HW %u\n", (uint32_t)vid);
   iwl_force_nmi(trans);
-#endif  // NEEDS_PORTING
   return NULL;
 }
 

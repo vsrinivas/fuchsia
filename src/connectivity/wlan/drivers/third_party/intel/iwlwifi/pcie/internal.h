@@ -166,8 +166,12 @@ struct iwl_rx_completion_desc {
  * @descriptors: IO buffer of receive buffer descriptors (rbd).
  *  Address size is 32 bit in pre-9000 devices and 64 bit in 9000 devices.
  *  In 22560 devices it is a pointer to a list of iwl_rx_transfer_desc's
- * @used_bd: driver's pointer to buffer of used receive buffer descriptors (rbd)
- * @used_bd_dma: physical address of buffer of used receive buffer descriptors (rbd)
+ *  This replaces the former 'bd' and 'bd_dma' fields.
+ * @used_descriptors: driver's pointer to buffer of used receive buffer descriptors (rbd).
+ *  This replaces the former 'used_bd_dma' field. Its virtual address 'used_bd' is also unioned
+ *  with the 'bd_32' field (for 9000 and lower chipsets) and the 'cd' field (for 22000 chipsets).
+ * @rb_status: driver's pointer to receive buffer status
+ *  This replaces the former 'rb_stts' and 'rb_stts_dma' fields.
  * @tr_tail: driver's pointer to the transmission ring tail buffer
  * @tr_tail_dma: physical address of the buffer for the transmission ring tail
  * @cr_tail: driver's pointer to the completion ring tail buffer
@@ -178,8 +182,6 @@ struct iwl_rx_completion_desc {
  * @write_actual:
  * @rx_free: list of RBDs with allocated RB ready for use
  * @need_update: flag to indicate we need to update read/write index
- * @rb_stts: driver's pointer to receive buffer status
- * @rb_stts_dma: bus address of receive buffer status
  * @lock:
  * @queue: actual rx queue. Not used for multi-rx queue.
  *
@@ -188,16 +190,17 @@ struct iwl_rx_completion_desc {
 struct iwl_rxq {
   int id;
   struct iwl_iobuf* descriptors;
+  struct iwl_iobuf* used_descriptors;
+  struct iwl_iobuf* rb_status;
 
-#if 0   // NEEDS_PORTING
   //  These fields are only used for multi-rx queue devices.
   union {
-    void* used_bd;
+    void* used_bd;  // the virtual address of 'used_descriptors'.
     __le32* bd_32;
     struct iwl_rx_completion_desc* cd;
   };
-  dma_addr_t used_bd_dma;
 
+#if 0   // NEEDS_PORTING
   // These fields are only used for 22560 devices and newer.
   __le16* tr_tail;
   dma_addr_t tr_tail_dma;
@@ -212,7 +215,6 @@ struct iwl_rxq {
   uint32_t queue_size;
   list_node_t rx_free;
   bool need_update;
-  struct iwl_iobuf* rb_status;
   mtx_t lock;
   struct napi_struct napi;  // TODO(43218): replace with something like mvmvif so that when
                             //              packet is received we know where to dispatch.
