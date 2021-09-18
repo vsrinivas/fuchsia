@@ -263,6 +263,7 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ~Parent_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Parent.First
   void First(::fidl::InterfaceRequest<
              ::fidl::test::inheritancewithrecursivedecl::Parent>
                  request) override;
@@ -298,6 +299,7 @@ class Parent_SyncProxy
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Parent.First
   zx_status_t First(::fidl::InterfaceRequest<
                     ::fidl::test::inheritancewithrecursivedecl::Parent>
                         request) override;
@@ -371,9 +373,11 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   ~Child_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Child.First
   void First(::fidl::InterfaceRequest<
              ::fidl::test::inheritancewithrecursivedecl::Parent>
                  request) override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Child.Second
   void Second(::fidl::InterfaceRequest<
               ::fidl::test::inheritancewithrecursivedecl::Parent>
                   request) override;
@@ -409,9 +413,11 @@ class Child_SyncProxy
  public:
   explicit Child_SyncProxy(::zx::channel channel);
   ~Child_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Child.First
   zx_status_t First(::fidl::InterfaceRequest<
                     ::fidl::test::inheritancewithrecursivedecl::Parent>
                         request) override;
+  // cts-coverage-fidl-name:fidl.test.inheritancewithrecursivedecl/Child.Second
   zx_status_t Second(::fidl::InterfaceRequest<
                      ::fidl::test::inheritancewithrecursivedecl::Parent>
                          request) override;

@@ -1798,6 +1798,7 @@ class SomeProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~SomeProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.anonymous/SomeProtocol.SomeMethod
   void SomeMethod(::fidl::test::anonymous::UnionMember union_member,
                   ::fidl::test::anonymous::TableMember table_member,
                   SomeMethodCallback callback) override;
@@ -1832,6 +1833,7 @@ class SomeProtocol_SyncProxy
  public:
   explicit SomeProtocol_SyncProxy(::zx::channel channel);
   ~SomeProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.anonymous/SomeProtocol.SomeMethod
   zx_status_t SomeMethod(
       ::fidl::test::anonymous::UnionMember union_member,
       ::fidl::test::anonymous::TableMember table_member,

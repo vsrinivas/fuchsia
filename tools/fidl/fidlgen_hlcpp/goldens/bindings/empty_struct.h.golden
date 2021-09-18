@@ -286,8 +286,10 @@ class EmptyProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~EmptyProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.emptystruct/EmptyProtocol.Send
   void Send(::fidl::test::emptystruct::Empty e) override;
   ReceiveCallback Receive;
+  // cts-coverage-fidl-name:fidl.test.emptystruct/EmptyProtocol.SendAndReceive
   void SendAndReceive(::fidl::test::emptystruct::Empty e,
                       SendAndReceiveCallback callback) override;
 
@@ -322,7 +324,9 @@ class EmptyProtocol_SyncProxy
  public:
   explicit EmptyProtocol_SyncProxy(::zx::channel channel);
   ~EmptyProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.emptystruct/EmptyProtocol.Send
   zx_status_t Send(::fidl::test::emptystruct::Empty e) override;
+  // cts-coverage-fidl-name:fidl.test.emptystruct/EmptyProtocol.SendAndReceive
   zx_status_t SendAndReceive(::fidl::test::emptystruct::Empty e,
                              ::fidl::test::emptystruct::Empty* out_e) override;
 

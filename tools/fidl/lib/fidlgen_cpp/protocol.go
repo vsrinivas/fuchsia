@@ -364,6 +364,11 @@ type methodInner struct {
 	responseTypeShapeV2 TypeShape
 
 	Attributes
+
+	// FullyQualifiedName is the fully qualified name as defined by
+	// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0043_documentation_comment_format?hl=en#fully-qualified-names
+	FullyQualifiedName string
+
 	nameVariants
 	Ordinal                   uint64
 	HasRequest                bool
@@ -396,6 +401,16 @@ func (m Method) WireRequestViewArg() string {
 
 func (m Method) WireCompleterArg() string {
 	return m.appendName("Completer").nest("Sync").Name()
+}
+
+// CtsMethodAnnotation generates a comment containing information about the FIDL
+// method that is covered by the C++ generated method. It is primarily meant
+// to be parsed by machines, but can serve as human readable documentation too.
+// For more information see fxbug.dev/84332.
+func (m Method) CtsMethodAnnotation() string {
+	// If the formatting of this comment needs to change, it should be done
+	// with consulting the CTS team.
+	return "// cts-coverage-fidl-name:" + m.FullyQualifiedName
 }
 
 type messageDirection int
@@ -559,14 +574,16 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
-			baseCodingTableName:       codingTableName + string(v.Name),
-			Marker:                    methodMarker,
-			requestTypeShapeV1:        TypeShape{v.RequestTypeShapeV1},
-			requestTypeShapeV2:        TypeShape{v.RequestTypeShapeV2},
-			responseTypeShapeV1:       TypeShape{v.ResponseTypeShapeV1},
-			responseTypeShapeV2:       TypeShape{v.ResponseTypeShapeV2},
-			wireMethod:                newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
-			Attributes:                Attributes{v.Attributes},
+			baseCodingTableName: codingTableName + string(v.Name),
+			Marker:              methodMarker,
+			requestTypeShapeV1:  TypeShape{v.RequestTypeShapeV1},
+			requestTypeShapeV2:  TypeShape{v.RequestTypeShapeV2},
+			responseTypeShapeV1: TypeShape{v.ResponseTypeShapeV1},
+			responseTypeShapeV2: TypeShape{v.ResponseTypeShapeV2},
+			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
+			Attributes:          Attributes{v.Attributes},
+			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
+			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
 			HasRequest:                v.HasRequest,
 			RequestArgs:               c.compileParameterArray(v.Request),

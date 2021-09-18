@@ -411,6 +411,7 @@ class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
   ~Example_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.error/Example.foo
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -438,6 +439,7 @@ class Example_SyncProxy : public ::fidl::test::error::Example_Sync {
  public:
   explicit Example_SyncProxy(::zx::channel channel);
   ~Example_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.error/Example.foo
   zx_status_t foo(::std::string s,
                   ::fidl::test::error::Example_foo_Result* out_result) override;
 

@@ -164,6 +164,7 @@ class Top_Proxy final : public ::fidl::internal::Proxy, public Top {
   ~Top_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.foreigntypeinresponseusedthroughcompose/Top.GetFoo
   void GetFoo(GetFooCallback callback) override;
 
  private:
@@ -201,6 +202,7 @@ class Top_SyncProxy
  public:
   explicit Top_SyncProxy(::zx::channel channel);
   ~Top_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.foreigntypeinresponseusedthroughcompose/Top.GetFoo
   zx_status_t GetFoo(::bottom::Foo* out_foo) override;
 
  private:

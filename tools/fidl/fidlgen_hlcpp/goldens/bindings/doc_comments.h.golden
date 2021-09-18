@@ -1168,6 +1168,7 @@ class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
   ~Interface_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.doccomments/Interface.Method
   void Method() override;
   OnEventCallback OnEvent;
 
@@ -1200,6 +1201,7 @@ class Interface_SyncProxy : public ::fidl::test::doccomments::Interface_Sync {
  public:
   explicit Interface_SyncProxy(::zx::channel channel);
   ~Interface_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.doccomments/Interface.Method
   zx_status_t Method() override;
 
  private:

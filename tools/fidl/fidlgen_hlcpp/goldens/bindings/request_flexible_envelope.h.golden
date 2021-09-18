@@ -610,9 +610,11 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   ~Protocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.requestflexibleenvelope/Protocol.RequestStrictResponseFlexible
   void RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::StrictFoo s,
       RequestStrictResponseFlexibleCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.requestflexibleenvelope/Protocol.RequestFlexibleResponseStrict
   void RequestFlexibleResponseStrict(
       ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       RequestFlexibleResponseStrictCallback callback) override;
@@ -648,9 +650,11 @@ class Protocol_SyncProxy
  public:
   explicit Protocol_SyncProxy(::zx::channel channel);
   ~Protocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.requestflexibleenvelope/Protocol.RequestStrictResponseFlexible
   zx_status_t RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::StrictFoo s,
       ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) override;
+  // cts-coverage-fidl-name:fidl.test.requestflexibleenvelope/Protocol.RequestFlexibleResponseStrict
   zx_status_t RequestFlexibleResponseStrict(
       ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
       ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) override;

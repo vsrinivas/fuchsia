@@ -203,6 +203,7 @@ class OnlyLibfuzzerAndDeps_Proxy final : public ::fidl::internal::Proxy,
   ~OnlyLibfuzzerAndDeps_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
   void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolCallback callback) override;
 
@@ -241,6 +242,7 @@ class OnlyLibfuzzerAndDeps_SyncProxy
  public:
   explicit OnlyLibfuzzerAndDeps_SyncProxy(::zx::channel channel);
   ~OnlyLibfuzzerAndDeps_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
   zx_status_t LibfuzzerNeedsNonemptyProtocol() override;
 
  private:

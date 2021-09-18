@@ -251,6 +251,7 @@ class super_Proxy final : public ::fidl::internal::Proxy, public super {
   ~super_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.inheritance/super.foo
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -279,6 +280,7 @@ class super_SyncProxy : public ::fidl::test::inheritance::super_Sync {
  public:
   explicit super_SyncProxy(::zx::channel channel);
   ~super_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.inheritance/super.foo
   zx_status_t foo(::std::string s, int64_t* out_y) override;
 
  private:
@@ -335,6 +337,7 @@ class sub_Proxy final : public ::fidl::internal::Proxy, public sub {
   ~sub_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.inheritance/sub.foo
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -362,6 +365,7 @@ class sub_SyncProxy : public ::fidl::test::inheritance::sub_Sync {
  public:
   explicit sub_SyncProxy(::zx::channel channel);
   ~sub_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.inheritance/sub.foo
   zx_status_t foo(::std::string s, int64_t* out_y) override;
 
  private:

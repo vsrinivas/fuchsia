@@ -825,6 +825,7 @@ class SimpleProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~SimpleProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.nullable/SimpleProtocol.Add
   void Add(int32_t a, int32_t b, AddCallback callback) override;
 
  private:
@@ -857,6 +858,7 @@ class SimpleProtocol_SyncProxy
  public:
   explicit SimpleProtocol_SyncProxy(::zx::channel channel);
   ~SimpleProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.nullable/SimpleProtocol.Add
   zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) override;
 
  private:

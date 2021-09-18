@@ -4218,8 +4218,10 @@ class TestProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~TestProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.union/TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated
   void StrictXUnionHenceResponseMayBeStackAllocated(
       StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.union/TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated
   void FlexibleXUnionHenceResponseMustBeHeapAllocated(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override;
 
@@ -4251,8 +4253,10 @@ class TestProtocol_SyncProxy : public ::fidl::test::union_::TestProtocol_Sync {
  public:
   explicit TestProtocol_SyncProxy(::zx::channel channel);
   ~TestProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.union/TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated
   zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::test::union_::StrictBoundedXUnion* out_xu) override;
+  // cts-coverage-fidl-name:fidl.test.union/TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated
   zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::test::union_::OlderSimpleUnion* out_xu) override;
 

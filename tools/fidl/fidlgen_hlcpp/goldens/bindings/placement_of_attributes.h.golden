@@ -804,6 +804,7 @@ class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~ExampleProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.placementofattributes/ExampleProtocol.Method
   void Method(::exampleusing::Empty arg) override;
 
  private:
@@ -841,6 +842,7 @@ class ExampleProtocol_SyncProxy
  public:
   explicit ExampleProtocol_SyncProxy(::zx::channel channel);
   ~ExampleProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.placementofattributes/ExampleProtocol.Method
   zx_status_t Method(::exampleusing::Empty arg) override;
 
  private:

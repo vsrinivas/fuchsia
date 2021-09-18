@@ -154,6 +154,7 @@ class {{ .Proxy.Name }} final : public ::fidl::internal::Proxy, public {{ .Name 
 
   {{- range .Methods }}
     {{- if .HasRequest }}
+  {{ .CtsMethodAnnotation }}
   void {{ template "RequestMethodSignature" . }} override;
     {{- else if .HasResponse }}
   {{ .CallbackType }} {{ .Name }};
@@ -195,6 +196,7 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 
   {{- range .Methods }}
     {{- if .HasRequest }}
+  {{ .CtsMethodAnnotation }}
   zx_status_t {{ template "SyncRequestMethodSignature" . }} override;
     {{- end }}
   {{- end }}

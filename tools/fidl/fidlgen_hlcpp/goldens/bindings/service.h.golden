@@ -266,6 +266,7 @@ class SecondProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~SecondProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.service/SecondProtocol.MethodOnSecond
   void MethodOnSecond() override;
 
  private:
@@ -298,6 +299,7 @@ class SecondProtocol_SyncProxy
  public:
   explicit SecondProtocol_SyncProxy(::zx::channel channel);
   ~SecondProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.service/SecondProtocol.MethodOnSecond
   zx_status_t MethodOnSecond() override;
 
  private:
@@ -485,6 +487,7 @@ class FirstProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~FirstProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.service/FirstProtocol.MethodOnFirst
   void MethodOnFirst() override;
 
  private:
@@ -517,6 +520,7 @@ class FirstProtocol_SyncProxy
  public:
   explicit FirstProtocol_SyncProxy(::zx::channel channel);
   ~FirstProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.service/FirstProtocol.MethodOnFirst
   zx_status_t MethodOnFirst() override;
 
  private:

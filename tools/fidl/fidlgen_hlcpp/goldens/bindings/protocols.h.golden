@@ -3583,7 +3583,9 @@ class HandleRightsProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~HandleRightsProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.NoResponseMethod
   void NoResponseMethod(::zx::socket h) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.ResponseMethod
   void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override;
   AnEventCallback AnEvent;
 
@@ -3621,7 +3623,9 @@ class HandleRightsProtocol_SyncProxy
  public:
   explicit HandleRightsProtocol_SyncProxy(::zx::channel channel);
   ~HandleRightsProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.NoResponseMethod
   zx_status_t NoResponseMethod(::zx::socket h) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.ResponseMethod
   zx_status_t ResponseMethod(::zx::socket h, ::zx::socket* out_h) override;
 
  private:
@@ -3720,12 +3724,18 @@ class WithAndWithoutRequestResponse_Proxy final
   ~WithAndWithoutRequestResponse_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
   void NoRequestNoResponse() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
   void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
   void WithRequestNoResponse(::std::string arg) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
   void WithRequestEmptyResponse(
       ::std::string arg, WithRequestEmptyResponseCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
   void WithRequestWithResponse(
       ::std::string arg, WithRequestWithResponseCallback callback) override;
   OnEmptyResponseCallback OnEmptyResponse;
@@ -3769,11 +3779,17 @@ class WithAndWithoutRequestResponse_SyncProxy
  public:
   explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
   ~WithAndWithoutRequestResponse_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
   zx_status_t NoRequestNoResponse() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
   zx_status_t NoRequestEmptyResponse() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
   zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
   zx_status_t WithRequestNoResponse(::std::string arg) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
   zx_status_t WithRequestEmptyResponse(::std::string arg) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
   zx_status_t WithRequestWithResponse(::std::string arg,
                                       ::std::string* out_ret) override;
 
@@ -3839,7 +3855,9 @@ class Transitional_Proxy final : public ::fidl::internal::Proxy,
   ~Transitional_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.Request
   void Request(int64_t x, RequestCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.OneWay
   void OneWay(int64_t x) override;
   EventCallback Event;
 
@@ -3874,7 +3892,9 @@ class Transitional_SyncProxy
  public:
   explicit Transitional_SyncProxy(::zx::channel channel);
   ~Transitional_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.Request
   zx_status_t Request(int64_t x, int64_t* out_y) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.OneWay
   zx_status_t OneWay(int64_t x) override;
 
  private:
@@ -3930,6 +3950,7 @@ class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy,
   ~MethodWithUnion_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/MethodWithUnion.UnionMethod
   void UnionMethod(::fidl::test::protocols::TheUnion u) override;
 
  private:
@@ -3963,6 +3984,7 @@ class MethodWithUnion_SyncProxy
  public:
   explicit MethodWithUnion_SyncProxy(::zx::channel channel);
   ~MethodWithUnion_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/MethodWithUnion.UnionMethod
   zx_status_t UnionMethod(::fidl::test::protocols::TheUnion u) override;
 
  private:
@@ -4061,13 +4083,16 @@ class WithProtocolEnds_Proxy final : public ::fidl::internal::Proxy,
   ~WithProtocolEnds_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ClientEnds
   void ClientEnds(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
       ClientEndsCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ServerEnds
   void ServerEnds(
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
           in,
       ServerEndsCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.StructContainingEnds
   void StructContainingEnds(::fidl::test::protocols::ProtocolEnds in,
                             StructContainingEndsCallback callback) override;
 
@@ -4103,15 +4128,18 @@ class WithProtocolEnds_SyncProxy
  public:
   explicit WithProtocolEnds_SyncProxy(::zx::channel channel);
   ~WithProtocolEnds_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ClientEnds
   zx_status_t ClientEnds(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
           out_out) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ServerEnds
   zx_status_t ServerEnds(
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
           in,
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
           out_out) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.StructContainingEnds
   zx_status_t StructContainingEnds(
       ::fidl::test::protocols::ProtocolEnds in,
       ::fidl::test::protocols::ProtocolEnds* out_out) override;
@@ -4176,6 +4204,7 @@ class ManyParameters_Proxy final : public ::fidl::internal::Proxy,
   ~ManyParameters_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ManyParameters.Fifteen
   void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7,
                bool p8, bool p9, bool p10, bool p11, bool p12, bool p13,
                bool p14, bool p15) override;
@@ -4210,6 +4239,7 @@ class ManyParameters_SyncProxy
  public:
   explicit ManyParameters_SyncProxy(::zx::channel channel);
   ~ManyParameters_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ManyParameters.Fifteen
   zx_status_t Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
                       bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
                       bool p13, bool p14, bool p15) override;
@@ -4306,9 +4336,13 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
   ~WithErrorSyntax_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ResponseAsStruct
   void ResponseAsStruct(ResponseAsStructCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsPrimitive
   void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsEnum
   void ErrorAsEnum(ErrorAsEnumCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.HandleInResult
   void HandleInResult(HandleInResultCallback callback) override;
 
  private:
@@ -4342,15 +4376,19 @@ class WithErrorSyntax_SyncProxy
  public:
   explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
   ~WithErrorSyntax_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ResponseAsStruct
   zx_status_t ResponseAsStruct(
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
           out_result) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsPrimitive
   zx_status_t ErrorAsPrimitive(
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
           out_result) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsEnum
   zx_status_t ErrorAsEnum(
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result)
       override;
+  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.HandleInResult
   zx_status_t HandleInResult(
       ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result*
           out_result) override;
@@ -4411,6 +4449,7 @@ class DiscoverableProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~DiscoverableProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/DiscoverableProtocol.Method
   void Method() override;
 
  private:
@@ -4446,6 +4485,7 @@ class DiscoverableProtocol_SyncProxy
  public:
   explicit DiscoverableProtocol_SyncProxy(::zx::channel channel);
   ~DiscoverableProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/DiscoverableProtocol.Method
   zx_status_t Method() override;
 
  private:
@@ -4522,10 +4562,14 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~ChannelProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodA
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodB
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.TakeHandle
   void TakeHandle(::zx::handle h, TakeHandleCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MutateSocket
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
@@ -4560,9 +4604,13 @@ class ChannelProtocol_SyncProxy
  public:
   explicit ChannelProtocol_SyncProxy(::zx::channel channel);
   ~ChannelProtocol_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodA
   zx_status_t MethodA(int64_t a, int64_t b) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodB
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.TakeHandle
   zx_status_t TakeHandle(::zx::handle h) override;
+  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MutateSocket
   zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
  private:

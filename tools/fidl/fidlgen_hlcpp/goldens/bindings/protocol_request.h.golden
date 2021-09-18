@@ -367,10 +367,14 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ~Parent_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChild
   void GetChild(GetChildCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChildRequest
   void GetChildRequest(GetChildRequestCallback callback) override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChild
   void TakeChild(
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChildRequest
   void TakeChildRequest(
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
       override;
@@ -403,14 +407,18 @@ class Parent_SyncProxy : public ::fidl::test::protocolrequest::Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChild
   zx_status_t GetChild(
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* out_c)
       override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChildRequest
   zx_status_t GetChildRequest(
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* out_r)
       override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChild
   zx_status_t TakeChild(
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) override;
+  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChildRequest
   zx_status_t TakeChildRequest(
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
       override;

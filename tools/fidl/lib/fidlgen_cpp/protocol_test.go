@@ -70,6 +70,10 @@ func TestMatchEvents(t *testing.T) {
 	expectEqual(t, toNames(exampleProtocol(t).Events), []string{"Event"})
 }
 
+func TestFullyQualifiedName(t *testing.T) {
+	expectEqual(t, exampleProtocol(t).OneWayMethods[0].FullyQualifiedName, "example/P.OneWay")
+}
+
 //
 // Test allocation strategies
 //
