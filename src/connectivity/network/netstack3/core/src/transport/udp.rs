@@ -5,6 +5,7 @@
 //! The User Datagram Protocol (UDP).
 
 use alloc::collections::HashSet;
+use core::mem;
 use core::num::{NonZeroU16, NonZeroUsize};
 use core::ops::RangeInclusive;
 
@@ -194,7 +195,7 @@ impl<I: Ip> UdpConnectionState<I> {
 ///
 /// Attempts to allocate a new unused local port with the given flow identifier
 /// `id`.
-fn try_alloc_local_port<I: IcmpIpExt, C: UdpContext<I>>(
+fn try_alloc_local_port<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     id: &ProtocolFlowId<I::Addr>,
 ) -> Option<NonZeroU16> {
@@ -207,7 +208,7 @@ fn try_alloc_local_port<I: IcmpIpExt, C: UdpContext<I>>(
 /// Helper function to allocate a listen port.
 ///
 /// Finds a random ephemeral port that is not in the provided `used_ports` set.
-fn try_alloc_listen_port<I: IcmpIpExt, C: UdpContext<I>>(
+fn try_alloc_listen_port<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
 ) -> Option<NonZeroU16> {
@@ -401,10 +402,8 @@ impl<I: Ip> IdMapCollectionKey for UdpListenerId<I> {
 }
 
 /// An execution context for the UDP protocol.
-pub trait UdpContext<I: IcmpIpExt>:
-    TransportIpContext<I> + RngStateContext<UdpState<I>> + CounterContext
-{
-    /// Receive an ICMP error message related to a previously-sent UDP packet.
+pub trait UdpContext<I: IcmpIpExt> {
+    /// Receives an ICMP error message related to a previously-sent UDP packet.
     ///
     /// `err` is the specific error identified by the incoming ICMP error
     /// message.
@@ -426,6 +425,29 @@ pub trait UdpContext<I: IcmpIpExt>:
     }
 }
 
+impl<I: IcmpIpExt, D: EventDispatcher + UdpContext<I>> UdpContext<I> for Ctx<D> {
+    fn receive_icmp_error(
+        &mut self,
+        id: Result<UdpConnId<I>, UdpListenerId<I>>,
+        err: I::ErrorCode,
+    ) {
+        UdpContext::receive_icmp_error(self.dispatcher_mut(), id, err);
+    }
+}
+
+/// An execution context for the UDP protocol which also provides access to state.
+pub trait UdpStateContext<I: IcmpIpExt>:
+    UdpContext<I> + CounterContext + TransportIpContext<I> + RngStateContext<UdpState<I>>
+{
+}
+
+impl<
+        I: IcmpIpExt,
+        C: UdpContext<I> + CounterContext + TransportIpContext<I> + RngStateContext<UdpState<I>>,
+    > UdpStateContext<I> for C
+{
+}
+
 /// An execution context for the UDP protocol when a buffer is provided.
 ///
 /// `BufferUdpContext` is like [`UdpContext`], except that it also requires that
@@ -434,16 +456,14 @@ pub trait UdpContext<I: IcmpIpExt>:
 /// [`send_udp_conn`] and [`send_udp_listener`]), and allows any generated
 /// link-layer frames to reuse that buffer rather than needing to always
 /// allocate a new one.
-pub trait BufferUdpContext<I: IpExt, B: BufferMut>:
-    UdpContext<I> + BufferTransportIpContext<I, B>
-{
+pub trait BufferUdpContext<I: IpExt, B: BufferMut>: UdpContext<I> {
     /// Receive a UDP packet for a connection.
     fn receive_udp_from_conn(
         &mut self,
         _conn: UdpConnId<I>,
         _src_ip: I::Addr,
         _src_port: NonZeroU16,
-        _body: &[u8],
+        _body: B,
     ) {
         log_unimplemented!((), "BufferUdpContext::receive_udp_from_conn: not implemented");
     }
@@ -455,10 +475,57 @@ pub trait BufferUdpContext<I: IpExt, B: BufferMut>:
         _src_ip: I::Addr,
         _dst_ip: I::Addr,
         _src_port: Option<NonZeroU16>,
-        _body: &[u8],
+        _body: B,
     ) {
         log_unimplemented!((), "BufferUdpContext::receive_udp_from_listen: not implemented");
     }
+}
+
+impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B> + BufferUdpContext<I, B>> BufferUdpContext<I, B>
+    for Ctx<D>
+{
+    fn receive_udp_from_conn(
+        &mut self,
+        conn: UdpConnId<I>,
+        src_ip: I::Addr,
+        src_port: NonZeroU16,
+        body: B,
+    ) {
+        BufferUdpContext::receive_udp_from_conn(self.dispatcher_mut(), conn, src_ip, src_port, body)
+    }
+
+    fn receive_udp_from_listen(
+        &mut self,
+        listener: UdpListenerId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        src_port: Option<NonZeroU16>,
+        body: B,
+    ) {
+        BufferUdpContext::receive_udp_from_listen(
+            self.dispatcher_mut(),
+            listener,
+            src_ip,
+            dst_ip,
+            src_port,
+            body,
+        )
+    }
+}
+
+/// An execution context for the UDP protocol when a buffer is provided which
+/// also provides access to state.
+pub trait BufferUdpStateContext<I: IpExt, B: BufferMut>:
+    BufferUdpContext<I, B> + BufferTransportIpContext<I, B> + UdpStateContext<I>
+{
+}
+
+impl<
+        I: IpExt,
+        B: BufferMut,
+        C: BufferUdpContext<I, B> + BufferTransportIpContext<I, B> + UdpStateContext<I>,
+    > BufferUdpStateContext<I, B> for C
+{
 }
 
 impl<I: Ip, D: EventDispatcher> DualStateContext<UdpState<I>, D::Rng> for Ctx<D> {
@@ -488,94 +555,10 @@ impl<I: Ip, D: EventDispatcher> DualStateContext<UdpState<I>, D::Rng> for Ctx<D>
     }
 }
 
-impl<I: IcmpIpExt, D: EventDispatcher + UdpEventDispatcher<I>> UdpContext<I> for Ctx<D> {
-    fn receive_icmp_error(
-        &mut self,
-        id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        err: I::ErrorCode,
-    ) {
-        UdpEventDispatcher::receive_icmp_error(self.dispatcher_mut(), id, err);
-    }
-}
-
-impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>> BufferUdpContext<I, B>
-    for Ctx<D>
-{
-    fn receive_udp_from_conn(
-        &mut self,
-        conn: UdpConnId<I>,
-        src_ip: I::Addr,
-        src_port: NonZeroU16,
-        body: &[u8],
-    ) {
-        self.dispatcher_mut().receive_udp_from_conn(conn, src_ip, src_port, body);
-    }
-
-    fn receive_udp_from_listen(
-        &mut self,
-        listener: UdpListenerId<I>,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        src_port: Option<NonZeroU16>,
-        body: &[u8],
-    ) {
-        self.dispatcher_mut().receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body);
-    }
-}
-
-/// An event dispatcher for the UDP layer.
-///
-/// See the `EventDispatcher` trait in the crate root for more details.
-pub trait UdpEventDispatcher<I: IcmpIpExt> {
-    /// Receive a UDP packet for a connection.
-    fn receive_udp_from_conn(
-        &mut self,
-        _conn: UdpConnId<I>,
-        _src_ip: I::Addr,
-        _src_port: NonZeroU16,
-        _body: &[u8],
-    ) {
-        log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
-    }
-
-    /// Receive a UDP packet for a listener.
-    fn receive_udp_from_listen(
-        &mut self,
-        _listener: UdpListenerId<I>,
-        _src_ip: I::Addr,
-        _dst_ip: I::Addr,
-        _src_port: Option<NonZeroU16>,
-        _body: &[u8],
-    ) {
-        log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_listen: not implemented");
-    }
-
-    /// Receive an ICMP error message related to a previously-sent UDP packet.
-    ///
-    /// `err` is the specific error identified by the incoming ICMP error
-    /// message.
-    ///
-    /// Concretely, this method is called when an ICMP error message is received
-    /// which contains an original packet which - based on its source and
-    /// destination IPs and ports - most likely originated from the given
-    /// socket. Note that the offending packet is not guaranteed to have
-    /// originated from the given socket. For example, it may have originated
-    /// from a previous socket with the same addresses, it may be the result of
-    /// packet corruption on the network, it may have been injected by a
-    /// malicious party, etc.
-    fn receive_icmp_error(
-        &mut self,
-        _id: Result<UdpConnId<I>, UdpListenerId<I>>,
-        _err: I::ErrorCode,
-    ) {
-        log_unimplemented!((), "UdpEventDispatcher::receive_icmp_error: not implemented");
-    }
-}
-
 /// An implementation of [`IpTransportContext`] for UDP.
 pub(crate) enum UdpIpTransportContext {}
 
-impl<I: IcmpIpExt, C: UdpContext<I>> IpTransportContext<I, C> for UdpIpTransportContext {
+impl<I: IcmpIpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTransportContext {
     fn receive_icmp_error(
         ctx: &mut C,
         src_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -612,7 +595,7 @@ impl<I: IcmpIpExt, C: UdpContext<I>> IpTransportContext<I, C> for UdpIpTransport
     }
 }
 
-impl<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportContext<I, B, C>
+impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportContext<I, B, C>
     for UdpIpTransportContext
 {
     fn receive_ip_packet(
@@ -642,20 +625,15 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportContext
             })
         {
             match socket {
-                LookupResult::Conn(id, conn) => ctx.receive_udp_from_conn(
-                    id,
-                    conn.remote_ip.get(),
-                    conn.remote_port,
-                    packet.body(),
-                ),
-                LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => ctx
-                    .receive_udp_from_listen(
-                        id,
-                        src_ip,
-                        dst_ip.get(),
-                        packet.src_port(),
-                        packet.body(),
-                    ),
+                LookupResult::Conn(id, conn) => {
+                    mem::drop(packet);
+                    ctx.receive_udp_from_conn(id, conn.remote_ip.get(), conn.remote_port, buffer)
+                }
+                LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => {
+                    let src_port = packet.src_port();
+                    mem::drop(packet);
+                    ctx.receive_udp_from_listen(id, src_ip, dst_ip.get(), src_port, buffer)
+                }
             }
             Ok(())
         } else if state.send_port_unreachable {
@@ -683,7 +661,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportContext
 /// `send_udp` fails if the selected 4-tuple conflicts with any existing socket.
 // TODO(brunodalbo): We may need more arguments here to express REUSEADDR and
 // BIND_TO_DEVICE options.
-pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
@@ -716,7 +694,7 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 }
 
 /// Send a UDP packet on an existing connection.
-pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
@@ -751,7 +729,7 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     ctx: &mut C,
     listener: UdpListenerId<I>,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -829,7 +807,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 /// `local_ip` is specified, but there are no available local ports for that
 /// address), `connect_udp` will fail. If there is no route to `remote_ip`,
 /// `connect_udp` will fail.
-pub fn connect_udp<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn connect_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
@@ -872,7 +850,7 @@ pub fn connect_udp<I: IcmpIpExt, C: UdpContext<I>>(
 /// # Panics
 ///
 /// `remove_udp_conn` panics if `id` is not a valid `UdpConnId`.
-pub fn remove_udp_conn<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn remove_udp_conn<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
@@ -885,7 +863,7 @@ pub fn remove_udp_conn<I: IcmpIpExt, C: UdpContext<I>>(
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpConnId`.
-pub fn get_udp_conn_info<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn get_udp_conn_info<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
@@ -913,7 +891,7 @@ pub fn get_udp_conn_info<I: IcmpIpExt, C: UdpContext<I>>(
 /// # Panics
 ///
 /// `listen_udp` panics if `listener` is already in use.
-pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn listen_udp<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     addr: Option<SpecifiedAddr<I::Addr>>,
     port: Option<NonZeroU16>,
@@ -959,7 +937,7 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
 /// # Panics
 ///
 /// `remove_listener` panics if `id` is not a valid `UdpListenerId`.
-pub fn remove_udp_listener<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn remove_udp_listener<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
@@ -996,7 +974,7 @@ pub fn remove_udp_listener<I: IcmpIpExt, C: UdpContext<I>>(
 /// # Panics
 ///
 /// `get_udp_conn_info` panics if `id` is not a valid `UdpListenerId`.
-pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpContext<I>>(
+pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpStateContext<I>>(
     ctx: &C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
@@ -1180,9 +1158,9 @@ mod tests {
             conn: UdpConnId<I>,
             _src_ip: <I as Ip>::Addr,
             _src_port: NonZeroU16,
-            body: &[u8],
+            body: B,
         ) {
-            self.get_mut().conn_data.push(ConnData { conn, body: body.to_owned() })
+            self.get_mut().conn_data.push(ConnData { conn, body: body.as_ref().to_owned() })
         }
 
         fn receive_udp_from_listen(
@@ -1191,14 +1169,14 @@ mod tests {
             src_ip: <I as Ip>::Addr,
             dst_ip: <I as Ip>::Addr,
             src_port: Option<NonZeroU16>,
-            body: &[u8],
+            body: B,
         ) {
             self.get_mut().listen_data.push(ListenData {
                 listener,
                 src_ip,
                 dst_ip,
                 src_port,
-                body: body.to_owned(),
+                body: body.as_ref().to_owned(),
             })
         }
     }

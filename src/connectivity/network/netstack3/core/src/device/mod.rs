@@ -175,7 +175,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, EthernetDeviceId> for
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.dispatcher_mut().send_frame(device.into(), frame)
+        DeviceLayerEventDispatcher::send_frame(self.dispatcher_mut(), device.into(), frame)
     }
 }
 

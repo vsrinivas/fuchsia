@@ -25,10 +25,10 @@ use log::{error, trace};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, IdMap, IdMapCollection, IpExt,
-    UdpConnId, UdpConnInfo, UdpEventDispatcher, UdpListenerId, UdpListenerInfo,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext, IdMap,
+    IdMapCollection, IpExt, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
 };
-use packet::serialize::Buf;
+use packet::{Buf, BufferMut};
 use std::collections::VecDeque;
 
 use crate::bindings::{BindingsDispatcher, LockedStackContext};
@@ -105,18 +105,34 @@ impl UdpSocketIpExt for Ipv6 {
     }
 }
 
-// NOTE(brunodalbo) we implement UdpEventDispatcher for EventLoopInner in this
+pub(crate) trait BindingsUdpContext<I: UdpSocketIpExt>:
+    UdpContext<I> + BufferUdpContext<I, Buf<Vec<u8>>> + for<'a> BufferUdpContext<I, Buf<&'a mut [u8]>>
+{
+}
+
+impl<
+        I: UdpSocketIpExt,
+        C: UdpContext<I>
+            + BufferUdpContext<I, Buf<Vec<u8>>>
+            + for<'a> BufferUdpContext<I, Buf<&'a mut [u8]>>,
+    > BindingsUdpContext<I> for C
+{
+}
+
+impl<I: UdpSocketIpExt> UdpContext<I> for BindingsDispatcher {}
+
+// NOTE(brunodalbo) we implement BufferUdpContext for EventLoopInner in this
 // module so it's closer to the rest of the UDP logic
-impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for BindingsDispatcher {
+impl<I: UdpSocketIpExt, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher {
     fn receive_udp_from_conn(
         &mut self,
         conn: UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
-        body: &[u8],
+        body: B,
     ) {
         let binding_data = I::get_collection_mut(self).get_conn(&conn);
-        if let Err(e) = binding_data.receive_datagram(src_ip, src_port.get(), body) {
+        if let Err(e) = binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref()) {
             error!("receive_udp_from_conn failed: {:?}", e);
         }
     }
@@ -127,12 +143,14 @@ impl<I: UdpSocketIpExt> UdpEventDispatcher<I> for BindingsDispatcher {
         src_ip: I::Addr,
         _dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
-        body: &[u8],
+        body: B,
     ) {
         let binding_data = I::get_collection_mut(self).get_listener(&listener);
-        if let Err(e) =
-            binding_data.receive_datagram(src_ip, src_port.map(|p| p.get()).unwrap_or(0), body)
-        {
+        if let Err(e) = binding_data.receive_datagram(
+            src_ip,
+            src_port.map(|p| p.get()).unwrap_or(0),
+            body.as_ref(),
+        ) {
             error!("receive_udp_from_conn failed: {:?}", e);
         }
     }
@@ -207,7 +225,7 @@ impl<I: Ip> SocketState<I> {
 
 pub(crate) trait UdpStackContext<I: UdpSocketIpExt>: StackContext
 where
-    <Self as StackContext>::Dispatcher: UdpEventDispatcher<I>,
+    <Self as StackContext>::Dispatcher: BindingsUdpContext<I>,
 {
 }
 
@@ -215,7 +233,7 @@ impl<T, I> UdpStackContext<I> for T
 where
     I: UdpSocketIpExt,
     T: StackContext,
-    T::Dispatcher: UdpEventDispatcher<I>,
+    T::Dispatcher: BindingsUdpContext<I>,
 {
 }
 
@@ -229,8 +247,8 @@ where
     C: UdpStackContext<Ipv4> + UdpStackContext<Ipv6>,
     C::Dispatcher: AsRef<UdpSocketCollection>
         + AsMut<UdpSocketCollection>
-        + UdpEventDispatcher<Ipv4>
-        + UdpEventDispatcher<Ipv6>,
+        + BindingsUdpContext<Ipv4>
+        + BindingsUdpContext<Ipv6>,
 {
     match version {
         IpVersion::V4 => UdpSocketWorker::<Ipv4, C>::spawn(ctx, properties, events),
@@ -241,7 +259,7 @@ where
 impl<I: UdpSocketIpExt, C: UdpStackContext<I>> UdpSocketWorker<I, C>
 where
     <C as StackContext>::Dispatcher:
-        AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + UdpEventDispatcher<I>,
+        AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + BindingsUdpContext<I>,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -896,7 +914,7 @@ impl<'a, I, C> RequestHandler<'a, I, C>
 where
     I: UdpSocketIpExt,
     C: UdpStackContext<I>,
-    C::Dispatcher: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + UdpEventDispatcher<I>,
+    C::Dispatcher: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection> + BindingsUdpContext<I>,
 {
     fn describe(&self) -> Option<fidl_fuchsia_io::NodeInfo> {
         self.get_state()

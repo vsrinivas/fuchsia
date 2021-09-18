@@ -59,8 +59,7 @@ pub(crate) mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
-use crate::ip::icmp::IcmpIpExt;
-use crate::transport::udp::{UdpEventDispatcher, UdpStateBuilder};
+use crate::transport::udp::UdpStateBuilder;
 use crate::{Ctx, EventDispatcher};
 
 /// A builder for transport layer state.
@@ -94,8 +93,3 @@ pub(crate) enum TransportLayerTimerId {}
 pub(crate) fn handle_timer<D: EventDispatcher>(_ctx: &mut Ctx<D>, id: TransportLayerTimerId) {
     match id {}
 }
-
-/// An event dispatcher for the transport layer.
-///
-/// See the `EventDispatcher` trait in the crate root for more details.
-pub trait TransportLayerEventDispatcher<I: IcmpIpExt>: UdpEventDispatcher<I> {}

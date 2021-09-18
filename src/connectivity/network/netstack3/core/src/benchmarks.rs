@@ -32,8 +32,7 @@ use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
-use crate::transport::udp::UdpEventDispatcher;
-use crate::transport::TransportLayerEventDispatcher;
+use crate::transport::udp::{BufferUdpContext, UdpContext};
 use crate::{IpLayerEventDispatcher, Ipv4StateBuilder, StackStateBuilder, TimerId};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
@@ -48,9 +47,9 @@ struct BenchmarkEventDispatcher {
     rng: FakeCryptoRng<XorShiftRng>,
 }
 
-impl<I: IcmpIpExt> UdpEventDispatcher<I> for BenchmarkEventDispatcher {}
+impl<I: IcmpIpExt> UdpContext<I> for BenchmarkEventDispatcher {}
 
-impl<I: IcmpIpExt> TransportLayerEventDispatcher<I> for BenchmarkEventDispatcher {}
+impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for BenchmarkEventDispatcher {}
 
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(

@@ -48,8 +48,10 @@ use netstack3_core::{
     handle_timer,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
     initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    IpLayerEventDispatcher, StackStateBuilder, TimerId, TransportLayerEventDispatcher,
+    IpLayerEventDispatcher, StackStateBuilder, TimerId,
 };
+
+use crate::bindings::socket::udp::BindingsUdpContext;
 
 /// A shorthand definition for the rather gnarly type signature of the lock
 /// obtained by the [`Lockable`] trait bound on [`StackContext`] that provides a
@@ -79,6 +81,8 @@ pub(crate) trait StackDispatcher:
     EventDispatcher
     + for<'a> IpLayerEventDispatcher<packet::Buf<&'a mut [u8]>>
     + for<'a> DeviceLayerEventDispatcher<packet::Buf<&'a mut [u8]>>
+    + BindingsUdpContext<Ipv4>
+    + BindingsUdpContext<Ipv6>
     + ConversionContext
     + Sync
     + Send
@@ -303,9 +307,6 @@ where
         Ok(())
     }
 }
-
-impl TransportLayerEventDispatcher<Ipv4> for BindingsDispatcher {}
-impl TransportLayerEventDispatcher<Ipv6> for BindingsDispatcher {}
 
 impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BindingsDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {

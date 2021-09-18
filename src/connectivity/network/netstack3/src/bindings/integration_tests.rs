@@ -20,21 +20,22 @@ use fuchsia_component::client;
 use futures::{lock::Mutex, Future};
 use net_types::{
     ethernet::Mac,
-    ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
+    ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither},
     SpecifiedAddr,
 };
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     error::NoRouteError,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
-    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, IpLayerEventDispatcher,
-    StackStateBuilder, TimerId, TransportLayerEventDispatcher,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
+    IpLayerEventDispatcher, StackStateBuilder, TimerId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 
 use crate::bindings::{
     context::Lockable,
     devices::DeviceInfo,
+    socket::udp::UdpSocketIpExt,
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, LockedStackContext, RequestStreamExt as _, StackContext, StackDispatcher,
 };
@@ -120,15 +121,15 @@ where
     }
 }
 
-impl<I: crate::bindings::socket::udp::UdpSocketIpExt> netstack3_core::UdpEventDispatcher<I>
-    for TestDispatcher
-{
+impl<I: UdpSocketIpExt> UdpContext<I> for TestDispatcher {}
+
+impl<I: UdpSocketIpExt, B: BufferMut> BufferUdpContext<I, B> for TestDispatcher {
     fn receive_udp_from_conn(
         &mut self,
         conn: netstack3_core::UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
-        body: &[u8],
+        body: B,
     ) {
         self.disp.receive_udp_from_conn(conn, src_ip, src_port, body)
     }
@@ -140,7 +141,7 @@ impl<I: crate::bindings::socket::udp::UdpSocketIpExt> netstack3_core::UdpEventDi
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,
-        body: &[u8],
+        body: B,
     ) {
         self.disp.receive_udp_from_listen(listener, src_ip, dst_ip, src_port, body)
     }
@@ -196,9 +197,6 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
         self.disp.send_frame(device, frame)
     }
 }
-
-impl TransportLayerEventDispatcher<Ipv4> for TestDispatcher {}
-impl TransportLayerEventDispatcher<Ipv6> for TestDispatcher {}
 
 impl<I: IcmpIpExt> IcmpEventDispatcher<I> for TestDispatcher {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {

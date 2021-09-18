@@ -30,8 +30,7 @@ use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::ip::IpLayerEventDispatcher;
-use crate::transport::udp::UdpEventDispatcher;
-use crate::transport::TransportLayerEventDispatcher;
+use crate::transport::udp::{BufferUdpContext, UdpContext};
 use crate::{handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
 /// Utilities to allow running benchmarks as tests.
@@ -738,9 +737,9 @@ impl DummyEventDispatcher {
     }
 }
 
-impl<I: IcmpIpExt> UdpEventDispatcher<I> for DummyEventDispatcher {}
+impl<I: IcmpIpExt> UdpContext<I> for DummyEventDispatcher {}
 
-impl<I: IcmpIpExt> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
+impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyEventDispatcher {}
 
 impl<I: IcmpIpExt> IcmpEventDispatcher<I> for DummyEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {

@@ -22,8 +22,9 @@ use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
 };
 
-use super::StackContext;
+use crate::bindings::socket::udp::BindingsUdpContext;
 use crate::bindings::util::{IntoCore, IntoFidl};
+use crate::bindings::StackContext;
 
 // Socket constants defined in FDIO in
 // `//sdk/lib/fdio/private-socket.h`
@@ -67,16 +68,16 @@ struct SocketWorkerProperties {}
 pub(crate) trait SocketStackDispatcher:
     AsRef<udp::UdpSocketCollection>
     + AsMut<udp::UdpSocketCollection>
-    + netstack3_core::UdpEventDispatcher<Ipv4>
-    + netstack3_core::UdpEventDispatcher<Ipv6>
+    + BindingsUdpContext<Ipv4>
+    + BindingsUdpContext<Ipv6>
 {
 }
 
 impl<T> SocketStackDispatcher for T where
     T: AsRef<udp::UdpSocketCollection>
         + AsMut<udp::UdpSocketCollection>
-        + netstack3_core::UdpEventDispatcher<Ipv4>
-        + netstack3_core::UdpEventDispatcher<Ipv6>
+        + BindingsUdpContext<Ipv4>
+        + BindingsUdpContext<Ipv6>
 {
 }
 

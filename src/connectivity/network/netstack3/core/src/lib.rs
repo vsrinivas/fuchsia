@@ -57,10 +57,10 @@ pub use crate::ip::{
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, SendError as UdpSendError,
-    UdpConnId, UdpConnInfo, UdpEventDispatcher, UdpListenerId, UdpListenerInfo,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext,
+    SendError as UdpSendError, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
 };
-pub use crate::transport::{TransportLayerEventDispatcher, TransportStateBuilder};
+pub use crate::transport::TransportStateBuilder;
 
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -339,12 +339,20 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
 /// `D: BufferDispatcher<B>` is shorthand for `D: EventDispatcher +
 /// DeviceLayerEventDispatcher<B>`.
 pub trait BufferDispatcher<B: BufferMut>:
-    EventDispatcher + DeviceLayerEventDispatcher<B> + IpLayerEventDispatcher<B>
+    EventDispatcher
+    + DeviceLayerEventDispatcher<B>
+    + IpLayerEventDispatcher<B>
+    + BufferUdpContext<Ipv4, B>
+    + BufferUdpContext<Ipv6, B>
 {
 }
 impl<
         B: BufferMut,
-        D: EventDispatcher + DeviceLayerEventDispatcher<B> + IpLayerEventDispatcher<B>,
+        D: EventDispatcher
+            + DeviceLayerEventDispatcher<B>
+            + IpLayerEventDispatcher<B>
+            + BufferUdpContext<Ipv4, B>
+            + BufferUdpContext<Ipv6, B>,
     > BufferDispatcher<B> for D
 {
 }
@@ -368,8 +376,12 @@ pub trait EventDispatcher:
     + DeviceLayerEventDispatcher<EmptyBuf>
     + IpLayerEventDispatcher<Buf<Vec<u8>>>
     + IpLayerEventDispatcher<EmptyBuf>
-    + TransportLayerEventDispatcher<Ipv4>
-    + TransportLayerEventDispatcher<Ipv6>
+    + UdpContext<Ipv4>
+    + UdpContext<Ipv6>
+    + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
+    + BufferUdpContext<Ipv4, EmptyBuf>
+    + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
+    + BufferUdpContext<Ipv6, EmptyBuf>
 {
 }
 
@@ -381,8 +393,12 @@ impl<
             + DeviceLayerEventDispatcher<EmptyBuf>
             + IpLayerEventDispatcher<Buf<Vec<u8>>>
             + IpLayerEventDispatcher<EmptyBuf>
-            + TransportLayerEventDispatcher<Ipv4>
-            + TransportLayerEventDispatcher<Ipv6>,
+            + UdpContext<Ipv4>
+            + UdpContext<Ipv6>
+            + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
+            + BufferUdpContext<Ipv4, EmptyBuf>
+            + BufferUdpContext<Ipv6, Buf<Vec<u8>>>
+            + BufferUdpContext<Ipv6, EmptyBuf>,
     > EventDispatcher for D
 {
 }
