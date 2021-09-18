@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite vim3_nna;
+
+using fuchsia.amlogic.platform;
+using fuchsia.platform;
+using fuchsia.registers;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A311D;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.NNA;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "register-reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.registers.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_REGISTER_ID == fuchsia.amlogic.platform.BIND_REGISTER_ID.NNA_RESET_LEVEL2;
+}

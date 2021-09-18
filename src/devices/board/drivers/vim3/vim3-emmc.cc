@@ -14,7 +14,8 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-emmc-bind.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 #define BIT_MASK(start, count) (((1 << (count)) - 1) << (start))
@@ -63,17 +64,6 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, A311D_GPIOBOOT(12)),
-};
-static const device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
-};
-static const device_fragment_t fragments[] = {
-    {"gpio", countof(gpio_fragment), gpio_fragment},
-};
-
 zx_status_t Vim3::EmmcInit() {
   zx_status_t status;
 
@@ -109,8 +99,8 @@ zx_status_t Vim3::EmmcInit() {
 
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), nullptr);
+  status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(vim3_emmc_fragments),
+                              countof(vim3_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

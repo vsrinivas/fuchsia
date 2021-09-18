@@ -10,7 +10,8 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-registers.h>
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-mali-bind.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 static const pbus_mmio_t mali_mmios[] = {
@@ -61,20 +62,10 @@ static pbus_dev_t mali_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-static const device_fragment_t mali_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
-
 zx_status_t Vim3::MaliInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(
-      &mali_dev, reinterpret_cast<uint64_t>(mali_fragments), countof(mali_fragments), nullptr);
+  zx_status_t status =
+      pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(vim3_mali_fragments),
+                         countof(vim3_mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
     return status;

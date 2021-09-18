@@ -6,6 +6,79 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
 
+driver_bind_rules("vim3-video-bind") {
+  rules = "vim3-video.bind"
+  header_output = "vim3-video-bind.h"
+  bind_output = "vim3-video-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("vim3-sdio-bind") {
+  rules = "vim3-sdio.bind"
+  header_output = "vim3-sdio-bind.h"
+  bind_output = "vim3-sdio-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a311d",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("vim3-nna-bind") {
+  rules = "vim3-nna.bind"
+  header_output = "vim3-nna-bind.h"
+  bind_output = "vim3-nna-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("vim3-mali-bind") {
+  rules = "vim3-mali.bind"
+  header_output = "vim3-mali-bind.h"
+  bind_output = "vim3-mali-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("vim3-emmc-bind") {
+  rules = "vim3-emmc.bind"
+  header_output = "vim3-emmc-bind.h"
+  bind_output = "vim3-emmc-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a311d",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("vim3-cpu-bind") {
+  rules = "vim3-cpu.bind"
+  header_output = "vim3-cpu-bind.h"
+  bind_output = "vim3-cpu-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a311d",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.power",
+  ]
+}
+
 driver_bind_rules("vim3-bind") {
   rules = "vim3.bind"
   header_output = "vim3-bind.h"
@@ -47,6 +120,12 @@ driver_module("vim3-driver") {
   ]
   deps = [
     ":vim3-bind",
+    ":vim3-cpu-bind_header",
+    ":vim3-emmc-bind_header",
+    ":vim3-mali-bind_header",
+    ":vim3-nna-bind_header",
+    ":vim3-sdio-bind_header",
+    ":vim3-video-bind_header",
     "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",

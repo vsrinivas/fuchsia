@@ -14,6 +14,7 @@
 #include <soc/aml-common/aml-cpu-metadata.h>
 #include <soc/aml-meson/g12b-clk.h>
 
+#include "src/devices/board/drivers/vim3/vim3-cpu-bind.h"
 #include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace {
@@ -27,90 +28,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
         .base = A311D_AOBUS_BASE,
         .length = A311D_AOBUS_LENGTH,
     },
-};
-
-constexpr zx_bind_inst_t big_power_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
-    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, static_cast<uint32_t>(A311dPowerDomains::kArmCoreBig)),
-};
-
-constexpr device_fragment_part_t big_power_dfp[] = {
-    {countof(big_power_match), big_power_match},
-};
-
-constexpr zx_bind_inst_t big_pll_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLL_DIV16),
-};
-
-constexpr device_fragment_part_t big_pll_div16_dfp[] = {
-    {countof(big_pll_div16_match), big_pll_div16_match},
-};
-
-constexpr zx_bind_inst_t big_cpu_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16),
-};
-
-constexpr device_fragment_part_t big_cpu_div16_dfp[] = {
-    {countof(big_cpu_div16_match), big_cpu_div16_match},
-};
-
-constexpr zx_bind_inst_t big_cpu_scaler_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::CLK_SYS_CPU_BIG_CLK),
-};
-
-constexpr device_fragment_part_t big_cpu_scaler_dfp[] = {
-    {countof(big_cpu_scaler_match), big_cpu_scaler_match},
-};
-
-constexpr zx_bind_inst_t little_power_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
-    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, static_cast<uint32_t>(A311dPowerDomains::kArmCoreLittle)),
-};
-
-constexpr device_fragment_part_t little_power_dfp[] = {
-    {countof(little_power_match), little_power_match},
-};
-
-constexpr zx_bind_inst_t little_pll_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLLB_DIV16),
-};
-
-constexpr device_fragment_part_t little_pll_div16_dfp[] = {
-    {countof(little_pll_div16_match), little_pll_div16_match},
-};
-
-constexpr zx_bind_inst_t little_cpu_div16_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16),
-};
-
-constexpr device_fragment_part_t little_cpu_div16_dfp[] = {
-    {countof(little_cpu_div16_match), little_cpu_div16_match},
-};
-
-constexpr zx_bind_inst_t little_cpu_scaler_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::CLK_SYS_CPU_LITTLE_CLK),
-};
-
-constexpr device_fragment_part_t little_cpu_scaler_dfp[] = {
-    {countof(little_cpu_scaler_match), little_cpu_scaler_match},
-};
-
-constexpr device_fragment_t fragments[] = {
-    {"power-01", countof(big_power_dfp), big_power_dfp},
-    {"clock-pll-div16-01", countof(big_pll_div16_dfp), big_pll_div16_dfp},
-    {"clock-cpu-div16-01", countof(big_cpu_div16_dfp), big_cpu_div16_dfp},
-    {"clock-cpu-scaler-01", countof(big_cpu_scaler_dfp), big_cpu_scaler_dfp},
-
-    {"power-02", countof(little_power_dfp), little_power_dfp},
-    {"clock-pll-div16-02", countof(little_pll_div16_dfp), little_pll_div16_dfp},
-    {"clock-cpu-div16-02", countof(little_cpu_div16_dfp), little_cpu_div16_dfp},
-    {"clock-cpu-scaler-02", countof(little_cpu_scaler_dfp), little_cpu_scaler_dfp},
 };
 
 constexpr amlogic_cpu::operating_point_t operating_points[] = {
@@ -177,8 +94,8 @@ constexpr pbus_dev_t cpu_dev = []() {
 namespace vim3 {
 
 zx_status_t Vim3::CpuInit() {
-  auto result = pbus_.CompositeDeviceAdd(&cpu_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), "power-01");
+  auto result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(vim3_cpu_fragments),
+                                   countof(vim3_cpu_fragments), "power-01");
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d", __func__, result);
   }

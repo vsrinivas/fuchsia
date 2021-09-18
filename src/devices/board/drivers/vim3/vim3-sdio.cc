@@ -12,8 +12,9 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
-#include "vim3-gpios.h"
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-gpios.h"
+#include "src/devices/board/drivers/vim3/vim3-sdio-bind.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 
@@ -54,17 +55,6 @@ static const pbus_metadata_t sdio_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, A311D_GPIOX(6)),
-};
-static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
-};
-static const device_fragment_t sdio_fragments[] = {
-    {"gpio-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-};
-
 zx_status_t Vim3::SdioInit() {
   zx_status_t status;
 
@@ -89,8 +79,8 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_SDIO_CLK, A311D_GPIOX_4_SDIO_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
-  if ((status = pbus_.CompositeDeviceAdd(&sdio_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                         countof(sdio_fragments), nullptr)) != ZX_OK) {
+  if ((status = pbus_.AddComposite(&sdio_dev, reinterpret_cast<uint64_t>(vim3_sdio_fragments),
+                                   countof(vim3_sdio_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
     return status;
   }

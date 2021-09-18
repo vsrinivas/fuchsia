@@ -11,7 +11,8 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-registers.h>
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-nna-bind.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 
@@ -83,22 +84,9 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
-};
-
-static const device_fragment_part_t reset_fragment[] = {
-    {countof(reset_match), reset_match},
-};
-
-static const device_fragment_t fragments[] = {
-    {"register-reset", countof(reset_fragment), reset_fragment},
-};
-
 zx_status_t Vim3::NnaInit() {
-  zx_status_t status = pbus_.CompositeDeviceAdd(&nna_dev, reinterpret_cast<uint64_t>(fragments),
-                                                countof(fragments), nullptr);
+  zx_status_t status = pbus_.AddComposite(&nna_dev, reinterpret_cast<uint64_t>(vim3_nna_fragments),
+                                          countof(vim3_nna_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Vim3::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

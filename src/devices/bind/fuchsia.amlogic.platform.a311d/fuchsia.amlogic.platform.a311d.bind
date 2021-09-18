@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.amlogic.platform.s905d2;
+library fuchsia.amlogic.platform.a311d;
 
-// Values taken from <soc/aml-s905d2/s905d2-gpio.h>
+// Values taken from <soc/aml-a311d/a311d-gpio.h>
 
 extend uint fuchsia.BIND_PWM_ID {
     PWM_A = 0,
@@ -144,5 +144,6 @@ uint GPIOE_PIN_ID {
 };
 
 uint POWER_DOMAIN {
-  ARM_CORE = 0,
+  ARM_CORE_BIG = 0,
+  ARM_CORE_LITTLE = 1,
 };

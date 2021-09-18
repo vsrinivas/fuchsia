@@ -11,7 +11,8 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-meson/g12b-clk.h>
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-video-bind.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 
@@ -64,39 +65,6 @@ static constexpr pbus_irq_t vim_video_irqs[] = {
     },
 };
 
-static constexpr zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-static constexpr zx_bind_inst_t canvas_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
-};
-static constexpr zx_bind_inst_t dos_gclk0_vdec_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_VDEC),
-};
-static constexpr zx_bind_inst_t clk_dos_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS),
-};
-static constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-static constexpr device_fragment_part_t canvas_fragment[] = {
-    {countof(canvas_match), canvas_match},
-};
-static constexpr device_fragment_part_t dos_gclk0_vdec_fragment[] = {
-    {countof(dos_gclk0_vdec_match), dos_gclk0_vdec_match},
-};
-static constexpr device_fragment_part_t clk_dos_fragment[] = {
-    {countof(clk_dos_match), clk_dos_match},
-};
-static constexpr device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"clock-dos-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
-    {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
-};
-
 zx_status_t Vim3::VideoInit() {
   pbus_dev_t video_dev = {};
   video_dev.name = "aml-video";
@@ -112,8 +80,8 @@ zx_status_t Vim3::VideoInit() {
 
   zx_status_t status;
 
-  if ((status = pbus_.CompositeDeviceAdd(&video_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), nullptr)) != ZX_OK) {
+  if ((status = pbus_.AddComposite(&video_dev, reinterpret_cast<uint64_t>(vim3_video_fragments),
+                                   countof(vim3_video_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d", status);
     return status;
   }
