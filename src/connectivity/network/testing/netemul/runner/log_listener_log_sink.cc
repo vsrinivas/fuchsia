@@ -55,11 +55,11 @@ void LogListenerLogSinkImpl::LogImpl(fuchsia::logger::LogMessage m) {
   // insert tags:
   size_t pos = 0;
   for (const auto& tag : m.tags) {
-    auto len = tag.length();
+    size_t len = tag.length();
     if (len > FX_LOG_MAX_TAG_LEN - 1) {
       len = FX_LOG_MAX_TAG_LEN - 1;
     }
-    packet.data[pos] = len;
+    packet.data[pos] = static_cast<char>(len);
     pos++;
     memcpy(&packet.data[pos], tag.c_str(), len);
     pos += len;

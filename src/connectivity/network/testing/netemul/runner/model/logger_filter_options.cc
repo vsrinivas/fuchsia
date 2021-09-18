@@ -40,10 +40,15 @@ bool LoggerFilterOptions::ParseFromJSON(const rapidjson::Value& value, json::JSO
   for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
     if (i->name == kVerbosity) {
       if (!i->value.IsUint()) {
-        parser->ReportError("logger_options enabled must be a unsigned integer value");
+        parser->ReportError("logger_options verbosity must be a unsigned integer value");
         return false;
       }
-      verbosity_ = i->value.GetUint();
+      unsigned int v = i->value.GetUint();
+      if (v > std::numeric_limits<uint8_t>::max()) {
+        parser->ReportError("logger_options verbosity must fit in a uint8");
+        return false;
+      }
+      verbosity_ = static_cast<uint8_t>(i->value.GetUint());
     } else if (i->name == kTags) {
       if (i->value.IsNull()) {
         continue;

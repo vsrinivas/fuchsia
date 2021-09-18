@@ -669,7 +669,7 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
 
   for (int i = 0; i < 3; i++) {
     // send buff 2 from eth endpoint:
-    eth1.Send(test_buff2.data(), test_buff2.size());
+    eth1.Send(test_buff2.data(), static_cast<uint16_t>(test_buff2.size()));
     // Read the next frame.
     fake_ep->Read([&ok, &test_buff2](std::vector<uint8_t> data, uint64_t dropped) {
       EXPECT_EQ(dropped, 0u);
