@@ -608,14 +608,20 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 		NIC:  info.NICID,
 	}
 
-	ep, err := packet.NewEndpoint(c.stack, true /* cooked */, header.IPv4ProtocolNumber, &c.wq)
+	// We pass the zero value network protocol to make sure we don't receive
+	// packets so that we can bind to IPv4 on the interface we are interested in.
+	//
+	// This prevents us from receiving packets that arrive on interfaces different
+	// from the interface the client is performing DHCP on.
+	ep, err := packet.NewEndpoint(c.stack, true /* cooked */, 0 /* netProto */, &c.wq)
 	if err != nil {
 		return Config{}, fmt.Errorf("packet.NewEndpoint(_, true, header.IPv4ProtocolNumber, _): %s", err)
 	}
 	defer ep.Close()
 
 	recvOn := tcpip.FullAddress{
-		NIC: info.NICID,
+		NIC:  info.NICID,
+		Port: uint16(header.IPv4ProtocolNumber),
 	}
 	if err := ep.Bind(recvOn); err != nil {
 		return Config{}, fmt.Errorf("ep.Bind(%+v): %s", recvOn, err)
