@@ -15,6 +15,15 @@ fuchsia_component("common-unittests") {
   deps = [ "common:unittests" ]
 }
 
+fuchsia_component("framework-unittests") {
+  testonly = true
+  manifest = "meta/framework-unittests.cml"
+  deps = [ "framework:unittests" ]
+}
+
 fuchsia_test_package("component-fuzzing-tests") {
-  test_components = [ ":common-unittests" ]
+  test_components = [
+    ":common-unittests",
+    ":framework-unittests",
+  ]
 }

@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("engine") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "corpus.cc",
+    "corpus.h",
+  ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "corpus-unittest.cc" ]
+  deps = [
+    ":engine",
+    "//third_party/googletest:gtest",
+  ]
+}

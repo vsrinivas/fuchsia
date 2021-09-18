@@ -22,6 +22,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fit",
     "//src/lib/fxl",
+    "//zircon/system/ulib/zx",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
