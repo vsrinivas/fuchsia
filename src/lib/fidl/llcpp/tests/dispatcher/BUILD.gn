@@ -15,6 +15,19 @@ group("dispatcher") {
   ]
 }
 
+source_set("client_test_helpers") {
+  public = [
+    "client_checkers.h",
+    "mock_client_impl.h",
+  ]
+  testonly = true
+  visibility = [ ":*" ]
+  public_deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
 test("fidl_llcpp_dispatcher_tests_bin") {
   output_name = "fidl_llcpp_dispatcher_tests"
   public = [ "mock_client_impl.h" ]
@@ -29,6 +42,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
     "transaction_tests.cc",
   ]
   deps = [
+    ":client_test_helpers",
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_llcpp",
     "//zircon/public/lib/async-cpp",

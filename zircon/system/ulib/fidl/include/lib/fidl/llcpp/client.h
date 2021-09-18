@@ -182,6 +182,9 @@ class WireClient {
   ClientImpl& operator*() const { return *get(); }
 
  private:
+  // Allow unit tests to peek into the internals of this class.
+  friend ::fidl_testing::ClientChecker;
+
   ClientImpl* get() const { return static_cast<ClientImpl*>(controller_.get()); }
 
   WireClient(const WireClient& other) noexcept = delete;
@@ -445,6 +448,9 @@ class WireSharedClient final {
   ClientImpl& operator*() const { return *get(); }
 
  private:
+  // Allow unit tests to peek into the internals of this class.
+  friend ::fidl_testing::ClientChecker;
+
   ClientImpl* get() const { return static_cast<ClientImpl*>(controller_.get()); }
 
   WireSharedClient(const WireSharedClient& other) noexcept = default;

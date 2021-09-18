@@ -25,6 +25,7 @@
 namespace fidl_testing {
 // Forward declaration of test helpers to support friend declaration.
 class ClientBaseChecker;
+class ClientChecker;
 }  // namespace fidl_testing
 
 namespace fidl {

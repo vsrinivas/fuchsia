@@ -19,6 +19,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "client_checkers.h"
 #include "mock_client_impl.h"
 
 namespace fidl {
@@ -164,7 +165,7 @@ TEST(WireSharedClient, Clone) {
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   for (size_t i = 0; i < kNumClones; i++) {
     auto clone = client.Clone();
-    contexts.emplace_back(std::make_unique<TestResponseContext>(clone.operator->()));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(&*clone));
     // Generate a txid for a ResponseContext.
     clone->PrepareAsyncTxn(contexts.back().get());
     // Both clone and the client should delegate to the same underlying binding.
@@ -199,16 +200,16 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
   {
     fidl::internal::WireClientImpl<TestProtocol>* client_ptr = nullptr;
     fidl::WireSharedClient<TestProtocol> outer_clone;
-    ASSERT_NULL(outer_clone.operator->());
+    ASSERT_CLIENT_IMPL_NULL(outer_clone);
 
     {
       fidl::WireSharedClient<TestProtocol> inner_clone;
-      ASSERT_NULL(inner_clone.operator->());
+      ASSERT_CLIENT_IMPL_NULL(inner_clone);
 
       {
         fidl::WireSharedClient client(std::move(endpoints->client), loop.dispatcher(),
                                       observer.GetEventHandler());
-        ASSERT_NOT_NULL(client.operator->());
+        ASSERT_CLIENT_IMPL_NOT_NULL(client);
         client_ptr = &*client;
 
         ASSERT_OK(loop.RunUntilIdle());
@@ -218,7 +219,7 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
         inner_clone = client.Clone();
       }
 
-      ASSERT_NOT_NULL(inner_clone.operator->());
+      ASSERT_CLIENT_IMPL_NOT_NULL(inner_clone);
       ASSERT_EQ(&*inner_clone, client_ptr);
 
       ASSERT_OK(loop.RunUntilIdle());
@@ -228,7 +229,7 @@ TEST(WireSharedClient, CloneCanExtendClientLifetime) {
       outer_clone = inner_clone.Clone();
     }
 
-    ASSERT_NOT_NULL(outer_clone.operator->());
+    ASSERT_CLIENT_IMPL_NOT_NULL(outer_clone);
     ASSERT_EQ(&*outer_clone, client_ptr);
 
     ASSERT_OK(loop.RunUntilIdle());

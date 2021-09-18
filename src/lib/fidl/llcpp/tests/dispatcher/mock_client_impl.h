@@ -108,13 +108,6 @@ class TestResponseContext : public fidl::internal::ResponseContext {
   fidl::internal::WireClientImpl<TestProtocol>* client_;
 };
 
-class ClientBaseChecker {
- public:
-  static std::shared_ptr<zx::channel> GetChannel(fidl::internal::ClientBase* client_base) {
-    return client_base->GetChannel();
-  }
-};
-
 }  // namespace fidl_testing
 
 #endif  // SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_MOCK_CLIENT_IMPL_H_

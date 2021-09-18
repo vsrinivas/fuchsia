@@ -21,6 +21,7 @@
 #include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
+#include "client_checkers.h"
 #include "mock_client_impl.h"
 
 namespace fidl {
@@ -63,7 +64,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
-  TestResponseContext context(client.operator->());
+  TestResponseContext context(&*client);
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
   fidl_message_header_t hdr;
@@ -110,7 +111,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   std::vector<std::unique_ptr<TestResponseContext>> contexts;
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    contexts.emplace_back(std::make_unique<TestResponseContext>(client.operator->()));
+    contexts.emplace_back(std::make_unique<TestResponseContext>(&*client));
     threads[i] = std::thread([context = contexts[i].get(), remote = &remote.channel(), &client] {
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
@@ -138,7 +139,7 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
-  TestResponseContext context(client.operator->());
+  TestResponseContext context(&*client);
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
 
