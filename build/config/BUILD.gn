@@ -662,8 +662,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/tools/bt-hci-tool:*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool:*",
     "//src/connectivity/lib/network-device/cpp:*",
-    "//src/connectivity/network/drivers/network-device:*",
-    "//src/connectivity/network/drivers/network-device/device:*",
     "//src/connectivity/network/mdns/service:*",
     "//src/connectivity/network/testing/netemul/lib/network:*",
     "//src/connectivity/network/testing/netemul/runner:*",

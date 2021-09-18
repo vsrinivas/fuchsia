@@ -76,7 +76,8 @@ zx::status<netdev::wire::SessionInfo> TestSession::GetInfo() {
   info.set_data(alloc_, std::move(data_vmo));
   info.set_descriptors(alloc_, std::move(descriptors_vmo));
   info.set_descriptor_version(alloc_, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-  info.set_descriptor_length(alloc_, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
+  info.set_descriptor_length(alloc_,
+                             static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
   info.set_descriptor_count(alloc_, descriptors_count_);
   return zx::ok(std::move(info));
 }

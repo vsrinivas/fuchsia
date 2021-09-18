@@ -1385,7 +1385,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
     std::unique_ptr rx_space = impl_.PopRxBuffer();
     // Set the port ID to an offset based the index, we should expect the session to only see port
     // 13.
-    uint8_t port_id = kPort13 + i;
+    uint8_t port_id = kPort13 + static_cast<uint8_t>(i);
     // Write some data so the buffer makes it into the session.
     ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
     std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space), port_id);

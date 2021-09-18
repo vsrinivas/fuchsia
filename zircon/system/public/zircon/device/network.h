@@ -14,7 +14,7 @@
 // Flags and constants are found on the definition of the fuchsia.hardware.network
 // FIDL library.
 
-#define NETWORK_DEVICE_DESCRIPTOR_VERSION (1)
+#define NETWORK_DEVICE_DESCRIPTOR_VERSION ((uint8_t)1)
 
 // A buffer descriptor, which contains a region of the data VMO that can be used
 // to store data plus associated metadata.

@@ -25,6 +25,8 @@ static_assert(offsetof(buffer_descriptor_t, port_id) == 8);
 static_assert(offsetof(buffer_descriptor_t, offset) == 16);
 static_assert(offsetof(buffer_descriptor_t, head_length) == 24);
 static_assert(offsetof(buffer_descriptor_t, inbound_flags) == 32);
+// Descriptor length is reported as uint8 words in session info, make sure that fits.
+static_assert(sizeof(buffer_descriptor_t) / sizeof(uint64_t) < std::numeric_limits<uint8_t>::max());
 
 namespace {
 const char* DeviceStatusToString(network::internal::DeviceStatus status) {
