@@ -1478,19 +1478,19 @@ Possible values:
 
 **Current value (from the default):** `"default"`
 
-From //build/images/fvm.gni:98
+From //build/images/fvm.gni:102
 
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:91
+From //build/images/fvm.gni:95
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:89
+From //build/images/fvm.gni:93
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1501,13 +1501,13 @@ room to initialize on boot.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:88
+From //build/images/fvm.gni:92
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:90
+From //build/images/fvm.gni:94
 
 ### fvm_max_disk_size
 The max size of the disk where the FVM is written. This is used for
@@ -2351,6 +2351,14 @@ From //zircon/kernel/lib/crashlog/params.gni:14
 **Current value (from the default):** `false`
 
 From //build/images/fvm.gni:78
+
+### minfs_board_maximum_data_bytes
+TODO(fxbug.dev/83978): Remove this arg which is used as part of a temporary
+workaround.
+
+**Current value (from the default):** `false`
+
+From //build/images/fvm.gni:83
 
 ### minfs_board_minimum_data_bytes
 
