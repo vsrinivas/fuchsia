@@ -819,7 +819,14 @@ def main():
         os.path.join(src_root, ".fx-build-dir"),
         # TODO(jayzhuang): flutter's dart_libraries currently don't have sources
         # listed, fix that and remove this exception.
-        os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter")
+        os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter"),
+        # The Dart format and analyzer want to write to $HOME/.dart/...
+        # but there is no HOME defined when running `fx build`, so they end
+        # up writing to the output directory instead. Ignore these since this
+        # is harmless. This is favored to setting a fake HOME value in
+        # the `hermetic-env` script (used by `fx build`), because it allows
+        # catching other tools trying to write to $HOME in the future.
+        os.path.join(os.getcwd(), ".dart"),
     }
     ignored_suffixes = {
         # TODO(fxb/71190): The following is a temporary symlink.
