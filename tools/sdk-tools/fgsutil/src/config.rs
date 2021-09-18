@@ -5,10 +5,14 @@
 //! Configuration data for fgsutil.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     serde::{Deserialize, Serialize},
     serde_json,
-    std::{fs::OpenOptions, io::BufReader, path::Path},
+    std::{
+        fs::OpenOptions,
+        io::{BufReader, ErrorKind},
+        path::Path,
+    },
 };
 
 /// Store the user's configuration data.
@@ -28,13 +32,16 @@ pub async fn write_config(config: &Configuration, file_path: &Path) -> Result<()
 }
 
 /// Retrieve the user's configuration data.
+///
+/// If no file is found a default configuration will be returned.
 pub async fn read_config(file_path: &Path) -> Result<Configuration> {
-    let file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(false)
-        .open(file_path)
-        .context("read config.json")?;
+    let file = match OpenOptions::new().read(true).write(true).create(false).open(file_path) {
+        Ok(f) => f,
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => return Ok(Configuration::default()),
+            _ => bail!("Trying to open config file: {:?}", e),
+        },
+    };
     let buf_reader = BufReader::new(file);
     let config = serde_json::from_reader(buf_reader)?;
     Ok(config)
@@ -50,6 +57,16 @@ pub struct Configuration {
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct GCS {
     pub refresh_token: Option<String>,
+}
+
+impl GCS {
+    /// Get the refresh token or error with explanation that it's required.
+    pub fn require_refresh_token(&self) -> Result<String> {
+        let a = self.refresh_token.as_ref().ok_or(anyhow!(
+            "Missing OAuth token. Please run `fgsutil config` to set up OAuth and retry."
+        ))?;
+        Ok(a.to_string())
+    }
 }
 
 #[cfg(test)]

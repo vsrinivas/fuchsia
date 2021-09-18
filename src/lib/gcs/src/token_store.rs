@@ -258,12 +258,17 @@ impl TokenStore {
     }
 
     /// Reads content of a stored object (blob) from GCS.
+    ///
+    /// A leading slash "/" on `object` will be ignored.
     pub(crate) async fn download(
         &self,
         https_client: &HttpsClient,
         bucket: &str,
         object: &str,
     ) -> Result<Response<Body>> {
+        // If the bucket and object are from a gs:// URL, the object may have a
+        // undesirable leading slash. Trim it if present.
+        let object = if object.starts_with('/') { &object[1..] } else { object };
         let res = self.attempt_download(https_client, bucket, object).await?;
         Ok(match res.status() {
             StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {

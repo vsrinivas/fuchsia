@@ -8,12 +8,18 @@
 
 use {
     crate::config::{read_config, write_config, Configuration},
-    anyhow::{anyhow, bail, Result},
-    args::{Args, SubCommand},
+    anyhow::{anyhow, bail, Context, Result},
+    args::{Args, CatArgs, ConfigArgs, CpArgs, ListArgs, SubCommand},
     fuchsia_hyper::new_https_client,
-    gcs::token_store::{auth_code_url, TokenStore},
+    gcs::{
+        client::{Client, ClientFactory},
+        token_store::{auth_code_url, TokenStore},
+    },
     home::home_dir,
+    hyper::Uri,
     std::{
+        convert::TryFrom,
+        fs::OpenOptions,
         io::{self, BufRead, BufReader, Read, Write},
         path::{Path, PathBuf},
     },
@@ -21,6 +27,8 @@ use {
 
 mod args;
 mod config;
+
+const VERSION: &str = "0.1";
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<()> {
@@ -31,13 +39,28 @@ async fn main() -> Result<()> {
 
 /// A wrapper for the main program flow (allows for easier testing).
 async fn main_helper(args: Args) -> Result<()> {
+    if args.version {
+        println!("Version {}", VERSION);
+        return Ok(());
+    }
     let config_path = build_config_path()?;
     match args.cmd {
-        SubCommand::Cat(_) => cat_command(&config_path).await,
-        SubCommand::Config(_) => config_command(&config_path).await,
-        SubCommand::Cp(_) => cp_command(&config_path).await,
-        SubCommand::List(_) => list_command(&config_path).await,
+        Some(cmd) => match cmd {
+            SubCommand::Cat(args) => cat_command(&args, &config_path).await,
+            SubCommand::Config(args) => config_command(&args, &config_path).await,
+            SubCommand::Cp(args) => cp_command(&args, &config_path).await,
+            SubCommand::List(args) => list_command(&args, &config_path).await,
+        },
+        None => bail!("Please enter a subcommand such as help, cat, config, cp, or list."),
     }
+}
+
+/// Helper function form common task of creating a client factory.
+async fn create_client_factory(config_path: &Path) -> Result<ClientFactory> {
+    let config = read_config(&config_path).await?;
+    let refresh_token = config.gcs.require_refresh_token()?.to_string();
+    let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None);
+    Ok(ClientFactory::new(token_store))
 }
 
 /// Determine where the configuration file should be.
@@ -49,21 +72,39 @@ fn build_config_path() -> Result<PathBuf> {
 }
 
 /// Handle the `cat` (concatenate) command and its args.
-async fn cat_command(config_path: &Path) -> Result<()> {
-    let _config = read_config(&config_path).await?;
-    println!("The cat command is a WIP. Nothing here yet.");
+///
+/// Loop over a list of gs URLs printing contents to stdout.
+async fn cat_command(args: &CatArgs, config_path: &Path) -> Result<()> {
+    let factory = create_client_factory(config_path).await?;
+    let client = factory.create_client();
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    write_downloads(&mut handle, &client, &args.gs_url).await?;
+    Ok(())
+}
+
+async fn write_downloads<W>(writer: &mut W, client: &Client, urls: &[String]) -> Result<()>
+where
+    W: Write,
+{
+    if urls.is_empty() {
+        bail!("One or more URLs are required. (e.g. gs://foo/bar)");
+    }
+    for gs_url in urls {
+        let url = Uri::try_from(gs_url)?;
+        let bucket = url.host().ok_or(anyhow!("A bucket is required: {:?}", gs_url))?;
+        let object = url.path();
+        client.write(bucket, object, writer).await?;
+    }
     Ok(())
 }
 
 /// Handle the `config` (configuration/set up) command and its args.
-async fn config_command(config_path: &Path) -> Result<()> {
-    let stdout = io::stdout();
-    let mut output = stdout.lock();
-    let stdin = io::stdin();
-    let mut input = stdin.lock();
-    let auth_code_ = get_auth_code(&mut output, &mut input)?;
-
-    let refresh_token = auth_code_to_refresh(&auth_code_).await?;
+///
+/// Prompt user for auth code and store the value in a configuration file.
+async fn config_command(_args: &ConfigArgs, config_path: &Path) -> Result<()> {
+    let auth_code = get_auth_code()?;
+    let refresh_token = auth_code_to_refresh(&auth_code).await?;
     let mut config = Configuration::default();
     config.gcs.refresh_token = Some(refresh_token.to_owned());
 
@@ -81,21 +122,41 @@ async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
 }
 
 /// Handle the `cp` (copy) command and its args.
-async fn cp_command(config_path: &Path) -> Result<()> {
-    let _config = read_config(&config_path).await?;
-    println!("The cp command is a WIP. Nothing here yet.");
-    Ok(())
+///
+/// Very limited version of gsutil cp: download one file only.
+async fn cp_command(args: &CpArgs, config_path: &Path) -> Result<()> {
+    let factory = create_client_factory(config_path).await?;
+    let client = factory.create_client();
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .truncate(true)
+        .open(&args.destination)
+        .context("create output file")?;
+    write_downloads(&mut file, &client, &vec![args.source.to_string()]).await
 }
 
 /// Handle the `ls` (list) command and its args.
-async fn list_command(config_path: &Path) -> Result<()> {
+async fn list_command(_args: &ListArgs, config_path: &Path) -> Result<()> {
     let _config = read_config(&config_path).await?;
     println!("The list command is a WIP. Nothing here yet.");
     Ok(())
 }
 
 /// Ask the user to visit a URL and copy-paste the auth code provided.
-fn get_auth_code<W, R>(writer: &mut W, reader: &mut R) -> Result<String>
+///
+/// A helper wrapper around get_auth_code_with() using stdin/stdout.
+fn get_auth_code() -> Result<String> {
+    let stdout = io::stdout();
+    let mut output = stdout.lock();
+    let stdin = io::stdin();
+    let mut input = stdin.lock();
+    get_auth_code_with(&mut output, &mut input)
+}
+
+/// Ask the user to visit a URL and copy-paste the auth code provided.
+fn get_auth_code_with<W, R>(writer: &mut W, reader: &mut R) -> Result<String>
 where
     W: Write,
     R: Read,
@@ -115,17 +176,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        gcs::{client::ClientFactory, token_store::TokenStore},
-    };
+    use super::*;
 
     async fn gcs_download() -> Result<()> {
-        let stdout = io::stdout();
-        let mut output = stdout.lock();
-        let stdin = io::stdin();
-        let mut input = stdin.lock();
-        let auth_code = get_auth_code(&mut output, &mut input)?;
+        let auth_code = get_auth_code()?;
         let token_store =
             TokenStore::new_with_code(&new_https_client(), &auth_code).await.expect("token_store");
 
@@ -159,10 +213,10 @@ mod tests {
     }
 
     #[test]
-    fn test_get_auth_code() {
+    fn test_get_auth_code_with() {
         let mut output: Vec<u8> = Vec::new();
         let mut input = "fake_auth_code".as_bytes();
-        let auth_code = get_auth_code(&mut output, &mut input).expect("auth code");
+        let auth_code = get_auth_code_with(&mut output, &mut input).expect("auth code");
         assert_eq!(auth_code, "fake_auth_code");
     }
 
