@@ -855,6 +855,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
     }
 
     if (conn == nullptr) {
+      // If we received a spurious reset, just ignore the request.
+      if (header->op == VIRTIO_VSOCK_OP_RST) {
+        continue;
+      }
+
       // Build a connection to send a connection reset.
       auto new_conn = std::make_unique<NullConnection>();
       conn = new_conn.get();

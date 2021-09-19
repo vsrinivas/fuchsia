@@ -206,6 +206,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     EXPECT_EQ(buffer->used_bytes, header->len + sizeof(*header));
   }
 
+  // Read a packet sent from the host to the guest.
   RxBuffer* DoReceive() {
     RunLoopUntilIdle();
     if (!rx_queue_.HasUsed()) {
@@ -217,6 +218,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     return buffer;
   }
 
+  // Send a packet from the guest to the host.
   void DoSend(uint32_t host_port, uint32_t guest_cid, uint32_t guest_port, uint16_t type,
               uint16_t op) {
     virtio_vsock_hdr_t tx_header = {
@@ -526,6 +528,15 @@ TEST_F(VirtioVsockTest, Reset) {
   connection.socket.reset();
   RunLoopUntilIdle();
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH);
+}
+
+// The device should not send any response to a spurious reset packet.
+TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
+  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
+         VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RST);
+  RunLoopUntilIdle();
+  RxBuffer* buffer = DoReceive();
+  EXPECT_EQ(nullptr, buffer);
 }
 
 TEST_F(VirtioVsockTest, ShutdownRead) {
