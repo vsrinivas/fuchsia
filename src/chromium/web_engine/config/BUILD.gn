@@ -4,14 +4,8 @@
 
 import("//build/config.gni")
 
-config_data("force-device-scale-factor--2") {
+config_data("chromebook") {
   for_pkg = "web_engine"
-  sources = [ "force_device_scale_factor__2.json" ]
-  outputs = [ "config.json" ]
-}
-
-config_data("force-device-scale-factor--1_25") {
-  for_pkg = "web_engine"
-  sources = [ "force_device_scale_factor__1_25.json" ]
+  sources = [ "chromebook.json" ]
   outputs = [ "config.json" ]
 }

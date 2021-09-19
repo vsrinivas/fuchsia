@@ -49,7 +49,7 @@ board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
 
 board_package_labels += [
   "//src/ui/scenic/config:chromebook",
-  "//src/chromium/web_engine/config:force-device-scale-factor--1_25",
+  "//src/chromium/web_engine/config:chromebook",
 ]
 
 # Partitions for fx flash to flash.

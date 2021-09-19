@@ -1,5 +1,6 @@
 {
     "command-line-args": {
+        "enable-features": "CanvasOopRasterization",
         "force-device-scale-factor": "1.25"
     }
 }
