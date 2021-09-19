@@ -18,6 +18,7 @@ zx_library("stdcompat") {
   sdk_headers = [
     "lib/stdcompat/algorithm.h",
     "lib/stdcompat/array.h",
+    "lib/stdcompat/atomic.h",
     "lib/stdcompat/bit.h",
     "lib/stdcompat/cstddef.h",
     "lib/stdcompat/functional.h",
@@ -38,6 +39,7 @@ zx_library("stdcompat") {
     # section.
     "lib/stdcompat/internal/algorithm.h",
     "lib/stdcompat/internal/array.h",
+    "lib/stdcompat/internal/atomic.h",
     "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
     "lib/stdcompat/internal/functional.h",
