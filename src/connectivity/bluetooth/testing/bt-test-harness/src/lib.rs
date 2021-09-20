@@ -6,6 +6,7 @@ use fuchsia_zircon::{Duration, DurationNum};
 
 pub mod access;
 pub mod bootstrap;
+pub mod core_realm;
 pub mod emulator;
 pub mod host_driver;
 pub mod host_watcher;

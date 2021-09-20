@@ -105,3 +105,38 @@ pub async fn mock_dev(
     fs.collect::<()>().await;
     Ok(())
 }
+
+/// A mock component serving a protocol `S` on `handles`. Specifically, this services S by calling
+/// `responder` for every request of every client connection to S.
+pub async fn stateless_mock_responder<S, F>(
+    handles: MockHandles,
+    responder: F,
+) -> Result<(), anyhow::Error>
+where
+    S: DiscoverableProtocolMarker,
+    <<S as ProtocolMarker>::RequestStream as TryStream>::Ok: std::fmt::Debug,
+    F: Fn(<<S as ProtocolMarker>::RequestStream as TryStream>::Ok) -> Result<(), Error>
+        + Copy
+        + Send
+        + 'static,
+{
+    let mut fs = ServiceFs::new();
+    // The FIDL service's task is generated for every client connection, hence the `F: Copy` bound
+    // in order to use `responder` inside the task. F's bound could be changed to `Clone` in the
+    // future, but we chose not to do so for now to avoid unexpected implicit `clone`s.
+    let _ = fs.dir("svc").add_fidl_service(
+        move |mut req_stream: <S as ProtocolMarker>::RequestStream| {
+            fasync::Task::local(async move {
+                let failure_msg = format!("serving {} request stream failed", S::PROTOCOL_NAME);
+                while let Some(req) = req_stream.try_next().await.expect(&failure_msg) {
+                    let failed_to_respond = format!("failed to respond to req {:?}", req);
+                    responder(req).expect(&failed_to_respond);
+                }
+            })
+            .detach()
+        },
+    );
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
+}

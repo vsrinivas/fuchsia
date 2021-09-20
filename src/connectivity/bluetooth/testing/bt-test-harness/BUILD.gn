@@ -3,26 +3,40 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("bt-test-harness") {
   with_unit_tests = true
+  testonly = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:host-rustc",
     "//src/connectivity/bluetooth/lib/device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/hci-emulator-client",
+    "//src/connectivity/bluetooth/testing/realmbuilder-mock-helpers",
     "//src/connectivity/bluetooth/testing/test-harness",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
@@ -34,9 +48,17 @@ rustc_library("bt-test-harness") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  # Add components used by core_realm to the library
+  deps += [
+    ":isolated-devmgr-component",
+    ":test-bt-init",
+    "//src/connectivity/bluetooth/core/bt-gap:test-stash-secure",
+  ]
+
   sources = [
     "src/access.rs",
     "src/bootstrap.rs",
+    "src/core_realm.rs",
     "src/emulator.rs",
     "src/host_driver.rs",
     "src/host_watcher.rs",
@@ -46,5 +68,25 @@ rustc_library("bt-test-harness") {
     "src/low_energy_central.rs",
     "src/low_energy_peripheral.rs",
     "src/profile.rs",
+  ]
+}
+
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    "//src/connectivity/bluetooth/core/bt-host:driver",
+    "//src/connectivity/bluetooth/hci/emulator:driver",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+  ]
+}
+
+fuchsia_component("test-bt-init") {
+  manifest = "meta/test-bt-init.cml"
+  deps = [
+    "//src/connectivity/bluetooth/core/bt-gap:component-v2",
+    "//src/connectivity/bluetooth/core/bt-init:bin_v2",
+    "//src/connectivity/bluetooth/core/bt-init:default-config",
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
   ]
 }

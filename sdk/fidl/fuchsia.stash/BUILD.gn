@@ -16,6 +16,7 @@ fidl("fuchsia.stash") {
     # fxbug.dev/47602 audit the below
     "//garnet/bin/setui/*",
     "//src/connectivity/bluetooth/core/bt-gap/*",
+    "//src/connectivity/bluetooth/testing/*",
     "//src/connectivity/bluetooth/tests/bt-manifest-integration-tests/*",
     "//src/connectivity/network/*",
     "//src/connectivity/network/dhcpd-cli/*",
