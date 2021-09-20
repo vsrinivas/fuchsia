@@ -149,26 +149,11 @@ function repro {
   fi
 
   print_comment "Set the build configuration:"
-  if is_feature_enabled "legacy_set"; then
-    # TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
-    # been deleted.
-    fint_params_contents="$(<"$fint_params_file")"
-    repro_build_config
-  else
-    # TODO(fxbug.dev/68465): Stop setting the --disable flag after the
-    # legacy_set feature has been deleted.
-    print_cmd "fx --disable=legacy_set --dir=${build_dir_name} set --fint-params-path '$fint_params_file_relative'"
-  fi
+  print_cmd "fx --dir=${build_dir_name} set --fint-params-path '$fint_params_file_relative'"
   print_spacer
 
   print_comment "Build:"
-  if is_feature_enabled "legacy_set"; then
-    # TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
-    # been deleted.
-    print_cmd "fx build"
-  else
-    print_cmd "fx build --fint-params-path '$fint_params_file_relative'"
-  fi
+  print_cmd "fx build --fint-params-path '$fint_params_file_relative'"
   print_spacer
 
   print_comment "If necessary, start an emulator or connect a device"
@@ -359,142 +344,5 @@ function main {
 
   repro "$project" "$bucket" "$builder" "$build_id"
 }
-
-################################## LEGACY CODE #################################
-# TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
-# been deleted.
-
-function repro_build_config {
-  local product board gn_args build_type variants
-
-  product="$(get_product)"
-  if [[ -z "${product}" ]]; then
-    unsupported_params "Cannot find product definition"
-    exit 1
-  fi
-  board="$(get_board)"
-  if [[ -z "${board}" ]]; then
-    board="$(get_target)"
-    if [[ -z "${board}" ]]; then
-      unsupported_params "Cannot find board definition"
-      exit 1
-    fi
-  fi
-  build_type="$(get1 optimize)"
-  build_type="$(to_lower "$build_type")"
-  gn_args=""
-
-  local cmd=( fx --dir "${build_dir_name}" set "$(get_product).${board}" )
-
-  if [[ "${build_type}" == "release" ]]; then
-    cmd+=("--release")
-  fi
-
-  while IFS= read -r line ; do if [[ -n "$line" ]]; then
-    cmd+=( "--with-base" "'$line'" )
-  fi; done <<< "$(getN base_packages)"
-  while IFS= read -r line ; do if [[ -n "$line" ]]; then
-    cmd+=( "--with" "'$line'" )
-  fi; done <<< "$(getN universe_packages)"
-  while IFS= read -r line ; do if [[ -n "$line" ]]; then
-    cmd+=( "--with-cache" "'$line'" )
-  fi; done <<< "$(getN cache_packages)"
-  while IFS= read -r line ; do if [[ -n "$line" ]]; then
-    cmd+=( "--args" "'$line'" )
-  fi; done <<< "$(getN gn_args)"
-
-  # for most variants, we can use "fx set --variant" argument, but in some cases,
-  # for example --fuzz-with, the fint_params has the full variant object specified in
-  # the variants proto field, so we need to give raw gn args to 'fx set'.
-  # Alternatively, we could check if the fint_params has exactly what fx set --fuzz-with
-  # generates, but that would add too many dependencies on internal knowledge of
-  # both fint params and fx set, without an easy way to detect when either changes.
-  variants="$(getN variants)"
-  if [[ $variants =~ \{ ]]; then
-    gn_args+="select_variant = ["
-    while IFS= read -r line ; do if [[ -n "$line" ]]; then
-      if [[ $line =~ \{ ]]; then
-        gn_args+="$line,"
-      else
-        # simple variants need to be quoted
-        gn_args+="\\\"$line\\\","
-      fi
-    fi; done <<< "$variants"
-    gn_args+="]"
-  else
-    while IFS= read -r line ; do if [[ -n "$line" ]]; then
-      cmd+=( "--variant" "'$line'" )
-    fi; done <<< "$variants"
-  fi
-
-  if [[ -n "$gn_args" ]]; then
-    cmd+=( "--args '$gn_args'" )
-  fi
-  print_cmd "${cmd[@]}"
-}
-
-function get_board {
-  get board <<< "$fint_params_contents" | sed 's/.*\/\([^/]*\).gni/\1/'
-}
-function get_target {
-  to_lower "$(get target_arch <<< "$fint_params_contents")"
-}
-function get_product {
-  get product <<< "$fint_params_contents" | sed 's/.*\/\([^/]*\).gni/\1/'
-}
-function getN {
-  get "$1" 0 <<< "$fint_params_contents"
-}
-function get1 {
-  get "$1" 1 <<< "$fint_params_contents"
-}
-# Warning: the code below performs a fragile parse of the fint params proto.
-# In order to improve the robustness of this code, it should use the protobuf schema
-# in //tools/integration/cmd/fint/proto/static.proto.
-function get {
-  local name="$1"
-  local multiple=0
-  if [[ $# -eq 3 ]]; then
-    multiple=$2
-  fi
-
-  # remote leading spaces
-  sed 's/^ *//' |
-  # extract a field from a section
-  awk "
-    {
-      found=0;
-    }
-    /^$name: / {
-      if ($multiple == 1 && found == 1) {
-        print \"Found more than one instance of $name. Aborting.\"
-        exit 22
-      }
-      sub(/^$name: /, \"\")
-      print
-      found=1
-    }
-  " | sed 's/^\s*"//; s/"\s*$//; s/\\//g;'  # now remove quotes and backslashes if needed
-}
-
-function to_lower {
-  echo "$1" | tr '[:upper:]' '[:lower:]'
-}
-
-function unsupported_params {
-  local message="$*"
-  fx-error "Cannot convert these fint params to 'fx' commands: $message"
-  fx-error "If this is not expected, please report at go/fx-repro-unsupported"
-  fx-error "And attach the following information:"
-  {
-    echo "--------------------------------"
-    echo "Error: $message"
-    echo "$fint_params_file:"
-    echo "$fint_params_contents"
-    echo "--------------------------------"
-  } >/dev/stderr
-}
-
-############################## END LEGACY CODE #################################
 
 main "$@"

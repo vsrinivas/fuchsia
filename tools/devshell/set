@@ -108,8 +108,7 @@
 ##                         provided delimited by commas or the --with-host
 ##                         argument can be provided multiple times.
 ##   --cargo-toml-gen      Enable generation of Cargo.toml files
-##   --dev                 Always recompile fx-set from source. Ignored unless
-##                         the legacy_set feature is disabled.
+##   --dev                 Always recompile fx-set from source.
 ##
 ## Example:
 ##
@@ -122,39 +121,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 set -e
-
-function find_config {
-  local config_type="$1"
-  local config_name="$2"
-
-  for directory in vendor/*/"${config_type}" "${config_type}"; do
-    local guessed_config="${directory}/${config_name}.gni"
-    if [[ -a "${guessed_config}" ]]; then
-      echo "${guessed_config}"
-      return
-    fi
-  done
-
-  fx-error "Could not find a ${config_type} configuration matching \"${config_name}\""
-  fx-error "Checked:"
-  for directory in vendor/*/"${config_type}" "${config_type}"; do
-    local guessed_config="${directory}/${config_name}.gni"
-    fx-error "  ${guessed_config}"
-  done
-  exit 1
-}
-
-function explain-goal-argument {
-  fx-error You must specify which product and which board you wish to build.
-  fx-error Example:
-  fx-error "  fx set core.x64"
-  fx-error
-  fx-error Run \"fx list-products\" to see the available products.
-  fx-error Run \"fx list-boards\" to see the available boards.
-  fx-error Run \"fx set --help\" to see full usage.
-  fx-error Run \"fx status\" to see the current developer settings.
-  return 0
-}
 
 function main {
   fx-standard-switches "$@"
@@ -173,406 +139,60 @@ function main {
     set -- "$@" "$arg"
   done
 
-  if ! is_feature_enabled "legacy_set"; then
-    # Cache the compiled executable for later invocations.
-    readonly exe_path="${FX_CACHE_DIR}/fx-set"
+  # Cache the compiled executable for later invocations.
+  readonly exe_path="${FX_CACHE_DIR}/fx-set"
+  readonly revision_file="${FX_CACHE_DIR}/fx-set-revision"
+  local current_revision
+  current_revision="$(git -C "$FUCHSIA_DIR" rev-parse HEAD)"
 
-    readonly revision_file="${FX_CACHE_DIR}/fx-set-revision"
-    local current_revision
-    current_revision="$(git -C "$FUCHSIA_DIR" rev-parse HEAD)"
+  # Determine whether we need to rebuild the fx-set executable. We'll only
+  # rebuild if the --dev flag is set, or if the cached version of fx-set was
+  # built at a revision other than the current revision. We determine that by
+  # storing the current HEAD of fuchsia.git in a cached version file whenever
+  # we build fx-set, and then we rebuild if the current HEAD differs from the
+  # revision referenced in the cached file.
+  local should_rebuild=true
+  if ! $dev && [ -f "$exe_path" ] && [ -f "$revision_file" ]; then
+    local fx_set_revision
+    fx_set_revision="$(head -n 1 "$revision_file")"
+    if [ "$fx_set_revision" = "$current_revision" ]; then
+      should_rebuild=false
+    fi
+  fi
 
-    # Determine whether we need to rebuild the fx-set executable. We'll only
-    # rebuild if the --dev flag is set, or if the cached version of fx-set was
-    # built at a revision other than the current revision. We determine that by
-    # storing the current HEAD of fuchsia.git in a cached version file whenever
-    # we build fx-set, and then we rebuild if the current HEAD differs from the
-    # revision referenced in the cached file.
-    local should_rebuild=true
-    if ! $dev && [ -f "$exe_path" ] && [ -f "$revision_file" ]; then
-      local fx_set_revision
-      fx_set_revision="$(head -n 1 "$revision_file")"
-      if [ "$fx_set_revision" = "$current_revision" ]; then
-        should_rebuild=false
+  if $should_rebuild; then
+    # Build in a temporary directory where we can arrange the module.
+    #
+    # Avoid "TMPDIR" since Go looks at that environment variable.
+    BUILD_DIR=$(mktemp -d)
+    trap 'rm -rf $BUILD_DIR' EXIT
+    pushd "$BUILD_DIR" > /dev/null
+    for target in go.{mod,sum} vendor; do
+      ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
+    done
+    # fx-set's only local imports (direct and transitive) are from //tools. We
+    # can symlink more top-level directories as necessary if fx-set ever needs
+    # to import their code.
+    ln -s "$FUCHSIA_DIR"/tools .
+    # GOPROXY=off enforces that we only use vendored dependencies and don't
+    # download anything.
+    # GO111MODULE=on ensures that we use modules for the build even if the
+    # user has GO111MODULE=off in their local environment.
+    if ! GOPROXY=off GO111MODULE=on fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd; then
+      if ! $dev; then # If running in dev mode, compilation failures are expected.
+        fx-error "Failed to build fx set."
+        fx-error "Please file a bug using \`fx report-bug set\` with the full error copy-pasted."
       fi
-    fi
-
-    if $should_rebuild; then
-      # Build in a temporary directory where we can arrange the module.
-      #
-      # Avoid "TMPDIR" since Go looks at that environment variable.
-      BUILD_DIR=$(mktemp -d)
-      trap 'rm -rf $BUILD_DIR' EXIT
-      pushd "$BUILD_DIR" > /dev/null
-      for target in go.{mod,sum} vendor; do
-        ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
-      done
-      # fx-set's only local imports (direct and transitive) are from //tools. We
-      # can symlink more top-level directories as necessary if fx-set ever needs
-      # to import their code.
-      ln -s "$FUCHSIA_DIR"/tools
-      # GOPROXY=off enforces that we only use vendored dependencies and don't
-      # download anything.
-      # GO111MODULE=on ensures that we use modules for the build even if the
-      # user has GO111MODULE=off in their local environment.
-      if ! GOPROXY=off GO111MODULE=on fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd; then
-        # TODO(fxbug.dev/68465): Remove this error handling once the Go version
-        # of fx-set has been rolled out and the old `fx set` code deleted.
-        if ! $dev; then # If running in dev mode, compilation failures are expected.
-          fx-error "Failed to build fx set."
-          fx-error "Please file a bug using \`fx report-bug set\` with the full error copy-pasted."
-          fx-error "Rerun your command using the uncompiled version:"
-          fx-error "  fx --enable=legacy_set set $*"
-        fi
-        return 1
-      fi
-      popd > /dev/null
-
-      # Record the current HEAD *after* building fx-set so that we always try
-      # to rebuild on subsequent attempts if compilation fails the first time.
-      echo "$current_revision" > "$revision_file"
-    fi
-
-    exec "$exe_path" "$@"
-  fi
-
-  ################################## LEGACY CODE #################################
-  # Everything below is no longer used by default. If you need to make a change
-  # to the behavior of `fx set`, make the change both here and in
-  # //tools/build/fx-set/cmd to ensure consistency between the two.
-  # TODO(fxbug.dev/68465): Delete all the below code and use the Go
-  # implementation unconditionally on 2021-09-14.
-
-  if [[ $# -lt 1 ]]; then
-      fx-error Missing an explicit PRODUCT.BOARD goal.
-      explain-goal-argument
-      return 1
-  fi
-
-  cd "${FUCHSIA_DIR}"
-
-  local gn_args=""
-  case "$1" in
-    *.*)
-      local product_name="${1%.*}"
-      local board_name="${1##*.}"
-      local product board
-      product="$(find_config "products" "${product_name}")"
-      board="$(find_config "boards" "${board_name}")"
-      if [[ "${product}" == "" ]] || [[ "${board}" == "" ]]; then
-        exit 1
-      fi
-      gn_args+=" import(\"//${board}\") import(\"//${product}\")"
-      gn_args+=" build_info_board=\"${board_name}\" build_info_product=\"${product_name}\""
-      ;;
-    *)
-      fx-error "Unable to parse PRODUCT.BOARD goal \"$1\""
-      explain-goal-argument
-      return 1
-      ;;
-  esac
-  shift
-
-  local gn_cmd='gen'
-  local -a gn_switches=(--fail-on-unused-args --check=system --export-rust-project --export-compile-commands=default --ninja-executable="${PREBUILT_NINJA}")
-  local gn_after_args=""
-  local base_packages=()
-  local cache_packages=()
-  local universe_packages=()
-  local host_labels=()
-  local auto_dir_variants=
-  local auto_dir=false
-  local is_release=false
-  local build_dir=
-  local variant=
-  local use_goma
-  local goma_dir
-  local ensure_goma=1
-  local enable_rbe=0
-  local cargo_toml_gen=0
-  local ccache
-  while [[ $# -ne 0 ]]; do
-    case "$1" in
-      --auto-dir)
-        if [[ -n "${_FX_BUILD_DIR}" ]]; then
-          fx-error "fx --dir and fx set --auto-dir are mutually exclusive, pick one."
-          return 1
-        fi
-        auto_dir=true
-        ;;
-      --with-base)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        IFS="," read -r -a labels <<< "$2"
-        base_packages+=("${labels[@]}")
-        shift
-        ;;
-      --with-cache)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        IFS="," read -r -a labels <<< "$2"
-        cache_packages+=("${labels[@]}")
-        shift
-        ;;
-      --with)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        IFS="," read -r -a labels <<< "$2"
-        universe_packages+=("${labels[@]}")
-        shift
-        ;;
-      --with-host)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        IFS="," read -r -a labels <<< "$2"
-        host_labels+=("${labels[@]}")
-        shift
-        ;;
-      --cargo-toml-gen)
-        cargo_toml_gen=1
-        ;;
-      --netboot)
-        gn_after_args+=" enable_netboot=true"
-        ;;
-      --goma)
-        use_goma=1
-        ;;
-      --no-goma)
-        use_goma=0
-        ;;
-      --no-ensure-goma)
-        ensure_goma=0
-        ;;
-      --goma-dir)
-        # TODO(haowei): Remove it once no other script use it.
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        goma_dir=$2
-        if [[ ! -d "${goma_dir}" ]]; then
-          fx-error "GOMA directory does not exist: ${goma_dir}"
-          return 1
-        fi
-        use_goma=1
-        shift
-        ;;
-      --rbe)
-        enable_rbe=1
-        ;;
-      --build-dir)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        if [[ -n "${_FX_BUILD_DIR}" ]]; then
-          fx-error "fx --dir and fx set --build-dir are mutually exclusive, pick one."
-          return 1
-        fi
-        fx-warn "DEPRECATED: \"fx set --build-dir DIR\""
-        fx-warn "       NEW: \"fx --dir DIR set\""
-        build_dir="$2"
-        shift
-        ;;
-      --release)
-        gn_args+=" is_debug=false"
-        is_release=true
-        ;;
-      --variant)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        variant+="\"$2\","
-        auto_dir_variants+="-$2"
-        shift
-        ;;
-      --fuzz-with)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        variant+="{variant=\"$2-fuzzer\" target_type=[\"fuzzed_executable\"]},"
-        # TODO(fxbug.dev/38226): Fuzzers need a version of libfdio.so that is sanitized,
-        # but doesn't collect coverage data.
-        variant+="{variant=\"$2\" label=[\"//sdk/lib/fdio\"]},"
-        shift
-        ;;
-      --args)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        gn_args+=" $2"
-        shift
-        ;;
-      --help-args)
-        gn_cmd=args
-        if [[ $# -ge 2 ]] && [[ "$2" != '--*' ]]; then
-          gn_switches+=("--list=$2")
-          shift
-        else
-          gn_switches+=(--list)
-        fi
-        fx-warn "DEPRECATED: \"fx set --help-args[=ARG]\""
-        fx-warn "       NEW: \"fx args [--list=ARG]\""
-        ;;
-      --ccache)
-        ccache=1
-        ;;
-      --no-ccache)
-        ccache=0
-        ;;
-      --ide)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        gn_switches+=("--ide=$2")
-        shift
-        ;;
-      --json-ide-script)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        gn_switches+=("--json-ide-script=$2")
-        shift
-        ;;
-      *)
-        fx-error "Unknown argument \"$1\""
-        fx-command-help
-        return 1
-        ;;
-    esac
-    shift
-  done
-
-  if [[ -z "${build_dir}" ]]; then
-    build_dir="${_FX_BUILD_DIR}"
-  fi
-
-  # Remove any trailing slash from build directory name.
-  build_dir="${build_dir%/}"
-
-  local config_build_dir
-  if $auto_dir; then
-    if [[ -n "$build_dir" ]]; then
-      fx-error "--auto-dir and --build-dir are mutually exclusive, pick one."
       return 1
     fi
-    if [[ "$auto_dir_variants" == */* ]]; then
-      fx-error "--auto-dir only works with simple catch-all --variant switches; choose your own directory name with fx --dir for a complex configuration"
-      return 1
-    fi
-    config_build_dir="out/${product_name}.${board_name}${auto_dir_variants}"
-    if $is_release; then
-      config_build_dir+="-release"
-    fi
-  else
-    case "$build_dir" in
-      '')
-        # Default is "//out/default".  Store it as relative.
-        config_build_dir="out/default"
-        ;;
-      //*|out/*)
-        # GN-style "source-relative" path or relative out/something.
-        config_build_dir="${build_dir#//}"
-        ;;
-      *)
-        fx-error "Invalid build directory: ${build_dir}"
-        fx-error "Please specify a build directory as \"out/something\"."
-        exit 1
-        ;;
-    esac
-  fi
-  build_dir="${FUCHSIA_DIR}/${config_build_dir}"
+    popd > /dev/null
 
-  # Automatically detect goma and ccache if not specified explicitly.
-  if [[ -z "${use_goma}" ]] && [[ -z "${ccache}" ]]; then
-    # Use Goma if the user has authorized with the Goma service.
-    if fx-command-run goma_auth info > /dev/null 2>&1; then
-      use_goma=1
-    elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
-      ccache=1
-    fi
-  elif [[ "${use_goma}" -eq 1 ]] && [[ "${ccache}" -eq 1 ]]; then
-    fx-error "--goma and --ccache are mutually exclusive, pick one."
-    return 1
+    # Record the current HEAD *after* building fx-set so that we always try
+    # to rebuild on subsequent attempts if compilation fails the first time.
+    echo "$current_revision" > "$revision_file"
   fi
 
-  # Add goma or ccache settings as appropriate.
-  if [[ "${use_goma}" -eq 1 ]]; then
-    gn_args+=" use_goma=true"
-  else
-    gn_args+=" use_goma=false"
-    if [[ "${ccache}" -eq 1 ]]; then
-      gn_args+=" use_ccache=true"
-    fi
-  fi
-
-  # Add rbe settings.
-  if [[ "${enable_rbe}" -eq 1 ]]; then
-    gn_args+=" enable_rbe=true"
-  fi
-
-  gn_args+="
-# See: fx args --list=base_package_labels
-base_package_labels+=["
-
-  for package in "${base_packages[@]}"; do
-    gn_args+="\"${package}\","
-  done
-  gn_args+="]
-
-# See: fx args --list=cache_package_labels
-cache_package_labels+=["
-
-  for package in "${cache_packages[@]}"; do
-    gn_args+="\"${package}\","
-  done
-  gn_args+="]
-
-# See: fx args --list=universe_package_labels
-universe_package_labels+=["
-
-  for package in "${universe_packages[@]}"; do
-    gn_args+="\"${package}\","
-  done
-  gn_args+="]
-
-# See: fx args --list=host_labels
-host_labels+=["
-
-  for label in "${host_labels[@]}"; do
-    gn_args+="\"${label}\","
-  done
-  gn_args+="]"
-
-  if [[ -n "${variant}" ]]; then
-    gn_args+=" select_variant=[${variant}]"
-  fi
-
-  if [[ "${cargo_toml_gen}" -eq 1 ]]; then
-    gn_args+=" base_package_labels += [ \"//build/rust:cargo_toml_gen\" ]"
-  fi
-
-  gn_args+="${gn_after_args}"
-
-  fx-gn ${gn_cmd} "${build_dir}" "${gn_switches[@]}" --args="${gn_args}" "$@"
-
-  fx-change-build-dir "${config_build_dir}"
-
-  if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
-    fx-command-run goma || return $?
-  fi
+  exec "$exe_path" "$@"
 }
 
 main "$@"

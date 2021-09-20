@@ -5,38 +5,32 @@
 
 ### Test basic fx execution flows
 
-MOCKED_GN="prebuilt/third_party/gn/test/gn"
-
 export BT_FILE_DEPS=(
   "scripts/fx"
   "tools/devshell/set"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
-  "tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni"
-  "tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni"
 )
 export BT_MOCKED_TOOLS=(
   "tools/devshell/lib/metrics.sh"
   "tools/devshell/lib/platform.sh"
-  "${MOCKED_GN}"
+  "_isolated_path_for/git"
+)
+export BT_MKDIR_DEPS=(
+  ".fx"
+  ".jiri_root"
 )
 
-export BT_MKDIR_DEPS=(
-  ".jiri_root"
-  "products"
-  "boards"
-)
+CURRENT_REVISION="abc123"
 
 BT_SET_UP() {
-  # These tests are specific to the legacy version of fx set.
-  export FUCHSIA_DISABLED_legacy_set=0
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
   _FUCHSIA_DIR="${BT_TEMP_DIR}"
   fx="${_FUCHSIA_DIR}/scripts/fx"
   BT_ASSERT_FILE_EXISTS "${fx}"
-  cp "${_FUCHSIA_DIR}/tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni" "${_FUCHSIA_DIR}/products"
-  cp "${_FUCHSIA_DIR}/tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni" "${_FUCHSIA_DIR}/boards"
 
   cat > "${_FUCHSIA_DIR}/tools/devshell/lib/metrics.sh.mock_side_effects" <<EOF
   function track-command-execution {
@@ -46,91 +40,60 @@ BT_SET_UP() {
     echo ""
   }
 EOF
-  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/platform.sh.mock_side_effects" <<EOF
-    readonly PREBUILT_GN="\${FUCHSIA_DIR}/${MOCKED_GN}"
+  echo "echo $CURRENT_REVISION" > "${PATH_DIR_FOR_TEST}/git.mock_side_effects"
+}
+
+# Neither .fx/fx-set nor .fx/fx-set-revision exists.
+TEST_fx-set-clean-build() {
+  fx_set_output="fx-set running"
+
+  # Mock an `fx go` command that produces an `fx-set` executable.
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/go"
+  fx_set=${_FUCHSIA_DIR}/.fx/fx-set
+  echo "echo 'echo $fx_set_output' > '$fx_set' && chmod +x '$fx_set'" > "${BT_TEMP_DIR}/tools/devshell/go.mock_side_effects"
+
+  output="$(BT_ASSERT "$fx" set myproduct.myboard)"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$output" "$fx_set_output"
+}
+
+# .fx/fx-set and .fx/fx-set-revision both exist, and are up-to-date, so no
+# rebuild is necessary.
+TEST_fx-set-no-rebuild() {
+  # If the fx-set-revision and fx-set files are already present, no rebuild
+  # should happen.
+  echo "$CURRENT_REVISION" > "${_FUCHSIA_DIR}/.fx/fx-set-revision"
+  fx_set_output="fx-set running"
+  echo "echo '$fx_set_output'" > "${_FUCHSIA_DIR}/.fx/fx-set"
+  chmod +x "${_FUCHSIA_DIR}/.fx/fx-set"
+
+  # Make sure `fx go` fails if called.
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/go"
+  cat > "${BT_TEMP_DIR}/tools/devshell/go.mock_side_effects" << "EOF"
+    exit 1
 EOF
-  local build_dir="$_FUCHSIA_DIR/out/default"
-  cat > "${_FUCHSIA_DIR}/${MOCKED_GN}.mock_side_effects" <<EOF
-    # The mocked GN executable needs to produce an 'fx.config' file in the output
-    # directory, or else 'fx-change-build-dir' will fail.
-    mkdir -p "$build_dir"
-    touch "${build_dir}/fx.config"
 
-    # Print the GN command line so that tests can inspect stdout to see what
-    # arguments 'fx set' passed to GN.
-    echo "\$@"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard)"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$output" "$fx_set_output"
+}
+
+# .fx/fx-set exists but an old revision is stored in .fx/fx-set-revision, so we
+# need to rebuild.
+TEST_fx-set-out-of-date-rebuild() {
+  echo "old_revision" > "${_FUCHSIA_DIR}/.fx/fx-set-revision"
+  fx_set_output="fx-set running"
+  echo "echo '$fx_set_output'" > "${_FUCHSIA_DIR}/.fx/fx-set"
+  chmod +x "${_FUCHSIA_DIR}/.fx/fx-set"
+
+  # Make sure `fx go` prints a distinctive substring if called.
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/go"
+  cat > "${BT_TEMP_DIR}/tools/devshell/go.mock_side_effects" << "EOF"
+    echo "rebuilding"
 EOF
-}
 
-# ensure that "fx set product.board" calls gn with the expected args
-TEST_fx-set() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma)"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
-}
-
-# ensure that "fx set product.board --with ..." calls gn with the expected args
-TEST_fx-set-with() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with //bundles:tests,//src:tests --with //tools:tests)"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=["//bundles:tests","//src:tests","//tools:tests"'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
-}
-
-# ensure that "fx set product.board --with-base ..." calls gn with the expected args
-TEST_fx-set-with-base() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-base "//bundles:tests")"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=["//bundles:tests"'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
-}
-
-# ensure that "fx set product.board --with-cache ..." calls gn with the expected args
-TEST_fx-set-with-cache() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-cache "//bundles:tests")"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=["//bundles:tests"'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=[]'
-}
-
-# ensure that "fx set product.board --with-host ..." calls gn with the expected args
-TEST_fx-set-with-host() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --with-host "//bundles:tests")"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'host_labels+=["//bundles:tests"'
-}
-
-# ensure that "fx set product.board --fuzz-with ..." calls gn with the expected args
-TEST_fx-set-fuzz-with() {
-  local output
-  output="$(BT_ASSERT "$fx" set myproduct.myboard --no-goma --fuzz-with foosan)"
-  local select_variant='select_variant=\['
-  select_variant+='{variant="foosan-fuzzer" target_type=\["fuzzed_executable"\]},'
-  select_variant+='{variant="foosan" label=\["//sdk/lib/fdio"\]},'
-  select_variant+='\]'
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" "$select_variant"
+  output="$(BT_ASSERT "$fx" set myproduct.myboard)"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$output" "$fx_set_output"
+  # `fx go build` should have been called.
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$output" "rebuilding"
 }
 
 BT_RUN_TESTS "$@"
