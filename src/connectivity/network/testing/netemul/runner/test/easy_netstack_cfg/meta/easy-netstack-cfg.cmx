@@ -7,8 +7,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.name.Lookup",
-            "fuchsia.net.stack.Log",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.posix.socket.Provider"
