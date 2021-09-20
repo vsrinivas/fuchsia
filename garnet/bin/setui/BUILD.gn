@@ -98,7 +98,6 @@ rustc_library("lib") {
     "src/agent/earcons/utils.rs",
     "src/agent/earcons/volume_change_handler.rs",
     "src/agent/inspect.rs",
-    "src/agent/inspect_config.rs",
     "src/agent/inspect_policy.rs",
     "src/agent/inspect_setting_data.rs",
     "src/agent/media_buttons.rs",

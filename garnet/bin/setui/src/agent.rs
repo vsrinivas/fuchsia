@@ -39,9 +39,6 @@ pub(crate) mod inspect;
 /// Earcons.
 pub(crate) mod earcons;
 
-/// Agent for capturing config load events.
-pub(crate) mod inspect_config;
-
 /// Agent for capturing policy state from messages from the message hub to
 /// policy proxies.
 pub(crate) mod inspect_policy;
