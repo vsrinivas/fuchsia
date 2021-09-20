@@ -10,7 +10,7 @@ Magma is the gpu driver architecture for Fuchsia. There are two driver component
 ## Hardware requirements
 
 ### Vulkan conformant gpu
-Magma is designed to support [Vulkan](vulkan.md), though it could be used to implement OpenGL or other graphics APIs.  Fuchsia intends to support OpenGL via translation to Vulkan using ANGLE.
+Magma is designed to support [Vulkan](vulkan.md), though it could be used to implement OpenGL or other graphics APIs.  Fuchsia intends to support software consuming OpenGL APIs via translation to Vulkan using ANGLE.
 
 ### MMU
 A memory management unit that allows arbitrary mapping of system memory pages into the GPU address space is needed for DMA to/from non-contiguous buffers.
