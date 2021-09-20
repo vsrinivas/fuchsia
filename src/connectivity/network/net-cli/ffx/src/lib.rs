@@ -14,12 +14,13 @@ use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
-const STACK_SELECTOR: &str = "core/appmgr:out:fuchsia.net.stack.Stack";
-const NETSTACK_SELECTOR: &str = "core/appmgr:out:fuchsia.netstack.Netstack";
-const FILTER_SELECTOR: &str = "core/appmgr:out:fuchsia.net.filter.Filter";
-const LOG_SELECTOR: &str = "core/appmgr:out:fuchsia.net.stack.Log";
-const NEIGHBOR_CONTROLLER_SELECTOR: &str = "core/appmgr:out:fuchsia.net.neighbor.Controller";
-const NEIGHBOR_VIEW_SELECTOR: &str = "core/appmgr:out:fuchsia.net.neighbor.View";
+const STACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.stack.Stack";
+const NETSTACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.netstack.Netstack";
+const FILTER_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.filter.Filter";
+const LOG_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.stack.Log";
+const NEIGHBOR_CONTROLLER_SELECTOR: &str =
+    "core/network/netstack:expose:fuchsia.net.neighbor.Controller";
+const NEIGHBOR_VIEW_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.neighbor.View";
 
 struct FfxConnector {
     remote_control: fremotecontrol::RemoteControlProxy,
