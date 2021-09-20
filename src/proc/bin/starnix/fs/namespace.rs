@@ -148,16 +148,16 @@ pub struct LookupContext {
 impl LookupContext {
     pub fn new(symlink_mode: SymlinkMode) -> LookupContext {
         LookupContext {
-            remaining_follows: MAX_SYMLINK_FOLLOWS,
             symlink_mode,
+            remaining_follows: MAX_SYMLINK_FOLLOWS,
             must_be_directory: false,
         }
     }
 
     pub fn with(&self, symlink_mode: SymlinkMode) -> LookupContext {
         LookupContext {
-            remaining_follows: self.remaining_follows,
             symlink_mode,
+            remaining_follows: self.remaining_follows,
             must_be_directory: self.must_be_directory,
         }
     }
@@ -165,7 +165,7 @@ impl LookupContext {
     pub fn update_for_path<'a>(&mut self, path: &'a FsStr) -> &'a FsStr {
         if path.last() == Some(&b'/') {
             self.must_be_directory = true;
-            &path[..path.len() - 1]
+            trim_trailing_slashes(path)
         } else {
             path
         }
@@ -176,6 +176,10 @@ impl Default for LookupContext {
     fn default() -> Self {
         LookupContext::new(SymlinkMode::Follow)
     }
+}
+
+fn trim_trailing_slashes(path: &FsStr) -> &FsStr {
+    path.iter().rposition(|c| *c != b'/').map(|last| &path[..(last + 1)]).unwrap_or(b"")
 }
 
 /// A node in a mount namespace.
@@ -248,21 +252,21 @@ impl NamespaceNode {
     }
 
     /// Traverse down a parent-to-child link in the namespace.
-    pub fn lookup(
+    pub fn lookup_child(
         &self,
         context: &mut LookupContext,
         task: &Task,
-        name: &FsStr,
+        basename: &FsStr,
     ) -> Result<NamespaceNode, Errno> {
         if !self.entry.node.is_dir() {
             error!(ENOTDIR)
-        } else if name == b"." || name == b"" {
+        } else if basename == b"." || basename == b"" {
             Ok(self.clone())
-        } else if name == b".." {
+        } else if basename == b".." {
             // TODO: make sure this can't escape a chroot
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
-            let mut child = self.with_new_entry(self.entry.component_lookup(name)?);
+            let mut child = self.with_new_entry(self.entry.component_lookup(basename)?);
             while child.entry.node.info().mode.is_lnk() {
                 match context.symlink_mode {
                     SymlinkMode::NoFollow => {
@@ -280,7 +284,7 @@ impl NamespaceNode {
                                 } else {
                                     self.clone()
                                 };
-                                task.lookup_node(context, link_directory, &link_target)?
+                                task.lookup_path(context, link_directory, &link_target)?
                             }
                             SymlinkTarget::Node(node) => node,
                         }
@@ -430,15 +434,20 @@ mod test {
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
-        let dev =
-            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let dev = ns
+            .root()
+            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
-        let dev =
-            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let dev = ns
+            .root()
+            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .expect("failed to lookup dev");
         let mut context = LookupContext::default();
-        let pts = dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+        let pts =
+            dev.lookup_child(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -459,22 +468,25 @@ mod test {
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
-        let dev =
-            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let dev = ns
+            .root()
+            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
         let mut context = LookupContext::default();
         let new_dev = ns
             .root()
-            .lookup(&mut context, &task_owner.task, b"dev")
+            .lookup_child(&mut context, &task_owner.task, b"dev")
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
         let mut context = LookupContext::default();
-        let _new_pts =
-            new_dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+        let _new_pts = new_dev
+            .lookup_child(&mut context, &task_owner.task, b"pts")
+            .expect("failed to lookup pts");
         let mut context = LookupContext::default();
-        assert!(dev.lookup(&mut context, &task_owner.task, b"pts").is_err());
+        assert!(dev.lookup_child(&mut context, &task_owner.task, b"pts").is_err());
 
         Ok(())
     }
@@ -491,19 +503,37 @@ mod test {
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
-        let dev =
-            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let dev = ns
+            .root()
+            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let mut context = LookupContext::default();
-        let dev =
-            ns.root().lookup(&mut context, &task_owner.task, b"dev").expect("failed to lookup dev");
+        let dev = ns
+            .root()
+            .lookup_child(&mut context, &task_owner.task, b"dev")
+            .expect("failed to lookup dev");
         let mut context = LookupContext::default();
-        let pts = dev.lookup(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
+        let pts =
+            dev.lookup_child(&mut context, &task_owner.task, b"pts").expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());
         assert_eq!(b"/dev/pts".to_vec(), pts.path());
         Ok(())
+    }
+
+    #[test]
+    fn test_trim_trailing_slashes() {
+        assert_eq!(b"", trim_trailing_slashes(b""));
+        assert_eq!(b"", trim_trailing_slashes(b"/"));
+        assert_eq!(b"", trim_trailing_slashes(b"/////"));
+        assert_eq!(b"abc", trim_trailing_slashes(b"abc"));
+        assert_eq!(b"abc", trim_trailing_slashes(b"abc/"));
+        assert_eq!(b"abc", trim_trailing_slashes(b"abc/////"));
+        assert_eq!(b"abc///xyz", trim_trailing_slashes(b"abc///xyz//"));
+        assert_eq!(b"abc///xyz", trim_trailing_slashes(b"abc///xyz/"));
+        assert_eq!(b"////abc///xyz", trim_trailing_slashes(b"////abc///xyz/"));
     }
 }

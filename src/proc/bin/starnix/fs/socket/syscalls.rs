@@ -82,7 +82,7 @@ pub fn sys_connect(
 
     let (parent, basename) =
         ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &address.sun_path[..path_len])?;
-    let node = parent.lookup(&mut LookupContext::default(), ctx.task, basename)?;
+    let node = parent.lookup_child(&mut LookupContext::default(), ctx.task, basename)?;
     let second_socket_node = node.entry.node.clone();
 
     if let Some(socket) = second_socket_node.socket() {

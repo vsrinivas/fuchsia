@@ -457,13 +457,16 @@ mod test {
         let ns = Namespace::new(fs.clone());
         let root = ns.root();
         let mut context = LookupContext::default();
-        assert_eq!(root.lookup(&mut context, &task_owner.task, b"nib").err(), Some(errno!(ENOENT)));
+        assert_eq!(
+            root.lookup_child(&mut context, &task_owner.task, b"nib").err(),
+            Some(errno!(ENOENT))
+        );
         let mut context = LookupContext::default();
-        root.lookup(&mut context, &task_owner.task, b"lib").unwrap();
+        root.lookup_child(&mut context, &task_owner.task, b"lib").unwrap();
 
         let mut context = LookupContext::default();
         let _test_file = root
-            .lookup(&mut context, &task_owner.task, b"bin/hello_starnix")?
+            .lookup_child(&mut context, &task_owner.task, b"bin/hello_starnix")?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }

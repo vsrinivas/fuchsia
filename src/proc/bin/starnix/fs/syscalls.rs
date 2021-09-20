@@ -251,7 +251,7 @@ fn lookup_at(
     }
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     let mut context = LookupContext::new(options.symlink_mode);
-    parent.lookup(&mut context, task, basename)
+    parent.lookup_child(&mut context, task, basename)
 }
 
 pub fn sys_openat(
@@ -413,7 +413,7 @@ pub fn sys_readlinkat(
             return error!(EACCES);
         }
         let mut context = LookupContext::new(SymlinkMode::NoFollow);
-        Ok(parent.lookup(&mut context, ctx.task, basename)?.entry)
+        Ok(parent.lookup_child(&mut context, ctx.task, basename)?.entry)
     })?;
 
     let target = match entry.node.readlink(ctx.task)? {
