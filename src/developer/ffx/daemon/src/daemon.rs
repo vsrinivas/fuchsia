@@ -25,9 +25,7 @@ use {
     },
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
-    fidl::endpoints::{
-        ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, Proxy, RequestStream,
-    },
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode, TargetCollectionMarker,
@@ -72,29 +70,12 @@ impl ConfigReader for DefaultConfigReader {
 }
 
 pub struct DaemonEventHandler {
-    // This must be a weak ref or else it will cause a circular reference.
-    // Generally this should be the common practice for any handler pointing
-    // to shared state, as it could be the handler's parent state that is
-    // holding the event queue itself (as is the case with the target collection
-    // here).
     target_collection: Rc<TargetCollection>,
 }
 
 impl DaemonEventHandler {
     fn new(target_collection: Rc<TargetCollection>) -> Self {
         Self { target_collection }
-    }
-
-    async fn handle_mdns(&self, t: TargetInfo) {
-        log::trace!(
-            "Found new target via mdns: {}",
-            t.nodename.clone().unwrap_or("<unknown>".to_string())
-        );
-        let new_target = Target::from_target_info(t.clone());
-        new_target.update_connection_state(|_| TargetConnectionState::Mdns(Instant::now()));
-
-        let target = self.target_collection.merge_insert(new_target);
-        target.run_host_pipe();
     }
 
     async fn handle_overnet_peer(&self, node_id: u64) {
@@ -130,16 +111,12 @@ impl DaemonEventHandler {
         }
     }
 
-    fn handle_fastboot(&self, t: TargetInfo, over_network: bool) {
+    fn handle_fastboot(&self, t: TargetInfo) {
         log::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        let target = if over_network {
-            self.target_collection.merge_insert(Target::from_fastboot_target_info(t.into()))
-        } else {
-            self.target_collection.merge_insert(Target::from_target_info(t.into()))
-        };
+        let target = self.target_collection.merge_insert(Target::from_target_info(t.into()));
         target.update_connection_state(|s| match s {
             TargetConnectionState::Disconnected | TargetConnectionState::Fastboot(_) => {
                 TargetConnectionState::Fastboot(Instant::now())
@@ -259,14 +236,10 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    if t.is_fastboot {
-                        self.handle_fastboot(t, true /*over network*/);
-                    } else {
-                        self.handle_mdns(t).await;
-                    }
+                    log::warn!("mdns traffic fired in daemon. This is deprecated: {:?}", t);
                 }
                 WireTrafficType::Fastboot(t) => {
-                    self.handle_fastboot(t, false /*over network*/);
+                    self.handle_fastboot(t);
                 }
                 WireTrafficType::Zedboot(t) => {
                     self.handle_zedboot(t).await;
@@ -397,7 +370,6 @@ impl Daemon {
         Daemon::spawn_onet_discovery(self.event_queue.clone());
         spawn_fastboot_discovery(self.event_queue.clone());
         self.tasks.push(Rc::new(zedboot_discovery(self.event_queue.clone())?));
-        self.start_mdns_event_forwarding().await?;
         Ok(())
     }
 
@@ -439,32 +411,6 @@ impl Daemon {
                 }
             }
         })))
-    }
-
-    async fn start_mdns_event_forwarding(&mut self) -> Result<()> {
-        let mdns = self.open_service_proxy(bridge::MdnsMarker::PROTOCOL_NAME.to_owned()).await?;
-        let mdns = bridge::MdnsProxy::from_channel(fidl::handle::AsyncChannel::from_channel(mdns)?);
-        let event_queue = self.event_queue.clone();
-        self.tasks.push(Rc::new(Task::local(async move {
-            while let Ok(Some(e)) = mdns.get_next_event().await {
-                match *e {
-                    bridge::MdnsEventType::TargetFound(t)
-                    | bridge::MdnsEventType::TargetRediscovered(t) => event_queue
-                        .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                            nodename: t.nodename,
-                            addresses: t
-                                .addresses
-                                .map(|a| a.into_iter().map(Into::into).collect())
-                                .unwrap_or(Vec::new()),
-                            is_fastboot: t.target_state == Some(bridge::TargetState::Fastboot),
-                            ..Default::default()
-                        })))
-                        .unwrap(),
-                    _ => {}
-                }
-            }
-        })));
-        Ok(())
     }
 
     async fn load_manual_targets(&self) {
@@ -1289,51 +1235,6 @@ mod test {
             assert_eq!(q, self.query_expected);
             Ok(Some(self.value.clone()))
         }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_daemon_mdns_event_handler() {
-        let t = Target::new_named("this-town-aint-big-enough-for-the-three-of-us");
-
-        let tc = Rc::new(TargetCollection::new());
-        tc.merge_insert(t.clone());
-
-        let before_update = Instant::now();
-
-        let handler = DaemonEventHandler { target_collection: tc.clone() };
-        assert!(
-            handler
-                .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                    nodename: Some(t.nodename().expect("mdns target should always have a name.")),
-                    ..Default::default()
-                })))
-                .await
-                .unwrap()
-                == events::Status::Waiting
-        );
-
-        assert!(t.is_host_pipe_running());
-        assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
-
-        let before_second_update = Instant::now();
-        assert!(before_update < before_second_update);
-
-        // This handler will now return the value of the default target as
-        // intended.
-        let handler = DaemonEventHandler { target_collection: tc.clone() };
-        assert!(
-            handler
-                .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                    nodename: Some(t.nodename().expect("Handling Mdns traffic for unnamed node")),
-                    ..Default::default()
-                })))
-                .await
-                .unwrap()
-                == events::Status::Waiting
-        );
-
-        assert!(t.is_host_pipe_running());
-        assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_second_update);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

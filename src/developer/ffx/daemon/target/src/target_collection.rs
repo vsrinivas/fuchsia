@@ -18,6 +18,7 @@ use {
     std::rc::Rc,
 };
 
+#[derive(Default)]
 pub struct TargetCollection {
     targets: RefCell<HashMap<u64, Rc<Target>>>,
     events: RefCell<Option<events::Queue<DaemonEvent>>>,

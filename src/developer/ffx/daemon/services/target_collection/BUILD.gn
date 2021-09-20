@@ -33,6 +33,8 @@ rustc_library("ffx_daemon_service_target_collection") {
     "//src/connectivity/overnet/lib/stream_link",
     "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/rcs:lib",
+    "//third_party/rust_crates:async-channel",
+    "//third_party/rust_crates:matches",
   ]
 
   sources = [

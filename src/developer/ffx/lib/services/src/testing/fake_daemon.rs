@@ -9,14 +9,67 @@ use {
     },
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
+    ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
     fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
+    std::cell::{Cell, RefCell},
     std::rc::Rc,
     std::sync::Arc,
 };
+
+#[derive(Default)]
+struct InjectedStreamHandler<F: FidlService> {
+    started: Cell<bool>,
+    stopped: Cell<bool>,
+    inner: Rc<RefCell<F>>,
+}
+
+impl<F: FidlService> InjectedStreamHandler<F> {
+    fn new(inner: Rc<RefCell<F>>) -> Self {
+        Self { inner, started: Cell::new(false), stopped: Cell::new(false) }
+    }
+}
+
+#[async_trait(?Send)]
+impl<F: 'static + FidlService> StreamHandler for InjectedStreamHandler<F> {
+    async fn start(&self, _cx: Context) -> Result<()> {
+        Ok(())
+    }
+
+    async fn open(
+        &self,
+        cx: Context,
+        server: Arc<ServeInner>,
+    ) -> Result<LocalBoxFuture<'static, Result<()>>> {
+        if !self.started.get() {
+            self.inner.borrow_mut().start(&cx).await?;
+            self.started.set(true);
+        }
+        let mut stream = <<F as FidlService>::Service as ProtocolMarker>::RequestStream::from_inner(
+            server, false,
+        );
+        let inner = self.inner.clone();
+        let fut = Box::pin(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                inner.borrow().handle(&cx, req).await?
+            }
+            Ok(())
+        });
+        Ok(fut)
+    }
+
+    async fn shutdown(&self, cx: &Context) -> Result<()> {
+        if !self.stopped.get() {
+            self.inner.borrow_mut().stop(cx).await?;
+        } else {
+            panic!("can only be stopped once");
+        }
+        Ok(())
+    }
+}
 
 pub struct ClosureStreamHandler<P: DiscoverableProtocolMarker> {
     func: Rc<dyn Fn(&Context, Request<P>) -> Result<()>>,
@@ -58,6 +111,7 @@ where
 pub struct FakeDaemon {
     nodename: Option<String>,
     register: Option<ServiceRegister>,
+    target_collection: Rc<TargetCollection>,
 }
 
 impl FakeDaemon {
@@ -126,6 +180,10 @@ impl DaemonServiceProvider for FakeDaemon {
             self.open_service_proxy(service_name).await?,
         ))
     }
+
+    async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
+        Ok(self.target_collection.clone())
+    }
 }
 
 #[derive(Default)]
@@ -171,8 +229,29 @@ impl FakeDaemonBuilder {
         self
     }
 
+    /// This is similar to [register_fidl_service], but instead of managing the
+    /// instantiation of the service using the defaults, the client instantiates
+    /// this service instance. This is useful if the client wants to have access
+    /// to some inner state for testing like a channel.
+    pub fn inject_fidl_service<F: FidlService>(mut self, svc: Rc<RefCell<F>>) -> Self
+    where
+        F: 'static,
+    {
+        if let Some(_) = self
+            .map
+            .insert(F::Service::PROTOCOL_NAME.to_owned(), Box::new(InjectedStreamHandler::new(svc)))
+        {
+            panic!("duplicate service registered under: {}", F::Service::PROTOCOL_NAME);
+        }
+        self
+    }
+
     pub fn build(self) -> FakeDaemon {
-        FakeDaemon { register: Some(ServiceRegister::new(self.map)), nodename: self.nodename }
+        FakeDaemon {
+            register: Some(ServiceRegister::new(self.map)),
+            nodename: self.nodename,
+            ..Default::default()
+        }
     }
 }
 
