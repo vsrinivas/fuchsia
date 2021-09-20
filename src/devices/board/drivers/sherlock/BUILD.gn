@@ -252,6 +252,37 @@ driver_bind_rules("sherlock-securemem-bind") {
   ]
 }
 
+driver_bind_rules("aml-usb-phy-v2-bind") {
+  rules = "bind/aml-usb-phy-v2.bind"
+  header_output = "aml-usb-phy-v2-bind.h"
+  bind_output = "aml-usb-phy-v2-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("dwc2-phy-bind") {
+  rules = "bind/dwc2-phy.bind"
+  header_output = "dwc2-phy-bind.h"
+  bind_output = "dwc2-phy-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("xhci-bind") {
+  rules = "bind/xhci.bind"
+  header_output = "xhci-bind.h"
+  bind_output = "xhci-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -309,6 +340,8 @@ template("sherlock_driver") {
     ]
 
     deps = [
+      ":aml-usb-phy-v2-bind_header",
+      ":dwc2-phy-bind_header",
       ":luis-cpu-bind_header",
       ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",
@@ -327,6 +360,7 @@ template("sherlock_driver") {
       ":sherlock-touch-bind_header",
       ":sherlock-video-bind_header",
       ":sherlock-video-enc-bind_header",
+      ":xhci-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
