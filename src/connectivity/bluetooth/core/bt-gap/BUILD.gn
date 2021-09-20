@@ -121,20 +121,15 @@ fuchsia_test_component("test-stash-secure") {
   manifest = "meta/test-stash-secure.cml"
 }
 
-fuchsia_test_component("test-driver") {
-  deps = [ ":bin_test" ]
-  manifest = "meta/test-driver.cml"
-}
-
 fuchsia_test_component("test-component") {
   manifest = "meta/bt-gap-unittests.cml"
+  deps = [ ":bin_test" ]
 }
 
 fuchsia_test_package("bt-gap-unittests") {
   test_components = [ ":test-component" ]
   deps = [
     ":default-config",
-    ":test-driver",
     ":test-stash-secure",
   ]
 }

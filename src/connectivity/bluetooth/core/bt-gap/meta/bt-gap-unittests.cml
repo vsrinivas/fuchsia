@@ -1,46 +1,42 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/bt_gap_bin_test",
+    },
     children: [
-        {
-            name: "test-driver",
-            url: "fuchsia-pkg://fuchsia.com/bt-gap-unittests#meta/test-driver.cm",
-        },
         {
             name: "secure-stash",
             url: "fuchsia-pkg://fuchsia.com/bt-gap-unittests#meta/test-stash-secure.cm",
         },
     ],
-    offer: [
-        {
-            runner: "rust_test_runnner",
-            from: "parent",
-            to: "#test-driver",
-        },
+    use: [
         {
             storage: "tmp",
-            from: "parent",
-            to: [
-                "#secure-stash",
-                "#test-driver",
-            ],
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [
-                "#secure-stash",
-                "#test-driver",
-            ],
+            path: "/tmp",
         },
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#secure-stash",
-            to: "#test-driver",
         },
     ],
-    expose: [
+    offer: [
         {
-            protocol: "fuchsia.test.Suite",
-            from: "#test-driver",
+            storage: "tmp",
+            from: "parent",
+            to: [ "#secure-stash" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#secure-stash" ],
         },
     ],
 }
