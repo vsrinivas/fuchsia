@@ -999,9 +999,11 @@ impl RealmNode {
                 });
             }
 
+            let name =
+                if walked_path.is_empty() { "root".to_string() } else { walked_path.join("-") };
             let decl = self.decl.native_into_fidl();
             registry
-                .validate_and_register(decl, package_dir.clone())
+                .validate_and_register(decl, name, package_dir.clone())
                 .await
                 .map_err(|e| Error::ValidationError(walked_path.into(), e))
         }
