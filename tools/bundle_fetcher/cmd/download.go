@@ -16,6 +16,7 @@ import (
 	"google.golang.org/api/iterator"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 type downloadCmd struct {
 	gcsBucket string
 	buildIDs  string
+	outDir    string
 }
 
 const (
@@ -48,14 +50,30 @@ func (*downloadCmd) Usage() string {
 func (cmd *downloadCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.gcsBucket, "bucket", "", "GCS bucket from which to read the files from.")
 	f.StringVar(&cmd.buildIDs, "build_ids", "", "Comma separated list of build_ids.")
+	f.StringVar(&cmd.outDir, "out_dir", "", "Directory to write outputs to.")
 }
 
 func (cmd *downloadCmd) parseFlags() error {
 	if cmd.buildIDs == "" {
 		return fmt.Errorf("-build_ids is required")
 	}
+
 	if cmd.gcsBucket == "" {
 		return fmt.Errorf("-bucket is required")
+	}
+
+	if cmd.outDir == "" {
+		return fmt.Errorf("-out_dir is required")
+	}
+	info, err := os.Stat(cmd.outDir)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("out directory path %v does not exist", cmd.outDir)
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("out directory path %v is not a directory", cmd.outDir)
 	}
 	return nil
 }
@@ -100,7 +118,11 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("unable to json marshall product bundle for build_id '%v': %v", buildID, err)
 		}
-		logger.Infof(ctx, "Product bundle for build_id %v:\n%v\n", buildID, string(data))
+		outputFilePath := filepath.Join(cmd.outDir, buildID+".json")
+		logger.Debugf(ctx, "writing updated product bundle to: %v", outputFilePath)
+		if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
+			return err
+		}
 	}
 	return nil
 }

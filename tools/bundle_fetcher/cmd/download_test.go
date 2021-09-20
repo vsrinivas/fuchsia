@@ -9,6 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -52,6 +55,16 @@ func (s *memSink) doesPathExist(ctx context.Context, prefix string) (bool, error
 }
 
 func TestParseFlags(t *testing.T) {
+	dir, err := ioutil.TempDir("", "bundle_fetcher_dir")
+	if err != nil {
+		t.Fatalf("unable to create temp dir")
+	}
+	tmpfn := filepath.Join(dir, "tmpfile")
+	if err := ioutil.WriteFile(tmpfn, []byte("hello world"), 0644); err != nil {
+		t.Fatalf("unable to create temp file")
+	}
+	defer os.RemoveAll(dir)
+
 	var tests = []struct {
 		downloadCmd *downloadCmd
 		expectedErr string
@@ -60,25 +73,43 @@ func TestParseFlags(t *testing.T) {
 			downloadCmd: &downloadCmd{
 				buildIDs:  "123456",
 				gcsBucket: "orange",
+				outDir:    dir,
 			},
 		},
 		{
 			downloadCmd: &downloadCmd{
 				gcsBucket: "orange",
+				outDir:    dir,
 			},
 			expectedErr: "-build_ids is required",
 		},
 		{
 			downloadCmd: &downloadCmd{
 				buildIDs: "123456",
+				outDir:   dir,
 			},
 			expectedErr: "-bucket is required",
+		},
+		{
+			downloadCmd: &downloadCmd{
+				buildIDs:  "123456",
+				gcsBucket: "orange",
+			},
+			expectedErr: "-out_dir is required",
+		},
+		{
+			downloadCmd: &downloadCmd{
+				buildIDs:  "123456",
+				gcsBucket: "orange",
+				outDir:    tmpfn,
+			},
+			expectedErr: fmt.Sprintf("out directory path %v is not a directory", tmpfn),
 		},
 	}
 
 	for _, test := range tests {
 		if err := test.downloadCmd.parseFlags(); err != nil && err.Error() != test.expectedErr {
-			t.Fatalf("Got error: '%v', want: '%v'", err.Error(), test.expectedErr)
+			t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErr)
 		}
 	}
 }
@@ -134,13 +165,13 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, "")
 			output, err := getProductBundlePathFromImagesJSON(ctx, sink, test.imageJSONPath)
 			if output != test.expectedOutput {
-				t.Fatalf("Got output: '%v', want: '%v'", output, test.expectedOutput)
+				t.Errorf("Got output: '%v', want: '%v'", output, test.expectedOutput)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
-				t.Fatalf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
+				t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
 			}
 			if err == nil && test.expectedErrMessage != "" {
-				t.Fatalf("Got no error, want: '%v", test.expectedErrMessage)
+				t.Errorf("Got no error, want: '%v", test.expectedErrMessage)
 			}
 		})
 	}
@@ -403,13 +434,13 @@ func TestGetProductBundleData(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, test.dir)
 			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
 			if !cmp.Equal(&output, &test.expectedProductBundle) {
-				t.Fatalf("Got output: '%v', want: '%v'", output, test.expectedProductBundle)
+				t.Errorf("Got output: '%v', want: '%v'", output, test.expectedProductBundle)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
-				t.Fatalf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
+				t.Errorf("Got error: '%v', want: '%v'", err.Error(), test.expectedErrMessage)
 			}
 			if err == nil && test.expectedErrMessage != "" {
-				t.Fatalf("Got no error, want: '%v", test.expectedErrMessage)
+				t.Errorf("Got no error, want: '%v", test.expectedErrMessage)
 			}
 		})
 	}
