@@ -81,7 +81,10 @@ void SocketDevice::Start(StartRequestView request, StartCompleter::Sync& complet
   // Go and process the rings to handle any pending rx descriptors and start
   // queueing new ones.
   UpdateRxRingLocked();
+
+  completer.Reply(ZX_OK);
 }
+
 void SocketDevice::SendRst(SendRstRequestView request, SendRstCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
   CleanupConAndRstLocked(request->addr);

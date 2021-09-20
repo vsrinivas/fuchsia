@@ -40,7 +40,7 @@ using DeviceType =
 
 class SocketDevice : public Device,
                      public DeviceType,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
+                     public ddk::EmptyProtocol<ZX_PROTOCOL_VSOCK> {
  public:
   struct ConnectionKey;
 
