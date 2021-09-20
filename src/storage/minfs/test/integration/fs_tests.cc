@@ -197,15 +197,17 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
 
 // Verify initial conditions on a filesystem, and validate that filesystem modifications adjust the
 // query info accordingly.
-TEST_F(MinfsFvmTest, QueryInfo) {
+TEST_F(MinfsFvmTest, QueryInitialState) {
   fuchsia_io_admin::wire::FilesystemInfo info;
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
 
   EXPECT_EQ(fs().options().fvm_slice_size, info.total_bytes);
   // TODO(fxbug.dev/31276): Adjust this once minfs accounting on truncate is fixed.
   EXPECT_EQ(2 * minfs::kMinfsBlockSize, info.used_bytes);
-  // The inode table's implementation is currently a flat array on disk.
-  EXPECT_EQ(fs().options().fvm_slice_size / sizeof(minfs::Inode), info.total_nodes);
+  // The inodes will use the required slices (rounded up). Since the current default inode data size
+  // divides evenly into the slice size, the values should match exactly.
+  EXPECT_EQ(fs().options().fvm_slice_size, 32768u);  // Verify expectations of this test.
+  EXPECT_EQ(minfs::kMinfsDefaultInodeCount, info.total_nodes);
   // The "zero-th" inode is reserved, as well as the root directory.
   const uint64_t kInitialUsedNodes = 2;
   EXPECT_EQ(kInitialUsedNodes, info.used_nodes);

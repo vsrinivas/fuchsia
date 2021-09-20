@@ -196,32 +196,49 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   }
 
   const size_t kBlocksPerSlice = info->slice_size / info->BlockSize();
-  extend_request_t request;
-  request.length = 1;
-  request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
   zx_status_t status = fvm::ResetAllSlices(device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "minfs mkfs: Failed to reset FVM slices: " << status;
     return status;
   }
+
+  extend_request_t request;
+
+  // Inode allocation bitmap.
+  info->ibm_slices = 1;
+  request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
+  request.length = info->ibm_slices;
   if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
     FX_LOGS(ERROR) << "minfs mkfs: Failed to allocate inode bitmap: " << status;
     return status;
   }
-  info->ibm_slices = 1;
+
+  // Data block allocation bitmap. Currently once slice should be enough for many more inodes than
+  // we currently reserve (this is validated with an assertion below).
+  info->abm_slices = 1;
   request.offset = kFVMBlockDataBmStart / kBlocksPerSlice;
+  request.length = info->abm_slices;
   if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
     FX_LOGS(ERROR) << "minfs mkfs: Failed to allocate data bitmap: " << status;
     return status;
   }
-  info->abm_slices = 1;
+
+  // Inode slice: Compute the number required to contain at least the default number of inodes.
+  auto inode_blocks = (kMinfsDefaultInodeCount + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+  info->ino_slices = (inode_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
   request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
+  request.length = info->ino_slices;
   if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
     FX_LOGS(ERROR) << "minfs mkfs: Failed to allocate inode table: " << status;
     return status;
   }
-  info->ino_slices = 1;
 
+  // The inode bitmap should be big enough to hold all the inodes we reserved. If this triggers we
+  // need to write logic to compute the proper ibm_slices size.
+  ZX_DEBUG_ASSERT(info->ibm_slices * info->slice_size * 8 >=
+                  info->ino_slices * kBlocksPerSlice * kMinfsInodesPerBlock);
+
+  // Journal.
   TransactionLimits limits(*info);
   blk_t journal_blocks = limits.GetRecommendedIntegrityBlocks();
   request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
@@ -232,6 +249,7 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   }
   info->integrity_slices = static_cast<blk_t>(request.length);
 
+  // Data.
   ZX_ASSERT(options.fvm_data_slices > 0);
   request.length = options.fvm_data_slices;
   request.offset = kFVMBlockDataStart / kBlocksPerSlice;
