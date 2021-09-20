@@ -61,7 +61,6 @@ type Node interface {
 	addConnection(ctx fidl.Context, flags, mode uint32, req fidlio.NodeWithCtxInterfaceRequest) error
 }
 
-// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type Service struct {
 	*fidlio.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	// AddFn is called serially with an incoming request. It must not block, and
@@ -91,25 +90,25 @@ func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxIn
 	return s.addConnection(ctx, flags, 0, req)
 }
 
-func (s *Service) Close(fidl.Context) (int32, error) {
+func (*Service) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s *Service) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+func (*Service) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
 	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
-func (s *Service) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (*Service) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var nodeInfo fidlio.NodeInfo
 	nodeInfo.SetService(fidlio.Service{})
 	return nodeInfo, nil
 }
 
-func (s *Service) Sync(fidl.Context) (int32, error) {
+func (*Service) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s *Service) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
+func (*Service) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:      fidlio.ModeTypeService,
 		Id:        fidlio.InoUnknown,
@@ -117,7 +116,15 @@ func (s *Service) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	}, nil
 }
 
-func (s *Service) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
+func (*Service) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (*Service) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (*Service) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -189,7 +196,6 @@ func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32,
 
 var _ fidlio.DirectoryWithCtx = (*directoryState)(nil)
 
-// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type directoryState struct {
 	*fidlio.DirectoryWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*DirectoryWrapper
@@ -202,25 +208,25 @@ func (dirState *directoryState) Clone(ctx fidl.Context, flags uint32, req fidlio
 	return dirState.addConnection(ctx, flags, 0, req)
 }
 
-func (dirState *directoryState) Close(fidl.Context) (int32, error) {
+func (*directoryState) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (dirState *directoryState) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
+func (*directoryState) Close2(fidl.Context) (fidlio.NodeClose2Result, error) {
 	return fidlio.NodeClose2ResultWithResponse(fidlio.NodeClose2Response{}), nil
 }
 
-func (dirState *directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (*directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var nodeInfo fidlio.NodeInfo
 	nodeInfo.SetDirectory(fidlio.DirectoryObject{})
 	return nodeInfo, nil
 }
 
-func (dirState *directoryState) Sync(fidl.Context) (int32, error) {
+func (*directoryState) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (dirState *directoryState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
+func (*directoryState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:      fidlio.ModeTypeDirectory | uint32(fdio.VtypeIRUSR),
 		Id:        fidlio.InoUnknown,
@@ -228,7 +234,7 @@ func (dirState *directoryState) GetAttr(fidl.Context) (int32, fidlio.NodeAttribu
 	}, nil
 }
 
-func (dirState *directoryState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
+func (*directoryState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -259,11 +265,11 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
-func (dirState *directoryState) AddInotifyFilter(ctx fidl.Context, path string, filters fidlio2.InotifyWatchMask, wd uint32, socket zx.Socket) error {
+func (*directoryState) AddInotifyFilter(ctx fidl.Context, path string, filters fidlio2.InotifyWatchMask, wd uint32, socket zx.Socket) error {
 	return nil
 }
 
-func (dirState *directoryState) Unlink(_ fidl.Context, name string, _ fidlio2.UnlinkOptions) (fidlio.DirectoryUnlinkResult, error) {
+func (*directoryState) Unlink(_ fidl.Context, name string, _ fidlio2.UnlinkOptions) (fidlio.DirectoryUnlinkResult, error) {
 	return fidlio.DirectoryUnlinkResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
@@ -321,27 +327,39 @@ func (dirState *directoryState) Rewind(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (dirState *directoryState) GetToken(fidl.Context) (int32, zx.Handle, error) {
+func (*directoryState) GetToken(fidl.Context) (int32, zx.Handle, error) {
 	return int32(zx.ErrNotSupported), zx.HandleInvalid, nil
 }
 
-func (dirState *directoryState) Rename(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
+func (*directoryState) Rename(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (dirState *directoryState) Rename2(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (fidlio.DirectoryRename2Result, error) {
+func (*directoryState) Rename2(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (fidlio.DirectoryRename2Result, error) {
 	return fidlio.DirectoryRename2ResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (dirState *directoryState) Link(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
+func (*directoryState) Link(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (dirState *directoryState) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
+func (*directoryState) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
 	if err := watcher.Close(); err != nil {
 		logError(err)
 	}
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*directoryState) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (*directoryState) NodeSetFlags(fidl.Context, uint32) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (dirState *directoryState) AdvisoryLock(fidl.Context, fidlio2.AdvisoryLockRequest) (fidlio2.AdvisoryLockingAdvisoryLockResult, error) {
+	return fidlio2.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", dirState)}
 }
 
 type File interface {
@@ -423,7 +441,6 @@ type Reader interface {
 	io.Seeker
 }
 
-// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
 type fileState struct {
 	*fidlio.FileWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*FileWrapper
@@ -436,7 +453,7 @@ func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWi
 	return fState.addConnection(ctx, flags, 0, req)
 }
 
-func (fState *fileState) Close(fidl.Context) (int32, error) {
+func (*fileState) Close(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
@@ -462,7 +479,7 @@ func (fState *fileState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (fState *fileState) Sync(fidl.Context) (int32, error) {
+func (*fileState) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -475,7 +492,7 @@ func (fState *fileState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, er
 	}, nil
 }
 
-func (fState *fileState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
+func (*fileState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -505,11 +522,11 @@ func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (in
 	return int32(zx.ErrOk), b, nil
 }
 
-func (fState *fileState) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
+func (*fileState) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (fState *fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
+func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
@@ -518,18 +535,30 @@ func (fState *fileState) Seek(_ fidl.Context, offset int64, start fidlio.SeekOri
 	return int32(zx.ErrOk), uint64(n), err
 }
 
-func (fState *fileState) Truncate(_ fidl.Context, length uint64) (int32, error) {
+func (*fileState) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (fState *fileState) GetFlags(fidl.Context) (int32, uint32, error) {
+func (*fileState) GetFlags(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (fState *fileState) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (*fileState) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (fState *fileState) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
+func (*fileState) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (*fileState) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (fState *fileState) AdvisoryLock(fidl.Context, fidlio2.AdvisoryLockRequest) (fidlio2.AdvisoryLockingAdvisoryLockResult, error) {
+	return fidlio2.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
+}
+
+func (*fileState) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }

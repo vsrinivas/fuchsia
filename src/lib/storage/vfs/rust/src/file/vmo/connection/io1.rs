@@ -359,8 +359,6 @@ impl VmoFileConnection {
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
-        // TODO(fxbug.dev/37419): Remove `allow(unreachable_patterns)` when the bug is done.
-        #[allow(unreachable_patterns)]
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(self.flags, flags, object);
@@ -465,7 +463,8 @@ impl VmoFileConnection {
             FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Alive)
     }

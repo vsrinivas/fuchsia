@@ -132,8 +132,6 @@ impl Connection {
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
-        // TODO(fxbug.dev/37419): Remove `allow(unreachable_patterns)` when the bug is done.
-        #[allow(unreachable_patterns)]
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, object);
@@ -171,6 +169,15 @@ impl Connection {
                 // PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            FileRequest::NodeGetFlags { responder } => {
+                responder.send(ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
+            }
+            FileRequest::NodeSetFlags { flags: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::AdvisoryLock { request: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
             FileRequest::Read { count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
@@ -199,8 +206,8 @@ impl Connection {
                 // There is no backing VMO.
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Alive)
     }

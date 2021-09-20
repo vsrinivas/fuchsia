@@ -1145,8 +1145,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         }
     }
 
-    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-    #[allow(unreachable_patterns)]
     fn handle_dir_request(
         &mut self,
         request: DirectoryRequest,
@@ -1274,15 +1272,30 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             DirectoryRequest::GetToken { responder } => unsupported!(responder, None)?,
             DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
+            DirectoryRequest::Rename2 { responder, .. } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+            }
             DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            DirectoryRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
+            DirectoryRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            DirectoryRequest::AdvisoryLock { request: _, responder } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+            }
+
+            DirectoryRequest::AddInotifyFilter { path, filter, watch_descriptor, .. } => {
+                panic!(
+                    "AddInotifyFilter not supported: path = {:?}, mask = {:?}, descriptor = {:?}",
+                    path, filter, watch_descriptor
+                );
+            }
+
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok((None, ConnectionState::Open))
     }
 
-    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-    #[allow(unreachable_patterns)]
     fn handle_file_request(
         &mut self,
         request: FileRequest,
@@ -1377,13 +1390,17 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
             FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            FileRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
+            FileRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            FileRequest::AdvisoryLock { request: _, responder } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+            }
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Open)
     }
 
-    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-    #[allow(unreachable_patterns)]
     fn handle_node_request(
         &mut self,
         request: NodeRequest,
@@ -1419,7 +1436,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            NodeRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
+            NodeRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Open)
     }

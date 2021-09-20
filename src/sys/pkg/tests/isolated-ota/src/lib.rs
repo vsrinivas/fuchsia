@@ -607,7 +607,8 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::GetDevicePath { responder } => {
                 responder.send(zx::Status::IO.into_raw(), None).context("failing getdevicepath")?
             }
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         };
     }
 

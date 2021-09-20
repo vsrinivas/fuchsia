@@ -312,7 +312,6 @@ func (t *terminalError) setConsumedLockedInner(err tcpip.Error) <-chan tcpip.Err
 
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
-	// TODO(https://fxbug.dev/37419): Remove TransitionalBase after methods landed.
 	*fidlio.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 
 	wq *waiter.Queue
@@ -368,6 +367,18 @@ func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) 
 
 func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32, error) {
 	_ = syslog.DebugTf("SetAttr", "%p", ep)
+
+	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+func (ep *endpoint) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+	_ = syslog.DebugTf("NodeGetFlags", "%p", ep)
+
+	return 0, 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+func (ep *endpoint) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
+	_ = syslog.DebugTf("NodeGetFlags", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }

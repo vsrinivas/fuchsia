@@ -159,8 +159,6 @@ where
 
     /// Handle a [`DirectoryRequest`].  This function is responsible for handing all the basic
     /// directory operations.
-    // TODO(fxbug.dev/37419): Remove default handling after methods landed.
-    #[allow(unreachable_patterns)]
     pub(in crate::directory) async fn handle_request(
         &mut self,
         request: DirectoryAdminRequest,
@@ -293,7 +291,8 @@ where
             DirectoryAdminRequest::Sync { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            _ => {} // TODO(https://fxbug.dev/77623): Remove when the transition is complete.
+            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
+            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Alive)
     }
