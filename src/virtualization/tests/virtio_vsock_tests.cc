@@ -118,12 +118,11 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   }
 };
 
-using GuestTypes = ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest>;
+using GuestTypes = ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest, TerminaEnclosedGuest>;
 
 TYPED_TEST_SUITE(VsockGuestTest, GuestTypes);
 
-// TODO(https://fxbug.dev/35555): Deflake and enable.
-TYPED_TEST(VsockGuestTest, DISABLED_ConnectDisconnect) {
+TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
   auto handle = std::async(std::launch::async, [this] { this->TestThread(); });
 
   std::string result;

@@ -401,6 +401,7 @@ fuchsia_test_component("virtualization_vsock_tests_cmp") {
   component_name = "virtualization_vsock_tests"
   deps = [
            ":debian_tests_img",
+           ":linux_extras_img",
            ":virtualization_vsock_tests",
            linux_tests_label,
          ] + guest_packages
