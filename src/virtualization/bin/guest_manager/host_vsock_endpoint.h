@@ -9,6 +9,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <deque>
 #include <unordered_map>
 
 #include <bitmap/rle-bitmap.h>
@@ -17,6 +18,12 @@
 // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
 static constexpr uint32_t kFirstEphemeralPort = 49152;
 static constexpr uint32_t kLastEphemeralPort = 65535;
+
+// How long to avoid reuse of ephemeral ports to avoid confusion between
+// old and new connections.
+//
+// TODO(fxbug.dev/84286): Handle this in virtio-vsock.
+constexpr zx::duration kPortQuarantineTime = zx::sec(10);
 
 // An callback for querying a |Realm| for |GuestVsockAcceptor|s.
 using AcceptorProvider = fit::function<fuchsia::virtualization::GuestVsockAcceptor*(uint32_t)>;
@@ -27,7 +34,7 @@ using AcceptorProvider = fit::function<fuchsia::virtualization::GuestVsockAccept
 class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
                           public fuchsia::virtualization::HostVsockEndpoint {
  public:
-  HostVsockEndpoint(AcceptorProvider acceptor_provider);
+  HostVsockEndpoint(async_dispatcher_t* dispatcher, AcceptorProvider acceptor_provider);
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> request);
 
@@ -51,8 +58,23 @@ class HostVsockEndpoint : public fuchsia::virtualization::HostVsockConnector,
   zx_status_t AllocEphemeralPort(uint32_t* port);
   void FreeEphemeralPort(uint32_t port);
 
+  async_dispatcher_t* dispatcher_;  // Owned elsewhere.
   AcceptorProvider acceptor_provider_;
   bitmap::RleBitmapBase<uint32_t> port_bitmap_;
+
+  // Recently freed ports, and the time they were freed. Used to reduce
+  // reuse of ports in short time intervals to avoid packets from old
+  // and new connections being confused.
+  //
+  // Ports are stored in non-decreasing release_time order.
+  //
+  // TODO(fxbug.dev/84286): Handle this in virtio-vsock.
+  struct QuarantinedPort {
+    uint32_t port;
+    zx::time available_time;  // Time the port will become available again.
+  };
+  std::deque<QuarantinedPort> quarantined_ports_;
+
   fidl::BindingSet<fuchsia::virtualization::HostVsockEndpoint> bindings_;
   std::unordered_map<uint32_t, fuchsia::virtualization::HostVsockAcceptorPtr> listeners_;
 };

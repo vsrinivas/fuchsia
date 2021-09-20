@@ -9,6 +9,6 @@
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  ManagerImpl env_mgr;
+  ManagerImpl env_mgr(loop.dispatcher());
   loop.Run();
 }

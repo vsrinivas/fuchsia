@@ -10,11 +10,12 @@
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 
-RealmImpl::RealmImpl(uint32_t id, const std::string& label, sys::ComponentContext* context,
+RealmImpl::RealmImpl(async_dispatcher_t* dispatcher, uint32_t id, const std::string& label,
+                     sys::ComponentContext* context,
                      fidl::InterfaceRequest<fuchsia::virtualization::Realm> request)
     : id_(id),
       label_(label),
-      host_vsock_endpoint_(fit::bind_member(this, &RealmImpl::GetAcceptor)) {
+      host_vsock_endpoint_(dispatcher, fit::bind_member(this, &RealmImpl::GetAcceptor)) {
   // Create environment.
   fuchsia::sys::EnvironmentPtr environment;
   context->svc()->Connect(environment.NewRequest());

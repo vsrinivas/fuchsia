@@ -82,7 +82,8 @@ static void NoOpCallback(zx_status_t status) {}
 
 class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
  protected:
-  HostVsockEndpoint host_endpoint_{fit::bind_member(this, &HostVsockEndpointTest::GetAcceptor)};
+  HostVsockEndpoint host_endpoint_{dispatcher(),
+                                   fit::bind_member(this, &HostVsockEndpointTest::GetAcceptor)};
   TestVsockAcceptor guest_acceptor_;
 
  private:
@@ -233,44 +234,54 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestMultipleTimes) {
   }
 }
 
+namespace {
+
+// Open a connection from the host to the given guest on the given port.
+zx::socket OpenConnectionToGuest(HostVsockEndpoint* host_endpoint, uint32_t cid, uint32_t port) {
+  // Create a socket.
+  zx::socket host_end, guest_end;
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &host_end, &guest_end);
+  ZX_ASSERT(status == ZX_OK);
+
+  // Connect to the guest.
+  host_endpoint->Connect(cid, port, std::move(guest_end), NoOpCallback);
+  return host_end;
+}
+
+}  // namespace
+
 TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
-  // Connect twice.
-  constexpr size_t kNumTimes = 2;
-
-  zx::socket handles[2 * kNumTimes];
-  for (size_t i = 0; i < kNumTimes; i++) {
-    zx::socket* h = &handles[i * 2];
-    ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h[0], &h[1]));
-
-    host_endpoint_.Connect(kGuestCid, 22, std::move(h[1]), NoOpCallback);
-  }
-
-  auto requests = guest_acceptor_.TakeRequests();
-  ASSERT_EQ(kNumTimes, requests.size());
-  uint32_t port = kFirstEphemeralPort;
-  for (const auto& request : requests) {
-    EXPECT_EQ(fuchsia::virtualization::HOST_CID, request.src_cid);
-    EXPECT_EQ(port++, request.src_port);
-    EXPECT_EQ(22u, request.port);
-    EXPECT_TRUE(request.handle.is_valid());
-    request.callback(ZX_OK);
-  }
-
-  // Disconnect the first connection and generate the shutdown event.
-  handles[0].reset();
-  host_endpoint_.OnShutdown(requests[0].src_port);
-
+  // Open two connections.
+  zx::socket first = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
+  zx::socket second = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
   RunLoopUntilIdle();
 
-  // Connect again and verify that the port is reused.
-  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &handles[0], &handles[1]));
+  // Ensure the two connections succeeded, and were allocated different ports.
+  auto requests = guest_acceptor_.TakeRequests();
+  ASSERT_EQ(requests.size(), 2u);
+  EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort);
+  EXPECT_EQ(requests[1].src_port, kFirstEphemeralPort + 1);
 
-  host_endpoint_.Connect(kGuestCid, 22, std::move(handles[1]), NoOpCallback);
+  // Disconnect the first connection and generate the shutdown event.
+  first.reset();
+  host_endpoint_.OnShutdown(requests[0].src_port);
+  RunLoopUntilIdle();
 
+  // Connect again. We expect the recently freed port to be under quarantine,
+  // and should not be reallocated.
+  zx::socket third = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
   requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
-  EXPECT_EQ(fuchsia::virtualization::HOST_CID, requests[0].src_cid);
-  EXPECT_EQ(kFirstEphemeralPort, requests[0].src_port);
-  EXPECT_EQ(22u, requests[0].port);
-  EXPECT_TRUE(requests[0].handle.is_valid());
+  EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort + 2);
+
+  // Disconnect again, and wait for all quarantine periods to end.
+  third.reset();
+  host_endpoint_.OnShutdown(requests[0].src_port);
+  RunLoopFor(kPortQuarantineTime * 2);
+
+  // Connect a fourth time. This time, the ephemeral port should be reused.
+  zx::socket fourth = OpenConnectionToGuest(&host_endpoint_, /*cid=*/kGuestCid, /*port=*/22);
+  requests = guest_acceptor_.TakeRequests();
+  ASSERT_EQ(1u, requests.size());
+  EXPECT_EQ(requests[0].src_port, kFirstEphemeralPort);
 }

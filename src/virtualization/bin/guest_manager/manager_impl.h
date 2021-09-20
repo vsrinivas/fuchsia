@@ -15,7 +15,7 @@
 
 class ManagerImpl : public fuchsia::virtualization::Manager {
  public:
-  ManagerImpl();
+  explicit ManagerImpl(async_dispatcher_t* dispatcher);
 
   ManagerImpl(const ManagerImpl&) = delete;
   ManagerImpl& operator=(const ManagerImpl&) = delete;
@@ -27,6 +27,7 @@ class ManagerImpl : public fuchsia::virtualization::Manager {
   void List(ListCallback callback) override;
   void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
+  async_dispatcher_t* dispatcher_;  // Owned elsewhere.
   std::unique_ptr<sys::ComponentContext> context_;
   std::unordered_map<uint32_t, std::unique_ptr<RealmImpl>> environments_;
   fidl::BindingSet<fuchsia::virtualization::Manager> bindings_;

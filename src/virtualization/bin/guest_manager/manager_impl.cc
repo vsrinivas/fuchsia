@@ -8,15 +8,16 @@
 
 static uint32_t g_next_env_id = 0;
 
-ManagerImpl::ManagerImpl() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
+ManagerImpl::ManagerImpl(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void ManagerImpl::Create(fidl::StringPtr label,
                          fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
   uint32_t env_id = g_next_env_id++;
-  auto env =
-      std::make_unique<RealmImpl>(env_id, label.value_or(""), context_.get(), std::move(request));
+  auto env = std::make_unique<RealmImpl>(dispatcher_, env_id, label.value_or(""), context_.get(),
+                                         std::move(request));
   env->set_unbound_handler([this, env_id]() { environments_.erase(env_id); });
   environments_.insert({env_id, std::move(env)});
 }

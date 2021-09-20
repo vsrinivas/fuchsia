@@ -23,7 +23,8 @@ static constexpr uint32_t kFirstGuestCid = 3;
 
 class RealmImpl : public fuchsia::virtualization::Realm {
  public:
-  RealmImpl(uint32_t id, const std::string& label, sys::ComponentContext* context,
+  RealmImpl(async_dispatcher_t* dispatcher, uint32_t id, const std::string& label,
+            sys::ComponentContext* context,
             fidl::InterfaceRequest<fuchsia::virtualization::Realm> request);
 
   RealmImpl(const RealmImpl&) = delete;

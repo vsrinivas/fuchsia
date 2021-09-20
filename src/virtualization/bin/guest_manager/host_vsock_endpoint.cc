@@ -4,12 +4,14 @@
 
 #include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
 
+#include <lib/async/cpp/time.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
-HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)
-    : acceptor_provider_(std::move(acceptor_provider)) {}
+HostVsockEndpoint::HostVsockEndpoint(async_dispatcher_t* dispatcher,
+                                     AcceptorProvider acceptor_provider)
+    : dispatcher_(dispatcher), acceptor_provider_(std::move(acceptor_provider)) {}
 
 void HostVsockEndpoint::AddBinding(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> request) {
@@ -113,6 +115,15 @@ void HostVsockEndpoint::OnShutdown(uint32_t port) {
 }
 
 zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {
+  // Remove ephemeral ports that have been in quarantine long enough.
+  zx::time now = async::Now(dispatcher_);
+  while (!quarantined_ports_.empty() && now >= quarantined_ports_.front().available_time) {
+    zx_status_t status = port_bitmap_.ClearOne(quarantined_ports_.front().port);
+    FX_DCHECK(status == ZX_OK);
+    quarantined_ports_.pop_front();
+  }
+
+  // Find an ephemeral port.
   uint32_t value;
   zx_status_t status = port_bitmap_.Find(false, kFirstEphemeralPort, kLastEphemeralPort, 1, &value);
   if (status != ZX_OK) {
@@ -123,6 +134,9 @@ zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {
 }
 
 void HostVsockEndpoint::FreeEphemeralPort(uint32_t port) {
-  __UNUSED zx_status_t status = port_bitmap_.ClearOne(port);
-  FX_DCHECK(status == ZX_OK);
+  FX_DCHECK(port_bitmap_.GetOne(port)) << "Attempted to free port that was unallocated: " << port;
+
+  // Add the port to the quarantine list.
+  quarantined_ports_.push_back(QuarantinedPort{
+      .port = port, .available_time = async::Now(dispatcher_) + kPortQuarantineTime});
 }
