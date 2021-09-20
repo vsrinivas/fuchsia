@@ -544,7 +544,7 @@ pub fn sys_unlinkat(
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.unlink(ctx.task, basename, kind)
+        parent.unlink(basename, kind)
     })?;
     Ok(SUCCESS)
 }
@@ -569,7 +569,7 @@ pub fn sys_renameat(
         return error!(EXDEV);
     }
 
-    DirEntry::rename(&old_parent.entry, &old_basename, &new_parent.entry, &new_basename)?;
+    DirEntry::rename(&old_parent, &old_basename, &new_parent, &new_basename)?;
     Ok(SUCCESS)
 }
 

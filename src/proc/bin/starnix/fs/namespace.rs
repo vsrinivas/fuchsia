@@ -227,29 +227,20 @@ impl NamespaceNode {
         Ok(self.with_new_entry(self.entry.create_symlink(name, target)?))
     }
 
-    pub fn unlink(&self, task: &Task, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         if DirEntry::is_reserved_name(name) {
-            return error!(EINVAL);
-        }
-        let mut context = LookupContext::new(SymlinkMode::NoFollow);
-        let child = self.lookup(&mut context, task, name)?;
-
-        let unlink = || {
-            if child.mountpoint().is_some() {
-                return error!(EBUSY);
+            match kind {
+                UnlinkKind::Directory => {
+                    if name == b".." {
+                        error!(ENOTEMPTY)
+                    } else {
+                        error!(EINVAL)
+                    }
+                }
+                UnlinkKind::NonDirectory => error!(ENOTDIR),
             }
-            self.entry.unlink(name, kind)
-        };
-
-        // If this node is mounted in a namespace, we grab a read lock on the
-        // mount points for the namespace to prevent a time-of-check to
-        // time-of-use race between checking whether the child is a mount point
-        // and removing the child.
-        if let Some(ns) = self.namespace() {
-            let _guard = ns.mount_points.read();
-            unlink()
         } else {
-            unlink()
+            DirEntry::unlink(self, name, kind)
         }
     }
 
@@ -301,6 +292,12 @@ impl NamespaceNode {
             }
             Ok(child)
         }
+    }
+
+    /// Whether the child is a mount point in this NamespaceNode.
+    pub fn child_is_mountpoint(&self, child_entry: &DirEntryHandle) -> bool {
+        let child = self.with_new_entry(child_entry.clone());
+        self.namespace().map(|ns| ns.mount_points.read().contains_key(&child)).unwrap_or(false)
     }
 
     /// Traverse up a child-to-parent link in the namespace.
@@ -379,8 +376,8 @@ impl NamespaceNode {
         a.mount.as_ref().map(Arc::as_ptr) == b.mount.as_ref().map(Arc::as_ptr)
     }
 
-    fn with_new_entry(&self, node: DirEntryHandle) -> NamespaceNode {
-        NamespaceNode { mount: self.mount.clone(), entry: node }
+    fn with_new_entry(&self, entry: DirEntryHandle) -> NamespaceNode {
+        NamespaceNode { mount: self.mount.clone(), entry }
     }
 
     fn namespace(&self) -> Option<Arc<Namespace>> {

@@ -243,9 +243,24 @@ impl DirEntry {
         Ok(())
     }
 
-    pub fn unlink(self: &DirEntryHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
-        let mut state = self.state.write();
-        let child = state.children.get(name).ok_or(errno!(ENOENT))?.upgrade().unwrap();
+    pub fn unlink(
+        parent_name: &NamespaceNode,
+        name: &FsStr,
+        kind: UnlinkKind,
+    ) -> Result<(), Errno> {
+        assert!(!DirEntry::is_reserved_name(name));
+        let parent = &parent_name.entry;
+        let mut parent_state = parent.state.write();
+
+        let child = parent.component_lookup_locked(&mut parent_state, name)?;
+
+        // TODO: We should hold a read lock on the mount points for this
+        //       namespace to prevent the child from becoming a mount point
+        //       while this function is executing.
+        if parent_name.child_is_mountpoint(&child) {
+            return error!(EBUSY);
+        }
+
         let child_state = child.state.read();
 
         match kind {
@@ -267,17 +282,16 @@ impl DirEntry {
             }
         }
 
-        self.node.unlink(name, &child.node)?;
-        state.children.remove(name);
+        parent.node.unlink(name, &child.node)?;
+        parent_state.children.remove(name);
 
         std::mem::drop(child_state);
         // We drop the state lock before we drop the child so that we do
         // not trigger a deadlock in the Drop trait for FsNode, which attempts
         // to remove the FsNode from its parent's child list.
-        std::mem::drop(state);
+        std::mem::drop(parent_state);
 
-        // TODO: When we have hard links, we'll need to check the link count.
-        self.node.fs().will_destroy_dir_entry(&child);
+        parent.node.fs().will_destroy_dir_entry(&child);
 
         std::mem::drop(child);
         Ok(())
@@ -288,9 +302,9 @@ impl DirEntry {
     ///
     /// old_parent and new_parent must belong to the same file system.
     pub fn rename(
-        old_parent: &DirEntryHandle,
+        old_parent_name: &NamespaceNode,
         old_basename: &FsStr,
-        new_parent: &DirEntryHandle,
+        new_parent_name: &NamespaceNode,
         new_basename: &FsStr,
     ) -> Result<(), Errno> {
         // If either the old_basename or the new_basename is a reserved name
@@ -298,6 +312,9 @@ impl DirEntry {
         if DirEntry::is_reserved_name(old_basename) || DirEntry::is_reserved_name(new_basename) {
             return error!(EBUSY);
         }
+
+        let old_parent = &old_parent_name.entry;
+        let new_parent = &new_parent_name.entry;
 
         // If the names and parents are the same, then there's nothing to do
         // and we can report success.
@@ -334,7 +351,13 @@ impl DirEntry {
             // establish the DirEntry that we are going to try to rename.
             let renamed = old_parent.component_lookup_locked(state.old_parent(), old_basename)?;
 
-            // TODO: Check whether renamed is a mount point. (EBUSY)
+            // Check whether the renamed entry is a mountpoint.
+            // TODO: We should hold a read lock on the mount points for this
+            //       namespace to prevent the child from becoming a mount point
+            //       while this function is executing.
+            if old_parent_name.child_is_mountpoint(&renamed) {
+                return error!(EBUSY);
+            }
 
             // This specialized function ensure that we do not deadlock while
             // walking the parent chain of the given entry. We need to check
@@ -410,7 +433,13 @@ impl DirEntry {
                                 return error!(ENOTEMPTY);
                             }
 
-                            // TODO: Check whether renamed is a mount point. (EBUSY)
+                            // Check whether the replaced entry is a mountpoint.
+                            // TODO: We should hold a read lock on the mount points for this
+                            //       namespace to prevent the child from becoming a mount point
+                            //       while this function is executing.
+                            if new_parent_name.child_is_mountpoint(&replaced) {
+                                return error!(EBUSY);
+                            }
                         } else if renamed.node.is_dir() {
                             return error!(ENOTDIR);
                         }
@@ -467,6 +496,7 @@ impl DirEntry {
         state: &mut DirEntryState,
         name: &FsStr,
     ) -> Result<DirEntryHandle, Errno> {
+        assert!(!DirEntry::is_reserved_name(name));
         let (node, _) = self.get_or_create_child_locked(state, name, || self.node.lookup(name))?;
         Ok(node)
     }
