@@ -5,6 +5,10 @@
 #ifndef ZXTEST_C_ZXTEST_H_
 #define ZXTEST_C_ZXTEST_H_
 
+#ifndef ZXTEST_INCLUDE_INTERNAL_HEADERS
+#error This header is not intended for direct inclusion. Include zxtest/zxtest.h instead.
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

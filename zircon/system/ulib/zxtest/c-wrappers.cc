@@ -10,7 +10,10 @@
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test.h>
+
+#define ZXTEST_INCLUDE_INTERNAL_HEADERS
 #include <zxtest/c/zxtest.h>
+#undef ZXTEST_INCLUDE_INTERNAL_HEADERS
 
 #ifdef __Fuchsia__
 #include <zxtest/base/death-statement.h>

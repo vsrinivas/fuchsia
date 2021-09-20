@@ -5,6 +5,10 @@
 #ifndef ZXTEST_CPP_ZXTEST_H_
 #define ZXTEST_CPP_ZXTEST_H_
 
+#ifndef ZXTEST_INCLUDE_INTERNAL_HEADERS
+#error This header is not intended for direct inclusion. Include zxtest/zxtest.h instead.
+#endif
+
 #include <cstdlib>
 #include <type_traits>
 

@@ -14,11 +14,13 @@ __ANALYZER_CREATE_SINK
 static inline void unittest_fails(void) {}
 
 // Select the right implementation.
+#define ZXTEST_INCLUDE_INTERNAL_HEADERS
 #ifdef __cplusplus
 #include <zxtest/cpp/zxtest.h>
 #else
 #include <zxtest/c/zxtest.h>
 #endif
+#undef ZXTEST_INCLUDE_INTERNAL_HEADERS
 
 // This header provides all the available macros for C/C++.
 // Most of these macros are equivalent to gTest macros, with a few differences:

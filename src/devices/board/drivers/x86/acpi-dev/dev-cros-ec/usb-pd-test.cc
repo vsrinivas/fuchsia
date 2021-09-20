@@ -10,7 +10,6 @@
 #include <memory>
 #include <vector>
 
-#include <zxtest/cpp/zxtest.h>
 #include <zxtest/zxtest.h>
 
 #include "dev.h"
