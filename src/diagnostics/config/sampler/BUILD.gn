@@ -16,6 +16,7 @@ sampler_files = [
   "file-usage-metrics.json",
   "ftl.json",
   "fvm.json",
+  "input.json",
   "netstack.json",
   "sdmmc.json",
   "sysmem.json",

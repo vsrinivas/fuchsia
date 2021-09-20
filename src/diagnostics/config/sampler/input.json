@@ -1,0 +1,18 @@
+{
+    "metrics": [
+        {
+            "event_codes": [],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/hid-input-report-touch:max_latency_usecs"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/hid-input-report-touch:average_latency_usecs"
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 11
+}
