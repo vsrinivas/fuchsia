@@ -13,7 +13,7 @@ We'll use the [`jq`] tool throughout, all queries can be used from an
 cat snapshot/inspect.json | fx jq '...'
 ```
 ```
-fx iquery --format json show netstack.cmx | fx jq '...'
+fx iquery --format json show core/network/netstack | fx jq '...'
 ```
 ## Inspect data
 
@@ -41,7 +41,7 @@ socket identifier,  e.g.:
 
 To retrieve all sockets from inspect data use:
 ```
-fx jq '.[] | select(.moniker == "netstack.cmx") | .payload."Socket Info" | .[]?'
+fx jq '.[] | select(.moniker == "core/network/netstack") | .payload."Socket Info" | .[]?'
 ```
 
 ### NICs
@@ -74,7 +74,7 @@ installed in the netstack, keyed by their interface identifier, e.g:
 
 To retrieve all NICs from inspect data use:
 ```
-fx jq '.[] | select(.moniker == "netstack.cmx") | .payload."NICs" | .[]?'
+fx jq '.[] | select(.moniker == "core/network/netstack") | .payload."NICs" | .[]?'
 ```
 To look at a single NIC with `id` or `name` simply append `| select(.NICID ==
 "id")` or `| select(.Name == "name")`, respectively.
@@ -104,7 +104,7 @@ e.g.:
 
 To get counters use:
 ```
-fx jq '.[] | select(.moniker == "netstack.cmx")
+fx jq '.[] | select(.moniker == "core/network/netstack")
            | .payload."Networking Stat Counters"
            | select(. != null)'
 ```
@@ -129,7 +129,7 @@ needed.
 
 To retrieve all routes from inspect data use:
 ```
-fx jq '.[] | select(.moniker == "netstack.cmx") | .payload."Routes" | .[]?'
+fx jq '.[] | select(.moniker == "core/network/netstack") | .payload."Routes" | .[]?'
 ```
 
 ## pprof
@@ -140,7 +140,7 @@ the Go runtime.
 A typical snapshot will contain periodic `pprof` data which is gathered at set
 intervals. You can query the available `pprof` information with:
 ```
-fx jq -c '.[] | select(.moniker == "netstack.cmx")
+fx jq -c '.[] | select(.moniker == "core/network/netstack")
               | select(.payload.root.pprof != null)
               | {file: .metadata.filename, keys: (.payload.root.pprof | keys)}'
 ```
@@ -157,7 +157,7 @@ the `pprof` files and decodes them at once (remember to either pipe in your
 `inspect` data or add path to your inspect file after the `jq` command):
 ```bash
 fx jq -rc '.[]
-            | select(.moniker == "netstack.cmx")
+            | select(.moniker == "core/network/netstack")
             | select(.payload.root.pprof != null)
             | . as $parent
             | (.payload.root.pprof | to_entries | .[] | ($parent | .metadata.filename) + "_" + .key + " " + .value)' | \
