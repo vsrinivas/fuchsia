@@ -417,6 +417,8 @@ type Type struct {
 	Identifier       EncodedCompoundIdentifier
 	Nullable         bool
 	ObjType          uint32
+	TypeShapeV1      TypeShape
+	TypeShapeV2      TypeShape
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -428,6 +430,14 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	}
 
 	err = json.Unmarshal(*obj["kind"], &t.Kind)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(*obj["type_shape_v1"], &t.TypeShapeV1)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(*obj["type_shape_v2"], &t.TypeShapeV2)
 	if err != nil {
 		return err
 	}

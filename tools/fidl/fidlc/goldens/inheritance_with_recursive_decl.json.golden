@@ -32,7 +32,25 @@
               "type": {
                 "kind": "request",
                 "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "request",
               "location": {
@@ -110,7 +128,25 @@
               "type": {
                 "kind": "request",
                 "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "request",
               "location": {
@@ -166,7 +202,25 @@
               "type": {
                 "kind": "request",
                 "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "request",
               "location": {
@@ -231,7 +285,25 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "request",
           "location": {
@@ -289,7 +361,25 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "request",
           "location": {
@@ -347,7 +437,25 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "request",
           "location": {

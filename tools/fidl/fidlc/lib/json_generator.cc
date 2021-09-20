@@ -209,6 +209,8 @@ void JSONGenerator::Generate(const flat::Type* value) {
                "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
       }
     }
+
+    GenerateTypeShapes(*value);
   });
 }
 
@@ -470,6 +472,7 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
       }
     }
+    GenerateTypeShapes(*type);
   });
 }
 

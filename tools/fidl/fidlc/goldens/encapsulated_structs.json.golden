@@ -106,7 +106,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int8"
+            "subtype": "int8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -127,7 +145,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "b",
           "location": {
@@ -182,7 +218,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int16"
+            "subtype": "int16",
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -203,7 +257,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int8"
+            "subtype": "int8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "b",
           "location": {
@@ -261,9 +333,45 @@
             "element_type": {
               "kind": "identifier",
               "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 2,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 2,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 3
+            "element_count": 3,
+            "type_shape_v1": {
+              "inline_size": 12,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 12,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "arr",
           "location": {
@@ -319,7 +427,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "trailing",
           "location": {
@@ -341,7 +467,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/Int8Int32",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "inner",
           "location": {
@@ -363,7 +507,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 12,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 12,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "array",
           "location": {
@@ -419,7 +581,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "element",
           "location": {
@@ -443,7 +623,25 @@
             "obj_type": 0,
             "subtype": "handle",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "h",
           "location": {
@@ -499,7 +697,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 24,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -521,7 +737,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "b",
           "location": {

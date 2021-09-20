@@ -21,7 +21,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "3",
       "members": [
@@ -93,7 +111,25 @@
       ],
       "type": {
         "kind": "primitive",
-        "subtype": "uint16"
+        "subtype": "uint16",
+        "type_shape_v1": {
+          "inline_size": 2,
+          "alignment": 2,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 2,
+          "alignment": 2,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "1",
       "members": [
@@ -285,7 +321,25 @@
               "type": {
                 "kind": "identifier",
                 "identifier": "fidl.test.anonymous/UnionMember",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 24,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 8,
+                  "has_padding": true,
+                  "has_flexible_envelope": true
+                },
+                "type_shape_v2": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": true,
+                  "has_flexible_envelope": true
+                }
               },
               "name": "union_member",
               "location": {
@@ -307,7 +361,25 @@
               "type": {
                 "kind": "identifier",
                 "identifier": "fidl.test.anonymous/TableMember",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 3,
+                  "max_handles": 0,
+                  "max_out_of_line": 64,
+                  "has_padding": true,
+                  "has_flexible_envelope": true
+                },
+                "type_shape_v2": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 3,
+                  "max_handles": 0,
+                  "max_out_of_line": 48,
+                  "has_padding": true,
+                  "has_flexible_envelope": true
+                }
               },
               "name": "table_member",
               "location": {
@@ -351,7 +423,25 @@
               "type": {
                 "kind": "identifier",
                 "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 24,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 8,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "result",
               "location": {
@@ -416,7 +506,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "uint8"
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "data",
           "location": {
@@ -486,7 +594,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/UnionMember",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "union_member",
           "location": {
@@ -508,7 +634,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/TableMember",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 64,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "table_member",
           "location": {
@@ -568,7 +712,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/BitsMember",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "bits_member",
           "location": {
@@ -626,7 +788,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "result",
           "location": {
@@ -715,7 +895,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/Op",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "op",
           "location": {
@@ -737,7 +935,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/Expression",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "left",
           "location": {
@@ -759,7 +975,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/Expression",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "right",
           "location": {
@@ -833,10 +1067,46 @@
             "element_type": {
               "kind": "identifier",
               "identifier": "fidl.test.anonymous/TableData",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 10,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 16,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 16,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "table_data",
           "location": {
@@ -887,7 +1157,25 @@
           "type": {
             "kind": "string",
             "maybe_element_count": 100,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 104,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 104,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "func",
           "location": {
@@ -915,10 +1203,46 @@
             "element_type": {
               "kind": "identifier",
               "identifier": "fidl.test.anonymous/Expression",
-              "nullable": true
+              "nullable": true,
+              "type_shape_v1": {
+                "inline_size": 24,
+                "alignment": 8,
+                "depth": 5,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": true
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 5,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": true
+              }
             },
             "maybe_element_count": 5,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 6,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "args",
           "location": {
@@ -934,7 +1258,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/Flags",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 2,
+              "alignment": 2,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "flags",
           "location": {
@@ -999,7 +1341,25 @@
           "name": "union_data",
           "type": {
             "kind": "primitive",
-            "subtype": "uint8"
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -1058,7 +1418,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "generated",
@@ -1074,7 +1452,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "generated",
@@ -1135,7 +1531,25 @@
           "name": "value",
           "type": {
             "kind": "primitive",
-            "subtype": "uint64"
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -1151,7 +1565,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/OverrideTest",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 56,
+              "alignment": 8,
+              "depth": 5,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 40,
+              "alignment": 8,
+              "depth": 5,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -1167,7 +1599,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.anonymous/FunctionApplication",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 5,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 5,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",

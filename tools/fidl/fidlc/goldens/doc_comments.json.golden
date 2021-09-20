@@ -80,7 +80,25 @@
       ],
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "3",
       "members": [
@@ -234,7 +252,25 @@
       ],
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "3",
       "members": [
@@ -387,7 +423,25 @@
       ],
       "type": {
         "kind": "primitive",
-        "subtype": "int32"
+        "subtype": "int32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "value": {
         "kind": "literal",
@@ -925,7 +979,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.doccomments/Interface",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "interface",
           "location": {
@@ -1019,7 +1091,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "Field",
           "location": {
@@ -1141,7 +1231,25 @@
           "reserved": false,
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "Field",
           "location": {
@@ -1257,7 +1365,25 @@
           "name": "Field",
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
@@ -1370,7 +1496,25 @@
           "name": "Field",
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",

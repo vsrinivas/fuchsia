@@ -16,7 +16,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "7",
       "members": [
@@ -93,7 +111,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint64"
+        "subtype": "uint64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "9223372036854775809",
       "members": [
@@ -151,7 +187,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint64"
+        "subtype": "uint64",
+        "type_shape_v1": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 8,
+          "alignment": 8,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "mask": "9223372036854775809",
       "members": [

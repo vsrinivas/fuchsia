@@ -25,7 +25,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "uint8"
+            "subtype": "uint8",
+            "type_shape_v1": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 1,
+              "alignment": 1,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "single_byte",
           "location": {
@@ -48,9 +66,45 @@
             "kind": "vector",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint8"
+              "subtype": "uint8",
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "many_bytes",
           "location": {
@@ -73,10 +127,46 @@
             "kind": "vector",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint8"
+              "subtype": "uint8",
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 1024,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 1024,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 1024,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "only_one_k_bytes",
           "location": {
@@ -99,10 +189,46 @@
             "kind": "vector",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint8"
+              "subtype": "uint8",
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 1024,
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 1024,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 1024,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "opt_only_one_k_bytes",
           "location": {

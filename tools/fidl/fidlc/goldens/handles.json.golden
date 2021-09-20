@@ -684,7 +684,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "properties": [
         {
@@ -698,7 +716,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.handles/obj_type",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           }
         },
         {
@@ -712,7 +748,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "zx/rights",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           }
         }
       ]
@@ -752,7 +806,25 @@
             "obj_type": 0,
             "subtype": "handle",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "plain_handle",
           "location": {
@@ -776,7 +848,25 @@
             "obj_type": 24,
             "subtype": "bti",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "bti_handle",
           "location": {
@@ -800,7 +890,25 @@
             "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "channel_handle",
           "location": {
@@ -824,7 +932,25 @@
             "obj_type": 30,
             "subtype": "clock",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "clock_handle",
           "location": {
@@ -848,7 +974,25 @@
             "obj_type": 12,
             "subtype": "debuglog",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "debuglog_handle",
           "location": {
@@ -872,7 +1016,25 @@
             "obj_type": 5,
             "subtype": "event",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "event_handle",
           "location": {
@@ -896,7 +1058,25 @@
             "obj_type": 16,
             "subtype": "eventpair",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "eventpair_handle",
           "location": {
@@ -920,7 +1100,25 @@
             "obj_type": 29,
             "subtype": "exception",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "exception_handle",
           "location": {
@@ -944,7 +1142,25 @@
             "obj_type": 19,
             "subtype": "fifo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "fifo_handle",
           "location": {
@@ -968,7 +1184,25 @@
             "obj_type": 20,
             "subtype": "guest",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "guest_handle",
           "location": {
@@ -992,7 +1226,25 @@
             "obj_type": 9,
             "subtype": "interrupt",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "interrupt_handle",
           "location": {
@@ -1016,7 +1268,25 @@
             "obj_type": 23,
             "subtype": "iommu",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "iommu_handle",
           "location": {
@@ -1040,7 +1310,25 @@
             "obj_type": 17,
             "subtype": "job",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "job_handle",
           "location": {
@@ -1064,7 +1352,25 @@
             "obj_type": 28,
             "subtype": "pager",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "pager_handle",
           "location": {
@@ -1088,7 +1394,25 @@
             "obj_type": 11,
             "subtype": "pcidevice",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "pcidevice_handle",
           "location": {
@@ -1112,7 +1436,25 @@
             "obj_type": 26,
             "subtype": "pmt",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "pmt_handle",
           "location": {
@@ -1136,7 +1478,25 @@
             "obj_type": 6,
             "subtype": "port",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "port_handle",
           "location": {
@@ -1160,7 +1520,25 @@
             "obj_type": 1,
             "subtype": "process",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "process_handle",
           "location": {
@@ -1184,7 +1562,25 @@
             "obj_type": 25,
             "subtype": "profile",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "profile_handle",
           "location": {
@@ -1208,7 +1604,25 @@
             "obj_type": 15,
             "subtype": "resource",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "resource_handle",
           "location": {
@@ -1232,7 +1646,25 @@
             "obj_type": 14,
             "subtype": "socket",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "socket_handle",
           "location": {
@@ -1256,7 +1688,25 @@
             "obj_type": 27,
             "subtype": "suspendtoken",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "suspendtoken_handle",
           "location": {
@@ -1280,7 +1730,25 @@
             "obj_type": 2,
             "subtype": "thread",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "thread_handle",
           "location": {
@@ -1304,7 +1772,25 @@
             "obj_type": 22,
             "subtype": "timer",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "timer_handle",
           "location": {
@@ -1328,7 +1814,25 @@
             "obj_type": 21,
             "subtype": "vcpu",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "vcpu_handle",
           "location": {
@@ -1352,7 +1856,25 @@
             "obj_type": 18,
             "subtype": "vmar",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "vmar_handle",
           "location": {
@@ -1376,7 +1898,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "vmo_handle",
           "location": {
@@ -1400,7 +1940,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 5,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "rights_handle",
           "location": {
@@ -1424,7 +1982,25 @@
             "obj_type": 0,
             "subtype": "handle",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.handles/aliased_plain_handle",
@@ -1453,7 +2029,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.handles/aliased_subtype_handle",
@@ -1482,7 +2076,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 1,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.handles/aliased_rights_handle",
@@ -1509,7 +2121,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.handles/SomeProtocol",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "some_protocol",
           "location": {
@@ -1531,7 +2161,25 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.handles/SomeProtocol",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "request_some_protocol",
           "location": {

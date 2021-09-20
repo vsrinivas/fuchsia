@@ -112,7 +112,25 @@
             {
               "type": {
                 "kind": "primitive",
-                "subtype": "int32"
+                "subtype": "int32",
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "a",
               "location": {
@@ -133,7 +151,25 @@
             {
               "type": {
                 "kind": "primitive",
-                "subtype": "int32"
+                "subtype": "int32",
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "b",
               "location": {
@@ -176,7 +212,25 @@
             {
               "type": {
                 "kind": "primitive",
-                "subtype": "int32"
+                "subtype": "int32",
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "sum",
               "location": {
@@ -239,7 +293,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -260,7 +332,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "b",
           "location": {
@@ -317,7 +407,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "sum",
           "location": {
@@ -372,7 +480,25 @@
         {
           "type": {
             "kind": "string",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -429,9 +555,45 @@
             "kind": "vector",
             "element_type": {
               "kind": "primitive",
-              "subtype": "int32"
+              "subtype": "int32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -489,7 +651,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -545,7 +725,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.nullable/SimpleProtocol",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -601,7 +799,25 @@
           "type": {
             "kind": "request",
             "subtype": "fidl.test.nullable/SimpleProtocol",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -656,7 +872,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -712,7 +946,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.nullable/Int32Wrapper",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -768,7 +1020,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.nullable/SimpleUnion",
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "val",
           "location": {
@@ -828,7 +1098,25 @@
           "name": "a",
           "type": {
             "kind": "primitive",
-            "subtype": "int32"
+            "subtype": "int32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
@@ -843,7 +1131,25 @@
           "name": "b",
           "type": {
             "kind": "primitive",
-            "subtype": "float32"
+            "subtype": "float32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",

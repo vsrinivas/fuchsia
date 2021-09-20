@@ -199,7 +199,9 @@ func TestCanUnmarshalBitsStrictness(t *testing.T) {
 			{
 				"type": {
 					"kind": "primitive",
-					"subtype": "uint32"
+					"subtype": "uint32",
+					"type_shape_v1": {},
+					"type_shape_v2": {}
 				},
 				"mask": "1",
 				"members": [],

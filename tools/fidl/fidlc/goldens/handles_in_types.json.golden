@@ -71,7 +71,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "properties": [
         {
@@ -85,7 +103,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.handlesintypes/obj_type",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           }
         }
       ]
@@ -113,7 +149,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "normal_handle",
           "location": {
@@ -139,9 +193,45 @@
               "obj_type": 3,
               "subtype": "vmo",
               "rights": 2147483648,
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "handle_in_vec",
           "location": {
@@ -167,9 +257,45 @@
               "obj_type": 3,
               "subtype": "vmo",
               "rights": 2147483648,
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 5
+            "element_count": 5,
+            "type_shape_v1": {
+              "inline_size": 20,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 5,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 20,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 5,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "handle_in_array",
           "location": {
@@ -197,11 +323,65 @@
                 "obj_type": 3,
                 "subtype": "vmo",
                 "rights": 2147483648,
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 4,
+                  "alignment": 4,
+                  "depth": 0,
+                  "max_handles": 1,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
-              "element_count": 5
+              "element_count": 5,
+              "type_shape_v1": {
+                "inline_size": 20,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 5,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 20,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 5,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "handle_in_mixed_vec_array",
           "location": {
@@ -223,7 +403,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.handlesintypes/TableWithHandle",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 1,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "table_with_handle",
           "location": {
@@ -245,7 +443,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.handlesintypes/UnionWithHandle",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
           },
           "name": "union_with_handle",
           "location": {
@@ -306,7 +522,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "h",
           "location": {
@@ -361,7 +595,25 @@
             "obj_type": 3,
             "subtype": "vmo",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",

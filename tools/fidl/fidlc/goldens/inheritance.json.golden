@@ -31,7 +31,25 @@
             {
               "type": {
                 "kind": "string",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 4294967295,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 4294967295,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "s",
               "location": {
@@ -74,7 +92,25 @@
             {
               "type": {
                 "kind": "primitive",
-                "subtype": "int64"
+                "subtype": "int64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "y",
               "location": {
@@ -182,7 +218,25 @@
             {
               "type": {
                 "kind": "string",
-                "nullable": false
+                "nullable": false,
+                "type_shape_v1": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 4294967295,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 16,
+                  "alignment": 8,
+                  "depth": 1,
+                  "max_handles": 0,
+                  "max_out_of_line": 4294967295,
+                  "has_padding": true,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "s",
               "location": {
@@ -225,7 +279,25 @@
             {
               "type": {
                 "kind": "primitive",
-                "subtype": "int64"
+                "subtype": "int64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_flexible_envelope": false
+                }
               },
               "name": "y",
               "location": {
@@ -288,7 +360,25 @@
         {
           "type": {
             "kind": "string",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "s",
           "location": {
@@ -345,7 +435,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int64"
+            "subtype": "int64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "y",
           "location": {
@@ -402,7 +510,25 @@
         {
           "type": {
             "kind": "string",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "s",
           "location": {
@@ -459,7 +585,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "int64"
+            "subtype": "int64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "y",
           "location": {

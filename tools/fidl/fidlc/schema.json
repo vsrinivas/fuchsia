@@ -23,12 +23,22 @@
                         "array"
                     ],
                     "type": "string"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
                 "element_type",
-                "element_count"
+                "element_count",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -562,6 +572,14 @@
                 "subtype": {
                     "$ref": "#/definitions/handle-subtype",
                     "description": "Sub-type of handle type"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
@@ -569,7 +587,9 @@
                 "nullable",
                 "obj_type",
                 "rights",
-                "subtype"
+                "subtype",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -634,12 +654,22 @@
                 "nullable": {
                     "description": "Flag indicating nullability of identifier type",
                     "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
                 "identifier",
-                "nullable"
+                "nullable",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -999,11 +1029,21 @@
                 "subtype": {
                     "$ref": "#/definitions/primitive-subtype",
                     "description": "Sub-type of the primitive type"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
-                "subtype"
+                "subtype",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -1028,12 +1068,22 @@
                 "subtype": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Protocol name of request type"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
                 "subtype",
-                "nullable"
+                "nullable",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -1188,11 +1238,21 @@
                 "nullable": {
                     "description": "Flag indicating nullability of string type",
                     "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
-                "nullable"
+                "nullable",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },
@@ -1710,12 +1770,22 @@
                 "nullable": {
                     "description": "Flag indicating nullability of vector type",
                     "type": "boolean"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
                 }
             },
             "required": [
                 "kind",
                 "element_type",
-                "nullable"
+                "nullable",
+                "type_shape_v1",
+                "type_shape_v2"
             ],
             "type": "object"
         },

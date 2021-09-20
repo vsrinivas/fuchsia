@@ -81,7 +81,25 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "uint32"
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
       },
       "properties": [
         {
@@ -95,7 +113,25 @@
           "type": {
             "kind": "identifier",
             "identifier": "fidl.test.typealiases/obj_type",
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           }
         }
       ]
@@ -120,7 +156,25 @@
         {
           "type": {
             "kind": "primitive",
-            "subtype": "uint32"
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/u32",
@@ -148,9 +202,45 @@
             "kind": "vector",
             "element_type": {
               "kind": "string",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              }
             },
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/vec_of_strings",
@@ -178,10 +268,46 @@
             "kind": "vector",
             "element_type": {
               "kind": "string",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 9,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/vec_of_strings",
@@ -210,10 +336,46 @@
             "kind": "vector",
             "element_type": {
               "kind": "string",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 5,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
@@ -242,10 +404,46 @@
             "element_type": {
               "kind": "identifier",
               "identifier": "someotherlibrary/ReferenceMe",
-              "nullable": false
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
             "maybe_element_count": 5,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
           },
           "name": "field_of_vec_of_ref_me_at_most_5",
           "location": {
@@ -269,7 +467,25 @@
             "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/channel",
@@ -298,7 +514,25 @@
             "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
-            "nullable": false
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/alias_of_channel",
@@ -327,7 +561,25 @@
             "obj_type": 4,
             "subtype": "channel",
             "rights": 2147483648,
-            "nullable": true
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "experimental_maybe_from_type_alias": {
             "name": "fidl.test.typealiases/alias_of_channel",

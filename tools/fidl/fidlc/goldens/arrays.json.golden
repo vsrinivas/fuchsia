@@ -27,9 +27,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 2
+            "element_count": 2,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -86,9 +122,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 100
+            "element_count": 100,
+            "type_shape_v1": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -148,9 +220,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 2
+            "element_count": 2,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -201,9 +309,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 100
+            "element_count": 100,
+            "type_shape_v1": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "name": "a",
           "location": {
@@ -257,9 +401,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 2
+            "element_count": 2,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
@@ -310,9 +490,45 @@
             "kind": "array",
             "element_type": {
               "kind": "primitive",
-              "subtype": "uint32"
+              "subtype": "uint32",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_flexible_envelope": false
+              }
             },
-            "element_count": 100
+            "element_count": 100,
+            "type_shape_v1": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 400,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
