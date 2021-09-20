@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 /// A `Message` represents a typed segment of bytes within a `MessageBuffer`.
 #[derive(Clone, PartialEq, Debug)]
 pub enum Message {
@@ -27,12 +25,23 @@ impl From<Packet> for Message {
 }
 
 impl Message {
+    /// Returns a `Message::Control` with the given bytes.
+    #[cfg(test)]
     pub fn control(bytes: Vec<u8>) -> Message {
         Message::Control(Control { bytes })
     }
 
+    /// Returns a `Message::Packet` with the given bytes.
     pub fn packet(bytes: Vec<u8>) -> Message {
         Message::Packet(Packet { bytes })
+    }
+
+    /// Returns the length of the message in bytes.
+    pub fn len(&self) -> usize {
+        match self {
+            Message::Packet(p) => p.len(),
+            Message::Control(c) => c.len(),
+        }
     }
 }
 
@@ -43,19 +52,9 @@ pub struct Control {
 }
 
 impl Control {
-    /// The amount of bytes in this control message.
+    /// Returns the number of bytes in the control message.
     pub fn len(&self) -> usize {
         self.bytes.len()
-    }
-
-    /// The bytes stored in this control message.
-    pub fn bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Converts this control message into a vector of bytes.
-    pub fn to_bytes(self) -> Vec<u8> {
-        self.bytes
     }
 }
 
@@ -87,5 +86,10 @@ impl Packet {
             packet.bytes = self.bytes.split_off(index);
         }
         packet
+    }
+
+    /// Returns a reference to the bytes in the packet.
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
     }
 }

@@ -114,20 +114,6 @@ impl Pipe {
         self.had_writer = true;
     }
 
-    /// Decrements the reader count for this pipe by 1.
-    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
-    // that without the pipe semantics.
-    pub fn remove_reader(&mut self) {
-        self.reader_count -= 1;
-    }
-
-    /// Decrements the writer count for this pipe by 1.
-    // TODO: This can be removed once the read/write logic has been extracted so sockets can use
-    // that without the pipe semantics.
-    pub fn remove_writer(&mut self) {
-        self.writer_count -= 1;
-    }
-
     fn get_size(&self) -> usize {
         self.size
     }

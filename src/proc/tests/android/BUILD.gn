@@ -161,7 +161,7 @@ gvisor_tests = [
 
   # "sigstop_test",
   # "socket_abstract_test",
-  # "socket_test",
+  "socket_test",
 
   # "socket_unix_stream_test",
   "stat_test",

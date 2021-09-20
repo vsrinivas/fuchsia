@@ -86,7 +86,7 @@ pub fn sys_connect(
     let second_socket_node = node.entry.node.clone();
 
     if let Some(socket) = second_socket_node.socket() {
-        if !socket.lock().accepts_connections() {
+        if !socket.lock().is_bound() {
             return error!(ECONNREFUSED);
         }
     } else {
@@ -149,10 +149,8 @@ pub fn sys_recvmsg(
     let result = file.read(&ctx.task, &iovec)?;
 
     // TODO: These control messages should be written and read in-band.
-    let socket = file.node().socket().map(|socket| socket.lock()).ok_or(errno!(ENOTSOCK))?;
-    if let Some(control_message) =
-        socket.connected_socket().and_then(|s| s.lock().take_control_message())
-    {
+    let mut socket = file.node().socket().map(|socket| socket.lock()).ok_or(errno!(ENOTSOCK))?;
+    if let Some(control_message) = socket.take_control_message() {
         let max_bytes =
             std::cmp::min(control_message.len(), message_header.msg_controllen as usize);
         ctx.task.mm.write_memory(message_header.msg_control, &control_message[..max_bytes])?;
@@ -161,6 +159,7 @@ pub fn sys_recvmsg(
         message_header.msg_controllen = 0;
     }
     ctx.task.mm.write_object(user_message_header, &message_header)?;
+
     Ok(result.into())
 }
 
@@ -183,8 +182,10 @@ pub fn sys_sendmsg(
     let mut bytes = vec![0u8; message_header.msg_controllen as usize];
     ctx.task.mm.read_memory(message_header.msg_control, &mut bytes)?;
 
+    // TODO: Send the control message in-band with the rest of the data.
     if let Some(socket) = file.node().socket() {
-        socket.lock().set_control_message(bytes);
+        let connected_socket = socket.lock().connected_socket();
+        connected_socket.map(|s| s.lock().set_control_message(bytes));
     }
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
@@ -203,8 +204,10 @@ pub fn sys_shutdown(
 
     // TODO: Respect the `how` argument.
 
-    let mut socket = file.node().socket().ok_or(errno!(ENOTSOCK))?.lock();
-    let _disconnected_node = socket.disconnect();
+    let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
+    let connected_node = socket.lock().connected_node().ok_or(errno!(ENOTSOCK))?;
+
+    Socket::disconnect(file.node(), &connected_node);
 
     Ok(SUCCESS)
 }
