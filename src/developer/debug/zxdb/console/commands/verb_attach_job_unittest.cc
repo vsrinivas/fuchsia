@@ -35,6 +35,18 @@ TEST_F(VerbAttachJob, Bad) {
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ("Job 1 attach-job failed.\nError attaching: Bad job", event.output.AsString());
+
+  // Remove the job, this will delete the default job that exists.
+  console().ProcessInputLine("job 1 rm");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(R"(Removed Job 1 state="Not attached" name="")", event.output.AsString());
+
+  // Now try to attach again (with no job objects alive), this should create a new job object but
+  // fail to attach it.
+  console().ProcessInputLine("attach-job 12345");
+  attach_remote_api()->last_attach->cb(Err(), reply);
+  event = console().GetOutputEvent();
+  EXPECT_EQ("Job 2 attach-job failed.\nError attaching: Bad job", event.output.AsString());
 }
 
 TEST_F(VerbAttachJob, Good) {
@@ -100,7 +112,15 @@ TEST_F(VerbAttachJob, Good) {
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ("Created Filter 3 pattern=baz job=2", event.output.AsString());
 
-  // Validate the filters.
+  // Validate the jobs and filters.
+  console().ProcessInputLine("job");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(
+      "  # State    Koid Name\n"
+      "  1 Attached 7890 some job\n"
+      "▶ 2 Attached 5555 other job\n",
+      event.output.AsString());
+
   console().ProcessInputLine("filter");
   event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -109,6 +129,37 @@ TEST_F(VerbAttachJob, Good) {
       "  1 foo       2\n"
       "  2 bar       2\n"
       "▶ 3 baz       2\n",
+      event.output.AsString());
+
+  // Remove the active job. This should delete the associated filters also.
+  console().ProcessInputLine("job 2 rm");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(R"(Removed Job 2 state=Attached koid=5555 name="other job")", event.output.AsString());
+
+  console().ProcessInputLine("job");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(
+      " # State    Koid Name\n"
+      " 1 Attached 7890 some job\n",
+      event.output.AsString());
+
+  console().ProcessInputLine("filter");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("No filters.\n", event.output.AsString());
+
+  // Attaching again should maje a new job object and set it as the default.
+  console().ProcessInputLine("attach-job 5555");
+  attach_remote_api()->last_attach->cb(Err(), reply);
+  event = console().GetOutputEvent();
+  EXPECT_EQ("Job 3 state=Attached koid=5555 name=\"other job\"", event.output.AsString());
+
+  console().ProcessInputLine("job");
+  event = console().GetOutputEvent();
+  EXPECT_EQ(
+      "  # State    Koid Name\n"
+      "  1 Attached 7890 some job\n"
+      "▶ 3 Attached 5555 other job\n",
       event.output.AsString());
 }
 

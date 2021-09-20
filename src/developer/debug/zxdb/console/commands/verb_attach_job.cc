@@ -157,7 +157,7 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
   } else if (attach_to_what == kAttachKoid &&
              (job = GetJobAlreadyAttached(&context->session()->system(), attach_koid))) {
     // The debugger is already attached to the requested koid, re-use it.
-  } else if (IsJobAttachable(cmd.job())) {
+  } else if (cmd.job() && IsJobAttachable(cmd.job())) {
     // Use the current job.
     job = cmd.job();
   } else {
