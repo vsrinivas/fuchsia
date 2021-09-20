@@ -13,7 +13,9 @@ import (
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"google.golang.org/api/iterator"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,9 +27,12 @@ type downloadCmd struct {
 }
 
 const (
-	buildsDirName = "builds"
-	imageDirName  = "images"
-	imageJSONName = "images.json"
+	buildsDirName       = "builds"
+	imageDirName        = "images"
+	imageJSONName       = "images.json"
+	fileFormatName      = "files"
+	gcsBaseURI          = "gs://"
+	gsUtilURIFormatName = "gsutil_uri"
 )
 
 func (*downloadCmd) Name() string { return "download" }
@@ -87,17 +92,87 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		productBundleAbsPath := filepath.Join(imageDir, productBundlePath)
 		logger.Debugf(ctx, "%v contains the product bundle in abs path %v", buildID, productBundleAbsPath)
 
-		productBundleData, err := getProductBundleData(ctx, sink, productBundleAbsPath)
+		updatedProductBundleData, err := readAndUpdateProductBundle(ctx, sink, productBundleAbsPath)
 		if err != nil {
 			return fmt.Errorf("unable to read product bundle data for build_id '%v': %v", buildID, err)
 		}
-		data, err := json.MarshalIndent(&productBundleData, "", "  ")
+		data, err := json.MarshalIndent(&updatedProductBundleData, "", "  ")
 		if err != nil {
 			return fmt.Errorf("unable to json marshall product bundle for build_id '%v': %v", buildID, err)
 		}
 		logger.Infof(ctx, "Product bundle for build_id %v:\n%v\n", buildID, string(data))
 	}
 	return nil
+}
+
+// getGCSURIBasedOnFileURI gets the gcs_uri based on the product_bundle path.
+func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, productBundleJSONPath, bucket string) (string, error) {
+	u, err := url.ParseRequestURI(fileURI)
+	if err != nil {
+		return "", err
+	}
+	productBundleDirPath := filepath.Dir(productBundleJSONPath)
+	baseURI := filepath.Join(productBundleDirPath, u.Path)
+
+	// Check that the path actually exists in GCS.
+	validPath, err := sink.doesPathExist(ctx, baseURI)
+	if err != nil {
+		return "", err
+	}
+	if !validPath {
+		return "", fmt.Errorf("base_uri is invalid %v", baseURI)
+	}
+	return gcsBaseURI + filepath.Join(bucket, baseURI), nil
+}
+
+// readAndUpdateProductBundle reads the product bundle from GCS and returns the ProductBundle
+// with updated images/packages paths that point to a GCS URI.
+func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundleJSONPath string) (ProductBundle, error) {
+	productBundleData, err := getProductBundleData(ctx, sink, productBundleJSONPath)
+	if err != nil {
+		return productBundleData, err
+	}
+
+	data := productBundleData.Data
+
+	var newImages []*Image
+	var newPackages []*Package
+
+	logger.Debugf(ctx, "updating images for product bundle %q", productBundleJSONPath)
+	for _, image := range data.Images {
+		if image.Format == fileFormatName {
+			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, image.BaseURI, productBundleJSONPath, sink.getBucketName())
+			if err != nil {
+				return ProductBundle{}, err
+			}
+			logger.Debugf(ctx, "gcs_uri is %v for image base_uri %v", gcsURI, image.BaseURI)
+			newImages = append(newImages, &Image{
+				Format:  gsUtilURIFormatName,
+				BaseURI: gcsURI,
+			})
+		}
+	}
+
+	logger.Debugf(ctx, "updating packages for product bundle %q", productBundleJSONPath)
+	for _, pkg := range data.Packages {
+		if pkg.Format == fileFormatName {
+			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
+			if err != nil {
+				return ProductBundle{}, err
+			}
+			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", gcsURI, pkg.RepoURI)
+			newPackages = append(newPackages, &Package{
+				Format:  gsUtilURIFormatName,
+				RepoURI: gcsURI,
+				BlobURI: pkg.BlobURI,
+			})
+		}
+	}
+
+	productBundleData.Data.Images = newImages
+	productBundleData.Data.Packages = newPackages
+
+	return productBundleData, nil
 }
 
 func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (ProductBundle, error) {
@@ -134,12 +209,15 @@ func getProductBundlePathFromImagesJSON(ctx context.Context, sink dataSink, imag
 // cloudSink, the GCS-backed implementation below.
 type dataSink interface {
 	readFromGCS(ctx context.Context, object string) ([]byte, error)
+	getBucketName() string
+	doesPathExist(ctx context.Context, prefix string) (bool, error)
 }
 
 // CloudSink is a GCS-backed data sink.
 type cloudSink struct {
-	client *storage.Client
-	bucket *storage.BucketHandle
+	client     *storage.Client
+	bucket     *storage.BucketHandle
+	bucketName string
 }
 
 func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
@@ -148,8 +226,9 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 		return nil, err
 	}
 	return &cloudSink{
-		client: client,
-		bucket: client.Bucket(bucket),
+		client:     client,
+		bucket:     client.Bucket(bucket),
+		bucketName: bucket,
 	}, nil
 }
 
@@ -173,4 +252,27 @@ func (s *cloudSink) readFromGCS(ctx context.Context, object string) ([]byte, err
 		return nil, err
 	}
 	return data, nil
+}
+
+func (s *cloudSink) getBucketName() string {
+	return s.bucketName
+}
+
+// doesPathExist checks if a path exists in GCS.
+func (s *cloudSink) doesPathExist(ctx context.Context, prefix string) (bool, error) {
+	logger.Debugf(ctx, "checking if %v is a valid path in GCS", prefix)
+	it := s.bucket.Objects(ctx, &storage.Query{
+		Prefix:    prefix,
+		Delimiter: "/",
+	})
+	_, err := it.Next()
+	// If the first object in the iterator is the end of the iterator, the path
+	// is invalid and doesn't exist in GCS.
+	if err == iterator.Done {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

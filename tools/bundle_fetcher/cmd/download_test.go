@@ -16,12 +16,14 @@ import (
 type memSink struct {
 	contents map[string][]byte
 	err      error
+	dir      string
 }
 
-func newMemSink(contents map[string][]byte, err error) *memSink {
+func newMemSink(contents map[string][]byte, err error, dir string) *memSink {
 	return &memSink{
 		contents: contents,
 		err:      err,
+		dir:      dir,
 	}
 }
 
@@ -33,6 +35,20 @@ func (s *memSink) readFromGCS(ctx context.Context, object string) ([]byte, error
 		return nil, fmt.Errorf("file not found")
 	}
 	return s.contents[object], nil
+}
+
+func (s *memSink) getBucketName() string {
+	return s.dir
+}
+
+func (s *memSink) doesPathExist(ctx context.Context, prefix string) (bool, error) {
+	if s.err != nil {
+		return false, s.err
+	}
+	if _, ok := s.contents[prefix]; !ok {
+		return false, nil
+	}
+	return true, nil
 }
 
 func TestParseFlags(t *testing.T) {
@@ -115,7 +131,7 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sink := newMemSink(contents, test.dataSinkErr)
+			sink := newMemSink(contents, test.dataSinkErr, "")
 			output, err := getProductBundlePathFromImagesJSON(ctx, sink, test.imageJSONPath)
 			if output != test.expectedOutput {
 				t.Fatalf("Got output: '%v', want: '%v'", output, test.expectedOutput)
@@ -132,7 +148,7 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 
 func TestGetProductBundleData(t *testing.T) {
 	contents := map[string][]byte{
-		"some/valid/emulator/product_bundle.json": []byte(`{
+		"builds/123456/images/gen/build/images/emulator.json": []byte(`{
 			"data": {
 			  "description": "some emulator device",
 			  "device_refs": [
@@ -140,7 +156,7 @@ func TestGetProductBundleData(t *testing.T) {
 			  ],
 			  "images": [
 				{
-				  "base_uri": "file://../../..",
+				  "base_uri": "file:/../../..",
 				  "format": "files"
 				}
 			  ],
@@ -148,7 +164,7 @@ func TestGetProductBundleData(t *testing.T) {
 			  "packages": [
 				{
 				  "format": "files",
-				  "repo_uri": "file://../../../amber-files"
+				  "repo_uri": "file:/../../../../packages"
 				}
 			  ],
 			  "type": "product_bundle",
@@ -164,7 +180,7 @@ func TestGetProductBundleData(t *testing.T) {
 			},
 			"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
 			}`),
-		"some/valid/physical/device/product_bundle.json": []byte(`{
+		"builds/789123/images/gen/build/images/physical_device.json": []byte(`{
 				"data": {
 				  "description": "",
 				  "device_refs": [
@@ -172,7 +188,7 @@ func TestGetProductBundleData(t *testing.T) {
 				  ],
 				  "images": [
 					{
-					  "base_uri": "file://../../..",
+					  "base_uri": "file:/../../..",
 					  "format": "files"
 					}
 				  ],
@@ -213,29 +229,66 @@ func TestGetProductBundleData(t *testing.T) {
 				  "packages": [
 					{
 					  "format": "files",
-					  "repo_uri": "file://../../../amber-files"
+					  "repo_uri": "file:/../../../../packages"
 					}
 				  ],
 				  "type": "product_bundle"
 				},
 				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
 			  }`),
+		"builds/invalid/path/images/gen/build/images/emulator.json": []byte(`{
+				"data": {
+				  "description": "some invalid emulator device",
+				  "device_refs": [
+					"qemu-x64"
+				  ],
+				  "images": [
+					{
+					  "base_uri": "file:/../../..",
+					  "format": "files"
+					}
+				  ],
+				  "name": "terminal.qemu-x64",
+				  "packages": [
+					{
+					  "format": "files",
+					  "repo_uri": "file:/../../../../packages"
+					}
+				  ],
+				  "type": "product_bundle",
+				  "manifests": {
+					"emu": {
+					  "disk_images": [
+						"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+					  ],
+					  "initial_ramdisk": "fuchsia.zbi",
+					  "kernel": "multiboot.bin"
+					}
+				   }
+				},
+				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+				}`),
 		"some/invalid/product_bundle.json": []byte(`{
 				  "data": "I am a string instead of an object",
 				"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
 			  }`),
+		"builds/123456/images":   []byte(""),
+		"builds/123456/packages": []byte(""),
+		"builds/789123/images":   []byte(""),
+		"builds/789123/packages": []byte(""),
 	}
 	ctx := context.Background()
 	var tests = []struct {
 		name                  string
 		productBundlePath     string
+		dir                   string
 		dataSinkErr           error
 		expectedProductBundle ProductBundle
 		expectedErrMessage    string
 	}{
 		{
 			name:              "valid product bundle for emulator",
-			productBundlePath: "some/valid/emulator/product_bundle.json",
+			productBundlePath: "builds/123456/images/gen/build/images/emulator.json",
 			expectedProductBundle: ProductBundle{
 				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
 				Data: Data{
@@ -243,16 +296,16 @@ func TestGetProductBundleData(t *testing.T) {
 					DeviceRefs:  []string{"qemu-x64"},
 					Images: []*Image{
 						{
-							BaseURI: "file://../../..",
-							Format:  "files",
+							BaseURI: "gs://fuchsia/builds/123456/images",
+							Format:  "gsutil_uri",
 						},
 					},
 					Type: "product_bundle",
 					Name: "terminal.qemu-x64",
 					Packages: []*Package{
 						{
-							Format:  "files",
-							RepoURI: "file://../../../amber-files",
+							Format:  "gsutil_uri",
+							RepoURI: "gs://fuchsia/builds/123456/packages",
 						},
 					},
 					Manifests: &Manifests{
@@ -264,10 +317,11 @@ func TestGetProductBundleData(t *testing.T) {
 					},
 				},
 			},
+			dir: "fuchsia",
 		},
 		{
 			name:              "valid product bundle for physical device",
-			productBundlePath: "some/valid/physical/device/product_bundle.json",
+			productBundlePath: "builds/789123/images/gen/build/images/physical_device.json",
 			expectedProductBundle: ProductBundle{
 				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
 				Data: Data{
@@ -275,16 +329,16 @@ func TestGetProductBundleData(t *testing.T) {
 					DeviceRefs:  []string{"x64"},
 					Images: []*Image{
 						{
-							BaseURI: "file://../../..",
-							Format:  "files",
+							BaseURI: "gs://fuchsia/builds/789123/images",
+							Format:  "gsutil_uri",
 						},
 					},
 					Type: "product_bundle",
 					Name: "terminal.x64",
 					Packages: []*Package{
 						{
-							Format:  "files",
-							RepoURI: "file://../../../amber-files",
+							Format:  "gsutil_uri",
+							RepoURI: "gs://fuchsia/builds/789123/packages",
 						},
 					},
 					Manifests: &Manifests{
@@ -322,6 +376,7 @@ func TestGetProductBundleData(t *testing.T) {
 					},
 				},
 			},
+			dir: "fuchsia",
 		},
 		{
 			name:               "product bundle does not exist in GCS",
@@ -337,12 +392,17 @@ func TestGetProductBundleData(t *testing.T) {
 			},
 			expectedErrMessage: "json: cannot unmarshal string into Go struct field ProductBundle.data of type main.Data",
 		},
+		{
+			name:               "gcs prefix doesn't exist",
+			productBundlePath:  "builds/invalid/path/images/gen/build/images/emulator.json",
+			expectedErrMessage: "base_uri is invalid builds/invalid/path/images",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sink := newMemSink(contents, test.dataSinkErr)
-			output, err := getProductBundleData(ctx, sink, test.productBundlePath)
-			if !cmp.Equal(output, test.expectedProductBundle) {
+			sink := newMemSink(contents, test.dataSinkErr, test.dir)
+			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
+			if !cmp.Equal(&output, &test.expectedProductBundle) {
 				t.Fatalf("Got output: '%v', want: '%v'", output, test.expectedProductBundle)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
