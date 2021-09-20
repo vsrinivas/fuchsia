@@ -159,13 +159,27 @@ class __TA_SCOPED_CAPABILITY
   ~Guard() __TA_RELEASE() { Release(); }
 
   // Releases the lock early before this guard instance goes out of scope.
+  //
+  // Note: It is important to validate the release operation and clear the
+  // validator state _before_ we actually release the lock.  Failure to observe
+  // this ordering requirement can enable the following sequence.
+  //
+  // 1) A kernel spinlock is held with interrupts disabled.
+  // 2) During the lock release operation, the lock is released and interrupts
+  //    are re-enabled.
+  // 3) Before the validation of the release operation has taken place and the
+  //    state is cleared, and interrupt it taken.
+  // 4) During the interrupt handler, the same lock is acquired.
+  // 5) To lockdep, it looks like the lock is already currently held which
+  //    results in a reentrancy violation, even though the lock has already been
+  //    dropped.
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
     if (validator_.lock() != nullptr) {
-      LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
-                                            std::forward<Args>(args)...);
+      LockType* lock_ptr = validator_.lock();
       validator_.ValidateRelease();
       validator_.Clear();
+      LockPolicy<LockType, Option>::Release(lock_ptr, &state_, std::forward<Args>(args)...);
     }
   }
 
@@ -241,6 +255,10 @@ class __TA_SCOPED_CAPABILITY
   // about the conditional path that would not be raised in the constructor
   // body.
   void ValidateAndAcquire() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    // TODO(fxb/84890): break this acquire up into two steps.  One where we
+    // validate the operation before attempting to obtain the lock, and the
+    // other where we update our bookkeeping to indicate that the lock is owned
+    // _after_ successfully obtaining the lock.
     validator_.ValidateAcquire();
     if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();
@@ -357,10 +375,10 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
     if (validator_.lock() != nullptr) {
-      LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
-                                            std::forward<Args>(args)...);
+      LockType* lock_ptr = validator_.lock();
       validator_.ValidateRelease();
       validator_.Clear();
+      LockPolicy<LockType, Option>::Release(lock_ptr, &state_, std::forward<Args>(args)...);
     }
   }
 
@@ -417,9 +435,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) __TA_NO_THREAD_SAFETY_ANALYSIS {
     ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
 
+    validator_.ValidateRelease();
     LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
                                           std::forward<ReleaseArgs>(release_args)...);
-    validator_.ValidateRelease();
 
     std::forward<Op>(op)();
 
@@ -437,6 +455,10 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // about the conditional path that would not be raised in the constructor
   // body.
   void ValidateAndAcquire() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    // TODO(fxb/84890): break this acquire up into two steps.  One where we
+    // validate the operation before attempting to obtain the lock, and the
+    // other where we update our bookkeeping to indicate that the lock is owned
+    // _after_ successfully obtaining the lock.
     validator_.ValidateAcquire();
     if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();

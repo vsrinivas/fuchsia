@@ -4,12 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/time.h>
 
+#include <kernel/mp.h>
 #include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <ktl/atomic.h>
+#include <ktl/bit.h>
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
 
@@ -1141,5 +1146,131 @@ UNITTEST_START_TESTCASE(lock_dep_tests)
 UNITTEST("lock_dep_dynamic_analysis_tests", lock_dep_dynamic_analysis_tests)
 UNITTEST("lock_dep_static_analysis_tests", lock_dep_static_analysis_tests)
 UNITTEST_END_TESTCASE(lock_dep_tests, "lock_dep_tests", "lock_dep_tests")
+#endif
 
+#if WITH_LOCK_DEP
+static bool bug_84827_regression_test() {
+  BEGIN_TEST;
+
+  cpu_mask_t online_cpus = mp_get_online_mask();
+  ASSERT_GE(ktl::popcount(online_cpus), 2, "Must have at least 2 CPUs online");
+
+  enum class TestState : uint32_t {
+    WaitingForThreadStart,
+    ThreadWaitingInLock,
+    IPIHasBeenQueued,
+  };
+
+  struct TestArgs {
+    DECLARE_SPINLOCK(TestArgs) lock;
+    cpu_mask_t first_cpu_mask{0};
+    cpu_mask_t second_cpu_mask{0};
+    ktl::atomic<TestState> state{TestState::WaitingForThreadStart};
+  } args;
+
+  // Determine the cores that this test will use.
+  for (cpu_num_t i = 0; !args.second_cpu_mask; ++i) {
+    if ((online_cpus & cpu_num_to_mask(i)) != 0) {
+      if (!args.first_cpu_mask) {
+        args.first_cpu_mask = cpu_num_to_mask(i);
+      } else {
+        args.second_cpu_mask = cpu_num_to_mask(i);
+      }
+    }
+  }
+
+  // Migrate to the secondary CPU we have chosen.  No matter what happens after
+  // this, don't forget to set our affinity mask back to what it was before.
+  cpu_mask_t prev_affinity = Thread::Current::Get()->GetCpuAffinity();
+  auto cleanup =
+      fit::defer([prev_affinity]() { Thread::Current::Get()->SetCpuAffinity(prev_affinity); });
+  Thread::Current::Get()->SetCpuAffinity(args.second_cpu_mask);
+
+  // Start up our work thread.  It will migrate to our first chosen core and
+  // then signal us via the test args state.
+  Thread* work_thread = Thread::Create(
+      "bug_84827_test_thread",
+      [](void* ctx) -> int {
+        TestArgs& args = *(reinterpret_cast<TestArgs*>(ctx));
+
+        // Migrate to our chosen cpu.
+        Thread::Current::Get()->SetCpuAffinity(args.first_cpu_mask);
+
+        // Enter the lock and signal that we are in the waiting-in-lock state.  Then
+        // wait until the main thread signals to us that it has queued the IPI.
+        {
+          Guard<SpinLock, IrqSave> guard(&args.lock);
+          args.state.store(TestState::ThreadWaitingInLock);
+          while (args.state.load() != TestState::IPIHasBeenQueued) {
+            // empty body, just spin.
+          }
+        }
+        return 0;
+      },
+      &args, DEFAULT_PRIORITY);
+  ASSERT_NONNULL(work_thread);
+  work_thread->Resume();
+
+  // Make sure we clean up our thread when we are done.
+  auto cleanup_thread = fit::defer([&work_thread]() {
+    int retcode;
+    work_thread->Thread::Join(&retcode, ZX_TIME_INFINITE);
+    work_thread = nullptr;
+  });
+
+  // Wait until we know that our work_thread is in the waiting state.
+  while (args.state.load() != TestState::ThreadWaitingInLock) {
+    Thread::Current::SleepRelative(ZX_USEC(100));
+  }
+
+  // OK, our work thread is now inside of the test spinlock and spinning,
+  // waiting for us to release it by setting the test state variable to
+  // IPIHasBeenQueued.
+  //
+  // We now schedule a small lambda to run at IRQ time on both our core, as well
+  // as the core the work_thread is on, using mp_sync_exec.
+  //
+  // What should happen here is that the task sent to the work_thread will become
+  // pending, but not able to run because the thread we just started is spinning
+  // in the spinlock.  _After_ this task has been queued and the IPI sent, the
+  // local core will run its copy of the task.  Note that this is currently a
+  // side effect of the behavior of mp_sync_exec, but one that we depend on.
+  // The order is important here.
+  //
+  // The local core will spin for just a little bit (to make absolutely sure
+  // that the IPI has been registered with the other core) and then release the
+  // work thread by changing the state variable.
+  //
+  // When the work thread eventually drops the lock, the IPI should immediately
+  // fire and cause the thread to re-obtain the lock again.  If the lockdep
+  // bookkeeping has not been cleared at this point in time, it will appear to
+  // the lockdep code that our thread is re-entering a lock it is already
+  // holding (even though the lock has already been dropped) triggering an OOPS.
+  mp_sync_exec(
+      MP_IPI_TARGET_MASK, args.first_cpu_mask | args.second_cpu_mask,
+      [](void* ctx) {
+        TestArgs& args = *(reinterpret_cast<TestArgs*>(ctx));
+
+        if (args.first_cpu_mask == Thread::Current::Get()->GetCpuAffinity()) {
+          bool prev_state = arch_blocking_disallowed();
+          arch_set_blocking_disallowed(false);
+          { Guard<SpinLock, IrqSave> guard(&args.lock); }
+          arch_set_blocking_disallowed(prev_state);
+        } else {
+          zx_time_t spin_deadline = current_time() + ZX_USEC(10);
+          while (current_time() < spin_deadline) {
+            // empty body, just spin.
+          }
+          args.state.store(TestState::IPIHasBeenQueued);
+        }
+      },
+      &args);
+
+  END_TEST;
+}
+
+UNITTEST_START_TESTCASE(lock_dep_regression_tests)
+UNITTEST("Bug #84827 regression test", bug_84827_regression_test)
+UNITTEST_END_TESTCASE(lock_dep_regression_tests, "lock_dep_regression_tests",
+                      "lock_dep_regression_tests")
 #endif
