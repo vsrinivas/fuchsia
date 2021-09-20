@@ -34,7 +34,17 @@ fn repository_registrations_query(repo_name: &str) -> String {
 
 /// Return the default repository from the configuration if set.
 pub async fn get_default_repository() -> Result<Option<String>> {
-    Ok(ffx_config::get(CONFIG_KEY_DEFAULT_REPOSITORY).await?)
+    let config_default: Option<String> = ffx_config::get(CONFIG_KEY_DEFAULT_REPOSITORY).await?;
+    if config_default.is_some() {
+        return Ok(config_default);
+    } else {
+        let repos = get_repositories().await;
+        if repos.len() == 1 {
+            return Ok(repos.keys().next().map(|s| s.clone()));
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 /// Sets the default repository from the config.
@@ -288,6 +298,31 @@ mod tests {
             repository_registrations_query("a%b"),
             format!("{}.a%25b", CONFIG_KEY_REGISTRATIONS)
         );
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_get_default_repository_with_only_one_configured() {
+        run_async_test(async {
+            ffx_config::set((CONFIG_KEY_ROOT, ConfigLevel::User), json!({})).await.unwrap();
+
+            // Initially there's no default.
+            assert_eq!(get_default_repository().await.unwrap(), None);
+
+            // Add the repository.
+            let repository = RepositorySpec::FileSystem { path: "foo/bar/baz".into() };
+            set_repository("repo", &repository).await.unwrap();
+
+            // The single configured repo should be returned as the default
+            assert_eq!(get_default_repository().await.unwrap(), Some(String::from("repo")));
+
+            // Add a second repository.
+            let repository = RepositorySpec::FileSystem { path: "foo/bar/baz2".into() };
+            set_repository("repo2", &repository).await.unwrap();
+
+            // The single configured repo should be returned as the default
+            assert_eq!(get_default_repository().await.unwrap(), None);
+        });
     }
 
     #[serial_test::serial]
