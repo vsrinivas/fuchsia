@@ -122,7 +122,7 @@ fuzzers can make code easier to unit test:
 
 ## Fuzzing in Fuchsia
 
-Fuchsia includes sveral guides for developers looking to fuzz Fuchsia software:
+Fuchsia includes several guides for developers looking to fuzz Fuchsia software:
 
  * To create a fuzzer, see [Write a fuzzer][write-a-fuzzer].
  * To build and package a fuzzer, see [Build a fuzzer][build-a-fuzzer].
