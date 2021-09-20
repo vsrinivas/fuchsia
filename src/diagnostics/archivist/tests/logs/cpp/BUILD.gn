@@ -29,7 +29,7 @@ executable("logs_integration_cpp_tests") {
 
 fuchsia_component("cpp-logs-test") {
   testonly = true
-  manifest = "meta/cpp-logs.cmx"
+  manifest = "meta/cpp-logs.cml"
   deps = [ ":logs_integration_cpp_tests" ]
 }
 
@@ -68,7 +68,7 @@ executable("logs_integration_structured_cpp_tests") {
 
 fuchsia_component("cpp-logs-test-structured") {
   testonly = true
-  manifest = "meta/cpp-logs-structured.cmx"
+  manifest = "meta/cpp-logs-structured.cml"
   deps = [ ":logs_integration_structured_cpp_tests" ]
 }
 

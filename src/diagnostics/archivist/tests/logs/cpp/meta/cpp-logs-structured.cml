@@ -7,7 +7,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/logs_integration_cpp_tests",
+        binary: "bin/logs_integration_structured_cpp_tests",
     },
     use: [
         {

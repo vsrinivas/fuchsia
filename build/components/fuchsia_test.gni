@@ -51,6 +51,10 @@ template("fuchsia_test") {
   manifest_name = get_target_outputs(invoker.component)
   manifest_name = get_path_info(manifest_name[0], "file")
 
+  assert(
+      get_path_info(manifest_name, "extension") == "cm",
+      "`manifest_name` must end with '.cm'. Refer https://fxbug.dev/84888 for more information.")
+
   test_spec(target_name) {
     forward_variables_from(invoker, "*")
     target = get_label_info(invoker.package, "label_with_toolchain")
