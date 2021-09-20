@@ -55,6 +55,7 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
