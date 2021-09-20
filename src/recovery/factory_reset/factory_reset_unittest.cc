@@ -86,23 +86,21 @@ class FactoryResetTest : public Test {
   }
 
   void CreateZxcrypt() {
-    std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-
     fbl::unique_fd fd;
     WaitForDevice(fvm_block_path_, &fd);
+
+    zxcrypt::VolumeManager zxcrypt_volume(std::move(fd), devfs_root());
+    zx::channel zxc_manager_chan;
+    ASSERT_EQ(zxcrypt_volume.OpenClient(zx::duration::infinite(), zxc_manager_chan), ZX_OK);
+
     // Use an explicit key for this test volume.  Other key sources may not be
     // available in the isolated test environment.
     crypto::Secret key;
     ASSERT_EQ(key.Generate(kKeyBytes), ZX_OK);
-    ASSERT_EQ(zxcrypt::FdioVolume::Create(fd.duplicate(), devfs_root(), key, &zxcrypt_volume),
-              ZX_OK);
+    zxcrypt::EncryptedVolumeClient volume_client(std::move(zxc_manager_chan));
 
-    zx::channel zxc_manager_chan;
-    ASSERT_EQ(zxcrypt_volume->OpenManager(zx::duration::infinite(),
-                                          zxc_manager_chan.reset_and_get_address()),
-              ZX_OK);
-    zxcrypt::FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
-    ASSERT_EQ(volume_manager.Unseal(key.get(), key.len(), 0), ZX_OK);
+    ASSERT_EQ(volume_client.Format(key.get(), key.len(), 0), ZX_OK);
+    ASSERT_EQ(volume_client.Unseal(key.get(), key.len(), 0), ZX_OK);
     WaitForZxcrypt();
   }
 

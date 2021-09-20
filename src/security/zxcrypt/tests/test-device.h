@@ -112,8 +112,16 @@ class TestDevice final {
   size_t block_count() const { return block_count_; }
 
   // Returns space reserved for metadata
-  size_t reserved_blocks() const { return volume_->reserved_blocks(); }
-  size_t reserved_slices() const { return volume_->reserved_slices(); }
+  size_t reserved_blocks() const {
+    std::unique_ptr<FdioVolume> volume;
+    FdioVolume::Unlock(parent(), key_, 0, &volume);
+    return volume->reserved_blocks();
+  }
+  size_t reserved_slices() const {
+    std::unique_ptr<FdioVolume> volume;
+    FdioVolume::Unlock(parent(), key_, 0, &volume);
+    return volume->reserved_slices();
+  }
 
   // Returns a reference to the root key generated for this device.
   const crypto::Secret& key() const { return key_; }
@@ -244,7 +252,7 @@ class TestDevice final {
   // File descriptor for the zxcrypt volume.
   fbl::unique_fd zxcrypt_;
   // The zxcrypt volume
-  std::unique_ptr<FdioVolume> volume_;
+  std::unique_ptr<zxcrypt::VolumeManager> volume_manager_;
   // The cached block count.
   size_t block_count_;
   // The cached block size.

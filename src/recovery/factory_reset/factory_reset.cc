@@ -34,27 +34,22 @@ namespace factory_reset {
 const char* kBlockPath = "class/block";
 
 zx_status_t ShredBlockDevice(fbl::unique_fd fd, fbl::unique_fd devfs_root_fd) {
-  std::unique_ptr<zxcrypt::FdioVolume> volume;
   zx_status_t status;
-  status = zxcrypt::FdioVolume::Init(std::move(fd), std::move(devfs_root_fd), &volume);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Couldn't init FdioVolume: %d (%s)\n", status, zx_status_get_string(status));
-    return status;
-  }
+  zxcrypt::VolumeManager volume(std::move(fd), std::move(devfs_root_fd));
 
   // Note: the access to /dev/sys/platform from the manifest is load-bearing
   // here, because we can only find the related zxcrypt device for a particular
   // block device via appending "/zxcrypt" to its topological path, and the
   // canonical topological path sits under sys/platform.
   zx::channel driver_chan;
-  status = volume->OpenManager(zx::sec(5), driver_chan.reset_and_get_address());
+  status = volume.OpenClient(zx::sec(5), driver_chan);
   if (status != ZX_OK) {
     fprintf(stderr, "Couldn't open channel to zxcrypt volume manager: %d (%s)\n", status,
             zx_status_get_string(status));
     return status;
   }
 
-  zxcrypt::FdioVolumeManager zxc_manager(std::move(driver_chan));
+  zxcrypt::EncryptedVolumeClient zxc_manager(std::move(driver_chan));
   status = zxc_manager.Shred();
   if (status != ZX_OK) {
     fprintf(stderr, "Couldn't shred volume: %d (%s)\n", status, zx_status_get_string(status));

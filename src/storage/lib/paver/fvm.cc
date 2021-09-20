@@ -371,64 +371,32 @@ namespace {
 zx_status_t ZxcryptCreate(PartitionInfo* part) {
   zx_status_t status;
 
-  char path[PATH_MAX];
-  status = GetTopoPathFromFd(part->new_part, path, sizeof(path));
-  if (status != ZX_OK) {
-    ERROR("Failed to get topological path\n");
-    return status;
-  }
   // TODO(security): fxbug.dev/31073. We need to bind with channel in order to pass a key here.
   // TODO(security): fxbug.dev/31733. The created volume must marked as needing key rotation.
 
   fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
-  std::unique_ptr<zxcrypt::FdioVolume> volume;
-  if ((status = zxcrypt::FdioVolume::CreateWithDeviceKey(
-           std::move(part->new_part), std::move(devfs_root), &volume)) != ZX_OK) {
-    ERROR("Could not create zxcrypt volume\n");
-    return status;
-  }
-  zx::channel zxcrypt_manager_chan;
-  if ((status = volume->OpenManager(zx::sec(3), zxcrypt_manager_chan.reset_and_get_address())) !=
-      ZX_OK) {
+
+  zxcrypt::VolumeManager zxcrypt_manager(std::move(part->new_part), std::move(devfs_root));
+  zx::channel client_chan;
+  if ((status = zxcrypt_manager.OpenClient(zx::sec(3), client_chan)) != ZX_OK) {
     ERROR("Could not open zxcrypt volume manager\n");
     return status;
   }
-
-  zxcrypt::FdioVolumeManager zxcrypt_manager(std::move(zxcrypt_manager_chan));
+  zxcrypt::EncryptedVolumeClient zxcrypt_client(std::move(client_chan));
   uint8_t slot = 0;
-  if ((status = zxcrypt_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
+  if ((status = zxcrypt_client.FormatWithImplicitKey(slot)) != ZX_OK) {
+    ERROR("Could not create zxcrypt volume\n");
+    return status;
+  }
+
+  if ((status = zxcrypt_client.UnsealWithImplicitKey(slot)) != ZX_OK) {
     ERROR("Could not unseal zxcrypt volume\n");
     return status;
   }
 
-  if ((status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
+  if ((status = zxcrypt_manager.OpenInnerBlockDevice(zx::sec(3), &part->new_part)) != ZX_OK) {
     ERROR("Could not open zxcrypt volume\n");
     return status;
-  }
-
-  fvm::ExtentDescriptor ext = GetExtent(part->pd, 0);
-  size_t reserved = volume->reserved_slices();
-
-  // |Create| guarantees at least |reserved| + 1 slices are allocated.  If the first extent had a
-  // single slice, we're done.
-  size_t allocated = std::max(reserved + 1, ext.slice_count);
-  size_t needed = reserved + ext.slice_count;
-  if (allocated >= needed) {
-    return ZX_OK;
-  }
-
-  // Otherwise, extend by the number of slices we stole for metadata
-  uint64_t offset = allocated - reserved;
-  uint64_t length = needed - allocated;
-  {
-    fdio_cpp::UnownedFdioCaller partition_connection(part->new_part.get());
-    auto result =
-        fidl::WireCall<volume::Volume>(partition_connection.channel()).Extend(offset, length);
-    status = result.ok() ? result.value().status : result.status();
-    if (status != ZX_OK) {
-      ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
-      return status;
-    }
   }
 
   return ZX_OK;

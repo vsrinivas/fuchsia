@@ -668,43 +668,35 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
       break;
 
     case DISK_FORMAT_ZXCRYPT: {
-      std::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
-      uint8_t slot = 0;
-      if (status = zx::make_status(zxcrypt::FdioVolume::UnlockWithDeviceKey(
-              std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),
-              &zxc_volume));
-          status.is_error()) {
-        ERROR("Couldn't unlock zxcrypt volume: %s\n", status.status_string());
-        return status.take_error();
-      }
+      zxcrypt::VolumeManager zxc_volume(std::move(part_fd), devfs_root_.duplicate());
 
       // Most of the time we'll expect the volume to actually already be
       // unsealed, because we created it and unsealed it moments ago to
       // format minfs.
-      if (status = zx::make_status(zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd));
+      if (status = zx::make_status(zxc_volume.OpenInnerBlockDevice(zx::sec(0), &mountpoint_dev_fd));
           status.is_ok()) {
         // Already unsealed, great, early exit.
         break;
       }
 
       // Ensure zxcrypt volume manager is bound.
-      zx::channel zxc_manager_chan;
-      if (status = zx::make_status(
-              zxc_volume->OpenManager(zx::sec(5), zxc_manager_chan.reset_and_get_address()));
+      zx::channel zxc_client_chan;
+      if (status = zx::make_status(zxc_volume.OpenClient(zx::sec(5), zxc_client_chan));
           status.is_error()) {
         ERROR("Couldn't open zxcrypt volume manager: %s\n", status.status_string());
         return status.take_error();
       }
 
       // Unseal.
-      zxcrypt::FdioVolumeManager zxc_manager(std::move(zxc_manager_chan));
-      if (status = zx::make_status(zxc_manager.UnsealWithDeviceKey(slot)); status.is_error()) {
+      zxcrypt::EncryptedVolumeClient zxc_client(std::move(zxc_client_chan));
+      uint8_t slot = 0;
+      if (status = zx::make_status(zxc_client.UnsealWithImplicitKey(slot)); status.is_error()) {
         ERROR("Couldn't unseal zxcrypt volume: %s\n", status.status_string());
         return status.take_error();
       }
 
       // Wait for the device to appear, and open it.
-      if (status = zx::make_status(zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd));
+      if (status = zx::make_status(zxc_volume.OpenInnerBlockDevice(zx::sec(5), &mountpoint_dev_fd));
           status.is_error()) {
         ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n",
               status.status_string());

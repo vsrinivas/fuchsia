@@ -125,7 +125,13 @@ void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume:
 
 void TestDevice::Bind(Volume::Version version, bool fvm) {
   ASSERT_NO_FATAL_FAILURES(Create(kDeviceSize, kBlockSize, fvm, version));
-  ASSERT_OK(FdioVolume::Create(parent(), devfs_root(), key_));
+
+  zxcrypt::VolumeManager volume_manager(parent(), devfs_root());
+  zx::channel zxc_client_chan;
+  ASSERT_OK(volume_manager.OpenClient(kTimeout, zxc_client_chan));
+  EncryptedVolumeClient volume_client(std::move(zxc_client_chan));
+  ASSERT_OK(volume_client.Format(key_.get(), key_.len(), 0));
+
   ASSERT_NO_FATAL_FAILURES(Connect());
 }
 
@@ -263,7 +269,7 @@ void TestDevice::Corrupt(uint64_t blkno, key_slot_t slot) {
   ASSERT_OK(ToStatus(::read(fd.get(), block, block_size_)));
 
   std::unique_ptr<FdioVolume> volume;
-  ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume));
+  ASSERT_OK(FdioVolume::Unlock(parent(), key_, 0, &volume));
 
   zx_off_t off;
   ASSERT_OK(volume->GetSlotOffset(slot, &off));
@@ -380,17 +386,18 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
 void TestDevice::Connect() {
   ZX_DEBUG_ASSERT(!zxcrypt_);
 
-  ASSERT_OK(FdioVolume::Unlock(parent(), devfs_root(), key_, 0, &volume_));
-  zx::channel zxc_manager_chan;
-  ASSERT_OK(volume_->OpenManager(kTimeout, zxc_manager_chan.reset_and_get_address()));
-  FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
+  volume_manager_.reset(new zxcrypt::VolumeManager(parent(), devfs_root()));
+  zx::channel zxc_client_chan;
+  ASSERT_OK(volume_manager_->OpenClient(kTimeout, zxc_client_chan));
+
+  EncryptedVolumeClient volume_client(std::move(zxc_client_chan));
   zx_status_t rc;
   // Unseal may fail because the volume is already unsealed, so we also allow
   // ZX_ERR_INVALID_STATE here.  If we fail to unseal the volume, the
   // volume_->Open() call below will fail, so this is safe to ignore.
-  rc = volume_manager.Unseal(key_.get(), key_.len(), 0);
+  rc = volume_client.Unseal(key_.get(), key_.len(), 0);
   ASSERT_TRUE(rc == ZX_OK || rc == ZX_ERR_BAD_STATE);
-  ASSERT_OK(volume_->Open(kTimeout, &zxcrypt_));
+  ASSERT_OK(volume_manager_->OpenInnerBlockDevice(kTimeout, &zxcrypt_));
   zxcrypt_caller_.reset(zxcrypt_.get());
 
   fuchsia_hardware_block_BlockInfo block_info;
@@ -419,12 +426,12 @@ void TestDevice::Connect() {
 }
 
 void TestDevice::Disconnect() {
-  if (volume_) {
-    zx::channel zxc_manager_chan;
-    volume_->OpenManager(kTimeout, zxc_manager_chan.reset_and_get_address());
-    if (zxc_manager_chan) {
-      FdioVolumeManager volume_manager(std::move(zxc_manager_chan));
-      volume_manager.Seal();
+  if (volume_manager_) {
+    zx::channel zxc_client_chan;
+    volume_manager_->OpenClient(kTimeout, zxc_client_chan);
+    if (zxc_client_chan) {
+      EncryptedVolumeClient volume_client(std::move(zxc_client_chan));
+      volume_client.Seal();
     }
   }
 
@@ -436,7 +443,7 @@ void TestDevice::Disconnect() {
     client_ = nullptr;
   }
   zxcrypt_.reset();
-  volume_.reset();
+  volume_manager_.reset();
   block_size_ = 0;
   block_count_ = 0;
   vmo_.reset();

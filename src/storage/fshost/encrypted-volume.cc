@@ -18,23 +18,18 @@ EncryptedVolume::EncryptedVolume(fbl::unique_fd fd, fbl::unique_fd devfs_root)
 
 zx_status_t EncryptedVolume::Unseal() {
   zx_status_t rc;
-  std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
-  rc = zxcrypt::FdioVolume::Init(fd_.duplicate(), devfs_root_.duplicate(), &zxcrypt_volume);
-  if (rc != ZX_OK) {
-    FX_LOGS(ERROR) << "couldn't open zxcrypt fdio volume: " << zx_status_get_string(rc);
-    return rc;
-  }
+  zxcrypt::VolumeManager zxcrypt_volume(fd_.duplicate(), devfs_root_.duplicate());
 
-  zx::channel zxcrypt_volume_manager_chan;
-  rc = zxcrypt_volume->OpenManager(zx::sec(2), zxcrypt_volume_manager_chan.reset_and_get_address());
+  zx::channel zxcrypt_volume_client_chan;
+  rc = zxcrypt_volume.OpenClient(zx::sec(2), zxcrypt_volume_client_chan);
   if (rc != ZX_OK) {
     FX_LOGS(ERROR) << "couldn't open zxcrypt manager device: " << zx_status_get_string(rc);
     return rc;
   }
 
-  zxcrypt::FdioVolumeManager zxcrypt_volume_manager(std::move(zxcrypt_volume_manager_chan));
+  zxcrypt::EncryptedVolumeClient zxcrypt_volume_client(std::move(zxcrypt_volume_client_chan));
   uint8_t slot = 0;
-  rc = zxcrypt_volume_manager.UnsealWithDeviceKey(slot);
+  rc = zxcrypt_volume_client.UnsealWithImplicitKey(slot);
   if (rc != ZX_OK) {
     FX_LOGS(ERROR) << "couldn't unseal zxcrypt manager device: " << zx_status_get_string(rc);
     return rc;
@@ -45,7 +40,18 @@ zx_status_t EncryptedVolume::Unseal() {
 
 zx_status_t EncryptedVolume::Format() {
   zx_status_t rc;
-  rc = zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), devfs_root_.duplicate(), nullptr);
+  zxcrypt::VolumeManager zxcrypt_volume(fd_.duplicate(), devfs_root_.duplicate());
+
+  zx::channel zxcrypt_volume_client_chan;
+  rc = zxcrypt_volume.OpenClient(zx::sec(2), zxcrypt_volume_client_chan);
+  if (rc != ZX_OK) {
+    FX_LOGS(ERROR) << "couldn't open zxcrypt manager device: " << zx_status_get_string(rc);
+    return rc;
+  }
+
+  zxcrypt::EncryptedVolumeClient zxcrypt_volume_client(std::move(zxcrypt_volume_client_chan));
+  uint8_t slot = 0;
+  rc = zxcrypt_volume_client.FormatWithImplicitKey(slot);
   if (rc != ZX_OK) {
     FX_LOGS(ERROR) << "couldn't format zxcrypt volume with device key: "
                    << zx_status_get_string(rc);
@@ -76,10 +82,10 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
   // have.  Otherwise, just return the error we got from the last Unseal()
   // attempt.
   if (rc == ZX_ERR_ACCESS_DENIED) {
-    FX_LOGS(ERROR) <<
-            "Failed repeatedly to unseal zxcrypt device with all available keys.  "
-            "Destructively reformatting with new key to attempt to bring up an empty block volume "
-            "rather than none at all.  Expect factory-reset-like behavior.";
+    FX_LOGS(ERROR)
+        << "Failed repeatedly to unseal zxcrypt device with all available keys.  "
+           "Destructively reformatting with new key to attempt to bring up an empty block volume "
+           "rather than none at all.  Expect factory-reset-like behavior.";
     rc = Format();
     if (rc != ZX_OK) {
       FX_LOGS(ERROR) << "couldn't format encrypted volume: " << zx_status_get_string(rc);
