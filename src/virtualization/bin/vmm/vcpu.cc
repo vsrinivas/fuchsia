@@ -70,6 +70,8 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
     vcpu_state.x[0] = boot_ptr_;
 #elif __x86_64__
     vcpu_state.rsi = boot_ptr_;
+#else
+#error Unknown architecture.
 #endif
 
     zx_status_t status = vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));

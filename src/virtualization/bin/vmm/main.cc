@@ -55,14 +55,14 @@
 
 #if __aarch64__
 #include "src/virtualization/bin/vmm/arch/arm64/pl031.h"
-
 #elif __x86_64__
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
 #include "src/virtualization/bin/vmm/arch/x64/page_table.h"
-
 static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
 static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
+#else
+#error Unknown architecture.
 #endif
 
 // For devices that can have their addresses anywhere we run a dynamic
@@ -135,6 +135,8 @@ int main(int argc, char** argv) {
   status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
 #elif __x86_64__
   status = interrupt_controller.Init();
+#else
+#error Unknown architecture.
 #endif
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create interrupt controller";
@@ -159,6 +161,8 @@ int main(int argc, char** argv) {
     FX_PLOGS(ERROR, status) << "Failed to create IO ports";
     return status;
   }
+#else
+#error Unknown architecture.
 #endif
 
   // Setup PCI.

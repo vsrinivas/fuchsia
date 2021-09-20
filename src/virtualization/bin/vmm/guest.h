@@ -26,12 +26,14 @@ enum class TrapType {
 
 class Guest {
  public:
-#ifdef __aarch64__
+#if __aarch64__
   // hypervisor::IdAllocator<uint16_t, 8>
   static constexpr size_t kMaxVcpus = 8u;
-#else
+#elif __x86_64__
   // hypervisor::IdAllocator<uint16_t, 64>
   static constexpr size_t kMaxVcpus = 64u;
+#else
+#error Unknown architecture.
 #endif
   using VcpuArray = std::array<std::optional<Vcpu>, kMaxVcpus>;
   using IoMappingList = std::forward_list<IoMapping>;

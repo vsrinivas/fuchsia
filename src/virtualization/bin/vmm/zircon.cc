@@ -35,30 +35,27 @@
 // This address works for direct-mapping of host memory. This address is chosen
 // to ensure that we do not collide with the mapping of the host kernel.
 static constexpr uintptr_t kKernelOffset = 0x2080000;
-
 static constexpr zbi_platform_id_t kPlatformId = {
     .vid = 3,  // PDEV_VID_GOOGLE
     .pid = 2,  // PDEV_PID_MACHINA
     .board_name = "machina",
 };
-
 static constexpr dcfg_arm_psci_driver_t kPsciDriver = {
     .use_hvc = false,
 };
-
 static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
     .irq_virt = 27,
 };
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
-
 // If the kernel specifies a load address smaller than this cut off,
 // we assume it is position-independent.
 //
 // TODO(fxbug.dev/32255): Delete once the x86 kernel is position-independent.
 constexpr uintptr_t kX86PositionIndependentLoadAddressCutOff = 0x100000;
-
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
+#else
+#error Unknown architecture.
 #endif
 
 static constexpr uintptr_t kRamdiskOffset = 0x4000000;

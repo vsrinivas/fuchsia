@@ -28,6 +28,8 @@ static constexpr uintptr_t kKernelOffset = 0x2080000;
 static constexpr uintptr_t kKernelOffset = 0x200000;
 #include "src/virtualization/bin/vmm/arch/x64/acpi.h"
 #include "src/virtualization/bin/vmm/arch/x64/e820.h"
+#else
+#error Unknown architecture.
 #endif
 
 static constexpr uint8_t kLoaderTypeUnspecified = 0xff;  // Unknown bootloader

@@ -7,10 +7,10 @@
 
 #include <limits.h>
 
-#if __x86_64__
-#include "arch/x64/constants.h"
-#elif __aarch64__
+#if __aarch64__
 #include "arch/arm64/constants.h"
+#elif __x86_64__
+#include "arch/x64/constants.h"
 #else
 #error Unknown architecture.
 #endif

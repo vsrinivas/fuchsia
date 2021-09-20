@@ -49,7 +49,7 @@ class Vcpu {
   zx_status_t ArchHandleInput(const zx_packet_guest_io_t& io, IoMapping* device_mapping);
   zx_status_t ArchHandleOutput(const zx_packet_guest_io_t& io, IoMapping* device_mapping);
   zx_status_t ArchHandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key);
-#endif
+#endif  // __x86_64__
 
   const uint64_t id_;
   Guest* const guest_;

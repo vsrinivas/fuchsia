@@ -84,17 +84,15 @@ constexpr uint8_t kPciCapNextOffset = 1;
 
 // PCI memory ranges.
 #if __aarch64__
-
 constexpr uint64_t kPciEcamPhysBase    = 0x808100000;
 constexpr uint64_t kPciMmioBarPhysBase = 0x808200000;
-
 #elif __x86_64__
-
 constexpr uint64_t kPciEcamPhysBase    = 0xf8100000;
 constexpr uint64_t kPciMmioBarPhysBase = 0xf8200000;
 constexpr uint64_t kPciConfigPortBase  = 0xcf8;
 constexpr uint64_t kPciConfigPortSize  = 0x8;
-
+#else
+#error Unknown architecture.
 #endif
 
 constexpr uint64_t kPciEcamSize        = pci_ecam_size(0, 1);

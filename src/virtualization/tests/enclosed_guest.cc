@@ -47,10 +47,12 @@ constexpr uint32_t kTerminaMaitredPort = 8888;
 // Linux kernel command line params for additional serial debug logs during boot.
 constexpr std::string_view kLinuxKernelSerialDebugCmdline[] = {
 // Add early UART output from kernel.
-#if defined(__x86_64__)
+#if __aarch64__
+    "earlycon=pl011,0x808300000",
+#elif __x86_64__
     "earlycon=uart,io,0x3f8",
 #else
-    "earlycon=pl011,0x808300000",
+#error Unknown architecture.
 #endif
 
     // Tell Linux to keep the console in polling mode instead of trying to switch
