@@ -161,6 +161,9 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   if (ret->result.response().state.has_turn_on_delay()) {
     format_info.set_turn_on_delay(ret->result.response().state.turn_on_delay());
   }
+  if (ret->result.response().state.has_turn_off_delay()) {
+    format_info.set_turn_off_delay(ret->result.response().state.turn_off_delay());
+  }
   return zx::ok(std::move(format_info));
 }
 

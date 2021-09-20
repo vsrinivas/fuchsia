@@ -195,10 +195,6 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
 
-  // TODO(fxbug.dev/83200): Define a codec turn-off time API to replace this sleep amount.
-  constexpr uint32_t msecs_turn_off_delay = 10;
-  zx::nanosleep(zx::deadline_after(zx::msec(msecs_turn_off_delay)));
-
   status = aml_audio_->InitHW(metadata_, std::numeric_limits<uint64_t>::max(), frame_rate_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to init tdm hardware %d", status);
@@ -369,6 +365,10 @@ zx_status_t AmlG12TdmStream::UpdateHardwareSettings() {
       int64_t delay = format_info->turn_on_delay();
       codecs_turn_on_delay_nsec_ = std::max(codecs_turn_on_delay_nsec_, delay);
     }
+    if (format_info->has_turn_off_delay()) {
+      int64_t delay = format_info->turn_off_delay();
+      codecs_turn_off_delay_nsec_ = std::max(codecs_turn_off_delay_nsec_, delay);
+    }
   }
   status = StartAllEnabledCodecs();
   if (status != ZX_OK) {
@@ -398,6 +398,11 @@ zx_status_t AmlG12TdmStream::ChangeActiveChannels(uint64_t mask) {
           zxlogf(ERROR, "Failed to stop the codec");
           return status;
         }
+        constexpr uint32_t codecs_turn_off_delay_if_unknown_msec = 50;
+        zx::duration delay = codecs_turn_off_delay_nsec_
+                                 ? zx::nsec(codecs_turn_off_delay_nsec_)
+                                 : zx::msec(codecs_turn_off_delay_if_unknown_msec);
+        zx::nanosleep(zx::deadline_after(delay));
       }
     }
   }
@@ -405,11 +410,14 @@ zx_status_t AmlG12TdmStream::ChangeActiveChannels(uint64_t mask) {
 }
 
 zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
-  auto cleanup = fit::defer([this, old_codecs_turn_on_delay_nsec = codecs_turn_on_delay_nsec_] {
+  auto cleanup = fit::defer([this, old_codecs_turn_on_delay_nsec = codecs_turn_on_delay_nsec_,
+                             old_codecs_turn_off_delay_nsec = codecs_turn_off_delay_nsec_] {
     codecs_turn_on_delay_nsec_ = old_codecs_turn_on_delay_nsec;
+    codecs_turn_off_delay_nsec_ = old_codecs_turn_off_delay_nsec;
   });
   fifo_depth_ = aml_audio_->fifo_depth();
   codecs_turn_on_delay_nsec_ = 0;
+  codecs_turn_off_delay_nsec_ = 0;
   for (size_t i = 0; i < metadata_.codecs.number_of_external_delays; ++i) {
     if (metadata_.codecs.external_delays[i].frequency == req.frames_per_second) {
       external_delay_nsec_ = metadata_.codecs.external_delays[i].nsecs;
@@ -426,6 +434,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
     }
   }
   SetTurnOnDelay(codecs_turn_on_delay_nsec_);
+  cleanup.cancel();
   return ZX_OK;
 }
 
@@ -435,14 +444,9 @@ void AmlG12TdmStream::ShutdownHook() {
     irq_.destroy();
     thrd_join(thread_, NULL);
   }
-  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-    // safe the codec so it won't throw clock errors when tdm bus shuts down
-    codecs_[i].Stop();
-  }
 
-  // TODO(fxbug.dev/83200): Define a codec turn-off time API to replace this sleep amount.
-  constexpr uint32_t msecs_turn_off_delay = 10;
-  zx::nanosleep(zx::deadline_after(zx::msec(msecs_turn_off_delay)));
+  // safe the codec so it won't throw clock errors when tdm bus shuts down
+  StopAllCodecs();
 
   if (enable_gpio_.is_valid()) {
     enable_gpio_.Write(0);
@@ -564,8 +568,12 @@ zx_status_t AmlG12TdmStream::Stop() {
   UpdateCodecsGainStateFromCurrent();
   notify_timer_.Cancel();
   us_per_notification_ = 0;
+  zx_status_t status = StopAllCodecs();
+  if (status != ZX_OK) {
+    return status;
+  }
   aml_audio_->Stop();
-  return StopAllCodecs();
+  return ZX_OK;
 }
 
 zx_status_t AmlG12TdmStream::StopAllCodecs() {
@@ -576,6 +584,11 @@ zx_status_t AmlG12TdmStream::StopAllCodecs() {
       return status;
     }
   }
+  constexpr uint32_t codecs_turn_off_delay_if_unknown_msec = 50;
+  zx::duration delay = codecs_turn_off_delay_nsec_
+                           ? zx::nsec(codecs_turn_off_delay_nsec_)
+                           : zx::msec(codecs_turn_off_delay_if_unknown_msec);
+  zx::nanosleep(zx::deadline_after(delay));
   return ZX_OK;
 }
 

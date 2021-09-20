@@ -25,6 +25,8 @@ namespace audio_fidl = fuchsia_hardware_audio;
 
 static constexpr float kTestGain = 2.f;
 static constexpr float kTestDeltaGain = 1.f;
+static constexpr float kTestTurnOnNsecs = 12345;
+static constexpr float kTestTurnOffNsecs = 67890;
 
 audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   audio_fidl::wire::PcmFormat format;
@@ -74,7 +76,8 @@ class CodecTest : public DeviceType, public SimpleCodecServer {
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
     CodecFormatInfo format_info = {};
-    format_info.set_turn_on_delay(123);
+    format_info.set_turn_on_delay(kTestTurnOnNsecs);
+    format_info.set_turn_off_delay(kTestTurnOffNsecs);
     return zx::ok(std::move(format_info));
   }
   GainFormat GetGainFormat() override {
@@ -481,7 +484,7 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
   ASSERT_OK(props.status());
 
-  EXPECT_EQ(123, props->properties.turn_on_delay());
+  EXPECT_EQ(kTestTurnOnNsecs, props->properties.turn_on_delay());
 
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());

@@ -442,6 +442,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   zx_time_t plug_time_ __TA_GUARDED(domain_token()) = 0;
 
   uint64_t turn_on_delay_nsec_ __TA_GUARDED(domain_token()) = 0;
+  uint64_t turn_off_delay_nsec_ __TA_GUARDED(domain_token()) = 0;
 
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;

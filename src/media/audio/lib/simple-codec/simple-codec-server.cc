@@ -217,6 +217,9 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
   if (format_info->has_turn_on_delay()) {
     codec_state.set_turn_on_delay(format_info->turn_on_delay());
   }
+  if (format_info->has_turn_off_delay()) {
+    codec_state.set_turn_off_delay(format_info->turn_off_delay());
+  }
   response.state = std::move(codec_state);
   result.set_response(std::move(response));
   callback(std::move(result));
