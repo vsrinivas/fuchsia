@@ -29,6 +29,9 @@ class VirtioVsock
  public:
   VirtioVsock(sys::ComponentContext* context, const PhysMem&, async_dispatcher_t* dispatcher);
 
+  // Bind to the given GuestVsockEndpoint interface request.
+  void Bind(fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockEndpoint> request);
+
   uint32_t guest_cid() const;
 
   // Check whether a connection exists. The connection is identified by a local
@@ -94,7 +97,13 @@ class VirtioVsock
   zx_status_t AddConnectionLocked(ConnectionKey key, std::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
+
+  // If `status` is an error, remove the connection and notify all bound
+  // GuestVsockEndpoint's of the termination.
+  //
+  // Returns true if `status` was an error.
   bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status) __TA_REQUIRES(mutex_);
+
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
   void Mux(zx_status_t status, uint16_t index);
@@ -117,12 +126,18 @@ class VirtioVsock
 
 class VirtioVsock::Connection {
  public:
+  enum class Type {
+    kStandard,  // Standard connection, established by/to an endpoint.
+    kInternal,  // Connection internal to vsock-device. Endpoints are not aware of this.
+  };
+
   Connection(async_dispatcher_t* dispatcher,
              fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
-             fit::closure queue_callback);
+             fit::closure queue_callback, Type type);
   virtual ~Connection();
   virtual zx_status_t Init() = 0;
 
+  Type type() const { return type_; }
   uint32_t flags() const { return flags_; }
   uint16_t op() const {
     std::lock_guard<std::mutex> lock(op_update_mutex_);
@@ -153,6 +168,7 @@ class VirtioVsock::Connection {
   zx_status_t WaitOnReceive(zx_status_t status);
 
  protected:
+  Type type_;
   uint32_t flags_ = 0;
   uint32_t rx_cnt_ = 0;
   uint32_t tx_cnt_ = 0;
@@ -176,9 +192,10 @@ class VirtioVsock::Connection {
   fit::closure queue_callback_;
 };
 
+// An connection used for internal book-keeping by the virtio-vsock device.
 class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
  public:
-  NullConnection() : Connection(nullptr, nullptr, nullptr) {}
+  NullConnection() : Connection(nullptr, nullptr, nullptr, Type::kInternal) {}
 
   zx_status_t Init() override { return ZX_OK; }
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }

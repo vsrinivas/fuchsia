@@ -28,8 +28,9 @@ zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
 VirtioVsock::Connection::Connection(
     async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
-    fit::closure queue_callback)
-    : dispatcher_(dispatcher),
+    fit::closure queue_callback, Type type)
+    : type_(type),
+      dispatcher_(dispatcher),
       accept_callback_(std::move(accept_callback)),
       queue_callback_(std::move(queue_callback)) {}
 
@@ -179,7 +180,8 @@ VirtioVsock::SocketConnection::SocketConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback),
+                 Type::kStandard),
       socket_(std::move(handle)) {}
 
 VirtioVsock::SocketConnection::~SocketConnection() {
@@ -351,7 +353,8 @@ VirtioVsock::ChannelConnection::ChannelConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback),
+                 Type::kStandard),
       channel_(std::move(handle)) {}
 
 VirtioVsock::ChannelConnection::~ChannelConnection() {
@@ -480,21 +483,26 @@ VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem
       rx_stream_(dispatcher, rx_queue(), this),
       tx_stream_(dispatcher, tx_queue(), this) {
   config_.guest_cid = 0;
-  if (context) {
-    // Construct a request handler that posts a task to the VirtioVsock dispatcher. VirtioVsock is
-    // not threadsafe and we must ensure that all interactions with the endpoint binding set occur
-    // on the same thread. This handler will run on the initial thread, but other interactions run
-    // on the "vsock-handler" thread. So we post a task to the dispatcher of the async loop running
-    // on that thread.
-    fidl::InterfaceRequestHandler<fuchsia::virtualization::GuestVsockEndpoint> handler =
-        [this](fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockEndpoint> request) {
-          async::PostTask(dispatcher_, [this, request = std::move(request)]() mutable {
-            endpoint_bindings_.AddBinding(this, std::move(request), dispatcher_);
-          });
-        };
 
-    context->outgoing()->AddPublicService(std::move(handler));
+  if (context) {
+    context->outgoing()->AddPublicService(
+        fidl::InterfaceRequestHandler<fuchsia::virtualization::GuestVsockEndpoint>(
+            fit::bind_member(this, &VirtioVsock::Bind)));
   }
+}
+
+void VirtioVsock::Bind(
+    fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockEndpoint> request) {
+  // Construct a request handler that posts a task to the VirtioVsock
+  // dispatcher. VirtioVsock is not thread-safe and we must ensure that all
+  // interactions with the endpoint binding set occur on the same thread.
+  //
+  // This handler will run on the initial thread, but other interactions run
+  // on the "vsock-handler" thread. So we post a task to the dispatcher of the
+  // async loop running on that thread.
+  async::PostTask(dispatcher_, [this, request = std::move(request)]() mutable {
+    endpoint_bindings_.AddBinding(this, std::move(request), dispatcher_);
+  });
 }
 
 uint32_t VirtioVsock::guest_cid() const {
@@ -610,13 +618,26 @@ VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
 }
 
 bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
-  if (status != ZX_OK) {
+  // If there was no error, don't erase the connection.
+  if (status == ZX_OK) {
+    return false;
+  }
+
+  // Find the connection.
+  auto it = connections_.find(key);
+  FX_CHECK(it != connections_.end()) << "Attempted to erase unknown connection.";
+
+  // If this is not an internal connection, notify endpoints that it has been terminated.
+  if (it->second->type() != Connection::Type::kInternal) {
     for (auto& binding : endpoint_bindings_.bindings()) {
       binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(), key.remote_port);
     }
-    connections_.erase(key);
   }
-  return status != ZX_OK;
+
+  // Remove the connection.
+  connections_.erase(it);
+
+  return true;
 }
 
 void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {

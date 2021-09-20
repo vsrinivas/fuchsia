@@ -8,6 +8,8 @@
 
 #include <iterator>
 
+#include <gtest/gtest.h>
+
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 
@@ -157,24 +159,39 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
   void SetUp() override {
     FillRxQueue();
-    ASSERT_EQ(endpoint_binding_.Bind(endpoint_.NewRequest()), ZX_OK);
+
+    // Set up a GuestVsockEndpoint and GuestVsockAcceptor interface connected
+    // to the VirtioVsock object.
+    vsock_.Bind(endpoint_.NewRequest());
     endpoint_->SetContextId(kVirtioVsockGuestCid, connector_binding_.NewBinding(),
                             acceptor_.NewRequest());
+    endpoint_.events().OnShutdown = [this](uint64_t local_cid, uint32_t local_port,
+                                           uint64_t guest_cid, uint32_t remote_port) {
+      received_shutdown_events_.push_back({local_cid, local_port, guest_cid, remote_port});
+    };
+
     RunLoopUntilIdle();
   }
 
  protected:
+  struct ShutdownEvent {
+    uint64_t local_cid;
+    uint32_t local_port;
+    uint64_t guest_cid;
+    uint32_t remote_port;
+  };
+
   PhysMemFake phys_mem_;
   VirtioVsock vsock_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
-  fidl::Binding<fuchsia::virtualization::GuestVsockEndpoint> endpoint_binding_{&vsock_};
   fuchsia::virtualization::GuestVsockEndpointPtr endpoint_;
   fuchsia::virtualization::GuestVsockAcceptorPtr acceptor_;
   fidl::Binding<fuchsia::virtualization::HostVsockConnector> connector_binding_{this};
   std::vector<zx::handle> remote_handles_;
   std::vector<ConnectionRequest> connection_requests_;
   std::vector<ConnectionRequest> connections_established_;
+  std::vector<ShutdownEvent> received_shutdown_events_;
   RxBuffer rx_buffers[kVirtioVsockRxBuffers] = {};
 
   // Set some default credit parameters that should suffice for most tests.
@@ -220,7 +237,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
 
   // Send a packet from the guest to the host.
   void DoSend(uint32_t host_port, uint32_t guest_cid, uint32_t guest_port, uint16_t type,
-              uint16_t op) {
+              uint16_t op, uint32_t flags = 0) {
     virtio_vsock_hdr_t tx_header = {
         .src_cid = guest_cid,
         .dst_cid = fuchsia::virtualization::HOST_CID,
@@ -228,6 +245,7 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
         .dst_port = host_port,
         .type = type,
         .op = op,
+        .flags = flags,
         .buf_alloc = this->buf_alloc,
         .fwd_cnt = this->fwd_cnt,
     };
@@ -335,6 +353,12 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     VerifyHeader(rx_buffer, host_port, kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_SHUTDOWN, flags);
   }
 
+  void ExpectHostResetOnPort(uint32_t host_port) {
+    RxBuffer* rx_buffer = DoReceive();
+    ASSERT_NE(nullptr, rx_buffer);
+    VerifyHeader(rx_buffer, host_port, kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_RST, 0);
+  }
+
   void GuestConnectOnPortRequest(uint32_t host_port, uint32_t guest_port) {
     DoSend(host_port, kVirtioVsockGuestCid, guest_port, VIRTIO_VSOCK_TYPE_STREAM,
            VIRTIO_VSOCK_OP_REQUEST);
@@ -390,6 +414,10 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
     DoSend(host_port, kVirtioVsockGuestCid, guest_port, VIRTIO_VSOCK_TYPE_STREAM,
            VIRTIO_VSOCK_OP_CREDIT_UPDATE);
   }
+
+  // Return a list of `OnShutdown` events that have been received from the
+  // virtio-vsock device to the endpoints.
+  const std::vector<ShutdownEvent>& received_shutdown_events() { return received_shutdown_events_; }
 };
 
 TEST_F(VirtioVsockTest, Connect) {
@@ -532,9 +560,12 @@ TEST_F(VirtioVsockTest, Reset) {
 
 // The device should not send any response to a spurious reset packet.
 TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
+  // Send a reset from the guest.
   DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
          VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RST);
   RunLoopUntilIdle();
+
+  // Expect no response from the host.
   RxBuffer* buffer = DoReceive();
   EXPECT_EQ(nullptr, buffer);
 }
@@ -555,6 +586,60 @@ TEST_F(VirtioVsockTest, ShutdownWrite) {
 
   ASSERT_EQ(connection.socket.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED), ZX_OK);
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND);
+}
+
+// Ensure endpoints are notified when a socket has been shutdown.
+TEST_F(VirtioVsockTest, ShutdownNotifiesEndpoint) {
+  TestSocketConnection connection;
+
+  // Establish a connection between the host and guest.
+  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  // Have the guest shutdown the stream.
+  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
+         VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_SHUTDOWN,
+         /*flags=*/VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH);
+  RunLoopUntilIdle();
+
+  // Ensure the host reset the connection.
+  ExpectHostResetOnPort(kVirtioVsockHostPort);
+  RunLoopUntilIdle();
+
+  // Ensure the endpoint was sent a shutdown event.
+  ASSERT_EQ(received_shutdown_events().size(), 1u);
+  const ShutdownEvent& shutdown_event = received_shutdown_events()[0];
+  EXPECT_EQ(shutdown_event.guest_cid, kVirtioVsockGuestCid);
+  EXPECT_EQ(shutdown_event.local_cid, fuchsia::virtualization::HOST_CID);
+  EXPECT_EQ(shutdown_event.local_port, kVirtioVsockHostPort);
+  EXPECT_EQ(shutdown_event.remote_port, kVirtioVsockGuestPort);
+}
+
+// Endpoints should not be sent OnShutdown events when virtio-vsock is
+// merely responding to spurious packets.
+TEST_F(VirtioVsockTest, SpuriousPacketsDoNotNotifyEndpoints) {
+  for (uint16_t packet_op : std::vector<uint16_t>{
+           VIRTIO_VSOCK_OP_SHUTDOWN,
+           VIRTIO_VSOCK_OP_RESPONSE,
+           VIRTIO_VSOCK_OP_CREDIT_UPDATE,
+           VIRTIO_VSOCK_OP_CREDIT_REQUEST,
+           VIRTIO_VSOCK_OP_INVALID,
+           VIRTIO_VSOCK_OP_RW,
+       }) {
+    SCOPED_TRACE(testing::Message() << "Testing packet operation #" << packet_op);
+
+    // Guest sends a spurious shutdown event.
+    DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
+           VIRTIO_VSOCK_TYPE_STREAM, packet_op);
+    RunLoopUntilIdle();
+
+    // We expect a reset from the host.
+    ExpectHostResetOnPort(kVirtioVsockHostPort);
+    RunLoopUntilIdle();
+
+    // Ensure that no shutdown events were sent to the endpoints.
+    EXPECT_TRUE(received_shutdown_events().empty());
+  }
 }
 
 TEST_F(VirtioVsockTest, WriteAfterShutdown) {
