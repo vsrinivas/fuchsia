@@ -79,22 +79,24 @@ void main() {
     });
   }
 
-  // Injects a command into terminal. This assumes only one terminal
-  // instance is running.
+  // Injects a command into terminal. This assumes the terminal view has focus.
   Future<void> inject(String cmd,
       {Duration delay = const Duration(seconds: 1)}) async {
-    await input.text(cmd);
-    await Future.delayed(delay);
-
-    // Wait for buffer to contain the injected command.
     await ermine.waitFor(() async {
-      final buffer = await waitForBuffer();
-      return buffer.contains(cmd);
-    });
+      // Inject the command.
+      await input.text(cmd);
+      await Future.delayed(delay);
 
-    // Commit the command.
-    await input.keyPress(kEnterKey);
-    await Future.delayed(delay);
+      final buffer = await waitForBuffer();
+      if (buffer.contains(cmd)) {
+        // Commit the command by injecting the ENTER key.
+        await input.keyPress(kEnterKey);
+        await Future.delayed(delay);
+        return true;
+      } else {
+        return false;
+      }
+    });
   }
 
   test('Launch and close two terminal instances', () async {
