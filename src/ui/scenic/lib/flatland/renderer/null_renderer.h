@@ -38,7 +38,8 @@ class NullRenderer final : public Renderer {
   bool RegisterRenderTargetCollection(
       allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      fuchsia::math::SizeU size = {}) override;
 
   // |Renderer|.
   void DeregisterRenderTargetCollection(

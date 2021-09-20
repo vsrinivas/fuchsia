@@ -98,8 +98,8 @@ void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id)
 
 bool VkRenderer::RegisterCollection(
     GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    vk::ImageUsageFlags usage) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token, vk::ImageUsageFlags usage,
+    fuchsia::math::SizeU size) {
   TRACE_DURATION("gfx", "VkRenderer::RegisterCollection");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
@@ -149,6 +149,9 @@ bool VkRenderer::RegisterCollection(
     for (const auto& format : kPreferredImageFormats) {
       create_infos.push_back(
           escher::RectangleCompositor::GetDefaultImageConstraints(format, usage));
+      if (size.width && size.height) {
+        create_infos.back().extent = vk::Extent3D{size.width, size.height, 1};
+      }
     }
 
     vk::ImageConstraintsInfoFUCHSIAX image_constraints_info;
@@ -365,9 +368,10 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
 
 bool VkRenderer::RegisterRenderTargetCollection(
     GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    fuchsia::math::SizeU size) {
   return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
-                            escher::RectangleCompositor::kRenderTargetUsageFlags);
+                            escher::RectangleCompositor::kRenderTargetUsageFlags, size);
 }
 
 void VkRenderer::DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) {

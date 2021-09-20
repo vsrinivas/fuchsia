@@ -26,6 +26,7 @@ const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
 // Debugging color used to highlight images that have gone through the GPU rendering path.
 const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
 
+#ifdef CPU_ACCESSIBLE_VMO
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
 fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_format_t format) {
   switch (format) {
@@ -42,6 +43,7 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
   FX_CHECK(false) << "Unsupported Zircon pixel format: " << format;
   return fuchsia::sysmem::PixelFormatType::INVALID;
 }
+#endif  // CPU_ACCESSIBLE_VMO
 
 // Returns a zircon format for buffer with this pixel format.
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
@@ -621,8 +623,8 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
       << "DisplayCompositor::AddDisplay(): display already exists: " << display_id;
 
-  const uint32_t kWidth = info.dimensions.x;
-  const uint32_t kHeight = info.dimensions.y;
+  const uint32_t width = info.dimensions.x;
+  const uint32_t height = info.dimensions.y;
 
   // Grab the best pixel format that the renderer prefers given the list of available formats on
   // the display.
@@ -668,8 +670,8 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
 
   // Register the buffer collection with the renderer
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator_.get(),
-                                                          std::move(renderer_token));
+  auto result = renderer_->RegisterRenderTargetCollection(
+      collection_id, sysmem_allocator_.get(), std::move(renderer_token), {width, height});
   FX_DCHECK(result);
 
   fuchsia::hardware::display::ImageConfig image_config;
@@ -683,16 +685,19 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
   fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
       CreateBufferCollectionSyncPtrAndSetConstraints(
-          sysmem_allocator_.get(), std::move(compositor_token), num_vmos, kWidth, kHeight,
+          sysmem_allocator_.get(), std::move(compositor_token), num_vmos, width, height,
           buffer_usage, ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
 #else
-  const fuchsia::sysmem::BufferUsage buffer_usage = {
-      .vulkan = fuchsia::sysmem::vulkanUsageColorAttachment};
-  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
-      CreateBufferCollectionSyncPtrAndSetConstraints(
-          sysmem_allocator_.get(), std::move(compositor_token), num_vmos, kWidth, kHeight,
-          buffer_usage, ConvertZirconFormatToSysmemFormat(pixel_format));
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.min_buffer_count_for_camping = num_vmos;
+  constraints.usage.none = fuchsia::sysmem::noneUsage;
 
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr;
+  status = sysmem_allocator_->BindSharedCollection(std::move(compositor_token),
+                                                   collection_ptr.NewRequest());
+  collection_ptr->SetName(10u, "FlatlandDisplayCompositorImage");
+  status = collection_ptr->SetConstraints(true, constraints);
+  FX_DCHECK(status == ZX_OK);
 #endif  // CPU_ACCESSIBLE_VMO
 
   // Have the client wait for buffers allocated so it can populate its information
@@ -712,8 +717,8 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     allocation::ImageMetadata target = {.collection_id = collection_id,
                                         .identifier = allocation::GenerateUniqueImageId(),
                                         .vmo_index = i,
-                                        .width = kWidth,
-                                        .height = kHeight};
+                                        .width = width,
+                                        .height = height};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
     // We know that this collection is supported by display because we collected constraints from

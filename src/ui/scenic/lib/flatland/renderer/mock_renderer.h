@@ -26,7 +26,8 @@ class MockRenderer : public Renderer {
 
   MOCK_METHOD(bool, RegisterRenderTargetCollection,
               (allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
+               fuchsia::math::SizeU size));
 
   MOCK_METHOD(void, DeregisterRenderTargetCollection, (allocation::GlobalBufferCollectionId));
 

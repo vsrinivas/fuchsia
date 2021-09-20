@@ -9,6 +9,7 @@
 
 #include <optional>
 
+#include "fuchsia/math/cpp/fidl.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 
@@ -17,8 +18,6 @@
 // clang-format on
 
 #include <zircon/pixelformat.h>
-
-#include "src/ui/lib/escher/geometry/types.h"
 
 #include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
@@ -40,10 +39,14 @@ class Renderer : public allocation::BufferCollectionImporter {
   //
   // This function is likewise threadsafe, although it is only meant to be called from the render
   // loop, and not by any flatland instance directly.
+  //
+  // |size| may be optionally set to indicate the intended size usage so that it may be specified
+  // when setting constraints in |token|.
   virtual bool RegisterRenderTargetCollection(
       allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      fuchsia::math::SizeU size = {}) = 0;
 
   // Removes a buffer collection used for render targets from the renderer. Once done, the
   // collection_id can be reused for another buffer collection.

@@ -12,7 +12,8 @@ namespace flatland {
 bool NullRenderer::RegisterRenderTargetCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    fuchsia::math::SizeU size) {
   return ImportBufferCollection(collection_id, sysmem_allocator, std::move(token));
 }
 

@@ -44,7 +44,8 @@ class VkRenderer final : public Renderer {
   bool RegisterRenderTargetCollection(
       allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      fuchsia::math::SizeU size = {}) override;
 
   // |Renderer|.
   void DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) override;
@@ -77,7 +78,7 @@ class VkRenderer final : public Renderer {
   bool RegisterCollection(allocation::GlobalBufferCollectionId collection_id,
                           fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                          vk::ImageUsageFlags usage);
+                          vk::ImageUsageFlags usage, fuchsia::math::SizeU size = {});
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
   escher::ImagePtr ExtractImage(const allocation::ImageMetadata& metadata,
