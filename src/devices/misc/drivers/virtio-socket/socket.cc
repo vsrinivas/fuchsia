@@ -1128,6 +1128,9 @@ zx_status_t SocketDevice::Connection::VmoWalker::Set(zx::bti& bti, zx::vmo vmo, 
 }
 
 void SocketDevice::Connection::VmoWalker::Release() {
+  if (pinned_pages_.is_valid()) {
+    pinned_pages_.unpin();
+  }
   pinned_pages_.reset();
   vmo_.reset();
   final_paddr_ = 0;
