@@ -28,6 +28,7 @@ void PrintHelp(Printer* printer) {
   printer->Print("usage: print-input-report <command> [<args>]\n\n");
   printer->Print("  commands:\n");
   printer->Print("    read [<devpath> [num reads]]\n");
+  printer->Print("    get [<devpath> <mouse|sensor|touch|keyboard|consumer_control>]\n");
   printer->Print("    descriptor [<devpath>]\n");
 }
 
@@ -65,6 +66,26 @@ std::optional<fidl::WireSharedClient<fuchsia_input_report::InputDevice>> GetClie
 
   return fidl::WireSharedClient(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
                                 dispatcher);
+}
+
+std::optional<fuchsia_input_report::wire::DeviceType> GetDeviceTypeFromString(
+    const std::string& string) {
+  if (string == "mouse") {
+    return fuchsia_input_report::wire::DeviceType::kMouse;
+  }
+  if (string == "sensor") {
+    return fuchsia_input_report::wire::DeviceType::kSensor;
+  }
+  if (string == "touch") {
+    return fuchsia_input_report::wire::DeviceType::kTouch;
+  }
+  if (string == "keyboard") {
+    return fuchsia_input_report::wire::DeviceType::kKeyboard;
+  }
+  if (string == "consumer_control") {
+    return fuchsia_input_report::wire::DeviceType::kConsumerControl;
+  }
+  return {};
 }
 
 int ReadAllDevices(async::Loop* loop, Printer* printer) {
@@ -190,7 +211,24 @@ int main(int argc, const char** argv) {
     print_input_report::PrintInputReports(device_path, &printer, std::move(reader), num_reads,
                                           [&loop]() { loop.Shutdown(); });
     loop.Run();
+    // The "get" command.
+  } else if (args[0] == "get" && args.size() >= 3) {
+    const std::string& device_path = args[1].c_str();
+    auto client = print_input_report::GetClientFromPath(&printer, device_path, loop.dispatcher());
+    if (!client) {
+      return -1;
+    }
 
+    const auto device_type = print_input_report::GetDeviceTypeFromString(args[2]);
+    if (!device_type) {
+      PrintHelp(&printer);
+      return 1;
+    }
+
+    printer.Print("Reading a report from %s:\n", device_path.c_str());
+    print_input_report::GetAndPrintInputReport(device_path, *device_type, &printer,
+                                               std::move(*client), [&loop] { loop.Shutdown(); });
+    loop.Run();
     // The "descriptor" command.
   } else if (args[0] == "descriptor") {
     // If we don't have a device path then read all of the descriptors.

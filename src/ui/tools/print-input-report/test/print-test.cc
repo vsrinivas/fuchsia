@@ -123,6 +123,39 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
   printer.AssertSawAllStrings();
 }
 
+TEST_F(PrintInputReport, PrintMouseGetInputReport) {
+  fuchsia::input::report::InputReport report;
+  report.mutable_mouse()->set_movement_x(100);
+  report.mutable_mouse()->set_movement_y(200);
+  report.mutable_mouse()->set_position_x(300);
+  report.mutable_mouse()->set_position_y(400);
+  report.mutable_mouse()->set_scroll_v(100);
+  report.mutable_mouse()->set_pressed_buttons({1, 10, 5});
+
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
+      "Movement x: 00000100\n",
+      "Movement y: 00000200\n",
+      "Position x: 00000300\n",
+      "Position y: 00000400\n",
+      "Scroll v: 00000100\n",
+      "Button 01 pressed\n",
+      "Button 10 pressed\n",
+      "Button 05 pressed\n",
+      "\n",
+  });
+
+  print_input_report::GetAndPrintInputReport("test", fuchsia_input_report::wire::DeviceType::kMouse,
+                                             &printer, std::move(*client_));
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
+}
+
 TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
   auto mouse = descriptor->mutable_mouse()->mutable_input();
@@ -247,6 +280,28 @@ TEST_F(PrintInputReport, PrintSensorInputReport) {
   printer.AssertSawAllStrings();
 }
 
+TEST_F(PrintInputReport, PrintSensorGetInputReport) {
+  fuchsia::input::report::InputReport report;
+  report.mutable_sensor()->set_values({100, -100});
+
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
+      "Sensor[00]: 00000100\n",
+      "Sensor[01]: -0000100\n",
+      "\n",
+  });
+
+  print_input_report::GetAndPrintInputReport(
+      "test", fuchsia_input_report::wire::DeviceType::kSensor, &printer, std::move(*client_));
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
+}
+
 TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
   auto touch = descriptor->mutable_touch()->mutable_input();
@@ -335,6 +390,41 @@ TEST_F(PrintInputReport, PrintTouchInputReport) {
   printer.AssertSawAllStrings();
 }
 
+TEST_F(PrintInputReport, PrintTouchGetInputReport) {
+  fuchsia::input::report::InputReport report;
+  fuchsia::input::report::ContactInputReport contact;
+
+  contact.set_contact_id(10);
+  contact.set_position_x(123);
+  contact.set_position_y(234);
+  contact.set_pressure(345);
+  contact.set_contact_width(678);
+  contact.set_contact_height(789);
+
+  report.mutable_touch()->mutable_contacts()->push_back(std::move(contact));
+
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
+      "Contact ID: 10\n",
+      "  Position X:     00000123\n",
+      "  Position Y:     00000234\n",
+      "  Pressure:       00000345\n",
+      "  Contact Width:  00000678\n",
+      "  Contact Height: 00000789\n",
+      "\n",
+  });
+
+  print_input_report::GetAndPrintInputReport("test", fuchsia_input_report::wire::DeviceType::kTouch,
+                                             &printer, std::move(*client_));
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
+}
+
 TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   auto descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
   descriptor->mutable_keyboard()->mutable_input()->set_keys3(
@@ -385,6 +475,31 @@ TEST_F(PrintInputReport, PrintKeyboardInputReport) {
   auto reader = std::move(res.value());
 
   print_input_report::PrintInputReports("test", &printer, std::move(reader), 1);
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
+}
+
+TEST_F(PrintInputReport, PrintKeyboardGetInputReport) {
+  fuchsia::input::report::InputReport report;
+  report.mutable_keyboard()->set_pressed_keys3(
+      {fuchsia::input::Key::A, fuchsia::input::Key::UP, fuchsia::input::Key::LEFT_SHIFT});
+
+  std::vector<fuchsia::input::report::InputReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Report from file: test\n",
+      "Keyboard Report\n",
+      "  Key:   458756\n",  // 0x70004
+      "  Key:   458834\n",  // 0x70052
+      "  Key:   458977\n",  // 0x700e1
+      "\n",
+  });
+
+  print_input_report::GetAndPrintInputReport(
+      "test", fuchsia_input_report::wire::DeviceType::kKeyboard, &printer, std::move(*client_));
   loop_->RunUntilIdle();
   printer.AssertSawAllStrings();
 }

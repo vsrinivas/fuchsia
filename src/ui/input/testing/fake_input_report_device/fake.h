@@ -27,9 +27,9 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
                            async_dispatcher_t* dispatcher)
       : binding_(this, std::move(request), dispatcher) {}
 
-  // Sets the fake's report, which will be read with |GetReports|. This also
-  // triggers the |reports_events_| signal which wakes up any clients waiting
-  // for report dta.
+  // Sets the fake's report, which will be read with |ReadInputReports| and
+  // |GetInputReport|. This also triggers the |reports_events_| signal which
+  // wakes up any clients waiting for report dta.
   void SetReports(std::vector<fuchsia::input::report::InputReport> reports);
 
   // Sets the fake's descriptor, which will be read with |GetDescriptor|.
@@ -51,10 +51,7 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
         fuchsia::input::report::InputDevice_SetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
   void GetInputReport(::fuchsia::input::report::DeviceType device_type,
-                      GetInputReportCallback callback) override {
-    callback(
-        fuchsia::input::report::InputDevice_GetInputReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-  }
+                      GetInputReportCallback callback) override;
 
  private:
   friend class FakeInputReportsReader;
