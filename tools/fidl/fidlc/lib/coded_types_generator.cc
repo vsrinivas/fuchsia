@@ -500,7 +500,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                                                  : TypeShape::ForEmptyPayload();
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructElement>(),
-              typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), std::move(message_qname)));
+              typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), typeshape_v1.HasEnvelope(),
+              std::move(message_qname)));
         };
         if (method.has_request) {
           CreateMessage(method.maybe_request_payload, types::MessageKind::kRequest);
@@ -529,12 +530,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       if (struct_decl->is_request_or_response)
         break;
       std::string struct_name = NameCodedName(struct_decl->name);
-      named_coded_types_.emplace(decl->name,
-                                 std::make_unique<coded::StructType>(
-                                     std::move(struct_name), std::vector<coded::StructElement>(),
-                                     struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize(),
-                                     struct_decl->typeshape(WireFormat::kV2).InlineSize(),
-                                     NameFlatName(struct_decl->name)));
+      named_coded_types_.emplace(
+          decl->name, std::make_unique<coded::StructType>(
+                          std::move(struct_name), std::vector<coded::StructElement>(),
+                          struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize(),
+                          struct_decl->typeshape(WireFormat::kV2).InlineSize(),
+                          struct_decl->typeshape(fidl::WireFormat::kV1NoEe).HasEnvelope(),
+                          NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {

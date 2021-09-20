@@ -7,12 +7,12 @@ __LOCAL extern const struct FidlCodedStruct bottom_FooTable;
 
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
-const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooRequest"};
+const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooRequest"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 static const struct FidlStructElement Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .elements=Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooResponse"};
+const struct FidlCodedStruct fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields67fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponse, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.foreigntypeinresponseusedthroughcompose/TopGetFooResponse"};
 
 

@@ -147,5 +147,5 @@ static const struct FidlStructElement Fields25fidl_test_handles_Handles[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=124u, .offset_v2=124u, .field_type=(fidl_type_t*)(&Protocol30fidl_test_handles_SomeProtocolnonnullableTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=128u, .offset_v2=128u, .field_type=(fidl_type_t*)(&Request30fidl_test_handles_SomeProtocolnonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_handles_HandlesTable = {.tag=kFidlTypeStruct, .elements=Fields25fidl_test_handles_Handles, .element_count=33u, .size_v1=132u, .size_v2=132u, .name="fidl.test.handles/Handles"};
+const struct FidlCodedStruct fidl_test_handles_HandlesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields25fidl_test_handles_Handles, .element_count=33u, .size_v1=132u, .size_v2=132u, .name="fidl.test.handles/Handles"};
 

@@ -764,7 +764,10 @@ zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transforma
                                                 uint32_t dst_num_bytes_capacity,
                                                 uint32_t* out_dst_num_bytes,
                                                 const char** out_error_msg) {
-  if (transformation == FIDL_TRANSFORMATION_NONE) {
+  bool does_not_contain_envelope =
+      type->type_tag() == kFidlTypeStruct &&
+      type->coded_struct().contains_envelope == kFidlContainsEnvelope_DoesNotContainEnvelope;
+  if (transformation == FIDL_TRANSFORMATION_NONE || does_not_contain_envelope) {
     // Fast path - directly copy if no transformation needs to be performed.
     if (dst_num_bytes_capacity < src_num_bytes) {
       *out_error_msg = "destination capacity too small";

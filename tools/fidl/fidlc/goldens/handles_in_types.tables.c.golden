@@ -54,5 +54,5 @@ static const struct FidlStructElement Fields39fidl_test_handlesintypes_HandlesIn
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=64u, .offset_v2=64u, .field_type=(fidl_type_t*)(&fidl_test_handlesintypes_TableWithHandleTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=80u, .offset_v2=80u, .field_type=(fidl_type_t*)(&fidl_test_handlesintypes_UnionWithHandleTable)}}
 };
-const struct FidlCodedStruct fidl_test_handlesintypes_HandlesInTypesTable = {.tag=kFidlTypeStruct, .elements=Fields39fidl_test_handlesintypes_HandlesInTypes, .element_count=8u, .size_v1=104u, .size_v2=96u, .name="fidl.test.handlesintypes/HandlesInTypes"};
+const struct FidlCodedStruct fidl_test_handlesintypes_HandlesInTypesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields39fidl_test_handlesintypes_HandlesInTypes, .element_count=8u, .size_v1=104u, .size_v2=96u, .name="fidl.test.handlesintypes/HandlesInTypes"};
 

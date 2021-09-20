@@ -16,10 +16,10 @@ __LOCAL extern const struct FidlCodedXUnion fidl_test_doccomments_FlexibleUnionN
 
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable;
-const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.doccomments/InterfaceMethodRequest"};
+const struct FidlCodedStruct fidl_test_doccomments_InterfaceMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.doccomments/InterfaceMethodRequest"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable;
-const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.doccomments/InterfaceOnEventEvent"};
+const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.doccomments/InterfaceOnEventEvent"};
 
 
 static const struct FidlTableField Fields27fidl_test_doccomments_Table[] = {
@@ -27,7 +27,7 @@ static const struct FidlTableField Fields27fidl_test_doccomments_Table[] = {
 };
 const struct FidlCodedTable fidl_test_doccomments_TableTable = {.tag=kFidlTypeTable, .fields=Fields27fidl_test_doccomments_Table, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.doccomments/Table"};
 
-const struct FidlCodedStruct fidl_test_doccomments_StructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.doccomments/Struct"};
+const struct FidlCodedStruct fidl_test_doccomments_StructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.doccomments/Struct"};
 
 static const struct FidlXUnionField Fields33fidl_test_doccomments_StrictUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}

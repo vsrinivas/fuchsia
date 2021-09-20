@@ -12,20 +12,20 @@ static const struct FidlStructElement Fields57fidl_test_inheritancewithrecursive
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ParentFirstRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ParentFirstRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ParentFirstRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ParentFirstRequest"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
 static const struct FidlStructElement Fields56fidl_test_inheritancewithrecursivedecl_ChildFirstRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable = {.tag=kFidlTypeStruct, .elements=Fields56fidl_test_inheritancewithrecursivedecl_ChildFirstRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildFirstRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields56fidl_test_inheritancewithrecursivedecl_ChildFirstRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildFirstRequest"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 static const struct FidlStructElement Fields57fidl_test_inheritancewithrecursivedecl_ChildSecondRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Request45fidl_test_inheritancewithrecursivedecl_ParentnonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=20u, .offset_v2=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable = {.tag=kFidlTypeStruct, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ChildSecondRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildSecondRequest"};
+const struct FidlCodedStruct fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields57fidl_test_inheritancewithrecursivedecl_ChildSecondRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritancewithrecursivedecl/ChildSecondRequest"};
 
 

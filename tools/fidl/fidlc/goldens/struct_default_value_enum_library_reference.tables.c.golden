@@ -11,5 +11,5 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibr
 static const struct FidlStructElement Fields52fidl_test_structdefaultvalueenumlibraryreference_Foo[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&dependent_MyEnumTable)}}
 };
-const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable = {.tag=kFidlTypeStruct, .elements=Fields52fidl_test_structdefaultvalueenumlibraryreference_Foo, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="fidl.test.structdefaultvalueenumlibraryreference/Foo"};
+const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields52fidl_test_structdefaultvalueenumlibraryreference_Foo, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="fidl.test.structdefaultvalueenumlibraryreference/Foo"};
 

@@ -69,6 +69,11 @@ typedef bool FidlMemcpyCompatibility;
 static const FidlMemcpyCompatibility kFidlMemcpyCompatibility_CannotMemcpy = false;
 static const FidlMemcpyCompatibility kFidlMemcpyCompatibility_CanMemcpy = true;
 
+// Indicates if a struct contains an envelope recursively within it.
+typedef bool FidlContainsEnvelope;
+static const FidlContainsEnvelope kFidlContainsEnvelope_DoesNotContainEnvelope = false;
+static const FidlContainsEnvelope kFidlContainsEnvelope_ContainsEnvelope = true;
+
 // TODO(fxbug.dev/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in
 // zircon/fidl.h.
 // clang-format off
@@ -380,6 +385,11 @@ struct FidlCodedBits FIDL_INTERNAL_INHERIT_TYPE_T {
 // the purview of this library. It's easier for the compiler to stash it.
 struct FidlCodedStruct FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
+  // Indicates if the struct recursively contains an envelope.
+  // Intended to be temporarily used in the FIDL transformer for the duration
+  // of the envelope wire format migration.
+  // TODO(fxbug.dev/79584) Remove this once the migration is complete.
+  const FidlContainsEnvelope contains_envelope;
   // element_count should be a uint32_t, but for the sake of binary size
   // a uint16_t is used (all existing values fit within this size).
   // If a larger size is needed, replace FidlCodedStruct or add a second

@@ -17,5 +17,5 @@ static const struct FidlStructElement Fields37fidl_test_vectors_ExampleUseOfVect
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable32Vector4294967295nonnullable4boolTable)}}
 };
-const struct FidlCodedStruct fidl_test_vectors_ExampleUseOfVectorsTable = {.tag=kFidlTypeStruct, .elements=Fields37fidl_test_vectors_ExampleUseOfVectors, .element_count=2u, .size_v1=32u, .size_v2=32u, .name="fidl.test.vectors/ExampleUseOfVectors"};
+const struct FidlCodedStruct fidl_test_vectors_ExampleUseOfVectorsTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields37fidl_test_vectors_ExampleUseOfVectors, .element_count=2u, .size_v1=32u, .size_v2=32u, .name="fidl.test.vectors/ExampleUseOfVectors"};
 

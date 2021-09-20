@@ -44,7 +44,7 @@ static const struct FidlTableField Fields32fidl_test_arrays_TableLargeArray[] = 
 };
 const struct FidlCodedTable fidl_test_arrays_TableLargeArrayTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_arrays_TableLargeArray, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.arrays/TableLargeArray"};
 
-const struct FidlCodedStruct fidl_test_arrays_StructSmallArrayTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.arrays/StructSmallArray"};
+const struct FidlCodedStruct fidl_test_arrays_StructSmallArrayTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.arrays/StructSmallArray"};
 
-const struct FidlCodedStruct fidl_test_arrays_StructLargeArrayTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=400u, .size_v2=400u, .name="fidl.test.arrays/StructLargeArray"};
+const struct FidlCodedStruct fidl_test_arrays_StructLargeArrayTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=400u, .size_v2=400u, .name="fidl.test.arrays/StructLargeArray"};
 

@@ -59,6 +59,7 @@ struct TypeShape {
   // flexible types, which doesn't make it very useful.)
   bool has_padding;
 
+  bool has_envelope;
   bool has_flexible_envelope;
 
   // TODO(fxbug.dev/36337): These accessors are for backward compatibility with current code, and
@@ -70,6 +71,7 @@ struct TypeShape {
   uint32_t MaxOutOfLine() const { return max_out_of_line; }
   bool HasPadding() const { return has_padding; }
   bool HasFlexibleEnvelope() const { return has_flexible_envelope; }
+  bool HasEnvelope() const { return has_envelope; }
 
   // This is a named constructor for the specific case of generating a type
   // shape to represent a method interaction kind (that is, request or response)
@@ -84,6 +86,7 @@ struct TypeShape {
         max_handles(0),
         max_out_of_line(0),
         has_padding(false),
+        has_envelope(false),
         has_flexible_envelope(false) {}
 };
 

@@ -19,7 +19,7 @@ static const struct FidlStructElement Fields60fidl_test_placementofattributes_Ex
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&exampleusing_EmptyTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields60fidl_test_placementofattributes_ExampleProtocolMethodRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.placementofattributes/ExampleProtocolMethodRequest"};
+const struct FidlCodedStruct fidl_test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields60fidl_test_placementofattributes_ExampleProtocolMethodRequest, .element_count=2u, .size_v1=24u, .size_v2=24u, .name="fidl.test.placementofattributes/ExampleProtocolMethodRequest"};
 
 
 static const struct FidlXUnionField Fields45fidl_test_placementofattributes_ExampleXUnion[] = {
@@ -43,7 +43,7 @@ static const struct FidlTableField Fields44fidl_test_placementofattributes_Examp
 };
 const struct FidlCodedTable fidl_test_placementofattributes_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields44fidl_test_placementofattributes_ExampleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.placementofattributes/ExampleTable"};
 
-const struct FidlCodedStruct fidl_test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.placementofattributes/ExampleStruct"};
+const struct FidlCodedStruct fidl_test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.placementofattributes/ExampleStruct"};
 
 static bool EnumValidatorFor_fidl_test_placementofattributes_ExampleEnum(uint64_t v) {
   switch (v) {

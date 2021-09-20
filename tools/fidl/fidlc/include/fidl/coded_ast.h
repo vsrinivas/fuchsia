@@ -233,16 +233,18 @@ struct StructPointerType;
 
 struct StructType : public Type {
   StructType(std::string name, std::vector<StructElement> elements, uint32_t size_v1,
-             uint32_t size_v2, std::string qname)
+             uint32_t size_v2, bool contains_envelope, std::string qname)
       : Type(Kind::kStruct, std::move(name), size_v1, size_v2, true, false),
         elements(std::move(elements)),
-        qname(std::move(qname)) {
+        qname(std::move(qname)),
+        contains_envelope(contains_envelope) {
     FIDL_CHECK(elements.size() <= std::numeric_limits<uint16_t>::max(),
                "coding table stores element_count in uint16_t");
   }
 
   std::vector<StructElement> elements;
   std::string qname;
+  bool contains_envelope;
   StructPointerType* maybe_reference_type = nullptr;
 };
 
@@ -290,12 +292,14 @@ struct XUnionType : public Type {
 
 struct MessageType : public Type {
   MessageType(std::string name, std::vector<StructElement> elements, uint32_t size_v1,
-              uint32_t size_v2, std::string qname)
+              uint32_t size_v2, bool contains_envelope, std::string qname)
       : Type(Kind::kMessage, std::move(name), size_v1, size_v2, true, false),
         elements(std::move(elements)),
+        contains_envelope(contains_envelope),
         qname(std::move(qname)) {}
 
   std::vector<StructElement> elements;
+  bool contains_envelope;
   std::string qname;
 };
 

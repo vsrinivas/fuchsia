@@ -79,5 +79,5 @@ static const struct FidlStructElement Fields48fidl_test_experimentalmaybefromtyp
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=576u, .offset_v2=576u, .field_type=(fidl_type_t*)(&Array48_25Vector2nonnullable6uint64Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=640u, .offset_v2=640u, .field_type=(fidl_type_t*)(&Vector3nonnullable15Array16_6uint64Table)}}
 };
-const struct FidlCodedStruct fidl_test_experimentalmaybefromtypealias_TestingTable = {.tag=kFidlTypeStruct, .elements=Fields48fidl_test_experimentalmaybefromtypealias_Testing, .element_count=22u, .size_v1=704u, .size_v2=704u, .name="fidl.test.experimentalmaybefromtypealias/Testing"};
+const struct FidlCodedStruct fidl_test_experimentalmaybefromtypealias_TestingTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields48fidl_test_experimentalmaybefromtypealias_Testing, .element_count=22u, .size_v1=704u, .size_v2=704u, .name="fidl.test.experimentalmaybefromtypealias/Testing"};
 

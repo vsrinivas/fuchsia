@@ -14,16 +14,16 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_error_ExamplefooRequestTab
 static const struct FidlStructElement Fields33fidl_test_error_ExamplefooRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_error_ExamplefooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_error_ExamplefooRequest, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="fidl.test.error/ExamplefooRequest"};
+const struct FidlCodedStruct fidl_test_error_ExamplefooRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields33fidl_test_error_ExamplefooRequest, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="fidl.test.error/ExamplefooRequest"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_error_ExamplefooResponseTable;
 static const struct FidlStructElement Fields34fidl_test_error_ExamplefooResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_error_Example_foo_ResultTable)}}
 };
-const struct FidlCodedStruct fidl_test_error_ExamplefooResponseTable = {.tag=kFidlTypeStruct, .elements=Fields34fidl_test_error_ExamplefooResponse, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.error/ExamplefooResponse"};
+const struct FidlCodedStruct fidl_test_error_ExamplefooResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields34fidl_test_error_ExamplefooResponse, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.error/ExamplefooResponse"};
 
 
-const struct FidlCodedStruct fidl_test_error_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.error/Example_foo_Response"};
+const struct FidlCodedStruct fidl_test_error_Example_foo_ResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.error/Example_foo_Response"};
 
 static const struct FidlXUnionField Fields34fidl_test_error_Example_foo_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_test_error_Example_foo_ResponseTable)},

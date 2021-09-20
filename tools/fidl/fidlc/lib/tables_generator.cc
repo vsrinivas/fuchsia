@@ -237,7 +237,11 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(struct_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .elements=");
+  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .contains_envelope=");
+  Emit(&tables_file_, struct_type.contains_envelope
+                          ? "kFidlContainsEnvelope_ContainsEnvelope"
+                          : "kFidlContainsEnvelope_DoesNotContainEnvelope");
+  Emit(&tables_file_, ", .elements=");
   Emit(&tables_file_, struct_type.elements.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .element_count=");
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.elements.size()));
@@ -326,7 +330,11 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
 
   Emit(&tables_file_, "const struct FidlCodedStruct ");
   Emit(&tables_file_, NameTable(message_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .elements=");
+  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .contains_envelope=");
+  Emit(&tables_file_, message_type.contains_envelope
+                          ? "kFidlContainsEnvelope_ContainsEnvelope"
+                          : "kFidlContainsEnvelope_DoesNotContainEnvelope");
+  Emit(&tables_file_, ", .elements=");
   Emit(&tables_file_, message_type.elements.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .element_count=");
   Emit(&tables_file_, static_cast<uint32_t>(message_type.elements.size()));

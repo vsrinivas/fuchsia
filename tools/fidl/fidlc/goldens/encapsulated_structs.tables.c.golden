@@ -24,29 +24,29 @@ static const struct FidlStructElement Fields55fidl_test_encapsulatedstructs_NonI
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=8u, .offset_v2=8u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=12u, .offset_v2=12u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_NonInlineStructTestStructTable = {.tag=kFidlTypeStruct, .elements=Fields55fidl_test_encapsulatedstructs_NonInlineStructTestStruct, .element_count=3u, .size_v1=16u, .size_v2=16u, .name="fidl.test.encapsulatedstructs/NonInlineStructTestStruct"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_NonInlineStructTestStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields55fidl_test_encapsulatedstructs_NonInlineStructTestStruct, .element_count=3u, .size_v1=16u, .size_v2=16u, .name="fidl.test.encapsulatedstructs/NonInlineStructTestStruct"};
 
 static const struct FidlStructElement Fields39fidl_test_encapsulatedstructs_Int8Int32[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int8Int32Table = {.tag=kFidlTypeStruct, .elements=Fields39fidl_test_encapsulatedstructs_Int8Int32, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.encapsulatedstructs/Int8Int32"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int8Int32Table = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields39fidl_test_encapsulatedstructs_Int8Int32, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.encapsulatedstructs/Int8Int32"};
 
 static const struct FidlStructElement Fields39fidl_test_encapsulatedstructs_Int16Int8[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=2u, .offset_v2=2u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int16Int8Table = {.tag=kFidlTypeStruct, .elements=Fields39fidl_test_encapsulatedstructs_Int16Int8, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="fidl.test.encapsulatedstructs/Int16Int8"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_Int16Int8Table = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields39fidl_test_encapsulatedstructs_Int16Int8, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="fidl.test.encapsulatedstructs/Int16Int8"};
 
 static const struct FidlStructElement Fields44fidl_test_encapsulatedstructs_ArrayInt16Int8[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Array12_39fidl_test_encapsulatedstructs_Int16Int8Table)}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_ArrayInt16Int8Table = {.tag=kFidlTypeStruct, .elements=Fields44fidl_test_encapsulatedstructs_ArrayInt16Int8, .element_count=1u, .size_v1=12u, .size_v2=12u, .name="fidl.test.encapsulatedstructs/ArrayInt16Int8"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_ArrayInt16Int8Table = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields44fidl_test_encapsulatedstructs_ArrayInt16Int8, .element_count=1u, .size_v1=12u, .size_v2=12u, .name="fidl.test.encapsulatedstructs/ArrayInt16Int8"};
 
 static const struct FidlStructElement Fields53fidl_test_encapsulatedstructs_StructPaddingTestStruct[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=2u, .offset_v2=2u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=4u, .offset_v2=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=12u, .offset_v2=12u, .field_type=(fidl_type_t*)(&Array12_39fidl_test_encapsulatedstructs_Int16Int8Table)}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_StructPaddingTestStructTable = {.tag=kFidlTypeStruct, .elements=Fields53fidl_test_encapsulatedstructs_StructPaddingTestStruct, .element_count=3u, .size_v1=24u, .size_v2=24u, .name="fidl.test.encapsulatedstructs/StructPaddingTestStruct"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_StructPaddingTestStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields53fidl_test_encapsulatedstructs_StructPaddingTestStruct, .element_count=3u, .size_v1=24u, .size_v2=24u, .name="fidl.test.encapsulatedstructs/StructPaddingTestStruct"};
 
 static const struct FidlStructElement Fields44fidl_test_encapsulatedstructs_TopLevelStruct[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=2u, .offset_v2=2u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}},
@@ -56,5 +56,5 @@ static const struct FidlStructElement Fields44fidl_test_encapsulatedstructs_TopL
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=32u, .offset_v2=32u, .field_type=(fidl_type_t*)(&Handlehandle2147483648nonnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=36u, .offset_v2=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
-const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStructTable = {.tag=kFidlTypeStruct, .elements=Fields44fidl_test_encapsulatedstructs_TopLevelStruct, .element_count=6u, .size_v1=40u, .size_v2=40u, .name="fidl.test.encapsulatedstructs/TopLevelStruct"};
+const struct FidlCodedStruct fidl_test_encapsulatedstructs_TopLevelStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields44fidl_test_encapsulatedstructs_TopLevelStruct, .element_count=6u, .size_v1=40u, .size_v2=40u, .name="fidl.test.encapsulatedstructs/TopLevelStruct"};
 

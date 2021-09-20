@@ -19,5 +19,5 @@ static const struct FidlStructElement Fields35fidl_test_byteandbytes_ByteAndByte
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=24u, .offset_v2=24u, .field_type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=40u, .offset_v2=40u, .field_type=(fidl_type_t*)(&Vector1024nullable5uint8Table)}}
 };
-const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields35fidl_test_byteandbytes_ByteAndBytes, .element_count=4u, .size_v1=56u, .size_v2=56u, .name="fidl.test.byteandbytes/ByteAndBytes"};
+const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields35fidl_test_byteandbytes_ByteAndBytes, .element_count=4u, .size_v1=56u, .size_v2=56u, .name="fidl.test.byteandbytes/ByteAndBytes"};
 

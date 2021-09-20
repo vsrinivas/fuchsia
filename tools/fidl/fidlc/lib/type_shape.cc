@@ -77,6 +77,8 @@ DataSize MaxOutOfLine(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] DataSize MaxOutOfLine(const flat::Object* object, const WireFormat wire_format);
 bool HasPadding(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasPadding(const flat::Object* object, const WireFormat wire_format);
+bool HasEnvelope(const flat::Object& object, const WireFormat wire_format);
+[[maybe_unused]] bool HasEnvelope(const flat::Object* object, const WireFormat wire_format);
 bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, const WireFormat wire_format);
 
@@ -946,6 +948,76 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   bool HasPadding(const flat::Object* object) { return HasPadding(*object); }
 };
 
+class HasEnvelopeVisitor final : public TypeShapeVisitor<bool> {
+ public:
+  using TypeShapeVisitor<bool>::TypeShapeVisitor;
+
+  std::any Visit(const flat::ArrayType& object) override {
+    return HasEnvelope(object.element_type, wire_format());
+  }
+
+  std::any Visit(const flat::VectorType& object) override {
+    return HasEnvelope(object.element_type, wire_format());
+  }
+
+  std::any Visit(const flat::StringType& object) override { return false; }
+
+  std::any Visit(const flat::HandleType& object) override { return false; }
+
+  std::any Visit(const flat::PrimitiveType& object) override { return false; }
+
+  std::any Visit(const flat::IdentifierType& object) override {
+    thread_local RecursionDetector recursion_detector;
+
+    auto guard = recursion_detector.Enter(&object);
+    if (!guard) {
+      return false;
+    }
+
+    return HasEnvelope(object.type_decl, wire_format());
+  }
+
+  std::any Visit(const flat::BoxType& object) override {
+    return HasEnvelope(object.boxed_type, wire_format());
+  }
+
+  std::any Visit(const flat::TransportSideType& object) override { return false; }
+
+  std::any Visit(const flat::Enum& object) override { return false; }
+
+  std::any Visit(const flat::Bits& object) override { return false; }
+
+  std::any Visit(const flat::Service& object) override { return false; }
+
+  std::any Visit(const flat::Struct& object) override {
+    for (const auto& member : object.members) {
+      if (HasEnvelope(member, wire_format())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  std::any Visit(const flat::Struct::Member& object) override {
+    return HasEnvelope(object.type_ctor->type, wire_format());
+  }
+
+  std::any Visit(const flat::Table& object) override { return true; }
+
+  std::any Visit(const flat::Table::Member& object) override { return true; }
+
+  std::any Visit(const flat::Table::Member::Used& object) override { return true; }
+
+  std::any Visit(const flat::Union& object) override { return true; }
+
+  std::any Visit(const flat::Union::Member& object) override { return true; }
+
+  std::any Visit(const flat::Union::Member::Used& object) override { return true; }
+
+  std::any Visit(const flat::Protocol& object) override { return false; }
+};
+
 class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
  public:
   using TypeShapeVisitor<bool>::TypeShapeVisitor;
@@ -1104,6 +1176,15 @@ bool HasPadding(const flat::Object& object, const WireFormat wire_format) {
   return HasPadding(*object, wire_format);
 }
 
+bool HasEnvelope(const flat::Object& object, const WireFormat wire_format) {
+  HasEnvelopeVisitor v(wire_format);
+  return object.Accept(&v);
+}
+
+[[maybe_unused]] bool HasEnvelope(const flat::Object* object, const WireFormat wire_format) {
+  return HasEnvelope(*object, wire_format);
+}
+
 bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format) {
   HasFlexibleEnvelopeVisitor v(wire_format);
   return object.Accept(&v);
@@ -1132,6 +1213,7 @@ TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
       max_handles(::MaxHandles(object)),
       max_out_of_line(::MaxOutOfLine(object, wire_format)),
       has_padding(::HasPadding(object, wire_format)),
+      has_envelope(::HasEnvelope(object, wire_format)),
       has_flexible_envelope(::HasFlexibleEnvelope(object, wire_format)) {}
 
 TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)

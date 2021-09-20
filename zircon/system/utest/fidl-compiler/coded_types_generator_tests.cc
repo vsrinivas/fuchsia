@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/tables_generator.h>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
@@ -94,6 +95,7 @@ type Vectors = struct {
   auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
   ASSERT_EQ(0, type_some_struct_struct->elements.size());
   EXPECT_STR_EQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
+  EXPECT_FALSE(type_some_struct_struct->contains_envelope);
   EXPECT_NULL(type_some_struct_struct->maybe_reference_type);
   EXPECT_EQ(1, type_some_struct_struct->size_v1);
   EXPECT_EQ(1, type_some_struct_struct->size_v2);
@@ -234,6 +236,7 @@ protocol UseOfProtocol {
   EXPECT_EQ(24, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
+  EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STR_EQ("example/UseOfProtocolCallRequest", type1_message->qname.c_str());
   EXPECT_EQ(2, type1_message->elements.size());
 
@@ -244,6 +247,37 @@ protocol UseOfProtocol {
   EXPECT_EQ(20, padding(type1_message->elements.at(1)).offset_v1);
   EXPECT_EQ(20, padding(type1_message->elements.at(1)).offset_v2);
   EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(type1_message->elements.at(1)).mask));
+}
+
+TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolErrorSyntax) {
+  TestLibrary library(R"FIDL(library example;
+
+protocol ErrorSyntaxProtocol {
+    ErrorSyntaxMethod() -> (struct{}) error uint32;
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes();
+
+  ASSERT_EQ(4, gen.coded_types().size());
+
+  auto type0 = gen.coded_types().at(0).get();
+  EXPECT_STR_EQ("example_ErrorSyntaxProtocol_ErrorSyntaxMethod_ResultNullableRef",
+                type0->coded_name.c_str());
+
+  auto type1 = gen.coded_types().at(1).get();
+  EXPECT_STR_EQ("uint32", type1->coded_name.c_str());
+
+  auto type2 = gen.coded_types().at(2).get();
+  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodRequest", type2->coded_name.c_str());
+  auto type2_message = static_cast<const fidl::coded::MessageType*>(type2);
+  EXPECT_FALSE(type2_message->contains_envelope);
+
+  auto type3 = gen.coded_types().at(3).get();
+  EXPECT_STR_EQ("example_ErrorSyntaxProtocolErrorSyntaxMethodResponse", type3->coded_name.c_str());
+  auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
+  EXPECT_TRUE(type3_message->contains_envelope);
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolEnds) {
@@ -288,6 +322,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(24, type1->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
   auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
+  EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsRequest", type1_message->qname.c_str());
   EXPECT_EQ(2, type1_message->elements.size());
   EXPECT_EQ(16, field(type1_message->elements.at(0)).offset_v1);
@@ -315,6 +350,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(24, type3->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type3->kind);
   auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
+  EXPECT_FALSE(type3_message->contains_envelope);
   EXPECT_STR_EQ("example/UseOfProtocolEndsClientEndsResponse", type3_message->qname.c_str());
   EXPECT_EQ(2, type3_message->elements.size());
   EXPECT_EQ(16, field(type3_message->elements.at(0)).offset_v1);
@@ -342,6 +378,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(24, type5->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type5->kind);
   auto type5_message = static_cast<const fidl::coded::MessageType*>(type5);
+  EXPECT_FALSE(type5_message->contains_envelope);
   EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsRequest", type5_message->qname.c_str());
   EXPECT_EQ(2, type5_message->elements.size());
   EXPECT_EQ(16, field(type5_message->elements.at(0)).offset_v1);
@@ -369,6 +406,7 @@ protocol UseOfProtocolEnds {
   EXPECT_EQ(24, type7->size_v2);
   ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type7->kind);
   auto type7_message = static_cast<const fidl::coded::MessageType*>(type7);
+  EXPECT_FALSE(type7_message->contains_envelope);
   EXPECT_STR_EQ("example/UseOfProtocolEndsServerEndsResponse", type7_message->qname.c_str());
   EXPECT_EQ(2, type7_message->elements.size());
   EXPECT_EQ(16, field(type7_message->elements.at(0)).offset_v1);
@@ -389,6 +427,11 @@ type MyXUnion = strict union {
     1: foo bool;
     2: bar int32;
 };
+
+type MyXUnionStruct = struct {
+  u MyXUnion;
+};
+
 )FIDL");
   ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
@@ -436,6 +479,15 @@ type MyXUnion = strict union {
   ASSERT_STR_EQ("example/MyXUnion", coded_xunion->qname.c_str());
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, coded_xunion->nullability);
   ASSERT_NOT_NULL(coded_xunion->maybe_reference_type);
+
+  auto struct_name = fidl::flat::Name::Key(library.library(), "MyXUnionStruct");
+  auto struct_type = gen.CodedTypeFor(struct_name);
+  ASSERT_NOT_NULL(struct_type);
+  ASSERT_STR_EQ("example_MyXUnionStruct", struct_type->coded_name.c_str());
+  ASSERT_TRUE(struct_type->is_coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, struct_type->kind);
+  auto struct_type_struct = static_cast<const fidl::coded::StructType*>(struct_type);
+  EXPECT_TRUE(struct_type_struct->contains_envelope);
 }
 
 // The code between |CodedTypesOfUnions| and |CodedTypesOfNullableUnions| is now very similar
