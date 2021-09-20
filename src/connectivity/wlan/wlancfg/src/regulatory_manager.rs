@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn returns_error_on_short_region_code() {
+    fn ignore_update_with_short_region_code() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn returns_error_on_long_region_code() {
+    fn ignore_update_with_long_region_code() {
         let mut context = TestContext::new(make_default_stub_iface_manager());
         let regulatory_fut = context.regulatory_manager.run(context.regulatory_sender);
         pin_mut!(regulatory_fut);
