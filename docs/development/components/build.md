@@ -8,7 +8,7 @@
   </aside>
 {% endset %}
 
-# Building components {#building-components}
+# Build components
 
 This document demonstrates how to build and test a component, highlighting best
 practices for defining packages, components, and their tests.

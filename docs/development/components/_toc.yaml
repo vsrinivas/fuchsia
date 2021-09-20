@@ -8,6 +8,8 @@
 toc:
 - title: "Build components"
   path: /docs/development/components/build.md
+- title: "Run components"
+  path: /docs/development/components/run.md
 - title: "Troubleshooting components"
   path: /docs/development/components/v2/troubleshooting.md
 - title: "Provide data files to components"
