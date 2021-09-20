@@ -71,7 +71,7 @@ function ffx-register-repository {
 
   ffx-add-repository "$repo_name" || return $?
 
-  fx-command-run ffx --config ffx_repository=true repository target register \
+  fx-command-run ffx --config ffx_repository=true target repository register \
     --repository "$repo_name" \
     --alias "fuchsia.com" \
     "$@"

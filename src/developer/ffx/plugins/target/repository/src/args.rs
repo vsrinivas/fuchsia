@@ -6,7 +6,15 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_target_repository_sub_command::S
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "target", description = "....")]
+#[argh(
+    subcommand,
+    name = "repository",
+    description = "Interact with target repository registration",
+    note = "The `repository` subcommand contains various commands for repository management
+    and interaction on targets.
+
+    Most of the commands depend on the RCS (Remote Control Service) on the target."
+)]
 pub struct TargetCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,

@@ -6,7 +6,11 @@ use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_bridge::Repos
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "register", description = "")]
+#[argh(
+    subcommand,
+    name = "register",
+    description = "Make the target aware of a specific repository"
+)]
 pub struct RegisterCommand {
     #[argh(option, short = 'r')]
     /// register this repository, rather than the default.

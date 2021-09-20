@@ -6,7 +6,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "deregister", description = "")]
+#[argh(
+    subcommand,
+    name = "deregister",
+    description = "Make the target forget a specific repository"
+)]
 pub struct DeregisterCommand {
     #[argh(option, short = 'r')]
     /// remove the repository named `name` from the target, rather than the default.

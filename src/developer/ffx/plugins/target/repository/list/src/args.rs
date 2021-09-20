@@ -6,5 +6,5 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "list", description = "")]
+#[argh(subcommand, name = "list", description = "List all the repositories on a target")]
 pub struct ListCommand {}
