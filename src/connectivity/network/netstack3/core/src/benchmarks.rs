@@ -29,11 +29,11 @@ use rand_xorshift::XorShiftRng;
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
-use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
+use crate::ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt};
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::{BufferUdpContext, UdpContext};
-use crate::{IpLayerEventDispatcher, Ipv4StateBuilder, StackStateBuilder, TimerId};
+use crate::{Ipv4StateBuilder, StackStateBuilder, TimerId};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
 // added by gating them on the `debug_assertions` configuration option. This
@@ -66,7 +66,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     }
 }
 
-impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BenchmarkEventDispatcher {
+impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
         unimplemented!()
     }
@@ -76,13 +76,11 @@ impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BenchmarkEventDispatcher {
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BenchmarkEventDispatcher {
+impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispatcher {
     fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _data: B) {
         unimplemented!()
     }
 }
-
-impl<B: BufferMut> IpLayerEventDispatcher<B> for BenchmarkEventDispatcher {}
 
 impl InstantContext for BenchmarkEventDispatcher {
     type Instant = DummyInstant;

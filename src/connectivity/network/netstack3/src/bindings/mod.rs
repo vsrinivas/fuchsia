@@ -46,9 +46,9 @@ use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     error::NoRouteError,
     handle_timer,
-    icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
+    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    IpLayerEventDispatcher, StackStateBuilder, TimerId,
+    StackStateBuilder, TimerId,
 };
 
 use crate::bindings::socket::udp::BindingsUdpContext;
@@ -79,7 +79,8 @@ pub(crate) trait StackContext:
 /// information for all submodules in this crate.
 pub(crate) trait StackDispatcher:
     EventDispatcher
-    + for<'a> IpLayerEventDispatcher<packet::Buf<&'a mut [u8]>>
+    + for<'a> BufferIcmpContext<Ipv4, packet::Buf<&'a mut [u8]>>
+    + for<'a> BufferIcmpContext<Ipv6, packet::Buf<&'a mut [u8]>>
     + for<'a> DeviceLayerEventDispatcher<packet::Buf<&'a mut [u8]>>
     + BindingsUdpContext<Ipv4>
     + BindingsUdpContext<Ipv6>
@@ -308,10 +309,10 @@ where
     }
 }
 
-impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BindingsDispatcher {
+impl<I: IcmpIpExt> IcmpContext<I> for BindingsDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
         // TODO(https://fxbug.dev/47321): implement.
-        warn!("IcmpEventDispatcher::receive_icmp_error unimplemented; ignoring error");
+        warn!("IcmpContext::receive_icmp_error unimplemented; ignoring error");
     }
 
     fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
@@ -320,14 +321,12 @@ impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BindingsDispatcher {
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BindingsDispatcher {
+impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BindingsDispatcher {
     fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, seq_num: u16, data: B) {
         // TODO(https://fxbug.dev/47321): implement.
         trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
     }
 }
-
-impl<B: BufferMut> IpLayerEventDispatcher<B> for BindingsDispatcher {}
 
 /// Utility operations that can be performed on a locked `Ctx<D>`.
 trait ContextExt {

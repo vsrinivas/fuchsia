@@ -26,9 +26,9 @@ use net_types::{
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     error::NoRouteError,
-    icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
+    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
-    IpLayerEventDispatcher, StackStateBuilder, TimerId, UdpContext,
+    StackStateBuilder, TimerId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 
@@ -198,9 +198,9 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
     }
 }
 
-impl<I: IcmpIpExt> IcmpEventDispatcher<I> for TestDispatcher {
+impl<I: IcmpIpExt> IcmpContext<I> for TestDispatcher {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
-        IcmpEventDispatcher::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
+        IcmpContext::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
     }
 
     fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: NoRouteError) {
@@ -208,7 +208,7 @@ impl<I: IcmpIpExt> IcmpEventDispatcher<I> for TestDispatcher {
     }
 }
 
-impl<I, B> BufferIcmpEventDispatcher<I, B> for TestDispatcher
+impl<I, B> BufferIcmpContext<I, B> for TestDispatcher
 where
     I: IcmpIpExt,
     B: BufferMut,
@@ -217,8 +217,6 @@ where
         self.disp.receive_icmp_echo_reply(conn, seq_num, data)
     }
 }
-
-impl<B: BufferMut> IpLayerEventDispatcher<B> for TestDispatcher {}
 
 /// A netstack context for testing.
 /// `TestContext` replaces [`crate::bindings::Netstack`] for testing. It

@@ -45,10 +45,10 @@ use crate::error::{ExistsError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::gmp::igmp::IgmpPacketHandler;
 use crate::ip::icmp::{
-    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpContext,
-    BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, IcmpIpExt, IcmpIpTransportContext,
-    Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6State,
-    Icmpv6StateBuilder, ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
+    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpIpExt,
+    IcmpIpTransportContext, IcmpState, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder,
+    Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder, InnerBufferIcmpContext, InnerIcmpContext,
+    ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
 };
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::path_mtu::{IpLayerPathMtuCache, PmtuTimerId};
@@ -330,7 +330,7 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Ctx<D> {
 /// internals to share.
 ///
 /// This trait provides the associated `DeviceId` type, and is used by
-/// [`IgmpContext`], [`MldContext`], and [`IcmpContext`]. It allows them to use
+/// [`IgmpContext`], [`MldContext`], and [`InnerIcmpContext`]. It allows them to use
 /// the same `DeviceId` type rather than each providing their own, which would
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
@@ -503,17 +503,6 @@ impl<I: Ip, D: EventDispatcher> StateContext<IpLayerPathMtuCache<I, D::Instant>>
     fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
         &mut get_state_inner_mut(self.state_mut()).path_mtu
     }
-}
-
-/// An event dispatcher for the IP layer.
-///
-/// See the `EventDispatcher` trait in the crate root for more details.
-pub trait IpLayerEventDispatcher<B: BufferMut>:
-    BufferIcmpEventDispatcher<Ipv4, B>
-    + BufferIcmpEventDispatcher<Ipv6, B>
-    + IcmpEventDispatcher<Ipv4>
-    + IcmpEventDispatcher<Ipv6>
-{
 }
 
 /// The identifier for timer events in the IP layer.
@@ -1865,7 +1854,7 @@ impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant, IpSock<Ipv6, Devic
     }
 }
 
-impl<D: EventDispatcher> IcmpContext<Ipv4> for Ctx<D> {
+impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
     fn receive_icmp_error(
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
@@ -1874,8 +1863,8 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Ctx<D> {
         original_body: &[u8],
         err: Icmpv4ErrorCode,
     ) {
-        self.increment_counter("IcmpContext<Ipv4>::receive_icmp_error");
-        trace!("IcmpContext<Ipv4>::receive_icmp_error({:?})", err);
+        self.increment_counter("InnerIcmpContext<Ipv4>::receive_icmp_error");
+        trace!("InnerIcmpContext<Ipv4>::receive_icmp_error({:?})", err);
 
         macro_rules! mtch {
             ($($cond:pat => $ty:ident),*) => {
@@ -1897,9 +1886,19 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Ctx<D> {
             Ipv4Proto::Proto(IpProto::Udp) => Proto17
         );
     }
+
+    fn get_state_and_update_meta(
+        &mut self,
+    ) -> (
+        &mut IcmpState<Ipv4Addr, D::Instant, IpSock<Ipv4, DeviceId>>,
+        &ForwardingTable<Ipv4, DeviceId>,
+    ) {
+        let state = &mut self.state_mut().ipv4;
+        (state.icmp.as_mut(), &state.inner.table)
+    }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv4, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for Ctx<D> {
     fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S>(
         &mut self,
         device: Option<DeviceId>,
@@ -1953,7 +1952,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv4, B> for Ctx<D>
     }
 }
 
-impl<D: EventDispatcher> IcmpContext<Ipv6> for Ctx<D> {
+impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
     fn receive_icmp_error(
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
@@ -1962,8 +1961,8 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Ctx<D> {
         original_body: &[u8],
         err: Icmpv6ErrorCode,
     ) {
-        self.increment_counter("IcmpContext<Ipv6>::receive_icmp_error");
-        trace!("IcmpContext<Ipv6>::receive_icmp_error({:?})", err);
+        self.increment_counter("InnerIcmpContext<Ipv6>::receive_icmp_error");
+        trace!("InnerIcmpContext<Ipv6>::receive_icmp_error({:?})", err);
 
         macro_rules! mtch {
             ($($cond:pat => $ty:ident),*) => {
@@ -1985,9 +1984,19 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Ctx<D> {
             Ipv6Proto::Proto(IpProto::Udp) => Proto17
         );
     }
+
+    fn get_state_and_update_meta(
+        &mut self,
+    ) -> (
+        &mut IcmpState<Ipv6Addr, D::Instant, IpSock<Ipv6, DeviceId>>,
+        &ForwardingTable<Ipv6, DeviceId>,
+    ) {
+        let state = &mut self.state_mut().ipv6;
+        (state.icmp.as_mut(), &state.inner.table)
+    }
 }
 
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Ctx<D> {
+impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for Ctx<D> {
     fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S>(
         &mut self,
         device: Option<DeviceId>,

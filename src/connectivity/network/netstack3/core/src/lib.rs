@@ -52,8 +52,7 @@ pub use crate::device::{
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::{
-    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, IpLayerEventDispatcher, Ipv4StateBuilder,
-    Ipv6StateBuilder,
+    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
@@ -73,6 +72,7 @@ use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
+use crate::ip::icmp::{BufferIcmpContext, IcmpContext};
 use crate::ip::{IpLayerTimerId, Ipv4State, Ipv6State};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
@@ -341,7 +341,8 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
 pub trait BufferDispatcher<B: BufferMut>:
     EventDispatcher
     + DeviceLayerEventDispatcher<B>
-    + IpLayerEventDispatcher<B>
+    + BufferIcmpContext<Ipv4, B>
+    + BufferIcmpContext<Ipv6, B>
     + BufferUdpContext<Ipv4, B>
     + BufferUdpContext<Ipv6, B>
 {
@@ -350,7 +351,8 @@ impl<
         B: BufferMut,
         D: EventDispatcher
             + DeviceLayerEventDispatcher<B>
-            + IpLayerEventDispatcher<B>
+            + BufferIcmpContext<Ipv4, B>
+            + BufferIcmpContext<Ipv6, B>
             + BufferUdpContext<Ipv4, B>
             + BufferUdpContext<Ipv6, B>,
     > BufferDispatcher<B> for D
@@ -374,8 +376,12 @@ pub trait EventDispatcher:
     + TimerContext<TimerId>
     + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
     + DeviceLayerEventDispatcher<EmptyBuf>
-    + IpLayerEventDispatcher<Buf<Vec<u8>>>
-    + IpLayerEventDispatcher<EmptyBuf>
+    + IcmpContext<Ipv4>
+    + IcmpContext<Ipv6>
+    + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
+    + BufferIcmpContext<Ipv4, EmptyBuf>
+    + BufferIcmpContext<Ipv6, Buf<Vec<u8>>>
+    + BufferIcmpContext<Ipv6, EmptyBuf>
     + UdpContext<Ipv4>
     + UdpContext<Ipv6>
     + BufferUdpContext<Ipv4, Buf<Vec<u8>>>
@@ -391,8 +397,12 @@ impl<
             + TimerContext<TimerId>
             + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
             + DeviceLayerEventDispatcher<EmptyBuf>
-            + IpLayerEventDispatcher<Buf<Vec<u8>>>
-            + IpLayerEventDispatcher<EmptyBuf>
+            + IcmpContext<Ipv4>
+            + IcmpContext<Ipv6>
+            + BufferIcmpContext<Ipv4, Buf<Vec<u8>>>
+            + BufferIcmpContext<Ipv4, EmptyBuf>
+            + BufferIcmpContext<Ipv6, Buf<Vec<u8>>>
+            + BufferIcmpContext<Ipv6, EmptyBuf>
             + UdpContext<Ipv4>
             + UdpContext<Ipv6>
             + BufferUdpContext<Ipv4, Buf<Vec<u8>>>

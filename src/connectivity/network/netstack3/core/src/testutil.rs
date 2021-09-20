@@ -28,8 +28,7 @@ use rand_xorshift::XorShiftRng;
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
-use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
-use crate::ip::IpLayerEventDispatcher;
+use crate::ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt};
 use crate::transport::udp::{BufferUdpContext, UdpContext};
 use crate::{handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
@@ -741,7 +740,7 @@ impl<I: IcmpIpExt> UdpContext<I> for DummyEventDispatcher {}
 
 impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyEventDispatcher {}
 
-impl<I: IcmpIpExt> IcmpEventDispatcher<I> for DummyEventDispatcher {
+impl<I: IcmpIpExt> IcmpContext<I> for DummyEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
         unimplemented!()
     }
@@ -751,21 +750,19 @@ impl<I: IcmpIpExt> IcmpEventDispatcher<I> for DummyEventDispatcher {
     }
 }
 
-impl<B: BufferMut> BufferIcmpEventDispatcher<Ipv4, B> for DummyEventDispatcher {
+impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyEventDispatcher {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, data: B) {
         let replies = self.icmpv4_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
 
-impl<B: BufferMut> BufferIcmpEventDispatcher<Ipv6, B> for DummyEventDispatcher {
+impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyEventDispatcher {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, data: B) {
         let replies = self.icmpv6_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
-
-impl<B: BufferMut> IpLayerEventDispatcher<B> for DummyEventDispatcher {}
 
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(
