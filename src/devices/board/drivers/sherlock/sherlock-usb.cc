@@ -211,7 +211,7 @@ static const pbus_dev_t usb_phy_dev = []() {
 zx_status_t Sherlock::UsbInit() {
   auto status =
       pbus_.AddComposite(&usb_phy_dev, reinterpret_cast<uint64_t>(aml_usb_phy_v2_fragments),
-                               countof(aml_usb_phy_v2_fragments), "pdev");
+                         countof(aml_usb_phy_v2_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
     return status;
@@ -219,7 +219,7 @@ zx_status_t Sherlock::UsbInit() {
 
   // Add XHCI and DWC2 to the same driver_host as the aml-usb-phy.
   status = pbus_.AddComposite(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                                    countof(xhci_fragments), "xhci-phy");
+                              countof(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
     return status;
@@ -250,7 +250,7 @@ zx_status_t Sherlock::UsbInit() {
     usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
     status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_phy_fragments),
-                                      countof(dwc2_phy_fragments), "dwc2-phy");
+                                countof(dwc2_phy_fragments), "dwc2-phy");
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
       return status;
@@ -276,7 +276,7 @@ zx_status_t Sherlock::UsbInit() {
     usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
     status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_phy_fragments),
-                                      countof(dwc2_phy_fragments), "dwc2-phy");
+                                countof(dwc2_phy_fragments), "dwc2-phy");
     free(config);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);

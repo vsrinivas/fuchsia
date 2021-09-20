@@ -18,6 +18,7 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-ot-radio-bind.h"
 
 namespace sherlock {
 
@@ -26,43 +27,6 @@ static const pbus_metadata_t nrf52840_radio_metadata[] = {
     {.type = DEVICE_METADATA_PRIVATE,
      .data_buffer = reinterpret_cast<const uint8_t*>(&device_id),
      .data_size = sizeof(device_id)},
-};
-
-// Composite binding rules for openthread radio driver.
-static constexpr zx_bind_inst_t ot_dev_match[] = {
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NORDIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_NORDIC_NRF52840),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_NORDIC_THREAD),
-};
-static constexpr zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_INTERRUPT),
-};
-static constexpr zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_RESET),
-};
-static constexpr zx_bind_inst_t gpio_bootloader_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_BOOTLOADER),
-};
-static constexpr device_fragment_part_t ot_dev_fragment[] = {
-    {std::size(ot_dev_match), ot_dev_match},
-};
-static constexpr device_fragment_part_t gpio_int_fragment[] = {
-    {std::size(gpio_int_match), gpio_int_match},
-};
-static constexpr device_fragment_part_t gpio_reset_fragment[] = {
-    {std::size(gpio_reset_match), gpio_reset_match},
-};
-static constexpr device_fragment_part_t gpio_bootloader_fragment[] = {
-    {std::size(gpio_bootloader_match), gpio_bootloader_match},
-};
-static constexpr device_fragment_t ot_fragments[] = {
-    {"spi", std::size(ot_dev_fragment), ot_dev_fragment},
-    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
-    {"gpio-bootloader", std::size(gpio_bootloader_fragment), gpio_bootloader_fragment},
 };
 
 zx_status_t Sherlock::OtRadioInit() {
@@ -74,12 +38,13 @@ zx_status_t Sherlock::OtRadioInit() {
   dev.metadata_list = nrf52840_radio_metadata;
   dev.metadata_count = std::size(nrf52840_radio_metadata);
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&dev, reinterpret_cast<uint64_t>(ot_fragments),
-                                                std::size(ot_fragments), nullptr);
+  zx_status_t status =
+      pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(nrf52840_radio_fragments),
+                         std::size(nrf52840_radio_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s(nrf52840): AddComposite failed: %d", __func__, status);
   } else {
-    zxlogf(INFO, "%s(nrf52840): DeviceAdded", __func__);
+    zxlogf(INFO, "%s(nrf52840): AddComposite", __func__);
   }
   return status;
 }

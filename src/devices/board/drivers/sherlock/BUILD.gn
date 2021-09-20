@@ -283,6 +283,44 @@ driver_bind_rules("xhci-bind") {
   ]
 }
 
+driver_bind_rules("gpio-light-bind") {
+  rules = "bind/gpio-light.bind"
+  header_output = "gpio-light-bind.h"
+  bind_output = "gpio-light-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("sherlock-light-sensor-bind") {
+  rules = "bind/sherlock-light-sensor.bind"
+  header_output = "sherlock-light-sensor-bind.h"
+  bind_output = "sherlock-light-sensor-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("sherlock-ot-radio-bind") {
+  rules = "bind/sherlock-ot-radio.bind"
+  header_output = "sherlock-ot-radio-bind.h"
+  bind_output = "sherlock-ot-radio-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.nordic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 template("sherlock_driver") {
   driver_module(target_name + "-driver") {
     output_name = invoker.target_name
@@ -342,6 +380,7 @@ template("sherlock_driver") {
     deps = [
       ":aml-usb-phy-v2-bind_header",
       ":dwc2-phy-bind_header",
+      ":gpio-light-bind_header",
       ":luis-cpu-bind_header",
       ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",
@@ -351,8 +390,10 @@ template("sherlock_driver") {
       ":sherlock-display-bind_header",
       ":sherlock-emmc-bind_header",
       ":sherlock-hevc-enc-bind_header",
+      ":sherlock-light-sensor-bind_header",
       ":sherlock-mali-bind_header",
       ":sherlock-nna-bind_header",
+      ":sherlock-ot-radio-bind_header",
       ":sherlock-pwm-bind_header",
       ":sherlock-securemem-bind_header",
       ":sherlock-spi-bind_header",

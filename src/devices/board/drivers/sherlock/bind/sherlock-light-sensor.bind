@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite sherlock_light_sensor;
+
+using fuchsia.amlogic.platform.t931;
+using fuchsia.i2c;
+using fuchsia.gpio;
+
+primary node "i2c" {
+  fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == 0; // SHERLOCK_I2C_A0_0
+  fuchsia.BIND_I2C_ADDRESS == 0x39;
+}
+
+node "gpio" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOAO_PIN_ID.PIN_5;  // GPIO_LIGHT_INTERRUPT
+}

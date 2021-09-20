@@ -7,3 +7,11 @@ library fuchsia.nordic.platform;
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   NORDIC = 22,
 };
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  NRF52840 = 0x01,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  THREAD = 0x01,
+};

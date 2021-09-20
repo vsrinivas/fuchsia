@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite nrf52840_radio;
+
+using fuchsia.amlogic.platform.t931;
+using fuchsia.google.platform;
+using fuchsia.gpio;
+using fuchsia.nordic.platform;
+using fuchsia.platform;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.SHERLOCK;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.OT_RADIO;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "spi" {
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.nordic.platform.BIND_PLATFORM_DEV_VID.NORDIC;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.nordic.platform.BIND_PLATFORM_DEV_PID.NRF52840;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.nordic.platform.BIND_PLATFORM_DEV_DID.THREAD;
+}
+
+node "gpio-int" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_4; // GPIO_OT_RADIO_INTERRUPT
+}
+
+node "gpio-reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_2; // GPIO_OT_RADIO_RESET
+}
+
+node "gpio-bootloader" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_5; // GPIO_OT_RADIO_BOOTLOADER
+}
