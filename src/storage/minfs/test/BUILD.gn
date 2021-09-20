@@ -300,14 +300,6 @@ fs_test_suite("minfs") {
   if (!is_coverage) {
     deps += [ ":minfs-power-test" ]
   }
-
-  # Temporarily disable ASAN resize test, which is timing out due to the FIDL
-  # wire format migration causing slower FIDL calls.
-  # TODO(fxbug.dev/84697) Re-enable once FIDL wire format migration is complete.
-  if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] !=
-      toolchain_variant.tags) {
-    omit_components = [ ":minfs-resize-tests" ]
-  }
 }
 
 slow_fs_test_suite("minfs") {

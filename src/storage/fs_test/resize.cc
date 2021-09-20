@@ -23,6 +23,9 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/format.h"
 
+// TODO(fxbug.dev/84697) Re-enable once FIDL wire format migration is complete.
+#if !__has_feature(address_sanitizer)
+
 namespace fs_test {
 namespace {
 
@@ -239,3 +242,5 @@ GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MaxDataTest);
 
 }  // namespace
 }  // namespace fs_test
+
+#endif // !__has_feature(address_sanitizer)
