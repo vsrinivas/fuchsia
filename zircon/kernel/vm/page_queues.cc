@@ -6,7 +6,11 @@
 
 #include <fbl/ref_counted_upgradeable.h>
 #include <vm/page_queues.h>
+#include <vm/scanner.h>
 #include <vm/vm_cow_pages.h>
+
+// Rotation time is presently a constant and not adjustable.
+constexpr zx_duration_t kMinMruRotateTime = ZX_SEC(10);
 
 PageQueues::PageQueues() {
   for (uint32_t i = 0; i < PageQueueNumQueues; i++) {
@@ -24,6 +28,86 @@ PageQueues::~PageQueues() {
   }
 }
 
+void PageQueues::StartThreads() {
+  Thread* thread = Thread::Create(
+      "page-queue-mru-thread",
+      [](void*) -> int {
+        pmm_page_queues()->MruThread();
+        return 0;
+      },
+      nullptr, LOW_PRIORITY);
+  DEBUG_ASSERT(thread);
+
+  thread->Resume();
+}
+
+void PageQueues::DisableAging() {
+  // Clear any previous signal.
+  aging_disabled_event_.Unsignal();
+  if (disable_aging_.exchange(true)) {
+    // It is an error to call DisableAging twice in a row.
+    panic("Mismatched disable/enable pair");
+  }
+  // Now that disable_aging_ is true, signal the aging thread. This ensures that it will wake up at
+  // least one more time and observe disable_aging_.
+  aging_event_.Signal();
+  aging_disabled_event_.WaitDeadline(ZX_TIME_INFINITE, Interruptible::No);
+  // Now that aging_disabled_event_ has been signaled we know the aging thread is not in the middle
+  // of doing any aging, and so we can finally return.
+}
+
+void PageQueues::EnableAging() {
+  if (!disable_aging_.exchange(false)) {
+    // It is an error to call EnableAging twice in a row.
+    panic("Mismatched disable/enable pair");
+  }
+  // Now that aging is enabled, signal the aging thread in case there was a pending reason to age.
+  aging_event_.Signal();
+}
+
+void PageQueues::MruThread() {
+  // Pretend that aging happens during startup to simplify the rest of the loop logic.
+  last_age_time_ = current_time();
+  while (1) {
+    // Although we have a minimum queue rotation time, we do not want to simply sleep here as this
+    // would prevent us from being able to disable aging in a timely manner.
+    zx_status_t result = aging_event_.WaitDeadline(
+        zx_time_add_duration(last_age_time_.load(ktl::memory_order_relaxed), kMinMruRotateTime),
+        Interruptible::No);
+
+    // Check if we should be disabling aging.
+    if (disable_aging_) {
+      aging_disabled_event_.Signal();
+      // Aging is only disabled when running tests, so for simplicity for the logic we can just
+      // pretend to have aged.
+      last_age_time_ = current_time();
+      continue;
+    }
+
+    if (result != ZX_ERR_TIMED_OUT) {
+      // We have not reached the minimum rotation time yet, so ignore this wake up and continue
+      // waiting.
+      continue;
+    }
+
+    // Make sure the accessed information has been harvested since the last time we aged, otherwise
+    // we are deliberately making the age information coarser, by effectively not using one of the
+    // queues, at which point we might as well not have bothered rotating.
+    // Currently this is redundant since we will explicitly harvest just after aging, however once
+    // there are additional aging triggers and harvesting is more asynchronous, this will serve as
+    // a synchronization point.
+    scanner_wait_for_accessed_scan(last_age_time_);
+
+    RotatePagerBackedQueues();
+
+    // To emulate previous behavior of the system, force an accessed scan to happen now that the
+    // page queues have been rotated. Preserving the existing behavior is important, as there is
+    // presently a single active queue, and so we need to immediately pull any accessed pages back
+    // into that active queue to prevent them from being evicted.
+    scanner_wait_for_accessed_scan(ZX_TIME_INFINITE);
+  }
+}
+
 void PageQueues::RotatePagerBackedQueues() {
   VM_KTRACE_DURATION(2, "RotatePagerBackedQueues");
   // We want to increment mru_gen, but first may need to make space by incrementing lru gen.
@@ -38,6 +122,7 @@ void PageQueues::RotatePagerBackedQueues() {
   // mru_gen_ changing whilst they hold the lock.
   Guard<CriticalMutex> guard{&lock_};
   mru_gen_.fetch_add(1, ktl::memory_order_relaxed);
+  last_age_time_ = current_time();
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t target_gen, bool peek) {

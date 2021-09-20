@@ -28,13 +28,12 @@ constexpr uint32_t kScannerOpDisable = 1u << 1;
 constexpr uint32_t kScannerOpEnable = 1u << 2;
 constexpr uint32_t kScannerOpDump = 1u << 3;
 constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
-constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
-constexpr uint32_t kScannerOpHarvestAccessed = 1u << 7;
+constexpr uint32_t kScannerOpUpdateHarvestTime = 1u << 6;
 constexpr uint32_t kScannerOpEnablePTReclaim = 1u << 8;
 constexpr uint32_t kScannerOpDisablePTReclaim = 1u << 9;
 
-// Amount of time between pager queue rotations.
-constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
+// Amount of time between page table evictions.
+constexpr zx_duration_t kPageTableEvictTime = ZX_SEC(10);
 
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
@@ -54,12 +53,21 @@ Event scanner_disabled_event;
 DECLARE_SINGLETON_MUTEX(scanner_disabled_lock);
 uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 
+// Mutex used to ensure only a single access scan is happening at once.
+DECLARE_SINGLETON_MUTEX(accessed_scanner_lock);
+ktl::atomic<zx_time_t> last_accessed_scan_complete = ZX_TIME_INFINITE_PAST;
+// Currently the page queue aging thread is explicitly performing accessed scanning after
+// rotation, and so performing an additional accessed scan here is additional work for no added
+// information. As such the scan period is currently infinite, to effectively disable it.
+ktl::atomic<zx_duration_t> accessed_scan_period = ZX_TIME_INFINITE;
+ktl::atomic<bool> reclaim_pt_next_accessed_scan = false;
+
 KCOUNTER(zero_scan_requests, "vm.scanner.zero_scan.requests")
 KCOUNTER(zero_scan_ends_empty, "vm.scanner.zero_scan.queue_emptied")
 KCOUNTER(zero_scan_pages_scanned, "vm.scanner.zero_scan.total_pages_considered")
 KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
 
-void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
+void scanner_print_stats() {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->QueueCounts();
@@ -74,8 +82,6 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
   printf("[SCAN]: Found %lu locked pages in discardable vmos\n", counts.locked);
   printf("[SCAN]: Found %lu unlocked pages in discardable vmos\n", counts.unlocked);
-
-  printf("[SCAN]: Next queue rotation in %ld ms\n", time_till_queue_rotate / ZX_MSEC(1));
 }
 
 zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
@@ -83,17 +89,28 @@ zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
                                         : ZX_TIME_INFINITE;
 }
 
+zx_time_t calc_next_pt_evict_deadline(zx_time_t current, bool pt_enable_override) {
+  if (page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_enable_override) {
+    return zx_time_add_duration(current, kPageTableEvictTime);
+  } else {
+    return ZX_TIME_INFINITE;
+  }
+}
+
 int scanner_request_thread(void *) {
   bool disabled = false;
   bool pt_eviction_enabled = false;
-  zx_time_t next_rotate_deadline = zx_time_add_duration(current_time(), kQueueRotateTime);
+  zx_time_t last_pt_evict = ZX_TIME_INFINITE_PAST;
   zx_time_t next_zero_scan_deadline = calc_next_zero_scan_deadline(current_time());
+  zx_time_t next_harvest_deadline = zx_time_add_duration(current_time(), accessed_scan_period);
   while (1) {
     if (disabled) {
       scanner_request_event.Wait(Deadline::infinite());
     } else {
-      scanner_request_event.Wait(
-          Deadline::no_slack(ktl::min(next_rotate_deadline, next_zero_scan_deadline)));
+      zx_time_t next_pt_evict_deadline =
+          calc_next_pt_evict_deadline(last_pt_evict, pt_eviction_enabled);
+      scanner_request_event.Wait(Deadline::no_slack(ktl::min(
+          next_pt_evict_deadline, ktl::min(next_zero_scan_deadline, next_harvest_deadline))));
     }
     int32_t op = scanner_operation.exchange(0);
     // It is possible for enable and disable to happen at the same time. This indicates the disabled
@@ -102,6 +119,7 @@ int scanner_request_thread(void *) {
     // that holds the mutex until complete.
     if (op & kScannerOpEnable) {
       op &= ~kScannerOpEnable;
+      pmm_page_queues()->EnableAging();
       // Re-enable eviction if it was originally enabled.
       if (gBootOptions->page_scanner_enable_eviction) {
         pmm_evictor()->EnableEviction();
@@ -113,6 +131,9 @@ int scanner_request_thread(void *) {
       // Make sure no eviction is happening either.
       pmm_evictor()->DisableEviction();
       disabled = true;
+      pmm_page_queues()->DisableAging();
+      // Grab the harvester lock to wait for any in progress scans to complete.
+      { Guard<Mutex> guard{accessed_scanner_lock::Get()}; }
       scanner_disabled_event.Signal();
     }
     if (disabled) {
@@ -123,12 +144,27 @@ int scanner_request_thread(void *) {
 
     zx_time_t current = current_time();
 
-    if (current >= next_rotate_deadline || (op & kScannerOpRotateQueues)) {
-      op &= ~kScannerOpRotateQueues;
-      pmm_page_queues()->RotatePagerBackedQueues();
-      next_rotate_deadline = zx_time_add_duration(current, kQueueRotateTime);
-      // Accessed harvesting currently happens in sync with rotating pager queues.
-      op |= kScannerOpHarvestAccessed;
+    if (current >= calc_next_pt_evict_deadline(last_pt_evict, pt_eviction_enabled) ||
+        (op & kScannerOpReclaimAll)) {
+      // Make sure a scan has happened since we last expected page table reclamation to happen.
+      // This in effect will cause scanning to happen at least once every pt reclamation period, and
+      // therefore for reclamation to happen, on average, once every target period.
+      // This is fine, and the goal of this is to ensure that we avoid triggering additional
+      // accessed scans if we can avoid it, and that we additionally do not reclaim page tables too
+      // often.
+      scanner_wait_for_accessed_scan(last_pt_evict);
+      // Trigger pt eviction to happen next time, which in the worst case will be once we timeout
+      // and call scanner_wait_for_accessed_scan above. In essence this is introducing some slack to
+      // the reclamation timeout to maximize the chance that the reclamation gets paired with a
+      // separate accessed harvest.
+      reclaim_pt_next_accessed_scan = true;
+      // Set now to our last pt evict so we retry again next period.
+      last_pt_evict = current;
+    }
+
+    if (current >= next_harvest_deadline) {
+      scanner_wait_for_accessed_scan(next_harvest_deadline);
+      op |= kScannerOpUpdateHarvestTime;
     }
 
     bool print = false;
@@ -147,10 +183,13 @@ int scanner_request_thread(void *) {
           .print_counts = print,
       });
       pmm_evictor()->EvictOneShotFromPreloadedTarget();
+      // To ensure any page table eviction that was set earlier actually occurs, force an accessed
+      // scan to happen right now.
+      scanner_wait_for_accessed_scan(current_time());
     }
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
-      scanner_print_stats(zx_time_sub_time(next_rotate_deadline, current));
+      scanner_print_stats();
     }
     if (op & kScannerOpEnablePTReclaim) {
       pt_eviction_enabled = true;
@@ -160,18 +199,10 @@ int scanner_request_thread(void *) {
       pt_eviction_enabled = false;
       op &= ~kScannerOpDisablePTReclaim;
     }
-    if (op & kScannerOpHarvestAccessed) {
-      op &= ~kScannerOpHarvestAccessed;
-      const VmAspace::NonTerminalAction action =
-          page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_eviction_enabled
-              ? VmAspace::NonTerminalAction::FreeUnaccessed
-              : VmAspace::NonTerminalAction::Retain;
-      // If we neither have page eviction or page table eviction then we can skip harvesting
-      // accessed bits.
-      if (action == VmAspace::NonTerminalAction::FreeUnaccessed ||
-          pmm_evictor()->IsEvictionEnabled()) {
-        VmAspace::HarvestAllUserAccessedBits(action);
-      }
+    if (op & kScannerOpUpdateHarvestTime) {
+      op &= ~kScannerOpUpdateHarvestTime;
+      next_harvest_deadline =
+          zx_time_add_duration(last_accessed_scan_complete, accessed_scan_period);
     }
     if (current >= next_zero_scan_deadline || reclaim_all) {
       const uint64_t scan_limit = reclaim_all ? UINT64_MAX : zero_page_scans_per_second;
@@ -198,6 +229,37 @@ void scanner_dump_info() {
 }
 
 }  // namespace
+
+// Currently accessed scanning happens completely inline, and so this does one of three things
+// 1. Returns immediately if a sufficiently recent scan already happened
+// 2. Waits for an in progress scan to finish, and then most likely returns unless update_time is
+//    ZX_TIME_INFINITE
+// 3. Performs an entire scan and then returns.
+// The public definition of this method is abstract to allow for this to, in the future, not
+// necessarily perform a scan itself, but sync up with the scanner thread that might be slowly
+// scanning in the background.
+void scanner_wait_for_accessed_scan(zx_time_t update_time) {
+  if (update_time <= last_accessed_scan_complete) {
+    // scanning is sufficiently up to date.
+    return;
+  }
+  Guard<Mutex> guard{accessed_scanner_lock::Get()};
+  // Re-check now that we hold the lock in case a scan just finished and we were blocked on it.
+  if (update_time <= last_accessed_scan_complete) {
+    return;
+  }
+  bool reclaim_pt = reclaim_pt_next_accessed_scan.exchange(false);
+  // Perform a scan.
+  // If we neither have page eviction or page table eviction then we can skip harvesting
+  // accessed bits.
+  if (reclaim_pt || pmm_evictor()->IsEvictionEnabled()) {
+    const VmAspace::NonTerminalAction action = reclaim_pt
+                                                   ? VmAspace::NonTerminalAction::FreeUnaccessed
+                                                   : VmAspace::NonTerminalAction::Retain;
+    VmAspace::HarvestAllUserAccessedBits(action);
+  }
+  last_accessed_scan_complete = current_time();
+}
 
 uint64_t scanner_do_zero_scan(uint64_t limit) {
   uint64_t deduped = 0;
@@ -282,8 +344,9 @@ static void scanner_init_func(uint level) {
   pmm_evictor()->SetDiscardableEvictionsPercent(
       gBootOptions->page_scanner_discardable_evictions_percent);
   zx_time_t eviction_interval = ZX_SEC(gBootOptions->page_scanner_eviction_interval_seconds);
-  pmm_evictor()->SetContinuousEvictionInterval(
-      (eviction_interval < kQueueRotateTime) ? kQueueRotateTime : eviction_interval);
+  pmm_evictor()->SetContinuousEvictionInterval(eviction_interval);
+
+  pmm_page_queues()->StartThreads();
 
   thread->Resume();
 }
@@ -317,11 +380,9 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     scanner_operation.fetch_or(kScannerOpReclaimAll | kScannerFlagPrint);
     scanner_request_event.Signal();
   } else if (!strcmp(argv[1].str, "rotate_queue")) {
-    scanner_operation.fetch_or(kScannerOpRotateQueues);
-    scanner_request_event.Signal();
+    pmm_page_queues()->RotatePagerBackedQueues();
   } else if (!strcmp(argv[1].str, "harvest_accessed")) {
-    scanner_operation.fetch_or(kScannerOpHarvestAccessed | kScannerFlagPrint);
-    scanner_request_event.Signal();
+    scanner_wait_for_accessed_scan(current_time());
   } else if (!strcmp(argv[1].str, "reclaim")) {
     if (argc < 3) {
       goto usage;

@@ -36,6 +36,11 @@ void scanner_enable_page_table_reclaim();
 // Inverse of |scanner_enable_page_table_reclaim|, also does not stack.
 void scanner_disable_page_table_reclaim();
 
+// Blocks until the scanner has completed an access scan that occurred at |upate_time| or later.
+// This means if an accessed scan already happened more recently this function will immediately
+// return, otherwise it will wait for a new scan to complete.
+void scanner_wait_for_accessed_scan(zx_time_t update_time);
+
 // AutoVmScannerDisable is an RAII helper for disabling scanning using the
 // scanner_push_disable_count()/scanner_pop_disable_count(). Disabling the scanner is useful in test
 // code where it is not possible or practical to hold locks to prevent the scanner from taking

@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
+#include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <ktl/array.h>
@@ -194,6 +195,17 @@ class PageQueues {
   bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
   bool DebugPageIsWired(const vm_page_t* page) const;
 
+  // These methods are public so that the scanner can call. Once the scanner is an object that can
+  // be friended, and not a collection of anonymous functions, these can be made private.
+
+  // Creates any threads for queue management.
+  void StartThreads();
+  // Controls to enable and disable the active aging system. These must be called alternately and
+  // not in parallel. That is, it is an error to call DisableAging twice without calling EnableAging
+  // in between. Similar for EnableAging.
+  void DisableAging();
+  void EnableAging();
+
  private:
   // Specifies the indices for both the page_queues_ and the page_queue_counts_
   enum PageQueue : uint32_t {
@@ -262,9 +274,23 @@ class PageQueues {
   void MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
                                  PageQueue queue) TA_REQ(lock_);
 
+  // Entry point for the thread that will performing aging and increment the mru generation.
+  void MruThread();
+
   // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
   // atomics.
   DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
+
+  // Shared variable with the aging thread used to indicate that we are attempting to disable aging.
+  // When the aging thread sees this it will signal aging_disabled_event_ and cease performing any
+  // aging until it observes disable_aging_ to be false again.
+  ktl::atomic<bool> disable_aging_ = false;
+  AutounsignalEvent aging_disabled_event_;
+
+  // Time at which the mru_gen_ was last incremented.
+  ktl::atomic<zx_time_t> last_age_time_ = ZX_TIME_INFINITE_PAST;
+  // Used to signal the aging thread that it should wake up and see if it needs to do anything.
+  AutounsignalEvent aging_event_;
 
   // The page queues are placed into an array, indexed by page queue, for consistency and uniformity
   // of access. This does mean that the list for PageQueueNone does not actually have any pages in
