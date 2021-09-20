@@ -49,6 +49,10 @@ impl Mac {
     /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame
     /// should be received by all receivers regardless of their local MAC
     /// address.
+    // TODO(https://github.com/rust-lang/rust/issues/73255): Make this
+    // `BroadcastAddr<Mac>` once the `const_precise_live_drops` feature has
+    // stabilized, and thus it's possible to write a `const fn` which converts
+    // from `BroadcastAddr<A>` to `A`.
     pub const BROADCAST: Mac = Mac([0xFF; 6]);
 
     /// The default [RFC 4291] EUI-64 magic value used by the [`to_eui64`]
