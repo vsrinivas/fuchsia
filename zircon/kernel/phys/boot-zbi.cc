@@ -168,6 +168,8 @@ bool BootZbi::FixedKernelOverlapsData(uint64_t kernel_load_address) const {
 
 fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
                                            ktl::optional<uintptr_t> kernel_load_address) {
+  ZX_ASSERT(data_.storage().empty());
+
   auto input_address = reinterpret_cast<uintptr_t>(zbi_.storage().data());
   auto input_capacity = zbi_.storage().size();
 
@@ -278,15 +280,15 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   // data item from the input ZBI just to make alignment arithmetic line up.
 
   uintptr_t data_address = 0, aligned_data_address = 0;
-  uint32_t data_load_size = 0;
+  uint32_t data_load_size = sizeof(zbi_header_t);
   if (it != zbi_.end()) {
     data_address = input_address + it.item_offset() - sizeof(zbi_header_t);
-    aligned_data_address = (input_address + it.item_offset()) & -arch::kZbiBootDataAlignment;
-    data_load_size = zbi_.size_bytes() - it.item_offset();
+    aligned_data_address = data_address & -arch::kZbiBootDataAlignment;
+    data_load_size = zbi_.size_bytes() - it.item_offset() + sizeof(zbi_header_t);
   }
 
   // There must be a container header for the data ZBI even if it's empty.
-  const uint32_t data_required_size = sizeof(zbi_header_t) + data_load_size + extra_data_capacity;
+  const uint32_t data_required_size = data_load_size + extra_data_capacity;
 
   // The incoming space can be reused for the data ZBI if either the tail is
   // already exactly aligned to leave space for a header with correct
@@ -304,10 +306,9 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     // Aligning down leaves enough space to insert a ZBI header to consume
     // the remaining space with a ZBI_TYPE_DISCARD item so the actual
     // contents can be left in place.
-    auto aligned_address = data_address & -arch::kZbiBootDataAlignment;
     data_.storage() = {
-        reinterpret_cast<std::byte*>(aligned_address),
-        input_capacity - (aligned_address - input_address),
+        reinterpret_cast<std::byte*>(aligned_data_address),
+        input_capacity - (aligned_data_address - input_address),
     };
   }
 
@@ -362,19 +363,18 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     // The data ZBI is perfect where it is.  Just overwrite where the end
     // of the kernel item was copied from with the new container header.
     auto hdr = reinterpret_cast<zbi_header_t*>(data_.storage().data());
-    hdr[0] = ZBI_CONTAINER_HEADER(data_load_size);
+    hdr[0] = ZBI_CONTAINER_HEADER(static_cast<uint32_t>(data_load_size - sizeof(zbi_header_t)));
   } else {
     // There's an aligned spot before the data ZBI's first item where we can
     // insert both a new container header and an item header to sop up the
     // remaining space before the first item without copying any data.
     auto hdr = reinterpret_cast<zbi_header_t*>(data_.storage().data());
-    auto aligned_address = data_address & -arch::kZbiBootDataAlignment;
-    auto discard_size = data_address - aligned_address - sizeof(hdr[1]);
+    auto discard_size = data_address - aligned_data_address - sizeof(hdr[1]);
     auto data_size = data_load_size + sizeof(hdr[1]) + discard_size;
-    ZX_ASSERT(data_address > aligned_address);
-    ZX_ASSERT(data_address - aligned_address >= sizeof(hdr[1]));
+    ZX_ASSERT(data_address > aligned_data_address);
+    ZX_ASSERT(data_address - aligned_data_address >= sizeof(hdr[1]));
     ZX_ASSERT(discard_size < data_size);
-    hdr[0] = ZBI_CONTAINER_HEADER(static_cast<uint32_t>(data_size));
+    hdr[0] = ZBI_CONTAINER_HEADER(static_cast<uint32_t>(data_size - sizeof(zbi_header_t)));
     hdr[1] = zbitl::SanitizeHeader({
         .type = ZBI_TYPE_DISCARD,
         .length = static_cast<uint32_t>(discard_size),
