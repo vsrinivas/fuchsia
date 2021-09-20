@@ -62,6 +62,13 @@ type CodecFormatInfo = table {
     /// a power state change. This delay must be taken into account if not getting the initial audio
     /// samples played or captured is not acceptable. Optional.
     2: turn_on_delay zx.duration;
+
+    /// The driver's best estimate of the amount of time (in nanoseconds) it takes the hardware to
+    /// actually stop playback/capture after a `Stop` command is issued.
+    /// It may take some time for the hardware to get into fully stopped mode, for example due
+    /// a power state change. This delay must be taken into account if playback/capture of samples
+    /// after a 'Stop' command is not acceptable. Optional.
+    3: turn_off_delay zx.duration;
 };
 
 /// For an overview see
@@ -79,10 +86,16 @@ protocol Codec {
     });
 
     /// Stops the codec operation.
-    /// `Stop` returns when stopping the codec is completed. If the driver can't successfully stop
-    /// the codec it will close the codec protocol channel, in this case the client may obtain a new
-    /// codec protocol channel and retry.
-    Stop() -> ();
+    /// `Stop` returns when configuring the codec to stop is completed but it does not wait for
+    /// the hardware to actually stop playback/capture, i.e. `turn_off_delay` impact is not
+    /// taken into account to return from `Stop`.
+    /// The `stop_time` value (in the CLOCK_MONOTONIC timeline) indicates when when configuring
+    /// the codec to stop is completed.
+    /// If the driver can't successfully configure the codec to stop it will close the codec
+    /// protocol channel, in this case the client may obtain a new codec protocol channel and retry.
+    Stop() -> (struct {
+        start_time zx.time;
+    });
 
     /// Start/Re-start the codec operation.
     /// `Start` returns when configuring the codec to start is completed but it does not wait for
