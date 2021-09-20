@@ -154,6 +154,15 @@ The example above demonstrates suppressing all sanitizers. However you should at
 most suppress sanitizers that are causing failures. Please track suppressions
 by filing a bug and referencing it in the comment as shown above.
 
+Furthermore the example above suppresses at the granularity of an entire
+executable. For finer-grained suppressions you may detect the presence of
+sanitizers in code. See:
+
+*   [Conditional Compilation with
+    `__has_feature(address_sanitizer)`][asan-conditional]{:.external}
+*   [Disabling Instrumentation with
+    `__attribute__((no_sanitize("address")))`][asan-disabling]{:.external}
+
 ### Test for flakiness
 
 Sanitizer errors may be flaky if the code under test's behavior is
@@ -202,6 +211,8 @@ Areas for future work:
 
 See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 
+[asan-conditional]: https://clang.llvm.org/docs/AddressSanitizer.html#conditional-compilation-with-has-feature-address-sanitizer
+[asan-disabling]: https://clang.llvm.org/docs/AddressSanitizer.html#disabling-instrumentation-with-attribute-no-sanitize-address
 [enable-pmm-checker]:  /docs/gen/boot-options.md#kernel_pmm_checker_enable_bool
 [ffi]: https://doc.rust-lang.org/nomicon/ffi.html
 [ftrivial-rfc]: https://lists.llvm.org/pipermail/cfe-dev/2018-November/060172.html
