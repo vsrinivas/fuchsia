@@ -1,30 +1,13 @@
 # Logging in Rust
 
-Rust programs on Fuchsia generally use the [log crate] and its `info!/warn!/error!` macros. The
-[`fuchsia_syslog`] crate is used for initialization.
+This document explains how to get started with logging in Rust programs on
+Fuchsia. For general information about recording and viewing logs, see the
+[language-agnostic logging documentation][doc-logging].
 
-See the [language agnostic logging docs](/docs/concepts/diagnostics/logs/README.md) for more information
-about recording and viewing logs.
+## Required capabilities {#capabilities}
 
-## Requirements
-
-### GN dependencies
-
-The necessary crates can be included with two additions to `deps` in `BUILD.gn`:
-
-```gn
-deps = [
-  "//src/lib/syslog/rust:syslog",   # for initialization
-  "//third_party/rust_crates:log",  # for recording messages
-]
-```
-
-See [Rust: Overview][rust-dev] for more information about building Rust within Fuchsia.
-
-### Component manifest dependency {#manifest}
-
-Ensure that your component has the required capabilities to log by including the
-following in your component manifest:
+Ensure that your component requests the appropriate logging capabilities by
+including the following in your component manifest:
 
    * {.cmx}
 
@@ -48,83 +31,112 @@ following in your component manifest:
    }
    ```
 
-The syslog library will fallback to `stderr` if the `LogSink` connection fails.
+## Initialization {#initialization}
 
-## Initialization
+You must initialize logging before you can [record logs](#record) from Rust code.
+Initialization is handled by the [`fuchsia`][ref-fuchsia] crate setup macros.
 
-The Rust `log` crate must be connected to the Fuchsia backend before it can emit messages. Failure
-to initialize the library will result in dropped messages.
+### GN dependencies
 
-### Basic
+Add the following `deps` to your `BUILD.gn` file:
 
-In your component's `main.rs`:
+```gn
+deps = [
+  "//src/lib/fuchsia",
+]
+```
+
+### Setup
+
+In your Rust source files, logging is enabled by default for any function
+initialized using the `fuchsia::component` or `fuchsia::test` macros:
 
 ```rust
-use fuchsia_syslog as syslog;
-
+#[fuchsia::component]
 fn main() {
-    // configures a single tag with the process name
-    syslog::init().unwrap();
+    // ...
+}
+
+#[fuchsia::test]
+fn example_test() {
+    // ...
 }
 ```
 
-### With tags
-
-By default the process name is used as the tag for all log messages. Tags can be used to further
-categorize log messages from the program, and they can also be globally overridden.
+You can also pass the `logging` flag to make this explicit:
 
 ```rust
-use fuchsia_syslog as syslog;
-
+#[fuchsia::component(logging = true)]
 fn main() {
-    // overrides the use of process name for tag
-    syslog::init_with_tags(&["my_tags"]).unwrap();
+    // ...
+}
 
-    // additional tag for just this message
-    syslog::fx_log_info!(tag: "init", "an update on program initialization");
+#[fuchsia::test(logging = true)]
+fn example_test() {
+    // ...
 }
 ```
 
-### Configure severity
+## Add tags
 
-The syslog crate starts at `INFO` severity but can be overridden.
+Log messages can include one or more tags to provide additional context.
+To enable log tags for a given scope, pass the `logging_tags` parameter during
+[initialization](#initialization):
 
 ```rust
-use fuchsia_syslog as syslog;
-
+#[fuchsia::component(logging_tags = ["foo", "bar"])]
 fn main() {
-    syslog::init().unwrap();
+    // ...
+}
 
-    // suppress INFO and below
-    syslog::set_severity(syslog::levels::WARN);
+#[fuchsia::test(logging_tags = ["foo", "bar"])]
+fn example_test_with_tags() {
+    // ...
 }
 ```
 
-## Recording messages
+## Record logs {#record}
 
-Most uses of logging are with the `log` crate's macros:
+Rust programs on Fuchsia generally use the `tracing` crate macros to record
+logs.
 
-```rust
-trace!("something happened: {}", 5); // maps to TRACE
-debug!("something happened: {}", 4); // maps to DEBUG
-info!("something happened: {}", 3);  // maps to INFO
-warn!("something happened: {}", 2);  // maps to WARN
-error!("something happened: {}", 1); // maps to ERROR
+### GN dependencies
+
+Add the `tracing` crate to the `deps` entry of your `BUILD.gn` file:
+
+```gn
+deps = [
+  "//third_party/rust_crates:tracing",
+]
 ```
 
-The `fuchsia_syslog` crate also offers macros like `fx_log_info!`, which allow manually specifying
-the tag of a message.
+### Log events
+
+Call the macros provided by the `tracing` crate to record logs at the declared
+severity level:
+
+```rust
+use tracing;
+
+fn main() {
+    tracing::trace!("something happened: {}", 5); // maps to TRACE
+    tracing::debug!("something happened: {}", 4); // maps to DEBUG
+    tracing::info!("something happened: {}", 3);  // maps to INFO
+    tracing::warn!("something happened: {}", 2);  // maps to WARN
+    tracing::error!("something happened: {}", 1); // maps to ERROR
+}
+```
 
 ## Standard streams
 
-`println!`, `eprintln!` etc. go to standard out (`stdout`) and standard error (`stderr`).
+Rust macros such as `println!`, `eprintln!` etc. map to standard out (`stdout`)
+and standard error (`stderr`). Using these streams may require additional setup
+work for your program.
 
-See [`stdout` & `stderr`] in the language-agnostic logging docs for details on the routing of stdio
-streams in the system.
+For more details, see the [standard streams][std-streams] section in the
+language-agnostic logging documentation.
 
-[log crate]: https://fuchsia-docs.firebaseapp.com/rust/log/
-[`fuchsia_syslog`]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_syslog/
-[initialized in main]: /docs/development/languages/rust/add-logging.md
+[doc-logging]: /docs/concepts/diagnostics/logs/README.md
+[ref-fuchsia]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia/
 [rust-dev]: /docs/development/languages/rust/README.md
-[`.cmx` file]: /docs/concepts/components/v1/component_manifests.md
-[`stdout` & `stderr`]: /docs/development/diagnostics/logs/recording.md#stdout-stderr
+[std-streams]: /docs/development/diagnostics/logs/recording.md#stdout-stderr

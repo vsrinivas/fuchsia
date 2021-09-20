@@ -108,7 +108,6 @@ Public discussion happens on the [rust-users@fuchsia.dev] mailing list.
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]
 - [Logging](logging.md)
-- [Add logging to hello world](add-logging.md)
 
 
 [target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
