@@ -18,7 +18,6 @@ static_library("vk") {
     "debug.h",
     "debug_utils.h",
     "find_mem_type_idx.h",
-    "find_validation_layer.h",
     "shader_info_amd.h",
   ]
   sources = [
@@ -34,8 +33,6 @@ static_library("vk") {
     "debug_utils.h",
     "find_mem_type_idx.c",
     "find_mem_type_idx.h",
-    "find_validation_layer.c",
-    "find_validation_layer.h",
     "shader_info_amd.c",
     "shader_info_amd.h",
   ]

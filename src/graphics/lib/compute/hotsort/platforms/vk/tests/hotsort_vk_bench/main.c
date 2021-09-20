@@ -21,7 +21,6 @@
 #include "common/vk/assert.h"
 #include "common/vk/cache.h"
 #include "common/vk/find_mem_type_idx.h"
-#include "common/vk/find_validation_layer.h"
 
 //
 //
@@ -426,8 +425,8 @@ main(int argc, char const * argv[])
     .apiVersion         = VK_API_VERSION_1_1
   };
 
-  char const * const instance_enabled_layers[]     = { "VK_LAYER_KHRONOS_validation" };
-  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
+  char const * const instance_layers[]     = { "VK_LAYER_KHRONOS_validation" };
+  char const * const instance_extensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
 
   VkInstanceCreateInfo const instance_info = {
 
@@ -435,10 +434,10 @@ main(int argc, char const * argv[])
     .pNext                   = NULL,
     .flags                   = 0,
     .pApplicationInfo        = &app_info,
-    .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers),
-    .ppEnabledLayerNames     = instance_enabled_layers,
-    .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions),
-    .ppEnabledExtensionNames = instance_enabled_extensions
+    .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_layers),
+    .ppEnabledLayerNames     = instance_layers,
+    .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_extensions),
+    .ppEnabledExtensionNames = instance_extensions
   };
 
   VkInstance instance;
