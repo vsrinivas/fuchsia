@@ -196,6 +196,9 @@ fuchsia_test_package("guest_interaction_tests") {
   ]
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

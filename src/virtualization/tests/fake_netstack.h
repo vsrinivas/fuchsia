@@ -86,12 +86,6 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
     loop_.StartThread("FakeNetstack");
   }
 
-  ~FakeNetstack() {
-    loop_.Quit();
-    loop_.JoinThreads();
-    loop_.Shutdown();
-  }
-
   // fuchsia::netstack::testing::Netstack_TestBase
   void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override;
   void AddEthernetDevice(std::string topological_path,
