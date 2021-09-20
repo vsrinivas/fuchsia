@@ -77,15 +77,18 @@ impl ChecksumList {
             // Ignore anything that was prior to being flushed.
             return;
         }
-        let mut r = self.device_offset_to_checksum_entry.range(device_range.start..);
+        let mut r = self.device_offset_to_checksum_entry.range(device_range.start + 1..);
         while let Some((_, index)) = r.next() {
             let entry = &mut self.checksum_entries[*index];
             if entry.device_range.start >= device_range.end {
                 break;
             }
             let chunk_size = (entry.device_range.length() / entry.checksums.len() as u64) as usize;
-            let checksum_index_start =
-                (device_range.start - entry.device_range.start) as usize / chunk_size;
+            let checksum_index_start = if device_range.start < entry.device_range.start {
+                0
+            } else {
+                (device_range.start - entry.device_range.start) as usize / chunk_size
+            };
             // Figure out the overlap.
             if entry.device_range.end >= device_range.end {
                 // TODO: check that chunk size is aligned.
@@ -216,6 +219,23 @@ mod tests {
         list.push(1, 512..1024, &vec![fletcher64(&[2; 512], 0)]);
 
         list.push(2, 1024..1536, &vec![fletcher64(&[2; 512], 0)]);
+
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_deallocate_overlap() {
+        let device = FakeDevice::new(2048, 512);
+        let mut buffer = device.allocate_buffer(512);
+        let mut list = ChecksumList::new(1);
+
+        buffer.as_mut_slice().copy_from_slice(&[2; 512]);
+        device.write(2560, buffer.as_ref()).await.expect("write failed");
+
+        list.push(2, 512..1024, &vec![fletcher64(&[1; 512], 0)]);
+        list.mark_deallocated(3, 0..1024);
+        list.push(4, 2048..3072, &vec![fletcher64(&[2; 512], 0); 2]);
+        list.mark_deallocated(5, 1536..2560);
 
         assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
     }
