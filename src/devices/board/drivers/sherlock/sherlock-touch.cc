@@ -18,6 +18,8 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/luis-touch-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-touch-bind.h"
 
 namespace sherlock {
 
@@ -32,60 +34,11 @@ static const zx_device_prop_t luis_touch_props[] = {
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTECH_FT8201},
 };
 
-// Composite binding rules for focaltech touch driver.
-
-static constexpr zx_bind_inst_t sherlock_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x38),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x40),
-};
-static constexpr device_fragment_part_t sherlock_i2c_fragment[] = {
-    {std::size(sherlock_i2c_match), sherlock_i2c_match},
-};
-
-static constexpr zx_bind_inst_t luis_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_2),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x40),
-};
-static constexpr device_fragment_part_t luis_i2c_fragment[] = {
-    {std::size(sherlock_i2c_match), luis_i2c_match},
-};
-
-static constexpr zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_INTERRUPT),
-};
-static constexpr device_fragment_part_t gpio_int_fragment[] = {
-    {std::size(gpio_int_match), gpio_int_match},
-};
-
-static constexpr zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
-};
-static constexpr device_fragment_part_t gpio_reset_fragment[] = {
-    {std::size(gpio_reset_match), gpio_reset_match},
-};
-
-static constexpr device_fragment_t sherlock_fragments[] = {
-    {"i2c", std::size(sherlock_i2c_fragment), sherlock_i2c_fragment},
-    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
-};
-
-static constexpr device_fragment_t luis_fragments[] = {
-    {"i2c", std::size(sherlock_i2c_fragment), luis_i2c_fragment},
-    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
-    {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
-};
-
 static const composite_device_desc_t luis_comp_desc = {
     .props = luis_touch_props,
     .props_count = countof(luis_touch_props),
-    .fragments = luis_fragments,
-    .fragments_count = countof(luis_fragments),
+    .fragments = ft8201_touch_fragments,
+    .fragments_count = countof(ft8201_touch_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = false,
 };
@@ -107,8 +60,8 @@ zx_status_t Sherlock::TouchInit() {
     static const composite_device_desc_t sherlock_comp_desc = {
         .props = sherlock_touch_props,
         .props_count = countof(sherlock_touch_props),
-        .fragments = sherlock_fragments,
-        .fragments_count = countof(sherlock_fragments),
+        .fragments = ft5726_touch_fragments,
+        .fragments_count = countof(ft5726_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft5726_touch_metadata,

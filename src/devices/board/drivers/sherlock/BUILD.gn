@@ -46,6 +46,28 @@ driver_bind_rules("sherlock-buttons-bind") {
   ]
 }
 
+driver_bind_rules("sherlock-touch-bind") {
+  rules = "bind/sherlock-touch.bind"
+  header_output = "sherlock-touch-bind.h"
+  bind_output = "sherlock-touch-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
+driver_bind_rules("luis-touch-bind") {
+  rules = "bind/luis-touch.bind"
+  header_output = "luis-touch-bind.h"
+  bind_output = "luis-touch-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+  ]
+}
+
 driver_bind_rules("sherlock-pwm-bind") {
   rules = "bind/sherlock-pwm.bind"
   header_output = "sherlock-pwm-bind.h"
@@ -288,6 +310,7 @@ template("sherlock_driver") {
 
     deps = [
       ":luis-cpu-bind_header",
+      ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",
       ":sherlock-bluetooth-bind_header",
       ":sherlock-buttons-bind_header",
@@ -301,6 +324,7 @@ template("sherlock_driver") {
       ":sherlock-securemem-bind_header",
       ":sherlock-spi-bind_header",
       ":sherlock-tee-bind_header",
+      ":sherlock-touch-bind_header",
       ":sherlock-video-bind_header",
       ":sherlock-video-enc-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
