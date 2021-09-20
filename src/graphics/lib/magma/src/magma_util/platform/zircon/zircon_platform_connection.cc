@@ -212,51 +212,6 @@ void ZirconPlatformConnection::DestroyContext(DestroyContextRequestView request,
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::ExecuteCommandBufferWithResources(
-    ExecuteCommandBufferWithResourcesRequestView request,
-    ExecuteCommandBufferWithResourcesCompleter::Sync& completer) {
-  FlowControl();
-
-  auto command_buffer = std::make_unique<magma_command_buffer>();
-
-  *command_buffer = {
-      .resource_count = static_cast<uint32_t>(request->resources.count()),
-      .batch_buffer_resource_index = request->command_buffer.batch_buffer_resource_index,
-      .batch_start_offset = request->command_buffer.batch_start_offset,
-      .wait_semaphore_count = static_cast<uint32_t>(request->wait_semaphores.count()),
-      .signal_semaphore_count = static_cast<uint32_t>(request->signal_semaphores.count()),
-      .flags = 0,
-  };
-
-  std::vector<magma_exec_resource> resources;
-  resources.reserve(request->resources.count());
-
-  for (auto& resource : request->resources) {
-    resources.push_back({
-        resource.buffer,
-        resource.offset,
-        resource.length,
-    });
-  }
-
-  // Merge semaphores into one vector
-  std::vector<uint64_t> semaphores;
-  semaphores.reserve(request->wait_semaphores.count() + request->signal_semaphores.count());
-
-  for (uint64_t semaphore_id : request->wait_semaphores) {
-    semaphores.push_back(semaphore_id);
-  }
-  for (uint64_t semaphore_id : request->signal_semaphores) {
-    semaphores.push_back(semaphore_id);
-  }
-
-  magma::Status status = delegate_->ExecuteCommandBufferWithResources(
-      request->context_id, std::move(command_buffer), std::move(resources), std::move(semaphores));
-
-  if (!status)
-    SetError(&completer, status.get());
-}
-
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources2(
     ExecuteCommandBufferWithResources2RequestView request,
     ExecuteCommandBufferWithResources2Completer::Sync& completer) {

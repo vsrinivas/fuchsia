@@ -123,14 +123,6 @@ type Resource = struct {
     length uint64;
 };
 
-/// Deprecated
-type CommandBuffer = struct {
-    /// Index of the resource containing instructions to start the command buffer.
-    batch_buffer_resource_index uint32;
-    /// Starting offset within the resource.
-    batch_start_offset uint64;
-};
-
 type CommandBufferFlags = flexible bits : uint64 {
     /// Vendor specific definitions start here
     VENDOR_FLAG_0 = 0x10000;
@@ -186,16 +178,6 @@ protocol Primary {
     /// Destroys context `context_id`.
     DestroyContext(struct {
         context_id uint32;
-    });
-
-    /// Deprecated:
-    /// Submits a command buffer for execution on the GPU, with associated resources.
-    ExecuteCommandBufferWithResources(struct {
-        context_id uint32;
-        command_buffer CommandBuffer;
-        resources vector<Resource>:MAX;
-        wait_semaphores vector<zx.koid>:MAX;
-        signal_semaphores vector<zx.koid>:MAX;
     });
 
     /// Submits a command buffer for execution on the GPU, with associated resources.

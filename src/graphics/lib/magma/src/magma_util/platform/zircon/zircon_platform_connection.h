@@ -145,9 +145,6 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
                      CreateContextCompleter::Sync& _completer) override;
   void DestroyContext(DestroyContextRequestView request,
                       DestroyContextCompleter::Sync& _completer) override;
-  void ExecuteCommandBufferWithResources(
-      ExecuteCommandBufferWithResourcesRequestView request,
-      ExecuteCommandBufferWithResourcesCompleter::Sync& _completer) override;
   void ExecuteImmediateCommands(ExecuteImmediateCommandsRequestView request,
                                 ExecuteImmediateCommandsCompleter::Sync& _completer) override;
   void ExecuteCommandBufferWithResources2(
