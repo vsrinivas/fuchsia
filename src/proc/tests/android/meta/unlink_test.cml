@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/unlink_test",
-        args: [ "--gunit_filter=-*.AtDirDegradedPermissions:*.ParentDegradedPermissions:*.AtBad:*.CannotRemoveRoot:*.CannotRemoveRootWithAtDir:*.CanRemoveWithTrailingSlashes" ],
+        args: [ "--gunit_filter=-*.AtDirDegradedPermissions:*.ParentDegradedPermissions:*.CanRemoveWithTrailingSlashes" ],
     },
 }

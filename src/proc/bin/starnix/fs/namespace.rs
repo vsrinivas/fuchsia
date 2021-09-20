@@ -233,6 +233,9 @@ impl NamespaceNode {
                 UnlinkKind::Directory => {
                     if name == b".." {
                         error!(ENOTEMPTY)
+                    } else if self.parent().is_none() {
+                        // The client is attempting to remove the root.
+                        error!(EBUSY)
                     } else {
                         error!(EINVAL)
                     }
