@@ -6,11 +6,13 @@
 
 #include <lib/async/cpp/task.h>
 
-#include <zxtest/zxtest.h>
-
+#include "lib/ddk/debug.h"
 #include "src/graphics/display/drivers/fake/fake-display.h"
+#include "zircon/status.h"
 
 namespace display {
+
+#define ZXLOG(level, fmt, ...) zxlogf(level, "[%s:%u]: " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 
 zx_status_t Binder::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                               zx_device_t** out) {
@@ -61,11 +63,18 @@ void Binder::DeviceAsyncRemove(zx_device_t* device) {
 
 bool Binder::Ok() {
   if (devices_.empty()) {
-    EXPECT_EQ(children_, 0);
+    if (children_ != 0) {
+      ZXLOG(ERROR, "children_ should be zero.");
+    }
     return children_ == 0;
   } else {
-    EXPECT_TRUE(devices_.size() == 1);
-    EXPECT_TRUE(devices_.begin()->first == fake_ddk::kFakeParent);
+    if (devices_.size() != 1) {
+      ZXLOG(ERROR, "devices_.size() should be 1.");
+    }
+
+    if (devices_.begin()->first != fake_ddk::kFakeParent) {
+      ZXLOG(ERROR, "devices_.begin()->first is not fake_ddk::kFakeParent.");
+    }
     return devices_.size() == 1 && devices_.begin()->first == fake_ddk::kFakeParent;
   }
 }
@@ -80,7 +89,10 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
   ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
 
-  EXPECT_OK(sysmem_->Bind());
+  if (auto result = sysmem_->Bind(); result != ZX_OK) {
+    ZXLOG(ERROR, "sysmem_.Bind() return status was not ZX_OK. Error: %s.",
+          zx_status_get_string(result));
+  }
 
   // Fragments for fake-display
   fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[2], 2);
@@ -92,7 +104,11 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ddk_.SetFragments(std::move(fragments));
 
   display_ = new fake_display::FakeDisplay(fake_ddk::kFakeParent);
-  ASSERT_OK(display_->Bind(start_vsync));
+  if (auto status = display_->Bind(start_vsync); status != ZX_OK) {
+    ZXLOG(ERROR, "display_->Bind(start_vsync) return status was not ZX_OK. Error: %s.",
+          zx_status_get_string(status));
+    return;
+  }
 
   // Protocols for display controller.
   ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, display_->dcimpl_proto());
@@ -102,7 +118,11 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   std::unique_ptr<display::Controller> c(new Controller(fake_ddk::kFakeParent));
   // Save a copy for test cases.
   controller_ = c.get();
-  ASSERT_OK(c->Bind(&c));
+  if (auto status = c->Bind(&c); status != ZX_OK) {
+    ZXLOG(ERROR, "c->Bind(&c) return status was not ZX_OK. Error: %s.",
+          zx_status_get_string(status));
+    return;
+  }
 }
 
 FakeDisplayDeviceTree::~FakeDisplayDeviceTree() {
