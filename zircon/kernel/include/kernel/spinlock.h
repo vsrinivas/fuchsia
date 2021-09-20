@@ -61,6 +61,11 @@ class TA_CAP("mutex") SpinLockBase {
   //
   // Returns false when the lock is acquired, and true when the lock is not
   // acquired.
+  //
+  // TryAcquire operations are not permitted to fail spuriously, even on
+  // architectures with weak memory ordering.  If a TryAcquire operation fails,
+  // it must be because the lock was actually observed to be held by another
+  // thread the attempt.
   bool TryAcquire() TA_TRY_ACQ(false) {
     static_assert(!kIsMonitored, "spinlock is monitored, use TryAcquire(const char* name) instead");
     return arch_spin_trylock(&spinlock_);

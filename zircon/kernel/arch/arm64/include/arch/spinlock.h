@@ -24,6 +24,10 @@ typedef struct TA_CAP("mutex") arch_spin_lock {
   unsigned long value;
 } arch_spin_lock_t;
 
+// Note: trylock operations are not permitted to fail spuriously, even on
+// architectures with weak memory ordering.  If a trylock operation fails, it
+// must be because the lock was actually observed to be held by another thread
+// during the attempt.
 void arch_spin_lock(arch_spin_lock_t* lock) TA_ACQ(lock);
 bool arch_spin_trylock(arch_spin_lock_t* lock) TA_TRY_ACQ(false, lock);
 void arch_spin_unlock(arch_spin_lock_t* lock) TA_REL(lock);

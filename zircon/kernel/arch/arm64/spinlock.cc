@@ -31,12 +31,18 @@ void arch_spin_lock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
 bool arch_spin_trylock(arch_spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
   unsigned long val = arch_curr_cpu_num() + 1;
   uint64_t out;
-
   __asm__ volatile(
-      "ldaxr   %[out], [%[lock]];"
-      "cbnz    %[out], 1f;"
-      "stxr    %w[out], %[val], [%[lock]];"
       "1:"
+      "ldaxr   %[out], [%[lock]];"
+      "cbnz    %[out], 2f;"
+      "stxr    %w[out], %[val], [%[lock]];"
+      // Even though this is a try lock, if the store on acquire fails we try
+      // again. This is to prevent spurious failures from misleading the caller
+      // into thinking the lock is held by another thread. See
+      // http://fxbug.dev/83983 for details.
+      "cbnz    %w[out], 1b;"
+      "2:"
+      "clrex;"
       : [out] "=&r"(out)
       : [lock] "r"(&lock->value), [val] "r"(val)
       : "cc", "memory");
