@@ -10,7 +10,7 @@ use {
     fuchsia_fatfs::FatFs,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
-    remote_block_device::RemoteBlockClient,
+    remote_block_device::RemoteBlockClientSync,
     std::ops::Deref,
     vfs::{execution_scope::ExecutionScope, registry::token_registry},
 };
@@ -45,7 +45,7 @@ impl FatDevice {
         let (block_channel, remote) = zx::Channel::create()?;
         fdio::service_connect_at(&dir, &partition, remote)?;
         let device =
-            Box::new(remote_block_device::Cache::new(RemoteBlockClient::new_sync(block_channel)?)?);
+            Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(block_channel)?)?);
         // TODO(simonshields): if this fails, we could try looking for another partition.
         let fs = FatFs::new(device)?;
 
@@ -289,7 +289,7 @@ pub mod test {
     pub fn format(channel: zx::Channel) {
         // Create a filesystem on the ramdisk.
         let device = Box::new(
-            remote_block_device::Cache::new(RemoteBlockClient::new_sync(channel).unwrap()).unwrap(),
+            remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),
         );
         fatfs::format_volume(device, fatfs::FormatVolumeOptions::new())
             .expect("Format volume succeeds");
@@ -297,7 +297,7 @@ pub mod test {
 
     pub fn setup_test_fs(channel: zx::Channel, name: &str) {
         let device = Box::new(
-            remote_block_device::Cache::new(RemoteBlockClient::new_sync(channel).unwrap()).unwrap(),
+            remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),
         );
         let fs = fatfs::FileSystem::new(device, fatfs::FsOptions::new())
             .expect("Create filesystem succeeds");

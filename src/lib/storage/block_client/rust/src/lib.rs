@@ -500,11 +500,6 @@ impl RemoteBlockClient {
         let vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
         Ok(RemoteBlockClient { remote, common: Common::new(fifo, &info, temp_vmo, vmo_id) })
     }
-
-    // TODO(csuter): Remove this once all clients have been migrated.
-    pub fn new_sync(channel: zx::Channel) -> Result<RemoteBlockClientSync, Error> {
-        RemoteBlockClientSync::new(channel)
-    }
 }
 
 #[async_trait]
