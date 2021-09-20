@@ -2,35 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/bt_hfp_audio_gateway_bin_test",
+    },
     children: [
-        {
-            name: "bt-hfp-audio-gateway-test-driver",
-            url: "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-tests#meta/bt-hfp-audio-gateway-test-driver.cm",
-        },
         {
             name: "mock-a2dp-controller",
             url: "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-tests#meta/mock-a2dp-controller.cm",
         },
     ],
-    offer: [
+    use: [
         {
-            protocol: "fuchsia.bluetooth.internal.a2dp.Controller",
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
             from: "#mock-a2dp-controller",
-            to: [ "#bt-hfp-audio-gateway-test-driver" ],
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [
-                "#bt-hfp-audio-gateway-test-driver",
-                "#mock-a2dp-controller",
-            ],
         },
     ],
-    expose: [
+    offer: [
         {
-            protocol: "fuchsia.test.Suite",
-            from: "#bt-hfp-audio-gateway-test-driver",
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#mock-a2dp-controller" ],
         },
     ],
 }

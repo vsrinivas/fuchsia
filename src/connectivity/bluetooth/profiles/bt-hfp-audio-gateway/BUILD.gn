@@ -174,19 +174,14 @@ group("bt-hfp-audio-gateway") {
   deps = [ ":bt-hfp-audio-gateway-default" ]
 }
 
-fuchsia_test_component("bt-hfp-audio-gateway-test-driver") {
-  manifest = "meta/bt-hfp-audio-gateway-test-driver.cml"
-  deps = [ ":bin_test" ]
-}
-
 fuchsia_test_component("test-component") {
   manifest = "meta/bt-hfp-audio-gateway-tests.cml"
+  deps = [ ":bin_test" ]
 }
 
 fuchsia_test_package("bt-hfp-audio-gateway-tests") {
   test_components = [ ":test-component" ]
   deps = [
-    ":bt-hfp-audio-gateway-test-driver",
     ":test_config",
 
     # The component mock for the `fuchsia.bluetooth.internal.a2dp.Controller` capability.
