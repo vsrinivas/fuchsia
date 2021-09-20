@@ -585,6 +585,11 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#network",
+            to: "#remote-control",
+        },
+        {
             protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",

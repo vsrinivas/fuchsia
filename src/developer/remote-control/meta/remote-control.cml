@@ -24,6 +24,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sys.Launcher",
                 "fuchsia.test.manager.Query",
                 "fuchsia.test.manager.RunBuilder",

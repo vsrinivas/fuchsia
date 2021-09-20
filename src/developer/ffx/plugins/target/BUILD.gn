@@ -11,6 +11,7 @@ ffx_plugin("ffx_target") {
     "add:ffx_target_add",
     "default:ffx_target_default",
     "flash:ffx_flash",
+    "forward:ffx_target_forward",
     "get-ssh-address:ffx_get_ssh_address",
     "list:ffx_list",
     "log:ffx_target_log",

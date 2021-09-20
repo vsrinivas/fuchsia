@@ -7,9 +7,13 @@ use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics::Selector,
-    fidl_fuchsia_io as io, fuchsia_zircon as zx,
+    fidl_fuchsia_io as io,
+    fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::join,
     futures::prelude::*,
     std::cell::RefCell,
+    std::net::SocketAddr,
     std::rc::Rc,
     tracing::*,
 };
@@ -63,8 +67,73 @@ impl RemoteControlService {
                         .map_err(|i| i.into_raw()),
                     )?;
                 }
+                rcs::RemoteControlRequest::ForwardTcp { addr, socket, responder } => {
+                    let addr: SocketAddressExt = addr.into();
+                    let addr = addr.0;
+                    let mut result = match fasync::Socket::from_socket(socket) {
+                        Ok(socket) => match self.connect_forwarded_port(addr, socket).await {
+                            Ok(()) => Ok(()),
+                            Err(e) => {
+                                log::error!("Port forward connection failed: {:?}", e);
+                                Err(rcs::TunnelError::ConnectFailed)
+                            }
+                        },
+                        Err(e) => {
+                            log::error!("Could not use socket asynchronously: {:?}", e);
+                            Err(rcs::TunnelError::SocketFailed)
+                        }
+                    };
+                    responder.send(&mut result)?;
+                }
             }
         }
+        Ok(())
+    }
+
+    async fn connect_forwarded_port(
+        &self,
+        addr: SocketAddr,
+        socket: fasync::Socket,
+    ) -> Result<(), std::io::Error> {
+        let (mut conn_read, mut conn_write) = fasync::net::TcpStream::connect(addr)?.await?.split();
+        let (mut socket_read, mut socket_write) = socket.split();
+        let write_read = async move {
+            // TODO(84188): Use a buffer pool once we have them.
+            let mut buf = [0; 4096];
+            loop {
+                let bytes = socket_read.read(&mut buf).await?;
+                if bytes == 0 {
+                    break Ok(());
+                }
+                conn_write.write_all(&mut buf[..bytes]).await?;
+                conn_write.flush().await?;
+            }
+        };
+        let read_write = async move {
+            // TODO(84188): Use a buffer pool once we have them.
+            let mut buf = [0; 4096];
+            loop {
+                let bytes = conn_read.read(&mut buf).await?;
+                if bytes == 0 {
+                    break Ok(()) as Result<(), std::io::Error>;
+                }
+                socket_write.write_all(&mut buf[..bytes]).await?;
+                socket_write.flush().await?;
+            }
+        };
+        let forward = join(read_write, write_read);
+        fasync::Task::local(async move {
+            match forward.await {
+                (Err(a), Err(b)) => {
+                    log::warn!("Port forward closed with errors:\n  {:?}\n  {:?}", a, b)
+                }
+                (Err(e), _) | (_, Err(e)) => {
+                    log::warn!("Port forward closed with error: {:?}", e)
+                }
+                _ => (),
+            }
+        })
+        .detach();
         Ok(())
     }
 
@@ -168,8 +237,8 @@ mod tests {
         super::*, fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
-        fuchsia_async as fasync, fuchsia_zircon as zx, selectors::parse_selector,
-        service_discovery::PathEntry, std::path::PathBuf,
+        fuchsia_zircon as zx, selectors::parse_selector, service_discovery::PathEntry,
+        std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";

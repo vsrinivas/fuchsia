@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_target_forward_tcp") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  args_with_unit_tests = true
+
+  args_deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+  ]
+
+  deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}

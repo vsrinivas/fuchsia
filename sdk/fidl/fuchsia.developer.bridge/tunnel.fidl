@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.developer.bridge;
+using fuchsia.device;
+using fuchsia.net;
+
+type TunnelError = strict enum {
+    /// Could not listen on the port from which we were attempting to forward.
+    COULD_NOT_LISTEN = 1;
+};
+
+@discoverable
+protocol Tunnel {
+    /// Forwards a TCP port on the host to the target address, from the target node.
+    ForwardPort(struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        host_address fuchsia.net.SocketAddress;
+        target_address fuchsia.net.SocketAddress;
+    }) -> (struct {}) error TunnelError;
+};

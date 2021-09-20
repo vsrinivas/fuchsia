@@ -15,6 +15,7 @@ fidl("fuchsia.developer.bridge") {
     "repo.fidl",
     "target.fidl",
     "tracing.fidl",
+    "tunnel.fidl",
     "version.fidl",
   ]
   public_deps = [

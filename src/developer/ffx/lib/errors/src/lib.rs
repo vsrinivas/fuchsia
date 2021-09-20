@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_bridge::{DaemonError, OpenTargetError};
+use fidl_fuchsia_developer_bridge::{DaemonError, OpenTargetError, TunnelError};
 
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
@@ -37,6 +37,11 @@ pub enum FfxError {
         OpenTargetError::TargetNotFound => format!("Target specification {} was not found. Use `ffx target list` to list known targets, and use a different matcher.", target_string(.target, .is_default_target))
     })]
     OpenTargetError { err: OpenTargetError, target: Option<String>, is_default_target: bool },
+
+    #[error("{}", match .err {
+        TunnelError::CouldNotListen => "Could not establish a host-side TCP listen socket".to_string(),
+    })]
+    TunnelError { err: TunnelError, target: Option<String>, is_default_target: bool },
 
     #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target, .is_default_target)))]
     FastbootError { target: Option<String>, is_default_target: bool },
