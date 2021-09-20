@@ -67,8 +67,7 @@ TEST_F(LoaderTest, LoadObject) {
 
   // Create backing loader.
   TestLoader backing_loader;
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &backing_loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &backing_loader);
   backing_loader.SetLoadObjectVmo(std::move(mylib_vmo));
 
   // Create VMO of compat driver for compat loader.
@@ -86,8 +85,7 @@ TEST_F(LoaderTest, LoadObject) {
 
   // Create loader client.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &loader);
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that loading a random library fetches a VMO from the backing loader.
@@ -121,8 +119,7 @@ TEST_F(LoaderTest, DoneClosesConnection) {
 
   // Create backing loader.
   TestLoader backing_loader;
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &backing_loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &backing_loader);
 
   // Create compat loader.
   compat::Loader loader(dispatcher());
@@ -134,8 +131,7 @@ TEST_F(LoaderTest, DoneClosesConnection) {
 
   // Create loader client.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &loader);
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher(), &handler);
 
   // Test that done closes the connection.
@@ -151,8 +147,7 @@ TEST_F(LoaderTest, ConfigSucceeds) {
 
   // Create backing loader.
   TestLoader backing_loader;
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &backing_loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &backing_loader);
 
   // Create compat loader.
   compat::Loader loader(dispatcher());
@@ -161,8 +156,7 @@ TEST_F(LoaderTest, ConfigSucceeds) {
 
   // Create loader client.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &loader);
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that config returns success.
@@ -176,8 +170,7 @@ TEST_F(LoaderTest, CloneSucceeds) {
 
   // Create backing loader.
   TestLoader backing_loader;
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &backing_loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &backing_loader);
 
   // Create compat loader.
   compat::Loader loader(dispatcher());
@@ -186,8 +179,7 @@ TEST_F(LoaderTest, CloneSucceeds) {
 
   // Create loader client.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &loader);
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that clone returns success.
@@ -211,8 +203,7 @@ TEST_F(LoaderTest, NoBackingLoader) {
 
   // Create loader client.
   endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  fidl::BindServer<fidl::WireServer<fldsvc::Loader>>(dispatcher(), std::move(endpoints->server),
-                                                     &loader);
+  fidl::BindServer(dispatcher(), std::move(endpoints->server), &loader);
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher());
 
   // Test that functions that call the backing loader fail.
