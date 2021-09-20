@@ -4,6 +4,12 @@
 
 import("//build/python/python_host_test.gni")
 
+python_host_test("fidl_api_mapper_test") {
+  main_source = "fidl_api_mapper_test.py"
+  sources = [ "fidl_api_mapper.py" ]
+  libraries = [ "//third_party/parameterized" ]
+}
+
 python_host_test("gather_package_deps_test") {
   main_source = "gather_package_deps_test.py"
   sources = [ "gather_package_deps.py" ]
@@ -17,6 +23,7 @@ python_host_test("verify_cts_deps_test") {
 group("tests") {
   testonly = true
   public_deps = [
+    ":fidl_api_mapper_test($host_toolchain)",
     ":gather_package_deps_test($host_toolchain)",
     ":verify_cts_deps_test($host_toolchain)",
   ]

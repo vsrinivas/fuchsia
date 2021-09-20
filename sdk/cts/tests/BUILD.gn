@@ -1,6 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/zircon/c_utils.gni")
 import("//sdk/cts/build/cts.gni")
 
 group("tests_no_e2e") {
@@ -37,6 +38,36 @@ group("tests") {
   deps = [
     ":e2e_tests",
     ":tests_no_e2e",
+  ]
+}
+
+cts_unstripped_binaries_file = "$root_out_dir/cts_unstripped_binaries.list"
+link_output_rspfile("cts_unstripped_binaries_list") {
+  testonly = true
+  outputs = [ cts_unstripped_binaries_file ]
+  deps = [
+    # TODO(chok): This currently contains a superset of unstripped binaries.
+    # We will want to create a smaller group which only contains cts_executable()'s.
+    ":tests",
+  ]
+}
+
+action("fidl_mangled_to_api_mapping") {
+  testonly = true
+  sources = [ cts_unstripped_binaries_file ]
+  deps = [ ":cts_unstripped_binaries_list" ]
+  script = "//sdk/cts/build/scripts/fidl_api_mapper.py"
+  depfile = "$target_gen_dir/$target_name.dd"
+  outputs = [ "$target_gen_dir/fidl_mangled_to_api_mapping.json" ]
+  args = [
+    "--input",
+    rebase_path(sources[0], root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+    "--dwarfdump",
+    rebase_path("$clang_prefix/llvm-dwarfdump", root_build_dir),
   ]
 }
 
