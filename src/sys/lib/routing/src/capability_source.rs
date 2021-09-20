@@ -177,6 +177,17 @@ pub struct StorageCapabilitySource<C: ComponentInstanceInterface> {
     pub storage_subdir: Option<PathBuf>,
 }
 
+impl<C: ComponentInstanceInterface> PartialEq for StorageCapabilitySource<C> {
+    fn eq(&self, other: &Self) -> bool {
+        let self_source_component = self.storage_provider.as_ref().map(|s| s.abs_moniker());
+        let other_source_component = other.storage_provider.as_ref().map(|s| s.abs_moniker());
+        self_source_component == other_source_component
+            && self.backing_directory_path == other.backing_directory_path
+            && self.backing_directory_subdir == other.backing_directory_subdir
+            && self.storage_subdir == other.storage_subdir
+    }
+}
+
 /// A provider of a capability whose source originates from zero or more components
 /// of a collection. This trait type-erases the capability type, so it can be handled
 /// and hosted generically.

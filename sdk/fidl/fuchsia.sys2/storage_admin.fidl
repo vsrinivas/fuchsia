@@ -17,9 +17,29 @@ protocol StorageAdmin {
         object server_end:fuchsia.io.Node;
     });
 
+    /// Lists the descendant components under the specified realm that use the storage
+    /// capability.
+    /// Returns INSTANCE_NOT_FOUND if the realm does not exist, and INVALID_ARGS if
+    /// |relative_moniker| is malformed.
+    ListStorageInRealm(resource struct {
+        relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        iterator server_end:StorageIterator;
+    }) -> (struct {}) error fuchsia.component.Error;
+
     /// Deletes the contents of the storage for this component. Does not delete the component's
     /// subdirectory itself from the backing directory.
     DeleteComponentStorage(struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {}) error fuchsia.component.Error;
+};
+
+/// An iterator protocol for returning a set of components using a storage capability. See
+/// |StorageAdmin.ListStorageInRealm| for more information.
+protocol StorageIterator {
+    /// Retrieve the next set of components using the storage capability. The returned monikers
+    /// are relative to the component that declares the storage capability. Returns an empty
+    /// vector after all components have been returned.
+    Next() -> (struct {
+        relative_monikers vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX;
+    });
 };

@@ -77,11 +77,11 @@ pub trait RelativeMonikerBase: Sized {
             .chain(self.down_path().iter().zip(iter::repeat("/")))
         {
             res.push_str(leading_char);
-            res.push_str(segment.name());
             if let Some(collection) = segment.collection() {
-                res.push_str(":");
                 res.push_str(collection);
+                res.push_str(":");
             }
+            res.push_str(segment.name());
         }
         res
     }

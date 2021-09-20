@@ -624,7 +624,7 @@ impl BuiltinEnvironment {
         model.root().hooks.install(binder_capability_host.hooks()).await;
 
         // Set up the storage admin protocol
-        let storage_admin_capability_host = Arc::new(StorageAdmin::new());
+        let storage_admin_capability_host = Arc::new(StorageAdmin::new(Arc::downgrade(&model)));
         model.root().hooks.install(storage_admin_capability_host.hooks()).await;
 
         // Set up the builtin runners.

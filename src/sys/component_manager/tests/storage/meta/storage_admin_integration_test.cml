@@ -1,0 +1,42 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/storage_admin_integration_test",
+    },
+    children: [
+        {
+            name: "memfs",
+            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+        },
+    ],
+    capabilities: [
+        {
+            storage: "data",
+            from: "#memfs",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#data",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "self",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#memfs" ],
+        },
+    ],
+}

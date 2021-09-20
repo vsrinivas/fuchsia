@@ -30,6 +30,33 @@ rustc_test("storage_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
+rustc_test("storage_admin_integration_test_bin") {
+  name = "storage_admin_integration_test"
+  edition = "2018"
+  source_root = "admin_integration_test.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/component-events",
+    "//src/sys/lib/moniker",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:parking_lot",
+  ]
+
+  sources = [ "admin_integration_test.rs" ]
+}
+
 rustc_binary("storage_realm_coll_bin") {
   name = "storage_realm_coll"
   edition = "2018"
@@ -113,12 +140,26 @@ fuchsia_component("only_exits") {
   manifest = "meta/only_exits.cml"
 }
 
-fuchsia_unittest_package("storage_integration_test") {
+fuchsia_unittest_component("storage_integration_test_component") {
+  component_name = "storage_integration_test"
   manifest = "meta/storage_integration_test.cmx"
+  deps = [ ":storage_integration_test_bin" ]
+}
+
+fuchsia_unittest_component("storage_admin_integration_test_component") {
+  component_name = "storage_admin_integration_test"
+  manifest = "meta/storage_admin_integration_test.cml"
+  deps = [ ":storage_admin_integration_test_bin" ]
+}
+
+fuchsia_test_package("storage_integration_test") {
+  test_components = [
+    ":storage_integration_test_component",
+    ":storage_admin_integration_test_component",
+  ]
   deps = [
     ":memfs",
     ":only_exits",
-    ":storage_integration_test_bin",
     ":storage_realm",
     ":storage_realm_coll",
     ":storage_realm_coll_invalid_route",

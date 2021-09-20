@@ -15,26 +15,30 @@ use {
         capability::{CapabilityProvider, CapabilitySource, ComponentCapability, OptionalTask},
         channel,
         model::{
-            component::{BindReason, WeakComponentInstance},
+            component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::Model,
             routing::{RouteRequest, RouteSource},
             storage,
         },
     },
-    ::routing::route_capability,
+    ::routing::{capability_source::StorageCapabilitySource, route_capability},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, OfferDecl, StorageDecl, UseDecl},
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::TryStreamExt,
+    futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
     log::*,
     moniker::ExtendedMoniker,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{
+        AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialRelativeMoniker,
+        RelativeMonikerBase,
+    },
     routing::component_instance::ComponentInstanceInterface,
     std::{
         convert::TryInto,
@@ -69,7 +73,7 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
     async fn open(
         self: Box<Self>,
         flags: u32,
-        open_mode: u32,
+        _open_mode: u32,
         in_relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<OptionalTask, ModelError> {
@@ -78,10 +82,6 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
             != (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
         {
             warn!("open request for the storage admin protocol rejected: access denied");
-            return Ok(None.into());
-        }
-        if 0 == (open_mode & MODE_TYPE_SERVICE) {
-            warn!("open request for the storage admin protocol rejected: incorrect mode");
             return Ok(None.into());
         }
         if in_relative_path != PathBuf::from("") {
@@ -100,12 +100,14 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
     }
 }
 
-pub struct StorageAdmin {}
+pub struct StorageAdmin {
+    model: Weak<Model>,
+}
 
 // `StorageAdmin` is a `Hook` that serves the `StorageAdmin` FIDL protocol.
 impl StorageAdmin {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(model: Weak<Model>) -> Self {
+        Self { model }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -221,6 +223,46 @@ impl StorageAdmin {
                     .await?;
                     dir_proxy.clone(flags, object)?;
                 }
+                fsys::StorageAdminRequest::ListStorageInRealm {
+                    relative_moniker,
+                    iterator,
+                    responder,
+                } => {
+                    let fut = async {
+                        let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
+                        let relative_moniker = PartialRelativeMoniker::parse(&relative_moniker)
+                            .map_err(|_| fcomponent::Error::InvalidArguments)?;
+                        let absolute_moniker = PartialAbsoluteMoniker::from_relative(
+                            &component.abs_moniker.to_partial(),
+                            &relative_moniker,
+                        )
+                        .map_err(|_| fcomponent::Error::InvalidArguments)?;
+                        let root_component = model
+                            .look_up(&absolute_moniker)
+                            .await
+                            .map_err(|_| fcomponent::Error::InstanceNotFound)?;
+                        Ok(root_component)
+                    };
+                    match fut.await {
+                        Ok(root_component) => {
+                            fasync::Task::spawn(
+                                Self::serve_storage_iterator(
+                                    root_component,
+                                    iterator,
+                                    storage_capability_source_info.clone(),
+                                )
+                                .unwrap_or_else(|e| {
+                                    warn!("Error serving storage iterator: {:?}", e)
+                                }),
+                            )
+                            .detach();
+                            responder.send(&mut Ok(()))?;
+                        }
+                        Err(e) => {
+                            responder.send(&mut Err(e))?;
+                        }
+                    }
+                }
                 fsys::StorageAdminRequest::DeleteComponentStorage {
                     relative_moniker,
                     responder,
@@ -263,6 +305,61 @@ impl StorageAdmin {
                     }
                 }
             }
+        }
+        Ok(())
+    }
+
+    async fn serve_storage_iterator(
+        root_component: Arc<ComponentInstance>,
+        iterator: ServerEnd<fsys::StorageIteratorMarker>,
+        storage_capability_source_info: StorageCapabilitySource<ComponentInstance>,
+    ) -> Result<(), Error> {
+        let mut components_to_visit = vec![root_component];
+        let mut storage_users = vec![];
+
+        // This is kind of inefficient, it should be possible to follow offers to child once a
+        // subtree that has access to the storage is found, rather than checking every single
+        // instance's storage uses as done here.
+        while let Some(component) = components_to_visit.pop() {
+            let component_state = component.lock_resolved_state().await.unwrap();
+            let storage_uses =
+                component_state.decl().uses.iter().filter_map(|use_decl| match use_decl {
+                    UseDecl::Storage(use_storage) => Some(use_storage),
+                    _ => None,
+                });
+            for use_storage in storage_uses {
+                match ::routing::route_storage_and_backing_directory(
+                    use_storage.clone(),
+                    &component,
+                )
+                .await
+                {
+                    Ok((storage_source_info, relative_moniker, _, _))
+                        if storage_source_info == storage_capability_source_info =>
+                    {
+                        storage_users.push(relative_moniker);
+                        break;
+                    }
+                    _ => (),
+                }
+            }
+            for component in component_state.all_children().values() {
+                components_to_visit.push(component.clone())
+            }
+        }
+
+        const MAX_MONIKERS_RETURNED: usize = 10;
+        let mut iterator_stream = iterator.into_stream()?;
+        // TODO(fxbug.dev/77077): This currently returns monikers with instance ids, even though
+        // the ListStorageUsers method takes monikers without instance id as arguments. This is done
+        // as the Open and Delete methods take monikers with instance id. Once these are updated,
+        // ListStorageUsers should also return monikers without instance id.
+        let mut storage_users = storage_users.into_iter().map(|moniker| format!("{}", moniker));
+        while let Some(request) = iterator_stream.try_next().await? {
+            let fsys::StorageIteratorRequest::Next { responder } = request;
+            let monikers: Vec<_> = storage_users.by_ref().take(MAX_MONIKERS_RETURNED).collect();
+            let mut str_monikers = monikers.iter().map(String::as_str);
+            responder.send(&mut str_monikers)?;
         }
         Ok(())
     }
