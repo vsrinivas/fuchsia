@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 
 #include <ddk/metadata/buttons.h>
+#include <hid/acer12.h>
 #include <hid/ambient-light.h>
 #include <hid/boot.h>
 #include <hid/buttons.h>
@@ -908,6 +909,91 @@ TEST_F(HidDevTest, InspectDeviceTypes) {
   ASSERT_NOT_NULL(device_types);
 
   EXPECT_STR_EQ(device_types->value().c_str(), "touch,mouse");
+}
+
+TEST_F(HidDevTest, GetInputReport) {
+  const uint8_t* sensor_desc_ptr;
+  size_t sensor_desc_size = get_ambient_light_report_desc(&sensor_desc_ptr);
+  std::vector<uint8_t> sensor_desc_vector(sensor_desc_ptr, sensor_desc_ptr + sensor_desc_size);
+  fake_hid_.SetReportDesc(sensor_desc_vector);
+
+  device_->Bind();
+
+  auto sync_client = GetSyncClient();
+
+  ambient_light_input_rpt_t report_data = {};
+  const int kIlluminanceTestVal = 10;
+  const int kRedTestVal = 101;
+  const int kBlueTestVal = 5;
+  const int kGreenTestVal = 3;
+  report_data.rpt_id = AMBIENT_LIGHT_RPT_ID_INPUT;
+  report_data.illuminance = kIlluminanceTestVal;
+  report_data.red = kRedTestVal;
+  report_data.blue = kBlueTestVal;
+  report_data.green = kGreenTestVal;
+
+  std::vector<uint8_t> report_vector(
+      reinterpret_cast<uint8_t*>(&report_data),
+      reinterpret_cast<uint8_t*>(&report_data) + sizeof(report_data));
+
+  fake_hid_.HidDeviceSetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT,
+                               report_vector.data(), report_vector.size());
+
+  {
+    const auto report_result =
+        sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kSensor);
+    ASSERT_TRUE(report_result.ok());
+
+    ASSERT_TRUE(report_result->result.is_response());
+    const auto& report = report_result->result.response().report;
+
+    ASSERT_TRUE(report.has_sensor());
+    const fuchsia_input_report::wire::SensorInputReport& sensor_report = report.sensor();
+    EXPECT_TRUE(sensor_report.has_values());
+    EXPECT_EQ(4, sensor_report.values().count());
+
+    EXPECT_EQ(kIlluminanceTestVal, sensor_report.values()[0]);
+    EXPECT_EQ(kRedTestVal, sensor_report.values()[1]);
+    EXPECT_EQ(kBlueTestVal, sensor_report.values()[2]);
+    EXPECT_EQ(kGreenTestVal, sensor_report.values()[3]);
+  }
+
+  {
+    // Requesting a different device type should fail.
+    const auto result = sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
+    ASSERT_TRUE(result.ok());
+    EXPECT_TRUE(result->result.is_err());
+  }
+}
+
+TEST_F(HidDevTest, GetInputReportMultipleDevices) {
+  size_t touch_desc_size;
+  const uint8_t* touch_desc_ptr = get_acer12_touch_report_desc(&touch_desc_size);
+  std::vector<uint8_t> touch_desc_vector(touch_desc_ptr, touch_desc_ptr + touch_desc_size);
+  fake_hid_.SetReportDesc(touch_desc_vector);
+
+  device_->Bind();
+
+  auto sync_client = GetSyncClient();
+
+  acer12_stylus_t report_data = {};
+  report_data.rpt_id = ACER12_RPT_ID_STYLUS;
+  report_data.status = 0;
+  report_data.x = 1;
+  report_data.y = 2;
+  report_data.pressure = 3;
+
+  std::vector<uint8_t> report_vector(
+      reinterpret_cast<uint8_t*>(&report_data),
+      reinterpret_cast<uint8_t*>(&report_data) + sizeof(report_data));
+
+  fake_hid_.HidDeviceSetReport(HID_REPORT_TYPE_INPUT, ACER12_RPT_ID_STYLUS, report_vector.data(),
+                               report_vector.size());
+
+  // There are two devices with this type (finger and stylus), so this should fail.
+  const auto result = sync_client.GetInputReport(fuchsia_input_report::wire::DeviceType::kTouch);
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result->result.is_err());
 }
 
 }  // namespace hid_input_report_dev

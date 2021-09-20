@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 
 #include <list>
@@ -63,9 +64,7 @@ class InputReport : public DeviceType,
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void GetInputReport(GetInputReportRequestView request,
-                      GetInputReportCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
+                      GetInputReportCompleter::Sync& completer) override;
 
   // Function for testing that blocks until a new reader is connected.
   zx_status_t WaitForNextReader(zx::duration timeout);
@@ -79,6 +78,9 @@ class InputReport : public DeviceType,
   static constexpr zx::duration kLatencyFloor = zx::msec(5);
   static constexpr zx::duration kLatencyInitialStep = kLatencyFloor;
   static constexpr uint64_t kLatencyStepMultiplier = 3;
+
+  static zx::status<hid_input_report::DeviceType> InputReportDeviceTypeToHid(
+      fuchsia_input_report::wire::DeviceType type);
 
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);
 

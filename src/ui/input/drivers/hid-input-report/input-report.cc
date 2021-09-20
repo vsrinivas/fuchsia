@@ -8,6 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
@@ -28,6 +29,24 @@
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {
+
+zx::status<hid_input_report::DeviceType> InputReport::InputReportDeviceTypeToHid(
+    const fuchsia_input_report::wire::DeviceType type) {
+  switch (type) {
+    case fuchsia_input_report::wire::DeviceType::kMouse:
+      return zx::ok(hid_input_report::DeviceType::kMouse);
+    case fuchsia_input_report::wire::DeviceType::kSensor:
+      return zx::ok(hid_input_report::DeviceType::kSensor);
+    case fuchsia_input_report::wire::DeviceType::kTouch:
+      return zx::ok(hid_input_report::DeviceType::kTouch);
+    case fuchsia_input_report::wire::DeviceType::kKeyboard:
+      return zx::ok(hid_input_report::DeviceType::kKeyboard);
+    case fuchsia_input_report::wire::DeviceType::kConsumerControl:
+      return zx::ok(hid_input_report::DeviceType::kConsumerControl);
+    default:
+      return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+}
 
 void InputReport::DdkUnbind(ddk::UnbindTxn txn) {
   hiddev_.UnregisterListener();
@@ -196,6 +215,55 @@ void InputReport::SendOutputReport(SendOutputReportRequestView request,
     return;
   }
   completer.ReplySuccess();
+}
+
+void InputReport::GetInputReport(GetInputReportRequestView request,
+                                 GetInputReportCompleter::Sync& completer) {
+  const auto device_type = InputReportDeviceTypeToHid(request->device_type);
+  if (device_type.is_error()) {
+    completer.ReplyError(device_type.error_value());
+    return;
+  }
+
+  fidl::Arena allocator;
+  fuchsia_input_report::wire::InputReport report(allocator);
+
+  for (auto& device : devices_) {
+    if (device->GetDeviceType() != device_type.value()) {
+      continue;
+    }
+    if (report.has_event_time()) {
+      // GetInputReport is not supported with multiple devices of the same type, as there is no
+      // way to distinguish between them.
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+      return;
+    }
+
+    std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
+    size_t report_size = 0;
+    zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+                                           report_data.data(), report_data.size(), &report_size);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+
+    if (device->ParseInputReport(report_data.data(), report_size, allocator, report) !=
+        hid_input_report::ParseResult::kOk) {
+      zxlogf(ERROR, "GetInputReport: Device failed to parse report correctly");
+      completer.ReplyError(ZX_ERR_INTERNAL);
+      return;
+    }
+
+    report.set_event_time(allocator, zx_clock_get_monotonic());
+    report.set_trace_id(allocator, TRACE_NONCE());
+  }
+
+  if (report.has_event_time()) {
+    completer.ReplySuccess(report);
+  } else {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 }
 
 zx_status_t InputReport::Bind() {
