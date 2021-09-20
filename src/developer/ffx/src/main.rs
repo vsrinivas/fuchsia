@@ -16,14 +16,16 @@ use {
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
-        TargetControlMarker, TargetControlProxy, TargetHandleMarker, VersionInfo,
+        TargetControlMarker, TargetControlProxy, TargetHandleMarker, TargetHandleProxy,
+        VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
-    fuchsia_async::TimeoutExt,
+    fuchsia_async::{futures::select, TimeoutExt},
     futures::FutureExt,
     ring::digest::{Context as ShaContext, Digest, SHA256},
     std::default::Default,
     std::fs::File,
+    std::future::Future,
     std::io::{BufReader, Read},
     std::path::PathBuf,
     std::time::{Duration, Instant},
@@ -46,47 +48,53 @@ impl Default for Injection {
     }
 }
 
+fn open_target_with_fut<'a>(
+    target: Option<String>,
+    is_default_target: bool,
+    daemon_proxy: DaemonProxy,
+) -> Result<(TargetHandleProxy, impl Future<Output = Result<()>> + 'a)> {
+    let (tc_proxy, tc_server_end) = create_proxy::<TargetCollectionMarker>()?;
+    let (target_proxy, target_server_end) = create_proxy::<TargetHandleMarker>()?;
+    let t_clone = target.clone();
+    let target_collection_fut = async move {
+        daemon_proxy
+            .connect_to_service(TargetCollectionMarker::NAME, tc_server_end.into_channel())
+            .await?
+            .map_err(|err| FfxError::DaemonError { err, target: t_clone, is_default_target })?;
+        Result::<()>::Ok(())
+    };
+    let t_clone = target.clone();
+    let target_handle_fut = async move {
+        tc_proxy
+            .open_target(t_clone.as_ref().map(|s| s.as_str()), target_server_end)
+            .await?
+            .map_err(|err| FfxError::OpenTargetError { err, target, is_default_target })?;
+        Result::<()>::Ok(())
+    };
+    let fut = async move {
+        let ((), ()) = fuchsia_async::futures::try_join!(target_collection_fut, target_handle_fut)?;
+        Ok(())
+    };
+    Ok((target_proxy, fut))
+}
+
 impl Injection {
     async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
         let app: Ffx = argh::from_env();
         let daemon_proxy = self.daemon_factory().await?;
-        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-        let (tc_proxy, tc_server) = create_proxy::<TargetCollectionMarker>()?;
-        let (target_proxy, target_server) = create_proxy::<TargetHandleMarker>()?;
         let target = app.target().await?;
         let proxy_timeout = proxy_timeout().await?;
-
-        let mut connect_to_service_fut = daemon_proxy
-            .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
-            .fuse();
-        let mut open_target_fut =
-            tc_proxy.open_target(target.as_ref().map(|s| s.as_str()), target_server).fuse();
-        // The timeout must be boxed because the future it returns uses GenFuture,
-        // which returns a Future that doesn't implement Unpin, which is
-        // necessary to get `select!` to work. The alternative to boxing is to
-        // wrap the loop in the timeout.
+        let is_default_target = app.target.is_none();
+        let (target_proxy, target_proxy_fut) =
+            open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
+        let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         let mut open_remote_control_fut =
             timeout(proxy_timeout, target_proxy.open_remote_control(remote_server_end))
-                .boxed()
+                .boxed_local()
                 .fuse();
         loop {
-            fuchsia_async::futures::select! {
-                res = connect_to_service_fut => {
-                    res?.map_err(|err| FfxError::DaemonError {
-                        err,
-                        target: target.clone(),
-                        is_default_target: app.target.is_none(),
-                    })?;
-                }
-                res = open_target_fut => {
-                    res?.map_err(|err| FfxError::OpenTargetError {
-                        err,
-                        target: target.clone(),
-                        is_default_target: app.target.is_none(),
-                    })?;
-                }
-                // Last result is the one with the timeout attached, and the
-                // only one where we care about completing the round trip.
+            select! {
                 res = open_remote_control_fut => {
                     res.map_err(|_| FfxError::DaemonError {
                         err: DaemonError::Timeout,
@@ -95,6 +103,7 @@ impl Injection {
                     })??;
                     break;
                 }
+                res = target_proxy_fut => res?
             }
         }
         Ok(remote_proxy)
@@ -111,24 +120,32 @@ impl Injector for Injection {
 
     async fn fastboot_factory(&self) -> Result<FastbootProxy> {
         let daemon_proxy = self.daemon_factory().await?;
-        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
-
-        let result = daemon_proxy
-            .get_fastboot(target.as_ref().map(|s| s.as_str()), fastboot_server_end)
-            .on_timeout(proxy_timeout().await?, || Ok(Err(DaemonError::Timeout)))
-            .await?;
-
-        result
-            .map_err(|err| match err {
-                DaemonError::TargetNotFound => {
-                    FfxError::FastbootError { target, is_default_target: app.target.is_none() }
+        let proxy_timeout = proxy_timeout().await?;
+        let is_default_target = app.target.is_none();
+        let (target_proxy, target_proxy_fut) =
+            open_target_with_fut(target.clone(), is_default_target, daemon_proxy.clone())?;
+        let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
+        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
+        let mut fastboot_proxy_fut =
+            timeout(proxy_timeout, target_proxy.open_fastboot(fastboot_server_end))
+                .boxed_local()
+                .fuse();
+        loop {
+            select! {
+                r = fastboot_proxy_fut => {
+                    r.map_err(|_| FfxError::DaemonError {
+                        err: DaemonError::Timeout,
+                        target: target.clone(),
+                        is_default_target: app.target.is_none(),
+                    })??;
+                    break;
                 }
-                _ => FfxError::DaemonError { err, target, is_default_target: app.target.is_none() },
-            })
-            .map(|_| fastboot_proxy)
-            .context("fastboot_factory")
+                r = target_proxy_fut => r?
+            }
+        }
+        Ok(fastboot_proxy)
     }
 
     async fn target_factory(&self) -> Result<TargetControlProxy> {

@@ -92,6 +92,7 @@ protocol Daemon {
     /// control instance for the target iff there is only one target in the
     /// cache, else will return an error. If there are no targets in the cache,
     /// will wait until the client chooses to time out.
+    @deprecated("Use target_collection_service -> open_target -> open_fastboot instead")
     GetFastboot(resource struct {
         target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
         fastboot server_end:Fastboot;
