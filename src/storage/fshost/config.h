@@ -21,38 +21,31 @@ struct Config {
  public:
   using Options = std::map<std::string, std::string, std::less<>>;
 
-  static constexpr char kBlobfs[] = "blobfs";      // Enables blobfs partition.
-  static constexpr char kBootpart[] = "bootpart";  // Enables bootpart partitions.
-  static constexpr char kDefault[] = "default";    // Expands to default options.
-  static constexpr char kDurable[] = "durable";    // Enables durable partition.
-  static constexpr char kFactory[] = "factory";    // Enables factory partition.
-  static constexpr char kFvm[] = "fvm";            // Enables a single FVM device.
-  static constexpr char kGpt[] = "gpt";            // Enables a single GPT device.
-  static constexpr char kGptAll[] = "gpt-all";     // Enables all GPT devices.
-  static constexpr char kMbr[] = "mbr";            // Enables MBR devices.
-  static constexpr char kMinfs[] = "minfs";        // Enables minfs partition.
-  static constexpr char kBlobfsMaxBytes[] =
-      "blobfs-max-bytes";  // Maximum number of bytes a blobfs partition can grow to.
-  static constexpr char kMinfsMaxBytes[] =
-      "minfs-max-bytes";  // Maximum number of bytes non-ramdisk minfs partition can grow to.
-  static constexpr char kNetboot[] =
-      "netboot";  // Disables everything except fvm, gpt and bootpart.
-  static constexpr char kNoZxcrypt[] = "no-zxcrypt";  // Disables zxcrypt for minfs partitions.
-  static constexpr char kFvmRamdisk[] =
-      "fvm-ramdisk";  // FVM is in a ram-disk, thus minfs doesn't require zxcrypt.
-  static constexpr char kAttachZxcryptToNonRamdisk[] =
-      "zxcrypt-non-ramdisk";  // Attach and unseal zxcrypt to minfs partitions not in a ram-disk
-  // (but don't mount).
-  static constexpr char kFormatMinfsOnCorruption[] =
-      "format-minfs-on-corruption";  // Formats minfs if it is found to be corrupted.
-  static constexpr char kCheckFilesystems[] =
-      "check-filesystems";  // Checks filesystems before mounting (if supported).
-  static constexpr char kWaitForData[] = "wait-for-data";  // Wait for data before launching pkgfs.
-  static constexpr char kUseSyslog[] = "use-syslog";       // Use syslog rather than debug-log.
-  static constexpr char kUseDefaultLoader[] =
-      "use-default-loader";  // Use the default loader rather than a custom one.
-  static constexpr char kSandboxDecompression[] =
-      "sandbox-decompression";  // Perform decompression in a sandboxed component.
+  // String constants for the keys in the config file. See the definitions in the .cc file for
+  // documentation.
+  static const char kApplyLimitsToRamdisk[];
+  static const char kAttachZxcryptToNonRamdisk[];
+  static const char kBlobfs[];
+  static const char kBlobfsMaxBytes[];
+  static const char kBootpart[];
+  static const char kCheckFilesystems[];
+  static const char kDefault[];
+  static const char kDurable[];
+  static const char kFactory[];
+  static const char kFormatMinfsOnCorruption[];
+  static const char kFvm[];
+  static const char kFvmRamdisk[];
+  static const char kGpt[];
+  static const char kGptAll[];
+  static const char kMbr[];
+  static const char kMinfs[];
+  static const char kMinfsMaxBytes[];
+  static const char kNetboot[];
+  static const char kNoZxcrypt[];
+  static const char kSandboxDecompression[];
+  static const char kUseDefaultLoader[];
+  static const char kUseSyslog[];
+  static const char kWaitForData[];
 
   // Reads options from the stream which consist of one option per line. "default" means include the
   // default options, and lines with a leading '-' negate the option.

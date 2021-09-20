@@ -323,6 +323,8 @@ test("fshost_integration_test") {
     "block-device-test.cc",
     "block-watcher-test.cc",
     "filesystem-mounter-test.cc",
+    "fshost_integration_test.cc",
+    "fshost_integration_test.h",
     "mock-block-device.h",
     "recovery-test.cc",
   ]
@@ -330,6 +332,7 @@ test("fshost_integration_test") {
     ":block-watcher",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.sys2",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
@@ -398,6 +401,10 @@ group("bootfs") {
 # Generates an fshost config file that will appear in config/fshost. If no configuration file is
 # present (i.e. there's no dependency on a target below), a default config is used (see
 # block-device-manager.cc).
+#
+# Some of the configuration settings are build args, and some are parameters passed in to the
+# template by the invoker. A few allow overriding by the invoker but fall back to the global build
+# arg.
 template("fshost_config") {
   generated_resource(target_name) {
     contents = [ "default" ]
@@ -419,9 +426,14 @@ template("fshost_config") {
     if (blobfs_maximum_runtime_bytes != "") {
       contents += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
     }
-    if (minfs_maximum_runtime_bytes != "") {
+
+    if (defined(invoker.minfs_maximum_runtime_bytes)) {
+      # This can be overridden by the invoker but defaults to the file one if undefined.
+      contents += [ "minfs-max-bytes=${invoker.minfs_maximum_runtime_bytes}" ]
+    } else if (minfs_maximum_runtime_bytes != "") {
       contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
     }
+
     if (!format_minfs_on_corruption) {
       contents += [ "-format-minfs-on-corruption" ]
     }
@@ -435,6 +447,12 @@ template("fshost_config") {
         invoker.sandbox_decompression) {
       contents += [ "sandbox-decompression" ]
     }
+
+    if (defined(invoker.apply_limits_to_ramdisk) &&
+        invoker.apply_limits_to_ramdisk) {
+      contents += [ "apply-limits-to-ramdisk" ]
+    }
+
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -473,4 +491,14 @@ fshost_config("integration_test_config") {
 
   use_syslog = true
   use_default_loader = true
+
+  # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes"
+  # gets applied correctly. It checks that the max size in FVM is set to this value. The
+  # "apply_limits_to_ramdisk" flag is required to apply the minfs limit even to a ramdisk which is
+  # used in tests (normally the limits apply only to physical devices).
+  #
+  # This number is chosen to be large because it will apply to all tests in the fshost integration
+  # test. So all minfs partitions created in that test must be smaller than this value.
+  minfs_maximum_runtime_bytes = 1073741824
+  apply_limits_to_ramdisk = true
 }

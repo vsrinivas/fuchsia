@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <inttypes.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -24,6 +25,7 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <sstream>
 #include <utility>
 
 #include <ddk/debug.h>
@@ -360,6 +362,8 @@ zx_status_t VPartitionManager::Load() {
     pslice_allocated_count_++;
   }
 
+  LogPartitionsLocked();
+
   lock.release();
 
   // Iterate through 'valid' VPartitions, and create their devices.
@@ -656,6 +660,8 @@ zx_status_t VPartitionManager::GetPartitionLimit(const uint8_t* guid, uint64_t* 
     return ZX_OK;
   }
 
+  // The bad GUID will already have been logged by GetPartitionNumberLocked().
+  zxlogf(ERROR, "Unable to get partition limit, partition not found.");
   *byte_count = 0;
   return ZX_ERR_NOT_FOUND;
 }
@@ -664,9 +670,19 @@ zx_status_t VPartitionManager::SetPartitionLimit(const uint8_t* guid, uint64_t b
   fbl::AutoLock lock(&lock_);
 
   if (size_t partition = GetPartitionNumberLocked(guid)) {
+    zxlogf(INFO, "Setting partition limit to %" PRIx64 " for partition #%zu", byte_count,
+           partition);
     max_partition_sizes_[partition] = byte_count;
     return ZX_OK;
   }
+
+  // The partition GUID will already have been logged by GetPartitionNumberLocked().
+  zxlogf(ERROR, "Unable set partition limit to %" PRIu64 ", partition not found.", byte_count);
+  // This additional logging by LogPartitionsLocked() about each partition was added due to reports
+  // of failures of this function. In the future it can be removed if we find this function fails in
+  // expected cases and the logging is excessive.
+  LogPartitionsLocked();
+
   return ZX_ERR_NOT_FOUND;
 }
 
@@ -711,7 +727,19 @@ size_t VPartitionManager::GetPartitionNumberLocked(const uint8_t* guid) const {
     if (entry->IsAllocated() && GuidsEqual(entry->guid, guid))
       return i;
   }
+
+  zxlogf(ERROR, "Partition not found for GUID %s", uuid::Uuid(guid).ToString().c_str());
   return 0;
+}
+
+void VPartitionManager::LogPartitionsLocked() const {
+  for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
+    if (auto* entry = GetVPartEntryLocked(i); entry->IsAllocated()) {
+      std::stringstream out;
+      out << "Partition " << i << ":" << entry << "limit:" << max_partition_sizes_[i];
+      zxlogf(INFO, "%s", out.str().c_str());
+    }
+  }
 }
 
 // Device protocol (FVM)

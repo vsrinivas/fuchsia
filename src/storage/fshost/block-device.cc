@@ -352,7 +352,9 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
           caller.channel()->get(), &instance_guid, max_size, &set_status);
       fidl_status != ZX_OK || set_status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
-                   << max_size << " bytes";
+                   << max_size << " bytes.";
+    FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(fidl_status)
+                   << " FVM error: " << zx_status_get_string(set_status);
     return fidl_status != ZX_OK ? fidl_status : set_status;
   }
 
