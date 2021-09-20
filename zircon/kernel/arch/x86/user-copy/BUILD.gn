@@ -7,6 +7,7 @@
 import("//build/components.gni")
 import("//build/cpp/library_headers.gni")
 import("//build/test.gni")
+import("//build/toolchain/toolchain_environment.gni")
 import("//zircon/kernel/lib/code-patching/code-patching.gni")
 
 library_headers("headers") {
@@ -70,7 +71,10 @@ user_copy_alternative("_x86_copy_to_or_from_user_movsb_smap") {
 
 if (is_kernel) {
   source_set("user-copy") {
-    sources = [ "user-copy.cc" ]
+    sources = []
+    if (toolchain_environment == "kernel") {
+      sources += [ "user-copy.cc" ]
+    }
     public_deps = [ ":headers" ]
     deps = [ ":_x86_copy_to_or_from_user" ]
   }

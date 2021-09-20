@@ -244,14 +244,6 @@ template("code_patching_hermetic_alternative") {
 #       function.
 #     - Type: list(string)
 #
-#   * default_alternative
-#     - Optional: the name of an alternative to default to instead of a trap
-#       fill.
-#       TODO(fxbug.dev/67615): Remove this option once code patching happens
-#       within physboot; at this point, pre-patched, trap-filled code will not
-#       be executed before it is patched.
-#     - Type: string
-#
 # Other parameters are as for source_set().
 #
 template("code_patching_hermetic_stub") {
@@ -272,7 +264,6 @@ template("code_patching_hermetic_stub") {
                              "output_name",
                              "deps",
                              "aliases",
-                             "default_alternative",
                            ])
     forward_variables_from(invoker,
                            [
@@ -311,7 +302,6 @@ template("code_patching_hermetic_stub") {
                              "output_name",
                              "case_id_header",
                              "aliases",
-                             "default_alternative",
                            ])
     if (!defined(output_name)) {
       output_name = main_target
@@ -351,107 +341,5 @@ template("code_patching_hermetic_stub") {
         ]
       }
     }
-
-    if (defined(default_alternative)) {
-      args += [
-        "--default",
-        default_alternative,
-      ]
-    }
-  }
-}
-
-# Providing a way of transporting the binary content of
-# code_patching_hermetic_alternative() targets, this template creates a
-# source_set() that defines the following function, which may be used to
-# access the instructions comprising a given alternativate:
-# ```
-# ktl::span<const ktl::byte> GetPatchAlternative(ktl::string_view name);
-# ```
-# It returns an empty span if the name is not recognized.
-#
-# TODO(68585): This means of transportation is purely a stop-gap; eventually
-# we will use a STORAGE_KERNEL ZBI item to supply code patching alternatives.
-#
-# Parameters
-#
-#   * deps
-#     - Required: The usual meaning, but with the added importance of
-#       transitively aggregating code_patching_hermetic_alternative() targets,
-#       whose metadata feeds into the generation logic.
-#     - Type: list(label)
-#
-#   * testonly, visibility
-#     - See source_set().
-#
-template("code_patching_hermetic_embedding") {
-  main_target = target_name
-  gen_target = "_code_patching_hermetic_embedding.gen.$main_target"
-  metadata_target = "_code_patching_hermetic_embedding.json.$main_target"
-  asm_gen_file = "$target_gen_dir/$main_target.S"
-  cpp_gen_file = "$target_gen_dir/$main_target.cc"
-  metadata_file = "$target_gen_dir/$main_target.json"
-
-  source_set(main_target) {
-    forward_variables_from(invoker,
-                           [
-                             "visibility",
-                             "testonly",
-                           ])
-    sources = [
-      asm_gen_file,
-      cpp_gen_file,
-    ]
-    deps = [
-      ":$gen_target",
-      "//zircon/kernel/lib/arch:headers",
-    ]
-
-    metadata = {
-      code_patching_hermetic_alternative_barrier = []
-    }
-  }
-
-  generated_file(metadata_target) {
-    visibility = [ ":$gen_target" ]
-    outputs = [ metadata_file ]
-
-    output_conversion = "json"
-    data_keys = [ "code_patching_hermetic_alternatives" ]
-    walk_keys = [ "code_patching_hermetic_alternative_barrier" ]
-
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-  }
-
-  action(gen_target) {
-    visibility = [ ":$main_target" ]
-    forward_variables_from(invoker,
-                           [
-                             "function_name",
-                             "testonly",
-                           ])
-
-    sources = [ metadata_file ]
-    outputs = [
-      asm_gen_file,
-      cpp_gen_file,
-    ]
-    deps = [ ":$metadata_target" ]
-    depfile = "$target_gen_dir/$main_target.d"
-    script = "//zircon/kernel/lib/code-patching/hermetic-embedding.py"
-    args = [
-      "--metadata-file",
-      rebase_path(sources[0], root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-      "--asm-outfile",
-      rebase_path(outputs[0], root_build_dir),
-      "--cpp-outfile",
-      rebase_path(outputs[1], root_build_dir),
-    ]
   }
 }

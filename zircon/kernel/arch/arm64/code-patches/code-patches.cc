@@ -11,31 +11,46 @@
 #include <cstdio>
 
 #include <arch/code-patches/case-id.h>
+#include <phys/symbolize.h>
 
 namespace {
 
-// TODO(68585): While .code-patches is allocated and accessed from directly
-// within the kernel, we expect its recorded addresses to be the final,
-// link-time ones.
-ktl::span<ktl::byte> GetInstructions(uint64_t range_start, size_t range_size) {
-  return {reinterpret_cast<ktl::byte*>(range_start), range_size};
+void PrintCaseInfo(const code_patching::Directive& patch, const char* fmt, ...) {
+  printf("%s: code-patching: ", Symbolize::kProgramName_);
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+  printf(": [%#lx, %#lx)\n", patch.range_start, patch.range_start + patch.range_size);
 }
 
 }  // namespace
 
 // Declared in <lib/code-patching/code-patches.h>.
-void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
-  for (const code_patching::Directive& patch : patches) {
-    ktl::span<ktl::byte> insns = GetInstructions(patch.range_start, patch.range_size);
-    if (insns.empty()) {
-      ZX_PANIC("code-patching: unrecognized address range for patch case ID %u: [%#lx, %#lx)",
-               patch.id, patch.range_start, patch.range_start + patch.range_size);
-    }
+void ArchPatchCode(code_patching::Patcher patcher, ktl::span<ktl::byte> patchee,
+                   uint64_t patchee_load_bias) {
+  bool performed = false;
+  for (const code_patching::Directive& patch : patcher.patches()) {
+    ZX_ASSERT(patch.range_start >= patchee_load_bias);
+    ZX_ASSERT(patch.range_size <= patchee.size());
+    ZX_ASSERT(patchee.size() - patch.range_size >= patch.range_start - patchee_load_bias);
+
+    ktl::span<ktl::byte> insns =
+        patchee.subspan(patch.range_start - patchee_load_bias, patch.range_size);
 
     switch (patch.id) {
+      case CASE_ID_SELF_TEST:
+        patcher.NopFill(insns);
+        PrintCaseInfo(patch, "'smoke test' trap patched");
+        performed = true;
+        break;
       default:
-        ZX_PANIC("code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n", patch.id,
-                 patch.range_start, patch.range_start + patch.range_size);
+        ZX_PANIC("%s: code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n",
+                 Symbolize::kProgramName_, patch.id, patch.range_start,
+                 patch.range_start + patch.range_size);
     }
+  }
+  if (!performed) {
+    ZX_PANIC("%s: code-patching: failed to patch the kernel\n", Symbolize::kProgramName_);
   }
 }

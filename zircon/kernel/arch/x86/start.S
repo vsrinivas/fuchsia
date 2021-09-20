@@ -8,11 +8,13 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/code-patches/case-id.h>
 #include <arch/defines.h>
 #include <arch/x86/asm.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
+#include <lib/code-patching/asm.h>
 #include <lib/instrumentation/asan.h>
 #include <zircon/tls.h>
 
@@ -53,6 +55,12 @@
 FUNCTION_LABEL(_start)
     // As early as possible collect the time stamp.
     sample_ticks %r15
+
+    // This serves as a verification that code-patching was performed before
+    // the kernel was booted; if unpatched, we would trap here and halt.
+    .code_patching.start CASE_ID_SELF_TEST
+    ud2  // Same as __builtin_trap()
+    .code_patching.end
 
     /* set up a temporary stack pointer */
     mov $PHYS(_kstack_end), %rsp

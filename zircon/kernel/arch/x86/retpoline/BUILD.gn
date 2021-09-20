@@ -28,7 +28,6 @@ code_patching_hermetic_alternative("__x86_indirect_thunk_amd_r11") {
 }
 
 code_patching_hermetic_stub("__x86_indirect_thunk_r11") {
-  default_alternative = "__x86_indirect_thunk_basic_r11"
   deps = [
     ":__x86_indirect_thunk_amd_r11",
     ":__x86_indirect_thunk_basic_r11",

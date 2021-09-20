@@ -8,8 +8,10 @@
 #include <arch/arm64/mmu.h>
 #include <arch/arm64.h>
 #include <arch/asm_macros.h>
+#include <arch/code-patches/case-id.h>
 #include <arch/defines.h>
 #include <arch/kernel_aspace.h>
+#include <lib/code-patching/asm.h>
 #include <zircon/tls.h>
 
 #ifndef __has_feature
@@ -68,6 +70,12 @@ handoff_paddr           .req x25
 FUNCTION(_start)
     // As early as possible collect the time stamp.
     sample_ticks
+
+    // This serves as a verification that code-patching was performed before
+    // the kernel was booted; if unpatched, we would trap here and halt.
+    .code_patching.start CASE_ID_SELF_TEST
+    brk #0  // Same as __builtin_trap()
+    .code_patching.end
 
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1

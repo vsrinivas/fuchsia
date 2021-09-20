@@ -118,7 +118,7 @@ $1 == "Relocation" && $2 == "section" {
 NF == 0 || $1 == "Offset" { next }
 !secname { exit(1); }
 # Ignore standard non-allocated sections.
-secname ~ /^\.debug/ || secname == ".comment" { next }
+secname ~ /^\.debug/ || secname == ".comment" || secname == ".code-patches" { next }
 # .text.boot contains code that runs before fixups.
 secname == ".text.boot" { next }
 $3 == "R_X86_64_PC32" || $3 == "R_X86_64_PLT32" || \
@@ -160,7 +160,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         bad = "";
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
-    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|\.code-patches|code_patch_table|__llvm_prf_data|asan_globals/) {
+    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|__llvm_prf_data|asan_globals/) {
         bad = "fixup in unexpected section"
     } else {
         bad = "";

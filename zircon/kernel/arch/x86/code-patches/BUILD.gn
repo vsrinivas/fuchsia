@@ -5,8 +5,9 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/cpp/library_headers.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
-if (is_kernel) {
+if (toolchain_environment == "kernel.phys") {
   source_set("code-patches") {
     sources = [ "code-patches.cc" ]
     public_deps = [ ":headers" ]
@@ -18,6 +19,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/code-patching",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc/string/arch/x86:headers",
+      "//zircon/kernel/phys:symbolize",
       "//zircon/system/ulib/hwreg",
     ]
   }

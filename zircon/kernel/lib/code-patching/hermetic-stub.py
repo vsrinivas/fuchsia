@@ -29,7 +29,7 @@ STUB_CONTENTS = string.Template(
 .text
 
 .function $function_name, global
-  .code_patching.blob $size, $case_id, "$default"
+  .code_patching.blob $size, $case_id
 .end_function
 """)
 
@@ -59,14 +59,6 @@ def main():
         action="append",
         help="Symbol names to alias to the function as",
         default=[])
-    # TODO(fxbug.dev/67615): Remove this option once code patching happens
-    # within physboot; at this point, pre-patched, trap-filled code will not be
-    # executed before it is patched.
-    parser.add_argument(
-        "--default",
-        help=
-        "The name of a hermetic patch alternative to default to instead of trap fill",
-    )
     parser.add_argument(
         "--depfile", metavar="FILE", help="A dependencies file to write to")
     parser.add_argument(
@@ -76,17 +68,12 @@ def main():
     with open(args.metadata_file, "r") as metadata_file:
         metadata = json.load(metadata_file)
 
-    default_alternative = None
     max_size = 0
     alternatives = []
     for entry in metadata:
         alternative = entry["path"]
         alternatives.append(alternative)
         max_size = max(max_size, os.path.getsize(alternative))
-        if entry["name"] == args.default:
-            default_alternative = alternative
-    assert args.default is None or default_alternative is not None, \
-        "alternative %s not found among those in %s" % (args.default, args.metadata_file)
 
     with open(args.depfile, "w") as depfile:
         depfile.write(
@@ -101,7 +88,6 @@ def main():
                 # Per the expectations of code_patching_hermetic_stub()'s
                 # `case_id_header` parameter.
                 case_id="CASE_ID_%s" % args.name.upper(),
-                default=default_alternative or "",
                 size=max_size,
             ))
         for alias in args.aliases:

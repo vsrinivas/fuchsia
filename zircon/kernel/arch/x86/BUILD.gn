@@ -155,7 +155,7 @@ zx_library("x86") {
   deps = [
     ":syscall",
     ":tests",
-    "code-patches",
+    "code-patches:headers",
     "cpuid",
     "retpoline",
     "user-copy",

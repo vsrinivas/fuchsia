@@ -41,7 +41,6 @@ if (toolchain_environment == "kernel") {
 
   code_patching_hermetic_stub("__unsanitized_memcpy") {
     aliases = [ "memcpy" ]
-    default_alternative = "memcpy_movsq"
     deps = [
       ":memcpy_movsb",
       ":memcpy_movsq",
@@ -60,7 +59,6 @@ if (toolchain_environment == "kernel") {
 
   code_patching_hermetic_stub("__unsanitized_memset") {
     aliases = [ "memset" ]
-    default_alternative = "memset_stosq"
     deps = [
       ":memset_stosb",
       ":memset_stosq",

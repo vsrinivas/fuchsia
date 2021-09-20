@@ -7,7 +7,10 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_X86_INCLUDE_LIB_ARCH_CACHE_H_
 #define ZIRCON_KERNEL_LIB_ARCH_X86_INCLUDE_LIB_ARCH_CACHE_H_
 
+// TODO(fxbug.dev/64109): <cpuid.h> lacks a proper multiple inclusion guard!
+#ifndef __cpuid
 #include <cpuid.h>
+#endif
 
 #include <cstddef>
 #include <cstdint>

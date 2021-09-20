@@ -13,12 +13,8 @@ source_set("platform") {
     "hw_reboot_reason.cc",
     "power.cc",
     "ram_mappable_crashlog.cc",
-
-    # TODO(fxbug.dev/67615): delete once code-patching is migrated to physboot.
-    "code-patches.cc",
   ]
   deps = [
-    "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",

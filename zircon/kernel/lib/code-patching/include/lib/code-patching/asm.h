@@ -33,15 +33,7 @@
   // to use the current section's section group (if any). Inside `.function`,
   // that ensures that the .code-patches data is attached to the function and
   // gets GC'd if and only if the function itself gets GC'd.
-  //
-  // TODO(67615): While code-patching remains in the kernel, it is most
-  // straightforward to make .code-patches as an allocated section and access
-  // its contents directly in memory.
-#ifdef _KERNEL
-  .pushsection .code-patches, "aM?", %progbits, 16
-#else
   .pushsection .code-patches, "M?", %progbits, 16
-#endif
   .quad \begin
   .int \end - \begin
   .int \ident
@@ -117,28 +109,14 @@ _.code_patching.end.reset
 ///       uint32_t), which corresponds to hard-coded details on how and when to
 ///       patch.
 ///
-///   * default
-///     - Optional: A binary with which to fill the blob instead of a pure trap
-///       fill. The remainder of the blob will still be filled with traps.
-///       TODO(fxbug.dev/67615): Remove this option once code patching happens
-///       within physboot; at this point, pre-patched, trap-filled code will not be
-///       executed before it is patched.
-///
-.macro .code_patching.blob size, ident, default=
+.macro .code_patching.blob size, ident
   // `\@` is a pseudo-variable holding the number of macros the assembler has
   // executed thus far; we leverage it to create unique(-enough) labels across
   // possibly many expansions of this macro.
   .L.code_patching.\@:
-  .ifb \default
-    .code_patching.trap_fill \size
-  .else
-     .L.code_patching.default.\@:
-     .incbin "\default"
-     .L.code_patching.default.\@.end:
-    .code_patching.trap_fill (\size - (.L.code_patching.default.\@.end - .L.code_patching.default.\@))
-  .endif
-   .L.code_patching.\@.end:
-   .code_patching.range .L.code_patching.\@, .L.code_patching.\@.end, \ident
+  .code_patching.trap_fill \size
+  .L.code_patching.\@.end:
+  .code_patching.range .L.code_patching.\@, .L.code_patching.\@.end, \ident
 .endm  // .code_patching.blob
 
 #endif  // clang-format on

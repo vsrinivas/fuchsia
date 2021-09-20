@@ -9,6 +9,7 @@ import("//build/toolchain/toolchain_environment.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//build/zircon/zircon_cpu.gni")
 import("//zircon/kernel/arch/$zircon_cpu/phys/phys.gni")
+import("//zircon/kernel/params.gni")
 import("zbi_executable.gni")
 
 if (current_toolchain == default_toolchain) {
@@ -345,8 +346,10 @@ zbi_executable("physboot") {
     ":stdio",
     ":symbolize",
     ":zbitl-allocation",
+    "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
+    "//zircon/kernel/lib/code-patching",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
     "//zircon/system/ulib/pretty",
@@ -365,6 +368,9 @@ zbi_executable("physboot") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # Used as a bias when patching kernel code.
+  defines = [ "KERNEL_LINK_ADDRESS=${kernel_base}" ]
 }
 
 source_set("handoff") {

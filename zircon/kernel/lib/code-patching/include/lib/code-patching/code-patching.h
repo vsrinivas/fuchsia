@@ -8,9 +8,9 @@
 #define ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_CODE_PATCHING_H_
 
 #include <lib/arch/cache.h>
-#include <lib/arch/nop.h>
 #include <lib/fitx/result.h>
 #include <lib/zbitl/items/bootfs.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -38,17 +38,6 @@ struct Directive {
 
 // Ensures against alignment padding.
 static_assert(std::has_unique_object_representations_v<Directive>);
-
-// Replaces a range of instuctions with the minimal number of `nop`
-// instructions.
-using arch::NopFill;
-
-// Performs a code patch, replacing a range of instructions with an opaque
-// blob.
-inline void Patch(ktl::span<ktl::byte> instructions, ktl::span<const ktl::byte> blob) {
-  ZX_ASSERT_MSG(instructions.size() >= blob.size(), "%zu >= %zu", instructions.size(), blob.size());
-  memcpy(instructions.data(), blob.data(), blob.size());
-}
 
 // Patcher helps to facilitate code patching. It is constructed from a BOOTFS
 // that expects the following entries to be present for some directory
@@ -113,6 +102,8 @@ class Patcher {
   ktl::span<const Directive> patches_;
   arch::GlobalCacheConsistencyContext sync_ctx_;
 };
+
+void PrintPatcherError(const Patcher::Error& error, FILE* f = stdout);
 
 }  // namespace code_patching
 

@@ -8,6 +8,8 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/word-view.h>
+#include <lib/code-patching/code-patches.h>
+#include <lib/code-patching/code-patching.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/items/bootfs.h>
@@ -88,8 +90,8 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
            pretty::FormattedBytes(storage_size).c_str());
   }
 
-  zbitl::BootfsView<ktl::span<ktl::byte>> storage;
-  if (auto result = zbitl::BootfsView<ktl::span<ktl::byte>>::Create(buffer.data());
+  zbitl::BootfsView<ktl::span<const ktl::byte>> storage;
+  if (auto result = zbitl::BootfsView<ktl::span<const ktl::byte>>::Create(buffer.data());
       result.is_error()) {
     zbitl::PrintBootfsError(result.error_value());
     abort();
@@ -110,9 +112,19 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
            static_cast<int>(kKernelZbiName.size()), kKernelZbiName.data());
     abort();
   }
+  ktl::span<ktl::byte> kernel_bytes = {const_cast<std::byte*>(it->data.data()), it->data.size()};
 
-  BootZbi::InputZbi kernel_zbi(it->data);
+  // Patch the kernel within the BOOTFS before try to load itself in place or
+  // copy it out.
+  code_patching::Patcher patcher;
+  if (auto result = patcher.Init(std::move(storage), kDefaultKernelPackage); result.is_error()) {
+    printf("physboot: Failed to initialize code patching: ");
+    code_patching::PrintPatcherError(result.error_value());
+    abort();
+  }
+  ArchPatchCode(std::move(patcher), kernel_bytes, KERNEL_LINK_ADDRESS);
 
+  BootZbi::InputZbi kernel_zbi(kernel_bytes);
   ChainBoot boot;
   if (auto result = boot.Init(kernel_zbi); result.is_error()) {
     printf("physboot: Cannot read STORAGE_KERNEL item ZBI: ");

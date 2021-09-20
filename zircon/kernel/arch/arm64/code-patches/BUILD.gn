@@ -5,10 +5,17 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/cpp/library_headers.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
-source_set("code-patches") {
-  sources = [ "code-patches.cc" ]
-  public_deps = [ ":headers" ]
+if (toolchain_environment == "kernel.phys") {
+  source_set("code-patches") {
+    sources = [ "code-patches.cc" ]
+    deps = [
+      "//zircon/kernel/lib/code-patching",
+      "//zircon/kernel/phys:symbolize",
+    ]
+    public_deps = [ ":headers" ]
+  }
 }
 
 library_headers("headers") {

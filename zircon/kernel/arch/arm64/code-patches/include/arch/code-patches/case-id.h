@@ -12,4 +12,9 @@
 // defined as `CASE_ID_${NAME}`, where `${NAME}` is the upper-cased version of
 // the function name.
 
+// This case serves as a verification that code-patching was performed before
+// the kernel was booted, `nop`ing out a trap among the kernel's earliest
+// instructions.
+#define CASE_ID_SELF_TEST 0
+
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_

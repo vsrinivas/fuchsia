@@ -7,6 +7,7 @@
 #include <lib/arch/nop.h>
 #include <lib/code-patching/code-patching.h>
 #include <lib/fitx/result.h>
+#include <lib/zbitl/error_stdio.h>
 
 #include <ktl/string_view.h>
 
@@ -72,6 +73,10 @@ fitx::result<Patcher::Error, Patcher::Bytes> Patcher::GetPatchAlternative(ktl::s
     return fitx::error{Error{.reason = "failed to find patch alternative"sv}};
   }
   return fitx::ok(it->data);
+}
+
+void PrintPatcherError(const Patcher::Error& error, FILE* f) {
+  return zbitl::PrintBootfsError(error, f);
 }
 
 }  // namespace code_patching

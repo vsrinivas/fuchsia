@@ -205,12 +205,6 @@ SECTIONS
                ".init_array overalignment -> maybe padding gaps");
     }
 
-    .code-patches : {
-        PROVIDE_HIDDEN(__start_code_patches = .);
-        KEEP(*(.code-patches))
-        PROVIDE_HIDDEN(__stop_code_patches = .);
-    }
-
     /*
      * Any read-only data "orphan" sections will be inserted here.
      * Ideally we'd put those into the .rodata output section, but
@@ -385,6 +379,13 @@ SECTIONS
 
      . = ALIGN(CONSTANT(MAXPAGESIZE));
     PROVIDE_HIDDEN(_end = .);
+
+    /*
+     * Non-allocated section needs to be protected from GC with BFD ld.
+     */
+    .code-patches 0 : {
+        KEEP(*(.code-patches))
+    }
 }
 
 PHDRS

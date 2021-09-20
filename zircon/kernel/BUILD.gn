@@ -401,10 +401,6 @@ if (is_kernel) {
     }
   }
 
-  code_patching_hermetic_embedding("code-patches") {
-    deps = [ "top" ]
-  }
-
   # This is the kernel proper, an ELF executable with full symbols.
   # It's the file to use with a debugger, for example.
   executable("zircon.elf") {
@@ -430,7 +426,6 @@ if (is_kernel) {
     configs += [ ":kernel_defsym" ]
 
     deps = [
-      ":code-patches",
       ":test",  # TODO: make optional, add testonly taint
       "top",
 
@@ -643,8 +638,16 @@ if (is_kernel) {
     deps = [ ":zbizircon" ]
   }
 
+  code_patches("code-patches") {
+    deps = [ ":zircon.elf" ]
+  }
+
   kernel_package("zircon") {
-    deps = [ ":zbizircon.input" ]
+    deps = [
+      ":code-patches",
+      ":zbizircon.input",
+      "top",
+    ]
   }
 
   # The final kernel ZBI combines physboot with that kernel storage payload.

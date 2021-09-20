@@ -134,6 +134,7 @@ if (toolchain_environment == "physmem" ||
     deps = [
       ":boot-mmu",
       ":tests",
+      "code-patches:headers",
       "//sdk/lib/fit",
       "//zircon/kernel/dev/coresight",
       "//zircon/kernel/dev/interrupt/arm_gic/common",
@@ -141,6 +142,7 @@ if (toolchain_environment == "physmem" ||
       "//zircon/kernel/dev/psci",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/code-patching",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/counters",
       "//zircon/kernel/lib/crashlog",
