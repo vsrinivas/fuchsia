@@ -60,8 +60,6 @@ toc:
   section:
   - title: "Timer slack"
     path: /docs/concepts/kernel/timer_slack.md
-  - title: "Time units"
-    path: /docs/concepts/kernel/time.md
   - title: "Clock transformations"
     path: /docs/concepts/kernel/clock_transformations.md
 - title: "Tracing"

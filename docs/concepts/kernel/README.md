@@ -36,7 +36,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Kernel Thread Signaling](kernel_thread_signaling.md)
 + [Fair Scheduler](fair_scheduler.md)
 + [Errors](errors.md)
-+ [Time](/docs/concepts/kernel/time.md)
++ [Time units](/docs/development/kernel/time.md)
 
 + [Process Objects](/docs/reference/kernel_objects/process.md)
 + [Thread Objects](/docs/reference/kernel_objects/thread.md)
