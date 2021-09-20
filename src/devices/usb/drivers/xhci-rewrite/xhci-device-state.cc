@@ -65,7 +65,7 @@ zx_status_t DeviceState::InitializeEndpointContext(const UsbXhci& hci, uint8_t s
     if (((speed == USB_SPEED_LOW) || (speed == USB_SPEED_FULL)) &&
         (hub_info->hub_speed == USB_SPEED_HIGH)) {
       slot_context->set_PARENT_HUB_SLOT_ID(hci.DeviceIdToSlotId(hub_info->hub_id))
-          .set_PARENT_PORT_NUMBER(speed);
+          .set_PARENT_PORT_NUMBER(port_id);
     }
   } else {
     speed = hci.GetPortSpeed(port_id);
