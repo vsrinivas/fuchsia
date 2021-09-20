@@ -96,14 +96,6 @@ uint32_t BlocksRequiredForInode(uint64_t inode_count);
 uint32_t BlocksRequiredForBits(uint64_t bit_count);
 
 #ifndef __Fuchsia__
-// Run fsck on a sparse minfs partition
-// |start| indicates where the minfs partition starts within the file (in bytes)
-// |end| indicates the end of the minfs partition (in bytes)
-// |extent_lengths| contains the length (in bytes) of each minfs extent: currently this includes
-// the superblock, inode bitmap, block bitmap, inode table, and data blocks.
-zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
-                       const fbl::Vector<size_t>& extent_lengths);
-
 // Copies into |out_size| the number of bytes used by data in fs contained in a partition between
 // bytes |start| and |end| in fd. extent_lengths is lengths of each extent (in bytes).
 zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,

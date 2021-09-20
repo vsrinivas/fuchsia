@@ -1725,17 +1725,6 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
   return ZX_OK;
 }
 
-zx_status_t SparseFsck(fbl::unique_fd fd, off_t start, off_t end,
-                       const fbl::Vector<size_t>& extent_lengths) {
-  std::unique_ptr<minfs::Bcache> bc;
-  zx_status_t status;
-  if ((status = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths, &bc)) != ZX_OK) {
-    return status;
-  }
-
-  return Fsck(std::move(bc), FsckOptions());
-}
-
 zx_status_t SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
                                const fbl::Vector<size_t>& extent_lengths, uint64_t* out_size) {
   std::unique_ptr<minfs::Bcache> bc;

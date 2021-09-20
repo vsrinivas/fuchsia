@@ -38,8 +38,6 @@
 #include "src/storage/volume_image/utils/fd_reader.h"
 #include "src/storage/volume_image/utils/fd_writer.h"
 
-#define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
-
 enum DiskType {
   File = 0,
   Mtd = 1,
@@ -85,18 +83,15 @@ int usage(void) {
           "will have dashes replaced with underscores, and duplicate names will get an additional "
           "dash and numerical suffix.\n");
   fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
-  fprintf(stderr,
-          " --slice [bytes] - specify slice size - only valid on container creation.\n"
-          "                   (default: %zu)\n",
-          DEFAULT_SLICE_SIZE);
+  fprintf(stderr, " --slice [bytes] - specify slice size - only valid on container creation.\n");
   fprintf(stderr,
           " --max-disk-size [bytes] Used for preallocating metadata. Only valid for sparse image. "
           "(defaults to 0)\n");
   fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
   fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
   fprintf(stderr,
-          " --compress - specify that file should be compressed (sparse and android sparse image "
-          "only)\n");
+          " --compress [type] - specify that file should be compressed (sparse and android sparse "
+          "image only). Currently, the only supported type is \"lz4\".\n");
   fprintf(stderr, " --disk [bytes] - Size of target disk (valid for size command only)\n");
   fprintf(stderr, " --disk-type [%s, %s OR %s] - Type of target disk (pave only)\n",
           kDiskTypeStr[DiskType::File], kDiskTypeStr[DiskType::Mtd],
@@ -295,6 +290,7 @@ zx_status_t CopyFile(const char* dst, const char* src) {
 int main(int argc, char** argv) {
   if (argc < 3) {
     usage();
+    return EXIT_FAILURE;
   }
 
   std::vector<std::string_view> arguments;
@@ -312,7 +308,6 @@ int main(int argc, char** argv) {
 
   size_t length = 0;
   size_t offset = 0;
-  size_t slice_size = DEFAULT_SLICE_SIZE;
   size_t disk_size = 0;
 
   size_t max_disk_size = 0;
@@ -323,44 +318,36 @@ int main(int argc, char** argv) {
   storage::volume_image::RawNandOptions options;
 
   while (i < argc) {
-    if (!strcmp(argv[i], "--slice") && i + 1 < argc) {
-      if (parse_size(argv[++i], &slice_size) < 0) {
-        return -1;
-      }
-      if (!slice_size || slice_size % blobfs::kBlobfsBlockSize ||
-          slice_size % minfs::kMinfsBlockSize) {
-        fprintf(stderr, "Invalid slice size - must be a multiple of %u and %u\n",
-                blobfs::kBlobfsBlockSize, minfs::kMinfsBlockSize);
-        return -1;
-      }
-    } else if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
+    // Not all arguments are parsed here; some of them get parsed below and some are passed through
+    // to the volume image library and get parsed there (e.g. the --sparse argument).
+    if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
       if (parse_size(argv[++i], &offset) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--length") && i + 1 < argc) {
       if (parse_size(argv[++i], &length) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--compress")) {
       if (!strcmp(argv[++i], "lz4")) {
         // This flag does nothing.
       } else {
         fprintf(stderr, "Invalid compression type\n");
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--disk-type")) {
       if (ParseDiskType(argv[++i], &disk_type) != ZX_OK) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--max-bad-blocks")) {
       is_max_bad_blocks_set = true;
     } else if (!strcmp(argv[i], "--disk")) {
       if (parse_size(argv[++i], &disk_size) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--max-disk-size") && i + 1 < argc) {
       if (parse_size(argv[++i], &max_disk_size) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(argv[i], "--resize-image-file-to-fit")) {
       // This flag does nothing.
@@ -371,32 +358,32 @@ int main(int argc, char** argv) {
     } else if (!strcmp(argv[i], "--nand-page-size")) {
       size_t page_size = 0;
       if (parse_size(argv[++i], &page_size) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
       options.page_size = static_cast<uint64_t>(page_size);
     } else if (!strcmp(argv[i], "--nand-oob-size")) {
       size_t oob_bytes_size = 0;
       if (parse_size(argv[++i], &oob_bytes_size) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
       if (oob_bytes_size > std::numeric_limits<uint8_t>::max()) {
         fprintf(stderr, "OOB Byte size must lower than 256 bytes.\n");
-        return -1;
+        return EXIT_FAILURE;
       }
       options.oob_bytes_size = static_cast<uint8_t>(oob_bytes_size);
     } else if (!strcmp(argv[i], "--nand-pages-per-block")) {
       size_t pages_per_block = 0;
       if (parse_size(argv[++i], &pages_per_block) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
       if (pages_per_block > std::numeric_limits<uint32_t>::max()) {
         fprintf(stderr, "Pages Per Block must be lower than 4,294,967,296.\n");
-        return -1;
+        return EXIT_FAILURE;
       }
       options.pages_per_block = static_cast<uint32_t>(pages_per_block);
     } else if (!strcmp(argv[i], "--nand-block-count")) {
       if (parse_size(argv[++i], &block_count) < 0) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else {
       break;
@@ -406,31 +393,45 @@ int main(int argc, char** argv) {
   }
 
   if (strcmp(command, "check") == 0) {
-    char* input_type = argv[i];
-    char* input_path = argv[i + 1];
-    if (strcmp(input_type, "--sparse") != 0) {
-      usage();
-      return -1;
+    const char* input_path;
+    // For convenience, allow output path to be used as an input path.
+    if (command == path) {
+      if (argc != i + 2) {
+        usage();
+        return EXIT_FAILURE;
+      }
+      char* input_type = argv[i++];
+      if (strcmp(input_type, "--sparse") != 0) {
+        usage();
+        return EXIT_FAILURE;
+      }
+      input_path = argv[i++];
+    } else {
+      if (argc != i) {
+        usage();
+        return EXIT_FAILURE;
+      }
+      input_path = path;
     }
     // Temporary usage of internal symbols.
     auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
     if (sparse_image_reader_or.is_error()) {
       fprintf(stderr, "%s\n", sparse_image_reader_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
     auto header_or =
         storage::volume_image::fvm_sparse_internal::GetHeader(0, sparse_image_reader_or.value());
     if (header_or.is_error()) {
       fprintf(stderr, "Failed to parse sparse image header. %s\n", header_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
     auto header = header_or.take_value();
 
     if (max_disk_size != 0 && header.maximum_disk_size != max_disk_size) {
       fprintf(stderr, "Sparse image does not match max disk size. Found %lu, expected %lu.\n",
               static_cast<size_t>(header.maximum_disk_size), max_disk_size);
-      return -1;
+      return EXIT_FAILURE;
     }
 
     auto partitions_or = storage::volume_image::fvm_sparse_internal::GetPartitions(
@@ -438,7 +439,7 @@ int main(int argc, char** argv) {
     if (partitions_or.is_error()) {
       fprintf(stderr, "Failed to parse sparse image partition metadata. %s\n",
               partitions_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
     auto partitions = partitions_or.take_value();
 
@@ -461,7 +462,7 @@ int main(int argc, char** argv) {
       if (!created_file.is_valid()) {
         fprintf(stderr, "Failed to create temporary file for decompressing image. %s\n",
                 strerror(errno));
-        return -1;
+        return EXIT_FAILURE;
       }
       auto cleanup = fit::defer([&]() { unlink(tmp_path.c_str()); });
 
@@ -470,13 +471,13 @@ int main(int argc, char** argv) {
           storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(), writer);
       if (decompress_or.is_error()) {
         std::cout << decompress_or.error();
-        return -1;
+        return EXIT_FAILURE;
       }
 
       auto decompressed_reader_or = storage::volume_image::FdReader::Create(tmp_path);
       if (reader_or.is_error()) {
         fprintf(stderr, "%s\n", reader_or.error().c_str());
-        return -1;
+        return EXIT_FAILURE;
       }
       total_size = decompressed_reader_or.value().length() - header.header_length;
     }
@@ -484,52 +485,53 @@ int main(int argc, char** argv) {
     if (expected_data_length > total_size) {
       fprintf(stderr, "Extent accumulated length is %d, uncompressed data is %d\n",
               expected_data_length, total_size);
-      return -1;
+      return EXIT_FAILURE;
     }
 
-    fprintf(stderr, "--sparse input file is a valid FVM Sparse Image.\n");
-    return 0;
+    fprintf(stderr, "Sparse input file is a valid FVM Sparse Image.\n");
+    return EXIT_SUCCESS;
   }
 
   if (!strcmp(command, "ftl-raw-nand")) {
+    if (argc != i + 2) {
+      fprintf(stderr, "Invalid arguments for 'ftl-raw-nand' command.\n");
+      return EXIT_FAILURE;
+    }
+
     char* input_type = argv[i];
     char* input_path = argv[i + 1];
 
     if (strcmp(input_type, "--sparse") != 0) {
       usage();
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (options.page_size == 0) {
       fprintf(stderr, "Raw Nand device page size must be greater than zero.\n");
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (options.oob_bytes_size == 0) {
       fprintf(stderr, "Raw Nand device page oob size must be greater than zero.\n");
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (options.pages_per_block == 0) {
       fprintf(stderr, "Raw Nand device pages per block must be greater than zero.\n");
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (block_count == 0) {
       fprintf(stderr, "Raw Nand device block count must be greater than zero.\n");
-      return -1;
+      return EXIT_FAILURE;
     }
 
     options.page_count = block_count * options.pages_per_block;
-    if (i >= argc) {
-      fprintf(stderr, "Missing input path for fvm sparse image.\n");
-      return -1;
-    }
 
     auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
     if (sparse_image_reader_or.is_error()) {
       fprintf(stderr, "%s\n", sparse_image_reader_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
     // The FTL writer intentionally leaves existing content in place when
@@ -541,11 +543,11 @@ int main(int argc, char** argv) {
       fbl::unique_fd ftl_output(open(path, O_CREAT | O_RDWR, 0644));
       if (!ftl_output.is_valid()) {
         fprintf(stderr, "Failed to create output path. Error %s.\n", strerror(errno));
-        return -1;
+        return EXIT_FAILURE;
       }
       if (ftruncate(ftl_output.get(), 0) != 0) {
         fprintf(stderr, "Failed to truncate output path. Error %s.\n", strerror(errno));
-        return -1;
+        return EXIT_FAILURE;
       }
     }
 
@@ -553,7 +555,7 @@ int main(int argc, char** argv) {
     auto ftl_image_writer_or = storage::volume_image::FdWriter::Create(path);
     if (ftl_image_writer_or.is_error()) {
       fprintf(stderr, "%s\n", ftl_image_writer_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
     auto ftl_image_writer = ftl_image_writer_or.take_value();
     RawBlockImageWriter raw_writer(&ftl_image_writer);
@@ -567,7 +569,7 @@ int main(int argc, char** argv) {
         storage::volume_image::OpenSparseImage(sparse_image_reader, max_disk_size_opt);
     if (fvm_partition_or.is_error()) {
       fprintf(stderr, "%s\n", fvm_partition_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
     std::vector<storage::volume_image::RawNandImageFlag> flags = {
@@ -576,7 +578,7 @@ int main(int argc, char** argv) {
         options, flags, storage::volume_image::ImageFormat::kRawImage, &raw_writer);
     if (raw_nand_image_writer_or.is_error()) {
       fprintf(stderr, "%s\n", raw_nand_image_writer_or.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
     auto [raw_nand_image_writer, ftl_options] = raw_nand_image_writer_or.take_value();
@@ -584,7 +586,7 @@ int main(int argc, char** argv) {
         ftl_options, fvm_partition_or.value(), &raw_nand_image_writer);
     if (ftl_image_write_result.is_error()) {
       fprintf(stderr, "%s\n", ftl_image_write_result.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
     // Write in the gaps in the image with 0xFF or 'unwritten' bytes.
@@ -602,10 +604,10 @@ int main(int argc, char** argv) {
 
     if (fill_result.is_error()) {
       fprintf(stderr, "%s\n", fill_result.error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   // If length was not specified, use remainder of file after offset.
@@ -619,12 +621,12 @@ int main(int argc, char** argv) {
     if (strcmp(command, "pave")) {
       fprintf(stderr, "Only the pave command is supported for disk type %s.\n",
               kDiskTypeStr[disk_type]);
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (!is_max_bad_blocks_set && disk_type == DiskType::Mtd) {
       fprintf(stderr, "--max-bad-blocks is required when paving to MTD.\n");
-      return -1;
+      return EXIT_FAILURE;
     }
   }
 
@@ -632,39 +634,39 @@ int main(int argc, char** argv) {
     auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
     if (create_params_or.is_error()) {
       std::cout << create_params_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
       std::cout << result.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "extend")) {
     auto extend_params_or = storage::volume_image::ExtendParams::FromArguments(arguments);
     if (extend_params_or.is_error()) {
       std::cout << extend_params_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (auto extend_res = Extend(extend_params_or.value()); extend_res.is_error()) {
       std::cout << extend_res.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "sparse")) {
     auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
     if (create_params_or.is_error()) {
       std::cout << create_params_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
       std::cout << result.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "decompress")) {
     if (argc - i != 2) {
       usage();
-      return -1;
+      return EXIT_FAILURE;
     }
 
     const char* input_type = argv[i];
@@ -675,7 +677,7 @@ int main(int argc, char** argv) {
       auto reader_or = storage::volume_image::FdReader::Create(input_path);
       if (reader_or.is_error()) {
         std::cout << "Failed to read image. " << reader_or.error() << std::endl;
-        return -1;
+        return EXIT_FAILURE;
       }
 
       // Check the first 16 bytes of the file to try and figure out the input type.
@@ -697,14 +699,14 @@ int main(int argc, char** argv) {
       auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
       if (sparse_image_reader_or.is_error()) {
         std::cout << "Failed to read image. " << sparse_image_reader_or.error() << std::endl;
-        return -1;
+        return EXIT_FAILURE;
       }
 
       auto header_or =
           storage::volume_image::fvm_sparse_internal::GetHeader(0, sparse_image_reader_or.value());
       if (header_or.is_error()) {
         std::cout << "Failed to parse sparse image header. " << header_or.error() << std::endl;
-        return -1;
+        return EXIT_FAILURE;
       }
       auto header = header_or.take_value();
 
@@ -716,39 +718,39 @@ int main(int argc, char** argv) {
         auto writer_or = storage::volume_image::FdWriter::Create(path);
         if (writer_or.is_error()) {
           std::cout << writer_or.error() << std::endl;
-          return -1;
+          return EXIT_FAILURE;
         }
 
         auto decompress_or = storage::volume_image::FvmSparseDecompressImage(0, reader_or.value(),
                                                                              writer_or.value());
         if (decompress_or.is_error()) {
           std::cout << decompress_or.error();
-          return -1;
+          return EXIT_FAILURE;
         }
       }
     } else if (!strcmp(input_type, "--lz4")) {
       if (fvm::SparseReader::DecompressLZ4File(input_path, path) != ZX_OK) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else if (!strcmp(input_type, "--raw")) {
       if (CopyFile(path, input_path) != ZX_OK) {
-        return -1;
+        return EXIT_FAILURE;
       }
     } else {
       usage();
-      return -1;
+      return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "size")) {
     auto size_params_or = storage::volume_image::SizeParams::FromArguments(arguments);
     if (size_params_or.is_error()) {
       std::cout << size_params_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     auto size_or = storage::volume_image::Size(size_params_or.value());
     if (size_or.is_error()) {
       std::cout << size_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     // If we are not doing a check of whether this image fits in a specified size, print the minimum
@@ -760,33 +762,34 @@ int main(int argc, char** argv) {
     auto pave_params_or = storage::volume_image::PaveParams::FromArguments(arguments);
     if (pave_params_or.is_error()) {
       std::cout << "Failed to parse pave params. " << pave_params_or.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
 
     if (auto result = storage::volume_image::Pave(pave_params_or.value()); result.is_error()) {
       std::cout << "Failed to pave. " << result.error() << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
   } else if (!strcmp(command, "unpack")) {
     if (argc - i != 1) {
       usage();
-      return -1;
+      return EXIT_FAILURE;
     }
     auto reader_or = storage::volume_image::FdReader::Create(arguments[i]);
     if (reader_or.is_error()) {
       fprintf(stderr, "%s\n", reader_or.take_error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
     const auto& reader = reader_or.take_value();
 
     if (auto result = storage::volume_image::UnpackRawFvm(reader, path); result.is_error()) {
       fprintf(stderr, "Failed to unpack: %s\n", result.take_error().c_str());
-      return -1;
+      return EXIT_FAILURE;
     }
   } else {
     fprintf(stderr, "Unrecognized command: \"%s\"\n", command);
     usage();
+    return EXIT_FAILURE;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

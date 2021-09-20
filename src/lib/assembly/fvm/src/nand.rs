@@ -82,9 +82,11 @@ impl NandFvmBuilder {
         maybe_append_value(&mut args, "nand-oob-size", Some(self.oob_size));
         maybe_append_value(&mut args, "nand-pages-per-block", Some(self.pages_per_block));
         maybe_append_value(&mut args, "nand-block-count", Some(self.block_count));
-        maybe_append_value(&mut args, "sparse", Some(self.sparse_blob_fvm.path_to_string()?));
         maybe_append_value(&mut args, "max-disk-size", self.max_disk_size);
         maybe_append_value(&mut args, "compress", self.compression.as_ref());
+
+        // A quirk of the FVM tool means the sparse argument *must* go last.
+        maybe_append_value(&mut args, "sparse", Some(self.sparse_blob_fvm.path_to_string()?));
 
         Ok(args)
     }
@@ -121,12 +123,12 @@ mod tests {
                 "3",
                 "--nand-block-count",
                 "4",
-                "--sparse",
-                "sparsepath",
                 "--max-disk-size",
                 "500",
                 "--compress",
-                "supercompress"
+                "supercompress",
+                "--sparse",
+                "sparsepath",
             ]
         );
     }
