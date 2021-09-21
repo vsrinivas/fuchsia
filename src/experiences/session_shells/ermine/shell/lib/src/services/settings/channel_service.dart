@@ -75,7 +75,6 @@ class ChannelService extends TaskService {
     }
   }
 
-  /// TODO(fxb/79588): Monitor all channel update states
   bool get checkingForUpdates =>
       _monitor.getState()?.checkingForUpdates != null;
 
@@ -84,7 +83,14 @@ class ChannelService extends TaskService {
 
   bool get noUpdateAvailable => _monitor.getState()?.noUpdateAvailable != null;
 
+  bool get installationDeferredByPolicy =>
+      _monitor.getState()?.installationDeferredByPolicy != null;
+
   bool get installingUpdate => _monitor.getState()?.installingUpdate != null;
+
+  bool get waitingForReboot => _monitor.getState()?.waitingForReboot != null;
+
+  bool get installationError => _monitor.getState()?.installationError != null;
 
   Future<void> checkForUpdates() async {
     _checkSubscription = () async {

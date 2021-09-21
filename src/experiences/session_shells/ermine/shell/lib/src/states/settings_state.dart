@@ -25,7 +25,10 @@ enum ChannelState {
   checkingForUpdates,
   errorCheckingForUpdate,
   noUpdateAvailable,
-  installingUpdate
+  installationDeferredByPolicy,
+  installingUpdate,
+  waitingForReboot,
+  installationError
 }
 
 /// Defines the pages that have a [SettingDetails] widget.

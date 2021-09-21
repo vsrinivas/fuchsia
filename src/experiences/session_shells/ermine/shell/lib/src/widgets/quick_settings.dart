@@ -46,7 +46,7 @@ class QuickSettings extends StatelessWidget {
                   ChannelSettings(
                     state: state,
                     onChange: state.setTargetChannel,
-                    updateAlert: appState.updateChannelAlert,
+                    updateAlert: appState.checkingForUpdatesAlert,
                   ),
               ],
             ),

@@ -387,9 +387,10 @@ class AppStateImpl with Disposable implements AppState {
       runInAction(() => preferencesService.launchOobe.value = false);
 
   @override
-  void updateChannelAlert() {
+  void checkingForUpdatesAlert() {
     runInAction(() {
-      final key = Key('channelalert_${DateTime.now().millisecondsSinceEpoch}');
+      final key = Key(
+          'checkingforupdatesalert_${DateTime.now().millisecondsSinceEpoch}');
       alerts.add(AlertInfo(
         key: key,
         title: Strings.channelUpdateAlertTitle,

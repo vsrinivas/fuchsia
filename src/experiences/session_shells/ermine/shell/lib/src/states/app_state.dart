@@ -64,7 +64,7 @@ abstract class AppState {
   void launchFeedback();
   void launchLicense();
   void oobeFinished();
-  void updateChannelAlert();
+  void checkingForUpdatesAlert();
 
   factory AppState.fromEnv() {
     // TODO(https://fxbug.dev/71711): Remove this ignore below when transition

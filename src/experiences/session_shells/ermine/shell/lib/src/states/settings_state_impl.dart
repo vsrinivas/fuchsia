@@ -233,8 +233,14 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           channelState = ChannelState.errorCheckingForUpdate;
         } else if (channelService.noUpdateAvailable) {
           channelState = ChannelState.noUpdateAvailable;
+        } else if (channelService.installationDeferredByPolicy) {
+          channelState = ChannelState.installationDeferredByPolicy;
         } else if (channelService.installingUpdate) {
           channelState = ChannelState.installingUpdate;
+        } else if (channelService.waitingForReboot) {
+          channelState = ChannelState.waitingForReboot;
+        } else if (channelService.installationError) {
+          channelState = ChannelState.installationError;
         }
       });
     };

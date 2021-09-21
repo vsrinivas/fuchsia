@@ -82,8 +82,14 @@ class ChannelSettings extends StatelessWidget {
         return _buildErrorCheckingForUpdate(context);
       case ChannelState.noUpdateAvailable:
         return _buildNoUpdateAvailable(context);
+      case ChannelState.installationDeferredByPolicy:
+        return _buildInstallationDeferredByPolicy(context);
       case ChannelState.installingUpdate:
         return _buildInstallingUpdate(context);
+      case ChannelState.waitingForReboot:
+        return _buildWaitingForReboot(context);
+      case ChannelState.installationError:
+        return _buildInstallationError(context);
       default:
         return _buildIdle(context);
     }
@@ -147,6 +153,17 @@ class ChannelSettings extends StatelessWidget {
     );
   }
 
+  Widget _buildInstallationDeferredByPolicy(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      title: ListTile(
+        title: Text(Strings.installationDeferredByPolicyTitle),
+        subtitle: Text(Strings.installationDeferredByPolicyBody),
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
   Widget _buildInstallingUpdate(BuildContext context) {
     // TODO(fxb/79588): Add progress indicator
     return AppBar(
@@ -154,6 +171,29 @@ class ChannelSettings extends StatelessWidget {
       title: Text(
         Strings.updating,
         style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildWaitingForReboot(BuildContext context) {
+    // TODO(fxb/79588): Add progress indicator
+    return AppBar(
+      elevation: 0,
+      title: Text(
+        Strings.waitingForReboot,
+        style: Theme.of(context).textTheme.bodyText2,
+      ),
+      shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+    );
+  }
+
+  Widget _buildInstallationError(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      title: ListTile(
+        title: Text(Strings.installationErrorTitle),
+        subtitle: Text(Strings.installationErrorBody),
       ),
       shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
     );

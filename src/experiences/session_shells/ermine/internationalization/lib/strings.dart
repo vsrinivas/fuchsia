@@ -892,6 +892,33 @@ class Strings {
         name: 'There is not an update available at this time',
         desc: 'The subtitle for "No update available" text field.',
       );
+  static String get waitingForReboot => Intl.message(
+        'System is about to reboot. Please wait...',
+        name: 'System is about to reboot. Please wait...',
+        desc: 'The text dialog while waiting for reboot during channel update.',
+      );
+  static String get installationDeferredByPolicyTitle => Intl.message(
+        'Update installation is deferred',
+        name: 'Update installation is deferred',
+        desc:
+            'The alert dialog title for the installation deferred by policy update state.',
+      );
+  static String get installationDeferredByPolicyBody => Intl.message(
+        'Due to policy restrictions the update is not available.',
+        name: 'Due to policy restrictions the update is not available.',
+        desc:
+            'The alert dialog body for the installation deferred by policy update state.',
+      );
+  static String get installationErrorTitle => Intl.message(
+        'Update installation failed',
+        name: 'Update installation failed',
+        desc: 'The alert dialog title for the installation error update state.',
+      );
+  static String get installationErrorBody => Intl.message(
+        'An error occured while installing the update.',
+        name: 'An error occured while installing the update.',
+        desc: 'The alert dialog body for the installation error update state.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {
