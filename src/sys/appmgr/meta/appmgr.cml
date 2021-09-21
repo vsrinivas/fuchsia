@@ -308,6 +308,10 @@
             path: "/svc_for_sys/fuchsia.net.dhcp.Server",
         },
         {
+            protocol: "fuchsia.net.routes.State",
+            path: "/svc_for_sys/fuchsia.net.routes.State",
+        },
+        {
             protocol: "fuchsia.net.stack.Stack",
             path: "/svc_for_sys/fuchsia.net.stack.Stack",
         },
