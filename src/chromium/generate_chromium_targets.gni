@@ -13,12 +13,12 @@ import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 # Parameters:
 #   archive_path_suffix: For a given package target, the archive_path_suffix
 #                        is appended to the innermost folder of the base paths
-#                        passed into the generate_pkg_and_config template.
+#                        passed into the generate_package_flavors_and_config template.
 
 template("generate_chromium_targets") {
   assert(defined(invoker.archive_path_suffix))
 
-  prebuilt_archive_base_path = "//prebuilt/third_party"
+  prebuilt_archive_root_path = "//prebuilt/third_party"
   build_output_gen_base_path = "/gen/fuchsia"
 
   # This target is provided for use by the //src:src target. Dependencies on
@@ -73,12 +73,15 @@ template("generate_chromium_targets") {
     ]
   }
 
-  generate_pkg_and_config("web_engine") {
-    # TODO(crbug.com/1148608): Move these two to `/web_engine`.
+  generate_package_flavors_and_config("web_engine") {
+    # TODO(crbug.com/1148608): Move the prebuilt to a web_engine* directory and
+    # replace `chromium` with `${target_name}`.
+    # Once that is done, consider making this the default value in
+    # generate_package_flavors*().
     prebuilt_archive_base_path =
-        "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
+        "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
     custom_package_path =
-        "${build_output_gen_base_path}/engine/web_engine/web_engine.far"
+        "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.
@@ -94,10 +97,9 @@ template("generate_chromium_targets") {
     deps = [ ":web_engine_shell_pkg" ]
     testonly = true
   }
-  generate_flavors("web_engine_shell") {
-    # TODO(crbug.com/1148608): Make the other two targets follow this pattern and
-    # potentially make these the default values in generate_flavors.gni.
-    prebuilt_archive_base_path = "${prebuilt_archive_base_path}/${target_name}${invoker.archive_path_suffix}"
+
+  generate_package_flavors("web_engine_shell") {
+    prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
     custom_package_path =
         "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
@@ -112,10 +114,11 @@ template("generate_chromium_targets") {
     ]
   }
 
-  generate_pkg_and_config("web_runner") {
-    # TODO(crbug.com/1148608): Move these two to `/web_runner`.
+  generate_package_flavors_and_config("web_runner") {
+    # TODO(crbug.com/1148608): Move the prebuilt to a web_runner* directory and
+    # replace `chromium` with `${target_name}`.
     prebuilt_archive_base_path =
-        "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
+        "${prebuilt_archive_root_path}/chromium${invoker.archive_path_suffix}"
     custom_package_path =
         "${build_output_gen_base_path}/runners/web_runner/web_runner.far"
     selections = package_flavor_selections
@@ -127,7 +130,7 @@ template("generate_chromium_targets") {
   }
 
   # TODO(fxbug.dev/71642): Migrate the uses of this variable below to
-  # generate_flavors.gni. A simple function with a Boolean could be sufficient.
+  # generate_pkg_and_config.gni. A simple function with a Boolean could be sufficient.
   if (use_chromium_canary) {
     canary_suffix = "_latest"
   }
@@ -136,9 +139,9 @@ template("generate_chromium_targets") {
     copy("chromedriver") {
       outputs = [ "${host_tools_dir}/chromedriver" ]
       if (use_chromium_canary) {
-        sources = [ "${prebuilt_archive_base_path}/chromedriver${invoker.archive_path_suffix}${canary_suffix}/linux-x64/chromedriver" ]
+        sources = [ "${prebuilt_archive_root_path}/chromedriver${invoker.archive_path_suffix}${canary_suffix}/linux-x64/chromedriver" ]
       } else {
-        sources = [ "${prebuilt_archive_base_path}/chromedriver${invoker.archive_path_suffix}/linux-x64/chromedriver" ]
+        sources = [ "${prebuilt_archive_root_path}/chromedriver${invoker.archive_path_suffix}/linux-x64/chromedriver" ]
       }
     }
   } else {
@@ -162,9 +165,9 @@ template("generate_chromium_targets") {
     # https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/cipd/BUILD.gn.
     prebuilt_test_manifest("chromium_tests") {
       if (use_chromium_canary) {
-        archive_dir = "${prebuilt_archive_base_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
+        archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
       } else {
-        archive_dir = "${prebuilt_archive_base_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
+        archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
       }
       environments = test_env
       log_settings = {

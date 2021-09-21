@@ -10,10 +10,13 @@ import("//src/chromium/generate_pkg_and_config.gni")
 # Parameters:
 #   archive_path_suffix: For a given package target, the archive_path_suffix
 #                        is appended to the innermost folder of the base paths
-#                        passed into the generate_pkg_and_config template.
+#                        passed into the generate_package_flavors_and_config template.
 
 template("generate_cast_targets") {
   assert(defined(invoker.archive_path_suffix))
+
+  prebuilt_archive_root_path = "//prebuilt/third_party"
+  build_output_gen_base_path = "/gen/fuchsia"
 
   group(target_name) {
     public_deps = [ ":cast_runner" ]
@@ -25,9 +28,6 @@ template("generate_cast_targets") {
       ":cast_runner_pkg",
     ]
   }
-
-  prebuilt_archive_base_path =
-      "//prebuilt/third_party/cast_runner${invoker.archive_path_suffix}"
 
   # TODO(fxbug.dev/70573): Remove when use_cast_runner_canary is deprecated.
   if (use_cast_runner_canary) {
@@ -48,9 +48,9 @@ template("generate_cast_targets") {
     ]
   }
 
-  generate_pkg_and_config("cast_runner") {
-    prebuilt_archive_base_path = prebuilt_archive_base_path
-    custom_package_path = "/gen/fuchsia/runners/cast_runner/cast_runner.far"
+  generate_package_flavors_and_config("cast_runner") {
+    prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
+    custom_package_path = "${build_output_gen_base_path}/runners/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.

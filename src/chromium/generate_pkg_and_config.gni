@@ -16,7 +16,7 @@ import("//src/chromium/build_args.gni")
 #   selections (optional): Flavor choice. This allows flavor to be changed based
 #       on other build args.
 
-template("generate_flavors") {
+template("generate_package_flavors") {
   prebuilt_package_with_flavors("${target_name}_pkg") {
     forward_variables_from(invoker,
                            [
@@ -65,8 +65,8 @@ template("generate_config") {
 # a config_data target for a given Chromium package. List of parameters is
 # the combined parameters in the generate_config and generate_flavors templates.
 
-template("generate_pkg_and_config") {
-  generate_flavors(target_name) {
+template("generate_package_flavors_and_config") {
+  generate_package_flavors(target_name) {
     forward_variables_from(invoker,
                            [
                              "custom_package_path",
