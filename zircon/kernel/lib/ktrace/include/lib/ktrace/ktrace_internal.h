@@ -12,7 +12,9 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <fbl/function.h>
 #include <ktl/atomic.h>
+#include <ktl/forward.h>
 
 namespace internal {
 
@@ -53,6 +55,41 @@ class KTraceState {
     return (grpmask_.load(std::memory_order_relaxed) & tag) != 0;
   }
 
+ protected:
+  // Add static names (eg syscalls and probes) to the trace buffer.  Called
+  // during a rewind operation immediately after resetting the trace buffer.
+  // Declared as virtual to facilitate testing.
+  virtual void ReportStaticNames();
+
+  // Add the names of current live threads and processes to the trace buffer.
+  // Called during start operations just before setting the group mask. Declared
+  // as virtual to facilitate testing.
+  virtual void ReportThreadProcessNames();
+
+  // A small printf stand-in which gives tests the ability to disable diagnostic
+  // printing during testing.
+  int DiagsPrintf(int level, const char* fmt, ...) __PRINTFLIKE(3, 4) {
+    if (!disable_diags_printfs_ && DPRINTF_ENABLED_FOR_LEVEL(level)) {
+      va_list args;
+      va_start(args, fmt);
+      int result = vprintf(fmt, args);
+      va_end(args);
+      return result;
+    }
+
+    return 0;
+  }
+
+  // raw trace buffer
+  // if this is nullptr, then bufsize == 0
+  //
+  // Protected so that the test fixture can free it.  The default global
+  // singleton KTraceState never frees its buffer.
+  uint8_t* buffer_{nullptr};
+
+  // Allow diagnostic dprintf'ing or not.  Overridden by test code.
+  bool disable_diags_printfs_{false};
+
  private:
   // Attempt to allocate our buffer, if we have not already done so.
   zx_status_t AllocBuffer();
@@ -84,10 +121,6 @@ class KTraceState {
 
   // offset where tracing was stopped, 0 if tracing active
   uint32_t marker_{0};
-
-  // raw trace buffer
-  // if this is nullptr, then bufsize == 0
-  uint8_t* buffer_{nullptr};
 
   // buffer is full or not
   ktl::atomic<bool> buffer_full_{false};

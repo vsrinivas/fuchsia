@@ -97,7 +97,7 @@ void KTraceState::Init(uint32_t target_bufsize, uint32_t initial_groups) {
 
   if (initial_groups != 0) {
     if (AllocBuffer() == ZX_OK) {
-      ktrace_report_live_threads();
+      ReportThreadProcessNames();
     }
   }
 
@@ -112,8 +112,7 @@ zx_status_t KTraceState::Start(uint32_t groups) {
   }
 
   marker_ = 0;
-  ktrace_report_live_processes();
-  ktrace_report_live_threads();
+  ReportThreadProcessNames();
   grpmask_.store(KTRACE_GRP_TO_MASK(groups));
 
   return ZX_OK;
@@ -133,9 +132,7 @@ void KTraceState::Rewind() {
   // roll back to just after the metadata
   offset_.store(KTRACE_RECSIZE * 2);
   buffer_full_.store(false);
-  ktrace_report_syscalls();
-  ktrace_report_probes();
-  ktrace_report_vcpu_meta();
+  ReportStaticNames();
 }
 
 ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
@@ -240,6 +237,17 @@ void KTraceState::WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const ch
   }
 }
 
+void KTraceState::ReportStaticNames() {
+  ktrace_report_syscalls();
+  ktrace_report_probes();
+  ktrace_report_vcpu_meta();
+}
+
+void KTraceState::ReportThreadProcessNames() {
+  ktrace_report_live_processes();
+  ktrace_report_live_threads();
+}
+
 zx_status_t KTraceState::AllocBuffer() {
   // The buffer is allocated once, then never deleted.  If it has already been
   // allocated, then we are done.
@@ -262,14 +270,14 @@ zx_status_t KTraceState::AllocBuffer() {
   if ((status = aspace->Alloc("ktrace", target_bufsize_, reinterpret_cast<void**>(&buffer_), 0,
                               VmAspace::VMM_FLAG_COMMIT,
                               ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE)) < 0) {
-    dprintf(INFO, "ktrace: cannot alloc buffer %d\n", status);
+    DiagsPrintf(INFO, "ktrace: cannot alloc buffer %d\n", status);
     return ZX_ERR_NO_MEMORY;
   }
 
   // The last packet written can overhang the end of the buffer,
   // so we reduce the reported size by the max size of a record
   bufsize_ = target_bufsize_ - 256;
-  dprintf(INFO, "ktrace: buffer at %p (%u bytes)\n", buffer_, target_bufsize_);
+  DiagsPrintf(INFO, "ktrace: buffer at %p (%u bytes)\n", buffer_, target_bufsize_);
 
   // write metadata to the first two event slots
   uint64_t n = ktrace_ticks_per_ms();
