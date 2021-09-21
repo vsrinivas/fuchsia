@@ -7,95 +7,157 @@ use std::{fs, io};
 
 use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
-use byteorder::{ByteOrder, LittleEndian};
-use fidl_fuchsia_hardware_input::{
-    DeviceMarker as SensorMarker, DeviceProxy as SensorProxy, ReportType,
+use fidl_fuchsia_input_report::{
+    DeviceDescriptor, InputDeviceMarker, InputDeviceProxy, InputReportsReaderMarker,
+    InputReportsReaderProxy, SensorAxis, SensorType,
 };
 use fuchsia_syslog::fx_log_info;
 
-/// Unique signature for the light sensor
-const HID_SENSOR_DESCRIPTOR: [u8; 4] = [5, 32, 9, 65];
-
 #[derive(Debug)]
 pub struct AmbientLightInputRpt {
-    pub rpt_id: u8,
-    pub state: u8,
-    pub event: u8,
-    pub illuminance: u16,
-    pub red: u16,
-    pub green: u16,
-    pub blue: u16,
+    pub illuminance: f32,
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
 }
 
-/// Opens the sensor's device file.
-/// Tries all the input devices until the one with the correct signature is found.
-async fn open_sensor() -> Result<SensorProxy, Error> {
-    let input_devices_directory = "/dev/class/input";
-    let path = Path::new(input_devices_directory);
-    let entries = fs::read_dir(path)?;
-    for entry in entries {
-        let entry = entry?;
-        let device = open_input_device(entry.path().to_str().expect("Bad path"))?;
-        if let Ok(device_descriptor) = device.get_report_desc().await {
-            if device_descriptor.len() < 4 {
-                return Err(format_err!("Short HID header"));
-            }
-            let device_header = &device_descriptor[0..4];
-            if device_header == HID_SENSOR_DESCRIPTOR {
-                return Ok(device);
-            }
-        }
-    }
-    Err(io::Error::new(io::ErrorKind::NotFound, "no sensor found").into())
+struct AmbientLightComponent {
+    pub report_index: usize,
+    pub exponent: i32,
 }
 
-/// Reads the sensor's HID record and decodes it.
-async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error> {
-    let report = sensor.get_report(ReportType::Input, 1).await?;
-    let report = report.1;
-    if report.len() < 11 {
-        return Err(format_err!("Sensor HID report too short"));
-    }
-    Ok(AmbientLightInputRpt {
-        rpt_id: report[0],
-        state: report[1],
-        event: report[2],
-        illuminance: LittleEndian::read_u16(&report[3..5]),
-        red: LittleEndian::read_u16(&report[5..7]),
-        blue: LittleEndian::read_u16(&report[7..9]),
-        green: LittleEndian::read_u16(&report[9..11]),
-    })
+struct AmbientLightInputReportReaderProxy {
+    pub proxy: InputReportsReaderProxy,
+
+    pub illuminance: Option<AmbientLightComponent>,
+    pub red: Option<AmbientLightComponent>,
+    pub green: Option<AmbientLightComponent>,
+    pub blue: Option<AmbientLightComponent>,
 }
 
-/// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxbug.dev/42782).
-fn default_report() -> Result<AmbientLightInputRpt, Error> {
-    Ok(AmbientLightInputRpt {
-        rpt_id: 0,
-        state: 0,
-        event: 0,
-        illuminance: 200,
-        red: 200,
-        green: 200,
-        blue: 200,
-    })
-}
-
-fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
+fn open_input_report_device(path: &str) -> Result<InputDeviceProxy, Error> {
     fx_log_info!("Opening sensor at {:?}", path);
-    let (proxy, server) =
-        fidl::endpoints::create_proxy::<SensorMarker>().context("Failed to create sensor proxy")?;
+    let (proxy, server) = fidl::endpoints::create_proxy::<InputDeviceMarker>()
+        .context("Failed to create sensor proxy")?;
     fdio::service_connect(path, server.into_channel())
         .context("Failed to connect built-in service")?;
     Ok(proxy)
 }
 
+async fn open_sensor_input_report_reader<'a>() -> Result<AmbientLightInputReportReaderProxy, Error>
+{
+    let input_report_directory = "/dev/class/input-report";
+    let dir_path = Path::new(input_report_directory);
+    let entries = fs::read_dir(dir_path)?;
+    for entry in entries {
+        let entry = entry?;
+        let device_path = entry.path();
+        let device_path = device_path.to_str().expect("Bad path");
+        let device = open_input_report_device(device_path)?;
+
+        let get_sensor_input_axes =
+            |descriptor: &'a DeviceDescriptor| -> Result<&'a Vec<SensorAxis>, Error> {
+                let sensor = descriptor.sensor.as_ref().context("device has no sensor")?;
+                let input = sensor.input.as_ref().context("sensor has no input descriptor")?;
+                let values = input.values.as_ref().context("input descriptor has no values")?;
+                Ok(values)
+            };
+
+        if let Ok(descriptor) = device.get_descriptor().await {
+            match get_sensor_input_axes(&descriptor) {
+                Ok(axes) => {
+                    let mut illuminance = None;
+                    let mut red = None;
+                    let mut green = None;
+                    let mut blue = None;
+
+                    for (i, val) in axes.iter().enumerate() {
+                        let component = AmbientLightComponent {
+                            report_index: i,
+                            exponent: val.axis.unit.exponent,
+                        };
+                        match val.type_ {
+                            SensorType::LightIlluminance => illuminance = Some(component),
+                            SensorType::LightRed => red = Some(component),
+                            SensorType::LightGreen => green = Some(component),
+                            SensorType::LightBlue => blue = Some(component),
+                            _ => {}
+                        }
+                    }
+
+                    if illuminance.is_some() {
+                        let (proxy, server_end) =
+                            fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
+                        if let Ok(()) = device.get_input_reports_reader(server_end) {
+                            return Ok(AmbientLightInputReportReaderProxy {
+                                proxy: proxy,
+                                illuminance,
+                                red,
+                                blue,
+                                green,
+                            });
+                        }
+                    }
+                }
+                Err(e) => {
+                    fx_log_info!("Skip device {}: {}", device_path, e);
+                }
+            };
+        }
+    }
+    Err(io::Error::new(io::ErrorKind::NotFound, "no sensor found").into())
+}
+
+/// Reads the sensor's input report and decodes it.
+async fn read_sensor_input_report(
+    device: &AmbientLightInputReportReaderProxy,
+) -> Result<AmbientLightInputRpt, Error> {
+    let r = device.proxy.read_input_reports().await;
+
+    match r {
+        Ok(Ok(reports)) => {
+            for report in reports {
+                if let Some(sensor) = report.sensor {
+                    if let Some(values) = sensor.values {
+                        let f = |component: &Option<AmbientLightComponent>| match component {
+                            Some(val) => match val.exponent {
+                                0 => values[val.report_index] as f32,
+                                _ => {
+                                    values[val.report_index] as f32
+                                        * f32::powf(10.0, val.exponent as f32)
+                                }
+                            },
+                            None => 0.0,
+                        };
+
+                        let illuminance = f(&device.illuminance);
+                        let red = f(&device.red);
+                        let green = f(&device.green);
+                        let blue = f(&device.blue);
+
+                        return Ok(AmbientLightInputRpt { illuminance, red, blue, green });
+                    }
+                }
+            }
+            Err(format_err!("No valid sensor reports"))
+        }
+        Ok(Err(e)) => Err(format_err!("ReadInputReports error: {}", e)),
+        Err(e) => Err(format_err!("FIDL call failed: {}", e)),
+    }
+}
+
+/// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxbug.dev/42782).
+fn default_report() -> Result<AmbientLightInputRpt, Error> {
+    Ok(AmbientLightInputRpt { illuminance: 200.0, red: 200.0, green: 200.0, blue: 200.0 })
+}
+
 pub struct Sensor {
-    proxy: Option<SensorProxy>,
+    proxy: Option<AmbientLightInputReportReaderProxy>,
 }
 
 impl Sensor {
     pub async fn new() -> Sensor {
-        let proxy = open_sensor().await;
+        let proxy = open_sensor_input_report_reader().await;
         match proxy {
             Ok(proxy) => return Sensor { proxy: Some(proxy) },
             Err(_e) => {
@@ -109,7 +171,7 @@ impl Sensor {
         if self.proxy.is_none() {
             default_report()
         } else {
-            read_sensor(self.proxy.as_ref().unwrap()).await
+            read_sensor_input_report(self.proxy.as_ref().unwrap()).await
         }
     }
 }
@@ -135,12 +197,9 @@ mod tests {
     async fn test_open_sensor_error() {
         let sensor = Sensor { proxy: None };
         let ambient_light_input_rpt = sensor.read().await.unwrap();
-        assert_eq!(ambient_light_input_rpt.rpt_id, 0);
-        assert_eq!(ambient_light_input_rpt.state, 0);
-        assert_eq!(ambient_light_input_rpt.event, 0);
-        assert_eq!(ambient_light_input_rpt.illuminance, 200);
-        assert_eq!(ambient_light_input_rpt.red, 200);
-        assert_eq!(ambient_light_input_rpt.green, 200);
-        assert_eq!(ambient_light_input_rpt.blue, 200);
+        assert_eq!(ambient_light_input_rpt.illuminance, 200.0);
+        assert_eq!(ambient_light_input_rpt.red, 200.0);
+        assert_eq!(ambient_light_input_rpt.green, 200.0);
+        assert_eq!(ambient_light_input_rpt.blue, 200.0);
     }
 }

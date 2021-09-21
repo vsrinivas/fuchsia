@@ -19,9 +19,9 @@
             path: "/dev/class/backlight",
         },
         {
-            directory: "dev-input",
+            directory: "dev-input-report",
             rights: [ "r*" ],
-            path: "/dev/class/input",
+            path: "/dev/class/input-report",
         },
         {
             storage: "data",

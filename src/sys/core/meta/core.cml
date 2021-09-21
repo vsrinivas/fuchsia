@@ -666,9 +666,9 @@
         {
             directory: "dev",
             from: "parent",
-            as: "dev-input",
+            as: "dev-input-report",
             to: "#brightness_manager",
-            subdir: "class/input",
+            subdir: "class/input-report",
         },
         {
             directory: "dev",

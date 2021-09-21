@@ -13,7 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fdio/rust:fdio",
