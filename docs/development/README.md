@@ -74,7 +74,7 @@ This section covers developing drivers on Fuchsia.
  - [Testing Isolated Cache Storage](/docs/concepts/testing/testing_isolated_cache_storage.md)
  - [Host-target interaction tests](/docs/development/testing/host_target_interaction_tests.md)
  - [Testing for Flakiness in CQ](/docs/development/testing/testing_for_flakiness_in_cq.md)
-
+ - [Testing a USB Device](/docs/development/testing/testing_usb_device.md)
 
 ## Conventions
 

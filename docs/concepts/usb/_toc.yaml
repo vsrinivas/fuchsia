@@ -12,5 +12,3 @@ toc:
   path: /docs/concepts/usb/request-lifecycle.md
 - title: "USB mass storage driver"
   path: /docs/concepts/usb/usb-mass-storage.md
-- title: "Testing a USB device"
-  path: /docs/concepts/usb/testing.md

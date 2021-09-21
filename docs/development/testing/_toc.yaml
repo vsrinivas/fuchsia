@@ -32,6 +32,10 @@ toc:
 - title: "Compatibility Testing"
   section:
   - include: /docs/development/testing/cts/_toc.yaml
+- title: "Driver testing"
+  section:
+  - title: "Testing a USB device"
+    path: /docs/development/testing/testing_usb_device.md
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
