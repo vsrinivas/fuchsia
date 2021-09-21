@@ -706,7 +706,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
+  const bool blocking = (io->ioflag() & IOFLAG_NONBLOCK) == 0;
   zx::time deadline = zx::deadline_after(io->rcvtimeo());
 
   zx_iovec_t zx_iov[iovcnt];
@@ -720,7 +720,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   for (;;) {
     size_t actual;
     zx_status_t status = zxio_readv_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
-    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+    if (status == ZX_ERR_SHOULD_WAIT && blocking) {
       status = fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr);
       if (status == ZX_OK) {
         continue;
@@ -742,7 +742,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
+  const bool blocking = (io->ioflag() & IOFLAG_NONBLOCK) == 0;
   zx::time deadline = zx::deadline_after(io->sndtimeo());
 
   zx_iovec_t zx_iov[iovcnt];
@@ -756,7 +756,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
   for (;;) {
     size_t actual;
     zx_status_t status = zxio_writev_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
-    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+    if (status == ZX_ERR_SHOULD_WAIT && blocking) {
       status = fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr);
       if (status == ZX_OK) {
         continue;
@@ -2028,14 +2028,14 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
   // install additional signal handlers to handle cases where connection has
   // been closed by remote end.
-  bool nonblocking = (ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  const bool blocking = ((ioflag & IOFLAG_NONBLOCK) | (flags & MSG_DONTWAIT)) == 0;
   flags &= ~MSG_DONTWAIT;
   zx::time deadline = zx::deadline_after(io->sndtimeo());
   for (;;) {
     size_t actual;
     int16_t out_code;
     zx_status_t status = io->sendmsg(msg, flags, &actual, &out_code);
-    if (!nonblocking) {
+    if (blocking) {
       switch (status) {
         case ZX_OK:
           if (out_code != EWOULDBLOCK) {
@@ -2069,14 +2069,14 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     return ERRNO(EBADF);
   }
   auto& ioflag = io->ioflag();
-  bool nonblocking = (ioflag & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
+  const bool blocking = ((ioflag & IOFLAG_NONBLOCK) | (flags & MSG_DONTWAIT)) == 0;
   flags &= ~MSG_DONTWAIT;
   zx::time deadline = zx::deadline_after(io->rcvtimeo());
   for (;;) {
     size_t actual;
     int16_t out_code;
     zx_status_t status = io->recvmsg(msg, flags, &actual, &out_code);
-    if (!nonblocking) {
+    if (blocking) {
       switch (status) {
         case ZX_OK:
           if (out_code != EWOULDBLOCK) {

@@ -276,7 +276,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       return ERRNO(EBADF);
     }
 
-    bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
+    const bool blocking = (io->ioflag() & IOFLAG_NONBLOCK) == 0;
 
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
@@ -289,7 +289,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       // This condition should also apply to EAGAIN; it happens to have the
       // same value as EWOULDBLOCK.
       if (out_code == EWOULDBLOCK) {
-        if (!nonblocking) {
+        if (blocking) {
           if ((status = fdio_wait(io, FDIO_EVT_READABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
             break;
           }
