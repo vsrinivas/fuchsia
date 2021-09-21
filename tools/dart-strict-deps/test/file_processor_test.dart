@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'package:dart_strict_deps_lib/file_processor.dart';
 import 'package:test/test.dart';
 import 'package:tools.dart-strict-deps.dart_strict_deps_proto/protos/models.pb.dart';

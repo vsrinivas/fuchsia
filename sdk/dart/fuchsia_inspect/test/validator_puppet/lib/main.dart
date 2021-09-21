@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 // ignore_for_file: implementation_imports
 
 import 'dart:async';
@@ -70,13 +73,13 @@ class _ValidateImpl extends fidl_validate.Validate {
           case fidl_validate.NumberTag.intT:
             final property = lookupNode(action.createNumericProperty.parent)
                 .intProperty(action.createNumericProperty.name)
-                  ..setValue(action.createNumericProperty.value.intT);
+              ..setValue(action.createNumericProperty.value.intT);
             _properties[action.createNumericProperty.id] = property;
             break;
           case fidl_validate.NumberTag.doubleT:
             final property = lookupNode(action.createNumericProperty.parent)
                 .doubleProperty(action.createNumericProperty.name)
-                  ..setValue(action.createNumericProperty.value.doubleT);
+              ..setValue(action.createNumericProperty.value.doubleT);
             _properties[action.createNumericProperty.id] = property;
             break;
           default:
@@ -86,7 +89,7 @@ class _ValidateImpl extends fidl_validate.Validate {
       case fidl_validate.ActionTag.createStringProperty:
         final property = lookupNode(action.createStringProperty.parent)
             .stringProperty(action.createStringProperty.name)
-              ..setValue(action.createStringProperty.value);
+          ..setValue(action.createStringProperty.value);
         _properties[action.createStringProperty.id] = property;
         break;
       case fidl_validate.ActionTag.createBytesProperty:
@@ -96,13 +99,13 @@ class _ValidateImpl extends fidl_validate.Validate {
             action.createBytesProperty.value.lengthInBytes);
         final property = lookupNode(action.createBytesProperty.parent)
             .byteDataProperty(action.createBytesProperty.name)
-              ..setValue(valueAsByteData);
+          ..setValue(valueAsByteData);
         _properties[action.createBytesProperty.id] = property;
         break;
       case fidl_validate.ActionTag.createBoolProperty:
         final property = lookupNode(action.createBoolProperty.parent)
             .boolProperty(action.createBoolProperty.name)
-              ..setValue(action.createBoolProperty.value);
+          ..setValue(action.createBoolProperty.value);
         _properties[action.createBoolProperty.id] = property;
         break;
       case fidl_validate.ActionTag.deleteProperty:

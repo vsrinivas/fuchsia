@@ -57,7 +57,7 @@ class VmoWriter {
   /// create a [FakeVmoHolder] if we aren't running on Fuchsia. This is useful
   /// for not needing to refactor code that needs to run in host side tests.
   factory VmoWriter.withSize(int size) => VmoWriter.withVmo(
-      Platform.isFuchsia ? VmoHolder(size) : FakeVmoHolder(size));
+      Platform.isFuchsia ? VmoHolder(size) : FakeVmoHolder(size) as VmoHolder);
 
   /// Function used for creating the heap by default.
   static const Function _heapCreate = LittleBigSlab.create;

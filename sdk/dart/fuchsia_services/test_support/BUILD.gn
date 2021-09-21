@@ -20,6 +20,8 @@ fidl("test-foo-fidl") {
 
 # The foo test server used for integration testing
 dart_app("fuchsia-services-foo-test-server") {
+  null_safe = true
+
   main_dart = "lib/main.dart"
 
   meta = [

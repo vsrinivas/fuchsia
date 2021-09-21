@@ -9,6 +9,7 @@ import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 import '../testing/util.dart' show FakeVmoHolder;
+import '../vmo/vmo_holder.dart';
 import '../vmo/vmo_writer.dart';
 import 'internal/_inspect_impl.dart';
 
@@ -70,7 +71,7 @@ abstract class Inspect {
   /// intended for unit testing inspect integrations, so that they can run as
   /// host tests.
   factory Inspect.forTesting(FakeVmoHolder vmo) {
-    return InspectImpl(VmoWriter.withVmo(vmo));
+    return InspectImpl(VmoWriter.withVmo(vmo as VmoHolder));
   }
 
   /// Mounts an [Inspect] file at <name>.inspect whose contents are

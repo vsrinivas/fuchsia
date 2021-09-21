@@ -39,6 +39,7 @@ dart_library("fuchsia_webview_flutter") {
 
 # fx run-host-tests fuchsia_webview_flutter_unittests
 flutter_test("fuchsia_webview_flutter_unittests") {
+  null_safe = true
   sources = [ "fuchsia_webview_test.dart" ]
 
   deps = [

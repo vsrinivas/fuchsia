@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 // @dart = 2.8
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'dart:collection' show SplayTreeMap;
 import 'dart:convert';
 import 'dart:io';

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 // false positive, see https://github.com/dart-lang/linter/issues/1381
 // ignore_for_file: close_sinks
 import 'dart:async';

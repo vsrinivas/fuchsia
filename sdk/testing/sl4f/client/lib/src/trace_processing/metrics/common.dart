@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'dart:math';
 
 import '../time_delta.dart';
@@ -83,9 +86,13 @@ List<Event> getFollowingEvents(Event event) {
       continue;
     }
     if (current is DurationEvent) {
-      frontier..addAll(current.childDurations)..addAll(current.childFlows);
+      frontier
+        ..addAll(current.childDurations)
+        ..addAll(current.childFlows);
     } else if (current is FlowEvent) {
-      frontier..add(current.enclosingDuration)..add(current.nextFlow);
+      frontier
+        ..add(current.enclosingDuration)
+        ..add(current.nextFlow);
     } else {
       assert(false);
     }

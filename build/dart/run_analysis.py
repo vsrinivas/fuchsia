@@ -18,13 +18,7 @@ def main():
     parser.add_argument(
         '--dot-packages', help='Path to the .packages file', required=True)
     parser.add_argument(
-        '--dartanalyzer',
-        help='Path to the Dart analyzer executable',
-        required=True)
-    parser.add_argument(
-        '--dart-sdk', help='Path to the Dart SDK', required=True)
-    parser.add_argument(
-        '--options', help='Path to analysis options', required=True)
+        '--dart', help='Path to the Dart executable', required=True)
     parser.add_argument(
         '--stamp',
         type=argparse.FileType('w'),
@@ -46,7 +40,11 @@ def main():
     args = parser.parse_args()
 
     with open(args.source_file, 'r') as source_file:
-        sources = source_file.read().strip().split('\n')
+        # Normalize path so paths like `foo/bar/../main.dart` would work even if
+        # `foo/bar` doesn't exist.
+        sources = [
+            os.path.normpath(p) for p in source_file.read().strip().split('\n')
+        ]
 
     args.depfile.write(
         '{}: {}'.format(
@@ -56,15 +54,11 @@ def main():
     )
 
     call_args = [
-        args.dartanalyzer,
+        args.dart,
+        'analyze',
         '--packages={}'.format(args.dot_packages),
-        '--dart-sdk={}'.format(args.dart_sdk),
-        '--options={}'.format(args.options),
         '--fatal-warnings',
-        '--fatal-hints',
-        '--fatal-lints',
-        '--enable-experiment',
-        'non-nullable',
+        '--fatal-infos',
     ] + sources
 
     # Call Dart anaylzer.

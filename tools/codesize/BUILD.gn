@@ -97,6 +97,8 @@ if (is_host) {
 }
 
 dart_test("codesize_tests") {
+  null_safe = true
+
   sources = [
     "cli_test.dart",
     "crash_handling_test.dart",
@@ -121,6 +123,12 @@ dart_test("codesize_tests") {
   ]
 
   non_dart_deps = [ ":bloaty_reports($host_toolchain)" ]
+
+  # TODO(https://fxbug.dev/84787): Remove the line below. This is currently
+  # necessary because otherwise `dart analyze` for this test will access
+  # `analysis_options.yaml` used by `codesize` above, regestering an unexpected
+  # read.
+  options_file = "test/analysis_options.yaml"
 }
 
 group("tests") {

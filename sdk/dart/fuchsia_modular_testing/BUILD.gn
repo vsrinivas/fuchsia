@@ -54,6 +54,8 @@ fidl("test_fidl") {
 # Run tese tests using:
 #  fx test fuchsia-pkg://fuchsia.com/fuchsia-modular-testing-integration-tests#meta/fuchsia-modular-testing-package-integration-tests.cmx
 dart_test_component("integration-test-component") {
+  null_safe = true
+
   component_name = "fuchsia-modular-testing-integration-tests"
   manifest = "meta/fuchsia-modular-testing-integration-tests.cmx"
   sources = [

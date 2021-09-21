@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 /// List of active repos under fuchsia.googlesource.com which can be linked to.
 const List<String> validProjects = <String>[
   '', // root page of all projects

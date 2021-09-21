@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import '../metrics_results.dart';
 import '../time_delta.dart';
 import '../trace_model.dart';
@@ -71,7 +74,7 @@ List<double> _computeDrmFpsValues(Iterable<DurationEvent> events) {
       .where((e) => e != null)
       .toSet()
       .toList()
-        ..sort((a, b) => a.start.compareTo(b.start));
+    ..sort((a, b) => a.start.compareTo(b.start));
   return _AdjacentPairIterable(vsyncs, (a, b) => (b.start - a.start))
       .where((x) => x < TimeDelta.fromSeconds(1))
       .map((x) => 1.0 / x.toSecondsF())

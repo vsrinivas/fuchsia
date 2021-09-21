@@ -25,5 +25,5 @@ class _FooImpl extends foo.Foo {
   }
 
   @override
-  Future<String> echo(String value) async => value;
+  Future<String?> echo(String? value) async => value;
 }

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 // This file is named sl4f_client.dart since the top-level dart file is names
 // sl4f.dart, which would cause problems for src files trying to import this
 // file.
@@ -437,7 +440,9 @@ class Sl4f {
       final stderrData = await stderr;
       // Print something about the process in case it fails.
       if (code != 0) {
-        _log..warning('$cmd; exit code: $code')..warning('stderr: $stderrData');
+        _log
+          ..warning('$cmd; exit code: $code')
+          ..warning('stderr: $stderrData');
       }
       await sink.close();
     }();

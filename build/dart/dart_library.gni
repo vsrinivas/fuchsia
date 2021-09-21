@@ -360,9 +360,6 @@ if (current_toolchain == dart_toolchain) {
         !defined(invoker.disable_analysis) || !invoker.disable_analysis
     with_analysis = enable_dart_analysis && with_analysis
     if (with_analysis) {
-      # TODO(jayzhuang): Remove `_analysis_options` as soon as we switch to
-      # `dart analyze`.
-      _analysis_options = "//analysis_options.yaml"
       if (defined(invoker.options_file)) {
         # Always append a trailing "/" so both paths consistently ends with a
         # "/" after get_path_info.
@@ -373,11 +370,7 @@ if (current_toolchain == dart_toolchain) {
         assert(
             _abs_options_file_dir == _abs_package_root,
             "custom analysis options file must be located in package root ${_abs_package_root}, it's currently located in ${_abs_options_file_dir}")
-
-        _analysis_options = invoker.options_file
       }
-
-      dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
 
       analysis_target_name = "${target_name}_analysis"
       group_deps += [ ":$analysis_target_name" ]
@@ -405,7 +398,6 @@ if (current_toolchain == dart_toolchain) {
                    _all_deps_sources_file,
                    _packages_path,
                    _pubspec,
-                   dart_analyzer_binary,
                    source_file,
                  ] + rebase_path(rebased_sources, ".", root_build_dir)
 
@@ -424,19 +416,12 @@ if (current_toolchain == dart_toolchain) {
         outputs = [ output_file ]
 
         args = [
+          "--dart",
+          rebase_path(prebuilt_dart, root_build_dir),
           "--source-file",
           rebase_path(source_file, root_build_dir),
           "--dot-packages",
           rebase_path(_packages_path, root_build_dir),
-
-          # TODO(jayzhuang): Remove `--options` flag as soon as we switch to
-          # `dart analyze`.
-          "--options",
-          rebase_path(_analysis_options, root_build_dir),
-          "--dartanalyzer",
-          rebase_path(dart_analyzer_binary, root_build_dir),
-          "--dart-sdk",
-          rebase_path(dart_sdk, root_build_dir),
           "--stamp",
           rebase_path(output_file, root_build_dir),
           "--depname",

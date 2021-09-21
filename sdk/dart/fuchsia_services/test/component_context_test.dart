@@ -20,10 +20,16 @@ void main() {
     });
 
     test('create throws an error when called twice', () {
+      // TODO(https://fxbug.dev/71711): Figure out why `dart analyze` complains
+      // about this.
+      // ignore: unnecessary_lambdas
       expect(() => ComponentContext.create(), throwsException);
     });
 
     test('createAndServe throws an error when called twice', () {
+      // TODO(https://fxbug.dev/71711): Figure out why `dart analyze` complains
+      // about this.
+      // ignore: unnecessary_lambdas
       expect(() => ComponentContext.createAndServe(), throwsException);
     });
   });

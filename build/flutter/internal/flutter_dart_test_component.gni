@@ -81,6 +81,7 @@ template("flutter_dart_test_component") {
                              "language_version",
                              "deps",
                              "non_dart_deps",
+                             "null_safe",
                            ])
 
     testonly = true

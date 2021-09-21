@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
@@ -233,11 +236,15 @@ class TestsConfig {
     var v2runnerTokens = <String>[];
 
     for (var filter in flags.testFilter) {
-      v2runnerTokens..add('--test-filter')..add(filter);
+      v2runnerTokens
+        ..add('--test-filter')
+        ..add(filter);
     }
 
     if (flags.count != null) {
-      v2runnerTokens..add('--count')..add(flags.count);
+      v2runnerTokens
+        ..add('--count')
+        ..add(flags.count);
     }
     // We do not add the parallel option here, as it may also be specified via
     // test spec. Instead, it is added later.
@@ -247,7 +254,9 @@ class TestsConfig {
       v2runnerTokens.add('--run-disabled');
     }
     if (flags.timeout > 0) {
-      v2runnerTokens..add('--timeout')..add(flags.timeout.toString());
+      v2runnerTokens
+        ..add('--timeout')
+        ..add(flags.timeout.toString());
     }
     if (flags.minSeverityLogs != null) {
       v2runnerTokens

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
@@ -416,9 +419,13 @@ class PackageManagerRepo {
     if (randomize) {
       params.shuffle();
     }
-    var cmdBuilder = StringBuffer()..write(cmd)..write(' ');
+    var cmdBuilder = StringBuffer()
+      ..write(cmd)
+      ..write(' ');
     for (var param in params) {
-      cmdBuilder..write(param)..write(' ');
+      cmdBuilder
+        ..write(param)
+        ..write(' ');
     }
     final response = await _sl4fDriver.ssh.run(cmdBuilder.toString());
     expect(response.exitCode, retCode);
