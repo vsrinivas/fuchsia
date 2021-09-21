@@ -80,8 +80,7 @@ TEST_F(StorageWatchdogTest, Basic) {
   TestStorageWatchdog watchdog = TestStorageWatchdog("/hippo_storage", "/hippo_storage/cache");
   watchdog.info.used_bytes = 0;
   watchdog.info.total_bytes = 20 * 1024;
-  auto usage = watchdog.GetStorageUsage();
-  EXPECT_LE(usage.percent(), StorageWatchdog::kCachePurgeThresholdPct);
+  EXPECT_TRUE(95 > watchdog.GetStorageUsage());
 
   for (size_t i = 0; i < 10; ++i) {
     auto filename = std::to_string(i);
@@ -94,8 +93,7 @@ TEST_F(StorageWatchdogTest, Basic) {
 
   // Confirm that storage pressure is high, clear the cache, check that things
   // were actually deleted
-  usage = watchdog.GetStorageUsage();
-  EXPECT_GT(usage.percent(), StorageWatchdog::kCachePurgeThresholdPct);
+  EXPECT_TRUE(95 < watchdog.GetStorageUsage());
   watchdog.PurgeCache();
 
   std::vector<std::string> example_files = {};
