@@ -49,7 +49,6 @@ group("common") {
     "//src/lib/fsl",
     "//src/lib/listnode",
     "//src/lib/storage/vfs/cpp",
-    "//src/storage/deprecated-fs-fidl-handler",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/lib/key_util",
     "//zircon/public/lib/fbl",

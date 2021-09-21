@@ -26,7 +26,6 @@
 #include <memory>
 
 #include <fbl/string_buffer.h>
-#include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "coordinator.h"
 #include "lib/fidl/cpp/message_part.h"

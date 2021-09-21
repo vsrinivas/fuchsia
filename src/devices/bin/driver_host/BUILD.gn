@@ -59,7 +59,6 @@ source_set("common") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/storage/vfs/cpp",
-    "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
