@@ -8,6 +8,7 @@ pub enum ModularMethod {
     RestartSession,
     StartBasemgr,
     KillBasemgr,
+    IsBasemgrRunning,
     LaunchMod,
 }
 
@@ -19,6 +20,7 @@ impl std::str::FromStr for ModularMethod {
             "RestartSession" => Ok(ModularMethod::RestartSession),
             "StartBasemgr" => Ok(ModularMethod::StartBasemgr),
             "KillBasemgr" => Ok(ModularMethod::KillBasemgr),
+            "IsBasemgrRunning" => Ok(ModularMethod::IsBasemgrRunning),
             "LaunchMod" => Ok(ModularMethod::LaunchMod),
             _ => return Err(format_err!("invalid ModularMethod: {}", method)),
         }
