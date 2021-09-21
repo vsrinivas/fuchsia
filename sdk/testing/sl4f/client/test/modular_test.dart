@@ -29,7 +29,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'basemgr_facade.RestartSession');
+      expect(body['method'], 'modular_facade.RestartSession');
       expect(body['params'], null);
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
@@ -45,7 +45,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'basemgr_facade.StartBasemgr');
+      expect(body['method'], 'modular_facade.StartBasemgr');
       expect(body['params'], isNotNull);
       expect(
           body['params'],
@@ -77,7 +77,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'basemgr_facade.StartBasemgr');
+      expect(body['method'], 'modular_facade.StartBasemgr');
       expect(body['params'], isNotNull);
       expect(body['params'], isEmpty);
       req.response.write(
@@ -94,7 +94,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'basemgr_facade.LaunchMod');
+      expect(body['method'], 'modular_facade.LaunchMod');
       expect(body['params'],
           {'mod_url': 'fake_url', 'mod_name': 'fake_name', 'story_name': null});
       req.response.write(
@@ -120,7 +120,7 @@ void main(List<String> args) {
           'error': null,
         }));
       } else {
-        expect(body['method'], 'basemgr_facade.StartBasemgr');
+        expect(body['method'], 'modular_facade.StartBasemgr');
         expect(body['params'], isNotNull);
         expect(body['params'], isEmpty);
         called = true;
@@ -148,7 +148,7 @@ void main(List<String> args) {
           'error': null,
         }));
       } else {
-        expect(body['method'], 'basemgr_facade.StartBasemgr');
+        expect(body['method'], 'modular_facade.StartBasemgr');
         expect(body['params'], isNotNull);
         expect(
             body['params'],
@@ -222,7 +222,7 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'basemgr_facade.KillBasemgr');
+      expect(body['method'], 'modular_facade.KillBasemgr');
       expect(body['params'], null);
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
@@ -245,7 +245,7 @@ void main(List<String> args) {
           'result': killed ? 'NotFound' : 'Success',
           'error': null,
         }));
-      } else if (body['method'] == 'basemgr_facade.StartBasemgr') {
+      } else if (body['method'] == 'modular_facade.StartBasemgr') {
         expect(
           body['params'],
           isNotNull,
@@ -255,7 +255,7 @@ void main(List<String> args) {
         req.response.write(
             jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       } else {
-        expect(body['method'], 'basemgr_facade.KillBasemgr');
+        expect(body['method'], 'modular_facade.KillBasemgr');
         expect(body['params'], anyOf(isNull, isEmpty));
         killed = true;
         req.response.write(

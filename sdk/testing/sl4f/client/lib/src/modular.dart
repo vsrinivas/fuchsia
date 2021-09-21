@@ -42,13 +42,13 @@ class Modular {
   ///
   /// This is equivalent to sessionctl restart_session.
   Future<String> restartSession() async =>
-      await _request('basemgr_facade.RestartSession');
+      await _request('modular_facade.RestartSession');
 
   /// Kill Basemgr.
   ///
   /// This is equivalent to basemgr_launcher shutdown.
   Future<String> killBasemgr() async =>
-      await _request('basemgr_facade.KillBasemgr');
+      await _request('modular_facade.KillBasemgr');
 
   /// Launches basemgr.
   ///
@@ -62,9 +62,9 @@ class Modular {
   Future<String> startBasemgr([String config]) async {
     if (config != null && config.isNotEmpty) {
       return await _request(
-          'basemgr_facade.StartBasemgr', {'config': json.decode(config)});
+          'modular_facade.StartBasemgr', {'config': json.decode(config)});
     } else {
-      return await _request('basemgr_facade.StartBasemgr', {});
+      return await _request('modular_facade.StartBasemgr', {});
     }
   }
 
@@ -73,7 +73,7 @@ class Modular {
   /// Take custom parameters or launch mod with default value.
   Future<String> launchMod(String modUrl,
       {String modName, String storyName}) async {
-    return await _request('basemgr_facade.LaunchMod',
+    return await _request('modular_facade.LaunchMod',
         {'mod_url': modUrl, 'mod_name': modName, 'story_name': storyName});
   }
 
