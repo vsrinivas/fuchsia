@@ -274,9 +274,9 @@ high_entry:
     call choose_stack_guard
 
     // Move it into place.
-    mov %rcx, %gs:ZX_TLS_STACK_GUARD_OFFSET
+    mov %rax, %gs:ZX_TLS_STACK_GUARD_OFFSET
     // Don't leak that value to other code.
-    xor %ecx, %ecx
+    xor %eax, %eax
 
     // configure the kernel base address
     // TODO: dynamically figure this out once we allow the x86 kernel to be loaded anywhere

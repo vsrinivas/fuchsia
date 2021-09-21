@@ -50,6 +50,7 @@ static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_stack_guard(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
@@ -74,6 +75,8 @@ STATIC_COMMAND("crash_pmm_use_after_free", "intentionally corrupt the pmm free l
 STATIC_COMMAND("crash_assert", "intentionally crash by failing an assert", &cmd_crash_assert)
 STATIC_COMMAND("crash_thread_lock", "intentionally crash while holding the thread lock",
                &cmd_crash_thread_lock)
+STATIC_COMMAND("crash_stack_guard", "attempt to crash by overwriting the stack guard",
+               &cmd_crash_stack_guard)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -459,6 +462,16 @@ static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags)
     Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
     panic("intentionally panicking while holding thread lock\n");
   }
+  return -1;
+}
+
+static int cmd_crash_stack_guard(int argc, const cmd_args* argv, uint32_t flags) {
+  printf("attempting to crash\n");
+  // Attempt to crash by overwriting the compiler-inserted stack guard.
+  constexpr size_t kSize = 128;
+  // alloca should never be used outside of test code.
+  char* p = static_cast<char*>(__builtin_alloca(kSize));
+  memset(p, 0x45, 2 * kSize);
   return -1;
 }
 
