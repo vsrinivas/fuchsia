@@ -25,8 +25,8 @@ source_set("clock") {
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/lib/fit-promise",
     "//src/media/audio/lib/timeline",
-    "//zircon/public/lib/affine",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/affine",
   ]
 }
 

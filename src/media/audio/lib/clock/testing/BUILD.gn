@@ -20,8 +20,8 @@ source_set("testing") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/fit-promise",
     "//src/media/audio/lib/clock",
-    "//zircon/public/lib/affine",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/affine",
   ]
 }
 
