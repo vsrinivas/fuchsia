@@ -201,7 +201,8 @@ class SimpleClient {
     tx_depth_ = tx_depth;
     fuchsia_hardware_network::wire::SessionInfo session_info(alloc_);
     session_info.set_descriptor_version(alloc_, NETWORK_DEVICE_DESCRIPTOR_VERSION);
-    session_info.set_descriptor_length(alloc_, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
+    session_info.set_descriptor_length(
+        alloc_, static_cast<uint8_t>(sizeof(buffer_descriptor_t) / sizeof(uint64_t)));
     session_info.set_descriptor_count(alloc_, descriptor_count_);
     session_info.set_options(alloc_, fuchsia_hardware_network::wire::SessionFlags::kPrimary);
 

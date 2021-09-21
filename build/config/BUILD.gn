@@ -663,7 +663,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/tools/bt-intel-tool:*",
     "//src/connectivity/network/mdns/service:*",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:*",
-    "//src/connectivity/network/tun/network-tun:*",
     "//src/connectivity/openthread/drivers/ot-radio:*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:*",
     "//src/connectivity/telephony/drivers/qmi-fake-transport:*",

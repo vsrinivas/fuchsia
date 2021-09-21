@@ -370,7 +370,7 @@ zx::status<RxBuffer> DeviceAdapter::AllocRxSpace(size_t length) __TA_REQUIRES(rx
   while (!rx_buffers_.empty()) {
     const rx_space_buffer_t& space = rx_buffers_.front();
     buffer.PushRxSpace(space);
-    uint32_t space_length = space.region.length;
+    uint64_t space_length = space.region.length;
     rx_buffers_.pop();
     if (space_length >= length) {
       return zx::ok(std::move(buffer));
