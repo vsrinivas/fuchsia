@@ -55,3 +55,9 @@ mount /dev/sys/platform/pci/00:1f.2/ahci/sata0/block /tmp/mount
 # When you're done, you can unmount it.
 umount /tmp/mount
 ```
+
+## Increasing the size of QEMU images
+
+```shell
+$ IMAGE_SIZE=… fx qemu …
+```
