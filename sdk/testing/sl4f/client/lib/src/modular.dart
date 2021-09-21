@@ -5,9 +5,7 @@
 import 'dart:convert';
 
 import 'package:logging/logging.dart';
-import 'package:retry/retry.dart';
 
-import 'component.dart';
 import 'exceptions.dart';
 import 'sl4f_client.dart';
 
@@ -25,18 +23,13 @@ class Modular {
   /// Function that makes a request to SL4F.
   final ModularRequestFn _request;
 
-  /// The handle to a component search query issuer.
-  final Component _component;
-
   bool _controlsBasemgr = false;
 
   /// Whether this instance controls the currently running basemgr so it will
   /// shut it down when [shutdown] is called.
   bool get controlsBasemgr => _controlsBasemgr;
 
-  Modular(Sl4f sl4f, {Component component})
-      : _request = sl4f.request,
-        _component = component ?? Component(sl4f);
+  Modular(Sl4f sl4f) : _request = sl4f.request;
 
   /// Restarts a Modular session.
   ///
@@ -80,14 +73,8 @@ class Modular {
   /// Whether basemgr is currently running on the DUT.
   ///
   /// This works whether it was started by this class or not.
-  ///
-  /// There are timing windows where [Component.search] can return a transient
-  /// error. Uses [retry] to capture the Exceptions for a small number of quick
-  /// attempts.
-  Future<bool> get isRunning => retry(
-        () => _component.search('basemgr.cmx'),
-        retryIf: (e) => e is JsonRpcException,
-      );
+  Future<bool> get isRunning async =>
+      await _request('modular_facade.IsBasemgrRunning');
 
   /// Starts basemgr only if it isn't running yet.
   ///

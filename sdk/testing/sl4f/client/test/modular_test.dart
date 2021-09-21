@@ -113,10 +113,10 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_facade.Search') {
+      if (body['method'] == 'modular_facade.IsBasemgrRunning') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': called ? 'Success' : 'NotFound',
+          'result': called,
           'error': null,
         }));
       } else {
@@ -141,10 +141,10 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_facade.Search') {
+      if (body['method'] == 'modular_facade.IsBasemgrRunning') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': called ? 'Success' : 'NotFound',
+          'result': called,
           'error': null,
         }));
       } else {
@@ -184,11 +184,10 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'component_facade.Search');
-      expect(body['params']['name'], 'basemgr.cmx');
+      expect(body['method'], 'modular_facade.IsBasemgrRunning');
       req.response.write(jsonEncode({
         'id': body['id'],
-        'result': 'NotFound',
+        'result': false,
         'error': null,
       }));
       await req.response.close();
@@ -203,11 +202,10 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      expect(body['method'], 'component_facade.Search');
-      expect(body['params']['name'], 'basemgr.cmx');
+      expect(body['method'], 'modular_facade.IsBasemgrRunning');
       req.response.write(jsonEncode({
         'id': body['id'],
-        'result': 'Success',
+        'result': true,
         'error': null,
       }));
       await req.response.close();
@@ -239,10 +237,10 @@ void main(List<String> args) {
     void handler(HttpRequest req) async {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
-      if (body['method'] == 'component_facade.Search') {
+      if (body['method'] == 'modular_facade.IsBasemgrRunning') {
         req.response.write(jsonEncode({
           'id': body['id'],
-          'result': killed ? 'NotFound' : 'Success',
+          'result': !killed,
           'error': null,
         }));
       } else if (body['method'] == 'modular_facade.StartBasemgr') {
