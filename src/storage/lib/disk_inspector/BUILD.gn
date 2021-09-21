@@ -63,10 +63,10 @@ if (is_fuchsia) {
       "vmo_buffer_factory.cc",
     ]
 
-    public_deps = [ "//zircon/public/lib/fbl" ]
+    public_deps = [ "//zircon/system/ulib/fbl" ]
     deps = [
       "//sdk/lib/syslog/cpp",
-      "//zircon/public/lib/fbl",
+      "//zircon/system/ulib/fbl",
     ]
 
     if (is_fuchsia) {

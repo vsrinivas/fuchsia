@@ -40,8 +40,8 @@ driver_module("usb-peripheral-driver") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # Set default configuration here, rather than relying on usbctl to do it.
@@ -96,11 +96,11 @@ test("usb-peripheral-unittest-bin") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/utf_conversion",
   ]
 

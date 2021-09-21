@@ -19,7 +19,7 @@ zx_library("hid-parser") {
     "report.cc",
     "units.cc",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 group("tests") {

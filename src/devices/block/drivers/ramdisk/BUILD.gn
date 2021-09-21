@@ -34,10 +34,10 @@ driver_module("ramdisk-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
   ]

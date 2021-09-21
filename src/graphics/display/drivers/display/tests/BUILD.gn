@@ -26,9 +26,9 @@ test("display-core-unittests") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -13,10 +13,10 @@ test("fake-ddk-test-bin") {
   sources = [ "fake-ddk-test.cc" ]
   deps = [
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

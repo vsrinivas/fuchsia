@@ -199,9 +199,9 @@ source_set("audio_core_lib") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/timeline",
     "//src/media/audio/lib/wav",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

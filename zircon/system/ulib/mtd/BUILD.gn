@@ -18,10 +18,10 @@ zx_library("mtd") {
     sources += [ "mtd-interface.cc" ]
   }
 
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
 
   deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/log",
   ]
 

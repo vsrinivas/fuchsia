@@ -18,8 +18,8 @@ test("range") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/range",
   ]
 }

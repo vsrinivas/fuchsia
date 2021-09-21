@@ -10,14 +10,14 @@ zx_library("fdio-caller") {
   sources = []
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

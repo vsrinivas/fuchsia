@@ -36,10 +36,10 @@ source_set("src") {
     "//src/connectivity/network/drivers/network-device/mac",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/syslog",
   ]

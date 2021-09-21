@@ -25,10 +25,10 @@ source_set("src") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
@@ -49,10 +49,10 @@ executable("isolated_devmgr") {
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
   ]
 
   # These binaries are used by isolated_devmgr at runtime and should be
@@ -98,10 +98,10 @@ static_library("usb-virtual-bus") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
   configs += [
@@ -180,8 +180,8 @@ driver_module("crash-device-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

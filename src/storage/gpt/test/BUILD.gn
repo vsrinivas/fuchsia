@@ -20,9 +20,9 @@ test("gpt-unit-test") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
     "//src/storage/gpt",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
 
     # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is
     # extracted to a library.

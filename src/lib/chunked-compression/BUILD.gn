@@ -21,12 +21,12 @@ source_set("chunked-compression") {
     "streaming-chunked-compressor.cc",
     "streaming-chunked-compressor.h",
   ]
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
   deps = [
     "//src/lib/fxl",
     "//third_party/zstd",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (is_fuchsia) {
@@ -39,7 +39,7 @@ executable("chunked-compress") {
   sources = [ "main.cc" ]
   deps = [
     ":chunked-compression",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -60,7 +60,7 @@ source_set("chunked-compression-testutils") {
   ]
   public_deps = [
     ":chunked-compression",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [ "//zircon/public/lib/cksum" ]
 }

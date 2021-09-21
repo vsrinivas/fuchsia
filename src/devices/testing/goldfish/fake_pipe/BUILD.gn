@@ -16,9 +16,9 @@ source_set("fake_pipe") {
     "//src/devices/testing/fake-bti",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 

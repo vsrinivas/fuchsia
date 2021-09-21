@@ -63,8 +63,8 @@ test("fdio-test") {
     "pipe.cc",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
   if (is_fuchsia) {
     sources += [
@@ -123,7 +123,7 @@ test("fdio-gtest") {
 
   deps = [
     "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (is_fuchsia) {

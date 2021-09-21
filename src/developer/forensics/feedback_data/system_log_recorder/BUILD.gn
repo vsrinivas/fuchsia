@@ -63,7 +63,7 @@ source_set("src") {
     "//src/lib/diagnostics/accessor2logger",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
   ]
 }

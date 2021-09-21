@@ -42,7 +42,7 @@ executable("validate-fars") {
     "//src/lib/files:files",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   testonly = true
 }

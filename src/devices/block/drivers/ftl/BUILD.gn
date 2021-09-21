@@ -38,7 +38,7 @@ driver_module("ftl-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -68,10 +68,10 @@ source_set("common") {
     "//sdk/lib/fit-promise",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",

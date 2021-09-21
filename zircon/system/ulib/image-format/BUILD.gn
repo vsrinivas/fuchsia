@@ -19,8 +19,8 @@ zx_library("image-format") {
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sysmem-version",
   ]
 

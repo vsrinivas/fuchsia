@@ -20,10 +20,10 @@ source_set("pipe_io") {
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

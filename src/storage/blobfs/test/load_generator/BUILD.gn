@@ -7,12 +7,12 @@ source_set("load_generator_lib") {
   sources = [ "load_generator.cc" ]
   deps = [
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
     "//src/storage/blobfs/test:test_utils",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

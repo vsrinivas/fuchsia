@@ -16,7 +16,7 @@ zx_library("perftest") {
     "results.cc",
     "runner.cc",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
   if (is_fuchsia) {
     deps += [
       "//zircon/public/lib/async",

@@ -42,12 +42,12 @@ source_set("common") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:syslog-headers",
   ]
 

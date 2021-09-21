@@ -119,9 +119,9 @@ test("posix-clocks-test") {
   sources = [ "posix-clocks.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

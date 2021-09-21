@@ -45,9 +45,9 @@ driver_module("qemu-arm64-driver") {
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (platform_enable_user_pci) {

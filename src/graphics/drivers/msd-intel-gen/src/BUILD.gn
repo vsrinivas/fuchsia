@@ -86,7 +86,7 @@ source_set("src") {
     "../include",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_deps = [ "//sdk/banjo/fuchsia.hardware.intelgpucore:fuchsia.hardware.intelgpucore_banjo_cpp" ]

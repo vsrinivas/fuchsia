@@ -10,7 +10,7 @@ source_set("lib") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_deps = [ "//sdk/lib/fit" ]

@@ -19,10 +19,10 @@ test("runtests-utils") {
   ]
   deps = [
     "//src/storage/memfs",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/runtests-utils",
   ]
@@ -65,9 +65,9 @@ executable("profile-helper") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

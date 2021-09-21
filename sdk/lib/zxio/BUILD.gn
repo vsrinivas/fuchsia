@@ -83,8 +83,8 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/zxio:inception",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

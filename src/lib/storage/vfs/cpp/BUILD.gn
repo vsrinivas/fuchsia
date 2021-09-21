@@ -30,12 +30,12 @@ static_library("cpp") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (is_fuchsia) {
@@ -127,10 +127,10 @@ static_library("cpp") {
       "//sdk/lib/fdio",
       "//sdk/lib/fit",
       "//zircon/public/lib/async",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",
     ]
@@ -151,13 +151,13 @@ static_library("inotify_test_base") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -207,7 +207,6 @@ test("fs-vnode-test") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -217,6 +216,7 @@ test("fs-vnode-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
@@ -249,7 +249,6 @@ test("fs-connection-test") {
     "//src/storage/memfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -258,6 +257,7 @@ test("fs-connection-test") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -277,13 +277,13 @@ test("fs-inotify-test") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

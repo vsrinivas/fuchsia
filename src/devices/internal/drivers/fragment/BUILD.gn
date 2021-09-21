@@ -72,9 +72,9 @@ driver_module("fragment-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 
@@ -146,9 +146,9 @@ driver_module("fragment.proxy-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }

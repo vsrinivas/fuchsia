@@ -32,13 +32,13 @@ source_set("shell") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [
     "//sdk/lib/fdio",
     "//src/developer/forensics/feedback/migration/utils",
     "//src/lib/files",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

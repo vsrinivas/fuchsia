@@ -10,7 +10,7 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     "//tools/fidl/fidlc:fidl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/perftest",
   ]
 }

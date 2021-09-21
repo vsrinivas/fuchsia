@@ -34,8 +34,8 @@ driver_module("fallback-driver") {
     "//src/devices/rtc/lib/rtc:rtc_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

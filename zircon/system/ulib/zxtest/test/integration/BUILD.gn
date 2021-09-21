@@ -36,8 +36,8 @@ test("zxtest-integration") {
     "register_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
   if (is_fuchsia) {
     deps += [

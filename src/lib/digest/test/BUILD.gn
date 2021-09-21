@@ -39,7 +39,7 @@ test("digest") {
     "//third_party/boringssl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

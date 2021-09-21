@@ -53,8 +53,8 @@ executable("sys_service_unittests") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

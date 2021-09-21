@@ -49,12 +49,12 @@ source_set("common") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
   ]

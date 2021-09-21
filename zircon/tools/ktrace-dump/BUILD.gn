@@ -12,8 +12,8 @@
 executable("ktrace-dump") {
   sources = [ "ktrace-dump.cc" ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -17,10 +17,10 @@ test("fake-object-test-bin") {
   sources = [ "fake-object-test.cc" ]
   deps = [
     "//src/devices/testing/fake-object",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

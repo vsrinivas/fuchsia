@@ -41,8 +41,8 @@ test("disk_extract_unit_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/extractor/cpp:disk_extractor",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

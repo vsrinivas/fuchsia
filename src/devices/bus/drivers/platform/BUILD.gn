@@ -48,10 +48,10 @@ driver_module("platform-bus-driver") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -74,10 +74,10 @@ driver_module("platform-bus.proxy-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -115,11 +115,11 @@ test("platform-bus-unittest") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

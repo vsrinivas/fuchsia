@@ -36,7 +36,7 @@ source_set("fvm-metadata") {
     "//src/storage/fvm",
     "//src/storage/volume_image/utils:io-interfaces",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 source_set("fvm-image-extend") {
@@ -86,7 +86,7 @@ source_set("fvm-unpack") {
   deps = [
     ":fvm-metadata",
     "//src/storage/volume_image/utils:fd-io",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -214,8 +214,8 @@ test("fvm_sparse_image_reader_test") {
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

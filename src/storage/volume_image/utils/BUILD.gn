@@ -12,7 +12,7 @@ source_set("compression-interfaces") {
   public_deps = [
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -29,8 +29,8 @@ source_set("lz4-compression") {
     ":compression-interfaces",
     "//sdk/lib/fit-promise",
     "//src/storage/volume_image:options",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/lz4",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -57,7 +57,7 @@ source_set("lz4-decompress-reader") {
     ":io-interfaces",
     ":lz4-compression",
     "//sdk/lib/fit",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -85,8 +85,8 @@ source_set("guid") {
   public = [ "guid.h" ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -97,7 +97,7 @@ source_set("guid-test") {
     ":guid",
     "//sdk/lib/fit",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # This double checks that the resulting guids are compatible with our existing guids.
@@ -121,7 +121,7 @@ source_set("io-interfaces") {
   ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -146,8 +146,8 @@ source_set("fd-io") {
   public_deps = [
     ":io-interfaces",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -157,7 +157,7 @@ source_set("block-io") {
   public_deps = [
     ":io-interfaces",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [ ":block-utils" ]
 }
@@ -179,7 +179,7 @@ source_set("fd-test-helper") {
   sources = [ "fd_test_helper.cc" ]
   public = [ "fd_test_helper.h" ]
   public_deps = [ "//sdk/lib/fit-promise" ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 source_set("fd-io-test") {
@@ -193,13 +193,13 @@ source_set("fd-io-test") {
     ":fd-test-helper",
     "//sdk/lib/fit",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
 source_set("block-utils") {
   public = [ "block_utils.h" ]
-  public_deps = [ "//zircon/public/lib/fbl" ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 source_set("block-utils-test") {
@@ -208,7 +208,7 @@ source_set("block-utils-test") {
   deps = [
     ":block-utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

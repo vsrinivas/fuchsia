@@ -46,7 +46,7 @@ executable("audio_fidelity_test_bin") {
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

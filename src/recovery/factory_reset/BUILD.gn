@@ -22,7 +22,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [
@@ -116,10 +116,10 @@ test("factory_reset_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/security/zxcrypt:zxcrypt-fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",

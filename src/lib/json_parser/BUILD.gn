@@ -23,8 +23,8 @@ source_set("json_parser") {
     "//sdk/lib/fit",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

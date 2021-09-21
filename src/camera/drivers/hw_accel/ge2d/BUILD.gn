@@ -44,8 +44,8 @@ source_set("lib") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
     "//src/devices/lib/driver",
@@ -113,9 +113,9 @@ executable("ge2d_task_unittest_bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

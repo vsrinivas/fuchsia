@@ -23,9 +23,9 @@ group("common") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
   ]
 }

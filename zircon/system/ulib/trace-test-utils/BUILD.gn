@@ -23,19 +23,19 @@ zx_library("trace-test-utils") {
   ]
   public_deps = [
     # <trace-test-utils/fixture.h> needs these
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-reader",
   ]
   deps = [
     # The kind of engine to use is up to the client, so we don't provide any
     # trace-engine dependency here.
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace-provider:trace-handler",
     "//zircon/system/ulib/trace-reader",
   ]

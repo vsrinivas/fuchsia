@@ -59,10 +59,10 @@ source_set("launcher") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -102,8 +102,8 @@ source_set("fshost-registry") {
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/storage/memfs:memfs-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
@@ -125,7 +125,7 @@ source_set("inspect") {
     "//src/lib/fsl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -213,10 +213,10 @@ source_set("block-watcher") {
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/service:service-llcpp",
@@ -461,8 +461,8 @@ test("copier_test") {
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/test_runners:tmp_storage",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

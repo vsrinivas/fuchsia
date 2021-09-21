@@ -26,8 +26,8 @@ source_set("fcrypto") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/system/public",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [

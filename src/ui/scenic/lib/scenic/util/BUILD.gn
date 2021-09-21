@@ -30,6 +30,6 @@ source_set("rk4_spring_simulation") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

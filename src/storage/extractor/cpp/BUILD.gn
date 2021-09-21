@@ -42,8 +42,8 @@ test("disk_extractor_unit_test") {
     "//src/storage/extractor/cpp:disk_extractor",
     "//src/storage/fs_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
     "//zircon/third_party/ulib/cksum",
   ]
   data_deps = [ "//src/storage/bin/blobfs" ]
@@ -84,7 +84,7 @@ static_library("disk_extractor") {
   deps = [
     "//src/lib/storage/vfs/cpp",
     "//src/storage/gpt",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath:safemath",
   ]
@@ -111,11 +111,11 @@ static_library("disk_extractor") {
     ]
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fbl",
     ]
     include_dirs = [ ".." ]
   } else {

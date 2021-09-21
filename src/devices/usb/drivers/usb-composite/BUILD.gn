@@ -39,8 +39,8 @@ driver_module("usb-composite-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

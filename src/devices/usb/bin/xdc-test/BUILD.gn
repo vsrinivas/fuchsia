@@ -17,8 +17,8 @@ executable("xdc-test") {
   deps = [
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
@@ -30,7 +30,7 @@ executable("xdc-test-host") {
     "xdc-test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/xdc-host-utils",
     "//zircon/system/ulib/xdc-server-utils",
   ]

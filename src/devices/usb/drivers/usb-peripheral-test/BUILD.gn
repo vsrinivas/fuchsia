@@ -36,8 +36,8 @@ if (is_fuchsia) {
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",
       "//src/lib/ddk",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
+      "//zircon/system/ulib/fbl",
     ]
   }
 
@@ -69,8 +69,8 @@ if (is_fuchsia) {
     output_name = "usb-peripheral-test"
     sources = [ "test.cc" ]
     deps = [
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/fbl",
       "//zircon/third_party/ulib/usbhost",
     ]
   }

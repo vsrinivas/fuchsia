@@ -35,9 +35,9 @@ driver_module("nand-broker-driver") {
     "//src/devices/lib/nand",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

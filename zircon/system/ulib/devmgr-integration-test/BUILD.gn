@@ -23,7 +23,7 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/devmgr-launcher",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <fbl/unique_fd.h>.
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/fit/function.h>.
     "//sdk/lib/fit",

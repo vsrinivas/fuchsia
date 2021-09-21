@@ -54,9 +54,9 @@ source_set("fake-lib") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]

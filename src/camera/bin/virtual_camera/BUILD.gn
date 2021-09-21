@@ -38,7 +38,7 @@ source_set("stream_storage") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

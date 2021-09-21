@@ -39,7 +39,7 @@ source_set("lib") {
     "//src/lib/digest",
     "//src/lib/json_parser",
     "//src/security/codelab/services:codelab",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

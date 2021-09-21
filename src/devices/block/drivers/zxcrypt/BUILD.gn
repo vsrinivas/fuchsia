@@ -42,10 +42,10 @@ driver_module("zxcrypt-driver") {
     "//src/security/fcrypto",
     "//src/security/zxcrypt:zxcrypt-dev",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 

@@ -21,11 +21,11 @@ test("sa-unittest-bin") {
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/drivers/lib/audio-utils",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]

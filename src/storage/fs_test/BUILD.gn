@@ -38,9 +38,9 @@ static_library("fs_test") {
     "//src/storage/blobfs",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -72,7 +72,7 @@ test("append_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -81,7 +81,7 @@ test("attr_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -107,7 +107,7 @@ test("clone_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -118,7 +118,7 @@ test("corrupt_tests") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -132,7 +132,7 @@ test("directory_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -157,7 +157,7 @@ test("fcntl_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -166,7 +166,7 @@ test("filename_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -175,7 +175,7 @@ test("link_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -184,7 +184,7 @@ test("lseek_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -194,7 +194,7 @@ test("mmap_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -240,7 +240,7 @@ test("random_op_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -252,7 +252,7 @@ test("realpath_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -262,7 +262,7 @@ test("rename_tests") {
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
 
@@ -280,7 +280,7 @@ test("resize_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",
     "//src/storage/minfs",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
 
@@ -295,7 +295,7 @@ test("rw_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -304,7 +304,7 @@ test("rw_workers_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -313,7 +313,7 @@ test("sparse_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -322,7 +322,7 @@ test("sync_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -331,7 +331,7 @@ test("threading_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -343,7 +343,7 @@ test("truncate_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -352,7 +352,7 @@ test("unicode_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -364,7 +364,7 @@ test("unlink_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -374,7 +374,7 @@ test("watcher_tests") {
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
 
@@ -389,7 +389,7 @@ test("directory_large_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -398,7 +398,7 @@ test("max_file_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -408,7 +408,7 @@ test("sparse_large_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/minfs",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -420,6 +420,6 @@ test("truncate_large_tests") {
   deps = [
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

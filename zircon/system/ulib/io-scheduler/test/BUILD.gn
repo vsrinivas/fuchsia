@@ -28,8 +28,8 @@ test("io-scheduler-test") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
   ]

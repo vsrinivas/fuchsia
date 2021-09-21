@@ -26,9 +26,9 @@ executable("miscsvc") {
     "//sdk/lib/fdio",
     "//src/storage/lib/paver",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/kcounter",
     "//zircon/system/ulib/svc",
   ]

@@ -31,9 +31,9 @@ source_set("use_media_decoder_source_set") {
     "//src/lib/fxl",
     "//src/media/lib/codec_impl:fourcc",
     "//third_party/boringssl:crypto",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [

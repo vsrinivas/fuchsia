@@ -39,9 +39,9 @@ driver_module("lite-on-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]
@@ -79,10 +79,10 @@ test("ltr-578als-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]

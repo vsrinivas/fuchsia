@@ -15,7 +15,7 @@ static_library("elflib") {
 
   public_deps = [
     "//src/lib/llvm:LLVMHeaderOnly",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

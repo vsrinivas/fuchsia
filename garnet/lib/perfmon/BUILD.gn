@@ -55,7 +55,7 @@ static_library("perfmon") {
 
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fbl",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
     ]
 

@@ -13,13 +13,13 @@ zx_library("id_allocator") {
     "//zircon/system/ulib/bitmap",
 
     # <id_allocator/id_allocator.h> has #include <fbl/algorithm.h>.
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/public",
     "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

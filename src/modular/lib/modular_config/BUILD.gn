@@ -16,7 +16,7 @@ source_set("modular_config") {
     ":modular_config_constants",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [
@@ -38,7 +38,7 @@ source_set("modular_config_accessor") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [ ":modular_config" ]

@@ -23,8 +23,8 @@ source_set("vmo") {
     "//sdk/fidl/fuchsia.mem",
     "//src/lib/files",
     "//src/lib/fxl:memory",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ "//garnet/public:config" ]

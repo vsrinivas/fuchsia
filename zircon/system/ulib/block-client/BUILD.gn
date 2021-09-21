@@ -49,9 +49,9 @@ zx_library("block-client") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -74,8 +74,8 @@ zx_library("fake-device") {
   sources = [ "fake-device.cc" ]
   public_deps = [
     ":block-client",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",

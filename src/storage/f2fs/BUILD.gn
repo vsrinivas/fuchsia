@@ -66,7 +66,7 @@ static_library("f2fs") {
   ]
 
   public_deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # bcache.h includes fs/transaction/device_transaction_handler.h & storage/buffer/...
     "//src/lib/storage/vfs/cpp/transaction",

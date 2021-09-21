@@ -17,8 +17,8 @@ executable("telephony-qmi-usb-integration-test") {
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr:usb-virtual-bus",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

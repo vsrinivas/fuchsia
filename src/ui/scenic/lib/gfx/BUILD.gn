@@ -265,7 +265,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/utils",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",

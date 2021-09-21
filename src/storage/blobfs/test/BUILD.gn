@@ -47,8 +47,8 @@ source_set("test_utils") {
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [
     "//src/storage/blobfs",

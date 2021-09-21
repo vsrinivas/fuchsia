@@ -14,9 +14,9 @@ executable("startup") {
     "//sdk/lib/fit",
     "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager_llcpp",
     "//src/sys/appmgr/fidl/fuchsia.appmgr:fuchsia.appmgr_llcpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 

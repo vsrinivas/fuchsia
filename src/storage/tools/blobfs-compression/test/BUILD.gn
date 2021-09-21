@@ -22,7 +22,7 @@ test("blobfs-compression-test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs/compression/configs",
     "//src/storage/tools/blobfs-compression:common",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -41,8 +41,8 @@ test("cli-option-validation-test") {
     "//src/storage/fs_test",
     "//src/storage/memfs/test:memfs_fs_test",
     "//src/storage/tools/blobfs-compression:common",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/id_allocator",
   ]
 }

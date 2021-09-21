@@ -27,9 +27,9 @@ test("utf_conversion-test") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/utf_conversion",
   ]
 }

@@ -109,11 +109,11 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
       "//sdk/lib/zxio:inception",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fbl",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
     fdio_version_script = "fdio.ld"

@@ -16,10 +16,10 @@ executable("ram-info") {
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -39,13 +39,13 @@ test("ram-info-test-bin") {
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 

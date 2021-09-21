@@ -34,8 +34,8 @@ common_deps = [
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",
-  "//zircon/public/lib/fbl",
   "//zircon/public/lib/zx",
+  "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/inspect",
 ]
 

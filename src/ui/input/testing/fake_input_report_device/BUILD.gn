@@ -12,9 +12,9 @@ source_set("fake_input_report_device") {
   public_deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report",
     "//src/ui/input/lib/hid-input-report",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
   ]
 }

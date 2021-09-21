@@ -34,7 +34,7 @@ source_set("categories") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_deps = [

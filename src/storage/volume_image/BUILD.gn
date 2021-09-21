@@ -27,7 +27,7 @@ source_set("address-descriptor") {
   public = [ "address_descriptor.h" ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [ "//third_party/rapidjson" ]

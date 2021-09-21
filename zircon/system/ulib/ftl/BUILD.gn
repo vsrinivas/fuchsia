@@ -52,8 +52,8 @@ zx_library("ftl") {
   deps = [
     ":private_headers",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/fbl",
   ]
 
   # Use fbl for mac, since it does not support unnamed semaphores.

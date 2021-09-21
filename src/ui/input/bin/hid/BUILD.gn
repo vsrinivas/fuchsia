@@ -19,8 +19,8 @@ executable("hid") {
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/listnode",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid-parser",
   ]

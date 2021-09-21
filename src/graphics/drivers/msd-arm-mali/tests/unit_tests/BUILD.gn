@@ -78,6 +78,6 @@ group("test_deps") {
     "//src/graphics/lib/magma/tests/helper:platform_device_helper",
     "//src/graphics/lib/magma/tests/mock:mmio",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

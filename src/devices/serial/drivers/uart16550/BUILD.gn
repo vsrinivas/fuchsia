@@ -49,9 +49,9 @@ template("define_common_lib") {
       "//src/devices/lib/acpi",
       "//src/lib/ddk",
       "//src/lib/ddktl",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/uart",
     ]
     if (invoker.testonly) {

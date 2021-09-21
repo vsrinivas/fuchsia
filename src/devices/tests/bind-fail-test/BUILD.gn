@@ -45,10 +45,10 @@ test("tests") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
   ]
   visibility = [ ":*" ]
 

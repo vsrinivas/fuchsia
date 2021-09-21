@@ -24,12 +24,12 @@ zx_library("fake_ddk") {
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
@@ -44,7 +44,7 @@ zx_library("fake_ddk") {
     "//src/lib/ddktl",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <fbl/array.h>
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <lib/fake_ddk/fidl-helper.h> has #include <lib/fidl/llcpp/server.h>.
     "//zircon/public/lib/fidl-llcpp",

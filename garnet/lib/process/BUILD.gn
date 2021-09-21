@@ -18,7 +18,7 @@ source_set("process") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -32,7 +32,7 @@ executable("unittests") {
     ":process",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

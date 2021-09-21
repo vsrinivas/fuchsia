@@ -51,11 +51,11 @@ source_set("common") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }

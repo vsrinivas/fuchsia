@@ -37,11 +37,11 @@ driver_module("ams-light-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -76,13 +76,13 @@ test("ams-light-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
   ]
 }

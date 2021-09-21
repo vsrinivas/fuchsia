@@ -94,7 +94,7 @@ source_set("tests") {
     ":common",
     "//src/lib/files",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

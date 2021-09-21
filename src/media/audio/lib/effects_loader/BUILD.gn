@@ -20,7 +20,7 @@ source_set("effects_loader") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/effects",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [

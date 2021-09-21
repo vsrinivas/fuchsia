@@ -49,8 +49,8 @@ source_set("common") {
     "//src/devices/lib/dev-operation",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -68,8 +68,8 @@ test("skip-block-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

@@ -79,7 +79,7 @@ static_library("minfs") {
   ]
   public_deps = [
     "//src/lib/storage/vfs/cpp/transaction",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [

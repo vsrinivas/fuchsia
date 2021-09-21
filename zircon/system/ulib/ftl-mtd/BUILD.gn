@@ -11,13 +11,13 @@ zx_library("ftl-mtd") {
   sources = [ "nand-volume-driver.cc" ]
 
   public_deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl",
   ]
 
   deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/mtd",
   ]

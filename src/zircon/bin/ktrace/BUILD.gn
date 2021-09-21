@@ -10,7 +10,7 @@ executable("ktrace") {
   deps = [
     "//sdk/fidl/fuchsia.tracing.kernel",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }

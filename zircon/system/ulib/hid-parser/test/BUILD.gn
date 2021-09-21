@@ -27,8 +27,8 @@ test("hid-parser") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
   ]
@@ -42,7 +42,7 @@ fuchsia_unittest_package("hid-parser-package") {
 fuzzer("hid-parser-fuzzer") {
   sources = [ "hid-parser-fuzztest.cc" ]
   deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid-parser",
   ]
 }

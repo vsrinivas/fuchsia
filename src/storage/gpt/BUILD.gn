@@ -15,7 +15,7 @@ zx_library("gpt") {
   public_deps = [
     "//sdk/lib/fit-promise",
     "//src/lib/uuid",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
   ]
 

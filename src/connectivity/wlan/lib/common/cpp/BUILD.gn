@@ -62,10 +62,10 @@ source_set("common") {
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_configs = [ ":wlan_common_config" ]

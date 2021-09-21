@@ -15,8 +15,8 @@ source_set("verified-volume-client") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
   ]
@@ -49,8 +49,8 @@ source_set("sealer") {
   ]
   deps = [
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -63,11 +63,11 @@ test("sealer-test") {
     ":geometry",
     ":sealer",
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -75,8 +75,8 @@ source_set("block-verifier") {
   sources = [ "block-verifier.cc" ]
   deps = [
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -89,11 +89,11 @@ test("block-verifier-test") {
     ":block-verifier",
     ":geometry",
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -161,8 +161,8 @@ driver_module("block-verity-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/digest",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

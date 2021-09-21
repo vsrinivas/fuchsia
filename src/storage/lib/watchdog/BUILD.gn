@@ -18,10 +18,10 @@ test("watchdog_unittest") {
   deps = [
     "//src/lib/storage/vfs/cpp",
     "//src/storage/lib/watchdog",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog",
   ]
 
@@ -46,8 +46,8 @@ zx_library("watchdog") {
   deps = [
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (is_fuchsia) {
@@ -59,7 +59,7 @@ zx_library("watchdog") {
     ]
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fbl",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/inspector",
     ]
   } else {

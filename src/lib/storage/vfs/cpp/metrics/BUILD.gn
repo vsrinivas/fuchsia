@@ -13,12 +13,12 @@ static_library("metrics-cobalt") {
     "events.h",
   ]
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -34,14 +34,14 @@ static_library("metrics-inspect") {
   ]
   sources = [ "histograms.cc" ]
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
   ]
@@ -60,8 +60,8 @@ static_library("metrics-composite-latency-event") {
   deps = [
     ":metrics-cobalt",
     ":metrics-inspect",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }
@@ -115,9 +115,9 @@ test("metrics-inspect-test") {
 
   deps = [
     ":metrics-inspect",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
 }

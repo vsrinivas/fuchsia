@@ -44,7 +44,6 @@ source_set("test_sources") {
     "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/sync",
@@ -53,6 +52,7 @@ source_set("test_sources") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
   ]
 
@@ -124,8 +124,8 @@ if (is_fuchsia) {
       ":tests_to_run_under_handle_policy",
       "//sdk/lib/fdio",
       "//third_party/googletest:gtest_main",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/fbl",
     ]
   }
 

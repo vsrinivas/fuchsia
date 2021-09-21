@@ -26,9 +26,9 @@ executable("nand-util") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }
@@ -46,7 +46,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 

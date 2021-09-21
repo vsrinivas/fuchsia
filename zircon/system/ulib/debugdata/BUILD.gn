@@ -19,10 +19,10 @@ zx_library("debugdata") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
   public_deps = [
@@ -30,7 +30,7 @@ zx_library("debugdata") {
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
 
     # <debugdata/debugdata.h> has #include <fbl/unique_fd.h>.
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <debugdata/debugdata.h> has #include <lib/async/cpp/wait.h>.
     "//zircon/public/lib/async-cpp",

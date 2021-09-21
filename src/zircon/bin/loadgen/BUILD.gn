@@ -7,6 +7,6 @@ executable("loadgen") {
   sources = [ "loadgen.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

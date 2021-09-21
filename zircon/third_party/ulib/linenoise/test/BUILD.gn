@@ -24,8 +24,8 @@ test("linenoise-test") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/third_party/ulib/linenoise",
   ]
 }

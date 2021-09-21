@@ -37,9 +37,9 @@ executable("hypervisor_tests") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/kernel/phys/lib/page-table",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

@@ -53,7 +53,7 @@ source_set("source") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxb/58162): delete the below and fix compiler warnings

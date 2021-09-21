@@ -19,7 +19,7 @@ source_set("wav") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

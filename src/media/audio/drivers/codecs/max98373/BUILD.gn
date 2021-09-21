@@ -35,9 +35,9 @@ driver_module("max98373-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -68,12 +68,12 @@ test("max98373-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

@@ -18,8 +18,8 @@ executable("fvm-check") {
     "//src/storage/gpt",
     "//third_party/boringssl",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]

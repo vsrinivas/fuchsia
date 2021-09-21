@@ -10,11 +10,11 @@ executable("runtests") {
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/runtests-utils",
   ]
 }

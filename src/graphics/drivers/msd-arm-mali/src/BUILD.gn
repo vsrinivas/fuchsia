@@ -92,7 +92,7 @@ source_set("src") {
     "//src/graphics/lib/magma/src/magma_util/platform:port",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_deps = [

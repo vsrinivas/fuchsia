@@ -17,10 +17,10 @@ test("fake-resource-test-bin") {
   sources = [ "fake-resource-test.cc" ]
   deps = [
     "//src/devices/testing/fake-resource",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

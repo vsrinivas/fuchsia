@@ -23,12 +23,12 @@ zx_library("trace-reader") {
     "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
 
     # <trace-reader/records.h> has #include <fbl/array.h>.
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <trace-reader/records.h> has #include <lib/stdcompat/variant.h>.
     "//sdk/lib/stdcompat",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

@@ -30,12 +30,12 @@ common_deps = [
   "//src/lib/ddktl",
   "//src/lib/fsl",
   "//src/ui/input/lib/input-report-reader",
-  "//zircon/public/lib/fbl",
   "//zircon/public/lib/fidl-llcpp",
   "//zircon/public/lib/zircon-internal",
   "//zircon/public/lib/zx",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/fbl",
 ]
 
 driver_module("sensor_driver_module") {
@@ -111,7 +111,7 @@ fuzzer("goldfish-sensor-parser-fuzzer") {
     "tests/parser_fuzztest.cc",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid-parser",
   ]
 }

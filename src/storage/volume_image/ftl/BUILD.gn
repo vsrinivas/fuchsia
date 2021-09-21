@@ -16,7 +16,7 @@ source_set("raw-nand-image-utils") {
   ]
   deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -25,7 +25,7 @@ source_set("ftl-image-internal") {
   public = [ "ftl_image_internal.h" ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
     ":raw-nand-image-utils",
@@ -43,8 +43,8 @@ source_set("ftl-io") {
   ]
   deps = [
     ":raw-nand-image-utils",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -55,7 +55,7 @@ source_set("ftl-raw-nand-image-writer") {
     ":raw-nand-options",
     "//sdk/lib/fit-promise",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
     ":ftl-image-internal",
@@ -77,7 +77,7 @@ source_set("ftl-image") {
     ":ftl-image-internal",
     ":raw-nand-image-utils",
     "//src/storage/volume_image/utils:block-utils",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -90,7 +90,7 @@ source_set("ftl-test-helper") {
     "//zircon/system/ulib/ftl",
   ]
 
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 source_set("ftl-test") {
@@ -125,7 +125,7 @@ executable("ftl-volume-extractor") {
   sources = [ "ftl_volume_extractor.cc" ]
   deps = [
     ":ftl-test-helper",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl:ftl",
   ]
 }

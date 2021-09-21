@@ -27,7 +27,7 @@ zx_library("sysconfig-sync-client") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
   deps = [

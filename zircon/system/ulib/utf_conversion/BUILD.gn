@@ -8,7 +8,7 @@ zx_library("utf_conversion") {
   sdk = "static"
   sdk_headers = [ "utf_conversion/utf_conversion.h" ]
   sources = [ "utf_conversion.cc" ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 group("tests") {

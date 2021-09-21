@@ -35,9 +35,9 @@ driver_module("dw-i2c-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

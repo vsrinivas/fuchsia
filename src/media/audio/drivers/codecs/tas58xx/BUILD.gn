@@ -34,9 +34,9 @@ driver_module("tas58xx-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }
@@ -64,11 +64,11 @@ test("tas58xx-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }

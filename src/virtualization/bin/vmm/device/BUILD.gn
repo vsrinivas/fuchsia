@@ -359,7 +359,7 @@ executable("device_unittests") {
     ":qcow_test_data",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

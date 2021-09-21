@@ -8,6 +8,6 @@ executable("lspwr") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }

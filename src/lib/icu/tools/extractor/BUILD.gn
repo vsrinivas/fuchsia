@@ -21,7 +21,7 @@ if (is_host) {
       "//src/lib/files",
       "//src/lib/fxl",
       "//third_party/icu",
-      "//zircon/public/lib/fbl",
+      "//zircon/system/ulib/fbl",
     ]
     configs += [
       # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

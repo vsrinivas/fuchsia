@@ -24,7 +24,7 @@ zx_library("memfs-cpp") {
     "//sdk/lib/fdio",
 
     # <lib/memfs/cpp/vnode.h> has #include <fbl/ref_ptr.h>
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
 
     # <lib/memfs/cpp/vnode.h> has #include <lib/zx/vmo.h>
     "//zircon/public/lib/zx",
@@ -65,7 +65,7 @@ zx_library("memfs") {
     ":memfs-cpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   runtime_deps = [
     "//sdk/lib/fdio:fdio_sdk",

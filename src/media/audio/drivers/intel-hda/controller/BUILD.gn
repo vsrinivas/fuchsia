@@ -81,10 +81,10 @@ source_set("src") {
     "//sdk/lib/fit",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/refcount",
   ]
@@ -134,9 +134,9 @@ test("controller_test") {
     ":src",
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }
@@ -177,7 +177,7 @@ fuzzer("nhlt-fuzzer") {
   sources = [ "nhlt_fuzzer.cc" ]
   deps = [
     ":src",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/47959): Fix the leaks and remove this.

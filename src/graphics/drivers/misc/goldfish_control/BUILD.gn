@@ -29,12 +29,12 @@ common_deps = [
   "//src/lib/ddk",
   "//src/lib/ddktl",
   "//src/lib/fsl",
-  "//zircon/public/lib/fbl",
   "//zircon/public/lib/fidl-llcpp",
   "//zircon/public/lib/zircon-internal",
   "//zircon/public/lib/zx",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/trace",
   "//zircon/system/ulib/trace:trace-driver",
 ]

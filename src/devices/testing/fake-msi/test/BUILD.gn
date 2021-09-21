@@ -17,10 +17,10 @@ test("fake-msi-test-bin") {
   sources = [ "fake-msi-test.cc" ]
   deps = [
     "//src/devices/testing/fake-msi",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

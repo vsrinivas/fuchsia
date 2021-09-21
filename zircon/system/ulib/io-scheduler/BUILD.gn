@@ -20,7 +20,7 @@ zx_library("io-scheduler") {
     "stream.cc",
     "worker.cc",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 group("tests") {

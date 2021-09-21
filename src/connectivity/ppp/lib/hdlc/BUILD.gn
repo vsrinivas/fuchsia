@@ -7,7 +7,7 @@ source_set("fcs") {
     "fcs.cc",
     "fcs.h",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 source_set("fcs-test") {
@@ -35,7 +35,7 @@ source_set("frame") {
     ":fcs",
     "//sdk/lib/fit-promise",
     "//src/connectivity/ppp/lib/common",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [ "//sdk/lib/fit-promise" ]
 }

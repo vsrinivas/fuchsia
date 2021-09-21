@@ -39,9 +39,9 @@ driver_module("i2c-driver") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//src/lib/listnode",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 
@@ -74,10 +74,10 @@ test("i2c-test-bin") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//src/lib/listnode",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 

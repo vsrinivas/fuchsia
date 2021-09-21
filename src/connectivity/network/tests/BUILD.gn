@@ -36,7 +36,7 @@ test("netstack_rawsocket_c_api_test") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -49,7 +49,7 @@ test("netstack_bsdsocket_c_api_test") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -64,7 +64,7 @@ test("netstack_external_network_test_client") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -80,8 +80,8 @@ test("netstack_fuchsia_c_api_test") {
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

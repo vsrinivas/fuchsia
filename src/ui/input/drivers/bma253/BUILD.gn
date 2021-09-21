@@ -40,9 +40,9 @@ driver_module("bma253-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]
@@ -76,10 +76,10 @@ test("bma253-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]

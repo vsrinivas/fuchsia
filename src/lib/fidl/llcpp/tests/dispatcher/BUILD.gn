@@ -62,8 +62,8 @@ test("fidl_llcpp_private_intrusive_wavl_tree_tests_bin") {
   output_name = "fidl_llcpp_private_intrusive_wavl_tree_tests"
   sources = [ "intrusive_wavl_tree_tests.cc" ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }

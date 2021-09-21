@@ -9,11 +9,11 @@ zx_library("elf-search") {
   sdk_headers = [ "elf-search.h" ]
   sources = [ "elf-search.cc" ]
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }

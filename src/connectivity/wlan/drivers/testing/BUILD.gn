@@ -52,10 +52,10 @@ driver_module("wlanphy-testdev-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

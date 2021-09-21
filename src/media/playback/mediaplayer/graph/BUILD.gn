@@ -56,7 +56,7 @@ source_set("graph") {
     "//sdk/lib/fit",
     "//sdk/lib/media/cpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 

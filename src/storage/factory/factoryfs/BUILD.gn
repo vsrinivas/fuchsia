@@ -84,7 +84,7 @@ test("integration_test") {
     "//src/lib/storage/fs_management",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

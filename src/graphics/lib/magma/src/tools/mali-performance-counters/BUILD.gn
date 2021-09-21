@@ -43,7 +43,7 @@ executable("mali-performance-counters-test-bin") {
     ":sources",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 
   cflags = [ "-fno-sanitize=shadow-call-stack" ]

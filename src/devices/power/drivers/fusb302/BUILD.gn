@@ -23,7 +23,7 @@ group("common") {
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
     "//zircon/system/ulib/inspect",
   ]

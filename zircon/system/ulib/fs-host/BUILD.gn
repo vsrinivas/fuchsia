@@ -18,5 +18,5 @@ zx_library("fs-host") {
     # <fs-host/json_recorder.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/public/lib/zircon-internal",
   ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }

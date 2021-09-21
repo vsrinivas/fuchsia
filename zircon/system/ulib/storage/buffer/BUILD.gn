@@ -29,15 +29,15 @@ zx_library("buffer") {
       "vmo_buffer.cc",
     ]
     public_deps = [
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/zx",
       "//zircon/public/lib/zxc",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
     ]
     deps = [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fbl",
+      "//zircon/system/ulib/fbl",
 
       # TODO(fxbug.dev/38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
       "//sdk/lib/syslog/cpp",

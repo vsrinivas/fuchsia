@@ -88,7 +88,7 @@ rustc_test("io1_conformance_test") {
 #     "//third_party/googletest:gtest",
 #     "//zircon/system/ulib/async-loop:async-loop-cpp",
 #     "//zircon/system/ulib/async-loop:async-loop-default",
-#     "//zircon/public/lib/fbl",
+#     "//zircon/system/ulib/fbl",
 #     "//sdk/lib/fdio",
 #     "//sdk/fidl/fuchsia.io",
 #   ]

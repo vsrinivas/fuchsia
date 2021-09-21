@@ -9,9 +9,9 @@ zx_library("abs_clock") {
   sdk_headers = [ "abs_clock/clock.h" ]
   sources = [ "clock.cc" ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
   public_deps = [ "//zircon/public/lib/zx" ]
 }

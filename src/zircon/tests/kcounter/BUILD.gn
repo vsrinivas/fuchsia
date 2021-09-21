@@ -21,10 +21,10 @@ test("kcounter") {
     "//sdk/lib/fdio",
     "//src/zircon/bin/kcounter:cmdline",
     "//zircon/kernel/lib/counters",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

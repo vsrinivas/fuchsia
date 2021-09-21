@@ -23,11 +23,11 @@ test("abs_clock_test") {
   sources = [ "clock_test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/abs_clock",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

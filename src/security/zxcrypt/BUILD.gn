@@ -29,10 +29,10 @@ static_library("zxcrypt-dev") {
     "//sdk/banjo/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_banjo_cpp",
     "//src/lib/ddk",
     "//third_party/boringssl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
@@ -62,10 +62,10 @@ shared_library("zxcrypt-fdio") {
     "//sdk/lib/fdio",
     "//src/security/kms-stateless",
     "//third_party/boringssl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",

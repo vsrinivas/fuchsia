@@ -8,8 +8,8 @@ source_set("clocktree") {
     "clocktree.cc",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 
   include_dirs = [ "include" ]

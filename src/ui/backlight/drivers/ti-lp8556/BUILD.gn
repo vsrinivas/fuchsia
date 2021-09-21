@@ -37,11 +37,11 @@ driver_module("ti-lp8556-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
 
@@ -75,7 +75,6 @@ test("ti-lp8556-test") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
@@ -84,6 +83,7 @@ test("ti-lp8556-test") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
 

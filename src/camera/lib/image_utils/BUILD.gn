@@ -61,8 +61,8 @@ source_set("image_format_rgba") {
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
   ]

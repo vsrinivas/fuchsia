@@ -13,9 +13,9 @@ zx_library("driver-integration-test") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspector",
   ]
   public_deps = [
@@ -23,8 +23,8 @@ zx_library("driver-integration-test") {
     "//sdk/lib/fit",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
@@ -38,9 +38,9 @@ zx_library("driver-integration-test-static") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspector",
   ]
   public_deps = [
@@ -48,8 +48,8 @@ zx_library("driver-integration-test-static") {
     "//sdk/lib/fit",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

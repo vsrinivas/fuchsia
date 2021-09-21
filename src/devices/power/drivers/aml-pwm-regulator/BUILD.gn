@@ -24,7 +24,7 @@ group("common") {
     "//src/devices/lib/amlogic",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

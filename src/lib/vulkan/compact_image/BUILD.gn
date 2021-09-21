@@ -65,7 +65,7 @@ loadable_module("compact_image") {
     "//sdk/lib/syslog/cpp:cpp",
     "//src/lib/vulkan:headers",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
   ldflags = [ "-static-libstdc++" ]
   configs += [ ":shaders_config" ]

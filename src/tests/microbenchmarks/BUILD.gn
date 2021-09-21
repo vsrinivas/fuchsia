@@ -54,10 +54,10 @@ executable("bin") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
   public_deps = [ "//zircon/system/ulib/perftest" ]

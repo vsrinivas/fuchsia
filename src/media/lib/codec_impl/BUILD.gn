@@ -55,10 +55,10 @@ source_set("codec_impl") {
     "//src/media/lib/metrics",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/thread-safe-deleter",
   ]

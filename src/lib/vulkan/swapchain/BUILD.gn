@@ -68,7 +68,7 @@ source_set("display") {
     "//src/lib/fsl",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

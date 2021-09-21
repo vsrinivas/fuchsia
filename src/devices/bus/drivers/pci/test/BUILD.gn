@@ -54,10 +54,10 @@ test("pci-driver") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

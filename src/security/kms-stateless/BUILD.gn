@@ -7,8 +7,8 @@ source_set("kms-stateless") {
   public = [ "kms-stateless.h" ]
 
   public_deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/system/public",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps = [

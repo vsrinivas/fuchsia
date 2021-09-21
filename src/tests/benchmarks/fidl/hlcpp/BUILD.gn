@@ -15,10 +15,10 @@ template("hlcpp_gidl_benchmark_suite") {
     fidl = invoker.fidl_target
     deps = [
       "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
-      "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/perftest",
     ]
     extra_args = [
@@ -47,7 +47,7 @@ executable("bin") {
   deps = [
            "//sdk/lib/fidl/cpp",
            "//src/zircon/lib/zircon",
-           "//zircon/public/lib/fbl",
+           "//zircon/system/ulib/fbl",
            "//zircon/public/lib/fidl",
            "//zircon/system/ulib/perftest",
          ] + gidl_deps

@@ -27,7 +27,7 @@ source_set("hdcp_service") {
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/files",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
 }

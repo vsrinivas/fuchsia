@@ -18,8 +18,8 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

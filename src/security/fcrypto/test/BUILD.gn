@@ -34,8 +34,8 @@ test("fcrypto") {
   deps = [
     "//sdk/lib/fdio",
     "//src/security/fcrypto",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -43,7 +43,7 @@ fuzzer("hmac-fuzzer") {
   sources = [ "hmac-fuzzer.cc" ]
   deps = [
     "//src/security/fcrypto",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

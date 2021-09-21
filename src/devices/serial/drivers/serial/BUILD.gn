@@ -43,9 +43,9 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

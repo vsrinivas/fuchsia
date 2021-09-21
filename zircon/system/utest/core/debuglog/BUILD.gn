@@ -9,7 +9,7 @@ source_set("unified-only") {
   testonly = true
   sources = [ "debuglog.cc" ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }

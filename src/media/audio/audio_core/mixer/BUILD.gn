@@ -49,8 +49,8 @@ source_set("mixer") {
     ":coefficient_table",
     ":constants",
     "//sdk/fidl/fuchsia.media",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/ffl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
   ]
 
@@ -138,7 +138,7 @@ executable("mixer_unittest_bin") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/test:constants",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

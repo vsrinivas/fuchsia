@@ -13,10 +13,10 @@ source_set("ethertap") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 
@@ -52,8 +52,8 @@ source_set("network_service") {
     "//sdk/lib/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/fbl",
   ]
 
   public_deps = [

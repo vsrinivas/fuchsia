@@ -22,8 +22,8 @@ executable("ihda") {
     "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

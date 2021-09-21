@@ -16,7 +16,7 @@ test("socket_benchmarks") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/perftest",
   ]
 }

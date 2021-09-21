@@ -12,8 +12,8 @@ executable("thermal-cli") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -24,8 +24,8 @@ source_set("common") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

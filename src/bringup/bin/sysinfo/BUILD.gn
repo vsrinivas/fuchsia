@@ -45,9 +45,9 @@ test("test") {
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

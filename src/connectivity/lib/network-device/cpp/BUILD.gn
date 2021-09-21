@@ -18,9 +18,9 @@ source_set("client") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

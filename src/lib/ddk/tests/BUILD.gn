@@ -33,8 +33,8 @@ test("ddk-unittest") {
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

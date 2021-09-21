@@ -27,10 +27,10 @@ source_set("lib") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 }

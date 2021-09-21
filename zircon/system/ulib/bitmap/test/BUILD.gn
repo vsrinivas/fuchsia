@@ -31,10 +31,10 @@ test("bitmap") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

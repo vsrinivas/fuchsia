@@ -31,8 +31,8 @@ source_set("h264_parser") {
   public_deps = [
     "//sdk/lib/stdcompat",
     "//src/media/lib/codec_impl",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/fbl",
   ]
   public_configs = [ ":h264_headers" ]
 

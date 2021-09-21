@@ -47,7 +47,7 @@ source_set("fdio") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]

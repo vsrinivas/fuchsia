@@ -16,9 +16,9 @@ executable("tel-driver-unit-test") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
   ]
 

@@ -17,8 +17,8 @@ executable("blobfs") {
     "//sdk/lib/fit",
     "//src/lib/digest",
     "//src/storage/blobfs",
-    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fs-host",
   ]
 

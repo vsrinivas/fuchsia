@@ -31,7 +31,7 @@ static_library("fvm") {
     "//src/lib/digest",
     "//src/lib/uuid",
     "//third_party/boringssl",
-    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/range",
     "//zircon/third_party/ulib/lz4",
     "//zircon/third_party/ulib/safemath",
@@ -74,8 +74,8 @@ static_library("test_support") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/storage/fvm",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ramdevice-client",
   ]
 
@@ -87,11 +87,11 @@ static_library("test_support") {
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
     "//src/storage/fvm",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
@@ -174,7 +174,6 @@ test("fvm-integration") {
     "//src/storage/fvm",
     "//src/storage/memfs",
     "//src/storage/minfs",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -182,6 +181,7 @@ test("fvm-integration") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
   ]
