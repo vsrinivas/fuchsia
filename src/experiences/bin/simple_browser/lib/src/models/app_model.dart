@@ -31,6 +31,9 @@ class AppModel {
   }) : _localeStream = localeStream {
     fieldFocus = FocusNode();
     _keyboardShortcuts =
+        // TODO(https://fxbug.dev/71711): Figure out why `dart analyze`
+        // complains about this.
+        // ignore: argument_type_not_assignable
         BrowserShortcuts(tabsBloc: tabsBloc, actions: _shortcutActions())
             .activateShortcuts(ScenicContext.hostViewRef());
   }

@@ -60,7 +60,9 @@ class FocusService extends FocusChainListener {
   Future<void> onFocusChange(FocusChain focusChain) async {
     // Convert from List<ViewRef> to List<ViewHandle>
     final chain = focusChain.focusChain
-        ?.map((viewRef) => ViewHandle(viewRef))
+        // TODO(https://fxbug.dev/71711): Figure out why `dart analyze`
+        // complains about this.
+        ?.map((viewRef) => ViewHandle(viewRef)) // ignore: unnecessary_lambdas
         .toList(growable: false);
 
     // Focus chain for the shell will be of the format:

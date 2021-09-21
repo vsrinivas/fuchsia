@@ -84,7 +84,9 @@ class PointerEventsService extends PointerCaptureListener {
           _timer = Timer(Duration(milliseconds: 300), () {
             // If pointer position is still at edge, we are peeking!.
             _state = _PeekState.peeking;
-            onPeekBegin(edge!);
+            // Although edge can't be null here, without the assertion Dart
+            // won't compile.
+            onPeekBegin(edge!); // ignore: unnecessary_non_null_assertion
           });
         }
         break;

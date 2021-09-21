@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
+// @dart=2.9
+
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -247,7 +250,11 @@ class Provide<T> extends StatelessWidget {
 /// Pass in value as well to avoid calling provider.get multiple times because
 /// that could have side effects for some provider types.
 Listenable _getListenable(Provider provider, dynamic value) =>
-    provider is Listenable ? provider : value is Listenable ? value : null;
+    provider is Listenable
+        ? provider
+        : value is Listenable
+            ? value
+            : null;
 
 /// Widget that rebuilds on change using multiple values provided by a
 /// [ProviderNode].

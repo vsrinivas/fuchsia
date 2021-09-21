@@ -26,7 +26,9 @@ void main() {
         .asBroadcastStream();
 
     tabsBloc = TabsBloc(
-      tabFactory: () => MockWebPageBloc(),
+      // TODO(https://fxbug.dev/71711): Figure out why `dart analyze` complains
+      // about this.
+      tabFactory: () => MockWebPageBloc(), // ignore: unnecessary_lambdas
       disposeTab: (tab) {
         tab.dispose();
       },

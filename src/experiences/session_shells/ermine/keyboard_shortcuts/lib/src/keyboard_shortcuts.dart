@@ -127,6 +127,9 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
           value is! List ||
           value.isEmpty);
     return kvData
+        // TODO(https://fxbug.dev/71711): Figure out why `dart analyze`
+        // complains about this.
+        // ignore: unnecessary_lambdas
         .map((k, v) => MapEntry<String, List<Shortcut>>(k, v))
         .values
         .expand((c) => c)

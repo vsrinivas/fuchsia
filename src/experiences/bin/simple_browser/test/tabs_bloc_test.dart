@@ -462,7 +462,9 @@ void main() {
 
 Future<TabsBloc> _creatNTabs(int n) async {
   TabsBloc tb = TabsBloc(
-    tabFactory: () => MockWebPageBloc(),
+    // TODO(https://fxbug.dev/71711): Figure out why `dart analyze` complains
+    // about this.
+    tabFactory: () => MockWebPageBloc(), // ignore: unnecessary_lambdas
     disposeTab: (tab) => tab.dispose(),
   );
 

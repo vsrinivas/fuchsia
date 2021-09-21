@@ -120,7 +120,9 @@ void main() {
     testWidgets('Should call the newTab callback when the + button is tapped.',
         (WidgetTester tester) async {
       TabsBloc tb = TabsBloc(
-        tabFactory: () => MockWebPageBloc(),
+        // TODO(https://fxbug.dev/71711): Figure out why `dart analyze`
+        // complains about this.
+        tabFactory: () => MockWebPageBloc(), // ignore: unnecessary_lambdas
         disposeTab: (tab) => tab.dispose(),
       );
 

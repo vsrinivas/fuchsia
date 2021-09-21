@@ -67,6 +67,10 @@ abstract class AppState {
   void updateChannelAlert();
 
   factory AppState.fromEnv() {
+    // TODO(https://fxbug.dev/71711): Remove this ignore below when transition
+    // to `dart analyze` is complete. `dart analyze` will complain without an
+    // explicit type cast.
+    // ignore: unnecessary_cast
     return AppStateImpl(
       launchService: LaunchService(),
       startupService: StartupService(),
@@ -78,7 +82,7 @@ abstract class AppState {
         ScenicContext.hostViewRef(),
         insets: EdgeInsets.only(left: AppBar.kWidth, right: SideBar.kWidth),
       ),
-    );
+    ) as AppState;
   }
 }
 
