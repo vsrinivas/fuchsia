@@ -14,33 +14,6 @@ import pathlib
 import shutil
 import json
 
-_release_build_file = """
-# Copyright 2021 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-import("//build/packages/prebuilt_test_manifest.gni")
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":abi",
-    #":api",
-  ]
-}
-
-group("api") {
-  testonly = true
-  deps = [
-    "//prebuilt/cts/{cts_version}/cts"
-  ]
-}
-
-prebuilt_test_manifest("abi") {
-  archive_dir = rebase_path("//prebuilt/cts/{cts_version}/cts")
-}
-"""
-
 
 class CTS:
     """
@@ -70,25 +43,33 @@ class CTS:
             self.fuchsia_dir, self.cts_version)
         self.cts_artifacts = "{}/cts_artifacts.json".format(self.out_dir)
 
+    def _print(self, string, end='\n'):
+        print(string, end=end)
+        sys.stdout.flush()
+
+    def _check_output(self, cmd):
+        try:
+            output = subprocess.check_output(
+                cmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as exc:
+            print("FAILED!")
+            print(" -> {}\n".format(cmd))
+            print(exc.output.decode("utf-8"))
+            sys.exit(1)
+
     def _build_cts_from_workspace(self):
         """
         Build the CTS SDK from your current workspace: //sdk:cts
 
         Throws an exception on build failure.
         """
-        print("Building the CTS SDK in your workspace....", end='')
+        self._print("Building the CTS SDK in your workspace....", end='')
 
-        cmd = "fx set {}.{} --with //sdk:cts --args 'cts_version=\"{}\"' ; fx build".format(
+        cmd = "fx set {}.{} --with //sdk:cts --args 'cts_version=\"{}\"' && fx build".format(
             self.product, self.board, self.cts_version)
 
-        try:
-            output = subprocess.check_output(
-                cmd, stderr=subprocess.STDOUT, shell=True)
-        except subprocess.CalledProcessError as exc:
-            raise ValueError(
-                "Failed to run ''".format(cmd), exc.returncode, exc.output)
-
-        print("Done.")
+        self._check_output(cmd)
+        self._print("Done.")
 
     def _release_cts_to_prebuilt_directory(self):
         """
@@ -96,7 +77,7 @@ class CTS:
 
         Throws an exception if any file listed in cts_artifacts.json does not exist.
         """
-        print("Releasing the CTS SDK....", end='')
+        self._print("Releasing the CTS SDK....", end='')
 
         # Remove previous releases if they exist.
         if os.path.isdir(self.release_dir):
@@ -116,7 +97,7 @@ class CTS:
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             shutil.copyfile(src, dest)
 
-        print("Done.")
+        self._print("Done.")
 
     def _build_cts_release(self):
         """
@@ -124,7 +105,7 @@ class CTS:
 
         Throws an exception if the CTS fails to build.
         """
-        print("Building the released CTS SDK....", end='')
+        self._print("Building the released CTS SDK....", end='')
 
         # Modify the BUILD.gn file template for the current CTS version.
         build_file_template = os.path.join(
@@ -139,17 +120,11 @@ class CTS:
             f.writelines(build_file)
 
         # Build the new CTS release.
-        cmd = "fx set {}.{} --with //prebuilt/cts/{}:tests ; fx build".format(
+        cmd = "fx set {}.{} --with //prebuilt/cts/{}:tests && fx build".format(
             self.product, self.board, self.cts_version)
 
-        try:
-            output = subprocess.check_output(
-                cmd, stderr=subprocess.STDOUT, shell=True)
-        except subprocess.CalledProcessError as exc:
-            raise ValueError(
-                "Failed to run ''".format(cmd), exc.returncode, exc.output)
-
-        print("Done.")
+        self._check_output(cmd)
+        self._print("Done.")
 
     def _run_tests(self):
         """
@@ -157,10 +132,12 @@ class CTS:
 
         Throws an exception if any CTS test fails.
         """
-        print("Running the released CTS tests....", end='')
+        self._print("Running the released CTS tests....", end='')
 
-        # TODO(jcecil): Start an emulator and run the released tests.
-        print("Not implemented.")
+        # TODO(jcecil): Start an emulator or check for the existence of one.
+        cmd = "fx test"
+        self._check_output(cmd)
+
         pass
 
     def run(self):
@@ -168,7 +145,7 @@ class CTS:
         self._release_cts_to_prebuilt_directory()
         self._build_cts_release()
 
-        print(
+        self._print(
             "The CTS SDK has been successfully released to {}.".format(
                 self.release_dir))
 
