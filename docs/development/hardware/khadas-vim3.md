@@ -13,7 +13,7 @@ Fuchsia currently supports these features of the VIM3:
 * Paving over ethernet and USB
 * Storage (eMMC)
 * HDMI Display and Framebuffer
-* GPU (Mali)
+* GPU (Mali) and Vulkan graphics
 * Ethernet
 * SDIO
 * I2C
@@ -30,7 +30,6 @@ These features are under development and may not be supported:
 * Video decoder
 * SPI
 * Audio
-* Vulkan graphics
 
 The following features are not supported, but might be added by future
 contributions:
