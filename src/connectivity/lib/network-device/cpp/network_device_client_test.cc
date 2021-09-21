@@ -22,16 +22,16 @@ namespace {
 // Enable timeouts only to test things locally, committed code should not use timeouts.
 constexpr zx::duration kTimeout = zx::duration::infinite();
 
-using namespace network::client;
-
+namespace netdev = fuchsia_hardware_network;
 namespace tun = fuchsia_net_tun;
+using NetworkDeviceClient = network::client::NetworkDeviceClient;
 
 template <class T>
 class TestEventHandler : public fidl::WireAsyncEventHandler<T> {
  public:
-  TestEventHandler(const char* name) : name_(name) {}
+  explicit TestEventHandler(const char* name) : name_(name) {}
 
-  virtual void on_fidl_error(fidl::UnbindInfo info) override {
+  void on_fidl_error(fidl::UnbindInfo info) override {
     FAIL() << "Lost connection to " << name_ << ": " << info;
   }
 
@@ -564,7 +564,7 @@ TEST_F(NetDeviceTest, ErrorCallback) {
 
 TEST_F(NetDeviceTest, PadTxFrames) {
   constexpr uint8_t kPayload[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A};
-  constexpr size_t kMinBufferLength = sizeof(kPayload) - 2;
+  constexpr uint32_t kMinBufferLength = static_cast<uint32_t>(sizeof(kPayload) - 2);
   constexpr size_t kSmallPayloadLength = kMinBufferLength - 2;
   auto device_config = DefaultDeviceConfig();
   tun::wire::BaseDeviceConfig base_config(alloc_);
@@ -587,8 +587,8 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   // Send three frames: one too small, one exactly minimum length, and one larger than minimum
   // length.
   for (auto& frame : {
-           fbl::Span(kPayload, sizeof(kSmallPayloadLength)),
-           fbl::Span(kPayload, sizeof(kMinBufferLength)),
+           fbl::Span(kPayload, kSmallPayloadLength),
+           fbl::Span(kPayload, kMinBufferLength),
            fbl::Span(kPayload),
        }) {
     auto tx = client->AllocTx();

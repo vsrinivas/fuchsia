@@ -23,9 +23,6 @@ source_set("client") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("cpp-test") {
@@ -42,9 +39,6 @@ executable("cpp-test") {
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

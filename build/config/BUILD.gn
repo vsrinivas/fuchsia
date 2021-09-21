@@ -661,7 +661,6 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/hci/vendor/intel:*",
     "//src/connectivity/bluetooth/tools/bt-hci-tool:*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool:*",
-    "//src/connectivity/lib/network-device/cpp:*",
     "//src/connectivity/network/mdns/service:*",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:*",
     "//src/connectivity/network/tun/network-tun:*",
