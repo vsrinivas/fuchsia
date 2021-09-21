@@ -132,6 +132,7 @@ pub struct VirtualConsoleViewAssistant {
     owns_display: bool,
     active_pointer_id: Option<input::pointer::PointerId>,
     start_pointer_location: Point,
+    is_primary: bool,
 }
 
 const BOOT_ANIMATION: &'static str = "/pkg/data/boot-animation.riv";
@@ -146,6 +147,7 @@ impl VirtualConsoleViewAssistant {
         font_size: f32,
         dpi: BTreeSet<u32>,
         boot_animation: bool,
+        is_primary: bool,
     ) -> Result<ViewAssistantPtr, Error> {
         let cell_size = Size::new(8.0, 16.0);
         let tab_width = MIN_TAB_WIDTH;
@@ -206,6 +208,7 @@ impl VirtualConsoleViewAssistant {
             owns_display,
             active_pointer_id,
             start_pointer_location,
+            is_primary,
         }))
     }
 
@@ -213,7 +216,7 @@ impl VirtualConsoleViewAssistant {
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
         let app_context = AppContext::new_for_testing_purposes_only();
         let dpi: BTreeSet<u32> = [160, 320, 480, 640].iter().cloned().collect();
-        Self::new(&app_context, 1, ColorScheme::default(), false, 14.0, dpi, animation)
+        Self::new(&app_context, 1, ColorScheme::default(), false, 14.0, dpi, animation, true)
     }
 
     // Resize all terminals for 'new_size'.
@@ -285,11 +288,14 @@ impl VirtualConsoleViewAssistant {
         }
     }
 
-    fn set_desired_virtcon_mode(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn set_desired_virtcon_mode(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
         if self.desired_virtcon_mode != self.virtcon_mode {
             self.virtcon_mode = self.desired_virtcon_mode;
-            if let Some(fb) = context.frame_buffer.as_ref() {
-                fb.borrow_mut().set_virtcon_mode(self.virtcon_mode)?;
+            // The primary view currently controls virtcon mode. More advanced
+            // coordination between views to determine virtcon mode can be added
+            // in the future when it becomes a requirement.
+            if self.is_primary {
+                self.app_context.set_virtcon_mode(self.virtcon_mode);
             }
         }
         Ok(())
@@ -539,17 +545,15 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 builder.facet(Box::new(RiveFacet::new(context.size, animation.artboard.clone())));
                 None
             } else {
-                let scale_factor = if let Some(fb) = context.frame_buffer.as_ref() {
-                    let config = fb.borrow_mut().get_config();
-                    // Use 1.0 scale factor when fallback sizes are used as apposed
+                let scale_factor = if let Some(info) = context.display_info.as_ref() {
+                    // Use 1.0 scale factor when fallback sizes are used as opposed
                     // to actual values reported by the display.
-                    if config.using_fallback_size {
+                    if info.using_fallback_size {
                         1.0
                     } else {
                         const MM_PER_INCH: f32 = 25.4;
 
-                        let dpi =
-                            config.height as f32 * MM_PER_INCH / config.vertical_size_mm as f32;
+                        let dpi = context.size.height * MM_PER_INCH / info.vertical_size_mm as f32;
 
                         get_scale_factor(&self.dpi, dpi)
                     }

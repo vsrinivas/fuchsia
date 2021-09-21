@@ -8,15 +8,17 @@ use crate::{
     geometry::Size,
     input::DeviceId,
     message::Message,
-    view::{strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey},
+    view::{
+        strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey,
+        USE_FIRST_VIEW,
+    },
 };
-use anyhow::{format_err, Context as _, Error};
-use fidl_fuchsia_hardware_display::VirtconMode;
+use anyhow::{bail, format_err, Context as _, Error};
+use fidl_fuchsia_hardware_display::{ControllerEvent, VirtconMode};
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component};
-use fuchsia_framebuffer::FrameBuffer;
-use fuchsia_zircon::{self as zx, Duration, DurationNum, Time};
+use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     future::{Either, Future},
@@ -24,7 +26,7 @@ use futures::{
 };
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use std::{cell::RefCell, collections::BTreeMap, fs, path::PathBuf, pin::Pin, rc::Rc};
+use std::{collections::BTreeMap, fs, path::PathBuf, pin::Pin};
 use toml;
 
 pub(crate) mod strategies;
@@ -83,6 +85,20 @@ const fn display_resource_release_delay_default() -> std::time::Duration {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ViewMode {
+    Auto,
+    Hosted,
+    Direct,
+}
+
+impl Default for ViewMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "keyboard_autorepeat_default")]
     /// Whether, when running without Scenic, this application should
@@ -105,8 +121,12 @@ pub struct Config {
     #[serde(default)]
     /// Whether to try to use hardware rendering (Spinel).
     pub use_spinel: bool,
+    /// What mode to use when acting as a virtual console.
     #[serde(default, deserialize_with = "deserialize_virtcon_mode")]
     pub virtcon_mode: Option<VirtconMode>,
+    /// What sort of view system to use.
+    #[serde(default)]
+    pub view_mode: ViewMode,
     #[serde(default)]
     /// Application option to exercise transparent rotation.
     pub display_rotation: DisplayRotation,
@@ -119,7 +139,7 @@ pub struct Config {
         deserialize_with = "deserialize_millis"
     )]
     /// How long should carnelian wait before releasing display resources when
-    /// it loses ownership of the display while running on the framebuffer. The default
+    /// it loses ownership of the display while running directly on the display. The default
     /// value is five seconds, so that the resource will not be rapidly allocated
     /// and deallocated when switching quickly between virtcon and the regular display.
     pub display_resource_release_delay: std::time::Duration,
@@ -147,6 +167,7 @@ impl Default for Config {
             keyboard_autorepeat_fast_interval: keyboard_autorepeat_fast_interval_default(),
             use_spinel: false,
             virtcon_mode: None,
+            view_mode: ViewMode::default(),
             display_rotation: DisplayRotation::Deg0,
             keymap_name: None,
             display_resource_release_delay: display_resource_release_delay_default(),
@@ -161,6 +182,7 @@ pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
 pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
 
+#[derive(Debug)]
 pub enum MessageTarget {
     View(ViewKey),
     Application,
@@ -185,7 +207,34 @@ impl AppContext {
     pub fn request_render(&self, target: ViewKey) {
         self.sender
             .unbounded_send(MessageInternal::RequestRender(target))
-            .expect("AppContext::queue_message - unbounded_send");
+            .expect("AppContext::request_render - unbounded_send");
+    }
+
+    pub fn set_virtcon_mode(&self, virtcon_mode: VirtconMode) {
+        println!("#### AppContext::set_virtcon_mode {:?}", virtcon_mode);
+        self.sender
+            .unbounded_send(MessageInternal::SetVirtconMode(virtcon_mode))
+            .expect("AppContext::set_virtcon_mode - unbounded_send");
+    }
+
+    /// Set the display's gamma table. Used only for factory diagnostics.
+    pub fn import_and_set_gamma_table(
+        &self,
+        display_id: u64,
+        gamma_table_id: u64,
+        r: GammaValues,
+        g: GammaValues,
+        b: GammaValues,
+    ) {
+        self.sender
+            .unbounded_send(MessageInternal::ImportAndSetGamaTable(
+                display_id,
+                gamma_table_id,
+                Box::new(r),
+                Box::new(g),
+                Box::new(b),
+            ))
+            .expect("AppContext::import_gamma_table - unbounded_send");
     }
 
     /// Create an context for testing things that need an app context.
@@ -250,9 +299,6 @@ pub trait AppAssistant {
 /// Reference to an application assistant.
 pub type AppAssistantPtr = Box<dyn AppAssistant>;
 
-/// Reference to FrameBuffer.
-pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
-
 /// Struct that implements module-wide responsibilities, currently limited
 /// to creating views on request.
 pub struct App {
@@ -264,6 +310,10 @@ pub struct App {
     sender: InternalSender,
 }
 
+pub type GammaValues = [f32; 256];
+type BoxedGammaValues = Box<[f32; 256]>;
+
+#[derive(Debug)]
 pub(crate) enum MessageInternal {
     ServiceConnection(zx::Channel, &'static str),
     CreateView(ViewStrategyParams),
@@ -274,11 +324,10 @@ pub(crate) enum MessageInternal {
     ScenicPresentSubmitted(ViewKey, fidl_fuchsia_scenic_scheduling::FuturePresentationTimes),
     ScenicPresentDone(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
     Focus(ViewKey),
+    CloseView(ViewKey),
     RequestRender(ViewKey),
     Render(ViewKey),
-    RenderAllViews,
     ImageFreed(ViewKey, u64, u32),
-    HandleVSyncParametersChanged(Time, Duration, u64),
     TargetedMessage(MessageTarget, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
@@ -288,6 +337,10 @@ pub(crate) enum MessageInternal {
     FlatlandOnNextFrameBegin(ViewKey, fidl_fuchsia_ui_composition::OnNextFrameBeginValues),
     FlatlandOnFramePresented(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
     FlatlandOnError(ViewKey, fuchsia_scenic::flatland::FlatlandError),
+    NewDisplayController(PathBuf),
+    DisplayControllerEvent(ControllerEvent),
+    SetVirtconMode(VirtconMode),
+    ImportAndSetGamaTable(u64, u64, BoxedGammaValues, BoxedGammaValues, BoxedGammaValues),
 }
 
 /// Future that returns an application assistant.
@@ -324,7 +377,7 @@ impl App {
             let assistant_creator = assistant_creator_func(&app_context);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
-            let strat = create_app_strategy(FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat = create_app_strategy(&internal_sender).await?;
             let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
             while let Some(message) = internal_receiver.next().await {
@@ -352,52 +405,50 @@ impl App {
             }
             MessageInternal::CreateView(params) => self.create_view_with_params(params).await?,
             MessageInternal::MetricsChanged(view_id, metrics) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("MetricsChanged")?;
                 view.handle_metrics_changed(metrics);
             }
             MessageInternal::SizeChanged(view_id, new_size) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("SizeChanged")?;
                 view.handle_size_changed(new_size);
             }
             MessageInternal::ScenicInputEvent(view_id, event) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("ScenicInputEvent")?;
                 view.handle_scenic_input_event(event);
             }
             MessageInternal::ScenicKeyEvent(view_id, event) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("ScenicKeyEvent")?;
                 view.handle_scenic_key_event(event);
             }
             MessageInternal::ScenicPresentSubmitted(view_id, info) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("ScenicPresentSubmitted")?;
                 view.present_submitted(info);
             }
             MessageInternal::ScenicPresentDone(view_id, info) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("ScenicPresentDone")?;
                 view.present_done(info);
             }
             MessageInternal::Focus(view_id) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("Focus")?;
                 view.focus(true);
             }
             MessageInternal::RequestRender(view_id) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("RequestRender")?;
                 view.request_render();
             }
             MessageInternal::Render(view_id) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("Render")?;
                 view.render().await;
             }
-            MessageInternal::RenderAllViews => self.render_all_views(),
+            MessageInternal::CloseView(view_id) => {
+                self.close_view(view_id);
+            }
             MessageInternal::ImageFreed(view_id, image_id, collection_id) => {
                 self.image_freed(view_id, image_id, collection_id)
             }
-            MessageInternal::HandleVSyncParametersChanged(phase, interval, cookie) => {
-                self.handle_vsync_parameters_changed(phase, interval);
-                self.handle_vsync_cookie(cookie);
-            }
             MessageInternal::TargetedMessage(target, message) => match target {
                 MessageTarget::View(view_id) => {
-                    let view = self.get_view(view_id);
+                    let view = self.get_view(view_id).context("TargetedMessage")?;
                     view.send_message(message);
                 }
                 MessageTarget::Application => {
@@ -409,12 +460,22 @@ impl App {
             }
             MessageInternal::InputReport(device_id, view_id, input_report) => {
                 let input_events = self.strategy.handle_input_report(&device_id, &input_report);
-                let view = self.get_view(view_id);
+                let calculated_view_id = if view_id == USE_FIRST_VIEW {
+                    *self.view_controllers.keys().next().expect("first_key")
+                } else {
+                    view_id
+                };
+                let view = self.get_view(calculated_view_id).context("InputReport")?;
                 view.handle_input_events(input_events);
             }
             MessageInternal::KeyboardAutoRepeat(device_id, view_id) => {
                 let input_events = self.strategy.handle_keyboard_autorepeat(&device_id);
-                let view = self.get_view(view_id);
+                let calculated_view_id = if view_id == USE_FIRST_VIEW {
+                    *self.view_controllers.keys().next().expect("first_key")
+                } else {
+                    view_id
+                };
+                let view = self.get_view(calculated_view_id).context("KeyboardAutoRepeat")?;
                 view.handle_input_events(input_events);
             }
             MessageInternal::OwnershipChanged(owned) => {
@@ -424,15 +485,32 @@ impl App {
                 self.drop_display_resources();
             }
             MessageInternal::FlatlandOnNextFrameBegin(view_id, info) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("FlatlandOnNextFrameBegin")?;
                 view.handle_on_next_frame_begin(&info);
             }
             MessageInternal::FlatlandOnFramePresented(view_id, info) => {
-                let view = self.get_view(view_id);
+                let view = self.get_view(view_id).context("FlatlandOnFramePresented")?;
                 view.present_done(info);
             }
             MessageInternal::FlatlandOnError(view_id, error) => {
                 eprintln!("flatland error view: {}, error: {:#?}", view_id, error);
+            }
+            MessageInternal::NewDisplayController(display_path) => {
+                self.strategy.handle_new_display_controller(display_path).await;
+            }
+            MessageInternal::DisplayControllerEvent(event) => match event {
+                ControllerEvent::OnVsync { display_id, .. } => {
+                    let view = self.get_view(display_id).context("DisplayControllerEvent")?;
+                    view.handle_display_controller_event(event).await;
+                }
+                _ => self.strategy.handle_display_controller_event(event).await,
+            },
+            MessageInternal::SetVirtconMode(virtcon_mode) => {
+                println!("#### MessageInternal::SetVirtconMode {:?}", virtcon_mode);
+                self.strategy.set_virtcon_mode(virtcon_mode);
+            }
+            MessageInternal::ImportAndSetGamaTable(display_id, gamma_table_id, r, g, b) => {
+                self.strategy.import_and_set_gamma_table(display_id, gamma_table_id, r, g, b);
             }
         }
         Ok(())
@@ -456,7 +534,7 @@ impl App {
             let assistant_creator = assistant_creator_func(&app_context);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
-            let strat = create_app_strategy(FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat = create_app_strategy(&internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
             let mut app = App::new(internal_sender, strat, assistant);
             let mut frame_count = 0;
@@ -477,9 +555,6 @@ impl App {
                             MessageInternal::Render(_) => {
                                 frame_count += 1;
                             }
-                            MessageInternal::RenderAllViews => {
-                                frame_count += 1;
-                            }
                             _ => (),
                         }
                         app.handle_message(message).await.expect("handle_message failed");
@@ -497,17 +572,18 @@ impl App {
         Ok(())
     }
 
-    fn get_view(&mut self, view_key: ViewKey) -> &mut ViewController {
+    fn get_view(&mut self, view_key: ViewKey) -> Result<&mut ViewController, Error> {
         if let Some(view) = self.view_controllers.get_mut(&view_key) {
-            view
+            Ok(view)
         } else {
-            panic!("Could not find view controller for {}", view_key);
+            bail!("Could not find view controller for {}", view_key);
         }
     }
 
-    fn render_all_views(&mut self) {
-        for (_, view_controller) in &mut self.view_controllers {
-            view_controller.send_update_message();
+    fn close_view(&mut self, view_key: ViewKey) {
+        let view = self.view_controllers.remove(&view_key);
+        if let Some(mut view) = view {
+            view.close();
         }
     }
 
@@ -530,31 +606,32 @@ impl App {
     }
 
     // Creates a view assistant for views that are using the render view mode feature, either
-    // in Scenic or framebuffer mode.
-    fn create_view_assistant(&mut self) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.create_view_assistant(self.next_key)?)
+    // in hosted or direct mode.
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(self.assistant.create_view_assistant(view_key)?)
     }
 
     async fn create_view_with_params(&mut self, params: ViewStrategyParams) -> Result<(), Error> {
-        let view_assistant = self.create_view_assistant()?;
+        let view_key = if let Some(view_key) = params.view_key() {
+            view_key
+        } else {
+            let view_key = self.next_key;
+            self.next_key += 1;
+            view_key
+        };
+        let view_assistant = self.create_view_assistant(view_key)?;
         let sender = &self.sender;
         let view_strat = {
-            let pixel_format = self.strategy.get_pixel_format();
             let view_strat =
-                self.strategy.create_view_strategy(self.next_key, sender.clone(), params).await?;
-            self.strategy.post_setup(pixel_format, sender).await?;
+                self.strategy.create_view_strategy(view_key, sender.clone(), params).await?;
+            self.strategy.post_setup(sender).await?;
             view_strat
         };
-        let view_controller = ViewController::new_with_strategy(
-            self.next_key,
-            view_assistant,
-            view_strat,
-            sender.clone(),
-        )
-        .await?;
+        let view_controller =
+            ViewController::new_with_strategy(view_key, view_assistant, view_strat, sender.clone())
+                .await?;
 
-        self.view_controllers.insert(self.next_key, view_controller);
-        self.next_key += 1;
+        self.view_controllers.insert(view_key, view_controller);
         Ok(())
     }
 
@@ -588,21 +665,10 @@ impl App {
     }
 
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {
-        let view = self.get_view(view_id);
-        view.image_freed(image_id, collection_id);
-    }
-
-    fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
-        for (_, view_controller) in &mut self.view_controllers {
-            view_controller.handle_vsync_parameters_changed(phase, interval);
-        }
-    }
-
-    fn handle_vsync_cookie(&mut self, cookie: u64) {
-        if cookie != 0 {
-            for (_, view_controller) in &mut self.view_controllers {
-                view_controller.handle_vsync_cookie(cookie);
-            }
+        if let Ok(view) = self.get_view(view_id) {
+            view.image_freed(image_id, collection_id);
+        } else {
+            eprintln!("No view for view_id: {}", view_id);
         }
     }
 

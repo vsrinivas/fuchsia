@@ -7,9 +7,9 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
-        make_app_assistant,
         render::{Composition, Context, CopyRegion, Image, PreClear, PreCopy, RenderExt},
-        App, AppAssistant, IntSize, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, AppAssistantPtr, AppContext, IntSize, ViewAssistant,
+        ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect},
     fuchsia_async as fasync,
@@ -132,15 +132,19 @@ impl GammaValues {
     }
 }
 
-#[derive(Default)]
 struct DisplayPngAppAssistant {
+    app_context: AppContext,
     png_source: Option<PngSourceInfo>,
     gamma_values: Option<GammaValues>,
     background: Option<Color>,
     position: Option<Point2D<f32>>,
 }
 
-impl DisplayPngAppAssistant {}
+impl DisplayPngAppAssistant {
+    fn new(app_context: AppContext) -> Self {
+        Self { app_context, png_source: None, gamma_values: None, background: None, position: None }
+    }
+}
 
 impl AppAssistant for DisplayPngAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
@@ -185,6 +189,7 @@ impl AppAssistant for DisplayPngAppAssistant {
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let png_source = self.png_source.take();
         Ok(Box::new(DisplayPngViewAssistant::new(
+            self.app_context.clone(),
             png_source,
             self.gamma_values.clone(),
             self.background.take().unwrap_or(WHITE_COLOR),
@@ -196,6 +201,7 @@ impl AppAssistant for DisplayPngAppAssistant {
 const GAMMA_TABLE_ID: u64 = 100;
 
 struct DisplayPngViewAssistant {
+    app_context: AppContext,
     png_source: Option<PngSourceInfo>,
     gamma_values: Option<GammaValues>,
     background: Color,
@@ -206,6 +212,7 @@ struct DisplayPngViewAssistant {
 
 impl DisplayPngViewAssistant {
     pub fn new(
+        app_context: AppContext,
         png_source: Option<PngSourceInfo>,
         gamma_values: Option<GammaValues>,
         background: Color,
@@ -213,7 +220,7 @@ impl DisplayPngViewAssistant {
     ) -> Self {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
         let composition = Composition::new(background);
-        Self { png_source, gamma_values, background, png: None, composition, position }
+        Self { app_context, png_source, gamma_values, background, png: None, composition, position }
     }
 }
 
@@ -221,24 +228,14 @@ impl ViewAssistant for DisplayPngViewAssistant {
     fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
         let args: Args = argh::from_env();
         if let Some(gamma_values) = self.gamma_values.as_ref() {
-            if let Some(frame_buffer) = context.frame_buffer.as_ref() {
-                let frame_buffer = frame_buffer.borrow_mut();
+            if let Some(info) = context.display_info.as_ref() {
                 let mut r: [f32; 256] = [0.0; 256];
                 r.copy_from_slice(&gamma_values.red);
                 let mut g: [f32; 256] = [0.0; 256];
                 g.copy_from_slice(&gamma_values.green);
                 let mut b: [f32; 256] = [0.0; 256];
                 b.copy_from_slice(&gamma_values.blue);
-                frame_buffer.controller.import_gamma_table(
-                    GAMMA_TABLE_ID,
-                    &mut r,
-                    &mut g,
-                    &mut b,
-                )?;
-                let config = frame_buffer.get_config();
-                frame_buffer
-                    .controller
-                    .set_display_gamma_table(config.display_id, GAMMA_TABLE_ID)?;
+                self.app_context.import_and_set_gamma_table(info.id, GAMMA_TABLE_ID, r, g, b);
             }
         }
         let timer = fasync::Timer::new(fasync::Time::after(Duration::from_seconds(args.timeout)));
@@ -361,5 +358,11 @@ mod test {
 }
 
 fn main() -> Result<(), Error> {
-    App::run(make_app_assistant::<DisplayPngAppAssistant>())
+    App::run(Box::new(|app_context| {
+        let f = async move {
+            let assistant = Box::new(DisplayPngAppAssistant::new(app_context.clone()));
+            Ok::<AppAssistantPtr, Error>(assistant)
+        };
+        Box::pin(f)
+    }))
 }

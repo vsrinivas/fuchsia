@@ -5,40 +5,34 @@
 use crate::{
     app::{
         strategies::{
-            framebuffer::{AutoRepeatContext, FrameBufferAppStrategy},
+            framebuffer::{first_display_device_path, DisplayController, DisplayDirectAppStrategy},
             scenic::ScenicAppStrategy,
         },
-        Config, FrameBufferPtr, InternalSender, MessageInternal,
+        BoxedGammaValues, Config, InternalSender, MessageInternal, ViewMode,
     },
     geometry::IntSize,
     input::{self},
     view::{
-        strategies::base::{FrameBufferParams, ViewStrategyParams, ViewStrategyPtr},
+        strategies::base::{ViewStrategyParams, ViewStrategyPtr},
         ViewKey,
     },
 };
 use anyhow::Error;
 use async_trait::async_trait;
-use euclid::size2;
+use fidl_fuchsia_hardware_display::VirtconMode;
 use fidl_fuchsia_input_report as hid_input_report;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
-use fuchsia_async::{self as fasync};
 use fuchsia_component::{
     client::connect_to_protocol,
     server::{ServiceFs, ServiceObjLocal},
 };
-use fuchsia_framebuffer::{FrameBuffer, FrameUsage};
-use fuchsia_zircon::{Duration, Time};
-use futures::{
-    channel::mpsc::{unbounded, UnboundedSender},
-    StreamExt, TryFutureExt,
-};
+use futures::channel::mpsc::UnboundedSender;
 use keymaps::select_keymap;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::path::PathBuf;
 
-// This trait exists to keep the scenic implementation and the software
-// framebuffer implementations as separate as possible.
+// This trait exists to keep the hosted implementation and the
+// direct implementations as separate as possible.
 // At the moment this abstraction is quite leaky, but it is good
 // enough and can be refined with experience.
 #[async_trait(?Send)]
@@ -61,18 +55,8 @@ pub(crate) trait AppStrategy {
         Ok(())
     }
     fn get_scenic_proxy(&self) -> Option<&ScenicProxy>;
-    fn get_frame_buffer(&self) -> Option<FrameBufferPtr> {
-        None
-    }
     fn get_frame_buffer_size(&self) -> Option<IntSize>;
-    fn get_pixel_size(&self) -> u32;
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat;
-    fn get_linear_stride_bytes(&self) -> u32;
-    async fn post_setup(
-        &mut self,
-        _pixel_format: fuchsia_framebuffer::PixelFormat,
-        _internal_sender: &InternalSender,
-    ) -> Result<(), Error>;
+    async fn post_setup(&mut self, _internal_sender: &InternalSender) -> Result<(), Error>;
     fn handle_input_report(
         &mut self,
         _device_id: &input::DeviceId,
@@ -89,92 +73,70 @@ pub(crate) trait AppStrategy {
         _device_descriptor: &hid_input_report::DeviceDescriptor,
     ) {
     }
+    async fn handle_new_display_controller(&mut self, _display_path: PathBuf) {}
+    async fn handle_display_controller_event(
+        &mut self,
+        _event: fidl_fuchsia_hardware_display::ControllerEvent,
+    ) {
+    }
+    fn set_virtcon_mode(&mut self, _virtcon_mode: VirtconMode) {}
+    fn import_and_set_gamma_table(
+        &mut self,
+        _display_id: u64,
+        _gamma_table_id: u64,
+        mut _r: BoxedGammaValues,
+        mut _g: BoxedGammaValues,
+        mut _b: BoxedGammaValues,
+    ) {
+    }
 }
 
 pub(crate) type AppStrategyPtr = Box<dyn AppStrategy>;
 
-// Tries to create a framebuffer. If that fails, assume Scenic is running.
+fn make_scenic_app_strategy() -> Result<AppStrategyPtr, Error> {
+    let scenic = connect_to_protocol::<ScenicMarker>()?;
+    Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
+}
+
+fn make_direct_app_strategy(
+    display_controller: Option<DisplayController>,
+    app_config: &Config,
+    internal_sender: InternalSender,
+) -> Result<AppStrategyPtr, Error> {
+    let strat = DisplayDirectAppStrategy::new(
+        display_controller,
+        select_keymap(&app_config.keymap_name),
+        internal_sender,
+        &app_config,
+    );
+
+    Ok(Box::new(strat))
+}
+
 pub(crate) async fn create_app_strategy(
-    next_view_key: ViewKey,
     internal_sender: &InternalSender,
 ) -> Result<AppStrategyPtr, Error> {
     let app_config = Config::get();
-
-    let usage = if app_config.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
-
-    let (sender, mut receiver) = unbounded::<fuchsia_framebuffer::Message>();
-    let fb = FrameBuffer::new(usage, Config::get().virtcon_mode, None, Some(sender)).await;
-    if fb.is_err() {
-        let scenic = connect_to_protocol::<ScenicMarker>()?;
-        Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
-    } else {
-        let fb = fb.unwrap();
-        let vsync_interval =
-            Duration::from_nanos(100_000_000_000 / fb.get_config().refresh_rate_e2 as i64);
-        let vsync_internal_sender = internal_sender.clone();
-
-        // TODO: improve scheduling of updates
-        fasync::Task::local(
-            async move {
-                let mut owned = true;
-                while let Some(message) = receiver.next().await {
-                    match message {
-                        fuchsia_framebuffer::Message::VSync(vsync) => {
-                            vsync_internal_sender
-                                .unbounded_send(MessageInternal::HandleVSyncParametersChanged(
-                                    Time::from_nanos(vsync.timestamp as i64),
-                                    vsync_interval,
-                                    vsync.cookie,
-                                ))
-                                .expect("unbounded_send");
-                            if owned {
-                                vsync_internal_sender
-                                    .unbounded_send(MessageInternal::RenderAllViews)
-                                    .expect("unbounded_send");
-                            }
-                        }
-                        fuchsia_framebuffer::Message::Ownership(in_owned) => {
-                            owned = in_owned;
-                            vsync_internal_sender
-                                .unbounded_send(MessageInternal::OwnershipChanged(owned))
-                                .expect("unbounded_send");
-                        }
-                    }
-                }
-                Ok(())
+    match app_config.view_mode {
+        ViewMode::Auto => {
+            // Tries to open the display controller. If that fails, assume we want to run as hosted.
+            let display_controller = if let Some(path) = first_display_device_path() {
+                DisplayController::open(&path, &app_config.virtcon_mode, &internal_sender)
+                    .await
+                    .ok()
+            } else {
+                None
+            };
+            if display_controller.is_none() {
+                make_scenic_app_strategy()
+            } else {
+                make_direct_app_strategy(display_controller, app_config, internal_sender.clone())
             }
-            .unwrap_or_else(|e: anyhow::Error| {
-                println!("error {:#?}", e);
-            }),
-        )
-        .detach();
-
-        let config = fb.get_config();
-        let size = size2(config.width as i32, config.height as i32);
-
-        let frame_buffer_ptr = Rc::new(RefCell::new(fb));
-
-        let strat = FrameBufferAppStrategy {
-            frame_buffer: frame_buffer_ptr.clone(),
-            display_rotation: app_config.display_rotation,
-            keymap: select_keymap(&app_config.keymap_name),
-            view_key: next_view_key,
-            input_report_handlers: HashMap::new(),
-            context: AutoRepeatContext::new(&internal_sender, next_view_key),
-        };
-
-        internal_sender
-            .unbounded_send(MessageInternal::CreateView(ViewStrategyParams::FrameBuffer(
-                FrameBufferParams {
-                    frame_buffer: frame_buffer_ptr,
-                    pixel_format: strat.get_pixel_format(),
-                    size,
-                    display_rotation: app_config.display_rotation,
-                    display_resource_release_delay: app_config.display_resource_release_delay,
-                },
-            )))
-            .unwrap_or_else(|err| panic!("unbounded send failed: {}", err));
-
-        Ok(Box::new(strat))
+        }
+        ViewMode::Direct => {
+            DisplayController::watch_displays(internal_sender.clone()).await;
+            make_direct_app_strategy(None, app_config, internal_sender.clone())
+        }
+        ViewMode::Hosted => make_scenic_app_strategy(),
     }
 }

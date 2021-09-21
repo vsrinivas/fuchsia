@@ -225,23 +225,7 @@ impl AppStrategy for ScenicAppStrategy {
         None
     }
 
-    fn get_pixel_size(&self) -> u32 {
-        4
-    }
-
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        fuchsia_framebuffer::PixelFormat::Argb8888
-    }
-
-    fn get_linear_stride_bytes(&self) -> u32 {
-        0
-    }
-
-    async fn post_setup(
-        &mut self,
-        _: fuchsia_framebuffer::PixelFormat,
-        _internal_sender: &InternalSender,
-    ) -> Result<(), Error> {
+    async fn post_setup(&mut self, _internal_sender: &InternalSender) -> Result<(), Error> {
         Ok(())
     }
 }
