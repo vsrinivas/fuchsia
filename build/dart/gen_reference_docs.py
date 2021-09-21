@@ -46,7 +46,7 @@ def is_dart_package_dir(package_dir):
     with open(pubspec_file) as f:
         pubspec = yaml.load(f, Loader=yaml.Loader)
         if not pubspec or pubspec['name'] != os.path.basename(package_dir):
-            print('%s has an invalid pubspec.yaml. Ignoring.' % (package_dir))
+            # Implies an invalid pubspec and the package will be ignored in dartdocs
             return False
 
     return True
@@ -174,7 +174,6 @@ def generate_docs(
         if process.returncode:
             print(process.stderr)
             return 1
-
         # Clear the docdir first.
         docs_dir = os.path.join(out_dir, "docs")
         pkg_to_docs_path = os.path.join(package_dir, docs_dir)
@@ -183,17 +182,11 @@ def generate_docs(
 
         # Run dartdoc.
         excluded_packages = ['Dart', 'logging']
-        # The flag no-enhanced-reference-lookup was removed in dart
-        # SDK 3.0, but this python script only runs in a builder that
-        # pins the dart sdk to the stable version.
-        # This is a work around fxb/80677 and should be removed once that
-        # bug is solved.
         process = subprocess.run(
             [
                 os.path.join(dart_prebuilt_dir, 'dartdoc'),
                 '--no-validate-links',
                 '--auto-include-dependencies',
-                '--no-enhanced-reference-lookup',
                 '--exclude-packages',
                 ','.join(excluded_packages),
                 '--output',

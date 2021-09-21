@@ -180,7 +180,6 @@ import 'package:foo/foo.dart';
                                     os.path.join(prebuilts, 'dartdoc'),
                                     '--no-validate-links',
                                     '--auto-include-dependencies',
-                                    '--no-enhanced-reference-lookup',
                                     '--exclude-packages', 'Dart,logging',
                                     '--output',
                                     os.path.join(out_dir,
