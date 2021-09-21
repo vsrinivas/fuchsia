@@ -242,27 +242,24 @@ void DevfsVnode::GetEventHandle(GetEventHandleRequestView request,
   completer.Reply(status, zx::event(event.release()));
 }
 
-void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsRequestView request,
-                                   GetDriverLogFlagsCompleter::Sync& completer) {
+void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
+                                         GetMinDriverLogSeverityCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE, 0);
     return;
   }
-  uint32_t flags = dev_->driver->driver_rec()->log_flags;
-  completer.Reply(ZX_OK, flags);
+  uint8_t severity = fx_logger_get_min_severity(dev_->driver->logger());
+  completer.Reply(ZX_OK, severity);
 }
 
-void DevfsVnode::SetDriverLogFlags(SetDriverLogFlagsRequestView request,
-                                   SetDriverLogFlagsCompleter::Sync& completer) {
+void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
+                                         SetMinDriverLogSeverityCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE);
     return;
   }
-  uint32_t flags = dev_->driver->driver_rec()->log_flags;
-  flags &= ~request->clear_flags;
-  flags |= request->set_flags;
-  dev_->driver->driver_rec()->log_flags = flags;
-  completer.Reply(ZX_OK);
+  auto status = dev_->driver->set_driver_min_log_severity(request->severity);
+  completer.Reply(status);
 }
 
 void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,

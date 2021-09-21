@@ -189,8 +189,8 @@ class DriverInspect {
 
   void set_status(zx_status_t status);
 
-  void set_driver_rec(zx_driver_rec_t* driver_rec) {
-    driver_node_.CreateUint("log_flags", driver_rec->log_flags, &static_values_);
+  void set_driver_min_log_severity(uint32_t severity) {
+    driver_node_.CreateUint("minimum_log_severity", severity, &static_values_);
   }
 
  private:

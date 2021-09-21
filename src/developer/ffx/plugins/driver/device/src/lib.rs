@@ -29,13 +29,13 @@ pub async fn device(dev: DirectoryProxy, cmd: DeviceCommand) -> Result<()> {
         DeviceSubCommand::LogLevel(LogLevelCommand { ref device_path, log_level }) => {
             let device = connect_to_device(dev, device_path)?;
             if let Some(log_level) = log_level {
-                zx::Status::ok(device.set_driver_log_flags(0, log_level.clone().into()).await?)
+                zx::Status::ok(device.set_min_driver_log_severity(log_level.clone().into()).await?)
                     .map_err(|err| format_err!("{:?}", err))?;
                 println!("Set {} log level to {}", device_path, log_level);
             } else {
-                let (status, flags) = device.get_driver_log_flags().await?;
+                let (status, severity) = device.get_min_driver_log_severity().await?;
                 zx::Status::ok(status).map_err(|err| format_err!("{:?}", err))?;
-                println!("Current log severity: {}", LogLevel::try_from(flags)?);
+                println!("Current log severity: {}", LogLevel::try_from(severity)?);
             }
         }
     }

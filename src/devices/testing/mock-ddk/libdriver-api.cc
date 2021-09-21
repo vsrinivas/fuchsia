@@ -246,5 +246,4 @@ __EXPORT
 __WEAK zx_driver_rec __zircon_driver_rec__ = {
     .ops = {},
     .driver = {},
-    .log_flags = 0,
 };

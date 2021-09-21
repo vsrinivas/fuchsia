@@ -317,7 +317,6 @@ static_assert(offsetof(zircon_driver_note_t, payload) == sizeof(zircon_driver_no
   zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {                                               \
       /* .ops = */ &(Ops),                                                                         \
       /* .driver = */ NULL,                                                                        \
-      /* .log_flags = */ 0,                                                                        \
   };                                                                                               \
   extern const struct zircon_driver_note __zircon_driver_note__ __EXPORT;                          \
   alignas(4) __SECTION(".note.zircon.driver." #Driver)                                             \

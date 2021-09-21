@@ -175,16 +175,13 @@ protocol Controller {
     });
 
     /// Return the current logging flags for this device's driver
-    GetDriverLogFlags() -> (struct {
+    GetMinDriverLogSeverity() -> (struct {
         status zx.status;
-        flags uint32;
+        severity uint32;
     });
     /// Set the logging flags for this device's driver.
-    /// Each set bit in `clear_flags` will be cleared in the log flags state.
-    /// Each set bit in `set_flags` will then be set in the log flags state.
-    SetDriverLogFlags(struct {
-        clear_flags uint32;
-        set_flags uint32;
+    SetMinDriverLogSeverity(struct {
+        severity uint32;
     }) -> (struct {
         status zx.status;
     });

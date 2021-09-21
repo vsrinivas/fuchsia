@@ -68,14 +68,14 @@ int main(int argc, char** argv) {
   }
 
   if (argc == 3) {
-    auto response =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device)).GetDriverLogFlags();
+    auto response = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device))
+                        .GetMinDriverLogSeverity();
     if (response.status() != ZX_OK || response->status != ZX_OK) {
       fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
       return -1;
     }
     printf("Log severity: ");
-    switch (static_cast<fx_log_severity_t>(response->flags)) {
+    switch (static_cast<fx_log_severity_t>(response->severity)) {
       case DDK_LOG_ERROR:
         printf("error\n");
         break;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   auto response = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device))
-                      .SetDriverLogFlags(0, flags);
+                      .SetMinDriverLogSeverity(flags);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
     fprintf(stderr, "SetDriverLogFlags failed for %s\n", path);
   }

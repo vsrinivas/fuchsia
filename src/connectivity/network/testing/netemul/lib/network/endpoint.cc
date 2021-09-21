@@ -313,12 +313,12 @@ class NetworkDeviceImpl : public EndpointImpl,
     callback(ZX_ERR_NOT_SUPPORTED, zx::event());
   }
 
-  void GetDriverLogFlags(GetDriverLogFlagsCallback callback) override {
+  void GetMinDriverLogSeverity(GetMinDriverLogSeverityCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED, 0);
   }
 
-  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
-                         SetDriverLogFlagsCallback callback) override {
+  void SetMinDriverLogSeverity(uint32_t severity,
+                               SetMinDriverLogSeverityCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED);
   }
 

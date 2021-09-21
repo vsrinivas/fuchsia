@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/syslog/logger.h>
 #include <zircon/types.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -15,7 +16,6 @@
 #include <fbl/string.h>
 
 class DriverInspect;
-typedef struct fx_logger fx_logger_t;
 
 namespace internal {
 
@@ -57,10 +57,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
     ReconfigureLogger({});
   }
 
-  void set_driver_rec(zx_driver_rec_t* driver_rec) {
-    driver_rec_ = driver_rec;
-    inspect_.set_driver_rec(driver_rec);
-  }
+  void set_driver_rec(zx_driver_rec_t* driver_rec) { driver_rec_ = driver_rec; }
 
   void set_ops(const zx_driver_ops_t* ops) {
     ops_ = ops;
@@ -70,6 +67,11 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   void set_status(zx_status_t status) {
     status_ = status;
     inspect_.set_status(status);
+  }
+
+  zx_status_t set_driver_min_log_severity(uint32_t severity) {
+    inspect_.set_driver_min_log_severity(severity);
+    return fx_logger_set_min_severity(logger(), severity);
   }
 
   fx_logger_t* logger() const { return logger_; }
