@@ -32,10 +32,8 @@ const (
 	dlogCmd = "\ndlog\n"
 
 	// String to look for in serial log that indicates system booted. From
-	// https://fuchsia.googlesource.com/fuchsia/+/6f93c82725f9d5e0a2a5c3be4ae7f4d4fe12c755/zircon/kernel/top/main.cc#65
-	// Note that the string in the source code there ends with "\n", while what we actually
-	// see over serial ends with "\r\n". This change is made in the zircon uart code.
-	bootedLogSignature = "printing enabled\r\n"
+	// https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/kernel/top/main.cc;l=116;drc=6a0fd696cde68b7c65033da57ab911ee5db75064
+	bootedLogSignature = "welcome to Zircon"
 )
 
 // DeviceConfig contains the static properties of a target device.
