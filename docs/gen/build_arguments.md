@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:41
+From //src/storage/fshost/BUILD.gn:42
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/cbbb43fd92ed042b5d5a9574bf5f42c6c458f627/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/33675ecd0a50df5257904e1f855b112224cbafa3/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/cbbb43fd92ed042b5d5a9574bf5f42c6c458f627/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/33675ecd0a50df5257904e1f855b112224cbafa3/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -1373,7 +1373,7 @@ Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:44
+From //src/storage/fshost/BUILD.gn:45
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -3833,10 +3833,16 @@ debug archives in tar.bzip2 format into the .build-id directory
 
 From //build/packages/prebuilt_package.gni:13
 
+### unstable_feature_use_f2fs
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/BUILD.gn:39
+
 ### unstable_feature_use_fxfs
 This flag isn't stable yet, don't use it.
-Set to true to enable fxfs instead of minfs.  If set, any existing minfs partition will be
-migrated in-place to fxfs when fshost mounts it.
+Set to true to enable fxfs/f2fs instead of minfs.  If set, any existing minfs partition will be
+migrated in-place to fxfs/f2fs when fshost mounts it.
 
 **Current value (from the default):** `false`
 
