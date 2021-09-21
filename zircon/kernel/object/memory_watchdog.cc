@@ -200,6 +200,12 @@ void MemoryWatchdog::WorkerThread() {
       }
       printf("memory-pressure: free memory after OOM eviction is %zuMB\n",
              pmm_count_free_pages() * PAGE_SIZE / MB);
+      PageQueues::PagerCounts pager_counts = pmm_page_queues()->GetPagerQueueCounts();
+      printf("memory-pressure: pager-backed working set immediately after OOM eviction is: "
+             "total: %zu MiB newest: %zu MiB oldest: %zu MiB\n",
+             pager_counts.total * PAGE_SIZE / MB,
+             pager_counts.newest * PAGE_SIZE / MB,
+             pager_counts.oldest * PAGE_SIZE / MB);
     }
 
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
