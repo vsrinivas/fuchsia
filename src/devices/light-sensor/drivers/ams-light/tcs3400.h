@@ -5,8 +5,10 @@
 #ifndef SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
 #define SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
 
+#include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -14,75 +16,109 @@
 #include <time.h>
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
-#include <hid/ambient-light.h>
+
+#include "src/ui/input/lib/input-report-reader/reader.h"
 
 namespace tcs {
 
-class Tcs3400Device;
-using DeviceType = ddk::Device<Tcs3400Device, ddk::Unbindable>;
+struct Tcs3400InputReport {
+  zx::time event_time = zx::time(ZX_TIME_INFINITE_PAST);
+  int64_t illuminance;
+  int64_t red;
+  int64_t blue;
+  int64_t green;
 
-// Note: the TCS-3400 device is connected via i2c and is not a HID
-// device.  This driver reads a collection of data from the data and
-// parses it into a message which will be sent up the stack.  This message
-// complies with a HID descriptor that was manually scripted (i.e. - not
-// reported by the device iteself).
-class Tcs3400Device : public DeviceType,
-                      public ddk::HidbusProtocol<Tcs3400Device, ddk::base_protocol> {
+  void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+                         fidl::AnyArena& allocator);
+
+  bool is_valid() const { return event_time.get() != ZX_TIME_INFINITE_PAST; }
+};
+
+struct Tcs3400FeatureReport {
+  int64_t report_interval_us;
+  fuchsia_input_report::wire::SensorReportingState reporting_state;
+  int64_t sensitivity;
+  int64_t threshold_high;
+  int64_t threshold_low;
+
+  fuchsia_input_report::wire::FeatureReport ToFidlFeatureReport(fidl::AnyArena& allocator) const;
+};
+
+class Tcs3400Device;
+
+class Tcs3400Device;
+using DeviceType =
+    ddk::Device<Tcs3400Device, ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin,
+                ddk::Unbindable>;
+
+class Tcs3400Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
+  // Visible for testing.
+  static zx::status<Tcs3400Device*> CreateAndGetDevice(void* ctx, zx_device_t* parent);
+
   Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
                 zx::port port)
-      : DeviceType(device), i2c_(std::move(i2c)), gpio_(gpio), port_(std::move(port)) {}
-  virtual ~Tcs3400Device() = default;
+      : DeviceType(device),
+        i2c_(i2c),
+        gpio_(gpio),
+        port_(std::move(port)),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ~Tcs3400Device() override = default;
 
   zx_status_t Bind();
   zx_status_t InitMetadata();
 
-  // Methods required by the ddk mixins
-  zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_input_lock_);
-  zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
-  void HidbusStop();
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, uint8_t* out_data_buffer,
-                                  size_t data_size, size_t* out_data_actual);
-  zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data, size_t len,
-                              size_t* out_len) TA_EXCL(client_input_lock_, feature_lock_);
-  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data, size_t len)
-      TA_EXCL(feature_lock_);
-  zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration);
-  zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
-  zx_status_t HidbusGetProtocol(uint8_t* protocol);
-  zx_status_t HidbusSetProtocol(uint8_t protocol);
-
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
- protected:
-  virtual void ShutDown() TA_EXCL(client_input_lock_);  // protected for unit test.
+  void GetInputReportsReader(GetInputReportsReaderRequestView request,
+                             GetInputReportsReaderCompleter::Sync& completer) override;
+
+  void GetDescriptor(GetDescriptorRequestView request,
+                     GetDescriptorCompleter::Sync& completer) override;
+  void SendOutputReport(SendOutputReportRequestView request,
+                        SendOutputReportCompleter::Sync& completer) override;
+  void GetFeatureReport(GetFeatureReportRequestView request,
+                        GetFeatureReportCompleter::Sync& completer) override;
+  void SetFeatureReport(SetFeatureReportRequestView request,
+                        SetFeatureReportCompleter::Sync& completer) override;
+  void GetInputReport(GetInputReportRequestView request,
+                      GetInputReportCompleter::Sync& completer) override;
+
+  // Visible for testing.
+  void WaitForNextReader();
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
  private:
-  ddk::I2cChannel i2c_ TA_GUARDED(i2c_lock_);
-  ddk::GpioProtocolClient gpio_ TA_GUARDED(i2c_lock_);
+  static constexpr size_t kFeatureAndDescriptorBufferSize = 512;
+
+  ddk::I2cChannel i2c_;  // Accessed by the main thread only before thread_ has been started.
+  ddk::GpioProtocolClient gpio_;
   zx::interrupt irq_;
   thrd_t thread_ = {};
   zx::port port_;
-  fbl::Mutex client_input_lock_ TA_ACQ_BEFORE(i2c_lock_);
+  fbl::Mutex input_lock_;
   fbl::Mutex feature_lock_;
-  fbl::Mutex i2c_lock_;
-  ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_input_lock_);
-  ambient_light_input_rpt_t input_rpt_ TA_GUARDED(client_input_lock_);
-  ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
+  Tcs3400InputReport input_rpt_ TA_GUARDED(input_lock_) = {};
+  Tcs3400FeatureReport feature_rpt_ TA_GUARDED(feature_lock_) = {};
   uint8_t atime_ = 1;
   uint8_t again_ = 1;
   bool isSaturated_ = false;
   time_t lastSaturatedLog_ = 0;
+  sync_completion_t next_reader_wait_;
+  async::Loop loop_;
+  input::InputReportReaderManager<Tcs3400InputReport> readers_;
 
-  zx_status_t FillInputRpt() TA_REQ(client_input_lock_);
+  zx::status<Tcs3400InputReport> ReadInputRpt();
   zx_status_t InitGain(uint8_t gain);
-  zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(i2c_lock_);
-  zx_status_t ReadReg(uint8_t reg, uint8_t& output_value) TA_REQ(i2c_lock_);
+  zx_status_t WriteReg(uint8_t reg, uint8_t value);
+  zx_status_t ReadReg(uint8_t reg, uint8_t& output_value);
   int Thread();
+  void ShutDown();
 };
 }  // namespace tcs
 

@@ -37,12 +37,15 @@ driver_module("ams-light-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/ui/input/lib/input-report-reader",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 
@@ -72,18 +75,22 @@ test("ams-light-test-bin") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/mmio",
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddktl",
+    "//src/ui/input/lib/input-report-reader",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
 

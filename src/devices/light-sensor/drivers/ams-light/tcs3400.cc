@@ -9,18 +9,17 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
-#include <string.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/server.h>
+#include <lib/zx/clock.h>
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include <algorithm>
-
+#include <ddktl/fidl.h>
 #include <ddktl/metadata/light-sensor.h>
-#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <hid/descriptor.h>
 
 #include "src/devices/light-sensor/drivers/ams-light/tcs3400_light_bind.h"
 #include "tcs3400-regs.h"
@@ -37,13 +36,7 @@ constexpr uint16_t kMaxSaturationGreen = 20'395;
 constexpr uint16_t kMaxSaturationBlue = 20'939;
 constexpr uint16_t kMaxSaturationClear = 65'085;
 
-#define GET_BYTE(val, shift) static_cast<uint8_t>((val >> shift) & 0xFF)
-
-// TODO(fxbug.dev/37765): -Waddress-of-packed-member warns on pointers to members of
-// packed structs because those pointers could be misaligned. The warning
-// however can appear on areas where we just copy the value of the pointer
-// instead of access it. These macros silence it by casting to a void* and back.
-#define UNALIGNED_U16_PTR(val) (uint16_t*)((void*)val)
+#define GET_BYTE(val, shift) static_cast<uint8_t>(((val) >> (shift)) & 0xFF)
 
 // clang-format off
 // zx_port_packet::type
@@ -54,40 +47,110 @@ constexpr uint16_t kMaxSaturationClear = 65'085;
 #define TCS_POLL      0x05
 // clang-format on
 
+constexpr fuchsia_input_report::wire::Axis kLightSensorAxis = {
+    .range = {.min = 0, .max = UINT16_MAX},
+    .unit =
+        {
+            .type = fuchsia_input_report::wire::UnitType::kOther,
+            .exponent = 0,
+        },
+};
+
+constexpr fuchsia_input_report::wire::Axis kReportIntervalAxis = {
+    .range = {.min = 0, .max = INT64_MAX},
+    .unit =
+        {
+            .type = fuchsia_input_report::wire::UnitType::kSeconds,
+            .exponent = -6,
+        },
+};
+
+constexpr fuchsia_input_report::wire::Axis kSensitivityAxis = {
+    .range = {.min = 1, .max = 64},
+    .unit =
+        {
+            .type = fuchsia_input_report::wire::UnitType::kOther,
+            .exponent = 0,
+        },
+};
+
+constexpr fuchsia_input_report::wire::SensorAxis MakeLightSensorAxis(
+    fuchsia_input_report::wire::SensorType type) {
+  return {.axis = kLightSensorAxis, .type = type};
+}
+
+template <typename T>
+bool FeatureValueValid(int64_t value, const T& axis) {
+  return value >= axis.range.min && value <= axis.range.max;
+}
+
 }  // namespace
 
 namespace tcs {
 
-zx_status_t Tcs3400Device::FillInputRpt() {
+void Tcs3400InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
+                                           fidl::AnyArena& allocator) {
+  fidl::VectorView<int64_t> values(allocator, 4);
+  values[0] = illuminance;
+  values[1] = red;
+  values[2] = green;
+  values[3] = blue;
+
+  const auto sensor_report =
+      fuchsia_input_report::wire::SensorInputReport(allocator).set_values(allocator, values);
+  input_report.set_event_time(allocator, event_time.get()).set_sensor(allocator, sensor_report);
+}
+
+fuchsia_input_report::wire::FeatureReport Tcs3400FeatureReport::ToFidlFeatureReport(
+    fidl::AnyArena& allocator) const {
+  fidl::VectorView<int64_t> sens(allocator, 1);
+  sens[0] = sensitivity;
+
+  fidl::VectorView<int64_t> thresh_high(allocator, 1);
+  thresh_high[0] = threshold_high;
+
+  fidl::VectorView<int64_t> thresh_low(allocator, 1);
+  thresh_low[0] = threshold_low;
+
+  const auto sensor_report = fuchsia_input_report::wire::SensorFeatureReport(allocator)
+                                 .set_report_interval(allocator, report_interval_us)
+                                 .set_reporting_state(allocator, reporting_state)
+                                 .set_sensitivity(allocator, sens)
+                                 .set_threshold_high(allocator, thresh_high)
+                                 .set_threshold_low(allocator, thresh_low);
+
+  return fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(allocator, sensor_report);
+}
+
+zx::status<Tcs3400InputReport> Tcs3400Device::ReadInputRpt() {
+  Tcs3400InputReport report{.event_time = zx::clock::get_monotonic()};
+
   bool saturatedReading = false;
-  input_rpt_.rpt_id = AMBIENT_LIGHT_RPT_ID_INPUT;
   struct Regs {
-    uint16_t* out;
+    int64_t* out;
     uint8_t reg_h;
     uint8_t reg_l;
   } regs[] = {
-      {UNALIGNED_U16_PTR(&input_rpt_.illuminance), TCS_I2C_CDATAH, TCS_I2C_CDATAL},
-      {UNALIGNED_U16_PTR(&input_rpt_.red), TCS_I2C_RDATAH, TCS_I2C_RDATAL},
-      {UNALIGNED_U16_PTR(&input_rpt_.green), TCS_I2C_GDATAH, TCS_I2C_GDATAL},
-      {UNALIGNED_U16_PTR(&input_rpt_.blue), TCS_I2C_BDATAH, TCS_I2C_BDATAL},
+      {&report.illuminance, TCS_I2C_CDATAH, TCS_I2C_CDATAL},
+      {&report.red, TCS_I2C_RDATAH, TCS_I2C_RDATAL},
+      {&report.green, TCS_I2C_GDATAH, TCS_I2C_GDATAL},
+      {&report.blue, TCS_I2C_BDATAH, TCS_I2C_BDATAL},
   };
+
   for (const auto& i : regs) {
     uint8_t buf_h, buf_l;
     zx_status_t status;
-    fbl::AutoLock lock(&i2c_lock_);
     // Read lower byte first, the device holds upper byte of a sample in a shadow register after
     // a lower byte read
     status = ReadReg(i.reg_l, buf_l);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
-      input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
-      return status;
+      zxlogf(ERROR, "Tcs3400Device::ReadInputRpt: i2c_write_read_sync failed: %d", status);
+      return zx::error(status);
     }
     status = ReadReg(i.reg_h, buf_h);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "Tcs3400Device::FillInputRpt: i2c_write_read_sync failed: %d", status);
-      input_rpt_.state = HID_USAGE_SENSOR_STATE_ERROR_VAL;
-      return status;
+      zxlogf(ERROR, "Tcs3400Device::ReadInputRpt: i2c_write_read_sync failed: %d", status);
+      return zx::error(status);
     }
     auto out = static_cast<uint16_t>(static_cast<float>(((buf_h & 0xFF) << 8) | (buf_l & 0xFF)));
 
@@ -101,30 +164,30 @@ zx_status_t Tcs3400Device::FillInputRpt() {
   if (saturatedReading) {
     // Saturated, ignoring the IR channel because we only looked at RGBC.
     // Return very bright value so that consumers can adjust screens etc accordingly.
-    input_rpt_.red = kMaxSaturationRed;
-    input_rpt_.green = kMaxSaturationGreen;
-    input_rpt_.blue = kMaxSaturationBlue;
-    input_rpt_.illuminance = kMaxSaturationClear;
+    report.red = kMaxSaturationRed;
+    report.green = kMaxSaturationGreen;
+    report.blue = kMaxSaturationBlue;
+    report.illuminance = kMaxSaturationClear;
     // log one message when saturation starts and then
     if (!isSaturated_ || difftime(time(NULL), lastSaturatedLog_) >= kSaturatedLogTimeSecs) {
-      zxlogf(INFO, "Tcs3400Device::FillInputRpt: sensor is saturated");
+      zxlogf(INFO, "Tcs3400Device::ReadInputRpt: sensor is saturated");
       time(&lastSaturatedLog_);
     }
   } else {
     if (isSaturated_) {
-      zxlogf(INFO, "Tcs3400Device::FillInputRpt: sensor is no longer saturated");
+      zxlogf(INFO, "Tcs3400Device::ReadInputRpt: sensor is no longer saturated");
     }
   }
   isSaturated_ = saturatedReading;
-  input_rpt_.state = HID_USAGE_SENSOR_STATE_READY_VAL;
-  return ZX_OK;
+
+  return zx::ok(report);
 }
 
 int Tcs3400Device::Thread() {
   // Both polling and interrupts are supported simultaneously
   zx_time_t poll_timeout = ZX_TIME_INFINITE;
   zx_time_t irq_rearm_timeout = ZX_TIME_INFINITE;
-  while (1) {
+  for (;;) {
     zx_port_packet_t packet;
     zx_time_t timeout = std::min(poll_timeout, irq_rearm_timeout);
     zx_status_t status = port_.wait(zx::time(timeout), &packet);
@@ -141,38 +204,45 @@ int Tcs3400Device::Thread() {
       }
     }
 
-    uint16_t threshold_low;
-    uint16_t threshold_high;
+    Tcs3400FeatureReport feature_report;
+    {
+      fbl::AutoLock lock(&feature_lock_);
+      feature_report = feature_rpt_;
+    }
 
     switch (packet.key) {
       case TCS_SHUTDOWN:
         zxlogf(INFO, "Tcs3400Device::Thread: shutting down");
         return thrd_success;
-      case TCS_CONFIGURE: {
-        fbl::AutoLock lock(&feature_lock_);
-        threshold_low = feature_rpt_.threshold_low;
-        threshold_high = feature_rpt_.threshold_high;
-        if (feature_rpt_.interval_ms == 0) {  // per spec 0 is device's default
-          poll_timeout = ZX_TIME_INFINITE;    // we define the default as no polling
+      case TCS_CONFIGURE:
+        if (feature_report.report_interval_us == 0) {  // per spec 0 is device's default
+          poll_timeout = ZX_TIME_INFINITE;             // we define the default as no polling
         } else {
-          poll_timeout = zx_deadline_after(ZX_MSEC(feature_rpt_.interval_ms));
+          poll_timeout = zx_deadline_after(ZX_USEC(feature_report.report_interval_us));
         }
-      }
+
         {
+          uint8_t control_reg = 0;
+          // clang-format off
+          if (feature_report.sensitivity == 4)  control_reg = 1;
+          if (feature_report.sensitivity == 16) control_reg = 2;
+          if (feature_report.sensitivity == 64) control_reg = 3;
+          // clang-format on
+
           struct Setup {
             uint8_t cmd;
             uint8_t val;
           } __PACKED setup[] = {
               {TCS_I2C_ENABLE,
                TCS_I2C_ENABLE_POWER_ON | TCS_I2C_ENABLE_ADC_ENABLE | TCS_I2C_ENABLE_INT_ENABLE},
-              {TCS_I2C_AILTL, GET_BYTE(threshold_low, 0)},
-              {TCS_I2C_AILTH, GET_BYTE(threshold_low, 8)},
-              {TCS_I2C_AIHTL, GET_BYTE(threshold_high, 0)},
-              {TCS_I2C_AIHTH, GET_BYTE(threshold_high, 8)},
+              {TCS_I2C_AILTL, GET_BYTE(feature_report.threshold_low, 0)},
+              {TCS_I2C_AILTH, GET_BYTE(feature_report.threshold_low, 8)},
+              {TCS_I2C_AIHTL, GET_BYTE(feature_report.threshold_high, 0)},
+              {TCS_I2C_AIHTH, GET_BYTE(feature_report.threshold_high, 8)},
               {TCS_I2C_PERS, SAMPLES_TO_TRIGGER},
+              {TCS_I2C_CONTROL, control_reg},
           };
           for (const auto& i : setup) {
-            fbl::AutoLock lock(&i2c_lock_);
             status = WriteReg(i.cmd, i.val);
             if (status != ZX_OK) {
               zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
@@ -183,200 +253,274 @@ int Tcs3400Device::Thread() {
         break;
       case TCS_INTERRUPT:
         zx_interrupt_ack(irq_.get());  // rearm interrupt at the IRQ level
+
         {
-          fbl::AutoLock lock(&feature_lock_);
-          threshold_low = feature_rpt_.threshold_low;
-          threshold_high = feature_rpt_.threshold_high;
-        }
-        {
-          fbl::AutoLock lock(&client_input_lock_);
-          if (FillInputRpt() == ZX_OK && client_.is_valid()) {
-            if (input_rpt_.illuminance > threshold_high) {
-              input_rpt_.event = HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL;
-              client_.IoQueue((uint8_t*)&input_rpt_, sizeof(ambient_light_input_rpt_t),
-                              zx_clock_get_monotonic());
-            } else if (input_rpt_.illuminance < threshold_low) {
-              input_rpt_.event = HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD_VAL;
-              client_.IoQueue((uint8_t*)&input_rpt_, sizeof(ambient_light_input_rpt_t),
-                              zx_clock_get_monotonic());
-            }
+          const zx::status<Tcs3400InputReport> report = ReadInputRpt();
+          if (report.is_error()) {
+            irq_rearm_timeout = zx_deadline_after(INTERRUPTS_HYSTERESIS);
+            break;
           }
-          // If report could not be filled, we do not ioqueue
-          irq_rearm_timeout = zx_deadline_after(INTERRUPTS_HYSTERESIS);
+          if (feature_report.reporting_state ==
+              fuchsia_input_report::wire::SensorReportingState::kReportNoEvents) {
+            irq_rearm_timeout = zx_deadline_after(INTERRUPTS_HYSTERESIS);
+            break;
+          }
+
+          if (report->illuminance > feature_report.threshold_high ||
+              report->illuminance < feature_report.threshold_low) {
+            readers_.SendReportToAllReaders(*report);
+          }
+
+          fbl::AutoLock lock(&input_lock_);
+          input_rpt_ = *report;
         }
+
+        irq_rearm_timeout = zx_deadline_after(INTERRUPTS_HYSTERESIS);
         break;
       case TCS_REARM_IRQ:
         // rearm interrupt at the device level
         {
-          fbl::AutoLock lock(&i2c_lock_);
           status = WriteReg(TCS_I2C_AICLEAR, 0x00);
           if (status != ZX_OK) {
             zxlogf(ERROR, "Tcs3400Device::Thread: i2c_write_sync failed: %d", status);
             // Continue on error, future transactions may succeed
           }
-          irq_rearm_timeout = ZX_TIME_INFINITE;
         }
+
+        irq_rearm_timeout = ZX_TIME_INFINITE;
         break;
-      case TCS_POLL: {
+      case TCS_POLL:
+        if (feature_report.reporting_state !=
+            fuchsia_input_report::wire::SensorReportingState::kReportAllEvents) {
+          break;
+        }
+
         {
-          fbl::AutoLock lock(&client_input_lock_);
-          if (client_.is_valid()) {
-            FillInputRpt();  // We ioqueue even if report filling failed reporting bad state
-            input_rpt_.event = HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL;
-            client_.IoQueue((uint8_t*)&input_rpt_, sizeof(ambient_light_input_rpt_t),
-                            zx_clock_get_monotonic());
+          const zx::status<Tcs3400InputReport> report = ReadInputRpt();
+          if (report.is_ok()) {
+            readers_.SendReportToAllReaders(*report);
+            fbl::AutoLock lock(&input_lock_);
+            input_rpt_ = *report;
           }
         }
-        {
-          fbl::AutoLock lock(&feature_lock_);
-          poll_timeout += ZX_MSEC(feature_rpt_.interval_ms);
-          zx_time_t now = zx_clock_get_monotonic();
-          if (now > poll_timeout) {
-            poll_timeout = zx_deadline_after(ZX_MSEC(feature_rpt_.interval_ms));
-          }
+
+        poll_timeout += ZX_USEC(feature_report.report_interval_us);
+        zx_time_t now = zx_clock_get_monotonic();
+        if (now > poll_timeout) {
+          poll_timeout = zx_deadline_after(ZX_USEC(feature_report.report_interval_us));
         }
         break;
-      }
     }
   }
   return thrd_success;
 }
 
-zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  fbl::AutoLock lock(&client_input_lock_);
-  if (client_.is_valid()) {
-    return ZX_ERR_ALREADY_BOUND;
-  } else {
-    client_ = ddk::HidbusIfcProtocolClient(ifc);
-  }
-  return ZX_OK;
+void Tcs3400Device::GetInputReportsReader(GetInputReportsReaderRequestView request,
+                                          GetInputReportsReaderCompleter::Sync& completer) {
+  readers_.CreateReader(loop_.dispatcher(), std::move(request->reader));
+  sync_completion_signal(&next_reader_wait_);  // Only for tests.
 }
 
-zx_status_t Tcs3400Device::HidbusQuery(uint32_t options, hid_info_t* info) {
-  if (!info) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  info->dev_num = 0;
-  info->device_class = HID_DEVICE_CLASS_OTHER;
-  info->boot_device = false;
-  info->vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
-  info->product_id =
+void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
+                                  GetDescriptorCompleter::Sync& completer) {
+  using SensorAxisVector = fidl::VectorView<fuchsia_input_report::wire::SensorAxis>;
+
+  fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
+
+  fuchsia_input_report::wire::DeviceInfo device_info;
+  device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);
+  device_info.product_id =
       static_cast<uint32_t>(fuchsia_input_report::wire::VendorGoogleProductId::kAmsLightSensor);
 
-  return ZX_OK;
+  auto sensor_axes = SensorAxisVector(allocator, 4);
+  sensor_axes[0] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightIlluminance);
+  sensor_axes[1] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightRed);
+  sensor_axes[2] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightGreen);
+  sensor_axes[3] = MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightBlue);
+
+  const auto input_descriptor =
+      fuchsia_input_report::wire::SensorInputDescriptor(allocator).set_values(allocator,
+                                                                              sensor_axes);
+
+  auto sensitivity_axes = SensorAxisVector(allocator, 1);
+  sensitivity_axes[0] = {
+      .axis = kSensitivityAxis,
+      .type = fuchsia_input_report::wire::SensorType::kLightIlluminance,
+  };
+
+  auto threshold_high_axes = SensorAxisVector(allocator, 1);
+  threshold_high_axes[0] =
+      MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightIlluminance);
+
+  auto threshold_low_axes = SensorAxisVector(allocator, 1);
+  threshold_low_axes[0] =
+      MakeLightSensorAxis(fuchsia_input_report::wire::SensorType::kLightIlluminance);
+
+  const auto feature_descriptor = fuchsia_input_report::wire::SensorFeatureDescriptor(allocator)
+                                      .set_report_interval(allocator, kReportIntervalAxis)
+                                      .set_supports_reporting_state(allocator, true)
+                                      .set_sensitivity(allocator, sensitivity_axes)
+                                      .set_threshold_high(allocator, threshold_high_axes)
+                                      .set_threshold_low(allocator, threshold_low_axes);
+
+  const auto sensor_descriptor = fuchsia_input_report::wire::SensorDescriptor(allocator)
+                                     .set_input(allocator, input_descriptor)
+                                     .set_feature(allocator, feature_descriptor);
+
+  const auto descriptor = fuchsia_input_report::wire::DeviceDescriptor(allocator)
+                              .set_device_info(allocator, device_info)
+                              .set_sensor(allocator, sensor_descriptor);
+
+  completer.Reply(descriptor);
 }
 
-void Tcs3400Device::HidbusStop() {}
-
-zx_status_t Tcs3400Device::HidbusGetDescriptor(hid_description_type_t desc_type,
-                                               uint8_t* out_data_buffer, size_t data_size,
-                                               size_t* out_data_actual) {
-  const uint8_t* desc;
-  size_t desc_size = get_ambient_light_report_desc(&desc);
-
-  if (data_size < desc_size) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  memcpy(out_data_buffer, desc, desc_size);
-  *out_data_actual = desc_size;
-  return ZX_OK;
+void Tcs3400Device::SendOutputReport(SendOutputReportRequestView request,
+                                     SendOutputReportCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t Tcs3400Device::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, uint8_t* data,
-                                           size_t len, size_t* out_len) {
-  if (rpt_id != AMBIENT_LIGHT_RPT_ID_INPUT && rpt_id != AMBIENT_LIGHT_RPT_ID_FEATURE) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  *out_len = (rpt_id == AMBIENT_LIGHT_RPT_ID_INPUT) ? sizeof(ambient_light_input_rpt_t)
-                                                    : sizeof(ambient_light_feature_rpt_t);
-  if (*out_len > len) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  if (rpt_id == AMBIENT_LIGHT_RPT_ID_INPUT) {
-    fbl::AutoLock lock(&client_input_lock_);
-    FillInputRpt();
-    auto out = reinterpret_cast<ambient_light_input_rpt_t*>(data);
-    *out = input_rpt_;  // TA doesn't work on a memcpy taking an address as in &input_rpt_
-  } else {
-    fbl::AutoLock lock(&feature_lock_);
-    auto out = reinterpret_cast<ambient_light_feature_rpt_t*>(data);
-    *out = feature_rpt_;  // TA doesn't work on a memcpy taking an address as in &feature_rpt_
-  }
-  return ZX_OK;
+void Tcs3400Device::GetFeatureReport(GetFeatureReportRequestView request,
+                                     GetFeatureReportCompleter::Sync& completer) {
+  fbl::AutoLock lock(&feature_lock_);
+  fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
+  completer.ReplySuccess(feature_rpt_.ToFidlFeatureReport(allocator));
 }
 
-zx_status_t Tcs3400Device::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const uint8_t* data,
-                                           size_t len) {
-  if (rpt_id != AMBIENT_LIGHT_RPT_ID_FEATURE) {
-    return ZX_ERR_NOT_SUPPORTED;
+void Tcs3400Device::SetFeatureReport(SetFeatureReportRequestView request,
+                                     SetFeatureReportCompleter::Sync& completer) {
+  const auto& report = request->report;
+  if (!report.has_sensor()) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
-  if (len < sizeof(ambient_light_feature_rpt_t)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+
+  if (!report.sensor().has_report_interval() || report.sensor().report_interval() < 0) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
   }
+
+  if (!report.sensor().has_sensitivity() || report.sensor().sensitivity().count() != 1 ||
+      !FeatureValueValid(report.sensor().sensitivity()[0], kSensitivityAxis)) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  const int64_t gain = report.sensor().sensitivity()[0];
+  if (!(gain == 1 || gain == 4 || gain == 16 || gain == 64)) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (!report.sensor().has_threshold_high() || report.sensor().threshold_high().count() != 1 ||
+      !FeatureValueValid(report.sensor().threshold_high()[0], kLightSensorAxis)) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  if (!report.sensor().has_threshold_low() || report.sensor().threshold_low().count() != 1 ||
+      !FeatureValueValid(report.sensor().threshold_low()[0], kLightSensorAxis)) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
   {
     fbl::AutoLock lock(&feature_lock_);
-    auto* out = reinterpret_cast<const ambient_light_feature_rpt_t*>(data);
-    feature_rpt_ = *out;  // TA doesn't work on a memcpy taking an address as in &feature_rpt_
+    feature_rpt_.report_interval_us = report.sensor().report_interval();
+    feature_rpt_.reporting_state = report.sensor().reporting_state();
+    feature_rpt_.sensitivity = report.sensor().sensitivity()[0];
+    feature_rpt_.threshold_high = report.sensor().threshold_high()[0];
+    feature_rpt_.threshold_low = report.sensor().threshold_low()[0];
+    again_ = static_cast<uint8_t>(feature_rpt_.sensitivity);
   }
 
   zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
   zx_status_t status = port_.queue(&packet);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Tcs3400Device::HidbusSetReport: zx_port_queue failed: %d", status);
-    return ZX_ERR_INTERNAL;
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    zxlogf(ERROR, "Tcs3400Device::SetFeatureReport: zx_port_queue failed: %d", status);
+    completer.ReplyError(status);
   }
-  return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
-  return ZX_ERR_NOT_SUPPORTED;
+void Tcs3400Device::GetInputReport(GetInputReportRequestView request,
+                                   GetInputReportCompleter::Sync& completer) {
+  if (request->device_type != fuchsia_input_report::wire::DeviceType::kSensor) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  {
+    fbl::AutoLock lock(&feature_lock_);
+    if (feature_rpt_.reporting_state !=
+        fuchsia_input_report::wire::SensorReportingState::kReportAllEvents) {
+      // Light sensor data isn't continuously being read -- the data we have might be far out of
+      // date, and we can't block to read new data from the sensor.
+      completer.ReplyError(ZX_ERR_BAD_STATE);
+      return;
+    }
+  }
+
+  fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
+  fuchsia_input_report::wire::InputReport report(allocator);
+
+  {
+    fbl::AutoLock lock(&input_lock_);
+    if (!input_rpt_.is_valid()) {
+      // The driver is in the right mode, but hasn't had a chance to read from the sensor yet.
+      completer.ReplyError(ZX_ERR_SHOULD_WAIT);
+      return;
+    }
+    input_rpt_.ToFidlInputReport(report, allocator);
+  }
+
+  completer.ReplySuccess(report);
 }
 
-zx_status_t Tcs3400Device::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
-  return ZX_ERR_NOT_SUPPORTED;
+void Tcs3400Device::WaitForNextReader() {
+  sync_completion_wait(&next_reader_wait_, ZX_TIME_INFINITE);
+  sync_completion_reset(&next_reader_wait_);
 }
-
-zx_status_t Tcs3400Device::HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }
-
-zx_status_t Tcs3400Device::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 // static
-zx_status_t Tcs3400Device::Create(void* ctx, zx_device_t* parent) {
+zx::status<Tcs3400Device*> Tcs3400Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
   ddk::I2cChannel channel(parent, "i2c");
   if (!channel.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
   ddk::GpioProtocolClient gpio(parent, "gpio");
   if (!gpio.is_valid()) {
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
   zx::port port;
   zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s port_create failed: %d", __FILE__, status);
-    return status;
+    return zx::error(status);
   }
 
-  auto dev =
-      std::make_unique<tcs::Tcs3400Device>(parent, std::move(channel), gpio, std::move(port));
+  auto dev = std::make_unique<tcs::Tcs3400Device>(parent, channel, gpio, std::move(port));
   status = dev->Bind();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s bind failed: %d", __FILE__, status);
-    return status;
+    return zx::error(status);
   }
 
   status = dev->DdkAdd("tcs-3400");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd failed: %d", __FILE__, status);
-    return status;
+    return zx::error(status);
   }
 
   // devmgr is now in charge of the memory for dev
-  __UNUSED auto ptr = dev.release();
-  return status;
+  return zx::ok(dev.release());
+}
+
+zx_status_t Tcs3400Device::Create(void* ctx, zx_device_t* parent) {
+  auto status = CreateAndGetDevice(ctx, parent);
+  return status.is_error() ? status.error_value() : ZX_OK;
 }
 
 zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
@@ -396,7 +540,6 @@ zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
   if (gain == 64) reg = 3;
   // clang-format on
 
-  fbl::AutoLock lock(&i2c_lock_);
   auto status = WriteReg(TCS_I2C_CONTROL, reg);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s Setting gain failed %d", __FILE__, status);
@@ -407,6 +550,8 @@ zx_status_t Tcs3400Device::InitGain(uint8_t gain) {
 }
 
 zx_status_t Tcs3400Device::InitMetadata() {
+  const int64_t kMsToUs = 1'000;
+
   metadata::LightSensorParams parameters = {};
   size_t actual = {};
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &parameters,
@@ -427,7 +572,6 @@ zx_status_t Tcs3400Device::InitMetadata() {
 
   zxlogf(DEBUG, "atime (%u)", atime_);
   {
-    fbl::AutoLock lock(&i2c_lock_);
     status = WriteReg(TCS_I2C_ATIME, atime_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s Setting integration time failed %d", __FILE__, status);
@@ -448,8 +592,10 @@ zx_status_t Tcs3400Device::InitMetadata() {
     // get effectively enabled when we configure a range that could trigger.
     feature_rpt_.threshold_low = 0x0000;
     feature_rpt_.threshold_high = 0xFFFF;
-    feature_rpt_.interval_ms = parameters.polling_time_ms;
-    feature_rpt_.state = HID_USAGE_SENSOR_STATE_INITIALIZING_VAL;
+    feature_rpt_.sensitivity = again_;
+    feature_rpt_.report_interval_us = parameters.polling_time_ms * kMsToUs;
+    feature_rpt_.reporting_state =
+        fuchsia_input_report::wire::SensorReportingState::kReportAllEvents;
   }
   zx_port_packet packet = {TCS_CONFIGURE, ZX_PKT_TYPE_USER, ZX_OK, {}};
   status = port_.queue(&packet);
@@ -486,7 +632,6 @@ zx_status_t Tcs3400Device::WriteReg(uint8_t reg, uint8_t value) {
 
 zx_status_t Tcs3400Device::Bind() {
   {
-    fbl::AutoLock al(&i2c_lock_);
     gpio_.ConfigIn(GPIO_NO_PULL);
 
     auto status = gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
@@ -514,6 +659,12 @@ zx_status_t Tcs3400Device::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
+  if ((status = loop_.StartThread("tcs3400-reader-thread")) != ZX_OK) {
+    zxlogf(ERROR, "%s failed to start loop: %d", __FILE__, status);
+    ShutDown();
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -522,13 +673,10 @@ void Tcs3400Device::ShutDown() {
   zx_status_t status = port_.queue(&packet);
   ZX_ASSERT(status == ZX_OK);
   if (thread_) {
-    thrd_join(thread_, NULL);
+    thrd_join(thread_, nullptr);
   }
   irq_.destroy();
-  {
-    fbl::AutoLock lock(&client_input_lock_);
-    client_.clear();
-  }
+  loop_.Shutdown();
 }
 
 void Tcs3400Device::DdkUnbind(ddk::UnbindTxn txn) {
