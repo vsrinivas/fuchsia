@@ -68,7 +68,7 @@ async fn make_discoverable(access: &AccessHarness) -> Result<ProcedureTokenProxy
 async fn test_watch_peers(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(host_watcher, "bt-hci-integration").await?;
+    let (_host, mut hci) = activate_fake_host(host_watcher).await?;
 
     let first_address = Address::Random([1, 0, 0, 0, 0, 0]);
     let second_address = Address::Public([2, 0, 0, 0, 0, 0]);
@@ -97,7 +97,7 @@ async fn test_watch_peers(
 async fn test_disconnect(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
+    let (_host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
 
     let peer_address = Address::Random([6, 5, 0, 0, 0, 0]);
     let _peer = create_le_peer(&hci, peer_address).await?;
@@ -139,7 +139,7 @@ async fn test_disconnect(
 async fn test_set_local_name(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
+    let (_host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
 
     let _ = host_watcher
         .when_satisfied(expectation::host_with_name("fuchsia"), timeout_duration())
@@ -162,7 +162,7 @@ async fn test_set_local_name(
 async fn test_discovery(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
+    let (host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
     let discovery_token = start_discovery(&access).await?;
 
     // We should now be discovering
@@ -188,7 +188,7 @@ async fn test_discovery(
 async fn test_discoverable(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
+    let (host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
     let discoverable_token = make_discoverable(&access).await?;
 
     // We should now be discoverable

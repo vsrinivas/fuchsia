@@ -115,7 +115,6 @@ pub const FAKE_HCI_ADDRESS: Address = Address::Public([0, 0, 0, 0, 0, 0]);
 /// bt-gap
 pub async fn activate_fake_host(
     host_watcher: HostWatcherHarness,
-    _name: &str,
 ) -> Result<(HostId, Emulator), Error> {
     let initial_hosts: Vec<HostId> = host_watcher.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
@@ -154,14 +153,14 @@ pub async fn activate_fake_host(
 }
 
 impl ActivatedFakeHost {
-    pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
+    pub async fn new() -> Result<ActivatedFakeHost, Error> {
         let host_watcher = new_host_watcher_harness().await?;
         fuchsia_async::Task::spawn(
             watch_hosts(host_watcher.clone())
                 .unwrap_or_else(|e| error!("Error watching hosts: {:?}", e)),
         )
         .detach();
-        let (host, hci) = activate_fake_host(host_watcher.clone(), name).await?;
+        let (host, hci) = activate_fake_host(host_watcher.clone()).await?;
         Ok(ActivatedFakeHost { host_watcher, host, hci: Some(hci) })
     }
 

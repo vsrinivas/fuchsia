@@ -41,7 +41,7 @@ impl TestHarness for BootstrapHarness {
         _shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            let fake_host = ActivatedFakeHost::new("bt-hci-integration-bootstrap-0").await?;
+            let fake_host = ActivatedFakeHost::new().await?;
             match fuchsia_component::client::connect_to_protocol::<BootstrapMarker>() {
                 Ok(proxy) => Ok((
                     BootstrapHarness(expectable(Default::default(), proxy)),

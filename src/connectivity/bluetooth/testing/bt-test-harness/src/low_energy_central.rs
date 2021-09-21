@@ -75,7 +75,7 @@ impl TestHarness for CentralHarness {
         _shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
+            let fake_host = ActivatedFakeHost::new().await?;
             let central = fuchsia_component::client::connect_to_protocol::<CentralMarker>()
                 .context("Failed to connect to BLE Central service")?;
 

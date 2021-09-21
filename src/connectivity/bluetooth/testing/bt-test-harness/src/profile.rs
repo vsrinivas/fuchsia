@@ -66,7 +66,7 @@ impl TestHarness for ProfileHarness {
         _shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            let host = ActivatedFakeHost::new("bt-hci-integration-profile-0").await?;
+            let host = ActivatedFakeHost::new().await?;
             let profile = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
                 .context("Failed to connect to Profile serivce")?;
             let harness = ProfileHarness(expectable(
