@@ -49,6 +49,14 @@
                 "fuchsia.process.Launcher",
             ],
         },
+        {
+            protocol: [
+                // Chromebook services
+                "fuchsia.nand.flashmap.Manager",
+                "fuchsia.tpm.cr50.Cr50",
+                "fuchsia.vboot.FirmwareParam",
+            ],
+        },
     ],
     expose: [
         {

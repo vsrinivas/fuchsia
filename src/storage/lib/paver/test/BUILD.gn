@@ -21,6 +21,7 @@ test("test") {
     "abr-test.cc",
     "data-sink-test.cc",
     "device-partitioner-test.cc",
+    "flashmap-client-test.cc",
     "fvm-test.cc",
     "main.cc",
     "partition-client-test.cc",
@@ -31,6 +32,7 @@ test("test") {
     "validation-test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_llcpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
@@ -38,7 +40,10 @@ test("test") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_llcpp",
+    "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_llcpp",
+    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot_llcpp",
     "//src/devices/lib/amlogic",
     "//src/firmware/lib/abr",
     "//src/lib/storage/fs_management",

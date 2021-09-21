@@ -147,10 +147,17 @@ source_set("astro") {
 }
 
 source_set("chromebook-x64") {
-  sources = [ "chromebook-x64.cc" ]
+  sources = [
+    "chromebook-x64.cc",
+    "flashmap-client.cc",
+  ]
   deps = [
     ":gpt",
     ":paver-core",
+    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_llcpp",
+    "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap_llcpp",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_llcpp",
+    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot_llcpp",
     "//src/lib/uuid",
   ]
 }

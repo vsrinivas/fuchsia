@@ -10,9 +10,11 @@
 
 #include <gpt/cros.h>
 
+#include "fidl/fuchsia.vboot/cpp/wire.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/abr-client-vboot.h"
 #include "src/storage/lib/paver/abr-client.h"
+#include "src/storage/lib/paver/flashmap-client.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/validation.h"
@@ -86,6 +88,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
 
 bool CrosDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
   const PartitionSpec supported_specs[] = {
+      PartitionSpec(paver::Partition::kBootloaderA, "ap"),
       PartitionSpec(paver::Partition::kZirconA),
       PartitionSpec(paver::Partition::kZirconB),
       PartitionSpec(paver::Partition::kZirconR),
@@ -102,7 +105,7 @@ bool CrosDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
   }
 
   return false;
-}
+}  // namespace paver
 
 zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition(
     const PartitionSpec& spec) const {
@@ -209,6 +212,12 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartitio
         return status.take_error();
       }
       return zx::ok(std::move(status->partition));
+    }
+    case Partition::kBootloaderA: {
+      if (spec.content_type == "ap") {
+        return FlashmapPartitionClient::Create(gpt_->devfs_root(), gpt_->svc_root(), zx::sec(15));
+      }
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
     default:
       ERROR("Cros partitioner cannot find unknown partition type\n");

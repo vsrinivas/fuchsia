@@ -698,7 +698,10 @@
         {
             protocol: [ "fuchsia.vboot.FirmwareParam" ],
             from: "#vboot-fwparam",
-            to: "#console-launcher",
+            to: [
+                "#console-launcher",
+                "#miscsvc",
+            ],
         },
         {
             protocol: [ "fuchsia.power.button.Monitor" ],
@@ -722,7 +725,10 @@
         {
             protocol: [ "fuchsia.tpm.cr50.Cr50" ],
             from: "#tpm-cr50",
-            to: "#console-launcher",
+            to: [
+                "#console-launcher",
+                "#miscsvc",
+            ],
         },
         {
             directory: "dev",
