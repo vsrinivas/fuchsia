@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/errors.h>
@@ -1598,6 +1599,19 @@ zx_status_t UsbXhci::InitPci() {
   }
   mmio_ = std::move(*buffer);
   irq_count_ = HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs();
+  // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
+  std::array<pci_irq_mode_t, 2> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI};
+  uint32_t mode_irq_max = 0;
+  for (auto& mode : modes) {
+    uint32_t mode_count = irq_count_;
+    status = pci_.QueryIrqMode(mode, &mode_count);
+    if (status == ZX_OK) {
+      mode_irq_max = std::max(mode_irq_max, mode_count);
+    } else {
+      zxlogf(DEBUG, "Unable to query PciIrqMode %u", mode);
+    }
+  }
+  irq_count_ = std::min(irq_count_, mode_irq_max);
   status = pci_.ConfigureIrqMode(irq_count_, nullptr);
   if (status != ZX_OK) {
     return status;
