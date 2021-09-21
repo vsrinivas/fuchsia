@@ -29,12 +29,11 @@ type downloadCmd struct {
 }
 
 const (
-	buildsDirName       = "builds"
-	imageDirName        = "images"
-	imageJSONName       = "images.json"
-	fileFormatName      = "files"
-	gcsBaseURI          = "gs://"
-	gsUtilURIFormatName = "gsutil_uri"
+	buildsDirName  = "builds"
+	imageDirName   = "images"
+	imageJSONName  = "images.json"
+	fileFormatName = "files"
+	gcsBaseURI     = "gs://"
 )
 
 func (*downloadCmd) Name() string { return "download" }
@@ -169,7 +168,7 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 			}
 			logger.Debugf(ctx, "gcs_uri is %v for image base_uri %v", gcsURI, image.BaseURI)
 			newImages = append(newImages, &Image{
-				Format:  gsUtilURIFormatName,
+				Format:  fileFormatName,
 				BaseURI: gcsURI,
 			})
 		}
@@ -184,7 +183,7 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 			}
 			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", gcsURI, pkg.RepoURI)
 			newPackages = append(newPackages, &Package{
-				Format:  gsUtilURIFormatName,
+				Format:  fileFormatName,
 				RepoURI: gcsURI,
 				BlobURI: pkg.BlobURI,
 			})

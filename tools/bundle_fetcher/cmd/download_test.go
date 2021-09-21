@@ -328,14 +328,14 @@ func TestGetProductBundleData(t *testing.T) {
 					Images: []*Image{
 						{
 							BaseURI: "gs://fuchsia/builds/123456/images",
-							Format:  "gsutil_uri",
+							Format:  "files",
 						},
 					},
 					Type: "product_bundle",
 					Name: "terminal.qemu-x64",
 					Packages: []*Package{
 						{
-							Format:  "gsutil_uri",
+							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/123456/packages",
 						},
 					},
@@ -361,14 +361,14 @@ func TestGetProductBundleData(t *testing.T) {
 					Images: []*Image{
 						{
 							BaseURI: "gs://fuchsia/builds/789123/images",
-							Format:  "gsutil_uri",
+							Format:  "files",
 						},
 					},
 					Type: "product_bundle",
 					Name: "terminal.x64",
 					Packages: []*Package{
 						{
-							Format:  "gsutil_uri",
+							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/789123/packages",
 						},
 					},
