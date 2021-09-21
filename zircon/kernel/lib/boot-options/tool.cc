@@ -55,6 +55,9 @@ void WriteJsonValue(rapidjson::PrettyWriter<rapidjson::FileWriteStream>& writer,
     writer.Uint(value);
   } else {
     char buffer[128];
+    // fmemopen is supposed to write a NUL terminator, but if no output at all
+    // is sent before fclose, it might fail to.
+    buffer[0] = '\0';
     FILE* f = fmemopen(buffer, sizeof(buffer), "w");
     BootOptions::PrintValue(value, f);
     fclose(f);
