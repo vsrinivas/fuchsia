@@ -27,8 +27,11 @@ void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
 
 void Connection::Close2(Node* vn, fuchsia::io::Node::Close2Callback callback) {
   zx_status_t status = vn->PreClose(this);
-  callback(status == ZX_OK ? fuchsia::io::Node_Close2_Result::WithResponse({})
-                           : fuchsia::io::Node_Close2_Result::WithErr(std::move(status)));
+  if (status == ZX_OK) {
+    callback(fpromise::ok());
+  } else {
+    callback(fpromise::error(status));
+  }
   vn->Close(this);
   // |this| is destroyed at this point.
 }
@@ -54,6 +57,16 @@ zx_status_t Connection::Bind(zx::channel request, async_dispatcher_t* dispatcher
 void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
   // TODO: Check flags.
   callback(vn->Sync());
+}
+
+void Connection::Sync2(Node* vn, fuchsia::io::Node::Sync2Callback callback) {
+  // TODO: Check flags.
+  zx_status_t status = vn->Sync();
+  if (status == ZX_OK) {
+    callback(fpromise::ok());
+  } else {
+    callback(fpromise::error(status));
+  }
 }
 
 void Connection::GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback) {

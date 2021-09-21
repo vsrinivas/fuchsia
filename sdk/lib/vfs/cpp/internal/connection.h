@@ -93,6 +93,7 @@ class Connection {
   void Close2(Node* vn, fuchsia::io::Node::Close2Callback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
+  void Sync2(Node* vn, fuchsia::io::Node::Sync2Callback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
                fuchsia::io::Node::SetAttrCallback callback);

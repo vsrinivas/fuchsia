@@ -48,6 +48,10 @@ void DirectoryConnection::Sync(SyncCallback callback) {
   Connection::Sync(vn_, std::move(callback));
 }
 
+void DirectoryConnection::Sync2(Sync2Callback callback) {
+  Connection::Sync2(vn_, std::move(callback));
+}
+
 void DirectoryConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
@@ -65,7 +69,7 @@ void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
 
 void DirectoryConnection::Unlink(std::string name, fuchsia::io2::UnlinkOptions options,
                                  UnlinkCallback callback) {
-  callback(fuchsia::io::Directory_Unlink_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 void DirectoryConnection::ReadDirents(uint64_t max_bytes, ReadDirentsCallback callback) {
@@ -91,7 +95,7 @@ void DirectoryConnection::GetToken(GetTokenCallback callback) {
 
 void DirectoryConnection::Rename2(std::string src, zx::event dst_parent_token, std::string dst,
                                   Rename2Callback callback) {
-  callback(fuchsia::io::Directory_Rename2_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 void DirectoryConnection::Link(std::string src, zx::handle dst_parent_token, std::string dst,

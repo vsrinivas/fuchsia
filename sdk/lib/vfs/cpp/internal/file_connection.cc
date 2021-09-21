@@ -44,6 +44,8 @@ void FileConnection::Describe(DescribeCallback callback) {
 
 void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
 
+void FileConnection::Sync2(Sync2Callback callback) { Connection::Sync2(vn_, std::move(callback)); }
+
 void FileConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));
 }
@@ -66,6 +68,17 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
   callback(status, std::move(data));
 }
 
+void FileConnection::Read2(uint64_t count, Read2Callback callback) {
+  Read(count, [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
+    if (status != ZX_OK) {
+      callback(fpromise::error(status));
+    } else {
+      callback(fuchsia::io::File_Read2_Result::WithResponse(
+          fuchsia::io::File_Read2_Response(std::move(data))));
+    }
+  });
+}
+
 void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
@@ -74,6 +87,18 @@ void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback call
   }
   zx_status_t status = vn_->ReadAt(count, offset, &data);
   callback(status, std::move(data));
+}
+
+void FileConnection::ReadAt2(uint64_t count, uint64_t offset, ReadAt2Callback callback) {
+  ReadAt(count, offset,
+         [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
+           if (status != ZX_OK) {
+             callback(fpromise::error(status));
+           } else {
+             callback(fuchsia::io::File_ReadAt2_Result::WithResponse(
+                 fuchsia::io::File_ReadAt2_Response(std::move(data))));
+           }
+         });
 }
 
 void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
@@ -89,6 +114,17 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
   callback(status, actual);
 }
 
+void FileConnection::Write2(std::vector<uint8_t> data, Write2Callback callback) {
+  Write(data, [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
+    if (status != ZX_OK) {
+      callback(fpromise::error(status));
+    } else {
+      callback(
+          fuchsia::io::File_Write2_Result::WithResponse(fuchsia::io::File_Write2_Response(actual)));
+    }
+  });
+}
+
 void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
   if (!Flags::IsWritable(flags())) {
     callback(ZX_ERR_BAD_HANDLE, 0);
@@ -97,6 +133,18 @@ void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAt
   uint64_t actual = 0u;
   zx_status_t status = vn_->WriteAt(std::move(data), offset, &actual);
   callback(status, actual);
+}
+
+void FileConnection::WriteAt2(std::vector<uint8_t> data, uint64_t offset,
+                              WriteAt2Callback callback) {
+  WriteAt(data, offset, [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
+    if (status != ZX_OK) {
+      callback(fpromise::error(status));
+    } else {
+      callback(fuchsia::io::File_WriteAt2_Result::WithResponse(
+          fuchsia::io::File_WriteAt2_Response(actual)));
+    }
+  });
 }
 
 void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, SeekCallback callback) {
@@ -127,12 +175,34 @@ void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, Seek
   callback(ZX_OK, offset());
 }
 
+void FileConnection::Seek2(fuchsia::io::SeekOrigin origin, int64_t offset, Seek2Callback callback) {
+  Seek(offset, origin,
+       [callback = std::move(callback)](zx_status_t status, int64_t offset_from_start) {
+         if (status != ZX_OK) {
+           callback(fpromise::error(status));
+         } else {
+           callback(fuchsia::io::File_Seek2_Result::WithResponse(
+               fuchsia::io::File_Seek2_Response(offset_from_start)));
+         }
+       });
+}
+
 void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
   if (!Flags::IsWritable(flags())) {
     callback(ZX_ERR_BAD_HANDLE);
     return;
   }
   callback(vn_->Truncate(length));
+}
+
+void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
+  Truncate(length, [callback = std::move(callback)](zx_status_t status) {
+    if (status != ZX_OK) {
+      callback(fpromise::error(status));
+    } else {
+      callback(fpromise::ok());
+    }
+  });
 }
 
 void FileConnection::GetFlags(GetFlagsCallback callback) { callback(ZX_OK, flags()); }
@@ -144,6 +214,10 @@ void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
 
 void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
+void FileConnection::GetBuffer2(fuchsia::io::VmoFlags flags, GetBuffer2Callback callback) {
+  callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 void FileConnection::SendOnOpenEvent(zx_status_t status) {

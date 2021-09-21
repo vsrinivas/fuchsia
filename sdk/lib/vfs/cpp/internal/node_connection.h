@@ -32,6 +32,7 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
   void Close2(Close2Callback callback) override;
   void Describe(DescribeCallback callback) override;
   void Sync(SyncCallback callback) override;
+  void Sync2(Sync2Callback callback) override;
   void GetAttr(GetAttrCallback callback) override;
   void SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attributes,
                SetAttrCallback callback) override;
