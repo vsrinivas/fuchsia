@@ -53,12 +53,13 @@ using WithAllDrivers = Template<
     Args...,
     // A default-constructed variant gets the null driver.
     null::Driver,
+    // This driver is potentially used on all machines.
+    ns8250::MmioDriver,
 #if defined(__aarch64__) || UART_ALL_DRIVERS
-    amlogic::Driver,
-    pl011::Driver,  // TODO(fxbug.dev/49423): many more...
+    amlogic::Driver, ns8250::LegacyDw8250Driver, pl011::Driver,
 #endif
 #if defined(__x86_64__) || defined(__i386__) || UART_ALL_DRIVERS
-    ns8250::MmioDriver, ns8250::PioDriver,
+    ns8250::PioDriver,
 #endif
     // This is never used but permits a trailing comma above.
     internal::DummyDriver>;

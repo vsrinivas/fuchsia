@@ -168,11 +168,15 @@ class DriverImpl
   using Base = DriverBase<DriverImpl<KdrvExtra, KdrvConfig>, KdrvExtra, KdrvConfig, kPortCount>;
 
   static constexpr std::string_view config_name() {
-    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
-      return "mmio";
-    } else {
+    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
       return "ioport";
     }
+#if defined(__i386__) || defined(__x86_64__)
+    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
+      return "mmio";
+    }
+#endif
+    return "ns8250";
   }
 
   template <typename... Args>
@@ -321,6 +325,9 @@ using MmioDriver = DriverImpl<KDRV_I8250_MMIO_UART, dcfg_simple_t>;
 
 // uart::KernelDriver UartDriver API for direct PIO.
 using PioDriver = DriverImpl<KDRV_I8250_PIO_UART, dcfg_simple_pio_t>;
+
+// uart::KernelDriver UartDriver API for PIO via MMIO using legacy item type.
+using LegacyDw8250Driver = DriverImpl<KDRV_DW8250_UART, dcfg_simple_t>;
 
 }  // namespace ns8250
 }  // namespace uart

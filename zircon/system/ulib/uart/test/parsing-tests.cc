@@ -12,6 +12,12 @@
 
 namespace {
 
+#if defined(__i386__) || defined(__x86_64__)
+constexpr bool kX86 = true;
+#else
+constexpr bool kX86 = false;
+#endif
+
 template <typename Uint>
 void TestOneUint() {
   // No leading comma.
@@ -240,9 +246,9 @@ TEST(ParsingTests, TwoUint64s) {
 }
 
 TEST(ParsingTests, Ns8250MmioDriver) {
-  auto driver = uart::ns8250::MmioDriver::MaybeCreate("mmio,0xa,0xb");
+  auto driver = uart::ns8250::MmioDriver::MaybeCreate(kX86 ? "mmio,0xa,0xb" : "ns8250,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
-  EXPECT_STR_EQ("mmio", driver->config_name());
+  EXPECT_STR_EQ(kX86 ? "mmio" : "ns8250", driver->config_name());
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
