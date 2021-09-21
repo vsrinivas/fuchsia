@@ -375,22 +375,30 @@ func Test_nodeFind(t *testing.T) {
 func Test_processInput(t *testing.T) {
 	// Create the test size limits.
 	const singleBlobSize = 4096
+	const creepLimit = 256
 	fooSrcRelPath := "foo.src"
 	input := SizeLimits{
-		ICUDataLimit: json.Number("2048"),
-		CoreLimit:    json.Number("2048"),
-		ICUData:      []string{"icudtl.dat"},
+		CoreLimit:                   json.Number("2048"),
+		CoreCreepLimit:              json.Number(strconv.Itoa(creepLimit)),
+		DistributedShlibs:           []string{"lib/ld.so.1"},
+		DistributedShlibsLimit:      json.Number("2048"),
+		DistributedShlibsCreepLimit: json.Number(strconv.Itoa(creepLimit)),
+		ICUData:                     []string{"icudtl.dat"},
+		ICUDataLimit:                json.Number("2048"),
+		ICUDataCreepLimit:           json.Number(strconv.Itoa(creepLimit)),
 		Components: []Component{
 			{
-				Component: "foo",
-				Limit:     json.Number(strconv.Itoa(singleBlobSize)),
-				Src:       []string{"foo-pkg"},
+				Component:  "foo",
+				Limit:      json.Number(strconv.Itoa(singleBlobSize)),
+				CreepLimit: json.Number(strconv.Itoa(creepLimit)),
+				Src:        []string{"foo-pkg"},
 			},
 		},
 		NonBlobFSComponents: []NonBlobFSComponent{
 			{
 				Component:           "bar",
 				Limit:               json.Number(strconv.Itoa(singleBlobSize)),
+				CreepLimit:          json.Number(strconv.Itoa(creepLimit)),
 				PackageManifestPath: "obj/foo-pkg/package_manifest.json",
 			},
 		},
@@ -505,12 +513,39 @@ func Test_processInput(t *testing.T) {
 	if fooSize.Size != int64(2*singleBlobSize) {
 		t.Fatalf("Unexpected size for component foo: %v", fooSize)
 	}
+	if fooSize.CreepBudget != int64(creepLimit) {
+		t.Fatalf("Unexpected creep budget for component foo: %v", fooSize.CreepBudget)
+	}
 	barSize, ok := sizes["bar"]
 	if !ok {
 		t.Fatalf("Failed to find bar in sizes: %v", sizes)
 	}
+	if barSize.CreepBudget != int64(creepLimit) {
+		t.Fatalf("Unexpected creep budget for component bar: %v", barSize.CreepBudget)
+	}
 	if barSize.Size != int64(10) {
 		t.Fatalf("Unexpected size for component bar: %v", fooSize)
+	}
+	coreSize, ok := sizes["Core system+services"]
+	if !ok {
+		t.Fatalf("Failed to find Core system+services in sizes: %v", sizes)
+	}
+	if coreSize.CreepBudget != int64(creepLimit) {
+		t.Fatalf("Unexpected creep budget for core: %v", coreSize.CreepBudget)
+	}
+	distributedShlibsSize, ok := sizes["Distributed shared libraries"]
+	if !ok {
+		t.Fatalf("Failed to find Distributed shared libraries in sizes: %v", sizes)
+	}
+	if distributedShlibsSize.CreepBudget != int64(creepLimit) {
+		t.Fatalf("Unexpected creep budget for distributed shared libraries: %v", distributedShlibsSize.CreepBudget)
+	}
+	icuSize, ok := sizes["ICU Data"]
+	if !ok {
+		t.Fatalf("Failed to find ICU Data in sizes: %v", sizes)
+	}
+	if icuSize.CreepBudget != int64(creepLimit) {
+		t.Fatalf("Unexpected creep budget for ICU data: %v", icuSize.CreepBudget)
 	}
 
 	// Both the budget-only and full report should report going over-budget.
@@ -536,14 +571,16 @@ func Test_writeOutputSizes(t *testing.T) {
 	// https://chromium.googlesource.com/infra/gerrit-plugins/binary-size/+/HEAD/README.md
 	sizes := map[string]*ComponentSize{
 		"a": {
-			Size:   1,
-			Budget: 2,
-			nodes:  []*Node{newNode("a node")},
+			Size:        1,
+			Budget:      2,
+			CreepBudget: 1,
+			nodes:       []*Node{newNode("a node")},
 		},
 		"b": {
-			Size:   2,
-			Budget: 2,
-			nodes:  []*Node{newNode("b node")},
+			Size:        2,
+			Budget:      2,
+			CreepBudget: 1,
+			nodes:       []*Node{newNode("b node")},
 		},
 	}
 	tmpDir := t.TempDir()
@@ -566,6 +603,9 @@ func Test_writeOutputSizes(t *testing.T) {
 
 	if val, ok := unmarshalled["a.budget"]; !ok || val.(float64) != 2 {
 		t.Fatalf("json size output missing expected key/value entry for budget")
+	}
+	if val, ok := unmarshalled["a.creepBudget"]; !ok || val.(float64) != 1 {
+		t.Fatalf("json size output missing expected key/value entry for creepBudget")
 	}
 
 }
