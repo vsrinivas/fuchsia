@@ -437,6 +437,7 @@ mod tests {
 
     use super::*;
 
+    use crate::assert_empty;
     use crate::device::DeviceId;
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
@@ -578,12 +579,12 @@ mod tests {
 
         // Delete all routes to subnet.
         table.del_route(subnet).unwrap();
-        assert_eq!(table.iter_active().count(), 0);
-        assert_eq!(table.iter_installed().count(), 0);
+        assert_empty(table.iter_active());
+        assert_empty(table.iter_installed());
 
         // Add the next hop route.
         table.add_route(subnet, next_hop).unwrap();
-        assert_eq!(table.iter_active().count(), 0);
+        assert_empty(table.iter_active());
         assert_eq!(table.iter_installed().count(), 1);
         assert!(table
             .iter_installed()
@@ -591,7 +592,7 @@ mod tests {
 
         // Attempting to add the next hop route again should fail.
         assert_eq!(table.add_route(subnet, next_hop).unwrap_err(), ExistsError);
-        assert_eq!(table.iter_active().count(), 0);
+        assert_empty(table.iter_active());
         assert_eq!(table.iter_installed().count(), 1);
 
         // Add a device route from the `next_hop` to some device.
@@ -622,11 +623,11 @@ mod tests {
 
         // Do lookup for our next hop (should get None since we have no route to
         // a local device).
-        assert!(table.lookup(next_hop).is_none());
+        assert_eq!(table.lookup(next_hop), None);
 
         // Do lookup for some address within `subnet` (should get None as well).
-        assert!(table.lookup(config.local_ip).is_none());
-        assert!(table.lookup(config.remote_ip).is_none());
+        assert_eq!(table.lookup(config.local_ip), None);
+        assert_eq!(table.lookup(config.remote_ip), None);
     }
 
     #[ip_test]
@@ -988,7 +989,7 @@ mod tests {
             .iter_active()
             .any(|x| (x.subnet == sub8_s27)
                 && (x.dest == ActiveEntryDest::Local { device: device0 })));
-        assert!(table.lookup(addr7).is_none());
+        assert_eq!(table.lookup(addr7), None);
         assert_eq!(table.lookup(addr8).unwrap(), Destination { next_hop: addr8, device: device0 });
         assert_eq!(
             table.lookup(addr10).unwrap(),
@@ -1026,7 +1027,7 @@ mod tests {
             .iter_active()
             .any(|x| (x.subnet == sub12_s26)
                 && (x.dest == ActiveEntryDest::Local { device: device1 })));
-        assert!(table.lookup(addr7).is_none());
+        assert_eq!(table.lookup(addr7), None);
         assert_eq!(table.lookup(addr8).unwrap(), Destination { next_hop: addr8, device: device0 });
         assert_eq!(
             table.lookup(addr10).unwrap(),
@@ -1123,7 +1124,7 @@ mod tests {
                 == ActiveEntryDest::Remote {
                     dest: Destination { next_hop: addr10, device: device0 }
                 })));
-        assert!(table.lookup(addr7).is_none());
+        assert_eq!(table.lookup(addr7), None);
         assert_eq!(table.lookup(addr8).unwrap(), Destination { next_hop: addr8, device: device0 });
         assert_eq!(
             table.lookup(addr10).unwrap(),
@@ -1323,11 +1324,11 @@ mod tests {
         assert!(table
             .iter_active()
             .any(|x| (x.subnet == sub3) && (x.dest == ActiveEntryDest::Local { device: device0 })));
-        assert!(table.lookup(addr1).is_none());
-        assert!(table.lookup(addr2).is_none());
+        assert_eq!(table.lookup(addr1), None);
+        assert_eq!(table.lookup(addr2), None);
         assert_eq!(table.lookup(addr3).unwrap(), Destination { next_hop: addr3, device: device0 });
-        assert!(table.lookup(addr4).is_none());
-        assert!(table.lookup(addr5).is_none());
+        assert_eq!(table.lookup(addr4), None);
+        assert_eq!(table.lookup(addr5), None);
 
         // Keep the route with the cycle, but add another route that doesn't
         // have a cycle for sub2.
@@ -1378,8 +1379,8 @@ mod tests {
         assert_eq!(table.lookup(addr1).unwrap(), Destination { next_hop: addr3, device: device0 });
         assert_eq!(table.lookup(addr2).unwrap(), Destination { next_hop: addr3, device: device0 });
         assert_eq!(table.lookup(addr3).unwrap(), Destination { next_hop: addr3, device: device0 });
-        assert!(table.lookup(addr4).is_none());
-        assert!(table.lookup(addr5).is_none());
+        assert_eq!(table.lookup(addr4), None);
+        assert_eq!(table.lookup(addr5), None);
     }
 
     #[ip_test]
@@ -1407,7 +1408,7 @@ mod tests {
             .iter_active()
             .any(|x| (x.subnet == sub1) && (x.dest == ActiveEntryDest::Local { device: device0 })));
         assert_eq!(table.lookup(addr1).unwrap(), Destination { next_hop: addr1, device: device0 });
-        assert!(table.lookup(addr2).is_none());
+        assert_eq!(table.lookup(addr2), None);
 
         // Add a default route.
         //

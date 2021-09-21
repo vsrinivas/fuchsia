@@ -665,9 +665,8 @@ pub(crate) enum AddrConfigType {
     Manual,
 }
 
-/// Data associated with an IP addressess on an interface.
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+/// Data associated with an IP addresses on an interface.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> + Copy = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     state: AddressState,

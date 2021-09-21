@@ -13,6 +13,7 @@ use core::num::NonZeroU8;
 use core::slice::Iter;
 
 use log::{debug, trace};
+use matches::assert_matches;
 use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
@@ -45,7 +46,7 @@ use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReport
 use crate::ip::gmp::{GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 #[cfg(test)]
 use crate::Ctx;
-use crate::Instant;
+use crate::{assert_empty, Instant};
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -424,7 +425,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
 
     // There should be no way to add addresses to a device before it's
     // initialized.
-    assert!(state.ip().ipv6_addr_sub.is_empty());
+    assert_empty(&state.ip().ipv6_addr_sub);
 
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
@@ -1468,11 +1469,12 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
                     // We must have had an invalidation timeout if we just
                     // attempted to deprecate.
-                    assert!(self
-                        .cancel_timer(
+                    assert_matches!(
+                        self.cancel_timer(
                             ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr).into()
-                        )
-                        .is_some());
+                        ),
+                        Some(_)
+                    );
 
                     Self::invalidate_slaac_addr(self, device_id, addr);
                 }
@@ -1627,7 +1629,7 @@ mod tests {
         add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
         DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
     };
-    use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
+    use crate::{assert_empty, Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     struct DummyEthernetCtx {
         state: IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
@@ -1933,7 +1935,7 @@ mod tests {
         // Receiving a packet not destined for the node should only result in a
         // dest unreachable message if routing is enabled.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent().iter());
 
         // Attempting to set router should work, but it still won't be able to
         // route packets.
@@ -1943,7 +1945,7 @@ mod tests {
         check_other_is_routing_enabled::<I>(&ctx, device, false);
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         // Still should not send ICMP because device has routing disabled.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent().iter());
 
         // Test with netstack forwarding
 
@@ -1967,7 +1969,7 @@ mod tests {
         // Receiving a packet not destined for the node should not result in an
         // unreachable message when routing is disabled.
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent().iter());
 
         // Attempting to set router should work
         set_routing_enabled::<_, I>(&mut ctx, device, true);
@@ -2096,45 +2098,45 @@ mod tests {
         let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
         let as2 = AddrSubnet::new(ip2.get(), prefix).unwrap();
 
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip1 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as1).unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 (ok)
         crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip1), Some(_));
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 (ok)
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Del ip1 again (ip1 not found)
         assert_eq!(
             crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap_err(),
             AddressError::NotFound
         );
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 again (ip2 already exists)
         assert_eq!(
             crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
 
         // Add ip2 with different subnet (ip2 already exists)
         assert_eq!(
@@ -2146,9 +2148,9 @@ mod tests {
             .unwrap_err(),
             AddressError::AlreadyExists
         );
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_some());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip3).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_matches!(crate::device::get_ip_addr_state(&ctx, device, &ip2), Some(_));
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip3), None);
     }
 
     fn receive_simple_ip_packet_test<A: IpAddress>(
@@ -2186,8 +2188,8 @@ mod tests {
         let ip2 = I::get_other_ip_address(2);
         let from_ip = I::get_other_ip_address(3).get();
 
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
 
         // Should not receive packets on any IP.
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
@@ -2201,7 +2203,7 @@ mod tests {
         )
         .unwrap();
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).unwrap().is_assigned());
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip2), None);
 
         // Should receive packets on ip1 but not ip2
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
@@ -2223,7 +2225,7 @@ mod tests {
 
         // Remove ip1
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
-        assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
+        assert_eq!(crate::device::get_ip_addr_state(&ctx, device, &ip1), None);
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).unwrap().is_assigned());
 
         // Should receive packets on ip2

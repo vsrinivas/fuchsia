@@ -2033,7 +2033,7 @@ mod tests {
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::transport::udp::UdpStateBuilder;
-    use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
+    use crate::{assert_empty, Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
         fn new_icmp_connection<D: EventDispatcher>(
@@ -2172,7 +2172,7 @@ mod tests {
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
-            assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+            assert_empty(ctx.dispatcher().frames_sent().iter());
         }
     }
 

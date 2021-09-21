@@ -2159,7 +2159,7 @@ mod tests {
     use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
     use crate::ip::path_mtu::get_pmtu;
     use crate::testutil::*;
-    use crate::{DeviceId, Mac, StackStateBuilder};
+    use crate::{assert_empty, DeviceId, Mac, StackStateBuilder};
 
     // Some helper functions
 
@@ -2661,7 +2661,7 @@ mod tests {
         );
 
         // Make sure no other times exist..
-        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
@@ -2986,8 +2986,9 @@ mod tests {
         // Should have dispatched the packet.
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
-        assert!(
-            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()).is_none(),
+        assert_eq!(
+            get_pmtu(&mut ctx, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            None
         );
     }
 
@@ -3151,7 +3152,7 @@ mod tests {
         // unrecognized so an ICMP parameter problem response SHOULD be sent,
         // but the netstack chooses to just drop the packet since we are not
         // required to send the ICMP response.
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher.frames_sent().iter());
     }
 
     #[test]

@@ -141,11 +141,6 @@ impl<A: Eq + Hash, C> ConnSocketMap<A, C> {
     pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &'_ A> + ExactSizeIterator {
         self.addr_to_id.keys()
     }
-
-    #[cfg(test)]
-    pub(crate) fn len(&self) -> usize {
-        self.addr_to_id.len()
-    }
 }
 
 impl<A: Eq + Hash, C> ConnSocketMap<A, C>

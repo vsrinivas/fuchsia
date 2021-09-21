@@ -30,6 +30,7 @@ use core::ops::RangeInclusive;
 use core::time::Duration;
 
 use log::{debug, error, trace};
+use matches::assert_matches;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet};
 use net_types::{
     LinkLocalAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
@@ -1992,9 +1993,10 @@ fn stop_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
 
     // Not having a scheduled router advertisement implies `device_id` is
     // already not an advertising interface.
-    assert!(ctx
-        .scheduled_instant(NdpTimerId::new_router_advertisement_transmit(device_id).into())
-        .is_some());
+    assert_matches!(
+        ctx.scheduled_instant(NdpTimerId::new_router_advertisement_transmit(device_id).into()),
+        Some(_)
+    );
 
     let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -2858,7 +2860,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                     // As per RFC 4861 section 6.3.4, immediately timeout the
                     // entry as specified in RFC 4861 section 6.3.5.
-                    assert!(ctx.cancel_timer(timer_id).is_some());
+                    assert_matches!(ctx.cancel_timer(timer_id), Some(_));
                 } else {
                     trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, but the router {:?} is unknown so doing nothing", src_ip);
                 }
@@ -3150,15 +3152,16 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                                     // Must not have reached this point if the
                                     // address was already assigned to a device.
-                                    assert!(ctx
-                                        .schedule_timer_instant(
+                                    assert_matches!(
+                                        ctx.schedule_timer_instant(
                                             valid_until,
                                             NdpTimerId::new_invalidate_slaac_address(
                                                 device_id, addr
                                             )
                                             .into(),
-                                        )
-                                        .is_some());
+                                        ),
+                                        Some(_)
+                                    );
                                 } else if remaining_lifetime
                                     .map_or(true, |r| r <= MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
                                 {
@@ -3203,15 +3206,16 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     // Must not have reached this point if the
                                     // address was not already assigned to a
                                     // device.
-                                    assert!(ctx
-                                        .schedule_timer_instant(
+                                    assert_matches!(
+                                        ctx.schedule_timer_instant(
                                             valid_until,
                                             NdpTimerId::new_invalidate_slaac_address(
                                                 device_id, addr
                                             )
                                             .into(),
-                                        )
-                                        .is_some());
+                                        ),
+                                        Some(_)
+                                    );
                                 }
                             } else {
                                 // As per RFC 4862 section 5.5.3.e, if the
@@ -3494,7 +3498,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
             // If we are not in the Incomplete state, we should have (at some
             // point) learned about a link-layer address.
-            assert!(neighbor_state.link_address.is_some());
+            assert_matches!(neighbor_state.link_address, Some(_));
 
             if !message.override_flag() {
                 // As per RFC 4861 section 7.2.5:
@@ -3674,7 +3678,9 @@ mod tests {
         DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, StepResult,
         TestIpExt, DUMMY_CONFIG_V6,
     };
-    use crate::{Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner};
+    use crate::{
+        assert_empty, Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
+    };
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
 
@@ -3864,14 +3870,9 @@ mod tests {
         }
 
         // Should have no more router advertisement timers.
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| *x.1
-                    == NdpTimerId::new_router_advertisement_transmit(device.id().into()).into())
-                .count(),
-            0
-        );
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
+        }));
     }
 
     /// Validate a simple Router Advertisement message (using default NDP
@@ -4341,8 +4342,8 @@ mod tests {
             AddrSubnet::new(remote_ip().get(), 128).unwrap(),
         )
         .unwrap();
-        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 0);
-        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 0);
+        assert_empty(net.context("local").dispatcher.frames_sent());
+        assert_empty(net.context("remote").dispatcher.frames_sent());
 
         crate::ip::send_ip_packet_from_device(
             net.context("local"),
@@ -4421,7 +4422,7 @@ mod tests {
         assert_eq!(remote_neighbor.state, NeighborEntryState::Stale);
 
         // The local timer should've been unscheduled.
-        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
+        assert_empty(net.context("local").dispatcher.timer_events());
 
         // Upon link layer resolution, the original ping request should've been
         // sent out.
@@ -4468,7 +4469,7 @@ mod tests {
 
         // Deinitializing the correct ID should cancel the timer.
         deinitialize(&mut ctx, dev_id.id.into());
-        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
+        assert_empty(ctx.dispatcher.timer_events());
     }
 
     #[test]
@@ -4537,14 +4538,8 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_eq!(
-            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(),
-            0
-        );
-        assert_eq!(
-            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
-            0
-        );
+        assert_empty(get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id));
+        assert_empty(get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id));
 
         // Both devices should not be in the multicast group
         assert!(!is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
@@ -4758,8 +4753,8 @@ mod tests {
         let _: StepResult = net.step();
 
         // Let's make sure that all timers are cancelled properly.
-        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
-        assert_eq!(net.context("remote").dispatcher.timer_events().count(), 0);
+        assert_empty(net.context("local").dispatcher.timer_events());
+        assert_empty(net.context("remote").dispatcher.timer_events());
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
@@ -4780,7 +4775,7 @@ mod tests {
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
@@ -4854,7 +4849,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
@@ -5729,7 +5724,7 @@ mod tests {
         // Should remove the prefix from our list now.
         assert!(!ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be unset.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Receive a new RA with new prefix (same as before but new since it
         // isn't in our list right now).
@@ -5822,11 +5817,11 @@ mod tests {
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device_id);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         let time = ctx.now();
         assert_eq!(
@@ -5909,11 +5904,11 @@ mod tests {
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device_id);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         let time = ctx.now();
         assert_eq!(
@@ -5970,8 +5965,8 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -5979,7 +5974,7 @@ mod tests {
         let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
 
         // Send the first router solicitation.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
@@ -6024,8 +6019,8 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6033,7 +6028,7 @@ mod tests {
         let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
 
         // Send the first router solicitation.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
@@ -6058,7 +6053,7 @@ mod tests {
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 0);
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id));
 
         // Unsetting routing should succeed.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
@@ -6096,8 +6091,8 @@ mod tests {
             .state_mut()
             .add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Updating the IP should resolve immediately since DAD is turned off by
         // `DummyEventDispatcherBuilder::build`.
@@ -6116,8 +6111,8 @@ mod tests {
             .unwrap(),
             AddressState::Assigned
         );
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Enable DAD for the device.
         let mut ndp_configs = crate::device::get_ndp_configurations(&ctx, device).clone();
@@ -6510,15 +6505,15 @@ mod tests {
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Setting a non-router device to be an advertising interface should do
         // nothing.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         fn confirm_dad_frame_timer(ctx: &mut Ctx<DummyEventDispatcher>, device: DeviceId) {
             assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
@@ -6598,7 +6593,7 @@ mod tests {
             .into()
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Update configurations that affect advertising interface status after
         // DAD has completed (RAs may now be sent).
@@ -6607,13 +6602,13 @@ mod tests {
         // nothing.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Setting a non-advertising interface to a router should do nothing.
         crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Set to be an advertising interface.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
@@ -6622,7 +6617,7 @@ mod tests {
         // Setting to be a non-router should end router advertisements.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
         validate_final_ras(&mut ctx, device, 4);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Set back to a router.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
@@ -6632,7 +6627,7 @@ mod tests {
         // advertisements.
         crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
         validate_final_ras(&mut ctx, device, 10);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Set back to being an advertising interface.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
@@ -6657,8 +6652,8 @@ mod tests {
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Make device a router so it will start sending router advertisements
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
@@ -6734,7 +6729,7 @@ mod tests {
         // interval.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
         validate_final_ras(&mut ctx, device, 3);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
         validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
         let now = ctx.now();
@@ -6798,7 +6793,7 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Should not have sent anything yet.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         let now = ctx.now();
         // First `MAX_INITIAL_RTR_ADVERTISEMENTS` will have an interval of
@@ -6841,7 +6836,7 @@ mod tests {
         );
 
         // Send the Router Advertisement.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
             NdpTimerId::new_router_advertisement_transmit(device.id().into()).into()
@@ -7024,7 +7019,7 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         // Should not have sent anything yet.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         let now = ctx.now();
         // First `MAX_INITIAL_RTR_ADVERTISEMENTS` will have an interval of
@@ -7062,7 +7057,7 @@ mod tests {
         );
 
         // Send the Router Advertisement.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_empty(ctx.dispatcher().frames_sent());
 
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
@@ -7631,11 +7626,10 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
 
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // No timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -7693,11 +7687,10 @@ mod tests {
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // No new address should be formed.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -7893,11 +7886,10 @@ mod tests {
                 NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
             )
         );
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -7958,54 +7950,33 @@ mod tests {
         assert!(ndp_state.has_prefix(&addr_subnet));
 
         // Should NOT have gotten a new IP.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                        .into()))
-                .count(),
-            0
-        );
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.0
-                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
-                    && (*x.1
-                        == NdpTimerId::new_invalidate_slaac_address(
-                            device.id().into(),
-                            expected_addr
-                        )
-                        .into()))
-                .count(),
-            0
-        );
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
-                        .into()))
-                .count(),
-            0
-        );
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                .into()
+        }));
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.0 == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
+                && *x.1
+                    == NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr)
+                        .into()
+        }));
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
+        }));
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), []);
 
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
     }
 
     #[test]
@@ -8178,26 +8149,21 @@ mod tests {
 
         // Timers should have been reset.
         let now = ctx.now();
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                .into()
+        }));
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                        .into()))
-                .count(),
-            0
-        );
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.0
-                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
-                    && (*x.1
+                .filter(|x| *x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
+                    && *x.1
                         == NdpTimerId::new_invalidate_slaac_address(
                             device.id().into(),
                             expected_addr
                         )
-                        .into()))
+                        .into())
                 .count(),
             1
         );
@@ -8249,26 +8215,21 @@ mod tests {
 
         // Timers should have been reset.
         let now = ctx.now();
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
+                .into()
+        }));
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
-                        .into()))
-                .count(),
-            0
-        );
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.0
-                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
-                    && (*x.1
+                .filter(|x| *x.0
+                    == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
+                    && *x.1
                         == NdpTimerId::new_invalidate_slaac_address(
                             device.id().into(),
                             expected_addr
                         )
-                        .into()))
+                        .into())
                 .count(),
             1
         );
@@ -8348,15 +8309,9 @@ mod tests {
                 .count(),
             1
         );
-        assert_eq!(
-            ctx.dispatcher()
-                .timer_events()
-                .filter(|x| (*x.1
-                    == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
-                        .into()))
-                .count(),
-            0
-        );
+        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+            *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
+        }));
 
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), vec!());
 
@@ -8397,11 +8352,10 @@ mod tests {
                 NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr).into()
             )
         );
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -8440,7 +8394,7 @@ mod tests {
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -8481,7 +8435,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
     }
 
     #[test]
@@ -8520,7 +8474,7 @@ mod tests {
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -8560,7 +8514,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
     }
 
     #[test]
@@ -8598,7 +8552,7 @@ mod tests {
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -8662,11 +8616,10 @@ mod tests {
         let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
 
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Receive a new RA with new prefix (autonomous), but preferred lifetime
         // is greater than valid.
@@ -8692,14 +8645,13 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Address invalidation timers were added.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_empty(ctx.dispatcher().timer_events());
     }
 
     #[test]
@@ -8723,11 +8675,10 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Enable DAD for future IPs.
         let mut ndp_configs = NdpConfigurations::default();
@@ -8823,11 +8774,10 @@ mod tests {
         // At this point, the address (that was tentative) should just be
         // invalidated (removed) since we should not have any existing
         // connections using the tentative address.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -8938,11 +8888,10 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_eq!(
-            NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
-                .count(),
-            0
-        );
+        assert_empty(NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(
+            &ctx,
+            device.id().into(),
+        ));
 
         // Receive a new RA with new prefix (autonomous).
         //

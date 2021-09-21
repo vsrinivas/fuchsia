@@ -15,6 +15,7 @@ use core::ops;
 use core::time::Duration;
 
 use log::{debug, trace};
+use matches::assert_matches;
 use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
@@ -226,7 +227,7 @@ pub(crate) fn run_for(ctx: &mut Ctx<DummyEventDispatcher>, duration: Duration) -
         }
 
         let timer_id = trigger_next_timer(ctx);
-        assert!(timer_id.is_some());
+        assert_matches!(timer_id, Some(_));
         timer_ids.push(timer_id.unwrap());
     }
 
@@ -1234,7 +1235,7 @@ mod tests {
 
     use super::*;
     use crate::ip;
-    use crate::TimerIdInner;
+    use crate::{assert_empty, TimerIdInner};
 
     #[test]
     fn test_dummy_network_transmits_packets() {
@@ -1392,7 +1393,7 @@ mod tests {
         // Earlier timer is popped first.
         assert_eq!(heap.pop().unwrap().1, 1);
         assert_eq!(heap.pop().unwrap().1, 2);
-        assert!(heap.pop().is_none());
+        assert_eq!(heap.pop(), None);
 
         heap.push(new_data(now + Duration::from_secs(1), 1));
         heap.push(new_data(now + Duration::from_secs(1), 1));
@@ -1400,7 +1401,7 @@ mod tests {
         // Can pop twice with identical data.
         assert_eq!(heap.pop().unwrap().1, 1);
         assert_eq!(heap.pop().unwrap().1, 1);
-        assert!(heap.pop().is_none());
+        assert_eq!(heap.pop(), None);
     }
 
     #[test]
@@ -1553,22 +1554,22 @@ mod tests {
         });
 
         net.collect_frames();
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.pending_frames.len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.pending_frames.iter());
 
         // Bob and Calvin should get any packet sent by Alice.
 
         send_packet(net.context("alice"), ip_a, ip_b, device);
         assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 1);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.pending_frames.len(), 0);
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
         assert_eq!(net.pending_frames.len(), 2);
         assert!(net
             .pending_frames
@@ -1583,14 +1584,14 @@ mod tests {
 
         net.pending_frames = BinaryHeap::new();
         send_packet(net.context("bob"), ip_b, ip_a, device);
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
         assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 1);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.pending_frames.len(), 0);
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
         assert_eq!(net.pending_frames.len(), 1);
         assert!(net
             .pending_frames
@@ -1601,14 +1602,14 @@ mod tests {
 
         net.pending_frames = BinaryHeap::new();
         send_packet(net.context("calvin"), ip_c, ip_a, device);
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
         assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 1);
-        assert_eq!(net.pending_frames.len(), 0);
+        assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
-        assert_eq!(net.pending_frames.len(), 0);
+        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.pending_frames.iter());
     }
 }

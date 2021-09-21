@@ -104,9 +104,7 @@ where
     ///
     /// Panics if this `TimerDispatcher` was already spawned.
     pub(crate) fn spawn<C: TimerContext<T>>(&mut self, ctx: C) {
-        if self.futures_sender.is_some() {
-            panic!("TimerDispatcher already spawned");
-        }
+        assert!(self.futures_sender.is_none(), "TimerDispatcher already spawned");
         let (sender, mut recv) = mpsc::unbounded();
         self.futures_sender = Some(sender);
         fasync::Task::spawn(async move {
@@ -402,8 +400,8 @@ mod tests {
         let (t, mut fired) = TestContext::new();
         run_in_executor(&mut executor, async {
             let mut d = t.lock().await;
-            assert!(d.dispatcher.schedule_timer(1, nanos_from_now(1)).is_none());
-            assert!(d.dispatcher.schedule_timer(2, nanos_from_now(2)).is_none());
+            assert_eq!(d.dispatcher.schedule_timer(1, nanos_from_now(1)), None);
+            assert_eq!(d.dispatcher.schedule_timer(2, nanos_from_now(2)), None);
         });
         assert_matches!(fired.try_next(), Err(mpsc::TryRecvError { .. }));
         executor.set_fake_time(fasync::Time::after(1.nanos()));
@@ -424,21 +422,21 @@ mod tests {
 
         // Timer 1 is scheduled.
         let time1 = nanos_from_now(1);
-        assert!(d.schedule_timer(1, time1).is_none());
+        assert_eq!(d.schedule_timer(1, time1), None);
         assert_eq!(d.scheduled_time(&1).unwrap(), time1);
 
         // Timer 2 does not exist yet.
-        assert!(d.scheduled_time(&2).is_none());
+        assert_eq!(d.scheduled_time(&2), None);
 
         // Timer 1 is scheduled.
         let time2 = nanos_from_now(2);
-        assert!(d.schedule_timer(2, time2).is_none());
+        assert_eq!(d.schedule_timer(2, time2), None);
         assert_eq!(d.scheduled_time(&1).unwrap(), time1);
         assert_eq!(d.scheduled_time(&2).unwrap(), time2);
 
         // Cancel Timer 1.
         assert_eq!(d.cancel_timer(&1).unwrap(), time1);
-        assert!(d.scheduled_time(&1).is_none());
+        assert_eq!(d.scheduled_time(&1), None);
 
         // Timer 2 should still be scheduled.
         assert_eq!(d.scheduled_time(&2).unwrap(), time2);
@@ -458,8 +456,8 @@ mod tests {
         let time2 = nanos_from_now(2);
         let time3 = nanos_from_now(5);
         t.with_disp_sync(|d| {
-            assert!(d.schedule_timer(1, time1).is_none());
-            assert!(d.schedule_timer(2, time2).is_none());
+            assert_eq!(d.schedule_timer(1, time1), None);
+            assert_eq!(d.schedule_timer(2, time2), None);
 
             assert_eq!(d.cancel_timer(&1).unwrap(), time1);
         });
@@ -468,7 +466,7 @@ mod tests {
 
         t.with_disp_sync(|d| {
             // can't cancel 2 anymore, it has already fired
-            assert!(d.cancel_timer(&2).is_none());
+            assert_eq!(d.cancel_timer(&2), None);
         });
         // only event 2 should come out because 1 was cancelled:
         assert_eq!(r, 2);
@@ -476,7 +474,7 @@ mod tests {
         // schedule another timer and wait for it, just to prove that timer 1's
         // event never gets fired:
         t.with_disp_sync(|d| {
-            assert!(d.schedule_timer(3, time3).is_none());
+            assert_eq!(d.schedule_timer(3, time3), None);
         });
         executor.set_fake_time(time3.0);
         let r = run_in_executor(&mut executor, rcv.next()).unwrap();
@@ -498,8 +496,8 @@ mod tests {
         let (t, mut rcv) = TestContext::new();
         {
             let d = &mut t.0.try_lock().unwrap().dispatcher;
-            assert!(d.schedule_timer(1, time1).is_none());
-            assert!(d.schedule_timer(2, time2).is_none());
+            assert_eq!(d.schedule_timer(1, time1), None);
+            assert_eq!(d.schedule_timer(2, time2), None);
             executor.set_fake_time(time1.0);
             // run the executor until it's stalled. We're still locking the
             // context mutex, meaning the dispatcher task is waiting for us.
@@ -543,8 +541,8 @@ mod tests {
         let resched2 = nanos_from_now(4);
 
         t.with_disp_sync(|d| {
-            assert!(d.schedule_timer(1, time1).is_none());
-            assert!(d.schedule_timer(2, time2).is_none());
+            assert_eq!(d.schedule_timer(1, time1), None);
+            assert_eq!(d.schedule_timer(2, time2), None);
             assert_eq!(d.schedule_timer(1, resched1).unwrap(), time1);
         });
         executor.set_fake_time(time2.0);
@@ -555,7 +553,7 @@ mod tests {
         t.with_disp_sync(|d| {
             // we can schedule timer 2 again, and it returns None because it has
             // already fired.
-            assert!(d.schedule_timer(2, resched2).is_none());
+            assert_eq!(d.schedule_timer(2, resched2), None);
         });
 
         // now we can go at it again and get the rescheduled timers:
@@ -572,10 +570,10 @@ mod tests {
 
         t.with_disp_sync(|d| {
             // schedule 4 timers:
-            assert!(d.schedule_timer(1, nanos_from_now(1)).is_none());
-            assert!(d.schedule_timer(2, nanos_from_now(2)).is_none());
-            assert!(d.schedule_timer(3, nanos_from_now(3)).is_none());
-            assert!(d.schedule_timer(4, nanos_from_now(4)).is_none());
+            assert_eq!(d.schedule_timer(1, nanos_from_now(1)), None);
+            assert_eq!(d.schedule_timer(2, nanos_from_now(2)), None);
+            assert_eq!(d.schedule_timer(3, nanos_from_now(3)), None);
+            assert_eq!(d.schedule_timer(4, nanos_from_now(4)), None);
 
             // cancel timers 1, 3, and 4.
             d.cancel_timers_with(|id| *id != 2);

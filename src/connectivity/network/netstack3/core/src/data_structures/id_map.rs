@@ -651,6 +651,7 @@ mod tests {
     use super::IdMapEntry::{self, Allocated, Free};
     use super::{Entry, IdMap};
     use super::{FreeList, FreeListLink};
+    use crate::assert_empty;
 
     // Smart constructors
     fn free<T>(prev: usize, next: usize) -> IdMapEntry<T> {
@@ -745,7 +746,7 @@ mod tests {
         assert_eq!(map.data, vec![Allocated(1)]);
         assert_eq!(map.freelist, None);
         assert_eq!(map.remove(0).unwrap(), 1);
-        assert!(map.data.is_empty());
+        assert_empty(map.data);
     }
 
     #[test]
@@ -991,7 +992,7 @@ mod tests {
             for i in &remove_seq {
                 assert_ne!(map.remove(*i), None);
             }
-            assert!(map.is_empty());
+            assert_empty(map.iter());
         }
     }
 
@@ -1004,7 +1005,7 @@ mod tests {
         for i in 0..100 {
             assert_eq!(map.remove(i), Some(0));
         }
-        assert_eq!(map.data.len(), 0);
+        assert_empty(map.data.iter());
         assert_eq!(map.freelist, None);
     }
 

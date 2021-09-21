@@ -336,7 +336,7 @@ mod tests {
             let mock = MockImpl { available: MockAvailable::DenyAll };
             let mut alloc = PortAlloc::<MockImpl>::new(&mut rng);
             let port = alloc.try_alloc(&MockId(0), &mock);
-            assert!(port.is_none());
+            assert_eq!(port, None);
         });
     }
 

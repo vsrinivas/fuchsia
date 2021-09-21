@@ -277,6 +277,7 @@ where
 }
 
 /// Device information kept in [`DeviceInfo`].
+#[cfg_attr(test, derive(Debug))]
 pub struct CommonInfo {
     path: String,
     client: eth::Client,
@@ -302,7 +303,7 @@ impl CommonInfo {
 }
 
 /// Device information kept by [`Devices`].
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DeviceInfo<C = DeviceId, I = CommonInfo> {
     id: BindingId,
     core_id: Option<C>,
@@ -371,6 +372,8 @@ impl<C> DeviceInfo<C, CommonInfo> {
 
 #[cfg(test)]
 mod tests {
+    use matches::assert_matches;
+
     use super::*;
 
     type TestDevices = Devices<MockDeviceId, u64>;
@@ -398,7 +401,7 @@ mod tests {
         let a = d.add_active_device(core_a, 10).expect("can add device");
         let b = d.add_active_device(core_b, 20).expect("can add device");
         assert_ne!(a, b, "allocated same id");
-        assert!(d.add_active_device(core_a, 10).is_none(), "can't add same id again");
+        assert_eq!(d.add_active_device(core_a, 10), None, "can't add same id again");
         // check that ids are incrementing
         assert_eq!(d.last_id, 2);
 
@@ -411,8 +414,8 @@ mod tests {
         assert_eq!(d.get_binding_id(core_b).unwrap(), b);
 
         // check that we can retrieve both devices by the core id:
-        assert!(d.get_core_device_mut(core_a).is_some());
-        assert!(d.get_core_device_mut(core_b).is_some());
+        assert_matches!(d.get_core_device_mut(core_a), Some(_));
+        assert_matches!(d.get_core_device_mut(core_b), Some(_));
 
         // remove both devices
         let info_a = d.remove_device(a).expect("can remove device");
@@ -422,12 +425,12 @@ mod tests {
         assert_eq!(info_a.core_id.unwrap(), core_a);
         assert_eq!(info_b.core_id.unwrap(), core_b);
         // removing device again will fail
-        assert!(d.remove_device(a).is_none());
+        assert_eq!(d.remove_device(a), None);
 
         // retrieving the devices now should fail:
-        assert!(d.get_device(a).is_none());
-        assert!(d.get_core_id(a).is_none());
-        assert!(d.get_core_device_mut(core_a).is_none());
+        assert_eq!(d.get_device(a), None);
+        assert_eq!(d.get_core_id(a), None);
+        assert_eq!(d.get_core_device_mut(core_a), None);
 
         assert!(d.active_devices.is_empty());
         assert!(d.inactive_devices.is_empty());
@@ -446,25 +449,25 @@ mod tests {
 
         // check that devices are correctly inserted and don't
         // carry a core id.
-        assert!(d.get_device(a).unwrap().core_id.is_none());
-        assert!(d.get_device(b).unwrap().core_id.is_none());
-        assert!(d.get_core_id(a).is_none());
-        assert!(d.get_core_id(b).is_none());
+        assert_eq!(d.get_device(a).unwrap().core_id, None);
+        assert_eq!(d.get_device(b).unwrap().core_id, None);
+        assert_eq!(d.get_core_id(a), None);
+        assert_eq!(d.get_core_id(b), None);
 
         // remove both devices
         let info_a = d.remove_device(a).expect("can remove device");
         let info_b = d.remove_device(b).expect("can remove device");
         assert_eq!(info_a.info, 10);
         assert_eq!(info_b.info, 20);
-        assert!(info_a.core_id.is_none());
-        assert!(info_b.core_id.is_none());
+        assert_eq!(info_a.core_id, None);
+        assert_eq!(info_b.core_id, None);
 
         // removing device again will fail
-        assert!(d.remove_device(a).is_none());
+        assert_eq!(d.remove_device(a), None);
 
         // retrieving the device now should fail:
-        assert!(d.get_device(a).is_none());
-        assert!(d.get_core_id(a).is_none());
+        assert_eq!(d.get_device(a), None);
+        assert_eq!(d.get_core_id(a), None);
 
         assert!(d.active_devices.is_empty());
         assert!(d.inactive_devices.is_empty());
@@ -514,7 +517,7 @@ mod tests {
         let (core, info) = d.deactivate_device(a).unwrap();
         assert_eq!(core, core_a);
         assert_eq!(info.info, 10);
-        assert!(info.core_id.is_none());
+        assert_eq!(info.core_id, None);
 
         // both a and b should be inactive now:
         assert!(d.active_devices.is_empty());

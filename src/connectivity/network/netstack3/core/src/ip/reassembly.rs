@@ -37,6 +37,7 @@ use core::cmp::Ordering;
 use core::convert::TryFrom;
 use core::time::Duration;
 
+use matches::assert_matches;
 use net_types::ip::{Ip, IpAddress};
 use packet::BufferViewMut;
 use packet_formats::ip::{IpExtByteSlice, IpPacket};
@@ -502,7 +503,7 @@ where
     let mut added_bytes = 0;
     // Get header buffer from `packet` if its fragment offset equals to 0.
     if offset == 0 {
-        assert!(fragment_data.header.is_none());
+        assert_eq!(fragment_data.header, None);
         let header = get_header::<B, I>(&packet);
         added_bytes = header.len();
         fragment_data.header = Some(header);
@@ -569,11 +570,11 @@ pub(crate) fn reassemble_packet<
     }
 
     // If we are not missing fragments, we must have header data.
-    assert!(fragment_data.header.is_some());
+    assert_matches!(fragment_data.header, Some(_));
 
     // Cancel the reassembly timer now that we know we have all the data
     // required for reassembly and are attempting to do so.
-    assert!(ctx.cancel_timer(*key).is_some());
+    assert_matches!(ctx.cancel_timer(*key), Some(_));
 
     // Take the header and body fragments from the cache data and remove the
     // cache data associated with `key` since it will no longer be needed.
@@ -731,6 +732,7 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
+    use crate::assert_empty;
     use crate::context::testutil::DummyTimerCtxExt;
     use crate::testutil::{TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
 
@@ -1119,7 +1121,7 @@ mod tests {
         let fragment_id = 5;
 
         // Make sure no timers in the dispatcher yet.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         assert_eq!(ctx.get_state_mut().cache_size, 0);
 
         // Test that we properly reset fragment cache on timer.
@@ -1146,7 +1148,7 @@ mod tests {
         assert!(ctx.trigger_next_timer());
 
         // Make sure no other times exist..
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         assert_eq!(ctx.get_state_mut().cache_size, 0);
 
         // Attempt to reassemble the packet but get an error since the fragment
@@ -1432,7 +1434,7 @@ mod tests {
         assert_eq!(ctx.trigger_timers_for(Duration::from_secs(10)), 1);
 
         // Make sure no other times exist.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
 
         // Process fragment #2 for packet #1 Should get a need more return value
         // since even though we technically received all the fragments, the last

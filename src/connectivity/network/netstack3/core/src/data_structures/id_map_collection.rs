@@ -133,6 +133,7 @@ impl<K: IdMapCollectionKey, T> Default for IdMapCollection<K, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_empty;
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     enum MockVariants {
@@ -178,16 +179,16 @@ mod tests {
     #[test]
     fn test_insert_and_get() {
         let mut t = TestCollection::new();
-        assert!(t.data[0].is_empty());
-        assert!(t.data[1].is_empty());
-        assert!(t.data[2].is_empty());
-        assert!(t.insert(&KEY_A, 1).is_none());
+        assert_empty(t.data[0].iter());
+        assert_empty(t.data[1].iter());
+        assert_empty(t.data[2].iter());
+        assert_eq!(t.insert(&KEY_A, 1), None);
         assert!(!t.data[0].is_empty());
-        assert!(t.insert(&KEY_B, 2).is_none());
+        assert_eq!(t.insert(&KEY_B, 2), None);
         assert!(!t.data[1].is_empty());
 
         assert_eq!(*t.get(&KEY_A).unwrap(), 1);
-        assert!(t.get(&KEY_C).is_none());
+        assert_eq!(t.get(&KEY_C), None);
 
         *t.get_mut(&KEY_B).unwrap() = 3;
         assert_eq!(*t.get(&KEY_B).unwrap(), 3);
@@ -196,17 +197,17 @@ mod tests {
     #[test]
     fn test_remove() {
         let mut t = TestCollection::new();
-        assert!(t.insert(&KEY_B, 15).is_none());
+        assert_eq!(t.insert(&KEY_B, 15), None);
         assert_eq!(t.remove(&KEY_B).unwrap(), 15);
-        assert!(t.remove(&KEY_B).is_none());
+        assert_eq!(t.remove(&KEY_B), None);
     }
 
     #[test]
     fn test_iter() {
         let mut t = TestCollection::new();
-        assert!(t.insert(&KEY_A, 15).is_none());
-        assert!(t.insert(&KEY_B, -5).is_none());
-        assert!(t.insert(&KEY_C, -10).is_none());
+        assert_eq!(t.insert(&KEY_A, 15), None);
+        assert_eq!(t.insert(&KEY_B, -5), None);
+        assert_eq!(t.insert(&KEY_C, -10), None);
         let mut c = 0;
         let mut sum = 0;
         for i in t.iter() {
@@ -221,16 +222,16 @@ mod tests {
     fn test_is_empty() {
         let mut t = TestCollection::new();
         assert!(t.is_empty());
-        assert!(t.insert(&KEY_B, 15).is_none());
+        assert_eq!(t.insert(&KEY_B, 15), None);
         assert!(!t.is_empty());
     }
 
     #[test]
     fn test_iter_mut() {
         let mut t = TestCollection::new();
-        assert!(t.insert(&KEY_A, 15).is_none());
-        assert!(t.insert(&KEY_B, -5).is_none());
-        assert!(t.insert(&KEY_C, -10).is_none());
+        assert_eq!(t.insert(&KEY_A, 15), None);
+        assert_eq!(t.insert(&KEY_B, -5), None);
+        assert_eq!(t.insert(&KEY_C, -10), None);
         for i in t.iter_mut() {
             *i *= 2;
         }

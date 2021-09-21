@@ -78,6 +78,7 @@ impl<D: ArpDevice, P: PType, DeviceId> ArpTimerId<D, P, DeviceId> {
 }
 
 /// The metadata associated with an ARP frame.
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct ArpFrameMetadata<D: ArpDevice, DeviceId> {
     /// The ID of the ARP device.
     pub(super) device_id: DeviceId,
@@ -727,6 +728,7 @@ mod tests {
     use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType, ArpPacketBuilder};
 
     use super::*;
+    use crate::assert_empty;
     use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerCtxExt};
     use crate::context::InstantContext;
     use crate::device::ethernet::EthernetLinkDevice;
@@ -894,7 +896,7 @@ mod tests {
         // We should have cached the sender's address information.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // Gratuitous ARPs should not prompt a response.
-        assert_eq!(ctx.frames().len(), 0);
+        assert_empty(ctx.frames().iter());
     }
 
     #[test]
@@ -915,7 +917,7 @@ mod tests {
         // We should have cached the sender's address information.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // Gratuitous ARPs should not send a response.
-        assert_eq!(ctx.frames().len(), 0);
+        assert_empty(ctx.frames().iter());
     }
 
     #[test]
@@ -1025,7 +1027,7 @@ mod tests {
 
         // Deinitializing the correct ID should cancel the timer.
         deinitialize(&mut ctx, device_id_0);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
     }
 
     #[test]
@@ -1095,7 +1097,7 @@ mod tests {
         assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), Some(TEST_REMOTE_MAC));
 
         // We should not have sent any ARP request.
-        assert_eq!(ctx.frames().len(), 0);
+        assert_empty(ctx.frames().iter());
         // We should not have set a retry timer.
         assert_eq!(ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)), None);
     }
@@ -1158,7 +1160,7 @@ mod tests {
         );
 
         // There shouldn't be any timers installed.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
 
         // The table entry should have been completely removed.
         assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
@@ -1398,7 +1400,7 @@ mod tests {
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
 
         // We should have notified the device layer.
         assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
@@ -1422,7 +1424,7 @@ mod tests {
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
     }
 
     #[test]
@@ -1447,7 +1449,7 @@ mod tests {
         // The entry should have been removed.
         assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
         // The timer should have been canceled.
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         // The device layer should have been notified.
         assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
@@ -1513,9 +1515,9 @@ mod tests {
         let mut ctx = DummyCtx::default();
 
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
     }
 }

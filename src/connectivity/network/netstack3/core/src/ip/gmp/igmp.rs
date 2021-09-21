@@ -43,6 +43,7 @@ use crate::Instant;
 /// When [`FrameContext::send_frame`] is called with an `IgmpPacketMetadata`,
 /// the body will be encapsulated in an IP packet with a TTL of 1 and with the
 /// "Router Alert" option set.
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct IgmpPacketMetadata<D> {
     pub(crate) device: D,
     pub(crate) dst_ip: MulticastAddr<Ipv4Addr>,
@@ -492,6 +493,7 @@ mod tests {
     use packet_formats::igmp::messages::IgmpMembershipQueryV2;
     use rand_xorshift::XorShiftRng;
 
+    use crate::assert_empty;
     use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
     use crate::context::DualStateContext;
     use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
@@ -833,7 +835,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
         receive_igmp_report(&mut ctx);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         // The report should be discarded because we have received from someone
         // else.
         assert_eq!(ctx.frames().len(), 1);
@@ -877,8 +879,8 @@ mod tests {
 
         // Assert that no observable effects have taken place.
         let assert_no_effect = |ctx: &DummyCtx| {
-            assert!(ctx.timers().is_empty());
-            assert!(ctx.frames().is_empty());
+            assert_empty(ctx.timers());
+            assert_empty(ctx.frames());
         };
 
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
@@ -935,7 +937,7 @@ mod tests {
 
         assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         assert_eq!(ctx.frames().len(), 2);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         ensure_ttl_ihl_rtr(&ctx);
     }
 }

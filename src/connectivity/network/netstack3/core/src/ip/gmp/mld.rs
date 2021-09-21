@@ -48,6 +48,7 @@ use crate::Instant;
 /// contains an MLD packet in an IP packet. It is encapsulated in a link-layer
 /// frame, and sent to the link-layer address corresponding to the given local
 /// IP address.
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct MldFrameMetadata<D> {
     pub(crate) device: D,
     pub(crate) dst_ip: MulticastAddr<Ipv6Addr>,
@@ -436,6 +437,7 @@ mod tests {
     use rand_xorshift::XorShiftRng;
 
     use super::*;
+    use crate::assert_empty;
     use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
     use crate::context::DualStateContext;
     use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
@@ -800,7 +802,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
         receive_mld_report(&mut ctx, GROUP_ADDR);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         // The report should be discarded because we have received from someone
         // else.
         assert_eq!(ctx.frames().len(), 1);
@@ -836,8 +838,8 @@ mod tests {
 
             // Assert that no observable effects have taken place.
             let assert_no_effect = |ctx: &DummyCtx| {
-                assert!(ctx.timers().is_empty());
-                assert!(ctx.frames().is_empty());
+                assert_empty(ctx.timers());
+                assert_empty(ctx.frames());
             };
 
             assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, group), GroupJoinResult::Joined(()));
@@ -916,7 +918,7 @@ mod tests {
 
         assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         assert_eq!(ctx.frames().len(), 2);
-        assert_eq!(ctx.timers().len(), 0);
+        assert_empty(ctx.timers().iter());
         let frame = &ctx.frames().last().unwrap().1;
         ensure_frame(frame, 132, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, GROUP_ADDR);
         ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);

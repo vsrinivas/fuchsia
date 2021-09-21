@@ -18,6 +18,7 @@ use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use futures::{lock::Mutex, Future};
+use matches::assert_matches;
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither},
@@ -686,7 +687,7 @@ async fn test_add_remove_interface() {
     // remove the interface:
     let () = stack.del_ethernet_interface(if_id).await.squash_result().expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert!(test_stack.ctx.lock().await.dispatcher().get_device_info(if_id).is_none());
+    assert_matches!(test_stack.ctx.lock().await.dispatcher().get_device_info(if_id), None);
 
     // if we try to remove it again, NotFound should be returned:
     let res =

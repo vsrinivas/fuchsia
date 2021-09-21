@@ -495,12 +495,29 @@ pub fn get_all_routes<'a, D: EventDispatcher>(
     v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }
 
+/// Asserts that an iterable object produces zero items.
+///
+/// `assert_empty` drains `into_iter.into_iter()` and asserts that zero
+/// items are produced. It panics with a message which includes the produced
+/// items if this assertion fails.
+#[track_caller]
+fn assert_empty<I: IntoIterator>(into_iter: I)
+where
+    I::Item: Debug + PartialEq,
+{
+    // NOTE: Collecting into a `Vec` is cheap in the happy path because
+    // zero-capacity vectors are guaranteed not to allocate.
+    assert_eq!(into_iter.into_iter().collect::<Vec<_>>(), &[]);
+}
+
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt};
+    use matches::assert_matches;
     use net_types::ip::{Ip, Ipv4, Ipv6};
     use net_types::Witness;
+
+    use super::*;
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt};
 
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
@@ -514,18 +531,18 @@ mod test {
         let addr_subnet = AddrSubnetEither::new(ip, prefix).unwrap();
 
         // IP doesn't exist initially.
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), None);
 
         // Add IP (OK).
         let () = add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap();
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
 
         // Add IP again (already exists).
         assert_eq!(
             add_ip_addr_subnet(&mut ctx, device, addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
 
         // Add IP with different subnet (already exists).
         let wrong_addr_subnet = AddrSubnetEither::new(ip, prefix - 1).unwrap();
@@ -533,16 +550,16 @@ mod test {
             add_ip_addr_subnet(&mut ctx, device, wrong_addr_subnet).unwrap_err(),
             NetstackError::Exists
         );
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_some());
+        assert_matches!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), Some(_));
 
         let ip = SpecifiedAddr::new(ip).unwrap();
         // Del IP (ok).
         let () = del_ip_addr(&mut ctx, device, ip.into()).unwrap();
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), None);
 
         // Del IP again (not found).
         assert_eq!(del_ip_addr(&mut ctx, device, ip.into()).unwrap_err(), NetstackError::NotFound);
-        assert!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet).is_none());
+        assert_eq!(get_all_ip_addr_subnets(&ctx, device).find(|&a| a == addr_subnet), None);
     }
 
     #[test]

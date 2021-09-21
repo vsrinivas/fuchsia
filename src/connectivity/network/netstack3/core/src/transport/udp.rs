@@ -245,7 +245,7 @@ impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 struct Conn<A: IpAddress> {
     local_ip: SpecifiedAddr<A>,
     local_port: NonZeroU16,
@@ -290,7 +290,7 @@ impl<A: IpAddress> From<Conn<A>> for UdpConnInfo<A> {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 struct Listener<A: IpAddress> {
     addr: SpecifiedAddr<A>,
     port: NonZeroU16,
@@ -1049,6 +1049,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
+    use crate::assert_empty;
     use crate::ip::{
         icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
         DummyDeviceId, IpDeviceIdContext,
@@ -1056,6 +1057,7 @@ mod tests {
     use crate::testutil::{set_logger_for_test, FakeCryptoRng};
 
     /// The listener data sent through a [`DummyUdpCtx`].
+    #[derive(Debug, PartialEq)]
     struct ListenData<I: Ip> {
         listener: UdpListenerId<I>,
         src_ip: I::Addr,
@@ -1065,6 +1067,7 @@ mod tests {
     }
 
     /// The UDP connection data sent through a [`DummyUdpCtx`].
+    #[derive(Debug, PartialEq)]
     struct ConnData<I: Ip> {
         conn: UdpConnId<I>,
         body: Vec<u8>,
@@ -1321,8 +1324,8 @@ mod tests {
             NonZeroU16::new(100).unwrap(),
             &body[..],
         );
-        assert_eq!(ctx.get_ref().listen_data.len(), 0);
-        assert_eq!(ctx.get_ref().conn_data.len(), 0);
+        assert_empty(ctx.get_ref().listen_data.iter());
+        assert_empty(ctx.get_ref().conn_data.iter());
     }
 
     /// Tests that UDP connections can be created and data can be transmitted
@@ -1506,9 +1509,8 @@ mod tests {
         let remote_ip = remote_ip::<I>();
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
-            0
+        assert_empty(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.iter_addrs(),
         );
 
         let body = [1, 2, 3, 4, 5];
@@ -1524,9 +1526,8 @@ mod tests {
         .expect("send_udp failed");
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
-            0
+        assert_empty(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.iter_addrs(),
         );
         let frames = ctx.frames();
         assert_eq!(frames.len(), 1);
@@ -1585,9 +1586,8 @@ mod tests {
         let remote_ip = remote_ip::<I>();
 
         // UDP connection count should be zero before and after `send_udp` call.
-        assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
-            0
+        assert_empty(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.iter_addrs(),
         );
 
         // Instruct the dummy frame context to throw errors.
@@ -1611,9 +1611,8 @@ mod tests {
 
         // UDP connection count should be zero before and after `send_udp` call
         // (even in the case of errors).
-        assert_eq!(
-            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.len(),
-            0
+        assert_empty(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state.conns.iter_addrs(),
         );
     }
 
@@ -2012,11 +2011,13 @@ mod tests {
 
         // Assert that that connection id was removed from the connections
         // state.
-        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-            .conn_state
-            .conns
-            .get_conn_by_id(conn.0)
-            .is_none());
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .conns
+                .get_conn_by_id(conn.0),
+            None
+        );
     }
 
     /// Tests [`remove_udp_listener`]
@@ -2032,22 +2033,26 @@ mod tests {
         let info = remove_udp_listener(&mut ctx, list);
         assert_eq!(info.local_ip.unwrap(), local_ip);
         assert_eq!(info.local_port, local_port);
-        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-            .conn_state
-            .listeners
-            .get_by_listener(list.id)
-            .is_none());
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .listeners
+                .get_by_listener(list.id),
+            None
+        );
 
         // Test removing a wildcard listener.
         let list = listen_udp::<I, _>(&mut ctx, None, Some(local_port)).expect("listen_udp failed");
         let info = remove_udp_listener(&mut ctx, list);
-        assert!(info.local_ip.is_none());
+        assert_eq!(info.local_ip, None);
         assert_eq!(info.local_port, local_port);
-        assert!(DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
-            .conn_state
-            .wildcard_listeners
-            .get_by_listener(list.id)
-            .is_none());
+        assert_eq!(
+            DualStateContext::<UdpState<I>, _>::get_first_state(&ctx)
+                .conn_state
+                .wildcard_listeners
+                .get_by_listener(list.id),
+            None
+        );
     }
 
     #[ip_test]
@@ -2087,7 +2092,7 @@ mod tests {
         let list =
             listen_udp::<I, _>(&mut ctx, None, NonZeroU16::new(200)).expect("listen_udp failed");
         let info = get_udp_listener_info(&ctx, list);
-        assert!(info.local_ip.is_none());
+        assert_eq!(info.local_ip, None);
         assert_eq!(info.local_port.get(), 200);
     }
 

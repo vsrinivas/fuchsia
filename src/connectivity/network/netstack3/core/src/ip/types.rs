@@ -122,8 +122,8 @@ mod tests {
             .unwrap(),
         }
         .into_ip_addr();
-        assert!(EntryEither::new(subnet_v4, entry_v6).is_none());
-        assert!(EntryEither::new(subnet_v6, entry_v4).is_none());
+        assert_eq!(EntryEither::new(subnet_v4, entry_v6), None);
+        assert_eq!(EntryEither::new(subnet_v6, entry_v4), None);
         let valid_v4 = EntryEither::new(subnet_v4, entry_v4).unwrap();
         let valid_v6 = EntryEither::new(subnet_v6, entry_v6).unwrap();
         // Check that the split produces results requal to the generating parts.

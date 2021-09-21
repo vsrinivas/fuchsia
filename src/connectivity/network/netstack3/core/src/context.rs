@@ -1316,7 +1316,7 @@ pub(crate) mod testutil {
             // Earlier timer is popped first.
             assert_eq!(heap.pop().unwrap().1, 1);
             assert_eq!(heap.pop().unwrap().1, 2);
-            assert!(heap.pop().is_none());
+            assert_eq!(heap.pop(), None);
 
             heap.push(new_data(now + Duration::from_secs(1), 1));
             heap.push(new_data(now + Duration::from_secs(1), 1));
@@ -1324,7 +1324,7 @@ pub(crate) mod testutil {
             // Can pop twice with identical data.
             assert_eq!(heap.pop().unwrap().1, 1);
             assert_eq!(heap.pop().unwrap().1, 1);
-            assert!(heap.pop().is_none());
+            assert_eq!(heap.pop(), None);
         }
 
         #[test]
@@ -1352,7 +1352,7 @@ pub(crate) mod testutil {
             ctx = Default::default();
 
             // No timer with id `0` exists yet.
-            assert!(ctx.scheduled_instant(0).is_none());
+            assert_eq!(ctx.scheduled_instant(0), None);
 
             assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
 
@@ -1364,7 +1364,7 @@ pub(crate) mod testutil {
 
             // After the timer fires, it should not still be scheduled at some
             // instant.
-            assert!(ctx.scheduled_instant(0).is_none());
+            assert_eq!(ctx.scheduled_instant(0), None);
 
             // The time should have been advanced.
             assert_eq!(ctx.now(), ONE_SEC_INSTANT);
@@ -1404,8 +1404,8 @@ pub(crate) mod testutil {
             );
 
             // They should be canceled now.
-            assert!(ctx.cancel_timer(0).is_none());
-            assert!(ctx.cancel_timer(1).is_none());
+            assert_eq!(ctx.cancel_timer(0), None);
+            assert_eq!(ctx.cancel_timer(1), None);
 
             // The clock should have been updated.
             assert_eq!(ctx.now(), ONE_SEC_INSTANT);
