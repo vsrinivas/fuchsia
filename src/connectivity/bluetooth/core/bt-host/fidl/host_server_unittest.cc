@@ -899,7 +899,6 @@ TEST_F(FIDL_HostServerTest, ConnectBredr) {
 
   EXPECT_FALSE(peer->le());
   ASSERT_TRUE(peer->bredr());
-  EXPECT_TRUE(peer->bredr()->connected());
 
   // bt-host should only attempt to connect the BR/EDR transport.
   EXPECT_EQ(0, test_device()->le_create_connection_command_count());
@@ -920,7 +919,6 @@ TEST_F(FIDL_HostServerTest, ConnectDualMode) {
   ASSERT_FALSE(result->is_error());
 
   // bt-host should only attempt to connect the BR/EDR transport.
-  EXPECT_TRUE(peer->bredr()->connected());
   EXPECT_FALSE(peer->le()->connected());
   EXPECT_EQ(0, test_device()->le_create_connection_command_count());
   EXPECT_EQ(1, test_device()->acl_create_connection_command_count());

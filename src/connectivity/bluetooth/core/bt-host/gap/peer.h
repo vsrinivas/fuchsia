@@ -457,6 +457,10 @@ class Peer final {
   // conditions are subtle and not fully supported yet.
   bool TryMakeNonTemporary();
 
+  // Marks this device as temporary. This operation may fail due to one of
+  // the conditions described above the |temporary()| method.
+  bool TryMakeTemporary();
+
   // Tells the owning PeerCache to update the expiry state of this
   // device.
   void UpdateExpiry();
