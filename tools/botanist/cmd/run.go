@@ -219,11 +219,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err := r.startTargets(ctx, targets, socketPath); err != nil {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
+		logger.Debugf(ctx, "successfully started all targets")
 		for _, t := range targets {
 			if err := r.addPackageRepo(ctx, t); err != nil {
 				return err
 			}
 		}
+		logger.Debugf(ctx, "added all package repositories")
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
