@@ -64,7 +64,7 @@ impl<T: Deserializable> TpmRequest for CcdRequest<T> {
 impl<T> Serializable for CcdRequest<T> {
     fn serialize(&self, serializer: &mut Serializer) {
         self.header.serialize(serializer);
-        serializer.put_be_u8(self.cmd);
+        serializer.put_u8(self.cmd);
         if let Some(password) = &self.password {
             serializer.put(password.as_bytes_with_nul());
         }

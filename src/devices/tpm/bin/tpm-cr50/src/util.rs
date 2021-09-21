@@ -80,7 +80,7 @@ impl Serializer {
         self.put(&data.to_be_bytes())
     }
 
-    pub fn put_be_u8(&mut self, data: u8) {
+    pub fn put_u8(&mut self, data: u8) {
         self.put(&[data])
     }
 
@@ -98,7 +98,7 @@ mod tests {
         let mut s = Serializer::new();
         s.put_be_u32(0xd00dfeed);
         s.put_be_u16(0xface);
-        s.put_be_u8(0xaa);
+        s.put_u8(0xaa);
         let vec = s.into_vec();
 
         assert_eq!(vec, vec![0xd0, 0x0d, 0xfe, 0xed, 0xfa, 0xce, 0xaa]);
