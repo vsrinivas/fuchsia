@@ -84,6 +84,9 @@ impl Log {
                             for byte in "\r\n".as_bytes() {
                                 parser.advance(&mut *term, *byte, &mut sink);
                             }
+
+                            // Request terminal update.
+                            client.request_update(id);
                         }
                         Err(status) if status == zx::Status::SHOULD_WAIT => {
                             break;
@@ -93,12 +96,13 @@ impl Log {
                             for byte in "\r\n<<LOG ERROR>>".as_bytes() {
                                 parser.advance(&mut *term, *byte, &mut sink);
                             }
+
+                            // Request terminal update.
+                            client.request_update(id);
                             break;
                         }
                     }
                 }
-
-                client.request_update(id);
             }
         })
         .detach();
