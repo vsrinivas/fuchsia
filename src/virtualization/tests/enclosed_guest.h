@@ -130,19 +130,6 @@ class EnclosedGuest {
   bool ready_ = false;
 };
 
-template <typename EnclosedGuestImpl>
-class SingleCpuEnclosedGuest : public EnclosedGuestImpl {
-  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
-    zx_status_t status = EnclosedGuestImpl::LaunchInfo(url, cfg);
-    if (status != ZX_OK) {
-      return status;
-    }
-    cfg->set_virtio_gpu(false);
-    cfg->set_cpus(1);
-    return ZX_OK;
-  }
-};
-
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
@@ -201,13 +188,11 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 };
 
-using AllGuestTypes =
-    ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>
+using AllGuestTypes = ::testing::Types<ZirconEnclosedGuest
 #if __x86_64__
-                     ,
-                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>,
-                     TerminaEnclosedGuest
+                                       ,
+                                       DebianEnclosedGuest, TerminaEnclosedGuest
 #endif  // __x86_64__
-                     >;
+                                       >;
 
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
