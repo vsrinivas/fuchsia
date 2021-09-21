@@ -1,0 +1,44 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+import("//build/packages/prebuilt_package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+declare_args() {
+  # Disable packaging a prebuilt ARM Mali Vulkan ICD. This can save space if a
+  # test ICD is being used instead.
+  disable_prebuilt_arm_mali_vulkan = false
+}
+
+# hardware_id is a hexadecimal (without the 0x) version of the GPU_ID register.
+icd_list = [
+  {
+    name = "libvulkan_arm_g52_r0p0"
+    hardware_id = "72120000"
+  },
+]
+
+# Also don't include ICDs on bringup builds (bootfs_only), because the metadata
+# files in them conflict with each other and the vulkan_loader can't load from
+# bootfs anyway.
+enable_icd =
+    target_cpu == "arm64" && !bootfs_only && !disable_prebuilt_arm_mali_vulkan
+
+# See //src/graphics/bin/vulkan_loader/README.md for a description of ICD
+# package layout requirements.
+foreach(icd, icd_list) {
+  icd_name = icd.name
+  if (enable_icd) {
+    hardware_id = icd.hardware_id
+    prebuilt_package(icd_name) {
+      package_name = "libvulkan_arm_mali_${hardware_id}"
+      archive =
+          "//prebuilt/proprietary/vendor/arm/${icd_name}/$package_name.far"
+    }
+  } else {
+    group(icd_name) {
+    }
+  }
+}

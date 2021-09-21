@@ -51,7 +51,11 @@ board_system_image_deps += [
 board_package_labels += [
   "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-config",
   "//garnet/packages/prod:vulkan",
+  "//src/graphics/drivers/arm-mali/icd:libvulkan_arm_g52_r0p0",
 ]
+
+# Board file adds vulkan VCD that lets vulkan tests work on systems with Mali GPUs.
+board_has_libvulkan_arm_mali = true
 
 firmware_prebuilts_path_suffix = ""
 firmware_prebuilts = [
