@@ -1,2 +1,5 @@
 fuchsia-pkg://fuchsia.com/guest-runner#meta/guest_runner.cmx
 fuchsia-pkg://fuchsia.com/has_deprecated_global_dev#meta/has_deprecated_global_dev.cmx
+# TODO(http://fxbug.dev/85030): Find a better solution to remove these from this list.
+fuchsia-pkg://fuchsia.com/go-stdlib-tests#meta/go-os-test.cmx
+fuchsia-pkg://fuchsia.com/go-stdlib-tests#meta/go-exec-test.cmx
