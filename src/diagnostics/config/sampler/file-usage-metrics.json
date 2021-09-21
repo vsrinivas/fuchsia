@@ -371,6 +371,14 @@
         },
         {
             "event_codes": [
+                47
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080"
+        },
+        {
+            "event_codes": [
                 1
             ],
             "metric_id": 2,
