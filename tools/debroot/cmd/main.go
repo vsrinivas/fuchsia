@@ -220,25 +220,27 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 
 				// We only want development libraries, filter out everything else.
 				for _, p := range ps {
+					var include bool
 					// Use sections as a coarse grained filter.
-					var section bool
 					switch p["Section"] {
 					case "libs", "libdevel", "devel", "x11":
-						section = true
+						include = true
 					}
-					// Use tags as a more fine-grained filter.
-					var tag bool
-					if section {
-						for _, n := range strings.Split(p["Tag"], ", ") {
-							t := strings.Split(strings.TrimSpace(n), " ")[0]
-							switch t {
-							case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
-								tag = true
+					if include {
+						if ts, ok := p["Tag"]; ok {
+							// Use tags as a more fine-grained filter.
+							include = false
+							for _, n := range strings.Split(ts, ", ") {
+								t := strings.Split(strings.TrimSpace(n), " ")[0]
+								switch t {
+								case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
+									include = true
+								}
 							}
 						}
 					}
 					// Skip everything that doesn't match.
-					if section && tag {
+					if include {
 						n := p["Package"]
 						if _, ok := descriptors[n]; !ok {
 							descriptors[n] = map[string]Descriptor{}

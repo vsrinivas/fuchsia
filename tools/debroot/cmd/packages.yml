@@ -47,6 +47,7 @@ packages:
   - package: linux-libc-dev
   - package: mesa-common-dev
   - package: x11proto-core-dev
+  - package: x11proto-dev
   - package: x11proto-fixes-dev
   - package: x11proto-gl-dev
   - package: x11proto-input-dev

@@ -1,5 +1,5 @@
-hash: 438634d58ee6cbb7ee0d0748fc14d84e0e56d3733d1ae4f86a612c4e50f511b8
-updated: 2021-09-17T21:36:38.920606068-07:00
+hash: 227559bbd679490bf6bf9c926e90b6964eadced9acdec6482e6b60086642618f
+updated: 2021-09-20T23:10:29.66960622-07:00
 packages:
 - package: libc6
   version: 2.28-10
@@ -581,6 +581,10 @@ packages:
   version: 2018.4-4
   filename: pool/main/x/xorgproto/x11proto-core-dev_2018.4-4_all.deb
   hash: 8bdb72e48cac24f5a6b284fea4d2bd6cb11cbe5fba2345ce57d8017ac40243cb
+- package: x11proto-dev
+  version: 2018.4-4
+  filename: pool/main/x/xorgproto/x11proto-dev_2018.4-4_all.deb
+  hash: aa0237467fcb5ccabf6a93fc19fae4d76d8c6dfbf9e449edda5f6393e50d8674
 - package: x11proto-fixes-dev
   version: 1:2018.4-4
   filename: pool/main/x/xorgproto/x11proto-fixes-dev_2018.4-4_all.deb
