@@ -9,6 +9,7 @@ use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_zircon as zx;
+use ieee80211::Ssid;
 
 type WlanService = DeviceServiceProxy;
 
@@ -47,13 +48,13 @@ pub async fn stop(
 
 pub async fn start(
     iface_sme_proxy: &fidl_sme::ApSmeProxy,
-    target_ssid: Vec<u8>,
+    target_ssid: Ssid,
     target_pwd: Vec<u8>,
     channel: u8,
 ) -> Result<fidl_sme::StartApResultCode, Error> {
     // create ConnectRequest holding network info
     let mut config = fidl_sme::ApConfig {
-        ssid: target_ssid,
+        ssid: target_ssid.into(),
         password: target_pwd,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
@@ -84,6 +85,7 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::stream::{StreamExt, StreamFuture};
     use futures::task::Poll;
+    use ieee80211::Ssid;
     use pin_utils::pin_mut;
     use wlan_common::assert_variant;
 
@@ -133,7 +135,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (ap_sme, server) = create_ap_sme_proxy();
         let mut ap_sme_req = server.into_future();
-        let target_ssid = ssid.as_bytes().to_vec();
+        let target_ssid = Ssid::from(ssid);
         let target_password = password.as_bytes().to_vec();
 
         let config = fidl_sme::ApConfig {

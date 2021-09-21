@@ -130,7 +130,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         for (ap_iface_id, wlan_ap_iface) in test_results.iface_ap_objects.iter_mut() {
             let start_ap_result_code = wlan_service_util::ap::start(
                 &wlan_ap_iface.sme_proxy,
-                target_ssid.to_vec(),
+                target_ssid.clone(),
                 target_pwd.to_vec(),
                 target_channel,
             )

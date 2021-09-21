@@ -11,9 +11,7 @@ pub const POLICY_STASH_PREFIX: &str = "config";
 pub const POLICY_DATA_KEY: &str = "data";
 pub const POLICY_STASH_ID: &str = "saved_networks";
 
-// TODO(fxbug.dev/81771): The type of the stashed ssid is not ieee80211::Ssid and cannot be easily
-// converted.
-type StashedSsid = Vec<u8>;
+pub type StashedSsid = Vec<u8>;
 
 /// The data that will be stored between reboots of a device. Used to convert the data between JSON
 /// and network config.

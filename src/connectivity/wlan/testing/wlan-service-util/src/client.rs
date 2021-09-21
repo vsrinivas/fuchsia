@@ -363,7 +363,7 @@ mod tests {
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
             StatusResponse::Connected => {
-                let serving_ap_info = create_serving_ap_info_using_ssid(vec![1, 2, 3, 4]);
+                let serving_ap_info = create_serving_ap_info_using_ssid(Ssid::from([1, 2, 3, 4]));
                 let mut response = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
@@ -787,16 +787,18 @@ mod tests {
     }
 
     fn test_connect(
-        ssid: &str,
+        target_ssid: &str,
         password: &str,
-        connected_to: &str,
+        connected_to_ssid: &str,
         result_code: ConnectResultCode,
     ) -> bool {
+        let target_ssid = Ssid::from(target_ssid);
+        let connected_to_ssid = Ssid::from(connected_to_ssid);
+
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = Ssid::from(ssid);
         let target_password = password.as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
@@ -820,7 +822,7 @@ mod tests {
             send_status_response(
                 &mut exec,
                 &mut next_client_sme_req,
-                Some(connected_to.as_bytes().to_vec()),
+                Some(connected_to_ssid),
                 None,
             );
         }
@@ -1019,12 +1021,18 @@ mod tests {
             StatusResponse::Idle => {
                 send_status_response(&mut exec, &mut client_sme_req, None, None)
             }
-            StatusResponse::Connected => {
-                send_status_response(&mut exec, &mut client_sme_req, Some(vec![1, 2, 3, 4]), None)
-            }
-            StatusResponse::Connecting => {
-                send_status_response(&mut exec, &mut client_sme_req, None, Some(vec![1, 2, 3, 4]))
-            }
+            StatusResponse::Connected => send_status_response(
+                &mut exec,
+                &mut client_sme_req,
+                Some(Ssid::from([1, 2, 3, 4])),
+                None,
+            ),
+            StatusResponse::Connecting => send_status_response(
+                &mut exec,
+                &mut client_sme_req,
+                None,
+                Some(Ssid::from([1, 2, 3, 4])),
+            ),
         }
 
         exec.run_until_stalled(&mut fut)
@@ -1042,10 +1050,10 @@ mod tests {
         rsp.send().expect("Failed to send DisconnectResponse.");
     }
 
-    fn create_serving_ap_info_using_ssid(ssid: Vec<u8>) -> fidl_sme::ServingApInfo {
+    fn create_serving_ap_info_using_ssid(ssid: Ssid) -> fidl_sme::ServingApInfo {
         fidl_sme::ServingApInfo {
             bssid: [0, 1, 2, 3, 4, 5],
-            ssid,
+            ssid: ssid.into(),
             rssi_dbm: -30,
             snr_db: 10,
             channel: fidl_common::WlanChannel {
@@ -1060,8 +1068,8 @@ mod tests {
     fn send_status_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
-        connected_to_ssid: Option<Vec<u8>>,
-        connecting_to_ssid: Option<Vec<u8>>,
+        connected_to_ssid: Option<Ssid>,
+        connecting_to_ssid: Option<Ssid>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
@@ -1075,7 +1083,7 @@ mod tests {
                 let serving_ap_info = create_serving_ap_info_using_ssid(ssid);
                 fidl_sme::ClientStatusResponse::Connected(serving_ap_info)
             }
-            (None, Some(ssid)) => fidl_sme::ClientStatusResponse::Connecting(ssid),
+            (None, Some(ssid)) => fidl_sme::ClientStatusResponse::Connecting(ssid.to_vec()),
             (None, None) => fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty {}),
         };
 

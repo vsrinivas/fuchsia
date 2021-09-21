@@ -166,7 +166,7 @@ impl PolicyStash {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, ieee80211::Ssid};
+    use {super::*, fuchsia_async as fasync, ieee80211::Ssid, wlan_stash_constants::StashedSsid};
 
     /// The PSK provided must be the bytes form of the 64 hexadecimal character hash. This is a
     /// duplicate of a definition in wlan/wlancfg/src, since I don't think there's a good way to
@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(data_actual, Some(&data_expected));
     }
 
-    fn network_id(ssid: impl Into<Vec<u8>>, security_type: SecurityType) -> NetworkIdentifier {
+    fn network_id(ssid: impl Into<StashedSsid>, security_type: SecurityType) -> NetworkIdentifier {
         NetworkIdentifier { ssid: ssid.into(), security_type }
     }
 }
