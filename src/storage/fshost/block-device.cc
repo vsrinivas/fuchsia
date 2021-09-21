@@ -51,6 +51,7 @@
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
 #include "src/storage/fvm/format.h"
@@ -133,25 +134,6 @@ int OpenVerityDeviceThread(void* arg) {
     return 1;
   }
   return 0;
-}
-
-std::string GetTopologicalPath(int fd) {
-  fdio_cpp::UnownedFdioCaller disk_connection(fd);
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                  zx::unowned_channel(disk_connection.borrow_channel()))
-                  .GetTopologicalPath();
-  if (resp.status() != ZX_OK) {
-    FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
-                     << zx_status_get_string(resp.status());
-    return {};
-  }
-  if (resp->result.is_err()) {
-    FX_LOGS(WARNING) << "Unable to get topological path: "
-                     << zx_status_get_string(resp->result.err());
-    return {};
-  }
-  const auto& path = resp->result.response().path;
-  return {path.data(), path.size()};
 }
 
 // Runs the binary indicated in `argv`, which must always be terminated with nullptr.
@@ -265,6 +247,25 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
 }
 
 }  // namespace
+
+std::string GetTopologicalPath(int fd) {
+  fdio_cpp::UnownedFdioCaller disk_connection(fd);
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                  zx::unowned_channel(disk_connection.borrow_channel()))
+                  .GetTopologicalPath();
+  if (resp.status() != ZX_OK) {
+    FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
+                     << zx_status_get_string(resp.status());
+    return {};
+  }
+  if (resp->result.is_err()) {
+    FX_LOGS(WARNING) << "Unable to get topological path: "
+                     << zx_status_get_string(resp->result.err());
+    return {};
+  }
+  const auto& path = resp->result.response().path;
+  return {path.data(), path.size()};
+}
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config)
     : mounter_(mounter),
@@ -688,6 +689,9 @@ zx_status_t BlockDevice::MountFilesystem() {
 
 zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
   switch (GetFormat()) {
+    case DISK_FORMAT_NAND_BROKER: {
+      return AttachDriver(kNandBrokerDriverPath);
+    }
     case DISK_FORMAT_BOOTPART: {
       return AttachDriver(kBootpartDriverPath);
     }

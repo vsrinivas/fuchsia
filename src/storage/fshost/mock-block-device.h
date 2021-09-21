@@ -29,6 +29,7 @@ class MockBlockDevice : public BlockDeviceInterface {
     std::string_view driver_path;
     std::string topological_path = MockBlockDevice::BaseTopologicalPath();
     std::string partition_name;
+    bool is_nand = false;
   };
 
   static Options GptOptions() {
@@ -43,6 +44,12 @@ class MockBlockDevice : public BlockDeviceInterface {
     return {
         .topological_path = MockBlockDevice::BaseTopologicalPath() +
                             "/" GPT_DURABLE_NAME "-004/block/zxcrypt/unsealed/block",
+    };
+  }
+  static Options NandOptions() {
+    return {
+        .driver_path = kNandBrokerDriverPath,
+        .is_nand = true,
     };
   }
 
@@ -120,6 +127,8 @@ class MockBlockDevice : public BlockDeviceInterface {
     max_size_ = max_size;
     return ZX_OK;
   }
+
+  bool IsNand() const override { return options_.is_nand; }
 
   bool attached() const { return attached_; }
 

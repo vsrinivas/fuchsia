@@ -23,35 +23,39 @@
 
 namespace fshost {
 
+// Get the topological path of the device backing |fd|.
+std::string GetTopologicalPath(int fd);
+
 // A concrete implementation of the block device interface.
 //
 // Used by fshost to attach either drivers or filesystems to incoming block devices.
-class BlockDevice final : public BlockDeviceInterface {
+class BlockDevice : public BlockDeviceInterface {
  public:
   BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config);
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
-  disk_format_t GetFormat() final;
-  void SetFormat(disk_format_t format) final;
-  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
-  const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const final;
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final;
-  zx_status_t AttachDriver(const std::string_view& driver) final;
-  zx_status_t UnsealZxcrypt() final;
-  zx_status_t FormatZxcrypt() final;
-  bool ShouldCheckFilesystems() final;
-  zx_status_t CheckFilesystem() final;
-  zx_status_t FormatFilesystem() final;
-  zx_status_t MountFilesystem() final;
-  zx::status<std::string> VeritySeal() final;
-  zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final;
-  bool ShouldAllowAuthoringFactory() final;
+  disk_format_t GetFormat() override;
+  void SetFormat(disk_format_t format) override;
+  zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
+  const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const override;
+  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override;
+  zx_status_t AttachDriver(const std::string_view& driver) override;
+  zx_status_t UnsealZxcrypt() override;
+  zx_status_t FormatZxcrypt() override;
+  bool ShouldCheckFilesystems() override;
+  zx_status_t CheckFilesystem() override;
+  zx_status_t FormatFilesystem() override;
+  zx_status_t MountFilesystem() override;
+  zx::status<std::string> VeritySeal() override;
+  zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override;
+  bool ShouldAllowAuthoringFactory() override;
   zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) override;
+  bool IsNand() const override { return false; }
 
-  disk_format_t content_format() const final;
-  const std::string& topological_path() const final { return topological_path_; }
-  const std::string& partition_name() const final;
+  disk_format_t content_format() const override;
+  const std::string& topological_path() const override { return topological_path_; }
+  const std::string& partition_name() const override;
   zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
   zx_status_t CheckFxfs() const;
   zx_status_t FormatFxfs() const;

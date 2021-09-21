@@ -24,6 +24,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_BOOTPART = 11,
   DISK_FORMAT_FXFS = 12,
   DISK_FORMAT_F2FS = 13,
+  DISK_FORMAT_NAND_BROKER = 14,
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 

@@ -90,6 +90,9 @@ const char Config::kUseFxfs[] = "use-fxfs";
 // Allow legacy names for the data partition.
 const char Config::kAllowLegacyDataPartitionNames[] = "allow-legacy-data-partition-names";
 
+// Enables NAND devices.
+const char Config::kNand[] = "nand";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {

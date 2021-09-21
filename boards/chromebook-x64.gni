@@ -22,6 +22,9 @@ avb_key =
 avb_atx_metadata =
     "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 
+# Bind the nand-broker to the NAND flash on the device, so the flashmap component can access it.
+fshost_watch_for_nand = true
+
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:chromebook-x64",
   "//src/devices/misc/drivers/chromeos-acpi",

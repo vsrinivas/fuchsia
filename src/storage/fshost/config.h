@@ -48,6 +48,7 @@ struct Config {
   static const char kWaitForData[];
   static const char kUseFxfs[];
   static const char kAllowLegacyDataPartitionNames[];
+  static const char kNand[];
 
   // Reads options from the stream which consist of one option per line. "default" means include the
   // default options, and lines with a leading '-' negate the option.

@@ -39,6 +39,9 @@ declare_args() {
 
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = true
+
+  # Make fshost watch for NAND devices.
+  fshost_watch_for_nand = false
 }
 
 group("tests") {
@@ -91,6 +94,7 @@ source_set("fshost-registry") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
   ]
   deps = [
@@ -163,8 +167,10 @@ source_set("block-watcher") {
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
+    "nand-device.cc",
     "pkgfs-launcher.cc",
     "pkgfs-loader-service.cc",
+    "watcher.cc",
   ]
   public_deps = [
     ":fshost-registry",
@@ -584,6 +590,10 @@ template("fshost_config") {
 
     if (invoker.allow_legacy_data_partition_names) {
       contents += [ "allow-legacy-data-partition-names" ]
+    }
+
+    if (fshost_watch_for_nand) {
+      contents += [ "nand" ]
     }
 
     output_conversion = "list lines"

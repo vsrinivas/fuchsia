@@ -43,6 +43,33 @@ bool IsRamdisk(const BlockDeviceInterface& device) {
   return device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) == 0;
 }
 
+// Matches all NAND devices.
+class NandMatcher : public BlockDeviceManager::Matcher {
+ public:
+  disk_format_t Match(const BlockDeviceInterface& device) override {
+    if (device.IsNand()) {
+      return DISK_FORMAT_NAND_BROKER;
+    }
+    return DISK_FORMAT_UNKNOWN;
+  }
+
+  zx_status_t Add(BlockDeviceInterface& device) override {
+    zx_status_t status = device.Add();
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (path_.empty()) {
+      path_ = device.topological_path();
+    }
+    return ZX_OK;
+  }
+
+  const std::string& path() const { return path_; }
+
+ private:
+  std::string path_;
+};
+
 // Matches anything that appears to have the given content and keeps track of the first device it
 // finds.
 class ContentMatcher : public BlockDeviceManager::Matcher {
@@ -248,8 +275,8 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
 
     // If the volume doesn't appear to be zxcrypt, assume that it's because it was never formatted
     // as such, or the keys have been shredded, so skip straight to reformatting.  Strictly
-    // speaking, it's not necessary, because attempting to unseal should trigger the same behaviour,
-    // but the log messages in that case are scary.
+    // speaking, it's not necessary, because attempting to unseal should trigger the same
+    // behaviour, but the log messages in that case are scary.
     if (device.GetFormat() == DISK_FORMAT_ZXCRYPT) {
       if (device.content_format() != DISK_FORMAT_ZXCRYPT) {
         FX_LOGS(INFO) << "Formatting as zxcrypt partition";
@@ -363,6 +390,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
 
   if (config_.is_set(Config::kBootpart)) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
+  }
+  if (config_.is_set(Config::kNand)) {
+    matchers_.push_back(std::make_unique<NandMatcher>());
   }
 
   auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, config_.is_set(Config::kGptAll),

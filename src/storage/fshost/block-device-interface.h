@@ -24,6 +24,7 @@ constexpr char kMBRDriverPath[] = "mbr.so";
 constexpr char kZxcryptDriverPath[] = "zxcrypt.so";
 constexpr char kBootpartDriverPath[] = "bootpart.so";
 constexpr char kBlockVerityDriverPath[] = "block-verity.so";
+constexpr char kNandBrokerDriverPath[] = "nand-broker.so";
 
 // An abstract class representing the operations which may be performed
 // on a block device, from the perspective of fshost.
@@ -99,6 +100,9 @@ class BlockDeviceInterface {
 
   // Sets the maximum size in FVM (at the given device path) for this device.
   virtual zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) = 0;
+
+  // Queries if the device is a block device or a NAND device.
+  virtual bool IsNand() const = 0;
 };
 
 }  // namespace fshost

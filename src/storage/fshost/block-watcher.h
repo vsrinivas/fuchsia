@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FSHOST_BLOCK_WATCHER_H_
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
 
 #include <condition_variable>
 #include <memory>
@@ -16,6 +17,7 @@
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/watcher.h"
 
 namespace fshost {
 
@@ -44,16 +46,14 @@ class BlockWatcher {
   void Thread();
 
   // Returns true if we received a WATCH_EVENT_IDLE and the watcher is paused.
-  bool Callback(int dirfd, int event, const char* name);
-
-  bool ProcessWatchMessages(fbl::Span<uint8_t> buf, int dirfd);
+  bool Callback(Watcher& watcher, int dirfd, int event, const char* name);
 
   // Returns kSignalWatcherPaused if the watcher is paused, ZX_CHANNEL_PEER_CLOSED if the watcher
   // channel was closed, and ZX_CHANNEL_READABLE if data was read, and 0 if some other error
   // occured. |buf| should be a buffer of size |buf_len|. |read_len| will be updated to contain the
   // actual number of bytes read.
-  zx_signals_t WaitForWatchMessages(const zx::unowned_channel& watcher_chan, bool finished_startup,
-                                    fbl::Span<uint8_t>& buf);
+  zx_signals_t WaitForWatchMessages(cpp20::span<Watcher> watchers, fbl::Span<uint8_t>& buf,
+                                    Watcher** selected);
 
   std::mutex lock_;
   // pause_count_ == -1 means shut down.

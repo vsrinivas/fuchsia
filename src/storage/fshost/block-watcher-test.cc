@@ -38,6 +38,29 @@ Config::Options DurableOptions() {
   options.insert({Config::kDurable, {}});
   return options;
 }
+Config::Options NandOptions() {
+  auto options = TestOptions();
+  options.insert({Config::kNand, {}});
+  return options;
+}
+
+TEST(AddDeviceTestCase, AddNandDeviceUseBroker) {
+  Config config(NandOptions());
+  BlockDeviceManager manager(&config);
+  MockBlockDevice device(MockBlockDevice::NandOptions());
+
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
+  EXPECT_TRUE(device.attached());
+}
+
+TEST(AddDeviceTestCase, AddNandDeviceNoBroker) {
+  Config config(TestOptions());
+  BlockDeviceManager manager(&config);
+  MockBlockDevice device(MockBlockDevice::NandOptions());
+
+  EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_FALSE(device.attached());
+}
 
 // Tests adding a device which has an unknown format.
 TEST(AddDeviceTestCase, AddUnknownDevice) {

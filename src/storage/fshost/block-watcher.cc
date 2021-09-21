@@ -5,6 +5,7 @@
 #include "block-watcher.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -49,6 +50,7 @@
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/nand-device.h"
 #include "src/storage/fshost/pkgfs-launcher.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -56,8 +58,6 @@ namespace fshost {
 namespace {
 
 namespace fio = fuchsia_io;
-
-constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 
 // Signal that is set on the watcher channel we want to stop watching.
 constexpr zx_signals_t kSignalWatcherPaused = ZX_USER_SIGNAL_0;
@@ -79,41 +79,20 @@ void BlockWatcher::Run() {
 }
 
 void BlockWatcher::Thread() {
-  fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
-  if (!dirfd) {
-    FX_LOGS(ERROR) << "failed to open block device dir: " << strerror(errno);
+  auto watchers = Watcher::CreateWatchers();
+  if (watchers.empty()) {
+    FX_LOGS(ERROR) << "failed to start any watchers";
     return;
   }
-  fdio_cpp::FdioCaller caller(std::move(dirfd));
   auto cleanup = fit::defer([this] {
     pause_event_.reset();
     pause_condition_.notify_all();
   });
 
-  bool ignore_existing = false;
   while (true) {
-    zx::channel watcher, server;
-    zx_status_t status = zx::channel::create(0, &watcher, &server);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to create watcher channel: " << zx_status_get_string(status);
-      return;
+    for (auto& watcher : watchers) {
+      watcher.ReinitWatcher();
     }
-
-    auto mask = fio::wire::kWatchMaskAll;
-    if (ignore_existing) {
-      mask &= ~fio::wire::kWatchMaskExisting;
-    }
-    auto result =
-        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
-    if (!result.ok()) {
-      FX_LOGS(ERROR) << "failed to send watch: " << result.error();
-      return;
-    }
-    if (result->s != ZX_OK) {
-      FX_LOGS(ERROR) << "watch failed: " << zx_status_get_string(result->s);
-      return;
-    }
-
     {
       std::scoped_lock guard(lock_);
       if (is_paused_) {
@@ -128,14 +107,15 @@ void BlockWatcher::Thread() {
     fbl::Span buf_span(buf, std::size(buf) - 1);
 
     zx_signals_t signals;
-    while ((signals = WaitForWatchMessages(watcher.borrow(), ignore_existing, buf_span)) ==
-           ZX_CHANNEL_READABLE) {
+    Watcher* selected = nullptr;
+    while ((signals = WaitForWatchMessages(watchers, buf_span, &selected)) == ZX_CHANNEL_READABLE) {
       // Add an extra byte, so that ProcessWatchMessages can make C strings in the messages.
       buf_span = fbl::Span(buf_span.data(), buf_span.size() + 1);
       buf_span.back() = 0;
-      if (ProcessWatchMessages(buf_span, caller.fd().get())) {
-        ignore_existing = true;
-      }
+      selected->ProcessWatchMessages(
+          buf_span, [this](Watcher& watcher, int dirfd, int event, const char* name) {
+            return Callback(watcher, dirfd, event, name);
+          });
 
       // reset the buffer for the next read.
       buf_span = fbl::Span(buf, std::size(buf) - 1);
@@ -242,7 +222,7 @@ zx_status_t BlockWatcher::Resume() {
   return ZX_OK;
 }
 
-bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
+bool BlockWatcher::Callback(Watcher& watcher, int dirfd, int event, const char* name) {
   if (event != fio::wire::kWatchEventAdded && event != fio::wire::kWatchEventExisting &&
       event != fio::wire::kWatchEventIdle) {
     return false;
@@ -266,100 +246,83 @@ bool BlockWatcher::Callback(int dirfd, int event, const char* name) {
     return false;
   }
 
-  BlockDevice device(&mounter_, std::move(device_fd), device_manager_.config());
-  zx_status_t status = device_manager_.AddDevice(device);
+  zx_status_t status = watcher.AddDevice(device_manager_, &mounter_, std::move(device_fd));
   if (status == ZX_ERR_NOT_SUPPORTED) {
     // The femu tests watch for the following message and will need updating if this changes.
-    FX_LOGS(INFO) << "" << kPathBlockDeviceRoot << "/" << name << " ignored (not supported)";
+    FX_LOGS(INFO) << "" << kWatcherPaths[watcher.type()] << "/" << name
+                  << " ignored (not supported)";
   } else if (status != ZX_OK) {
     // There's not much we can do if this fails - we want to keep seeing future block device
     // events, so we just log loudly that we failed to do something.
-    FX_LOGS(ERROR) << "" << kPathBlockDeviceRoot << "/" << name
+    FX_LOGS(ERROR) << "" << kWatcherPaths[watcher.type()] << "/" << name
                    << " failed: " << zx_status_get_string(status);
   }
+
   return false;
 }
 
-bool BlockWatcher::ProcessWatchMessages(fbl::Span<uint8_t> buf, int dirfd) {
-  uint8_t* iter = buf.begin();
-  bool did_receive_idle = false;
-  while (iter + 2 <= buf.end()) {
-    uint8_t event = *iter++;
-    uint8_t name_len = *iter++;
-
-    if (iter + name_len > buf.end()) {
-      break;
-    }
-
-    // Save the first byte of the next message,
-    // and null-terminate the name.
-    uint8_t tmp = iter[name_len];
-    iter[name_len] = 0;
-
-    if (Callback(dirfd, event, reinterpret_cast<const char*>(iter))) {
-      // We received a WATCH_EVENT_IDLE, and the watcher is paused.
-      // Bail out early.
-      return true;
-    }
-    if (event == fio::wire::kWatchEventIdle) {
-      // WATCH_EVENT_IDLE - but the watcher is not paused. Finish processing this set of messages,
-      // but return true once we're done to indicate that we should start checking for the pause
-      // signal.
-      did_receive_idle = true;
-    }
-
-    iter[name_len] = tmp;
-
-    iter += name_len;
-  }
-  return did_receive_idle;
-}
-
-zx_signals_t BlockWatcher::WaitForWatchMessages(const zx::unowned_channel& watcher_chan,
-                                                bool finished_startup, fbl::Span<uint8_t>& buf) {
+zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
+                                                fbl::Span<uint8_t>& buf, Watcher** selected) {
+  *selected = nullptr;
   zx_status_t status;
-  zx_wait_item_t wait_items[2] = {
-      {
-          .handle = watcher_chan->get(),
-          .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-          .pending = 0,
-      },
-      {
-          .handle = pause_event_.get(),
-          .waitfor = kSignalWatcherPaused | kSignalWatcherShutDown,
-          .pending = 0,
-      },
-  };
+  std::vector<zx_wait_item_t> wait_items;
+  bool can_pause = true;
+  for (auto& watcher : watchers) {
+    if (!watcher.ignore_existing()) {
+      can_pause = false;
+    }
+    wait_items.emplace_back(zx_wait_item_t{
+        .handle = watcher.borrow_watcher()->get(),
+        .waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+        .pending = 0,
+    });
+  }
 
-  // We only want to check for kSignalWatcherPaused and kSignalWatcherShutDown if finished_startup
-  // is true.
-  size_t wait_item_count = finished_startup ? 2 : 1;
+  // We only want to check for kSignalWatcherPaused and kSignalWatcherShutDown if all watchers
+  // are ignoring existing items.
+  if (can_pause) {
+    wait_items.emplace_back(zx_wait_item_t{
+        .handle = pause_event_.get(),
+        .waitfor = kSignalWatcherPaused | kSignalWatcherShutDown,
+        .pending = 0,
+    });
+  }
 
-  if ((status = zx_object_wait_many(wait_items, wait_item_count, zx::time::infinite().get())) !=
-      ZX_OK) {
+  if ((status = zx_object_wait_many(wait_items.data(), wait_items.size(),
+                                    zx::time::infinite().get())) != ZX_OK) {
     FX_LOGS(ERROR) << "failed to wait_many: " << zx_status_get_string(status);
     return 0;
   }
 
-  if (wait_items[1].pending & kSignalWatcherShutDown) {
-    return kSignalWatcherShutDown;
-  }
-  if (wait_items[1].pending & kSignalWatcherPaused) {
-    return kSignalWatcherPaused;
-  }
-  if (wait_items[0].pending & ZX_CHANNEL_PEER_CLOSED) {
-    return ZX_CHANNEL_PEER_CLOSED;
+  if (can_pause) {
+    if (wait_items.back().pending & kSignalWatcherShutDown) {
+      return kSignalWatcherShutDown;
+    }
+    if (wait_items.back().pending & kSignalWatcherPaused) {
+      return kSignalWatcherPaused;
+    }
   }
 
-  uint32_t read_len;
-  status = zx_channel_read(watcher_chan->get(), 0, buf.begin(), nullptr,
-                           static_cast<uint32_t>(buf.size()), 0, &read_len, nullptr);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to read from channel:" << zx_status_get_string(status);
-    return 0;
+  for (size_t i = 0; i < watchers.size(); ++i) {
+    if (wait_items[i].pending & ZX_CHANNEL_PEER_CLOSED) {
+      return ZX_CHANNEL_PEER_CLOSED;
+    }
+
+    if (wait_items[i].pending & ZX_CHANNEL_READABLE) {
+      uint32_t read_len;
+      status = zx_channel_read(watchers[i].borrow_watcher()->get(), 0, buf.begin(), nullptr,
+                               static_cast<uint32_t>(buf.size()), 0, &read_len, nullptr);
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "failed to read from channel:" << zx_status_get_string(status);
+        return 0;
+      }
+      *selected = &watchers[i];
+      buf = buf.subspan(0, read_len);
+      return ZX_CHANNEL_READABLE;
+    }
   }
-  buf = buf.subspan(0, read_len);
-  return ZX_CHANNEL_READABLE;
+
+  ZX_ASSERT_MSG(false, "watcher got event but nothing is pending");
 }
 
 fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher,
