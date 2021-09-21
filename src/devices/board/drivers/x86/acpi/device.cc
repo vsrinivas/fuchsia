@@ -183,24 +183,27 @@ void Device::DdkInit(ddk::InitTxn txn) {
   txn.Reply(result);
 }
 
-zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
+void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
-    return st;
+    completer.ReplyError(st);
+    return;
   }
 
-  if (index >= mmio_resources_.size()) {
-    return ZX_ERR_NOT_FOUND;
+  if (request->index >= mmio_resources_.size()) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
   }
 
-  const DeviceMmioResource& res = mmio_resources_[index];
+  const DeviceMmioResource& res = mmio_resources_[request->index];
   // TODO(fxbug.dev/67899): This check becomes overly pessimistic at larger page sizes.
   if (((res.base_address & (zx_system_get_page_size() - 1)) != 0) ||
       ((res.address_length & (zx_system_get_page_size() - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned",
-           device_get_name(zxdev_), index, res.base_address, res.address_length);
-    return ZX_ERR_NOT_FOUND;
+           device_get_name(zxdev_), request->index, res.base_address, res.address_length);
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
   }
 
   zx_handle_t vmo;
@@ -208,14 +211,15 @@ zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   st = zx_vmo_create_physical(get_root_resource(), res.base_address, size, &vmo);
   if (st != ZX_OK) {
-    return st;
+    completer.ReplyError(st);
+    return;
   }
 
-  out_mmio->offset = 0;
-  out_mmio->size = size;
-  out_mmio->vmo = vmo;
-
-  return ZX_OK;
+  completer.ReplySuccess(fuchsia_mem::wire::Range{
+      .vmo = zx::vmo(vmo),
+      .offset = 0,
+      .size = size,
+  });
 }
 
 zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {

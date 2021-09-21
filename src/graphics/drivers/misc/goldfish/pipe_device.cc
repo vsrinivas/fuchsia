@@ -133,14 +133,16 @@ zx_status_t PipeDevice::Bind() {
     return status;
   }
 
-  acpi_mmio_t mmio;
-  status = acpi_.GetMmio(0, &mmio);
-  if (status != ZX_OK) {
+  auto mmio_result = acpi_fidl_.borrow().GetMmio(0);
+  if (!mmio_result.ok() || mmio_result->result.is_err()) {
+    zx_status_t status = mmio_result.ok() ? mmio_result->result.err() : mmio_result.status();
     zxlogf(ERROR, "%s: GetMmio failed: %d", kTag, status);
     return status;
   }
+
   fbl::AutoLock lock(&mmio_lock_);
-  status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, zx::vmo(mmio.vmo),
+  auto& mmio = mmio_result->result.mutable_response().mmio;
+  status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
                                    ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: mmiobuffer create failed: %d", kTag, status);

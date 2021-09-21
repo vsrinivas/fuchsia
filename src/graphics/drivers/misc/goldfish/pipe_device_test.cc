@@ -183,9 +183,7 @@ class PipeDeviceTest : public zxtest::Test {
     ASSERT_OK(out_bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &acpi_bti_));
 
     constexpr size_t kCtrlSize = 4096u;
-    zx::vmo vmo_control;
-    ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control));
-    ASSERT_OK(vmo_control.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_control_));
+    ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control_));
 
     zx::interrupt irq;
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0u, ZX_INTERRUPT_VIRTUAL, &irq));
@@ -199,9 +197,19 @@ class PipeDeviceTest : public zxtest::Test {
           ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe));
           completer.ReplySuccess(std::move(dupe));
         });
+    mock_acpi_fidl_.SetGetMmio([this](acpi::mock::Device::GetMmioRequestView rv,
+                                      acpi::mock::Device::GetMmioCompleter::Sync& completer) {
+      ASSERT_EQ(rv->index, 0);
+      zx::vmo dupe;
+      ASSERT_OK(vmo_control_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe));
+      completer.ReplySuccess(fuchsia_mem::wire::Range{
+          .vmo = std::move(dupe),
+          .offset = 0,
+          .size = kCtrlSize,
+      });
+    });
 
-    mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishBtiId, 0, std::move(out_bti))
-        .ExpectGetMmio(ZX_OK, 0u, {.offset = 0u, .size = kCtrlSize, .vmo = vmo_control.release()});
+    mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishBtiId, 0, std::move(out_bti));
 
     mock_acpi_.mock_connect_sysmem().ExpectCallWithMatcher([this](const zx::channel& connection) {
       zx_info_handle_basic_t info;

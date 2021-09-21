@@ -22,12 +22,6 @@ protocol Acpi {
     ConnectServer(resource struct {
         server zx.handle:CHANNEL;
     }) -> ();
-    GetMmio(struct {
-        index uint32;
-    }) -> (resource struct {
-        s zx.status;
-        mmio AcpiMmio;
-    });
     GetBti(struct {
         bdf uint32;
         index uint32;

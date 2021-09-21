@@ -4,6 +4,7 @@
 library fuchsia.hardware.acpi;
 
 using zx;
+using fuchsia.mem;
 
 /// ACPI Object Types.
 /// See ACPI spec v6.4, 19.6.96 - ObjectType (Get Object Type).
@@ -289,6 +290,13 @@ protocol Device {
         index uint32;
     }) -> (resource struct {
         pio zx.handle:RESOURCE;
+    }) error zx.status;
+
+    /// Get the "index"th MMIO region for this device.
+    GetMmio(struct {
+        index uint32;
+    }) -> (resource struct {
+        mmio fuchsia.mem.Range;
     }) error zx.status;
 
     /// Evaluate the object at the given |path|, relative to this device, with |parameters| as
