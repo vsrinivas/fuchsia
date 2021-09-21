@@ -31,6 +31,7 @@
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/screenshot/screenshot_manager.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
@@ -120,6 +121,8 @@ class App {
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
+
+  std::unique_ptr<screenshot::ScreenshotManager> screenshot_manager_;
 
   view_tree::ViewRefInstalledImpl view_ref_installed_impl_;
 

@@ -7,6 +7,7 @@
 
 // TODO(fxbug.dev/76640): delete when we delete hack_seen_display_ids_.
 #include <set>
+#include <utility>
 
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
@@ -36,6 +37,9 @@ class Engine {
   // Snapshots the current Flatland content tree rooted at |display| as a
   // view_tree::SubtreeSnapshot.
   view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(const FlatlandDisplay& display) const;
+
+  std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>
+  GetRenderables(const FlatlandDisplay& display);
 
  private:
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
