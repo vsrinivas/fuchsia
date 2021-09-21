@@ -57,6 +57,8 @@ class VmoWriter {
   /// create a [FakeVmoHolder] if we aren't running on Fuchsia. This is useful
   /// for not needing to refactor code that needs to run in host side tests.
   factory VmoWriter.withSize(int size) => VmoWriter.withVmo(
+      // Legacy dart analyzer might warn about this.
+      // ignore: unnecessary_cast
       Platform.isFuchsia ? VmoHolder(size) : FakeVmoHolder(size) as VmoHolder);
 
   /// Function used for creating the heap by default.

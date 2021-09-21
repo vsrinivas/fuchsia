@@ -71,6 +71,8 @@ abstract class Inspect {
   /// intended for unit testing inspect integrations, so that they can run as
   /// host tests.
   factory Inspect.forTesting(FakeVmoHolder vmo) {
+    // Legacy dart analyzer might warn about this.
+    // ignore: unnecessary_cast
     return InspectImpl(VmoWriter.withVmo(vmo as VmoHolder));
   }
 
