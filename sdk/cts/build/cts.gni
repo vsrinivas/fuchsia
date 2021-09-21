@@ -14,5 +14,8 @@ import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/dart/cts_dart_library.gni")
 import("//sdk/cts/build/dart/cts_dart_test.gni")
 import("//sdk/cts/build/fidl/cts_fidl.gni")
+import("//sdk/cts/build/rust/cts_rustc_binary.gni")
+import("//sdk/cts/build/rust/cts_rustc_library.gni")
+import("//sdk/cts/build/rust/cts_rustc_test.gni")
 
 import("//build/sdk/sdk_molecule.gni")

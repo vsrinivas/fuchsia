@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
+import("//sdk/cts/build/write_cts_file.gni")
+
+# A Rust binary that can be used in CTS.
+#
+# An equivalent to the in tree rustc_binary, but ensures dependencies are allowed
+# in CTS.
+#
+# See rustc_binary() for parameters.
+template("cts_rustc_binary") {
+  invoker_deps = []
+  if (defined(invoker.deps)) {
+    invoker_deps += invoker.deps
+  }
+  if (defined(invoker.test_deps)) {
+    invoker_deps += invoker.test_deps
+  }
+  if (defined(invoker.non_rust_deps)) {
+    invoker_deps += invoker.non_rust_deps
+  }
+
+  if (invoker_deps != [] && cts_version == "") {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_cts_file"
+
+  if (defined(verify_target)) {
+    cts_element(verify_target) {
+      deps = invoker_deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+    }
+  }
+
+  write_cts_file(write_file_target) {
+  }
+
+  rustc_binary(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(non_rust_deps)) {
+      non_rust_deps = []
+    }
+
+    if (defined(verify_target)) {
+      non_rust_deps += [ ":$verify_target" ]
+    }
+    non_rust_deps += [ ":$write_file_target" ]
+  }
+}

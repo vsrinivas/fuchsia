@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_test.gni")
 import("//sdk/cts/build/cts.gni")
 
-rustc_test("bin") {
+cts_rustc_test("bin") {
   name = "cts_hello_world_rust"
   source_root = "src/main.rs"
 

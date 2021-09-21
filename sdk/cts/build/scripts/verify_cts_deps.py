@@ -38,8 +38,9 @@ class VerifyCtsDeps:
     Raises: ValueError if any parameter is empty, if root_build_dir does not exist, or if the sdk_manifests do not exist.
     """
 
-    def __init__(self, root_build_dir, cts_file, invoker_label, deps,
-                 allowed_cts_deps, allowed_cts_dirs, sdk_manifests):
+    def __init__(
+            self, root_build_dir, cts_file, invoker_label, deps,
+            allowed_cts_deps, allowed_cts_dirs, sdk_manifests):
         if root_build_dir and os.path.exists(root_build_dir):
             self.root_build_dir = root_build_dir
         else:
@@ -157,11 +158,19 @@ class VerifyCtsDeps:
                 # SDK atoms are appended with one of the following and a
                 # toolchain, so we want to ignore them to match against the
                 # provided label.
-                match_label = re.compile("(?:(_sdk)|(_sdk_manifest)|(_sdk_legacy))\(.*\)")
+                match_label = re.compile(
+                    "(?:(_sdk)|(_sdk_manifest)|(_sdk_legacy))\(.*\)")
                 label = re.sub(match_label, '', atom['gn-label'])
                 sdk_atom_labels[label] = atom['category']
 
-        return dep in sdk_atom_labels and sdk_atom_labels[dep] in [ 'partner', 'public' ]
+        # Removes the Rust binding suffix because the SDK manifests will only
+        # contain the FIDL name.
+        if dep.endswith('-rustc'):
+            dep = dep[:-6]
+
+        return dep in sdk_atom_labels and sdk_atom_labels[dep] in [
+            'partner', 'public'
+        ]
 
     def create_cts_dep_file(self):
         """Create a CTS file containing the verified dependencies.
