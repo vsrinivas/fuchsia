@@ -295,26 +295,6 @@ async fn test_theme_mode_auto() {
     assert_eq!(settings.theme, expected_theme);
 }
 
-// TODO(fxb/64775) Remove this test once we remove the theme type of AUTO.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_theme_type_auto() {
-    let incoming_theme =
-        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY });
-    let expected_theme = Some(FidlTheme {
-        theme_mode: Some(FidlThemeMode::Auto),
-        ..incoming_theme.clone().unwrap()
-    });
-
-    let display_proxy = setup_display_env().await;
-
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.theme = incoming_theme;
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.theme, expected_theme);
-}
-
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_theme_mode_auto_and_type_light() {
     let incoming_theme = Some(FidlTheme {

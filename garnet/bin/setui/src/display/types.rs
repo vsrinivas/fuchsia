@@ -102,9 +102,6 @@ pub enum ThemeType {
     Default,
     Light,
     Dark,
-    /// Product can choose a theme based on ambient cues.
-    /// Deprecated, use ThemeMode instead.
-    Auto,
 }
 
 bitflags! {

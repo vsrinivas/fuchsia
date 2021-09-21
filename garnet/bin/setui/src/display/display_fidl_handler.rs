@@ -68,7 +68,6 @@ impl From<FidlThemeType> for ThemeType {
     fn from(fidl_theme_type: FidlThemeType) -> Self {
         match fidl_theme_type {
             FidlThemeType::Default => ThemeType::Default,
-            FidlThemeType::Auto => ThemeType::Auto,
             FidlThemeType::Light => ThemeType::Light,
             FidlThemeType::Dark => ThemeType::Dark,
         }
@@ -106,7 +105,6 @@ impl From<SettingInfo> for DisplaySettings {
                         ThemeType::Default => Some(FidlThemeType::Default),
                         ThemeType::Light => Some(FidlThemeType::Light),
                         ThemeType::Dark => Some(FidlThemeType::Dark),
-                        ThemeType::Auto => Some(FidlThemeType::Auto),
                     },
                     _ => None,
                 },

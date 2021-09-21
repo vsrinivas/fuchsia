@@ -239,7 +239,6 @@ table/member fuchsia.settings/Theme.theme_type fuchsia.settings/ThemeType
 table fuchsia.settings/Theme
 bits/member fuchsia.settings/ThemeMode.AUTO 1
 strict bits fuchsia.settings/ThemeMode uint32
-enum/member fuchsia.settings/ThemeType.AUTO 3
 enum/member fuchsia.settings/ThemeType.DARK 2
 enum/member fuchsia.settings/ThemeType.DEFAULT 0
 enum/member fuchsia.settings/ThemeType.LIGHT 1

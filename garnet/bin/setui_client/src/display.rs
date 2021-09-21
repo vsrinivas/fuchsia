@@ -28,7 +28,13 @@ pub async fn command(
     settings.low_light_mode = low_light_mode;
     settings.screen_enabled = screen_enabled;
 
-    if let Some(Theme { theme_type: Some(theme_type), .. }) = theme {
+    if let Some(Theme { theme_type: Some(theme_type), theme_mode: Some(theme_mode), .. }) = theme {
+        settings.theme = Some(Theme {
+            theme_type: Some(theme_type),
+            theme_mode: Some(theme_mode),
+            ..Theme::EMPTY
+        });
+    } else if let Some(Theme { theme_type: Some(theme_type), .. }) = theme {
         settings.theme = Some(Theme { theme_type: Some(theme_type), ..Theme::EMPTY });
     }
 

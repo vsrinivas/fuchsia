@@ -89,8 +89,7 @@ impl DeviceStorageCompatible for DisplayInfo {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV5::deserialize_from(&value)))
+        Self::extract(value).unwrap_or_else(|_| Self::from(DisplayInfoV5::deserialize_from(value)))
     }
 }
 
@@ -286,37 +285,11 @@ where
 {
     fn build_theme(&self, incoming_theme: Theme, display_info: &DisplayInfo) -> Option<Theme> {
         let mut theme_builder = ThemeBuilder::new();
-
         let existing_theme_type = display_info.theme.and_then(|theme| theme.theme_type);
-
         let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
 
-        // Temporarily, if no theme type has ever been set, and the
-        // theme mode is Auto, we also set the theme type to Auto
-        // to support clients that haven't migrated.
-        // TODO(fxb/64775): Remove this assignment.
-        let mode_adjusted_new_theme_type = match new_theme_type {
-            None | Some(ThemeType::Unknown)
-                if incoming_theme.theme_mode.contains(ThemeMode::AUTO) =>
-            {
-                Some(ThemeType::Auto)
-            }
-            _ => new_theme_type,
-        };
-
-        theme_builder.set_theme_type(mode_adjusted_new_theme_type);
-
-        theme_builder.set_theme_mode(
-            incoming_theme.theme_mode
-            // Temporarily, if the theme type is auto we also set the
-            // theme mode to auto until all clients are sending setUI
-            // theme mode Auto.
-            // TODO(fxb/64775): Remove this or clause.
-            | match incoming_theme.theme_type {
-                Some(ThemeType::Auto) => ThemeMode::AUTO,
-                _ => ThemeMode::empty(),
-            },
-        );
+        theme_builder.set_theme_type(new_theme_type);
+        theme_builder.set_theme_mode(incoming_theme.theme_mode);
 
         theme_builder.build()
     }
@@ -388,8 +361,7 @@ impl DeviceStorageCompatible for DisplayInfoV2 {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV1::deserialize_from(&value)))
+        Self::extract(value).unwrap_or_else(|_| Self::from(DisplayInfoV1::deserialize_from(value)))
     }
 }
 
@@ -417,11 +389,11 @@ pub enum ThemeModeV1 {
 impl From<ThemeModeV1> for ThemeType {
     fn from(theme_mode_v1: ThemeModeV1) -> Self {
         match theme_mode_v1 {
-            ThemeModeV1::Unknown => ThemeType::Unknown,
             ThemeModeV1::Default => ThemeType::Default,
             ThemeModeV1::Light => ThemeType::Light,
             ThemeModeV1::Dark => ThemeType::Dark,
-            ThemeModeV1::Auto => ThemeType::Auto,
+            // ThemeType has removed Auto field, see fxb/64775
+            ThemeModeV1::Unknown | ThemeModeV1::Auto => ThemeType::Unknown,
         }
     }
 }
@@ -468,8 +440,7 @@ impl DeviceStorageCompatible for DisplayInfoV3 {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(&value)))
+        Self::extract(value).unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(value)))
     }
 }
 
@@ -541,8 +512,7 @@ impl DeviceStorageCompatible for DisplayInfoV4 {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
+        Self::extract(value).unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(value)))
     }
 }
 
@@ -582,10 +552,8 @@ impl From<DisplayInfoV4> for DisplayInfoV5 {
             manual_brightness_value: v4.manual_brightness_value,
             screen_enabled: v4.screen_enabled,
             low_light_mode: v4.low_light_mode,
-            theme: Some(Theme::new(
-                Some(v4.theme_type),
-                if v4.theme_type == ThemeType::Auto { ThemeMode::AUTO } else { ThemeMode::empty() },
-            )),
+            // Clients has migrated off auto theme_type, we should not get theme_type as Auto
+            theme: Some(Theme::new(Some(v4.theme_type), ThemeMode::empty())),
         }
     }
 }
@@ -604,8 +572,7 @@ impl DeviceStorageCompatible for DisplayInfoV5 {
     }
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
+        Self::extract(value).unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(value)))
     }
 }
 
@@ -687,7 +654,7 @@ fn test_display_migration_v4_to_v5() {
         manual_brightness_value: 0.7,
         auto_brightness: true,
         low_light_mode: LowLightMode::Enable,
-        theme_type: ThemeType::Auto,
+        theme_type: ThemeType::Dark,
         screen_enabled: false,
     };
 
@@ -700,7 +667,7 @@ fn test_display_migration_v4_to_v5() {
             manual_brightness_value: v4.manual_brightness_value,
             auto_brightness: v4.auto_brightness,
             low_light_mode: v4.low_light_mode,
-            theme: Some(Theme::new(Some(v4.theme_type), ThemeMode::AUTO)),
+            theme: Some(Theme::new(Some(v4.theme_type), ThemeMode::empty())),
             screen_enabled: v4.screen_enabled,
         }
     );

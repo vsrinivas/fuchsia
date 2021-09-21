@@ -571,9 +571,16 @@ fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, &str> {
         "light" => {
             Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Light), ..Theme::EMPTY })
         }
-        "auto" => {
-            Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Auto), ..Theme::EMPTY })
-        }
+        "darkauto" => Ok(Theme {
+            theme_type: Some(fidl_fuchsia_settings::ThemeType::Dark),
+            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::Auto),
+            ..Theme::EMPTY
+        }),
+        "lightauto" => Ok(Theme {
+            theme_type: Some(fidl_fuchsia_settings::ThemeType::Light),
+            theme_mode: Some(fidl_fuchsia_settings::ThemeMode::Auto),
+            ..Theme::EMPTY
+        }),
         _ => Err("Couldn't parse theme."),
     }
 }
