@@ -133,19 +133,7 @@ class Action(object):
     outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
     label: str = ""
 
-    def run_cached(
-            self,
-            tempfile_transform: TempFileTransform,
-            verbose: bool = False,
-            dry_run: bool = False) -> int:
-        """Runs a modified command and conditionally moves outputs in-place.
-
-        Args:
-          tempfile_transform: describes transformation to temporary file name.
-          verbose: If True, print substituted command before running it.
-          dry_run: If True, print substituted command and stop.
-    """
-
+    def _substitute_command(self, tempfile_transform: TempFileTransform) -> Tuple[Sequence[str], Dict[str, str]]:
         # renamed_outputs: keys: original file names, values: transformed temporary file names
         renamed_outputs = {}
 
@@ -158,10 +146,34 @@ class Action(object):
             else:
                 return arg
 
-        substituted_command = [
+        substituted_command = []
+        # Subprocess calls do not work for commands that start with VAR=VALUE
+        # environment variables, which is remedied by prefixing with 'env'.
+        if self.command and '=' in self.command[0]:
+            substituted_command += ['/usr/bin/env']
+
+        substituted_command += [
             lexically_rewrite_token(tok, replace_output_filename)
             for tok in self.command
         ]
+
+        return substituted_command, renamed_outputs
+
+    def run_cached(
+            self,
+            tempfile_transform: TempFileTransform,
+            verbose: bool = False,
+            dry_run: bool = False) -> int:
+        """Runs a modified command and conditionally moves outputs in-place.
+
+        Args:
+          tempfile_transform: describes transformation to temporary file name.
+          verbose: If True, print substituted command before running it.
+          dry_run: If True, print substituted command and stop.
+        """
+
+        # renamed_outputs: keys: original file names, values: transformed temporary file names
+        substituted_command, renamed_outputs = self._substitute_command(tempfile_transform)
 
         if verbose or dry_run:
             cmd_str = " ".join(substituted_command)
@@ -268,21 +280,7 @@ class Action(object):
         """
 
         # renamed_outputs: keys: original file names, values: transformed temporary file names
-        renamed_outputs = {}
-
-        def replace_output_filename(arg: str) -> str:
-            if arg in self.outputs:
-                new_arg = tempfile_transform.transform(arg)
-                if arg != new_arg:
-                    renamed_outputs[arg] = new_arg
-                return new_arg
-            else:
-                return arg
-
-        substituted_command = [
-            lexically_rewrite_token(tok, replace_output_filename)
-            for tok in self.command
-        ]
+        substituted_command, renamed_outputs = self._substitute_command(tempfile_transform)
 
         if verbose:
             cmd_str = " ".join(substituted_command)
