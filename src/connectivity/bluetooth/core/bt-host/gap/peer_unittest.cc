@@ -13,6 +13,7 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/manufacturer_names.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/util.h"
+#include "src/connectivity/bluetooth/core/bt-host/hci-spec/link_key.h"
 
 namespace bt::gap {
 namespace {
@@ -21,6 +22,11 @@ using namespace inspect::testing;
 
 constexpr uint16_t kManufacturer = 0x0001;
 constexpr uint16_t kSubversion = 0x0002;
+
+const bt::sm::LTK kSecureBrEdrKey(sm::SecurityProperties(true /*encrypted*/, true /*authenticated*/,
+                                                         true /*secure_connections*/,
+                                                         sm::kMaxEncryptionKeySize),
+                                  hci::LinkKey(UInt128{4}, 5, 6));
 
 class GAP_PeerTest : public ::gtest::TestLoopFixture {
  public:
@@ -220,6 +226,36 @@ TEST_F(GAP_PeerTest, SetNameWithInvalidUtf8NameDoesNotUpdatePeerName) {
   peer().SetName(kName);
   EXPECT_FALSE(listener_notified);
   EXPECT_FALSE(peer().name().has_value());
+}
+
+TEST_F(GAP_PeerTest, SettingBrEdrConnectionStateUpdatesTemporary) {
+  int notify_count = 0;
+  set_notify_listeners_cb([&](const Peer&, Peer::NotifyListenersChange) { notify_count++; });
+
+  peer().MutBrEdr().SetConnectionState(Peer::ConnectionState::kInitializing);
+  ASSERT_FALSE(peer().temporary());
+  // Notifications: one for non-temporary.
+  EXPECT_EQ(notify_count, 1);
+
+  peer().MutBrEdr().SetConnectionState(Peer::ConnectionState::kNotConnected);
+  ASSERT_TRUE(peer().temporary());
+  EXPECT_EQ(notify_count, 1);
+
+  peer().MutBrEdr().SetConnectionState(Peer::ConnectionState::kInitializing);
+  ASSERT_FALSE(peer().temporary());
+  // +1 notification (non-temporary)
+  EXPECT_EQ(notify_count, 2);
+
+  peer().MutBrEdr().SetConnectionState(Peer::ConnectionState::kConnected);
+  peer().MutBrEdr().SetBondData(kSecureBrEdrKey);
+  ASSERT_FALSE(peer().temporary());
+  // +2 notification (connected, bonded)
+  EXPECT_EQ(notify_count, 4);
+
+  peer().MutBrEdr().SetConnectionState(Peer::ConnectionState::kNotConnected);
+  ASSERT_FALSE(peer().temporary());
+  // +1 notification (connection state)
+  EXPECT_EQ(notify_count, 5);
 }
 
 }  // namespace
