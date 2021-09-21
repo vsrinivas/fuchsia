@@ -11,9 +11,10 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildRef, ComponentDecl, DependencyType, OfferDecl,
-        OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget,
-        RegistrationSource, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseProtocolDecl, UseServiceDecl, UseSource,
+        OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
+        OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget, RegistrationSource,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -54,10 +55,25 @@ pub enum DependencyNode {
 }
 
 impl DependencyNode {
-    fn from_child_ref(child: ChildRef) -> Self {
-        // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
-        assert_eq!(child.collection, None);
-        DependencyNode::Child(child.name)
+    fn from_offer_target(target: &OfferTarget) -> Self {
+        match target {
+            OfferTarget::Child(ChildRef { name, collection: None }) => {
+                DependencyNode::Child(name.clone())
+            }
+            OfferTarget::Child(ChildRef { collection: Some(_), .. }) => {
+                // TODO(fxbug.dev/84678): It's safe to not support dynamic
+                // children here, because the shutdown logic only sees
+                // `OfferDecl`s listed in the static `ComponentDecl`, which
+                // doesn't include dynamic offers. So effectively, dynamic
+                // offers are ignored. We'll need to properly support dynamic
+                // children once dynamic offers are read by the shutdown logic.
+                panic!(
+                    "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: {:?}",
+                    target
+                )
+            }
+            OfferTarget::Collection(collection) => DependencyNode::Collection(collection.clone()),
+        }
     }
 }
 
@@ -466,15 +482,28 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                     // Any other capability type cannot be marked as weak, so we can proceed
                 }
             }
-            let offer_target_node = match offer.target() {
-                OfferTarget::Child(child) => DependencyNode::from_child_ref(child.clone()),
-                OfferTarget::Collection(name) => DependencyNode::Collection(name.clone()),
-            };
+            let offer_target_node = DependencyNode::from_offer_target(offer.target());
             if children_the_parent_transitively_depends_on.contains(&offer_target_node) {
                 // The target for this is in our transitive dependency set, so we also
                 // transitively depend on the source
                 let offer_source_node = match offer.source() {
-                    OfferSource::Child(child) => DependencyNode::from_child_ref(child.clone()),
+                    OfferSource::Child(ChildRef { name: source_name, collection: None }) => {
+                        DependencyNode::Child(source_name.clone())
+                    }
+                    OfferSource::Child(ChildRef { collection: Some(_), .. }) => {
+                        // TODO(fxbug.dev/84678): It's safe to not support
+                        // dynamic children here, because the shutdown logic
+                        // only sees `OfferDecl`s listed in the static
+                        // `ComponentDecl`, which doesn't include dynamic
+                        // offers. So effectively, dynamic offers are ignored.
+                        // We'll need to properly support dynamic children once
+                        // dynamic offers are read by the shutdown logic.
+                        panic!(
+                            "A dynamic child appeared in an OfferDecl contained in a \
+                            ComponentDecl: {:?}",
+                            offer
+                        )
+                    }
                     OfferSource::Collection(name) => DependencyNode::Collection(name.clone()),
                     OfferSource::Capability(name) => {
                         // The only valid use for an OfferSource::Capability today is for a storage
@@ -541,157 +570,10 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
 /// provide capabilities to other siblings.
 fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
     for dep in &decl.offers {
-        // Identify the source and target of the offer. We only care about
-        // dependencies where the provider of the dependency is another child,
-        // otherwise the capability comes from the parent or component manager
-        // itself in which case the relationship is not relevant for ordering
-        // here.
-        let source_target_pairs = match dep {
-            OfferDecl::Protocol(svc_offer) => {
-                match svc_offer.dependency_type {
-                    DependencyType::Strong => {}
-                    DependencyType::Weak | DependencyType::WeakForMigration => {
-                        // weak dependencies are ignored by this algorithm, because weak
-                        // dependencies can be broken arbitrarily.
-                        continue;
-                    }
-                }
-                match &svc_offer.source {
-                    OfferSource::Child(source) => match &svc_offer.target {
-                        OfferTarget::Child(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::from_child_ref(target.clone()),
-                        )],
-                        OfferTarget::Collection(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::Collection(target.clone()),
-                        )],
-                    },
-                    _ => {
-                        // Capabilities offered by the parent, routed in from the component, or
-                        // provided by the framework (based on some other capability) are not
-                        // relevant.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Service(svc_offer) => {
-                match &svc_offer.source {
-                    OfferSource::Child(source) => match &svc_offer.target {
-                        OfferTarget::Child(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::from_child_ref(target.clone()),
-                        )],
-                        OfferTarget::Collection(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::Collection(target.clone()),
-                        )],
-                    },
-                    _ => {
-                        // Capabilities offered by the parent, routed in from the component, or
-                        // provided by the framework (based on some other capability) are not
-                        // relevant.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Directory(dir_offer) => {
-                match dir_offer.dependency_type {
-                    DependencyType::Strong => {}
-                    DependencyType::Weak | DependencyType::WeakForMigration => {
-                        // weak dependencies are ignored by this algorithm, because weak
-                        // dependencies can be broken arbitrarily.
-                        continue;
-                    }
-                }
-                match &dir_offer.source {
-                    OfferSource::Child(source) => match &dir_offer.target {
-                        OfferTarget::Child(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::from_child_ref(target.clone()),
-                        )],
-                        OfferTarget::Collection(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::Collection(target.clone()),
-                        )],
-                    },
-                    _ => {
-                        // Capabilities offered by the parent or routed in from
-                        // the component are not relevant.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Storage(s) => {
-                match &s.source {
-                    OfferSource::Self_ => {
-                        match find_storage_provider(&decl.capabilities, &s.source_name) {
-                            Some(storage_source) => match &s.target {
-                                OfferTarget::Child(target) => vec![(
-                                    DependencyNode::Child(storage_source.clone()),
-                                    DependencyNode::from_child_ref(target.clone()),
-                                )],
-                                OfferTarget::Collection(target) => vec![(
-                                    DependencyNode::Child(storage_source.clone()),
-                                    DependencyNode::Collection(target.clone()),
-                                )],
-                            },
-                            None => {
-                                // The storage offer is not from a child, so it
-                                // can be ignored.
-                                continue;
-                            }
-                        }
-                    }
-                    _ => {
-                        // Capabilities coming from the parent aren't tracked.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Runner(runner_offer) => {
-                match &runner_offer.source {
-                    OfferSource::Child(source) => match &runner_offer.target {
-                        OfferTarget::Child(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::from_child_ref(target.clone()),
-                        )],
-                        OfferTarget::Collection(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::Collection(target.clone()),
-                        )],
-                    },
-                    _ => {
-                        // Capabilities coming from the parent aren't tracked.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Resolver(resolver_offer) => {
-                match &resolver_offer.source {
-                    OfferSource::Child(source) => match &resolver_offer.target {
-                        OfferTarget::Child(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::from_child_ref(target.clone()),
-                        )],
-                        OfferTarget::Collection(target) => vec![(
-                            DependencyNode::from_child_ref(source.clone()),
-                            DependencyNode::Collection(target.clone()),
-                        )],
-                    },
-                    _ => {
-                        // Capabilities coming from the parent aren't tracked.
-                        continue;
-                    }
-                }
-            }
-            OfferDecl::Event(_) => {
-                // Events aren't tracked as dependencies for shutdown.
-                continue;
-            }
-        };
-
-        for (capability_provider, capability_target) in source_target_pairs {
+        // Identify the source and target of the offer, if this offer is
+        // actually relevant to shutdown order.
+        if let Some((capability_provider, capability_target)) = get_dependency_from_offer(decl, dep)
+        {
             if !dependency_map.contains_key(&capability_target) {
                 panic!(
                     "This capability routing seems invalid, the target \
@@ -706,6 +588,125 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                 capability_provider, capability_target,
             ));
             sibling_deps.insert(capability_target);
+        }
+    }
+}
+
+/// Extracts a (capability_provider, capability_target) pair from a single
+/// `OfferDecl`, or returns `None` if the offer has no impact on shutdown
+/// ordering. The `ComponentDecl` provides context that may be necessary to
+/// understand the `OfferDecl`.
+fn get_dependency_from_offer(
+    component_decl: &ComponentDecl,
+    offer_decl: &OfferDecl,
+) -> Option<(DependencyNode, DependencyNode)> {
+    // We only care about dependencies where the provider of the dependency is
+    // another child, otherwise the capability comes from the parent or
+    // component manager itself in which case the relationship is not relevant
+    // for ordering here.
+    match offer_decl {
+        OfferDecl::Protocol(OfferProtocolDecl {
+            dependency_type: DependencyType::Strong,
+            source,
+            target,
+            ..
+        })
+        | OfferDecl::Service(OfferServiceDecl { source, target, .. })
+        | OfferDecl::Directory(OfferDirectoryDecl {
+            dependency_type: DependencyType::Strong,
+            source,
+            target,
+            ..
+        })
+        | OfferDecl::Runner(OfferRunnerDecl { source, target, .. })
+        | OfferDecl::Resolver(OfferResolverDecl { source, target, .. }) => {
+            match source {
+                OfferSource::Child(ChildRef { name: source_name, collection: None }) => Some((
+                    DependencyNode::Child(source_name.clone()),
+                    DependencyNode::from_offer_target(target),
+                )),
+                OfferSource::Child(ChildRef { collection: Some(_), .. }) => {
+                    // TODO(fxbug.dev/84678): It's safe to not support dynamic
+                    // children here, because the shutdown logic only sees
+                    // `OfferDecl`s listed in the static `ComponentDecl`, which
+                    // doesn't include dynamic offers. So effectively, dynamic
+                    // offers are ignored. We'll need to properly support
+                    // dynamic children once dynamic offers are read by the
+                    // shutdown logic.
+                    panic!(
+                        "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: \
+                        {:?}",
+                        offer_decl
+                    )
+                }
+                OfferSource::Collection(_) => {
+                    // TODO(fxbug.dev/84766): Consider services routed from
+                    // collections in shutdown order.
+                    None
+                }
+                OfferSource::Framework
+                | OfferSource::Parent
+                | OfferSource::Self_
+                | OfferSource::Capability(_) => {
+                    // Capabilities offered by the parent, routed in from the
+                    // component, or provided by the framework (based on some
+                    // other capability) are not relevant.
+                    None
+                }
+            }
+        }
+
+        OfferDecl::Protocol(OfferProtocolDecl {
+            dependency_type: DependencyType::Weak | DependencyType::WeakForMigration,
+            ..
+        })
+        | OfferDecl::Directory(OfferDirectoryDecl {
+            dependency_type: DependencyType::Weak | DependencyType::WeakForMigration,
+            ..
+        }) => {
+            // weak dependencies are ignored by this algorithm, because weak
+            // dependencies can be broken arbitrarily.
+            None
+        }
+
+        // Storage is special.
+        OfferDecl::Storage(OfferStorageDecl {
+            source: OfferSource::Self_,
+            source_name,
+            target,
+            ..
+        }) => find_storage_provider(&component_decl.capabilities, &source_name).map(
+            |storage_source_child_name| {
+                (
+                    DependencyNode::Child(storage_source_child_name),
+                    DependencyNode::from_offer_target(target),
+                )
+            },
+        ),
+        OfferDecl::Storage(OfferStorageDecl {
+            source:
+                OfferSource::Child(_)
+                | OfferSource::Parent
+                | OfferSource::Capability(_)
+                | OfferSource::Collection(_)
+                | OfferSource::Framework,
+            ..
+        }) => {
+            // The storage offer is not from `self`, so it can be ignored.
+            //
+            // NOTE: It may seem weird that storage offers from "child" are
+            // ignored, but storage offers that come from children work
+            // differently than other kinds of offers. A Storage offer always
+            // comes from either `parent` or `self`, but the storage capability
+            // _itself_ (see `StorageDecl`) may reference a child. But in that
+            // case, the `OfferSource` is still listed as `self`, in which case
+            // it is handled above.
+            None
+        }
+
+        OfferDecl::Event(_) => {
+            // Events aren't tracked as dependencies for shutdown.
+            None
         }
     }
 }
