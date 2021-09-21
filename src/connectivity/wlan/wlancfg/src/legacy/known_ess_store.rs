@@ -5,6 +5,7 @@
 use serde::Deserialize;
 use {
     anyhow::format_err,
+    ieee80211::Ssid,
     log::{error, warn},
     parking_lot::{Mutex, MutexGuard},
     serde::Serialize,
@@ -87,11 +88,11 @@ impl KnownEssStore {
         self.ess_by_ssid.lock().get(ssid).map(Clone::clone)
     }
 
-    pub fn store(&self, ssid: Vec<u8>, ess: KnownEss) -> Result<(), anyhow::Error> {
+    pub fn store(&self, ssid: Ssid, ess: KnownEss) -> Result<(), anyhow::Error> {
         let mut guard = self.ess_by_ssid.lock();
         // Even if writing into the file fails, it is still okay
         // to modify the in-memory map. We are not too worried about consistency here.
-        if let Some(_) = guard.insert(ssid, ess) {
+        if let Some(_) = guard.insert(ssid.to_vec(), ess) {
             warn!("Overwriting prior entry for ssid");
         };
         self.write(guard)
@@ -197,10 +198,10 @@ mod tests {
 
         assert_eq!(None, store.lookup(b"foo"));
         assert_eq!(0, store.known_network_count());
-        store.store(b"foo".to_vec(), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
         assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
-        store.store(b"foo".to_vec(), ess(b"12345")).expect("storing 'foo' again failed");
+        store.store(Ssid::from("foo"), ess(b"12345")).expect("storing 'foo' again failed");
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
 
@@ -210,7 +211,7 @@ mod tests {
         assert_eq!(1, store.known_network_count());
 
         // Make sure that overwriting the existing file works
-        store.store(b"bar".to_vec(), ess(b"zxcvb")).expect("storing 'bar' failed");
+        store.store(Ssid::from("bar"), ess(b"zxcvb")).expect("storing 'bar' failed");
         let store = create_ess_store(temp_dir.path());
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
         assert_eq!(Some(ess(b"zxcvb")), store.lookup(b"bar"));
@@ -233,7 +234,7 @@ mod tests {
         assert!(!path.exists());
 
         // Writing an entry should create the file
-        store.store(b"foo".to_vec(), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
         assert!(path.exists());
     }
 
@@ -246,7 +247,7 @@ mod tests {
         )
         .expect("Failed to create a KnownEssStore");
 
-        let e = store.store(b"foo".to_vec(), ess(b"qwerty")).expect_err("expected store to fail");
+        let e = store.store(Ssid::from("foo"), ess(b"qwerty")).expect_err("expected store to fail");
         assert!(
             e.to_string().contains("Failed to rename")
                 && e.to_string().contains("into /dev/null/foo"),
@@ -263,7 +264,7 @@ mod tests {
         // exist yet
         let store = create_ess_store(temp_dir.path());
 
-        store.store(b"foo".to_vec(), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
         assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
         store.clear().expect("clearing store failed");

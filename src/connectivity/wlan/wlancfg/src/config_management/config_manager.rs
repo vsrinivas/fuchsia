@@ -454,7 +454,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         {
             let ess = KnownEss { password: credential.into_bytes() };
             self.legacy_store
-                .store(network_id.ssid.to_vec(), ess)
+                .store(network_id.ssid.clone(), ess)
                 .map_err(|_| NetworkConfigError::LegacyWriteError)?;
         }
         Ok(evicted_config)
