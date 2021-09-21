@@ -62,8 +62,8 @@ lazy_init::LazyInit<VmAddressRegion, lazy_init::CheckType::None, lazy_init::Dest
 // space. Thread safety analysis is disabled since we don't need to
 // lock yet.
 void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
-
-  g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL, "kernel");
+  g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
+                             "kernel");
 
 #if LK_DEBUGLEVEL > 1
   g_kernel_aspace->Adopt();
@@ -678,7 +678,7 @@ void VmAspace::InitializeAslr() {
     aslr_compact_entropy_bits_ = 8;
   }
 
-  crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
+  crypto::global_prng::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
   aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
 }
 

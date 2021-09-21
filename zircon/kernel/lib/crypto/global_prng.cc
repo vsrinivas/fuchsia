@@ -40,12 +40,10 @@
 #define LOCAL_TRACE 0
 
 namespace crypto {
-
-namespace GlobalPRNG {
-
+namespace global_prng {
 namespace {
 
-PRNG* kGlobalPrng = nullptr;
+Prng* g_prng_instance = nullptr;
 
 unsigned int IntegrateZbiEntropy() {
   zbitl::View zbi(ZbiInPhysmap());
@@ -53,11 +51,11 @@ unsigned int IntegrateZbiEntropy() {
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
     if ((*it).header->type == ZBI_TYPE_SECURE_ENTROPY) {
       auto data = (*it).payload;
-      if (data.size() < PRNG::kMinEntropy) {
+      if (data.size() < Prng::kMinEntropy) {
         printf("ZBI_TYPE_SECURE_ENTROPY item at offset %#x too small: %zu < %zu\n",
-               it.item_offset(), data.size(), static_cast<size_t>(PRNG::kMinEntropy));
+               it.item_offset(), data.size(), static_cast<size_t>(Prng::kMinEntropy));
       } else {
-        kGlobalPrng->AddEntropy(data.data(), data.size());
+        g_prng_instance->AddEntropy(data.data(), data.size());
         mandatory_memset(data.data(), 0, data.size());
         LTRACEF("Collected %zu bytes of entropy from a ZBI Item\n", data.size());
         auto result = zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
@@ -96,17 +94,17 @@ bool IntegrateCmdlineEntropy() {
 
   uint8_t digest[SHA256_DIGEST_LENGTH];
   SHA256(reinterpret_cast<const uint8_t*>(entropy.data()), entropy.size(), digest);
-  kGlobalPrng->AddEntropy(digest, sizeof(digest));
+  g_prng_instance->AddEntropy(digest, sizeof(digest));
 
   const size_t entropy_added = ktl::min(entropy.size() / 2, sizeof(digest));
   LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n", entropy_added);
-  return (entropy_added >= PRNG::kMinEntropy);
+  return (entropy_added >= Prng::kMinEntropy);
 }
 
 // Returns true on success, false on failure.
 bool SeedFrom(entropy::Collector* collector) {
-  uint8_t buf[PRNG::kMinEntropy] = {0};
-  size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
+  uint8_t buf[Prng::kMinEntropy] = {0};
+  size_t remaining = collector->BytesNeeded(8 * Prng::kMinEntropy);
 #if LOCAL_TRACE
   {
     char name[ZX_MAX_NAME_LEN];
@@ -124,7 +122,7 @@ bool SeedFrom(entropy::Collector* collector) {
       return false;
     }
 
-    kGlobalPrng->AddEntropy(buf, result);
+    g_prng_instance->AddEntropy(buf, result);
     mandatory_memset(buf, 0, sizeof(buf));
     remaining -= result;
   }
@@ -134,7 +132,7 @@ bool SeedFrom(entropy::Collector* collector) {
 
 // Instantiates the global PRNG (in non-thread-safe mode) and seeds it.
 void EarlyBootSeed(uint level) {
-  ASSERT(kGlobalPrng == nullptr);
+  ASSERT(g_prng_instance == nullptr);
 
   // Before doing anything else, test our entropy collector. This is
   // explicitly called here rather than in another init hook to ensure
@@ -147,8 +145,8 @@ void EarlyBootSeed(uint level) {
   // TODO(security): This causes the PRNG state to be in a fairly predictable
   // place.  Some aspects of KASLR will help with this, but we may
   // additionally want to remap where this is later.
-  alignas(alignof(PRNG)) static uint8_t prng_space[sizeof(PRNG)];
-  kGlobalPrng = new (&prng_space) PRNG(nullptr, 0, PRNG::NonThreadSafeTag());
+  alignas(alignof(Prng)) static uint8_t prng_space[sizeof(Prng)];
+  g_prng_instance = new (&prng_space) Prng(nullptr, 0, Prng::NonThreadSafeTag());
 
   unsigned int successful = 0;  // number of successful entropy sources
   entropy::Collector* collector = nullptr;
@@ -183,8 +181,8 @@ void EarlyBootSeed(uint level) {
     // hardware that we should remove and attempt to do better.  If this
     // fallback is used, it breaks all cryptography used on the system.
     // *CRITICAL*
-    uint8_t buf[PRNG::kMinEntropy] = {0};
-    kGlobalPrng->AddEntropy(buf, sizeof(buf));
+    uint8_t buf[Prng::kMinEntropy] = {0};
+    g_prng_instance->AddEntropy(buf, sizeof(buf));
     return;
   } else {
     LTRACEF("Successfully collected entropy from %u sources.\n", successful);
@@ -213,7 +211,7 @@ void ReseedPRNG() {
   }
 
   if (successful == 0) {
-    kGlobalPrng->SelfReseed();
+    g_prng_instance->SelfReseed();
     LTRACEF("Reseed PRNG with no new entropy source\n");
   } else {
     LTRACEF("Successfully reseed PRNG from %u sources.\n", successful);
@@ -241,21 +239,20 @@ void StartReseedThread(uint level) {
 
 }  // namespace
 
-PRNG* GetInstance() {
-  ASSERT(kGlobalPrng);
-  return kGlobalPrng;
+Prng* GetInstance() {
+  ASSERT(g_prng_instance);
+  return g_prng_instance;
 }
 
-}  // namespace GlobalPRNG
-
+}  // namespace global_prng
 }  // namespace crypto
 
 // intel hw_rng init hook is at PLATFORM_EARLY+1
 // make sure we start after that so we can use it for the early seed.
-LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed, LK_INIT_LEVEL_PLATFORM_EARLY + 2)
+LK_INIT_HOOK(global_prng_seed, crypto::global_prng::EarlyBootSeed, LK_INIT_LEVEL_PLATFORM_EARLY + 2)
 
-LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
+LK_INIT_HOOK(global_prng_thread_safe, crypto::global_prng::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)
 
 // Reseed the CPRNG right before entering userspace.
-LK_INIT_HOOK(global_prng_reseed, crypto::GlobalPRNG::StartReseedThread, LK_INIT_LEVEL_USER - 1)
+LK_INIT_HOOK(global_prng_reseed, crypto::global_prng::StartReseedThread, LK_INIT_LEVEL_USER - 1)

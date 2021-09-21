@@ -272,7 +272,7 @@ zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
   // Ensure we get rid of the stack copy of the random data as this function returns.
   explicit_memory::ZeroDtor<uint8_t> zero_guard(kernel_buf, sizeof(kernel_buf));
 
-  auto prng = crypto::GlobalPRNG::GetInstance();
+  auto prng = crypto::global_prng::GetInstance();
   ASSERT(prng->is_thread_safe());
   prng->Draw(kernel_buf, len);
 
@@ -294,7 +294,7 @@ zx_status_t sys_cprng_add_entropy(user_in_ptr<const void> buffer, size_t buffer_
   if (buffer.reinterpret<const uint8_t>().copy_array_from_user(kernel_buf, buffer_size) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
 
-  auto prng = crypto::GlobalPRNG::GetInstance();
+  auto prng = crypto::global_prng::GetInstance();
   ASSERT(prng->is_thread_safe());
   prng->AddEntropy(kernel_buf, buffer_size);
 

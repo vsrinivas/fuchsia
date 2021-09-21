@@ -32,20 +32,20 @@ static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "must be LE");
 
 }  // namespace
 
-PRNG::PRNG(const void* data, size_t size) : PRNG(data, size, NonThreadSafeTag()) {
+Prng::Prng(const void* data, size_t size) : Prng(data, size, NonThreadSafeTag()) {
   BecomeThreadSafe();
 }
 
-PRNG::PRNG(const void* data, size_t size, NonThreadSafeTag tag) : nonce_(0), accumulated_(0) {
+Prng::Prng(const void* data, size_t size, NonThreadSafeTag tag) : nonce_(0), accumulated_(0) {
   AddEntropy(data, size);
 }
 
-PRNG::~PRNG() {
+Prng::~Prng() {
   Guard<SpinLock, IrqSave> spinlock_guard(&pool_lock_);
   nonce_ = 0;
 }
 
-void PRNG::AddEntropy(const void* data, size_t size) {
+void Prng::AddEntropy(const void* data, size_t size) {
   DEBUG_ASSERT(data || size == 0);
   ASSERT(size <= kMaxEntropy);
 
@@ -72,9 +72,9 @@ void PRNG::AddEntropy(const void* data, size_t size) {
 }
 
 // AddEntropy() with NULL input effectively reseeds with hash of current key.
-void PRNG::SelfReseed() { AddEntropy(nullptr, 0); }
+void Prng::SelfReseed() { AddEntropy(nullptr, 0); }
 
-void PRNG::Draw(void* out, size_t size) {
+void Prng::Draw(void* out, size_t size) {
   DEBUG_ASSERT(out || size == 0);
   ASSERT(size <= kMaxDrawLen);
   // Wait if other threads should add entropy.
@@ -102,7 +102,7 @@ void PRNG::Draw(void* out, size_t size) {
   CRYPTO_chacha_20(buf, buf, size, pool.contents().data(), nonce_u8, 0);
 }
 
-uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
+uint64_t Prng::RandInt(uint64_t exclusive_upper_bound) {
   ASSERT(exclusive_upper_bound != 0);
 
   const uint log2 = log2_ulong_ceil(exclusive_upper_bound);
@@ -125,13 +125,13 @@ uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
 
 // It is safe to call this function from PRNG's constructor provided
 // |ready_| and |accumulated_| initialized.
-void PRNG::BecomeThreadSafe() {
+void Prng::BecomeThreadSafe() {
   ASSERT(!is_thread_safe());
   ready_.Initialize(accumulated_.load() >= kMinEntropy);
   is_thread_safe_ = true;
 }
 
-bool PRNG::is_thread_safe() const {
+bool Prng::is_thread_safe() const {
   // Safe to read |is_thread_safe_|; it is read-only in a threaded context.
   return is_thread_safe_;
 }

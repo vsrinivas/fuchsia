@@ -166,7 +166,7 @@ void vm_init_preheap_vmars() {
   // the adjacent memory mappings (kstack_vmar, arena:handles and others) at
   // non-static virtual addresses.
   size_t size_entropy;
-  crypto::GlobalPRNG::GetInstance()->Draw(&size_entropy, sizeof(size_entropy));
+  crypto::global_prng::GetInstance()->Draw(&size_entropy, sizeof(size_entropy));
 
   const size_t random_size = PAGE_ALIGN(size_entropy % (64ULL * GB));
   vmar = fbl::AdoptRef<VmAddressRegion>(
@@ -228,7 +228,7 @@ void vm_init_preheap() {
 #if !DISABLE_KASLR  // Disable random memory padding for KASLR
   // Reserve up to 15 pages as a random padding in the kernel physical mapping
   unsigned char entropy;
-  crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
+  crypto::global_prng::GetInstance()->Draw(&entropy, sizeof(entropy));
   struct list_node list;
   list_initialize(&list);
   size_t page_count = entropy % 16;

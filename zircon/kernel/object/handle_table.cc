@@ -41,7 +41,7 @@ static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
 HandleTable::HandleTable(ProcessDispatcher* process) : process_(process) {
   // Generate handle XOR mask with top bit and bottom two bits cleared
   uint32_t secret;
-  auto prng = crypto::GlobalPRNG::GetInstance();
+  auto prng = crypto::global_prng::GetInstance();
   prng->Draw(&secret, sizeof(secret));
 
   // Handle values must always have the low kHandleReservedBits set.  Do not

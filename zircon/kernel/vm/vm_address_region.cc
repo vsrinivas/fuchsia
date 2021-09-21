@@ -1141,7 +1141,7 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
   // Ensure our candidate calculation shift will not overflow.
   const uint8_t entropy = aspace_->AslrEntropyBits(flags_ & VMAR_FLAG_COMPACT);
   vaddr_t alloc_spot = 0;
-  crypto::PRNG* prng = nullptr;
+  crypto::Prng* prng = nullptr;
   if (aspace_->is_aslr_enabled()) {
     prng = &aspace_->AslrPrng();
   }

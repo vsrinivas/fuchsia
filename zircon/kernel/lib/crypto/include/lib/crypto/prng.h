@@ -25,20 +25,20 @@ typedef unsigned __int128 uint128_t;
 // This exposes a (optionally-)thread-safe cryptographically secure PRNG.
 // This PRNG must be seeded with at least 256 bits of "real" entropy before
 // being used for cryptographic applications.
-class PRNG {
+class Prng {
  public:
   // Tag object for constructing a non-thread-safe version.
   struct NonThreadSafeTag {};
 
   // Construct a thread-safe instance of the PRNG with the byte array at
   // |data| as the initial seed.  |size| is the length of |data| in bytes.
-  PRNG(const void* data, size_t size);
+  Prng(const void* data, size_t size);
 
   // Construct a non-thread-safe instance of the PRNG with the byte array at
   // |data| as the initial seed.  |size| is the length of |data| in bytes.
-  PRNG(const void* data, size_t size, NonThreadSafeTag);
+  Prng(const void* data, size_t size, NonThreadSafeTag);
 
-  ~PRNG();
+  ~Prng();
 
   // Re-seed the PRNG by mixing-in new entropy. |size| is in bytes.
   // |size| MUST NOT be greater than kMaxEntropy.
@@ -82,14 +82,14 @@ class PRNG {
   static constexpr uint64_t kMaxDrawLen = 1ULL << 38;
 
  private:
-  PRNG(const PRNG&) = delete;
-  PRNG& operator=(const PRNG&) = delete;
+  Prng(const Prng&) = delete;
+  Prng& operator=(const Prng&) = delete;
 
   // Synchronizes calls to |AddEntropy|.
-  DECLARE_MUTEX(PRNG) add_entropy_lock_;
+  DECLARE_MUTEX(Prng) add_entropy_lock_;
 
   // Controls access to |key_| |and nonce_|.
-  DECLARE_SPINLOCK(PRNG) pool_lock_;
+  DECLARE_SPINLOCK(Prng) pool_lock_;
 
   // ChaCha20 key(pool_) and nonce as described in RFC 7539.
   EntropyPool pool_ TA_GUARDED(pool_lock_);

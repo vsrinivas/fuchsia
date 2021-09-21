@@ -193,7 +193,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
   // Expose the PRNG for ASLR to VmAddressRegion
-  crypto::PRNG& AslrPrng() {
+  crypto::Prng& AslrPrng() {
     DEBUG_ASSERT(aslr_enabled_);
     return aslr_prng_;
   }
@@ -262,8 +262,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   // PRNG used by VMARs for address choices.  We record the seed to enable
   // reproducible debugging.
-  crypto::PRNG aslr_prng_;
-  uint8_t aslr_seed_[crypto::PRNG::kMinEntropy];
+  crypto::Prng aslr_prng_;
+  uint8_t aslr_seed_[crypto::Prng::kMinEntropy];
 
   // architecturally specific part of the aspace
   ArchVmAspace arch_aspace_;

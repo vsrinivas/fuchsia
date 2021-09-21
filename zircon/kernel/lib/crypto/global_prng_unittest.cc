@@ -14,8 +14,8 @@ namespace {
 bool identical() {
   BEGIN_TEST;
 
-  PRNG* prng1 = GlobalPRNG::GetInstance();
-  PRNG* prng2 = GlobalPRNG::GetInstance();
+  Prng* prng1 = global_prng::GetInstance();
+  Prng* prng2 = global_prng::GetInstance();
 
   EXPECT_NE(prng1, nullptr);
   EXPECT_EQ(prng1, prng2);

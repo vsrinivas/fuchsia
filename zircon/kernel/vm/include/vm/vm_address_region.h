@@ -279,7 +279,7 @@ class RegionList final {
 
   // Get the allocation spot that is free and large enough for the aligned size.
   zx_status_t GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy, size_t size,
-                           vaddr_t parent_base, size_t parent_size, crypto::PRNG* prng,
+                           vaddr_t parent_base, size_t parent_size, crypto::Prng* prng,
                            vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const {
     DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
     const vaddr_t align = 1UL << align_pow2;

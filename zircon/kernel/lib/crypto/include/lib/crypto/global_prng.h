@@ -11,13 +11,13 @@
 
 namespace crypto {
 
-namespace GlobalPRNG {
+namespace global_prng {
 
 // Returns a pointer to the global PRNG singleton.  The pointer is
 // guaranteed to be non-null.
-PRNG* GetInstance();
+Prng* GetInstance();
 
-}  // namespace GlobalPRNG
+}  // namespace global_prng
 
 }  // namespace crypto
 

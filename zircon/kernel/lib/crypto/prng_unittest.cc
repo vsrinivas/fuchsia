@@ -18,7 +18,7 @@ namespace {
 bool instantiate() {
   BEGIN_TEST;
 
-  { PRNG prng("", 0); }
+  { Prng prng("", 0); }
 
   END_TEST;
 }
@@ -32,8 +32,8 @@ bool non_thread_safe_prng_same_behavior() {
   static const int kSeed2Size = sizeof(kSeed2);
   static const int kDrawSize = 13;
 
-  PRNG prng1(kSeed1, kSeed1Size, PRNG::NonThreadSafeTag());
-  PRNG prng2(kSeed1, kSeed1Size);
+  Prng prng1(kSeed1, kSeed1Size, Prng::NonThreadSafeTag());
+  Prng prng2(kSeed1, kSeed1Size);
 
   EXPECT_FALSE(prng1.is_thread_safe(), "unexpected PRNG state");
   EXPECT_TRUE(prng2.is_thread_safe(), "unexpected PRNG state");
@@ -73,9 +73,9 @@ bool reseed() {
   static const int kSeed2Size = sizeof(kSeed2);
   static const int kDrawSize = 13;
 
-  PRNG prng1(kSeed1, kSeed1Size);
-  PRNG prng2(kSeed1, kSeed1Size);
-  PRNG prng3(kSeed1, kSeed1Size);
+  Prng prng1(kSeed1, kSeed1Size);
+  Prng prng2(kSeed1, kSeed1Size);
+  Prng prng3(kSeed1, kSeed1Size);
 
   uint8_t out1[kDrawSize] = {0};
   uint8_t out2[kDrawSize] = {0};
@@ -107,11 +107,11 @@ bool prng_output() {
   static const int kSeed1Size = sizeof(kSeed1);
   static const int kDrawSize = 13;
 
-  PRNG prng1(kSeed1, kSeed1Size);
+  Prng prng1(kSeed1, kSeed1Size);
   uint8_t out1[kDrawSize] = {0};
   prng1.Draw(out1, sizeof(out1));
 
-  PRNG prng2(kSeed1, kSeed1Size);
+  Prng prng2(kSeed1, kSeed1Size);
   uint8_t out2[kDrawSize] = {0};
   prng2.Draw(out2, sizeof(out2));
 
@@ -133,12 +133,12 @@ bool prng_output() {
 
   // Now verify that different seeds produce different outputs.
   static const char kSeed2[33] = {'b', 'l', 'a', 'h'};
-  PRNG prng3(kSeed2, sizeof(kSeed2));
+  Prng prng3(kSeed2, sizeof(kSeed2));
   uint8_t out3[kDrawSize] = {0};
   prng3.Draw(out3, sizeof(out3));
 
   static const char kSeed3[33] = {'b', 'l', 'e', 'h'};
-  PRNG prng4(kSeed3, sizeof(kSeed3));
+  Prng prng4(kSeed3, sizeof(kSeed3));
   uint8_t out4[kDrawSize] = {0};
   prng3.Draw(out4, sizeof(out4));
 
@@ -149,16 +149,16 @@ bool prng_output() {
 
 static int cprng_drawer_thread(void* prng) {
   uint8_t buf[16] = {0};
-  static_cast<PRNG*>(prng)->Draw(buf, sizeof(buf));
+  static_cast<Prng*>(prng)->Draw(buf, sizeof(buf));
   return 0;
 }
 
 // If not enough entropy has been added to the CPRNG, it should block.
 bool prng_blocks() {
   BEGIN_TEST;
-  uint8_t fake_entropy[PRNG::kMinEntropy] = {0};
+  uint8_t fake_entropy[Prng::kMinEntropy] = {0};
 
-  PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
+  Prng prng(nullptr, 0, Prng::NonThreadSafeTag());
   prng.BecomeThreadSafe();
 
   Thread* drawer =
@@ -191,9 +191,9 @@ bool prng_blocks() {
 // unblocking.
 bool prng_doesnt_block_if_entropy_is_added_early() {
   BEGIN_TEST;
-  uint8_t fake_entropy[PRNG::kMinEntropy] = {0};
+  uint8_t fake_entropy[Prng::kMinEntropy] = {0};
 
-  PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
+  Prng prng(nullptr, 0, Prng::NonThreadSafeTag());
   prng.AddEntropy(fake_entropy, sizeof(fake_entropy));
   prng.BecomeThreadSafe();
   Thread* drawer =
@@ -212,7 +212,7 @@ bool prng_randint() {
   static const char kSeed[32] = {'a', 'b', 'c'};
   static const int kSeedSize = sizeof(kSeed);
 
-  PRNG prng(kSeed, kSeedSize);
+  Prng prng(kSeed, kSeedSize);
 
   // Technically could fall out of the log2 loop below, but let's be explicit
   // about this case.
