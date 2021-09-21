@@ -19,6 +19,8 @@ BT_FILE_DEPS=(
   "tools/devshell/tests/subcommands/${TESTDATA}/gn.gn"
   "tools/devshell/tests/subcommands/${TESTDATA}/gn.gni"
   "tools/devshell/tests/subcommands/${TESTDATA}/python3.py"
+  "tools/devshell/tests/subcommands/${TESTDATA}/no-extension"
+  "tools/devshell/tests/subcommands/${TESTDATA}/unknown-extension.blah"
 )
 
 MOCK_CLANG_DIR="prebuilt/third_party/clang/test"
@@ -56,7 +58,7 @@ EOF
 
 # Ensure that formatting an unchanged tree works
 TEST_fx-format-code-no-args() {
-  BT_EXPECT ${fx} format-code 2> stderr
+  BT_EXPECT "${fx}" format-code 2> stderr
 }
 
 # Ensure that the commands for common file types are sensible.
@@ -71,12 +73,27 @@ TEST_fx-format-code-commands() {
   )
   local csfiles
   printf -v csfiles ",%s" "${files[@]}"
-  BT_EXPECT ${fx} format-code --verbose --files="${csfiles:1}" > "${out}"
+  BT_EXPECT "${fx}" format-code --verbose --files="${csfiles:1}" > "${out}"
   BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
   BT_EXPECT grep -q -E '"gn format.*gn.gn"' "${out}"
   BT_EXPECT grep -q -E '"gn format.*gn.gni"' "${out}"
   BT_EXPECT grep -q -E '"rustfmt.*rust.rs"' "${out}"
   BT_EXPECT grep -q -E '"yapf.*python3.py"' "${out}"
+}
+
+# Ensure that the command fails if a file has no extension that we can use to
+# choose a formatter.
+TEST_fx-format-code-no-extension() {
+  local out="${BT_TEMP_DIR}/_fx_format_code_output"
+  BT_ASSERT_FAIL "${fx}" format-code --files="${TESTDATA}/no-extension" 2> "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "Unable to determine language"
+}
+
+# Ensure that the command fails if a file has an unsupported extension.
+TEST_fx-format-code-unknown-extension() {
+  local out="${BT_TEMP_DIR}/_fx_format_code_output"
+  BT_ASSERT_FAIL "${fx}" format-code --files="${TESTDATA}/unknown-extension.blah" 2> "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "Unsupported extension"
 }
 
 BT_RUN_TESTS "$@"

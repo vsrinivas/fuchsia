@@ -98,7 +98,8 @@ function format-full-file() {
 
 # Format the given file.
 function format-file() {
-  case "$1" in
+  filename="$(basename "$1")"
+  case "${filename}" in
     *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
       format-cc-file "$1" ;;
 
@@ -116,6 +117,8 @@ function format-file() {
     *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
     *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
     *.persist) format-full-file "${JSON5_FMT_CMD}" "$1";;
+    *.*) fx-error "Unsupported extension for file $1" && exit 1;;
+    *) fx-error "Unable to determine language for file $1" && exit 1;;
   esac
 }
 
