@@ -820,6 +820,39 @@ static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
   return 0;
 }
 
+static constexpr TimerSlack kSlack{ZX_MSEC(10), TIMER_SLACK_CENTER};
+
+void RecurringCallback::CallbackWrapper(Timer* t, zx_time_t now, void* arg) {
+  auto cb = static_cast<RecurringCallback*>(arg);
+  cb->func_();
+
+  {
+    Guard<SpinLock, IrqSave> guard{&cb->lock_};
+
+    if (cb->started_) {
+      const Deadline deadline(zx_time_add_duration(now, ZX_SEC(1)), kSlack);
+      t->Set(deadline, CallbackWrapper, arg);
+    }
+  }
+
+  // reschedule to give the debuglog a chance to run
+  Thread::Current::preemption_state().PreemptSetPending();
+}
+
+void RecurringCallback::Toggle() {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+
+  if (!started_) {
+    const Deadline deadline = Deadline::after(ZX_SEC(1), kSlack);
+    // start the timer
+    timer_.Set(deadline, CallbackWrapper, static_cast<void*>(this));
+    started_ = true;
+  } else {
+    timer_.Cancel();
+    started_ = false;
+  }
+}
+
 static void kernel_shell_init(uint level) {
   if (gBootOptions->shell) {
     console_start();

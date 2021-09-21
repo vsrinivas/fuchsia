@@ -14,6 +14,11 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include <fbl/macros.h>
+#include <kernel/mutex.h>
+#include <kernel/spinlock.h>
+#include <kernel/timer.h>
+
 /* command args */
 typedef struct {
   const char* str;
@@ -67,6 +72,25 @@ typedef struct {
   {command_str, help_str, func, availability_mask},
 
 #endif  // LK_DEBUGLEVEL == 0
+
+class RecurringCallback {
+ public:
+  using CallbackFunc = void (*)();
+
+  explicit RecurringCallback(CallbackFunc callback) : func_(callback) {}
+
+  void Toggle();
+
+ private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RecurringCallback);
+
+  static void CallbackWrapper(Timer* t, zx_time_t now, void* arg);
+
+  DECLARE_SPINLOCK(RecurringCallback) lock_;
+  Timer timer_;
+  bool started_ = false;
+  CallbackFunc func_ = nullptr;
+};
 
 /* external api */
 int console_run_script(const char* string);
