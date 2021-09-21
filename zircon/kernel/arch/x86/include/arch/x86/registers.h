@@ -98,11 +98,9 @@
 #define X86_CR4_PSE 0xffffffef                     /* Disabling PSE bit in the CR4 */
 
 // Non-architectural MSRs
-#define X86_MSR_POWER_CTL 0x000001fc       /* Power Control Register */
-#define X86_MSR_RAPL_POWER_UNIT 0x00000606 /* RAPL unit multipliers */
-#define X86_MSR_PKG_POWER_LIMIT 0x00000610 /* Package power limits */
-#define X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP (1 << 16)
-#define X86_MSR_PKG_POWER_LIMIT_PL1_ENABLE (1 << 15)
+#define X86_MSR_POWER_CTL 0x000001fc               /* Power Control Register */
+#define X86_MSR_RAPL_POWER_UNIT 0x00000606         /* RAPL unit multipliers */
+#define X86_MSR_PKG_POWER_LIMIT 0x00000610         /* Package power limits */
 #define X86_MSR_PKG_ENERGY_STATUS 0x00000611       /* Package energy status */
 #define X86_MSR_PKG_POWER_INFO 0x00000614          /* Package power range info */
 #define X86_MSR_DRAM_POWER_LIMIT 0x00000618        /* DRAM RAPL power limit control */
@@ -113,6 +111,7 @@
 #define X86_MSR_PP1_ENERGY_STATUS 0x00000641       /* PP1 energy status */
 #define X86_MSR_PLATFORM_ENERGY_COUNTER 0x0000064d /* Platform energy counter */
 #define X86_MSR_PPERF 0x0000064e                   /* Productive performance count */
+#define X86_MSR_PERF_LIMIT_REASONS 0x0000064f      /* Clipping cause register */
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
 #define X86_MSR_AMD_F10_DE_CFG 0xc0011029          /* AMD Family 10h+ decode config */
 #define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)
