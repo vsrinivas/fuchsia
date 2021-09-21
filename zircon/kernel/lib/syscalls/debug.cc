@@ -196,7 +196,7 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
     return ZX_ERR_INVALID_ARGS;
   }
 
-  ktrace_write_record(TAG_PROBE_24(event_id), ktrace_timestamp(), arg0, arg1);
+  KTRACE_STATE.WriteRecord(TAG_PROBE_24(event_id), ktrace_timestamp(), arg0, arg1);
   return ZX_OK;
 }
 

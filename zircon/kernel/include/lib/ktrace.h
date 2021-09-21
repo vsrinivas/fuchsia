@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 #define ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 
+#include <lib/ktrace/ktrace_internal.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <platform.h>
@@ -14,6 +15,9 @@
 #include <zircon/types.h>
 
 #include <ktl/atomic.h>
+
+// Declaration of the global singleton KTraceState
+extern internal::KTraceState KTRACE_STATE;
 
 // Specifies whether the trace applies to the current thread or cpu.
 enum class TraceContext {
@@ -56,29 +60,13 @@ inline constexpr uint64_t kRecordCurrentTimestamp = 0xffffffff'ffffffff;
 #define KTRACE_STRING_REF_CAT(a, b) a##b
 #define KTRACE_STRING_REF(string) KTRACE_STRING_REF_CAT(string, _stringref)
 
-// Mask of trace groups that should be traced. If 0, then all tracing is disabled.
-//
-// This value is frequently read and rarely modified.
-extern ktl::atomic<uint32_t> ktrace_grpmask;
-
 // Determine if ktrace is enabled for the given tag.
-inline bool ktrace_enabled(uint32_t tag) {
-  return (ktrace_grpmask.load(std::memory_order_relaxed) & tag) != 0;
-}
-
-// Write a record to the tracelog.
-//
-// |payload| must consist of all uint32_t or all uint64_t types.
-template <typename... Args>
-void ktrace_write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args);
-
-// Write a tiny ktrace record.
-void ktrace_write_record_tiny(uint32_t tag, uint32_t arg);
+inline bool ktrace_enabled(uint32_t tag) { return KTRACE_STATE.tag_enabled(tag); }
 
 // Emits a tiny trace record.
 inline void ktrace_tiny(uint32_t tag, uint32_t arg) {
   if (unlikely(ktrace_enabled(tag))) {
-    ktrace_write_record_tiny(tag, arg);
+    KTRACE_STATE.WriteRecordTiny(tag, arg);
   }
 }
 
@@ -94,7 +82,7 @@ inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag, ui
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, explicit_ts, a, b, c, d);
+    KTRACE_STATE.WriteRecord(effective_tag, explicit_ts, a, b, c, d);
   }
 }
 
@@ -123,7 +111,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
   }
 }
 
@@ -137,7 +125,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, a, b);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
   }
 }
 
@@ -151,7 +139,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, a);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a);
   }
 }
 
@@ -165,7 +153,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, a, b);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
   }
 }
 
@@ -179,7 +167,7 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context, u
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
   }
 }
 
@@ -194,7 +182,7 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context, uin
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
 
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
   }
 }
 
@@ -208,7 +196,7 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context, u
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, a, b);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
   }
 }
 
@@ -222,7 +210,7 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context, uin
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, a, b);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
   }
 }
 
@@ -236,7 +224,7 @@ inline void ktrace_flow_begin(TraceEnabled<enabled>, TraceContext context, uint3
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
   }
 }
 
@@ -250,7 +238,7 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
   }
 }
 
@@ -264,7 +252,7 @@ inline void ktrace_flow_step(TraceEnabled<enabled>, TraceContext context, uint32
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(effective_tag))) {
-    ktrace_write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
+    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
   }
 }
 
@@ -276,18 +264,25 @@ inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* str
   }
   const uint32_t tag = KTRACE_TAG_FLAGS(TAG_COUNTER(string_ref->GetId(), group), KTRACE_FLAGS_CPU);
   if (unlikely(ktrace_enabled(tag))) {
-    ktrace_write_record(tag, kRecordCurrentTimestamp, counter_id, static_cast<uint64_t>(value));
+    KTRACE_STATE.WriteRecord(tag, kRecordCurrentTimestamp, counter_id,
+                             static_cast<uint64_t>(value));
   }
 }
 
-void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
+inline void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
+                            bool always) {
+  KTRACE_STATE.WriteNameEtc(tag, id, arg, name, always);
+}
 
 inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
                         bool always = false) {
   ktrace_name_etc(tag, id, arg, name, always);
 }
 
-ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len);
+inline ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
+  return KTRACE_STATE.ReadUser(ptr, off, len);
+}
+
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 
 void ktrace_report_live_threads();
