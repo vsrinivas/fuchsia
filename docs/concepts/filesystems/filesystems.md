@@ -199,7 +199,8 @@ mountpoints exist elsewhere.
 There are a collection of filesystem operations that are considered related to
 "administration", including "unmounting the current filesystem", "querying for
 the underlying block device path", etc. These operations are defined by the
-DirectoryAdmin interface within [io.fidl](/sdk/fidl/fuchsia.io/io.fidl).
+DirectoryAdmin interface within
+[directory_admin.fidl](/sdk/fidl/fuchsia.io.admin/directory_admin.fidl).
 A connection to this interface allows access to "filesystem-wide" state, and is
 restricted by an access flag `ZX_FS_RIGHT_ADMIN`. This access right must be
 requested explicitly, and is not granted when requested on a connection lacking

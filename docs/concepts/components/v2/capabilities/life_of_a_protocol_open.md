@@ -271,7 +271,7 @@ with `use` declarations; it must use `BindChild()`.
 [cap-routing]: #the-open-triggers-capability-routing
 [channel]: /docs/reference/kernel_objects/channel.md
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
-[fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
+[fuchsia.io]: https://fuchsia.dev/reference/fidl/fuchsia.io
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory

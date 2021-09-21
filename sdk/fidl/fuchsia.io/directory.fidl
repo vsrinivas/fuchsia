@@ -1,0 +1,426 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io;
+
+using fuchsia.io2;
+using zx;
+
+/// Can read from target object.
+const OPEN_RIGHT_READABLE uint32 = 0x00000001;
+/// Can write to target object.
+const OPEN_RIGHT_WRITABLE uint32 = 0x00000002;
+/// Connection can mount/umount filesystem.
+const OPEN_RIGHT_ADMIN uint32 = 0x00000004;
+/// Connection can map target object executable.
+const OPEN_RIGHT_EXECUTABLE uint32 = 0x00000008;
+
+/// Create the object if it doesn't exist.
+const OPEN_FLAG_CREATE uint32 = 0x00010000;
+/// (with Create) Fail if the object already exists.
+const OPEN_FLAG_CREATE_IF_ABSENT uint32 = 0x00020000;
+/// Truncate the object before usage.
+const OPEN_FLAG_TRUNCATE uint32 = 0x00040000;
+/// Assert that the object to be opened is a directory.
+/// Return an error if the target object is not a directory.
+const OPEN_FLAG_DIRECTORY uint32 = 0x00080000;
+/// Seek to the end of the object before all writes.
+const OPEN_FLAG_APPEND uint32 = 0x00100000;
+/// If the object is a mount point, open the local directory.
+const OPEN_FLAG_NO_REMOTE uint32 = 0x00200000;
+/// Open a reference to the object, not the object itself.
+/// It is ONLY valid to pass the following flags together with `OPEN_FLAG_NODE_REFERENCE`:
+/// - `OPEN_FLAG_DIRECTORY`
+/// - `OPEN_FLAG_NOT_DIRECTORY`
+/// - `OPEN_FLAG_DESCRIBE`
+/// otherwise an error is returned.
+/// If an object is opened or cloned using this method, the resulting connection does not carry
+/// any permission flags.
+/// The resulting node allows a limited set of operations: `GetAttr`, `Clone`, `Close`, `Describe`,
+/// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
+const OPEN_FLAG_NODE_REFERENCE uint32 = 0x00400000;
+/// Binary OR of `OPEN_FLAG_DIRECTORY`, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
+/// `OPEN_FLAG_NODE_REFERENCE`. Flags used when opening a node reference must fall within this mask.
+const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 = 0x02c80000;
+/// Requests that an "OnOpen" event is sent to the interface request.
+/// The event will contain a non-null NodeInfo if the open/clone is successful.
+const OPEN_FLAG_DESCRIBE uint32 = 0x00800000;
+/// Specify this flag to request POSIX-compatibility with respect to execute and write permissions.
+/// This flag implies OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE.
+///
+/// Use of this flag is being deprecated, and should be replaced with a combination of
+/// OPEN_FLAG_POSIX_WRITABLE and/or OPEN_FLAG_POSIX_EXECUTABLE.
+const OPEN_FLAG_POSIX uint32 = 0x01000000;
+/// Specify this flag to request POSIX-compatibility with respect to write permission handling.
+/// Currently, it affects permission handling specifically during Open:
+/// - If the target path is a directory, the rights on the new connection expand to include
+///   `OPEN_RIGHT_WRITABLE` if and only if the current connection and all intermediate mount points
+///   are writable.
+/// - Otherwise, this flag is ignored. It is an access denied error to request more rights
+///   than those on the current connection, or any intermediate mount points.
+///
+/// If this flag is omitted, opening always uses the requested rights, failing the operation with
+/// access denied error if requested rights exceeds the rights attached to the current connection.
+///
+/// If the requesting connection is read-only and the requested rights are read-only, the flag
+/// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
+/// necessary to enforce hierarchical permissions across mount points, and should have no effect
+/// on the expected behavior for clients.
+const OPEN_FLAG_POSIX_WRITABLE uint32 = 0x08000000;
+/// Specify this flag to request POSIX-compatibility with respect to execute permission handling.
+/// Currently, it affects permission handling specifically during Open:
+/// - If the target path is a directory, the rights on the new connection expand to include
+///   `OPEN_RIGHT_EXECUTABLE` if and only if the current connection and all intermediate mount
+///   points are executable.
+/// - Otherwise, this flag is ignored. It is an access denied error to request more rights
+///   than those on the current connection, or any intermediate mount points.
+///
+/// If this flag is omitted, opening always uses the requested rights, failing the operation with
+/// access denied error if requested rights exceeds the rights attached to the current connection.
+///
+/// If the requesting connection is read-only and the requested rights are read-only, the flag
+/// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
+/// necessary to enforce hierarchical permissions across mount points, and should have no effect
+/// on the expected behavior for clients.
+const OPEN_FLAG_POSIX_EXECUTABLE uint32 = 0x10000000;
+/// Assert that the object to be opened is not a directory.
+/// Return an error if the target object is a directory.
+const OPEN_FLAG_NOT_DIRECTORY uint32 = 0x02000000;
+/// When used during clone, the new connection inherits the rights on the source connection,
+/// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
+/// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
+const CLONE_FLAG_SAME_RIGHTS uint32 = 0x04000000;
+
+/// Bits reserved for posix protections. Native fuchsia filesystems
+/// are not required to set bits contained within `MODE_PROTECTION_MASK`,
+/// but filesystems that wish to do so may refer to sys/stat.h for their
+/// definitions.
+const MODE_PROTECTION_MASK uint32 = 0x00FFF;
+/// Bits indicating node type. The canonical mechanism to check
+/// for a node type is to take 'mode', bitwise AND it with the
+/// `MODE_TYPE_MASK`, and check exact equality against a mode type.
+const MODE_TYPE_MASK uint32 = 0xFF000;
+const MODE_TYPE_DIRECTORY uint32 = 0x04000;
+const MODE_TYPE_BLOCK_DEVICE uint32 = 0x06000;
+const MODE_TYPE_FILE uint32 = 0x08000;
+const MODE_TYPE_SOCKET uint32 = 0x0C000;
+const MODE_TYPE_SERVICE uint32 = 0x10000;
+
+/// The maximum length, in bytes, of a filesystem string.
+// TODO(smklein): Update to 4095. +1 is for null-terminator, which shouldn't be
+// part of the FIDL length.
+const MAX_PATH uint64 = 4096;
+/// The maximum length, in bytes, of a single filesystem component.
+const MAX_FILENAME uint64 = 255;
+
+// Dirent type information associated with the results of ReadDirents.
+// The following values are aligned with the values from libc's "dirent.h" "DT_...".
+
+/// A dirent with an unknown type.
+const DIRENT_TYPE_UNKNOWN uint8 = 0;
+/// A dirent representing a directory object.
+const DIRENT_TYPE_DIRECTORY uint8 = 4;
+/// A dirent representing a block device object.
+const DIRENT_TYPE_BLOCK_DEVICE uint8 = 6;
+/// A dirent representing a file object.
+const DIRENT_TYPE_FILE uint8 = 8;
+/// A dirent representing a socket object.
+const DIRENT_TYPE_SOCKET uint8 = 12;
+/// A dirent representing a service object.
+const DIRENT_TYPE_SERVICE uint8 = 16;
+
+/// Nodes which do not have ino values should return this value
+/// from Readdir and GetAttr.
+const INO_UNKNOWN uint64 = 0xFFFFFFFFFFFFFFFF;
+
+/// Indicates the directory being watched has been deleted.
+const WATCH_EVENT_DELETED uint8 = 0;
+/// Indicates a node has been created (either new or moved) into a directory.
+const WATCH_EVENT_ADDED uint8 = 1;
+/// Identifies a node has been removed (either deleted or moved) from the directory.
+const WATCH_EVENT_REMOVED uint8 = 2;
+/// Identifies a node already existed in the directory when watching started.
+const WATCH_EVENT_EXISTING uint8 = 3;
+/// Identifies that no more `WATCH_EVENT_EXISTING` events will be sent.
+const WATCH_EVENT_IDLE uint8 = 4;
+
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_DELETED`.
+const WATCH_MASK_DELETED uint32 = 0x00000001;
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_ADDED`.
+const WATCH_MASK_ADDED uint32 = 0x00000002;
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_REMOVED`.
+const WATCH_MASK_REMOVED uint32 = 0x00000004;
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_EXISTING`.
+const WATCH_MASK_EXISTING uint32 = 0x00000008;
+/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_IDLE`.
+const WATCH_MASK_IDLE uint32 = 0x00000010;
+/// Used by `Directory.Watch`. Requests transmission of all watcher events.
+const WATCH_MASK_ALL uint32 = 0x0000001F;
+
+// TODO(fxbug.dev/7903): Unused.
+/// WatchedEvent describes events returned from a DirectoryWatcher.
+type WatchedEvent = struct {
+    event uint8;
+    len uint8;
+    name vector<uint8>:MAX_FILENAME;
+};
+
+// TODO(fxbug.dev/7903): Unused.
+/// DirectoryWatcher transmits messages from a filesystem server
+/// about events happening in the filesystem. Clients can register
+/// new watchers using the `Directory.Watch` method, where they can
+/// filter which events they want to receive notifications for.
+protocol DirectoryWatcher {
+    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
+    @selector("fuchsia.io1/DirectoryWatcher.OnEvent")
+    OnEvent(struct {
+        events vector<uint8>:MAX_BUF;
+    });
+};
+
+/// Directory defines a node which is capable of containing other Objects.
+protocol Directory {
+    compose Node;
+    compose fuchsia.io2.AdvisoryLocking;
+
+    /// Opens a new object relative to this directory object.
+    ///
+    /// `path` may contain multiple segments, separated by "/" characters, and should never be
+    /// empty; i.e. "" is an invalid path. A trailing slash implies OPEN_FLAG_DIRECTORY. Components
+    /// must not be empty (i.e. "foo//bar" is invalid). ".." is disallowed anywhere in the path. "."
+    /// is only allowed if the path is exactly ".", but not otherwise. A leading '/' is allowed (and
+    /// is treated the same way as if not present, i.e. "/foo/bar' and "foo/bar" are the same).
+    ///
+    /// `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
+    /// The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
+    /// on the `object` handle, indicating the type of object opened.
+    ///
+    /// If an unknown value is sent for flags the connection should be closed.
+    ///
+    /// `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
+    /// the `object` channel which will be connected to the opened entity.
+    ///
+    /// Rights are never increased. When you open a nested entity within a directory, you may only
+    /// request the same rights as what the directory connection already has, or a subset of those.
+    /// Exceeding those rights causes an access denied error to be transmitted in the
+    /// `OnOpen` event if applicable, and the `object` connection closed.
+    ///
+    /// The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
+    /// the `OPEN_FLAG_NODE_REFERENCE` flag.
+    ///
+    /// `mode` is only used if an object is created and indicates the type of object to be
+    /// created. An unsupported mode will cause the connection to be closed.
+    /// The mode type, if set, must always be consistent with the OPEN_FLAG_DIRECTORY and
+    /// OPEN_FLAG_NOT_DIRECTORY flags, even if an object is not being created. If an object is not
+    /// being created, `mode` is otherwise ignored. If an object is being created and the mode
+    /// type is not set, a directory will be created if OPEN_FLAG_DIRECTORY is set (explicitly or
+    /// implicitly), or otherwise a server chosen object type.
+    @selector("fuchsia.io1/Directory.Open")
+    Open(resource struct {
+        flags uint32;
+        mode uint32;
+        path string:MAX_PATH;
+        object server_end:Node;
+    });
+
+    /// Adds a new inotify filter for an object relative to this directory object.
+    ///
+    /// + 'filter` is a mask of different inotify events that need to be watched by the server
+    ///   for a specific file/directory.
+    ///
+    /// + `path` may contain multiple segments, separated by "/" characters,
+    ///   and should never be empty; i.e., "" is an invalid path. Paths should not contain
+    ///   a leading "/".
+    ///
+    /// +`watch_descriptor` is client assigned value to identify a filter.
+    ///   Server shouldn't trust the client-assigned watch_descriptor. They should just send it
+    ///   back to the client in the socket.
+    ///   This value is not used by server, but it is returned back as part of InotifyEvent,
+    ///   to help the client correlate filter with events on this filter.
+    ///
+    /// + `socket` is shared between different filter objects i.e every new filter will
+    ///   have a different server end of the socket and there will be a single client end per
+    ///   inotify instance on inotify init.
+    ///
+    @selector("fuchsia.io1/Directory.AddInotifyFilter")
+    AddInotifyFilter(resource struct {
+        path fuchsia.io2.Path;
+        filter fuchsia.io2.InotifyWatchMask;
+        watch_descriptor uint32;
+        socket zx.handle:SOCKET;
+    }) -> ();
+
+    /// Removes a child node from the this directory's list of entries.
+    ///
+    /// Note: this does not guarantee that the underlying object is destroyed.
+    /// Although the link will be removed from the containing directory,
+    /// objects with multiple references (such as files which are still open)
+    /// will not actually be destroyed until all references are closed.
+    ///
+    /// * error `ZX_ERR_ACCESS_DENIED` if the connection does not have
+    ///   [`Rights.WRITE_BYTES`].
+    /// * error `ZX_ERR_NOT_SUPPORTED` if the underlying filesystem does not
+    ///   support writing.
+    /// * error `ZX_ERR_BAD_PATH` if `name` is invalid.
+    /// * error `ZX_ERR_NOT_EMPTY` if `name` refers to a non-empty directory.
+    /// * error `ZX_ERR_UNAVAILABLE` if `name` refers to a mount point,
+    ///   containing a remote channel.
+    /// * error `ZX_ERR_NOT_DIR` if the options requested a directory but something other than a
+    ///     directory was found.
+    ///
+    /// Other errors may be returned for filesystem-specific reasons.
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    @selector("fuchsia.io/Directory.Unlink")
+    Unlink(struct {
+        name fuchsia.io2.Name;
+        options fuchsia.io2.UnlinkOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Reads a collection of variably sized dirents into a buffer.
+    /// The number of dirents in a directory may be very large: akin to
+    /// calling read multiple times on a file, directories have a seek
+    /// offset which is updated on subsequent calls to ReadDirents.
+    /// Each call to ReadDirents will only return whole dirent structures,
+    /// they will not get split across ReadDirent calls.
+    ///
+    /// These dirents are of the form:
+    /// ```
+    /// struct dirent {
+    ///   // Describes the inode of the entry.
+    ///   uint64 ino;
+    ///   // Describes the length of the dirent name in bytes.
+    ///   uint8 size;
+    ///   // Describes the type of the entry. Aligned with the
+    ///   // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+    ///   uint8 type;
+    ///   // Unterminated name of entry.
+    ///   char name[0];
+    /// }
+    /// ```
+    ///
+    /// This method does not require any rights, since one could always probe for
+    /// directory contents by triggering name conflicts during file creation.
+    // TODO(smklein): Convert to a vector of variable-length objects, when
+    // llcpp arrives.
+    // TODO(smklein): Get rid of "max_bytes".
+    // TODO(smklein): Document the behavior when the seek pointer reaches the end of the directory.
+    @selector("fuchsia.io1/Directory.ReadDirents")
+    ReadDirents(struct {
+        max_bytes uint64;
+    }) -> (struct {
+        s zx.status;
+        dirents vector<uint8>:MAX_BUF;
+    });
+
+    /// Resets the directory seek offset.
+    ///
+    /// This method does not require any rights, similar to ReadDirents.
+    @selector("fuchsia.io1/Directory.Rewind")
+    Rewind() -> (struct {
+        s zx.status;
+    });
+
+    /// Acquires a token to a Directory which can be used to identify
+    /// access to it at a later point in time.
+    ///
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/Directory.GetToken")
+    GetToken() -> (resource struct {
+        s zx.status;
+        token zx.handle:optional;
+    });
+
+    /// Renames an object named src to the name dst, in a directory represented by token.
+    ///
+    /// `src/dst` must be resolved object names. Including "/" in any position
+    /// other than the end of the string will return `ZX_ERR_INVALID_ARGS`.
+    /// Returning "/" at the end of either string implies that it must be a
+    /// directory, or else `ZX_ERR_NOT_DIR` should be returned.
+    ///
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
+    @transitional // Rename is being removed, use Rename2 instead.
+    @selector("fuchsia.io1/Directory.Rename")
+    Rename(resource struct {
+        src string:MAX_PATH;
+        dst_parent_token zx.handle;
+        dst string:MAX_PATH;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Renames a node named `src` to the name `dst`, in a directory represented
+    /// by `dst_parent_token`.
+    ///
+    /// `src` and `dst` must be valid node names.
+    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    ///
+    /// This method requires the following rights on both the current
+    /// connection, and the connection identified by `dst_parent_token`:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    @selector("fuchsia.io/Directory.Rename")
+    Rename2(resource struct {
+        src fuchsia.io2.Name;
+        dst_parent_token fuchsia.io2.Token;
+        dst fuchsia.io2.Name;
+    }) -> (struct {}) error zx.status;
+
+    /// Creates a link to an object named src by the name dst, within a directory represented by
+    /// token.
+    ///
+    /// `src` must be a resolved object name. Including "/" in the string will
+    /// return `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// `dst` must be a resolved object name. Including "/" in the string will
+    /// return `ZX_ERR_INVALID_ARGS`.
+    ///
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/Directory.Link")
+    Link(resource struct {
+        src string:MAX_FILENAME;
+        dst_parent_token zx.handle;
+        dst string:MAX_FILENAME;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    // TODO(smklein): When stablized, remove the "This API is unstable" comment
+    /// Watches a directory, receiving events of added messages on the
+    /// watcher request channel.
+    ///
+    /// The `watcher` handle will send messages of the form:
+    /// ```
+    /// struct {
+    ///   uint8 event;
+    ///   uint8 len;
+    ///   char name[];
+    /// };
+    /// ```
+    /// Where names are NOT null-terminated.
+    ///
+    /// This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
+    ///
+    /// Mask specifies a bitmask of events to observe.
+    /// Options must be zero; it is reserved.
+    ///
+    /// This method does not require any rights, similar to ReadDirents.
+    @selector("fuchsia.io1/Directory.Watch")
+    Watch(resource struct {
+        mask uint32;
+        options uint32;
+        watcher zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
+};

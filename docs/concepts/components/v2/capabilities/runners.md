@@ -196,5 +196,5 @@ route the runner capability so that it is available to launch other components.
 [program]: ../component_manifests.md#program
 [sdk-component-controller]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
-[sdk-directory]: /sdk/fidl/fuchsia.io/io.fidl
+[sdk-directory]: /sdk/fidl/fuchsia.io/directory.fidl
 [use]: ../component_manifests.md#use

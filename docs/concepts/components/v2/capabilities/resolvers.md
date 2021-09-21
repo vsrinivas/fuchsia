@@ -105,6 +105,6 @@ See [`environments`][environment].
 [`fuchsia.sys2.ComponentResolver`]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
 [`ComponentDecl`]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [component-manifest]: ../component_manifests.md
-[`fuchsia.io.Directory`]: /sdk/fidl/fuchsia.io/io.fidl
+[`fuchsia.io.Directory`]: /sdk/fidl/fuchsia.io/directory.fidl
 [`protocol`]: protocol.md
 [routing]: ../component_manifests.md#capability-routing

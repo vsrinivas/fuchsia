@@ -11,8 +11,10 @@ fidl("fuchsia.io") {
   sources = [
     "connection-info.fidl",
     "connection-options.fidl",
-    "io.fidl",
+    "directory.fidl",
+    "file.fidl",
     "node-attributes.fidl",
+    "node.fidl",
     "rights-abilities.fidl",
   ]
 

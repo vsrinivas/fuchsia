@@ -1,0 +1,313 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io;
+
+using zx;
+
+/// Connection information.
+///
+/// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
+type NodeInfo = strict resource union {
+    /// No protocol information was supplied by the connection.
+    1: service @generated_name("Service") struct {};
+
+    /// The connection composes [`File`].
+    2: file @generated_name("FileObject") resource struct {
+        /// An optional event which transmits information about an object's readability
+        /// or writability. This event relays information about the underlying object, not
+        /// the capability granted to client: this event may be signalled "readable" on a
+        /// connection that does not have the capability to read.
+        ///
+        /// The "`FILE_SIGNAL_`" values may be observed on this event.
+        event zx.handle:<EVENT, optional>;
+
+        /// A placeholder for future stream support.
+        ///
+        /// Currently, servers are required not to send a handle in this field.
+        stream zx.handle:<STREAM, optional>;
+    };
+
+    /// The connection composes [`Directory`].
+    3: directory @generated_name("DirectoryObject") struct {};
+    4: pipe @generated_name("Pipe") resource struct {
+        socket zx.handle:SOCKET;
+    };
+
+    /// The connection composes [`File`]. Its implementation is backed by a VMO.
+    5: vmofile @generated_name("Vmofile") resource struct {
+        /// The VMO which backs this file.
+        vmo zx.handle:VMO;
+        /// The index into `vmo` which represents the first byte of the file.
+        offset uint64;
+        /// The number of bytes, starting at `offset`, which may be used to represent this file.
+        length uint64;
+    };
+    6: device @generated_name("Device") resource struct {
+        /// An optional event which transmits information about a device's state.
+        ///
+        /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
+        event zx.handle:<EVENTPAIR, optional>;
+    };
+    7: tty @generated_name("Tty") resource struct {
+        event zx.handle:<EVENTPAIR, optional>;
+    };
+
+    8: reserved;
+
+    /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
+    9: datagram_socket @generated_name("DatagramSocket") resource struct {
+        /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
+        event zx.handle:EVENTPAIR;
+    };
+
+    /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
+   10: stream_socket @generated_name("StreamSocket") resource struct {
+        socket zx.handle:SOCKET;
+    };
+
+    /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
+   11: raw_socket @generated_name("RawSocket") resource struct {
+        /// See [`fuchsia.posix.socket.raw.Socket`] for details.
+        event zx.handle:EVENTPAIR;
+    };
+};
+
+/// The fields of 'attributes' which are used to update the Node are indicated
+/// by the 'flags' argument.
+const NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 = 0x00000001;
+const NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 = 0x00000002;
+
+/// NodeAttributes defines generic information about a filesystem node.
+type NodeAttributes = struct {
+    /// Protection bits and node type information describe in 'mode'.
+    mode uint32;
+    /// A filesystem-unique ID.
+    id uint64;
+    /// Node size, in bytes.
+    content_size uint64;
+    /// Space needed to store node (possibly larger than size), in bytes.
+    storage_size uint64;
+    /// Hard link count.
+    link_count uint64;
+    /// Time of creation (may be updated manually after creation) in ns since Unix epoch, UTC.
+    creation_time uint64;
+    /// Time of last modification in ns since Unix epoch, UTC.
+    modification_time uint64;
+};
+
+/// Node defines the minimal interface for entities which can be accessed in a filesystem.
+protocol Node {
+    /// This message should never be sent or received.
+    ///
+    /// This declaration exists to let keep the Rust bindings compiling as we add and remove
+    /// transitional elements from the fuchsia.io protocols. Without this declaration, the
+    /// users of the Rust bindings fail to compile when there aren't any transitional protocol
+    /// elements.
+    @transitional
+    @deprecated
+    @selector("fuchsia.io1/Node.IoToIo2Placeholder")
+    IoToIo2Placeholder();
+
+    /// Create another connection to the same remote object.
+    ///
+    /// `flags` may be any of:
+    ///
+    /// - `OPEN_RIGHT_*`
+    /// - `OPEN_FLAG_APPEND`
+    /// - `OPEN_FLAG_NO_REMOTE`
+    /// - `OPEN_FLAG_DESCRIBE`
+    /// - `CLONE_FLAG_SAME_RIGHTS`
+    ///
+    /// All other flags are ignored.
+    ///
+    /// The `OPEN_RIGHT_*` bits in `flags` request corresponding rights over the resulting
+    /// cloned object.
+    /// The cloned object must have rights less than or equal to the original object, otherwise
+    /// returns `ZX_ERR_ACCESS_DENIED`.
+    /// Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
+    /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
+    /// `CLONE_FLAG_SAME_RIGHTS`.
+    @selector("fuchsia.io1/Node.Clone")
+    Clone(resource struct {
+        flags uint32;
+        object server_end:Node;
+    });
+
+    /// Creates another connection to the same node.
+    ///
+    /// + `options` options applicable to both `Open` and `Reopen`,
+    ///   including negotiating protocol and restricting rights.
+    ///   See [`fuchsia.io2/ConnectionOptions`].
+    /// + `object_request` is the server end of a channel created for the new
+    ///   connection. The caller may proceed to send messages on the
+    ///   corresponding client end right away.
+    ///
+    /// For files, the cloned connection and the original connection have
+    /// independent seek offsets.
+    @transitional
+    @selector("fuchsia.io/Node.Reopen")
+    Reopen(resource struct {
+        options ConnectionOptions;
+        object_request zx.handle:CHANNEL;
+    });
+
+    /// Terminates connection with object.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io1/Node.Close")
+    Close() -> (struct {
+        s zx.status;
+    });
+
+    /// Terminates connection with object.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io/Node.Close")
+    Close2() -> (struct {}) error zx.status;
+
+    /// Returns extra information about the type of the object.
+    /// If the `Describe` operation fails, the connection is closed.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io1/Node.Describe")
+    Describe() -> (resource struct {
+        info NodeInfo;
+    });
+
+    /// Returns extra connection information and auxiliary handles.
+    ///
+    /// + `query` specifies the fields in `ConnectionInfo` that the caller is
+    ///   interested in.
+    /// - `info` see [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    ///
+    /// When all known bits in `query` are set, the return value matches
+    /// the one from [`OnConnectionInfo`], as if the caller requested that event
+    /// using [`ConnectionFlags.GET_CONNECTION_INFO`].
+    ///
+    /// If the `Describe` operation fails, the connection is closed with the
+    /// associated error.
+    ///
+    /// This method does not require any rights.
+    @transitional
+    @selector("fuchsia.io/Node.Describe")
+    Describe2(struct {
+        query ConnectionInfoQuery;
+    }) -> (resource struct {
+        info ConnectionInfo;
+    });
+
+    /// An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
+    ///
+    /// Indicates the success or failure of the open operation, and optionally describes the
+    /// object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    /// (the same as would be returned by `Describe`).
+    @selector("fuchsia.io1/Node.OnOpen")
+    -> OnOpen(resource struct {
+        s zx.status;
+        info NodeInfo:optional;
+    });
+
+    // TODO: Add OnConnectionInfo from fuchsia.io2.
+
+    /// Synchronizes updates to the node to the underlying media, if it exists.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io1/Node.Sync")
+    Sync() -> (struct {
+        s zx.status;
+    });
+
+    /// Synchronizes updates to the node to the underlying media, if it exists.
+    ///
+    /// This method will return when the filesystem server has flushed the
+    /// relevant updates to the underlying media, but does not guarantee the
+    /// underlying media has persisted the information, nor that any information
+    /// is committed to hardware. Clients may use `Sync` to ensure ordering
+    /// between operations.
+    ///
+    /// This method does not require any rights.
+    @transitional
+    @selector("fuchsia.io/Node.Sync")
+    Sync2() -> (struct {}) error zx.status;
+
+    /// Acquires information about the node.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io1/Node.GetAttr")
+    GetAttr() -> (struct {
+        s zx.status;
+        attributes NodeAttributes;
+    });
+
+    /// Acquires information about the node.
+    ///
+    /// The attributes of a node should be stable, independent of the
+    /// specific protocol used to access it.
+    ///
+    /// + `query` a bit-mask specifying which attributes to fetch. The server
+    ///   should not return more than necessary.
+    /// - `attributes` the returned attributes.
+    ///
+    /// This method requires the [`Rights.GET_ATTRIBUTES`] right.
+    @transitional
+    @selector("fuchsia.io/Node.GetAttributes")
+    GetAttributes(struct {
+        query NodeAttributesQuery;
+    }) -> (struct {
+        attributes NodeAttributes2;
+    }) error zx.status;
+
+    /// Updates information about the node.
+    /// `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
+    ///
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
+    @selector("fuchsia.io1/Node.SetAttr")
+    SetAttr(struct {
+        flags uint32;
+        attributes NodeAttributes;
+    }) -> (struct {
+        s zx.status;
+    });
+
+    /// Updates information about the node.
+    ///
+    /// + `attributes` the presence of a table field in `attributes` indicates
+    /// the intent to update the corresponding attribute.
+    ///
+    /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
+    @transitional
+    @selector("fuchsia.io/Node.UpdateAttributes")
+    UpdateAttributes(struct {
+        attributes NodeAttributes2;
+    }) -> (struct {}) error zx.status;
+
+    /// Acquires the `Directory.Open` rights and flags used to access this file.
+    ///
+    /// This method does not require any rights.
+    /// This method has the same functionality as GetFlags for File and is
+    /// meant as an in-progress replacement.
+    @transitional
+    @selector("fuchsia.io1/Node.NodeGetFlags")
+    NodeGetFlags() -> (struct {
+        s zx.status;
+        flags uint32;
+    });
+
+    /// Changes the `Directory.Open` flags used to access the file.
+    /// Supported flags which can be turned on / off:
+    /// - `OPEN_FLAG_APPEND`
+    ///
+    /// This method does not require any rights.
+    /// This method has the same functionality as SetFlags for File and is
+    /// meant as an in-progress replacement.
+    @transitional
+    @selector("fuchsia.io1/Node.NodeSetFlags")
+    NodeSetFlags(struct {
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+};

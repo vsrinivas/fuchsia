@@ -93,7 +93,7 @@ an unintended behavior). Additionally, if this protocol allowed the client to
 have arbitrary control over the server, this communication layer would be ripe
 for exploitation.
 
-The [FIDL IO protocol](/sdk/fidl/fuchsia.io/io.fidl)
+The [FIDL IO protocol](https://fuchsia.dev/reference/fidl/fuchsia.io)
 describes the wire-format of what these bytes and handles should actually mean
 when transmitted between two entities. The protocol describes things like
 “expected number of handles”, “enumerated operation”, and “data”. In our case,
