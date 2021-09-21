@@ -84,8 +84,11 @@ const char Config::kUseDefaultLoader[] = "use-default-loader";
 // Wait for data before launching pkgfs.
 const char Config::kWaitForData[] = "wait-for-data";
 
-// Use Fxfs instead of Minfs for the data partition.
-const char Config::kUseFxfs[] = "use-fxfs";
+// Use the given binary as the filesystem for the data partition.
+const char Config::kDataFilesystemBinaryPath[] = "data-filesystem-binary-path";
+
+// If set, the data filesystem needs crypt support.
+const char Config::kDataFilesystemUsesCrypt[] = "data-filesystem-uses-crypt";
 
 // Allow legacy names for the data partition.
 const char Config::kAllowLegacyDataPartitionNames[] = "allow-legacy-data-partition-names";
@@ -143,6 +146,13 @@ uint64_t Config::ReadUint64OptionValue(std::string_view key, uint64_t default_va
   }
 
   return value;
+}
+
+std::string Config::ReadStringOptionValue(std::string_view key) const {
+  auto found = options_.find(key);
+  if (found == options_.end())
+    return {};
+  return found->second;
 }
 
 std::ostream& operator<<(std::ostream& stream, const Config::Options& options) {

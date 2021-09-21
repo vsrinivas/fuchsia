@@ -33,9 +33,10 @@ declare_args() {
   extract_minfs_metadata_on_corruption = false
 
   # This flag isn't stable yet, don't use it.
-  # Set to true to enable fxfs instead of minfs.  If set, any existing minfs partition will be
-  # migrated in-place to fxfs when fshost mounts it.
+  # Set to true to enable fxfs/f2fs instead of minfs.  If set, any existing minfs partition will be
+  # migrated in-place to fxfs/f2fs when fshost mounts it.
   unstable_feature_use_fxfs = false
+  unstable_feature_use_f2fs = false
 
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = true
@@ -232,6 +233,8 @@ source_set("block-watcher") {
 
   if (unstable_feature_use_fxfs) {
     deps += [ "//src/storage/fxfs" ]
+  } else if (unstable_feature_use_f2fs) {
+    deps += [ "//src/storage/bin/f2fs" ]
   }
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -581,7 +584,12 @@ template("fshost_config") {
     }
 
     if (invoker.unstable_feature_use_fxfs) {
-      contents += [ "use-fxfs" ]
+      contents += [
+        "data-filesystem-binary-path=/pkg/bin/fxfs",
+        "data-filesystem-uses-crypt",
+      ]
+    } else if (invoker.unstable_feature_use_f2fs) {
+      contents += [ "data-filesystem-binary-path=/pkg/bin/f2fs" ]
     }
 
     if (defined(invoker.check_filesystems) && invoker.check_filesystems) {

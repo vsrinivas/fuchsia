@@ -57,8 +57,8 @@ class BlockDevice : public BlockDeviceInterface {
   const std::string& topological_path() const override { return topological_path_; }
   const std::string& partition_name() const override;
   zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
-  zx_status_t CheckFxfs() const;
-  zx_status_t FormatFxfs() const;
+  zx_status_t CheckCustomFilesystem(const std::string& binary_path) const;
+  zx_status_t FormatCustomFilesystem(const std::string& binary_path) const;
 
  private:
   FilesystemMounter* mounter_ = nullptr;

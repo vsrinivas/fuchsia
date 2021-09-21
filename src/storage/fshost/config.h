@@ -46,7 +46,8 @@ struct Config {
   static const char kUseDefaultLoader[];
   static const char kUseSyslog[];
   static const char kWaitForData[];
-  static const char kUseFxfs[];
+  static const char kDataFilesystemBinaryPath[];
+  static const char kDataFilesystemUsesCrypt[];
   static const char kAllowLegacyDataPartitionNames[];
   static const char kNand[];
 
@@ -73,6 +74,9 @@ struct Config {
 
   // Reads the given named option, defaulting to the given value if not found.
   uint64_t ReadUint64OptionValue(std::string_view key, uint64_t default_value) const;
+
+  // Reads the string option, defaulting to "" if not found.
+  std::string ReadStringOptionValue(std::string_view key) const;
 
  private:
   friend std::ostream& operator<<(std::ostream& stream, const Config& config);

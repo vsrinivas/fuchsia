@@ -110,22 +110,18 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOp
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  const char* binary_path;
-  fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
-  if (config_.is_set(Config::kUseFxfs)) {
-    if (auto crypt_client_or = GetCryptClient(); crypt_client_or.is_error()) {
-      return crypt_client_or.error_value();
-    } else {
-      crypt_client = *std::move(crypt_client_or);
-    }
-    binary_path = "/pkg/bin/fxfs";
-  } else {
+  std::string binary_path = config_.ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+  if (binary_path.empty())
     binary_path = "/pkg/bin/minfs";
-  }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kData, binary_path, options,
-                                   std::move(block_device), FS_SVC, std::move(crypt_client));
-  if (ret.is_error()) {
+  auto crypt_client_or = GetCryptClient();
+  if (crypt_client_or.is_error())
+    return crypt_client_or.error_value();
+
+  if (zx::status ret =
+          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
+                          std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
+      ret.is_error()) {
     return ret.error_value();
   }
 
@@ -242,6 +238,8 @@ void FilesystemMounter::TryMountPkgfs() {
 }
 
 zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {
+  if (!config_.is_set(Config::kDataFilesystemUsesCrypt))
+    return zx::ok(fidl::ClientEnd<fuchsia_fxfs::Crypt>());
   auto crypt_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::Crypt>();
   if (crypt_endpoints_or.is_error())
     return zx::error(crypt_endpoints_or.status_value());

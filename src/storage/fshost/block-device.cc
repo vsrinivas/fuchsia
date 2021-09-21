@@ -197,14 +197,23 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
 
 // Unmounts the filesystem using fuchsia.fs (rather than DirectoryAdmin).
 void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
-  auto client_end_or = service::ConnectAt<fuchsia_fs::Admin>(export_root);
-  if (client_end_or.is_error()) {
-    FX_LOGS(ERROR) << "Unmount failed";
+  auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
+  if (admin_or.is_error()) {
+    FX_LOGS(ERROR) << "Unable to create fs.Admin endpoints";
+    return;
+  }
+  if (zx_status_t status = fdio_service_connect_at(
+          export_root.channel().get(), fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Admin>,
+          std::move(admin_or->server).channel().release());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to connect to fs.Admin";
     return;
   }
 
   // Ignore errors; there's nothing we can do.
-  fidl::WireCall(*client_end_or).Shutdown();
+  auto resp = fidl::WireCall(admin_or->client).Shutdown();
+  if (resp.status() != ZX_OK)
+    FX_LOGS(ERROR) << "Unmount failed: " << resp.status();
 }
 
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
@@ -516,9 +525,10 @@ zx_status_t BlockDevice::CheckFilesystem() {
       });
       FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " started";
 
-      if (device_config_->is_set(Config::kUseFxfs)) {
-        FX_LOGS(INFO) << "Using fxfs";
-        status = CheckFxfs();
+      if (device_config_->is_set(Config::kDataFilesystemBinaryPath)) {
+        FX_LOGS(INFO) << "Using "
+                      << device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+        status = CheckFilesystem();
       } else {
         uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
         std::unique_ptr<block_client::BlockDevice> device;
@@ -579,11 +589,13 @@ zx_status_t BlockDevice::FormatFilesystem() {
       return ZX_ERR_NOT_SUPPORTED;
     }
     case DISK_FORMAT_MINFS: {
-      if (device_config_->is_set(Config::kUseFxfs)) {
-        FX_LOGS(INFO) << "Formatting fxfs";
-        status = FormatFxfs();
+      const auto binary_path =
+          device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
+      if (!binary_path.empty()) {
+        FX_LOGS(INFO) << "Formatting using " << binary_path;
+        status = FormatCustomFilesystem(binary_path);
         if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to format fxfs: " << zx_status_get_string(status);
+          FX_LOGS(ERROR) << "Failed to format: " << zx_status_get_string(status);
           return status;
         }
       } else {
@@ -791,9 +803,9 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
   return zx::ok(std::move(end_points_or->client));
 }
 
-zx_status_t BlockDevice::CheckFxfs() const {
+zx_status_t BlockDevice::CheckCustomFilesystem(const std::string& binary_path) const {
   fbl::Vector<const char*> argv;
-  argv.push_back("/pkg/bin/fxfs");
+  argv.push_back(binary_path.c_str());
   argv.push_back("fsck");
   argv.push_back(nullptr);
   auto device_or = GetDeviceEndPoint();
@@ -803,11 +815,11 @@ zx_status_t BlockDevice::CheckFxfs() const {
   auto crypt_client_or = mounter_->GetCryptClient();
   if (crypt_client_or.is_error())
     return crypt_client_or.error_value();
-  return RunBinary(argv, std::move(device_or).value(), {}, std::move(*crypt_client_or));
+  return RunBinary(argv, std::move(device_or).value(), {}, *std::move(crypt_client_or));
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
-zx_status_t BlockDevice::FormatFxfs() const {
+zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) const {
   // Try mounting minfs and slurp all existing data off.
   zx_handle_t handle;
   if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK)
@@ -919,14 +931,16 @@ zx_status_t BlockDevice::FormatFxfs() const {
     return status;
   }
 
-  fbl::Vector<const char*> argv = {"/pkg/bin/fxfs", "mkfs", nullptr};
+  fbl::Vector<const char*> argv = {binary_path.c_str(), "mkfs", nullptr};
+
   auto crypt_client_or = mounter_->GetCryptClient();
   crypt_client_or = mounter_->GetCryptClient();
   if (crypt_client_or.is_error())
     return crypt_client_or.error_value();
   if (zx_status_t status = RunBinary(argv, std::move(device), {}, *std::move(crypt_client_or));
-      status != ZX_OK)
+      status != ZX_OK) {
     return status;
+  }
 
   // Now mount and then copy all the data back.
   if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK) {
@@ -952,7 +966,7 @@ zx_status_t BlockDevice::FormatFxfs() const {
           RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server),
                     *std::move(crypt_client_or));
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to mount fxfs after format";
+    FX_LOGS(ERROR) << "Unable to mount after format";
     return status;
   }
 
