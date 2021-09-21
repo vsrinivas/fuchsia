@@ -1368,6 +1368,13 @@ debug issues.
 
 From //src/storage/fshost/BUILD.gn:29
 
+### fshost_watch_for_nand
+Make fshost watch for NAND devices.
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/BUILD.gn:44
+
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
 with TRACE level log statements that increase binary size a measurable amount.
