@@ -13,7 +13,6 @@
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
-#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
@@ -27,9 +26,7 @@ class ScreenshotBufferCollectionTest : public scenic_impl::gfx::test::VkSessionT
  public:
   void SetUp() override {
     VkSessionTest::SetUp();
-    std::shared_ptr<flatland::VkRenderer> renderer =
-        std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
-    importer_ = std::make_unique<ScreenshotBufferCollectionImporter>(renderer);
+    importer_ = std::make_unique<ScreenshotBufferCollectionImporter>(escher()->GetWeakPtr());
   }
 
  protected:

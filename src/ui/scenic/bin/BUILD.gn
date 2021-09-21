@@ -31,7 +31,6 @@ executable("bin") {
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
-    "//src/ui/scenic/lib/screenshot",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",
     "//src/ui/scenic/lib/view_tree:view_ref_installed",

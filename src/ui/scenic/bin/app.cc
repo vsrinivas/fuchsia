@@ -18,8 +18,6 @@
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
-#include "src/ui/scenic/lib/screenshot/screenshot.h"
-#include "src/ui/scenic/lib/screenshot/screenshot_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace {
@@ -417,11 +415,12 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
       [this](zx_koid_t view_ref_koid, fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser) {
         focus_manager_->RegisterViewFocuser(view_ref_koid, std::move(focuser));
       });
-  auto flatland_renderer = std::make_shared<flatland::VkRenderer>(escher_->GetWeakPtr());
 
   // Flatland compositor must be made first; it is needed by the manager and the engine.
   {
     TRACE_DURATION("gfx", "App::InitializeServices[flatland_display_compositor]");
+
+    auto flatland_renderer = std::make_shared<flatland::VkRenderer>(escher_->GetWeakPtr());
 
     flatland_compositor_ = std::make_shared<flatland::DisplayCompositor>(
         async_get_default_dispatcher(), display_manager_->default_display_controller(),
@@ -476,21 +475,16 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     }
   }
 
-  auto screenshot_buffer_collection_importer =
-      std::make_shared<screenshot::ScreenshotBufferCollectionImporter>(flatland_renderer);
-
   // Allocator service needs Flatland DisplayCompositor to act as a BufferCollectionImporter.
   {
-    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> default_importers;
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
-    default_importers.push_back(gfx_buffer_collection_importer);
-    screenshot_importers.push_back(screenshot_buffer_collection_importer);
-
+    importers.push_back(gfx_buffer_collection_importer);
     if (config_values_.enable_allocator_for_flatland && flatland_compositor_)
-      default_importers.push_back(flatland_compositor_);
+      importers.push_back(flatland_compositor_);
 
     allocator_ = std::make_shared<allocation::Allocator>(
-        app_context_.get(), default_importers, screenshot_importers,
+        app_context_.get(), importers, screenshot_importers,
         utils::CreateSysmemAllocatorSyncPtr("ScenicAllocator"));
   }
 
@@ -503,22 +497,6 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
     frame_renderer_ = std::make_shared<TemporaryFrameRendererDelegator>(flatland_manager_,
                                                                         flatland_engine_, engine_);
-  }
-
-  // Make ScreenshotManager.
-  {
-    TRACE_DURATION("gfx", "App::InitializeServices[screenshot_manager]");
-
-    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
-    importers.push_back(screenshot_buffer_collection_importer);
-
-    screenshot_manager_ = std::make_unique<screenshot::ScreenshotManager>(
-        flatland_engine_, flatland_renderer,
-        flatland_manager_->GetPrimaryFlatlandDisplayForRendering(), std::move(importers));
-
-    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
-        fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateClient);
-    // TODO (fxbug.dev/64652): AddPublicService()
   }
 }
 

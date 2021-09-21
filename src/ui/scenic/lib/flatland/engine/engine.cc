@@ -119,34 +119,4 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(const FlatlandDispla
   return topology_data.GenerateViewTreeSnapshot(display_width, display_height);
 }
 
-// TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread
-// safe.
-std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>
-Engine::GetRenderables(const FlatlandDisplay& display) {
-  const auto snapshot = uber_struct_system_->Snapshot();
-  const auto links = link_system_->GetResolvedTopologyLinks();
-  const auto link_system_id = link_system_->GetInstanceId();
-
-  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
-      snapshot, links, link_system_id, display.root_transform());
-  const auto global_matrices = flatland::ComputeGlobalMatrices(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto [image_indices, images] = flatland::ComputeGlobalImageData(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto global_clip_regions = ComputeGlobalTransformClipRegions(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
-
-  const auto image_rectangles = flatland::ComputeGlobalRectangles(
-      flatland::SelectAttribute(global_matrices, image_indices),
-      flatland::SelectAttribute(global_image_sample_regions, image_indices),
-      flatland::SelectAttribute(global_clip_regions, image_indices), images);
-
-  return std::make_pair(std::move(image_rectangles), std::move(images));
-}
-
 }  // namespace flatland

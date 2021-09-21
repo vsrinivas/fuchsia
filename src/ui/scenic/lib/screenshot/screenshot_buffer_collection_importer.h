@@ -7,11 +7,8 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 
-#include <unordered_set>
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
-#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -19,7 +16,7 @@ namespace screenshot {
 
 class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionImporter {
  public:
-  explicit ScreenshotBufferCollectionImporter(std::shared_ptr<flatland::VkRenderer> renderer);
+  explicit ScreenshotBufferCollectionImporter(escher::EscherWeakPtr escher);
   ~ScreenshotBufferCollectionImporter() override;
 
   // |BufferCollectionImporter|
@@ -38,13 +35,23 @@ class ScreenshotBufferCollectionImporter : public allocation::BufferCollectionIm
   void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
 
  private:
+  escher::ImagePtr ExtractImage(const allocation::ImageMetadata& metadata,
+                                vk::BufferCollectionFUCHSIAX collection, vk::ImageUsageFlags usage);
+
   // Dispatcher where this class runs on. Currently points to scenic main thread's dispatcher.
   async_dispatcher_t* dispatcher_;
 
-  std::shared_ptr<flatland::VkRenderer> renderer_;
+  // Escher gives us access to Vulkan.
+  escher::EscherWeakPtr escher_;
 
-  // Store all registered buffer collections.
-  std::unordered_set<allocation::GlobalBufferCollectionId> buffer_collection_infos_;
+  struct BufferCollectionInfo {
+    vk::BufferCollectionFUCHSIAX vk_buffer_collection;
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
+  };
+
+  // Store all registered buffer collections and their related information.
+  std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo>
+      buffer_collection_infos_;
 };
 
 }  // namespace screenshot

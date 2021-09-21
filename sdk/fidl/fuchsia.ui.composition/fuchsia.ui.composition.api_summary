@@ -14,11 +14,15 @@ protocol/member fuchsia.ui.composition/ChildViewWatcher.GetStatus() -> (fuchsia.
 protocol fuchsia.ui.composition/ChildViewWatcher
 struct/member fuchsia.ui.composition/ContentId.value uint64
 struct fuchsia.ui.composition/ContentId
+table/member fuchsia.ui.composition/CreateImageArgs.image_height uint32
 table/member fuchsia.ui.composition/CreateImageArgs.image_id uint64
+table/member fuchsia.ui.composition/CreateImageArgs.image_width uint32
 table/member fuchsia.ui.composition/CreateImageArgs.import_token fuchsia.ui.composition/BufferCollectionImportToken
-table/member fuchsia.ui.composition/CreateImageArgs.size fuchsia.math/SizeU
 table/member fuchsia.ui.composition/CreateImageArgs.vmo_index uint32
 resource table fuchsia.ui.composition/CreateImageArgs
+enum/member fuchsia.ui.composition/CreateImageError.BAD_OPERATION 2
+enum/member fuchsia.ui.composition/CreateImageError.MISSING_ARGS 1
+strict enum fuchsia.ui.composition/CreateImageError uint32
 protocol/member fuchsia.ui.composition/Flatland.AddChild(fuchsia.ui.composition/TransformId parent_transform_id,fuchsia.ui.composition/TransformId child_transform_id)
 protocol/member fuchsia.ui.composition/Flatland.Clear()
 protocol/member fuchsia.ui.composition/Flatland.CreateImage(fuchsia.ui.composition/ContentId image_id,fuchsia.ui.composition/BufferCollectionImportToken import_token,uint32 vmo_index,fuchsia.ui.composition/ImageProperties properties)
@@ -85,36 +89,12 @@ strict enum fuchsia.ui.composition/RegisterBufferCollectionError uint32
 enum/member fuchsia.ui.composition/RegisterBufferCollectionUsage.DEFAULT 0
 enum/member fuchsia.ui.composition/RegisterBufferCollectionUsage.SCREENSHOT 1
 strict enum fuchsia.ui.composition/RegisterBufferCollectionUsage uint32
-table/member fuchsia.ui.composition/RemoveImageArgs.image_id uint64
-resource table fuchsia.ui.composition/RemoveImageArgs
-enum/member fuchsia.ui.composition/Rotation.CW_0_DEGREES 0
-enum/member fuchsia.ui.composition/Rotation.CW_180_DEGREES 2
-enum/member fuchsia.ui.composition/Rotation.CW_270_DEGREES 3
-enum/member fuchsia.ui.composition/Rotation.CW_90_DEGREES 1
-strict enum fuchsia.ui.composition/Rotation uint32
 protocol/member fuchsia.ui.composition/Screenshot.CreateImage(fuchsia.ui.composition/CreateImageArgs args) -> (fuchsia.ui.composition/Screenshot_CreateImage_Result result)
-protocol/member fuchsia.ui.composition/Screenshot.RemoveImage(fuchsia.ui.composition/RemoveImageArgs args) -> (fuchsia.ui.composition/Screenshot_RemoveImage_Result result)
-protocol/member fuchsia.ui.composition/Screenshot.TakeScreenshot(fuchsia.ui.composition/TakeScreenshotArgs args) -> (fuchsia.ui.composition/Screenshot_TakeScreenshot_Result result)
 protocol fuchsia.ui.composition/Screenshot
-enum/member fuchsia.ui.composition/ScreenshotError.BAD_OPERATION 2
-enum/member fuchsia.ui.composition/ScreenshotError.MISSING_ARGS 1
-strict enum fuchsia.ui.composition/ScreenshotError uint32
 struct fuchsia.ui.composition/Screenshot_CreateImage_Response
-union/member fuchsia.ui.composition/Screenshot_CreateImage_Result.err fuchsia.ui.composition/ScreenshotError
+union/member fuchsia.ui.composition/Screenshot_CreateImage_Result.err fuchsia.ui.composition/CreateImageError
 union/member fuchsia.ui.composition/Screenshot_CreateImage_Result.response fuchsia.ui.composition/Screenshot_CreateImage_Response
 strict union fuchsia.ui.composition/Screenshot_CreateImage_Result
-struct fuchsia.ui.composition/Screenshot_RemoveImage_Response
-union/member fuchsia.ui.composition/Screenshot_RemoveImage_Result.err fuchsia.ui.composition/ScreenshotError
-union/member fuchsia.ui.composition/Screenshot_RemoveImage_Result.response fuchsia.ui.composition/Screenshot_RemoveImage_Response
-strict union fuchsia.ui.composition/Screenshot_RemoveImage_Result
-struct fuchsia.ui.composition/Screenshot_TakeScreenshot_Response
-union/member fuchsia.ui.composition/Screenshot_TakeScreenshot_Result.err fuchsia.ui.composition/ScreenshotError
-union/member fuchsia.ui.composition/Screenshot_TakeScreenshot_Result.response fuchsia.ui.composition/Screenshot_TakeScreenshot_Response
-strict union fuchsia.ui.composition/Screenshot_TakeScreenshot_Result
-table/member fuchsia.ui.composition/TakeScreenshotArgs.event zx/handle:EVENT
-table/member fuchsia.ui.composition/TakeScreenshotArgs.image_id uint64
-table/member fuchsia.ui.composition/TakeScreenshotArgs.rotation fuchsia.ui.composition/Rotation
-resource table fuchsia.ui.composition/TakeScreenshotArgs
 struct/member fuchsia.ui.composition/TransformId.value uint64
 struct fuchsia.ui.composition/TransformId
 table/member fuchsia.ui.composition/ViewBoundProtocols.mouse_source server_end:fuchsia.ui.pointer/MouseSource

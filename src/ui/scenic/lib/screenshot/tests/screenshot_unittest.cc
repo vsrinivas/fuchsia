@@ -7,8 +7,6 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <utility>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -20,7 +18,8 @@
 
 using allocation::BufferCollectionImporter;
 using fuchsia::ui::composition::CreateImageArgs;
-using fuchsia::ui::composition::ScreenshotError;
+using fuchsia::ui::composition::CreateImageError;
+using ::testing::_;
 using testing::_;
 
 namespace screenshot {
@@ -51,18 +50,11 @@ class ScreenshotTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
-std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>
-GetRenderables() {
-  return std::make_pair<const std::vector<Rectangle2D>&,
-                        const std::vector<allocation::ImageMetadata>&>({}, {});
-}
-
 TEST_F(ScreenshotTest, CreateImage_SingleImporter_Success) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
   std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
   screenshot_importers.push_back(buffer_collection_importer_);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
-                            &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -70,7 +62,8 @@ TEST_F(ScreenshotTest, CreateImage_SingleImporter_Success) {
   args.set_image_id(15122);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
       .WillRepeatedly(testing::Return(true));
@@ -89,8 +82,7 @@ TEST_F(ScreenshotTest, CreateImage_SingleImporter_Failure) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
   std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
   screenshot_importers.push_back(buffer_collection_importer_);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
-                            &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -98,19 +90,20 @@ TEST_F(ScreenshotTest, CreateImage_SingleImporter_Failure) {
   args.set_image_id(15122);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
       .WillRepeatedly(testing::Return(false));
 
-  ScreenshotError error;
+  CreateImageError error;
   sc.CreateImage(std::move(args),
                  [&error](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
                    EXPECT_TRUE(result.is_err());
                    error = result.err();
                  });
   RunLoopUntilIdle();
-  EXPECT_EQ(error, ScreenshotError::BAD_OPERATION);
+  EXPECT_EQ(error, CreateImageError::BAD_OPERATION);
 }
 
 TEST_F(ScreenshotTest, CreateImage_MultipleImporters_Success) {
@@ -123,8 +116,7 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_Success) {
 
   screenshot_importers.push_back(buffer_collection_importer_);
   screenshot_importers.push_back(buffer_collection_importer2);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
-                            &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -132,7 +124,8 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_Success) {
   args.set_image_id(15122);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
       .WillRepeatedly(testing::Return(true));
@@ -159,8 +152,7 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_ImportFailure) {
 
   screenshot_importers.push_back(buffer_collection_importer_);
   screenshot_importers.push_back(buffer_collection_importer2);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
-                            &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -168,7 +160,8 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_ImportFailure) {
   args.set_image_id(15122);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
       .WillRepeatedly(testing::Return(true));
@@ -177,29 +170,29 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_ImportFailure) {
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_));
 
-  ScreenshotError error;
+  CreateImageError error;
   sc.CreateImage(std::move(args),
                  [&error](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
                    EXPECT_TRUE(result.is_err());
                    error = result.err();
                  });
   RunLoopUntilIdle();
-  EXPECT_EQ(error, ScreenshotError::BAD_OPERATION);
+  EXPECT_EQ(error, CreateImageError::BAD_OPERATION);
 }
 
 TEST_F(ScreenshotTest, CreateImage_MissingArguments) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {});
   sc.CreateImage({}, [](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
     EXPECT_TRUE(result.is_err());
     auto error = result.err();
-    EXPECT_EQ(error, ScreenshotError::MISSING_ARGS);
+    EXPECT_EQ(error, CreateImageError::MISSING_ARGS);
   });
 }
 
 TEST_F(ScreenshotTest, CreateImage_InvalidID) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {});
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -207,21 +200,22 @@ TEST_F(ScreenshotTest, CreateImage_InvalidID) {
   args.set_image_id(0);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
-  ScreenshotError error;
+  CreateImageError error;
   sc.CreateImage(std::move(args),
                  [&error](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
                    EXPECT_TRUE(result.is_err());
                    error = result.err();
                  });
   RunLoopUntilIdle();
-  EXPECT_EQ(error, ScreenshotError::BAD_OPERATION);
+  EXPECT_EQ(error, CreateImageError::BAD_OPERATION);
 }
 
 TEST_F(ScreenshotTest, CreateImage_DuplicateID) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {});
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -229,7 +223,8 @@ TEST_F(ScreenshotTest, CreateImage_DuplicateID) {
   args.set_image_id(15410);
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_vmo_index(1);
-  args.set_size({1, 1});
+  args.set_image_height(1);
+  args.set_image_width(1);
 
   sc.CreateImage(std::move(args),
                  [](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
@@ -240,9 +235,10 @@ TEST_F(ScreenshotTest, CreateImage_DuplicateID) {
   args2.set_image_id(15410);
   args2.set_import_token(std::move(ref_pair.import_token));
   args2.set_vmo_index(1);
-  args2.set_size({1, 1});
+  args2.set_image_height(1);
+  args2.set_image_width(1);
 
-  ScreenshotError error;
+  CreateImageError error;
 
   sc.CreateImage(std::move(args),
                  [&error](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
@@ -250,7 +246,7 @@ TEST_F(ScreenshotTest, CreateImage_DuplicateID) {
                    error = result.err();
                  });
   RunLoopUntilIdle();
-  EXPECT_EQ(error, ScreenshotError::BAD_OPERATION);
+  EXPECT_EQ(error, CreateImageError::BAD_OPERATION);
 }
 
 }  // namespace test
