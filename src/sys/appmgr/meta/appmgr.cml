@@ -302,25 +302,10 @@
             path: "/svc_for_sys/fuchsia.net.name.Lookup",
         },
 
-        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
-        // this API in appmgr.
+        // TODO(https://fxbug.dev/82130): Remove once dhcpd-cli is an ffx plugin.
         {
             protocol: "fuchsia.net.dhcp.Server",
             path: "/svc_for_sys/fuchsia.net.dhcp.Server",
-        },
-
-        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
-        // this API in appmgr.
-        {
-            protocol: "fuchsia.net.neighbor.Controller",
-            path: "/svc_for_sys/fuchsia.net.neighbor.Controller",
-        },
-
-        // TODO(https://fxbug.dev/82633): Remove once net-cli no longer needs
-        // this API in appmgr.
-        {
-            protocol: "fuchsia.net.stack.Log",
-            path: "/svc_for_sys/fuchsia.net.stack.Log",
         },
         {
             protocol: "fuchsia.net.stack.Stack",

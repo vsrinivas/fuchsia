@@ -81,7 +81,6 @@ fuchsia_shell_package("net-cli") {
     ":bin",
     "//build/validate:non_production_tag",
   ]
-  manifest = "meta/net.cmx"
 }
 
 fuchsia_unittest_package("net-cli-tests") {

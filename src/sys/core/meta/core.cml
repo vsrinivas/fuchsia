@@ -286,19 +286,11 @@
         },
         {
             protocol: [
-                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
-                // needs this API in appmgr.
+                // TODO(https://fxbug.dev/82130): Remove once dhcpd-cli is an
+                // ffx plugin.
                 "fuchsia.net.dhcp.Server",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.NameLookup",
-
-                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
-                // needs this API in appmgr.
-                "fuchsia.net.neighbor.Controller",
-
-                // TODO(https://fxbug.dev/82633): Remove once net-cli no longer
-                // needs this API in appmgr.
-                "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
