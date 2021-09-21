@@ -9,7 +9,7 @@ group("tests") {
     "bt-a2dp-source-integration-tests:tests",
 
     # TODO(fxbug.dev/80164): Re-enable these tests once the test flakes have been fixed.
-    # "bt-avrcp-integration-tests:tests",
+    "bt-avrcp-integration-tests:tests",
     "bt-hfp-audio-gateway-integration-tests:tests",
     "bt-rfcomm-integration-tests:tests",
 
