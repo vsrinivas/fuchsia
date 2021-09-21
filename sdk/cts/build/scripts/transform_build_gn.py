@@ -14,6 +14,9 @@ _targets_to_remove = [
     "cts_source_library",
     "sdk_molecule",
     "action(\"update_test_manifest\")",
+    "cts_unstripped_binaries_file",
+    "action(\"fidl_mangled_to_api_mapping\")",
+    "link_output_rspfile",
 ]
 
 
