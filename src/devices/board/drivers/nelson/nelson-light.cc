@@ -98,9 +98,9 @@ static const pbus_dev_t light_dev = []() {
 zx_status_t Nelson::LightInit() {
   metadata::LightSensorParams params = {};
   // TODO(kpt): Insert the right parameters here.
-  params.integration_time_ms = 615;
+  params.integration_time_us = 711'680;
   params.gain = 16;
-  params.polling_time_ms = 100;
+  params.polling_time_us = 100'000;
   device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,

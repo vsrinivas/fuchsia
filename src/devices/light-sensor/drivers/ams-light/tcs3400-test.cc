@@ -76,7 +76,7 @@ class FakeLightSensor : public fake_i2c::FakeI2c {
       sync_completion_signal(&read_completion_);
     } else if (address == TCS_I2C_ENABLE) {
       enable_written_ = true;
-    } else if (address == TCS_I2C_CONTROL && enable_written_) {
+    } else if (address == TCS_I2C_ATIME && enable_written_) {
       enable_written_ = false;
       sync_completion_signal(&configuration_completion_);
     }
@@ -97,8 +97,8 @@ class Tcs3400Test : public zxtest::Test {
   void SetUp() override {
     constexpr metadata::LightSensorParams kLightSensorMetadata = {
         .gain = 16,
-        .integration_time_ms = 615,
-        .polling_time_ms = 0,
+        .integration_time_us = 615'000,
+        .polling_time_us = 0,
     };
 
     fake_parent_ = MockDevice::FakeRootParent();
@@ -125,7 +125,7 @@ class Tcs3400Test : public zxtest::Test {
 
     fake_i2c_.WaitForConfiguration();
 
-    EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ATIME), 0x00);
+    EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ATIME), 35);
     EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_CONTROL), 0x02);
   }
 
@@ -166,11 +166,14 @@ class Tcs3400Test : public zxtest::Test {
     ASSERT_TRUE(report.has_threshold_low());
     ASSERT_EQ(report.threshold_low().count(), 1);
 
+    ASSERT_TRUE(report.has_sampling_rate());
+
     out_report->report_interval_us = report.report_interval();
     out_report->reporting_state = report.reporting_state();
     out_report->sensitivity = report.sensitivity()[0];
     out_report->threshold_high = report.threshold_high()[0];
     out_report->threshold_low = report.threshold_low()[0];
+    out_report->integration_time_us = report.sampling_rate();
   }
 
   static auto SetFeatureReport(fidl::WireSyncClient<fuchsia_input_report::InputDevice>& client,
@@ -190,7 +193,8 @@ class Tcs3400Test : public zxtest::Test {
                                        .set_reporting_state(allocator, report.reporting_state)
                                        .set_sensitivity(allocator, sensitivity)
                                        .set_threshold_high(allocator, threshold_high)
-                                       .set_threshold_low(allocator, threshold_low);
+                                       .set_threshold_low(allocator, threshold_low)
+                                       .set_sampling_rate(allocator, report.integration_time_us);
 
     const auto set_report = fuchsia_input_report::wire::FeatureReport(allocator).set_sensor(
         allocator, set_sensor_report);
@@ -233,6 +237,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -270,6 +275,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -291,6 +297,7 @@ TEST_F(Tcs3400Test, GetInputReport) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -316,6 +323,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -392,6 +400,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -429,11 +438,14 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   const auto response = SetFeatureReport(client, kEnableThresholdEvents);
   ASSERT_TRUE(response.ok());
   EXPECT_FALSE(response->result.is_err());
+
+  fake_i2c_.WaitForConfiguration();
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
@@ -482,6 +494,7 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   const auto response = SetFeatureReport(client, kEnableThresholdEvents);
@@ -531,6 +544,7 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
       .sensitivity = 16,
       .threshold_high = 0x8000,
       .threshold_low = 0x1000,
+      .integration_time_us = 615'000,
   };
 
   {
@@ -658,6 +672,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
             fuchsia_input_report::wire::SensorReportingState::kReportAllEvents);
   EXPECT_EQ(report.threshold_high, 0xffff);
   EXPECT_EQ(report.threshold_low, 0x0000);
+  EXPECT_EQ(report.integration_time_us, 614'380);
 
   // These values are passed in through metadata.
   EXPECT_EQ(report.report_interval_us, 0);
@@ -670,6 +685,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   fake_i2c_.SetRegister(TCS_I2C_AIHTH, 0);
   fake_i2c_.SetRegister(TCS_I2C_PERS, 0);
   fake_i2c_.SetRegister(TCS_I2C_CONTROL, 0);
+  fake_i2c_.SetRegister(TCS_I2C_ATIME, 0);
 
   constexpr Tcs3400FeatureReport kNewFeatureReport = {
       .report_interval_us = 1'000,
@@ -677,6 +693,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
       .sensitivity = 64,
       .threshold_high = 0xabcd,
       .threshold_low = 0x1234,
+      .integration_time_us = 278'000,
   };
   const auto response = SetFeatureReport(client, kNewFeatureReport);
   ASSERT_TRUE(response.ok());
@@ -690,6 +707,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AIHTL), 0xcd);
   EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_AIHTH), 0xab);
   EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_CONTROL), 3);
+  EXPECT_EQ(fake_i2c_.GetRegister(TCS_I2C_ATIME), 156);
 
   ASSERT_NO_FATAL_FAILURES(GetFeatureReport(client, &report));
   EXPECT_EQ(report.report_interval_us, 1'000);
@@ -698,6 +716,7 @@ TEST_F(Tcs3400Test, FeatureReport) {
   EXPECT_EQ(report.sensitivity, 64);
   EXPECT_EQ(report.threshold_high, 0xabcd);
   EXPECT_EQ(report.threshold_low, 0x1234);
+  EXPECT_EQ(report.integration_time_us, 278'000);
 }
 
 TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
@@ -789,20 +808,20 @@ TEST_F(Tcs3400Test, SetInvalidFeatureReport) {
 class Tcs3400MetadataTest : public zxtest::Test {
  protected:
   void SetGainTest(uint8_t gain, uint8_t again_register) {
-    // integration_time_ms = 612 for atime = 0x01.
-    SetGainAndIntegrationTest(gain, 612, again_register, 0x01);
+    // integration_time_us = 612'000 for atime = 36.
+    SetGainAndIntegrationTest(gain, 612'000, again_register, 36);
   }
 
-  void SetIntegrationTest(uint32_t integration_time_ms, uint8_t atime_register) {
+  void SetIntegrationTest(uint32_t integration_time_us, uint8_t atime_register) {
     // gain = 1 for again = 0x00.
-    SetGainAndIntegrationTest(1, integration_time_ms, 0x00, atime_register);
+    SetGainAndIntegrationTest(1, integration_time_us, 0x00, atime_register);
   }
 
-  void SetGainAndIntegrationTest(uint8_t gain, uint32_t integration_time_ms, uint8_t again_register,
+  void SetGainAndIntegrationTest(uint8_t gain, uint32_t integration_time_us, uint8_t again_register,
                                  uint8_t atime_register) {
     const metadata::LightSensorParams metadata = {
         .gain = gain,
-        .integration_time_ms = integration_time_ms,
+        .integration_time_us = integration_time_us,
     };
 
     std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
@@ -851,11 +870,11 @@ TEST_F(Tcs3400MetadataTest, Gain) {
 }
 
 TEST_F(Tcs3400MetadataTest, IntegrationTime) {
-  SetIntegrationTest(616, 0x01);  // Invalid integration time sets atime = 1.
-  SetIntegrationTest(612, 0x01);
-  SetIntegrationTest(610, 0x02);
-  SetIntegrationTest(608, 0x03);
-  SetIntegrationTest(3, 0xFF);
+  SetIntegrationTest(750'000, 0x01);  // Invalid integration time sets atime = 1.
+  SetIntegrationTest(708'900, 0x01);
+  SetIntegrationTest(706'120, 0x02);
+  SetIntegrationTest(703'340, 0x03);
+  SetIntegrationTest(2'780, 0xFF);
 }
 
 TEST(Tcs3400Test, TooManyI2cErrors) {
@@ -863,7 +882,7 @@ TEST(Tcs3400Test, TooManyI2cErrors) {
 
   metadata::LightSensorParams parameters = {};
   parameters.gain = 64;
-  parameters.integration_time_ms = 612;  // For atime = 0x01.
+  parameters.integration_time_us = 708'900;  // For atime = 0x01.
 
   mock_i2c::MockI2c mock_i2c;
   mock_i2c

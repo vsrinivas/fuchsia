@@ -42,6 +42,7 @@ struct Tcs3400FeatureReport {
   int64_t sensitivity;
   int64_t threshold_high;
   int64_t threshold_low;
+  int64_t integration_time_us;
 
   fuchsia_input_report::wire::FeatureReport ToFidlFeatureReport(fidl::AnyArena& allocator) const;
 };

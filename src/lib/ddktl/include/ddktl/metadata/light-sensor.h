@@ -9,9 +9,9 @@ namespace metadata {
 
 struct LightSensorParams {
   uint8_t gain;
-  uint32_t integration_time_ms;
+  uint32_t integration_time_us;
   // The polling time in milliseconds. 0 is defined as no polling.
-  uint32_t polling_time_ms;
+  uint32_t polling_time_us;
 };
 
 }  // namespace metadata
