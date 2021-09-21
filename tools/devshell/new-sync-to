@@ -1,0 +1,495 @@
+#!/usr/bin/env python3
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(olivernewman): Delete the old version of `fx sync-to` and replace it with
+# this one once feature parity is reached.
+
+#### CATEGORY=Source tree
+### [EXPERIMENTAL] Sync the local Fuchsia source tree to a given state
+
+import argparse
+import enum
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
+from typing import Union
+
+HELP = """\
+## usage: fx new-sync-to [-h|--help] <STATE>
+##
+## THIS COMMAND IS EXPERIMENTAL. It's recommended to use the internal `fx
+## sync-to` command instead until this command reaches stability.
+##
+## To reproduce builds at a given repo state, or bisect bugs among a series of
+## checkins, this command synchronizes the local Fuchsia source tree to a given
+## state. The state can be specified in one of the following ways:
+##
+##  BUILD_ID: a large number like '8938070794014050064' (preceded or not by a
+##    'b' letter), which is the "Build #" in a builder's "Ended builds" page,
+##     for example:
+##       https://luci-milo.appspot.com/p/fuchsia/builders/try/core.x64-asan
+##
+##  RELEASE_TAG: a string like "releases/0.20190927.1.1", representing a
+##    git tag in the //integration repository. To find available tags, run
+##    `git tags -l` in your local integration repository.
+##
+##  BRANCH_NAME: a string like "refs/heads/releases/f1", representing a
+##    git branch (head) in the //integration repository.
+##
+##  JIRI_HISTORY_TIMESTAMP: a timestamp like "2019-03-21T15:30:00-07:00".
+##    This is local to your tree, and represents a moment where you
+##    previously ran `jiri update`. To find available timestamps, look at
+##    files in ${FUCHSIA_DIR}/.jiri_root/update_history/
+##
+##  INTEGRATION_GIT_COMMIT: a 3-40 character commit hash like "e9d97d1" in the
+##    integration repo. Can be optionally prefixed with 'git:' (e.g.
+##    "git:e9d97d1") to disambiguate from BUILD_ID. To find valid commits,
+##    look at your integration commit history:
+##       git -C ${FUCHSIA_DIR}/integration log --oneline
+##
+##  "reset":
+##    Use "reset" to return to the top of the tree. This is equivalent to:
+##      git -C ${FUCHSIA_DIR}/integration checkout JIRI_HEAD && jiri update -gc
+##
+## Known limitations:
+## - Does not work on CI builds triggered on repos other than integration (very
+##   rare). It works on all CQ builds and all CI builds triggered by
+##   integration.git commits.
+## - Does not respect `attributes`. Local attributes will not be overridden (so
+##   the checkout may contain some extra repositories), and
+##   attributes used by an infra build will not be reproduced
+##
+## Examples:
+##
+## # Sync to the source used by build https://ci.chromium.org/b/8835832080588336881
+## fx new-sync-to 8835832080588336881
+##
+## # Sync to the source tagged as release 0.20210822.2.5:
+## fx new-sync-to releases/0.20210822.2.5
+##
+## # Sync to the same tree updated in 2021-08-28T14:26:22-07:00 (this is
+## # local to your local tree - to reproduce, look for timestamps in your
+## # own .jiri_root/update_history directory):
+## fx new-sync-to 2021-08-28T14:26:22-07:00
+##
+## # Sync to integration commit 901ed5b
+## # (https://fuchsia.googlesource.com/integration/+/901ed5bf7db253bb6feb4832ac1a752248e2361d):
+## fx new-sync-to 901ed5b
+##
+## # Sync to release branch f1:
+## fx new-sync-to refs/heads/releases/f1
+##
+## # Restore your source to the top of the tree:
+## fx new-sync-to reset
+##
+"""
+
+# The name of the temporary integration.git branch that we'll use for checking
+# out an integration revision to sync to.
+TEMP_BRANCH_NAME = "_fx-sync-to"
+
+# Matches release branch names in the integration repository.
+RELEASE_BRANCH_REGEX = r"^refs/heads/([/0-9.A-Za-z]+)$"
+# Matches release tags in the integration repository.
+RELEASE_TAG_REGEX = r"^releases\/[0-9.A-Z]+$"
+# Matches a timestamp of the form that Jiri uses for names of snapshot files in
+# the .jiri_root/update_history dir.
+TIMESTAMP_REGEX = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+[-+][0-9:]+$"
+# Matches a git revision, with an optional "git:" prefix to distinguish an
+# all-digit revision from a LUCI build ID.
+GIT_REVISION_REGEX = r"^(git:)?[0-9a-z]{3,40}$"
+# Matches a LUCI build ID, with an optional leading "b" like is included in LUCI
+# build URLs.
+BUILD_ID_REGEX = r"^b?[0-9]+$"
+
+
+class Error(Exception):
+    """Raise this type to present a user-friendly error instead of a stacktrace.
+
+    By default, causes the program to return a nonzero return code. To cause the
+    program to emit a return code of zero, pass `fail=False`.
+    """
+
+    def __init__(self, msg: str, fail: bool = True):
+        self.msg = msg
+        self.fail = fail
+
+
+class Color(enum.Enum):
+    RESET = "\33[0m"
+    RED = "\33[31m"
+    GREEN = "\33[32m"
+    YELLOW = "\33[33m"
+
+
+def colorize(text: str, color: Color) -> str:
+    """Wrap `text` in terminal color directives.
+
+    The return value will show up as the given color when printed in a terminal.
+    """
+    return f"{color.value}{text}{Color.RESET.value}"
+
+
+class SyncToCommand:
+
+    def __init__(self, args: argparse.Namespace, fuchsia_dir: str):
+        self.fuchsia_dir = pathlib.Path(fuchsia_dir)
+        self.help: bool = args.help
+        self.state: str = args.state
+        self.dry_run: bool = args.dry_run
+
+    @property
+    def integration_dir(self) -> pathlib.Path:
+        return self.fuchsia_dir.joinpath("integration")
+
+    def run(self) -> None:
+        if self.help:
+            for line in HELP.splitlines():
+                print(line[3:])
+            return
+
+        if not self.state:
+            raise Error("A single positional argument is required.")
+
+        if self.state == "reset":
+            self.reset_checkout()
+        elif re.match(RELEASE_BRANCH_REGEX, self.state):
+            self.sync_to_release_branch()
+        elif re.match(RELEASE_TAG_REGEX, self.state):
+            self.sync_to_release_tag()
+        elif re.match(TIMESTAMP_REGEX, self.state):
+            self.sync_to_timestamp()
+        elif not self.state.startswith("git:") and re.match(BUILD_ID_REGEX,
+                                                            self.state):
+            self.sync_to_build_id()
+        # Git short SHA-1s can be any length up to 40, but assume at least three
+        # characters.
+        elif re.match(GIT_REVISION_REGEX, self.state):
+            self.sync_to_integration_commit()
+        else:
+            raise Error(
+                f"Unsupported state definition format: {self.state!r}.\n"
+                "Use -h for help.")
+
+    def reset_checkout(self) -> None:
+        """Sync all repos back to JIRI_HEAD."""
+        # TODO(olivernewman): Have `fx sync-to` create a snapshot of the
+        # checkout prior to syncing and have `reset` restore the exact contents
+        # of the old checkout instead of always going back to JIRI_HEAD.
+        print("Resetting the tree to the latest...")
+        self.confirm_ok_to_change_source_code()
+        print("Checking out integration repo for JIRI_HEAD")
+        self.run_command("git", "-C", "./integration", "checkout", "JIRI_HEAD")
+        print("Syncing the source tree")
+        self.jiri("runp", "git checkout JIRI_HEAD")
+        self.jiri("update", "-gc")
+
+    def sync_to_release_branch(self) -> None:
+        print(f"{self.state!r} looks like a branch name")
+        branch = "origin/" + remove_prefix(self.state, "refs/heads/")
+        if not self.is_valid_integration_rev(branch):
+            raise Error(
+                f"Invalid remote branch, is {self.state!r} a valid head in"
+                " an integration repo other than the one your source is using?\n\n"
+                "See valid branches by running:\n\n"
+                "  git -C ${FUCHSIA_DIR}/integration ls-remote --heads")
+        self.sync_to_integration_ref(branch)
+        self.print_synced_revision()
+
+    def sync_to_release_tag(self) -> None:
+        print(f"{self.state!r} looks like a release tag")
+        if not self.is_valid_integration_rev(self.state):
+            raise Error(
+                f"Invalid release tag, is {self.state!r} a tag from"
+                " an integration repo other than the one your source is using?\n\n"
+                "See valid tags by running:\n\n"
+                "  git -C ${FUCHSIA_DIR}/integration tag -l")
+        self.sync_to_integration_ref(f"tags/{self.state}")
+        self.print_synced_revision()
+
+    def sync_to_integration_commit(self) -> None:
+        print(f"{self.state!r} looks like an integration git commit")
+        revision = remove_prefix(self.state, "git:")
+        if not self.is_valid_integration_rev(revision):
+            raise Error(
+                f"Commit not found, is {self.state!r} a commit from a repo other"
+                "than your local integration repo?"
+                "See valid commits by running:\n"
+                "  git -C ${FUCHSIA_DIR}/integration log --oneline")
+        self.sync_to_integration_ref(revision)
+
+    def sync_to_timestamp(self) -> None:
+        """Sync the checkout based on a Jiri snapshot XML file from a past timestamp."""
+        print(f"{self.state!r} looks like a local Jiri update timestamp")
+        update_history_dir = self.fuchsia_dir.joinpath(
+            ".jiri_root", "update_history")
+        snapshot_file = update_history_dir.joinpath(self.state)
+        if not os.path.exists(snapshot_file):
+            raise Error(
+                "Invalid Jiri history timestamp. See valid options by running:\n"
+                f"  ls {update_history_dir}")
+        integration_remote = self.jiri(
+            "manifest",
+            "-element=integration",
+            "-template={{.Remote}}",
+            snapshot_file,
+            dry_run_safe=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        self.assert_correct_integration_repo(integration_remote)
+        self.confirm_ok_to_change_source_code()
+        print(f"Syncing to Jiri snapshot {str(snapshot_file)!r}")
+        self.jiri("update", "-local-manifest", "-gc", snapshot_file)
+
+    def sync_to_integration_ref(self, ref: str) -> None:
+        """Sync to a branch, tag, or revision of the integration repo."""
+        self.confirm_ok_to_change_source_code()
+        print(f"Checking out integration repo at {ref}")
+        self.run_command("git", "-C", self.integration_dir, "fetch", "origin")
+        self.run_command(
+            "git",
+            "-C",
+            self.integration_dir,
+            "checkout",
+            "-B",
+            TEMP_BRANCH_NAME,
+            ref,
+        )
+        try:
+            # Make sure all repos are on JIRI_HEAD, because jiri update will
+            # skip any that aren't on JIRI_HEAD.
+            self.jiri("runp", "git checkout JIRI_HEAD")
+            self.jiri("update", "-local-manifest", "-gc")
+        except subprocess.CalledProcessError:
+            print("Sync failed, restoring the integration repo to JIRI_HEAD")
+            self.run_command(
+                "git", "-C", self.integration_dir, "checkout", "JIRI_HEAD")
+            raise
+
+    def is_valid_integration_rev(self, rev: str) -> bool:
+        """Determine whether `rev` exists in the local integration repo."""
+        return (
+            self.run_command(
+                "git",
+                "-C",
+                self.integration_dir,
+                "rev-parse",
+                "--verify",
+                "-q",
+                rev,
+                check=False,
+                dry_run_safe=True,
+            ).returncode == 0)
+
+    def assert_correct_integration_repo(self, remote: str) -> None:
+        jiri_manifest = self.fuchsia_dir.joinpath(".jiri_manifest")
+        local_remote = self.jiri(
+            "manifest",
+            "-element=integration",
+            "-template={{.Remote}}",
+            jiri_manifest,
+            dry_run_safe=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        if local_remote != remote:
+            raise Error(
+                f"Integration remote {remote!r} does not match"
+                f" local checkout remote {local_remote!r}")
+
+    def assert_correct_integration_manifest(self, manifest: str) -> None:
+        jiri_manifest = self.fuchsia_dir.joinpath(".jiri_manifest")
+        local_manifest = self.jiri(
+            "manifest",
+            "-element=integration",
+            "-template={{.Manifest}}",
+            jiri_manifest,
+            dry_run_safe=True,
+            stdout=subprocess.PIPE,
+        ).stdout.strip()
+        if local_manifest != manifest:
+            raise Error(
+                f"Manifest {manifest!r} does not match local manifest {local_manifest!r}"
+            )
+
+    def sync_to_build_id(self) -> None:
+        """Sync to the checkout version used by an infra build."""
+        print(f"{self.state!r} looks like a build ID")
+        build_id = remove_prefix(self.state, "b")
+        print(
+            f"Syncing to state used by build https://ci.chromium.org/b/{build_id}"
+        )
+        bb = self.fuchsia_dir.joinpath("prebuilt", "tools", "buildbucket", "bb")
+        proc = self.run_command(
+            bb,
+            "auth-info",
+            dry_run_safe=True,
+            check=False,
+            # Silence stdout to avoid printing the auth info. We
+            # only care whether the command passes or fails.
+            stdout=subprocess.DEVNULL)
+        if proc.returncode:
+            print("Please login to Buildbucket first.")
+            self.run_command(bb, "auth-login")
+
+        proc = self.run_command(
+            bb,
+            "get",
+            build_id,
+            "-json",
+            "--fields",
+            "status,builder,output.properties",
+            dry_run_safe=True,
+            capture_output=True,
+        )
+        build = json.loads(proc.stdout)
+        checkout_info = build["output"]["properties"].get("checkout_info")
+        if not checkout_info:
+            # TODO(olivernewman): If checkout_info is not available, fall back
+            # to legacy behavior of downloading a snapshot from GCS
+            raise Error("Build did not emit checkout info")
+        integration_remote = checkout_info["manifest_remote"]
+        self.assert_correct_integration_repo(integration_remote)
+        manifest = checkout_info["manifest"]
+        self.assert_correct_integration_manifest(manifest)
+
+        self.sync_to_integration_ref(checkout_info["base_manifest_revision"])
+        has_integration_patch = False
+        for patch in checkout_info.get("patches", []):
+            if patch["project"] == "integration":
+                has_integration_patch = True
+            self.jiri(
+                "patch",
+                # Delete the target branch if it exists.
+                "-delete",
+                "-host",
+                patch["host"],
+                "-project",
+                patch["project"],
+                patch["ref"],
+            )
+        # If we patched in a change to the integration repo, we have to `jiri
+        # update` again to make sure we respect any project/package pin updates.
+        if has_integration_patch:
+            self.jiri("update", "-local-manifest", "-rebase-tracked", "-gc")
+
+    def print_synced_revision(self) -> None:
+        if self.dry_run:
+            print(
+                "Dry-run: Fuchsia Platform tree not changed, currently synced to:"
+            )
+        else:
+            print("Success! Fuchsia Platform tree synced to:")
+        self.run_command(
+            "git",
+            "-C",
+            self.integration_dir,
+            "config",
+            "--get",
+            "remote.origin.url",
+            dry_run_safe=True,
+        )
+        self.run_command(
+            "git",
+            "-C",
+            self.integration_dir,
+            "--no-pager",
+            "show",
+            "--format=format:'  %h - (%ar) %s - %an %d'",
+            dry_run_safe=True,
+        )
+
+    def run_command(
+        self,
+        *args: Union[str, pathlib.Path],
+        dry_run_safe: bool = False,
+        check: bool = True,
+        **kwargs,
+    ) -> subprocess.CompletedProcess:
+        cmd = [str(a) for a in args]  # Convert any Path objects to strings.
+        if self.dry_run and not dry_run_safe:
+            print("Dry-run: %s" % colorize(" ".join(cmd), Color.GREEN))
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+        print("Running: %s" % colorize(" ".join(cmd), Color.YELLOW))
+        return subprocess.run(cmd, check=check, text=True, **kwargs)
+
+    def jiri(
+        self,
+        *args: Union[str, pathlib.Path],
+        **kwargs,
+    ) -> subprocess.CompletedProcess:
+        return self.run_command("jiri", *args, **kwargs)
+
+    def confirm_ok_to_change_source_code(self) -> None:
+        # Check if any repo has uncommitted changes and exit early if so,
+        # because we can't sync without discarding the uncommitted changes,
+        # which could be bad.
+        output = self.jiri(
+            "runp", "git diff-index --quiet HEAD",
+            capture_output=True).stdout or ""
+        output = output.strip()
+        if output:
+            repos = "\n".join(
+                "- " + remove_prefix(line, "FAILED: ").split("=")[0]
+                for line in output.splitlines())
+            raise Error(
+                "Cannot sync to a different version as the following projects"
+                f" have uncommitted changes:\n{repos}"
+                "\nCommit or discard these changes and try again.")
+
+        if self.dry_run:
+            print("Dry-run: nothing will be changed on your local repo.")
+        else:
+            while True:  # Loop until we get a valid input.
+                print(
+                    "I'm about to change the state of your source code."
+                    " No untracked changes will be discarded, but any"
+                    " repos not currently on JIRI_HEAD will not be"
+                    " automatically restored to their original revisions.")
+                yn = input("Are you sure you want to continue? (Y/n) ")
+                if yn.startswith(("y", "Y")):
+                    return
+                elif yn.startswith(("n", "N")):
+                    raise Error("Aborting.", fail=False)
+                else:
+                    print(colorize(f"Invalid choice: {yn!r}", Color.RED))
+
+
+def remove_prefix(s, prefix: str) -> str:
+    if s.startswith(prefix):
+        return s[len(prefix):]
+    return s
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true")
+    parser.add_argument("state", nargs="?", default="")
+    return parser.parse_args()
+
+
+def main() -> None:
+    fuchsia_dir = os.getenv("FUCHSIA_DIR")
+    if fuchsia_dir is None:
+        raise Error("FUCHSIA_DIR must be set")
+    os.chdir(fuchsia_dir)
+    args = parse_args()
+    SyncToCommand(args, fuchsia_dir).run()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Error as e:
+        if e.fail:
+            prefix = colorize("ERROR", Color.RED)
+            print(f"{prefix}: {e.msg}")
+            sys.exit(1)
+        else:
+            print(e.msg)
