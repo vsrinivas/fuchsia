@@ -6,6 +6,32 @@
 
 import("//build/zircon/migrated_targets.gni")
 
+source_set("crypto-entropy-src") {
+  sources = [ "entropy_pool.cc" ]
+  public = [ "include/lib/crypto/entropy_pool.h" ]
+  include_dirs = [ "include" ]
+  public_deps = [ "//zircon/kernel/lib/ktl" ]
+  deps = [
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/third_party/ulib/boringssl",
+  ]
+}
+
+source_set("crypto-entropy-test") {
+  sources = [ "entropy_pool_test.cc" ]
+  include_dirs = [ "include" ]
+  deps = [
+    ":crypto-entropy-src",
+    "//zircon/kernel/lib/unittest",
+  ]
+}
+
+zx_library("crypto-entropy") {
+  kernel = true
+  public_deps = [ ":crypto-entropy-src" ]
+  deps = [ ":crypto-entropy-test" ]
+}
+
 zx_library("crypto") {
   kernel = true
   sources = [
@@ -15,6 +41,7 @@ zx_library("crypto") {
     "prng_unittest.cc",
   ]
   deps = [
+    ":crypto-entropy",
     "entropy",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/fbl",
