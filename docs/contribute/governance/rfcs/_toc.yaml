@@ -263,3 +263,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0124_decentralized_product_integration_artifact_description_and_propagation.md
 - title: "RFC-0125: Shortlinks on Fuchsia.dev"
   path: /docs/contribute/governance/rfcs/0125_shortlink_fuchsia_dev.md
+- title: "RFC-0126: Driver Runtime"
+  path: /docs/contribute/governance/rfcs/0126_driver_runtime.md

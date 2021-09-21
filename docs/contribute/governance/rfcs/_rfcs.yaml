@@ -1629,3 +1629,16 @@
   reviewers: ['curtisgalloway@google.com', 'mkearney@google.com', 'tkilbourn@google.com']
   submitted: '2021-07-09'
   reviewed: '2021-09-01'
+
+- name: 'RFC-0126'
+  title: 'Driver Runtime'
+  short_description: 'Specification of new runtime for drivers to operate within.'
+  authors: ['surajmalhotra@google.com']
+  file: '0126_driver_runtime.md'
+  area: ['Devices']
+  issue: ['']
+  gerrit_change_id: ['564883']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'abdulla@google.com', 'ampearce@google.com', 'eieio@google.com', 'hansens@google.com', 'jamesr@google.com', 'jocelyndang@google.com', 'yifeit@google.com']
+  submitted: '2021-08-04'
+  reviewed: '2021-09-21'
