@@ -22,6 +22,7 @@
 #include "src/security/fcrypto/cipher.h"
 #include "src/security/fcrypto/secret.h"
 #include "src/security/kms-stateless/kms-stateless.h"
+#include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/tests/test-device.h"
 

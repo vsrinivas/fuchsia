@@ -26,7 +26,8 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/fcrypto/secret.h"
+#include "src/security/zxcrypt/client.h"
 
 namespace {
 

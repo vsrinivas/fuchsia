@@ -24,6 +24,7 @@ test("zxcrypt") {
     "//src/lib/storage/vfs/cpp",
     "//src/security/fcrypto",
     "//src/security/kms-stateless",
+    "//src/security/zxcrypt:zxcrypt-client",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/fvm",
     "//src/storage/gpt",

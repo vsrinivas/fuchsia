@@ -27,7 +27,7 @@
 #include <fs-management/mount.h>
 
 #include "src/security/kms-stateless/kms-stateless.h"
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/client.h"
 
 namespace factory_reset {
 

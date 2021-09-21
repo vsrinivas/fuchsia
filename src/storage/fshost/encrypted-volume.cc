@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/client.h"
 
 namespace fshost {
 

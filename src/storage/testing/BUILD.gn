@@ -46,7 +46,7 @@ source_set("storage_driver_test_support") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/lib/utils:topological_path",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fdio-caller",

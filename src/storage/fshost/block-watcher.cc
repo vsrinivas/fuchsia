@@ -46,7 +46,7 @@
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/fs-manager.h"

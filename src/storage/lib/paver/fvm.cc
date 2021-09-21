@@ -35,7 +35,7 @@
 
 #include "pave-logging.h"
 #include "src/lib/uuid/uuid.h"
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/client.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/fvm_sparse.h"

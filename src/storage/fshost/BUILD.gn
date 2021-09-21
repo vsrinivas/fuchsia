@@ -209,7 +209,7 @@ source_set("block-watcher") {
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
-    "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",

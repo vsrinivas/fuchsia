@@ -41,7 +41,7 @@ source_set("paver-core") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
-    "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fidl",

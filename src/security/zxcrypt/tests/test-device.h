@@ -27,6 +27,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/security/fcrypto/secret.h"
+#include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/storage/fvm/format.h"
 

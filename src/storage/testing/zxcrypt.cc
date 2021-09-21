@@ -8,7 +8,7 @@
 
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/security/zxcrypt/fdio-volume.h"
+#include "src/security/zxcrypt/client.h"
 #include "src/storage/lib/utils/topological_path.h"
 
 namespace storage {
