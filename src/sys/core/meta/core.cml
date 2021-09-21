@@ -1024,16 +1024,6 @@
             from: "#pkg-resolver",
         },
         {
-            protocol: [
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "#network",
-        },
-        {
             protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
         },
