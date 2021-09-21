@@ -275,6 +275,11 @@ impl ModularFacade {
         Ok(BasemgrResult::Success)
     }
 
+    /// Facade that returns true if basemgr is running.
+    pub fn is_basemgr_running(&self) -> Result<bool, Error> {
+        Ok(get_basemgr_runtime_state().is_some())
+    }
+
     /// Facade to launch mod from Sl4f
     /// # Arguments
     /// * `args`: will be parsed to LaunchModRequest
@@ -682,6 +687,84 @@ mod tests {
 
         // The session should have been launched.
         assert_eq!(SESSION_LAUNCH_CALL_COUNT.get(), 1);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_is_basemgr_running_not_running() -> Result<(), Error> {
+        // This test does not bind the protocols that is_basemgr_running expects to be
+        // in the namespace for either a session or legacy basemgr component to
+        // simulate the case when neither is running.
+        let sys_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.sys.Launcher");
+        })?;
+
+        let session_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
+        })?;
+
+        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+
+        assert_matches!(facade.is_basemgr_running(), Ok(false));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run(2, test)]
+    async fn test_is_basemgr_running_legacy() -> Result<(), Error> {
+        let scope = ExecutionScope::new();
+        let mut ns = NamespaceBinder::new(scope);
+
+        // Serve the `fuchsia.modular.internal.BasemgrDebug` protocol in the hub path
+        // for legacy basemgr. This simulates a running legacy basemgr component.
+        ns.bind_at_path(
+            BASEMGR_DEBUG_LEGACY_GLOB,
+            vfs::service::host(|_stream: fmodular_internal::BasemgrDebugRequestStream| async {
+                panic!("ModularFacade.is_basemgr_running should not connect to BasemgrDebug");
+            }),
+        )?;
+
+        let sys_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.sys.Launcher");
+        })?;
+
+        let session_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
+        })?;
+
+        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+
+        assert_matches!(facade.is_basemgr_running(), Ok(true));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run(2, test)]
+    async fn test_is_basemgr_running_v2() -> Result<(), Error> {
+        let scope = ExecutionScope::new();
+        let mut ns = NamespaceBinder::new(scope);
+
+        // Serve the `fuchsia.modular.internal.BasemgrDebug` protocol in the hub path
+        // for the session. This simulates a running session.
+        ns.bind_at_path(
+            BASEMGR_DEBUG_SESSION_GLOB,
+            vfs::service::host(|_stream: fmodular_internal::BasemgrDebugRequestStream| async {
+                panic!("ModularFacade.is_basemgr_running should not connect to BasemgrDebug");
+            }),
+        )?;
+
+        let sys_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.sys.Launcher");
+        })?;
+
+        let session_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
+        })?;
+
+        let facade = ModularFacade::new_with_proxies(sys_launcher, session_launcher);
+
+        assert_matches!(facade.is_basemgr_running(), Ok(true));
 
         Ok(())
     }
