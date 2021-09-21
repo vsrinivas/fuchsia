@@ -100,9 +100,16 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
                                 fidl::To<std::vector<std::string>>(publication_ptr->text),
                                 publication_ptr->srv_priority, publication_ptr->srv_weight);
 
-  publication->ptr_ttl_seconds_ = zx::nsec(publication_ptr->ptr_ttl).to_secs();
-  publication->srv_ttl_seconds_ = zx::nsec(publication_ptr->srv_ttl).to_secs();
-  publication->txt_ttl_seconds_ = zx::nsec(publication_ptr->txt_ttl).to_secs();
+  auto ensure_uint32_secs = [](int64_t nanos) -> uint32_t {
+    const int64_t secs = zx::nsec(nanos).to_secs();
+    FX_CHECK(secs >= 0 && secs < std::numeric_limits<uint32_t>::max())
+        << secs << " doesn't fit a uint32";
+    return static_cast<uint32_t>(secs);
+  };
+
+  publication->ptr_ttl_seconds_ = ensure_uint32_secs(publication_ptr->ptr_ttl);
+  publication->srv_ttl_seconds_ = ensure_uint32_secs(publication_ptr->srv_ttl);
+  publication->txt_ttl_seconds_ = ensure_uint32_secs(publication_ptr->txt_ttl);
 
   return publication;
 }

@@ -26,7 +26,7 @@ class MdnsInterfaceTransceiverV6 : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override;
   int SetOptionFamilySpecific() override;
   int Bind() override;
-  int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override;
+  ssize_t SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override;
 
  public:
   // Disallow copy, assign and move.

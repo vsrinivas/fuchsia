@@ -96,7 +96,7 @@ class MdnsInterfaceTransceiver {
   virtual int SetOptionMulticastTtl() = 0;
   virtual int SetOptionFamilySpecific() = 0;
   virtual int Bind() = 0;
-  virtual int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) = 0;
+  virtual ssize_t SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) = 0;
 
  private:
   int SetOptionSharePort();

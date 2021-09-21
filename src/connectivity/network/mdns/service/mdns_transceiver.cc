@@ -140,8 +140,12 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
   for (const auto& net_interfaces_addr : properties.addresses()) {
     const inet::IpAddress addr = MdnsFidlUtil::IpAddressFrom(net_interfaces_addr.addr().addr);
     const inet::IpAddress& alternate_addr = addr.is_v4() ? v6_addr : v4_addr;
-    started |=
-        EnsureInterfaceTransceiver(addr, alternate_addr, properties.id(), media, properties.name());
+    const uint64_t id = properties.id();
+    // NB: fuchsia.net.interfaces/Properties reports IDs as uint64_t but we store them as uint32
+    // for usage in POSIX APIs in transceivers. Ensure that the conversion is valid here.
+    FX_DCHECK(id <= std::numeric_limits<uint32_t>::max()) << id << " doesn't fit in a uint32";
+    started |= EnsureInterfaceTransceiver(addr, alternate_addr, static_cast<uint32_t>(id), media,
+                                          properties.name());
   }
   return started;
 }

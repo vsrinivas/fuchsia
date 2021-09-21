@@ -121,8 +121,9 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataSrv& value) 
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataOpt& value) {
-  uint16_t length = value.options_.size();
-  return writer << length << value.options_;
+  const size_t length = value.options_.size();
+  FX_CHECK(length <= std::numeric_limits<uint16_t>::max()) << length << " doesn't fit uint16";
+  return writer << static_cast<uint16_t>(length) << value.options_;
 }
 
 PacketWriter& operator<<(PacketWriter& writer, const DnsResourceDataNSec& value) {
@@ -138,9 +139,7 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
 
   // Note where the data size goes and write a placeholder.
   size_t data_size_position = writer.position();
-  uint16_t data_size = 0;
-
-  writer << data_size;
+  writer << static_cast<uint16_t>(0);
 
   switch (value.type_) {
     case DnsType::kA:
@@ -176,10 +175,11 @@ PacketWriter& operator<<(PacketWriter& writer, const DnsResource& value) {
   }
 
   // Determine the size of the data and prefix the data with it.
-  size_t end_position = writer.position();
-  data_size = end_position - data_size_position - sizeof(data_size);
+  const size_t end_position = writer.position();
+  const size_t data_size = end_position - data_size_position - sizeof(uint16_t);
   writer.SetPosition(data_size_position);
-  writer << data_size;
+  FX_CHECK(data_size <= std::numeric_limits<uint16_t>::max()) << data_size << " doesn't fit uint16";
+  writer << static_cast<uint16_t>(data_size);
   writer.SetPosition(end_position);
 
   return writer;

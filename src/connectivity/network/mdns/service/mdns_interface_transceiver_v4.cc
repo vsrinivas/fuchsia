@@ -94,8 +94,8 @@ int MdnsInterfaceTransceiverV4::Bind() {
   return result;
 }
 
-int MdnsInterfaceTransceiverV4::SendTo(const void* buffer, size_t size,
-                                       const inet::SocketAddress& address) {
+ssize_t MdnsInterfaceTransceiverV4::SendTo(const void* buffer, size_t size,
+                                           const inet::SocketAddress& address) {
   return sendto(socket_fd().get(), buffer, size, 0, address.as_sockaddr(), address.socklen());
 }
 

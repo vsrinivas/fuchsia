@@ -119,7 +119,7 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override { return 0; }
   int SetOptionFamilySpecific() override { return 0; }
   int Bind() override { return 0; }
-  int SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override {
+  ssize_t SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override {
     return 0;
   }
 

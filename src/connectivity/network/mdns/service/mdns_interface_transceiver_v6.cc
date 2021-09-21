@@ -142,8 +142,8 @@ int MdnsInterfaceTransceiverV6::Bind() {
   return result;
 }
 
-int MdnsInterfaceTransceiverV6::SendTo(const void* buffer, size_t size,
-                                       const inet::SocketAddress& address) {
+ssize_t MdnsInterfaceTransceiverV6::SendTo(const void* buffer, size_t size,
+                                           const inet::SocketAddress& address) {
   if (address == addresses().v4_multicast()) {
     // |v4_multicast| indicates multicast, meaning V6 multicast in this case.
     return sendto(socket_fd().get(), buffer, size, 0, addresses().v6_multicast().as_sockaddr(),

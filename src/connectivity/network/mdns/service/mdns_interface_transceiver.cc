@@ -60,8 +60,7 @@ bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
 
   addresses_ = &addresses;
 
-  std::cout << "Starting mDNS on interface " << name_ << " using port "
-            << addresses.port() << "\n";
+  std::cout << "Starting mDNS on interface " << name_ << " using port " << addresses.port() << "\n";
 
   socket_fd_ = fbl::unique_fd(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -157,7 +156,7 @@ int MdnsInterfaceTransceiver::SetOptionBindToDevice() {
                    << strerror(errno);
   }
   int result = setsockopt(socket_fd_.get(), SOL_SOCKET, SO_BINDTODEVICE, &ifname,
-                          strnlen(ifname, IF_NAMESIZE));
+                          static_cast<socklen_t>(strnlen(ifname, IF_NAMESIZE)));
   if (result < 0) {
     FX_LOGS(ERROR) << "Failed to set socket option SO_BINDTODEVICE with ifname=" << ifname
                    << ", error" << strerror(errno);

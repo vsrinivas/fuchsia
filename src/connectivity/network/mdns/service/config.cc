@@ -121,9 +121,10 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
 
   if (document.HasMember(kPortKey)) {
     FX_DCHECK(document[kPortKey].IsUint());
-    FX_DCHECK(document[kPortKey].GetUint() >= 1);
-    FX_DCHECK(document[kPortKey].GetUint() <= 65535);
-    addresses_.SetPort(inet::IpPort::From_uint16_t(document[kPortKey].GetUint()));
+    const unsigned int port = document[kPortKey].GetUint();
+    FX_DCHECK(port >= 1);
+    FX_DCHECK(port <= std::numeric_limits<uint16_t>::max()) << port << " doesn't fit in a uint16";
+    addresses_.SetPort(inet::IpPort::From_uint16_t(static_cast<uint16_t>(port)));
   }
 
   if (document.HasMember(kV4MultcastAddressKey)) {
@@ -181,8 +182,9 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
   FX_DCHECK(value[kServiceKey].IsString());
   FX_DCHECK(value.HasMember(kPortKey));
   FX_DCHECK(value[kPortKey].IsUint());
-  FX_DCHECK(value[kPortKey].GetUint() >= 1);
-  FX_DCHECK(value[kPortKey].GetUint() <= 65535);
+  const unsigned int port = value[kPortKey].GetUint();
+  FX_DCHECK(port >= 1);
+  FX_DCHECK(port <= std::numeric_limits<uint16_t>::max()) << port << " doesn't fit in a uint16";
 
   auto service = value[kServiceKey].GetString();
   if (!MdnsNames::IsValidServiceName(service)) {
@@ -252,7 +254,7 @@ void Config::IntegratePublication(const rapidjson::Value& value, const std::stri
       .service_ = service,
       .instance_ = instance,
       .publication_ =
-          Mdns::Publication::Create(inet::IpPort::From_uint16_t(value[kPortKey].GetUint()), text),
+          Mdns::Publication::Create(inet::IpPort::From_uint16_t(static_cast<uint16_t>(port)), text),
       .perform_probe_ = perform_probe,
       .media_ = media});
 }
