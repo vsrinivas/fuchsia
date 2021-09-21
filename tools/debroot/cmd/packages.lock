@@ -1,5 +1,5 @@
-hash: 227559bbd679490bf6bf9c926e90b6964eadced9acdec6482e6b60086642618f
-updated: 2021-09-20T23:10:29.66960622-07:00
+hash: 9567d3cce2fd3a35e46b233547d81a237d75cbc96d253bc8fddb2d327f00ad93
+updated: 2021-09-20T23:21:33.383405046-07:00
 packages:
 - package: libc6
   version: 2.28-10
@@ -113,22 +113,6 @@ packages:
   version: 18.3.6-2+deb10u1
   filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_i386.deb
   hash: a418330a40a4f4275c86c732d52b2a8a5c142a5d58afc82540323cb5887626f3
-- package: libpulse-dev
-  version: 12.2-4+deb10u1
-  filename: pool/main/p/pulseaudio/libpulse-dev_12.2-4+deb10u1_amd64.deb
-  hash: 6aa5973e00ac561ee1219983d78c40fa6341fe7e4ce25acc0b047e297f9a8095
-- package: libpulse-dev
-  version: 12.2-4+deb10u1
-  filename: pool/main/p/pulseaudio/libpulse-dev_12.2-4+deb10u1_arm64.deb
-  hash: ada3da8f3245ce82fda28f2ef494029213c8a4acb16bf66bb9c6664138749182
-- package: libpulse-dev
-  version: 12.2-4+deb10u1
-  filename: pool/main/p/pulseaudio/libpulse-dev_12.2-4+deb10u1_armhf.deb
-  hash: f56949743b50a40b003800bff4c92d3cd6f0370565bb4c1d250b9dd87fda7a6b
-- package: libpulse-dev
-  version: 12.2-4+deb10u1
-  filename: pool/main/p/pulseaudio/libpulse-dev_12.2-4+deb10u1_i386.deb
-  hash: 05882ec472acc29fd7dc1d25d4eb94d46e294669a5af24debab6d712fb7582aa
 - package: libstdc++-8-dev
   version: 8.3.0-6
   filename: pool/main/g/gcc-8/libstdc++-8-dev_8.3.0-6_amd64.deb
