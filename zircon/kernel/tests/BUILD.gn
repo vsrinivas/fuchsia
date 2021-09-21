@@ -118,6 +118,7 @@ if (toolchain_environment == "kernel") {
       "//zircon/kernel/lib/io",
       "//zircon/kernel/lib/jtrace/tests",
       "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/ktrace/tests",
       "//zircon/kernel/lib/persistent-debuglog/tests",
       "//zircon/kernel/lib/root_resource_filter",
       "//zircon/kernel/lib/unittest",

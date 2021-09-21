@@ -16,11 +16,17 @@
 #include <ktl/atomic.h>
 #include <ktl/forward.h>
 
+// Fwd decl of tests to allow friendship.
+namespace ktrace_tests {
+struct tests;
+}
+
 namespace internal {
 
 class KTraceState {
  public:
   constexpr KTraceState() = default;
+  virtual ~KTraceState();
 
   // Initialize the KTraceState instance, may only be called once.  Any methods
   // called on a KTraceState instance after construction, but before Init,
@@ -56,6 +62,8 @@ class KTraceState {
   }
 
  protected:
+  friend struct ktrace_tests::tests;
+
   // Add static names (eg syscalls and probes) to the trace buffer.  Called
   // during a rewind operation immediately after resetting the trace buffer.
   // Declared as virtual to facilitate testing.
@@ -80,17 +88,6 @@ class KTraceState {
     return 0;
   }
 
-  // raw trace buffer
-  // if this is nullptr, then bufsize == 0
-  //
-  // Protected so that the test fixture can free it.  The default global
-  // singleton KTraceState never frees its buffer.
-  uint8_t* buffer_{nullptr};
-
-  // Allow diagnostic dprintf'ing or not.  Overridden by test code.
-  bool disable_diags_printfs_{false};
-
- private:
   // Attempt to allocate our buffer, if we have not already done so.
   zx_status_t AllocBuffer();
 
@@ -102,6 +99,13 @@ class KTraceState {
     grpmask_.store(0);
     buffer_full_.store(true);
   }
+
+  // raw trace buffer
+  // if this is nullptr, then bufsize == 0
+  uint8_t* buffer_{nullptr};
+
+  // Allow diagnostic dprintf'ing or not.  Overridden by test code.
+  bool disable_diags_printfs_{false};
 
   // Mask of trace groups that should be traced. If 0, then all tracing is
   // disabled.

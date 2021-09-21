@@ -46,7 +46,7 @@ __BEGIN_CDECLS
 #define KTRACE_NAMESIZE           (12)
 #define KTRACE_NAMEOFF            (8)
 
-#define KTRACE_VERSION            (0x00020000)
+#define KTRACE_VERSION            (0x00020000u)
 
 // Filter Groups
 #define KTRACE_GRP_ALL            0xFFF

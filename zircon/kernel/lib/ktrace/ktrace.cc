@@ -88,6 +88,13 @@ void ktrace_report_probes() {
 
 namespace internal {
 
+KTraceState::~KTraceState() {
+  if (buffer_ != nullptr) {
+    VmAspace* aspace = VmAspace::kernel_aspace();
+    aspace->FreeRegion(reinterpret_cast<vaddr_t>(buffer_));
+  }
+}
+
 void KTraceState::Init(uint32_t target_bufsize, uint32_t initial_groups) {
   ASSERT_MSG(target_bufsize_ == 0,
              "Double init of KTraceState instance (tgt_bs %u, new tgt_bs %u)!", target_bufsize_,
@@ -172,6 +179,8 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
 // Write out a ktrace record with no payload.
 template <>
 void KTraceState::WriteRecord(uint32_t effective_tag, uint64_t explicit_ts) {
+  DEBUG_ASSERT(KTRACE_LEN(effective_tag) >= sizeof(ktrace_header_t));
+
   if (explicit_ts == kRecordCurrentTimestamp) {
     explicit_ts = ktrace_timestamp();
   }
@@ -184,12 +193,15 @@ void KTraceState::WriteRecord(uint32_t effective_tag, uint64_t explicit_ts) {
 // Arguments must be of the same type.
 template <typename... Args>
 void KTraceState::WriteRecord(uint32_t effective_tag, uint64_t explicit_ts, Args... args) {
+  DEBUG_ASSERT(KTRACE_LEN(effective_tag) >= (sizeof(ktrace_header_t) + sizeof...(Args)));
+
   if (explicit_ts == kRecordCurrentTimestamp) {
     explicit_ts = ktrace_timestamp();
   }
 
   // Write out each arg.
   auto payload = {args...};
+
   using PayloadType = typename decltype(payload)::value_type;
   if (auto* data = static_cast<PayloadType*>(Open(effective_tag, explicit_ts)); data != nullptr) {
     int i = 0;
