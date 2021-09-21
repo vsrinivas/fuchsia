@@ -192,8 +192,10 @@ type DispatchPolicy = strict enum {
     ///       accordingly in its own coordinate system.
     TOP_HIT_AND_ANCESTORS_IN_TARGET = 2;
 
-    /// Clients in the |Target|'s view tree receive hover events when a cursor
-    /// is positioned over it, unless the mouse is latched to a specific client.
+    /// The top hit client in the |Target|'s view tree receives hover events when
+    /// a cursor is positioned over it, unless the mouse is latched to a specific
+    /// client.
+    ///
     /// A mouse initiates a latch via button down, and until the release of that
     /// latch, mouse events are delivered to that latched client; other clients
     /// do not receive hover events in the latch duration.
