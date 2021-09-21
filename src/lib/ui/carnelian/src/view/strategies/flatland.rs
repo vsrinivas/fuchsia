@@ -156,7 +156,7 @@ impl Plumber {
             flatland.create_image(
                 &mut flatland_image_id.clone(),
                 &mut import_token,
-                0,
+                uindex,
                 image_props,
             )?;
             flatland
