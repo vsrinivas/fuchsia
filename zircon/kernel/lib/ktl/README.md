@@ -20,3 +20,19 @@ APIs from <memory> and <utility> that are included, such as <ktl/move.h> for
 The implementation here simply leverages the libc++ implementation and defines
 `using` aliases in the `ktl` namespace.  It's expected that ktl will only ever
 provide "header only" APIs.
+
+## ktl enforcement
+
+The [`<ktl/enforce.h>`](include/ktl/enforce.h) header file should be used in
+most `.cc` files (but not `.h`) files meant only for the kernel environment.
+That is, in `.cc` files that use the `<ktl/*.h>` headers or use kernel-only
+headers that use them.
+
+This file must appear last in the `#include` list and `clang-format` will
+arrange that automatically.
+
+After this `#include` any use of the `std` identifier in C++ code will cause a
+compile-time error.  When such errors are encountered, the kernel code should
+be checked for use of C++ standard library headers (with no `.h` in the name,
+like `<memory>, etc.) that should be replaced with `<ktl/*.h>` headers and for
+`std::` names that should be replaced with `ktl::` names.

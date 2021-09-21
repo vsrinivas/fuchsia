@@ -3,12 +3,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+
 #include "asid_allocator.h"
 
 #include <debug.h>
 #include <lib/unittest/unittest.h>
 #include <trace.h>
 #include <zircon/types.h>
+
+#include <ktl/unique_ptr.h>
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 
@@ -71,7 +76,7 @@ bool asid_allocator_test_inner(enum arm64_asid_width asid_width) {
   BEGIN_TEST;
 
   fbl::AllocChecker ac;
-  std::unique_ptr<AsidAllocator> aa(new (&ac) AsidAllocator(asid_width));
+  ktl::unique_ptr<AsidAllocator> aa(new (&ac) AsidAllocator(asid_width));
   ASSERT_TRUE(ac.check());
 
   // test that it computed the correct asid width
