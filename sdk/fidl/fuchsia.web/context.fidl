@@ -124,8 +124,6 @@ type CreateContextParams = resource table {
     /// The following services must be present in order to render web content in a Scenic view
     /// using [`Frame.CreateView`] or [`Frame.CreateViewWithViewRef`]:
     /// - [`fuchsia.accessibility.semantics/SemanticsManager`]
-    /// - [`fuchsia.ui.input/ImeService`]
-    /// - [`fuchsia.ui.input/ImeVisibilityService`]
     /// - [`fuchsia.ui.scenic/Scenic`]
     1: service_directory client_end:fuchsia.io.Directory;
 
