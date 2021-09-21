@@ -119,7 +119,6 @@ class ChannelSettings extends StatelessWidget {
   }
 
   Widget _buildCheckingForUpdates(BuildContext context) {
-    // TODO(fxb/79588): Add progress indicator
     return AppBar(
       elevation: 0,
       title: Text(
@@ -127,6 +126,13 @@ class ChannelSettings extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyText2,
       ),
       shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+      bottom: PreferredSize(
+        preferredSize: Size(double.infinity, 1.0),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(18, 0, 18, 18),
+          child: LinearProgressIndicator(),
+        ),
+      ),
     );
   }
 
@@ -165,19 +171,27 @@ class ChannelSettings extends StatelessWidget {
   }
 
   Widget _buildInstallingUpdate(BuildContext context) {
-    // TODO(fxb/79588): Add progress indicator
+    int progress = state.systemUpdateProgress != 0
+        ? (state.systemUpdateProgress * 100).floor()
+        : 0;
     return AppBar(
       elevation: 0,
       title: Text(
-        Strings.updating,
+        Strings.updating(progress),
         style: Theme.of(context).textTheme.bodyText2,
       ),
       shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+      bottom: PreferredSize(
+        preferredSize: Size(double.infinity, 1.0),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(18, 0, 18, 18),
+          child: LinearProgressIndicator(value: state.systemUpdateProgress),
+        ),
+      ),
     );
   }
 
   Widget _buildWaitingForReboot(BuildContext context) {
-    // TODO(fxb/79588): Add progress indicator
     return AppBar(
       elevation: 0,
       title: Text(
@@ -185,6 +199,13 @@ class ChannelSettings extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyText2,
       ),
       shape: Border(top: BorderSide(color: Theme.of(context).indicatorColor)),
+      bottom: PreferredSize(
+        preferredSize: Size(double.infinity, 1.0),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(18, 0, 18, 18),
+          child: LinearProgressIndicator(),
+        ),
+      ),
     );
   }
 

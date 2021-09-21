@@ -92,6 +92,14 @@ class ChannelService extends TaskService {
 
   bool get installationError => _monitor.getState()?.installationError != null;
 
+  double get updateProgress =>
+      _monitor
+          .getState()
+          ?.installingUpdate
+          ?.installationProgress
+          ?.fractionCompleted ??
+      0;
+
   Future<void> checkForUpdates() async {
     _checkSubscription = () async {
       assert(_manager.ctrl.isBound);

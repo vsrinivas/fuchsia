@@ -133,6 +133,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   set channelState(ChannelState value) => _channelState.value = value;
   final _channelState = Observable<ChannelState>(ChannelState.idle);
 
+  @override
+  double get systemUpdateProgress => _systemUpdateProgress.value;
+  set systemUpdateProgress(double value) => _systemUpdateProgress.value = value;
+  final _systemUpdateProgress = Observable<double>(0);
+
   final List<String> _timezones;
 
   @override
@@ -209,6 +214,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       runInAction(() {
         optedIntoUpdates = channelService.optedIntoUpdates;
         currentChannel = channelService.currentChannel;
+        systemUpdateProgress = channelService.updateProgress;
         // Ensure current channel is listed first in available channels
         List<String> channels;
         if (channelService.channels.contains(currentChannel)) {

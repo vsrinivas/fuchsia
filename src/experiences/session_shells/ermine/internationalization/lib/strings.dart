@@ -867,10 +867,11 @@ class Strings {
         name: 'this action will download the latest OTA updates',
         desc: 'The alert dialog body before attempting channel update.',
       );
-  static String get updating => Intl.message(
-        'Updating...',
+  static String updating(int percent) => Intl.message(
+        'Updating... $percent%',
         name: 'updating...',
         desc: 'The label for "Updating..." text field.',
+        args: [percent],
       );
   static String get noUpdateAvailableTitle => Intl.message(
         'No update available.',

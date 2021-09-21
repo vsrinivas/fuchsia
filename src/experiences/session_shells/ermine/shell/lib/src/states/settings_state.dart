@@ -72,6 +72,7 @@ abstract class SettingsState implements TaskService {
   List<String> get availableChannels;
   String get targetChannel;
   ChannelState get channelState;
+  double get systemUpdateProgress;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     // TODO(https://fxbug.dev/71711): Remove this ignore below when transition
