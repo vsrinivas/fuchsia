@@ -308,11 +308,8 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         .await
         .unwrap();
 
-    // Build the test realm.
-    let realm_instance = builder.build().create().await.unwrap();
-
     // Start the component tree
-    let _ = realm_instance.root.connect_to_binder().unwrap();
+    let realm_instance = builder.build().create().await.unwrap();
 
     // Await the test result.
     if test_data.bails {

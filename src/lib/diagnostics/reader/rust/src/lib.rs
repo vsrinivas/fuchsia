@@ -456,11 +456,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Context;
-    use component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Started},
-        matcher::EventMatcher,
-    };
     use diagnostics_data::{Data, LifecycleType};
     use diagnostics_hierarchy::assert_data_tree;
     use fidl_fuchsia_diagnostics as fdiagnostics;
@@ -481,24 +476,7 @@ mod tests {
                 source: RouteEndpoint::AboveRoot,
                 targets: vec![RouteEndpoint::component("test_component")],
             })?;
-
-        // TODO(https://fxbug.dev/81400): Switch to `start_with_binder_sync`
-        // during post-migration cleanup.
-        let event_source = EventSource::new().context("failed to create EventSource")?;
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-            .await
-            .context("failed to subscribe to EventSource")?;
-
         let instance = builder.build().create().await?;
-        let _ = instance.root.connect_to_binder()?;
-
-        let _ = EventMatcher::ok()
-            .moniker("test_component".to_owned())
-            .wait::<Started>(&mut event_stream)
-            .await
-            .context("failed to observe Started event")?;
-
         Ok(instance)
     }
 
