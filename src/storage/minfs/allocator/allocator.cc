@@ -65,16 +65,6 @@ size_t Allocator::GetAvailableLocked() const {
   return storage_->PoolAvailable() - total_reserved;
 }
 
-size_t Allocator::TemporaryGetPendingChangesSizeLocked() const {
-  size_t total_reserved = reserved_;
-  for (const PendingChange* change : pending_changes_) {
-    total_reserved += change->GetReservedCount();
-  }
-  return total_reserved;
-}
-
-size_t Allocator::TemporaryGetReservedSizeLocked() const { return reserved_; }
-
 WriteData Allocator::GetMapDataLocked() { return map_.StorageUnsafe()->GetVmo().get(); }
 
 fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {

@@ -121,12 +121,8 @@ void SpaceDumper::DumpFilesystem() {
     return;
   }
 
-  const Allocator& allocator = minfs_->GetBlockAllocator();
-  size_t pending = allocator.TemporaryGetPendingChangesSizeLocked();
-  size_t reserved = allocator.TemporaryGetReservedSizeLocked();
-
   FX_LOGS(WARNING) << "========== MINFS FILESYSTEM DUMP (size > " << kMinSizeToDump
-                   << ", pending=" << pending << " reserved=" << reserved << ") ==========";
+                   << ") ==========";
   DumpDir(minfs_, *root, "/data");
   FX_LOGS(WARNING) << "========== DONE MINFS FILESYSTEM DUMP ==========";
 #endif

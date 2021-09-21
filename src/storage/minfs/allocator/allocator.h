@@ -147,14 +147,6 @@ class Allocator {
   // Returns the number of reserved blocks.
   size_t GetReserved() const __TA_EXCLUDES(lock_);
 
-#ifdef __Fuchsia__
-  // TODO(b/198638128) REMOVE THIS TEST CODE WHEN ISSUE IS FOUND.
-  // This requires the lock to be held but is not annotated because it's called from within the call
-  // stack of the storage implementation where the lock information is lost.
-  size_t TemporaryGetPendingChangesSizeLocked() const __TA_NO_THREAD_SAFETY_ANALYSIS;
-  size_t TemporaryGetReservedSizeLocked() const __TA_NO_THREAD_SAFETY_ANALYSIS;
-#endif
-
   // Free an item from the allocator.
   void Free(AllocatorReservation* reservation, size_t index) __TA_EXCLUDES(lock_);
 
