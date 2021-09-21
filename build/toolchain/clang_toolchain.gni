@@ -101,6 +101,8 @@ template("clang_toolchain") {
       _rust_concurrent_jobs = concurrent_jobs.goma
     }
 
+    rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
+
     # Set all tools to defaults
     cc = "${prefix}/clang"
     cxx = "${prefix}/clang++"
@@ -215,90 +217,209 @@ template("clang_toolchain") {
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
     }
 
-    tool("rust_bin") {
-      forward_variables_from(_rust_concurrent_jobs, "*")
+    # Compute default dynamic library extension
+    if (invoker.toolchain_os == "mac") {
+      _dylib_extension = ".dylib"
+    } else if (invoker.toolchain_cpu == "wasm32") {
+      _dylib_extension = ".wasm"
+    } else if (invoker.toolchain_os == "win") {
+      _dylib_extension = ".dll"
+    } else if (invoker.toolchain_os == "fuchsia" ||
+               invoker.toolchain_os == "linux") {
+      _dylib_extension = ".so"
+    } else {
+      assert(false,
+             "Unsupported toolchain_os value \"${invoker.toolchain_os}\"")
+    }
+
+    # The _rust_link_common scope is used to capture common computations that
+    # are needed by the "rust_bin", "rust_dylib" and "rust_cdylib" tool()
+    # definitions below. It should define the following keys:
+    #
+    #   depfile: The depfile to use.
+    #   command: The command used to build the binary.
+    #   outputs: The list of outputs for the command.
+    #   unstripped_outfile: Path to unstripped output file (see below).
+    #
+    # Note that the 'command' and 'outputs' keys will use template parameters in their
+    # string, with the following values, which must be expanded based on the final
+    # target type:
+    #
+    # - {{UNSTRIPPED_OUTFILE}}: path of the unstripped output file. Should be
+    #   'unstripped_outfile', except for tool("rust_bin") when toolchain_os == "wasm32", where
+    #   it should be "${unstripped_outfile}.wasm" instead. The reason for this is that setting
+    #   default_output_extension doesn't work for binaries as it does for libraries.
+    #
+    # - {{UNSTRIPPED_DIR}}: name of directory holding unstripped binaries. 'lib.unstripped'
+    #   for shared libraries and modules, and 'exe.unstripped' for executables. Must be
+    #   expanded after {{UNSTRIPPED_OUTFILE}}.
+    #
+    # - {{BREAKPAD_NAME}}: Either an empty string, or "-n \"$breakpad_name\" "
+    #   (note the trailing space) for loadable modules and executables
+    #   (but not shared libraries), when breakpad symbols must be generated. Note that
+    #   this is only used if 'breakpad_name' is defined.
+    #
+    # Note that the choice of GN-style source expansion parameters is intentional: If by
+    # mistake the parameters are not properly expanded inside the tool() definitions, GN
+    # will complain loudly about it!
+    #
+    _rust_link_common = {
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
-      unstripped_outfile = outfile
       command = ""
+      unstripped_outfile = outfile
       if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
-
-        # TODO: see the comment below
-        command += "mkdir -p {{output_dir}}/exe.unstripped && "
+        unstripped_outfile = "{{output_dir}}/{{UNSTRIPPED_DIR}}/{{target_output_name}}{{output_extension}}"
       }
 
-      if (invoker.toolchain_cpu == "wasm32") {
-        # default_output_extension doesn't work on binaries
-        unstripped_outfile = "$unstripped_outfile.wasm"
+      forward_variables_from(_rust_concurrent_jobs, "*")
+
+      # TODO: see the comment below.
+      if (use_strip) {
+        command += "mkdir -p {{output_dir}}/{{UNSTRIPPED_DIR}} && "
       }
 
-      if (invoker.toolchain_os != "mac") {
-        if (invoker.toolchain_os == "fuchsia") {
-          # On Fuchsia, lld is directly used to perform linking
-          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
+      ld_location_env = ""
+      link_map_args = ""
+      if (invoker.toolchain_os == "fuchsia") {
+        # On Fuchsia, lld is directly used to perform linking
+        link_map_args = "-C link-args=--Map=\"{{UNSTRIPPED_OUTFILE}}.map\""
+      } else if (invoker.toolchain_cpu == "wasm32") {
+        # TODO(fxbug.dev/56076): Remove need for ld location.
+        # On WASM builds, rust-ldd has trouble finding libLLVM.
+        # This workaround allows the build to proceed.
+        shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
+        if (host_os == "mac") {
+          ld_location_env = " DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
+        } else if (host_os == "linux") {
+          ld_location_env = " LD_LIBRARY_PATH=\"$shared_lib_dir\""
         } else {
-          # On host, clang seems to be used to perform linking
-          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
+          assert(false, "Unsupported host os: $host_os")
         }
+
+        # Disable link map args, which also seems to have a problem with WASM.
+      } else if (invoker.toolchain_os == "mac") {
+        # NOTE: MacOs does not support '--Map' in linker flags
       } else {
-        # MacOS does not support `--Map` in linker flags
-        link_map_args = ""
+        # On host, clang seems to be used to perform linking
+        link_map_args = "-C link-args=-Wl,--Map=\"{{UNSTRIPPED_OUTFILE}}.map\""
       }
 
       # Possibly enable remote building for the rustc command.
       command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "{{rustenv}}${ld_location_env} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}}"
+      command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}}"
+      command += " -o \"{{UNSTRIPPED_OUTFILE}}\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
-      description = "RUST {{output}}"
-      default_output_dir = "{{root_out_dir}}"
       outputs = [ outfile ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
       }
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia" &&
-          host_os != "mac") {
-        command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      if (defined(breakpad_name) && host_os != "mac") {
+        command += " && $dump_syms -r {{BREAKPAD_NAME}}-o Fuchsia \"{{UNSTRIPPED_OUTFILE}}\" > \"$outfile.sym\""
         outputs += [ "$outfile.sym" ]
       }
       if (output_gsym && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.gsym" ]
-        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
+        command += " && $gsymutil --convert=\"{{UNSTRIPPED_OUTFILE}}\" --out-file=\"$outfile.gsym\""
       }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
-          command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
-        } else if (invoker.toolchain_os == "fuchsia") {
-          command +=
-              " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
+          command += " && $strip \"{{UNSTRIPPED_OUTFILE}}\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+              " && $strip --strip-all \"{{UNSTRIPPED_OUTFILE}}\" \"$outfile\""
         }
         if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
           command +=
               " && $buildidtool -build-id-dir .build-id" +
               " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
+              " -entry \".debug={{UNSTRIPPED_OUTFILE}}\""
         }
       }
       rust_sysroot = "$rebased_rust_sysroot"
     }
 
-    tool("rust_rlib") {
-      depfile = "{{output}}.d"
+    # Compute common values for "rust_dylib" and "rust_cdylib".
+    # All template parameters will be expanded.
+    _rust_dylib_common = {
+      forward_variables_from(_rust_link_common, "*", [ "outputs" ])
 
+      # Expand UNSTRIPPED_OUTFILE
+      command =
+          string_replace(command, "{{UNSTRIPPED_OUTFILE}}", unstripped_outfile)
+      default_output_extension = _dylib_extension
+
+      # Expand UNSTRIPPED_DIR
+      _unstripped_dir = "lib.unstripped"
+      command = string_replace(command, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+      outputs = []
+      foreach(output, _rust_link_common.outputs) {
+        output =
+            string_replace(output, "{{UNSTRIPPED_OUTFILE}}", unstripped_outfile)
+        output = string_replace(output, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+        outputs += [ output ]
+      }
+
+      # Expand BREAKPAD_NAME, if present, which is unused for dynamic libraries.
+      command = string_replace(command, "{{BREAKPAD_NAME}}", "")
+    }
+
+    tool("rust_bin") {
+      description = "RUST {{output}}"
+      default_output_dir = "{{root_out_dir}}"
+      rust_sysroot = "$rebased_rust_sysroot"
+
+      forward_variables_from(_rust_link_common, "*", [ "outputs" ])
+
+      # Expand UNSTRIPPED_OUTFILE
+      if (invoker.toolchain_cpu == "wasm32") {
+        unstripped_outfile += ".wasm"
+      }
+      command =
+          string_replace(command, "{{UNSTRIPPED_OUTFILE}}", unstripped_outfile)
+
+      # Expand UNSTRIPPED_DIR
+      _unstripped_dir = "exe.unstripped"
+      command = string_replace(command, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+      outputs = []
+      foreach(output, _rust_link_common.outputs) {
+        output =
+            string_replace(output, "{{UNSTRIPPED_OUTFILE}}", unstripped_outfile)
+        output = string_replace(output, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+        outputs += [ output ]
+      }
+
+      # Expand BREAKPAD_NAME if present.
+      if (defined(breakpad_name)) {
+        command = string_replace(command,
+                                 "{{BREAKPAD_NAME}}",
+                                 "-n \"$breakpad_name\" ")
+      }
+
+      # As a special case, on Fuchsia, replace --strip-all with --strip-sections.
+      # It is stronger, and thus generates smaller binaries, but also creates
+      # crashes for host binaries (e.g. https://fxbug.dev/49945).
+      if (invoker.toolchain_os == "fuchsia") {
+        command = string_replace(command, " --strip-all ", " --strip-sections ")
+      }
+    }
+
+    tool("rust_rlib") {
       forward_variables_from(_rust_concurrent_jobs, "*")
+      depfile = "{{output}}.d"
 
       # Possibly enable remote building for the rustc command.
       command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}}"
+      command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}}"
+      command += " -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -317,7 +438,9 @@ template("clang_toolchain") {
       command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}}"
+      command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}}"
+      command += " -o {{output}} {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
@@ -330,169 +453,19 @@ template("clang_toolchain") {
     }
 
     tool("rust_cdylib") {
-      forward_variables_from(_rust_concurrent_jobs, "*")
-      depfile = "{{output}}.d"
-
-      outname = "{{target_output_name}}{{output_extension}}"
-      outfile = "{{output_dir}}/$outname"
-      depfile = "$outfile.d"
-      command = ""
-      if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
-
-        # TODO: see the comment below
-        command += "mkdir -p {{output_dir}}/lib.unstripped && "
-      } else {
-        unstripped_outfile = outfile
-      }
-      ld_location_env = ""
-      if (invoker.toolchain_os != "mac") {
-        if (invoker.toolchain_os == "fuchsia") {
-          # On Fuchsia, lld is directly used to perform linking
-          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
-        } else if (invoker.toolchain_cpu == "wasm32" && host_os == "linux") {
-          # TODO(fxbug.dev/56076): Remove need for ld location.
-          # On WASM builds, rust-lld has trouble finding libLLVM.
-          # This workaround allows the build to proceed.
-
-          # Disable link map args, which also seems to have problems with WASM.
-          link_map_args = ""
-          shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
-          ld_location_env = " LD_LIBRARY_PATH=\"$shared_lib_dir\""
-        } else if (invoker.toolchain_cpu == "wasm32" && host_os == "mac") {
-          # See previous section comment.
-          # We use the fallback dynamic library path on Mac to ensure we first
-          # search default locations.
-          link_map_args = ""
-          shared_lib_dir = rebase_path("$rustc_prefix/../lib", root_build_dir)
-          ld_location_env = " DYLD_FALLBACK_LIBRARY_PATH=\"$shared_lib_dir\""
-        } else {
-          # On host, clang seems to be used to perform linking
-          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
-        }
-      } else {
-        # MacOS does not support `--Map` in linker flags
-        link_map_args = ""
-      }
-
-      # Possibly enable remote building for the rustc command.
-      command += _rustc_wrapper
-
-      # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}}$ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
-      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+      forward_variables_from(_rust_dylib_common, "*")
 
       description = "RUST {{output}}"
       default_output_dir = "{{target_out_dir}}"
-      if (invoker.toolchain_os == "mac") {
-        default_output_extension = ".dylib"
-      } else if (invoker.toolchain_cpu == "wasm32") {
-        default_output_extension = ".wasm"
-      } else {
-        default_output_extension = ".so"
-      }
       output_prefix = "lib"
-      outputs = [ outfile ]
-      if (outfile != unstripped_outfile) {
-        outputs += [ unstripped_outfile ]
-      }
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
-        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-        outputs += [ "$outfile.sym" ]
-      }
-      if (output_gsym && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.gsym" ]
-        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
-      }
-      if (use_strip) {
-        if (invoker.toolchain_os == "mac") {
-          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
-        } else {
-          command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
-        }
-        if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
-        }
-      }
-      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_dylib") {
-      forward_variables_from(_rust_concurrent_jobs, "*")
-
-      outname = "{{target_output_name}}{{output_extension}}"
-      outfile = "{{output_dir}}/$outname"
-      depfile = "$outfile.d"
-      command = ""
-      if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
-
-        # TODO: see the comment below
-        command += "mkdir -p {{output_dir}}/lib.unstripped && "
-      } else {
-        unstripped_outfile = outfile
-      }
-
-      if (invoker.toolchain_os != "mac") {
-        if (invoker.toolchain_os == "fuchsia") {
-          # On Fuchsia, lld is directly used to perform linking
-          link_map_args = "-C link-args=--Map=\"$unstripped_outfile.map\""
-        } else {
-          # On host, clang seems to be used to perform linking
-          link_map_args = "-C link-args=-Wl,--Map=\"$unstripped_outfile.map\""
-        }
-      } else {
-        # MacOS does not support `--Map` in linker flags
-        link_map_args = ""
-      }
-
-      # Possibly enable remote building for the rustc command.
-      command += _rustc_wrapper
-      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
-      command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
+      forward_variables_from(_rust_dylib_common, "*")
 
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
-      if (invoker.toolchain_os == "mac") {
-        default_output_extension = ".dylib"
-      } else if (invoker.toolchain_cpu == "wasm32") {
-        default_output_extension = ".wasm"
-      } else {
-        default_output_extension = ".so"
-      }
-
       output_prefix = "lib"
-      outputs = [ outfile ]
-      if (outfile != unstripped_outfile) {
-        outputs += [ unstripped_outfile ]
-      }
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
-        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-        outputs += [ "$outfile.sym" ]
-      }
-      if (output_gsym && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.gsym" ]
-        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
-      }
-      if (use_strip) {
-        if (invoker.toolchain_os == "mac") {
-          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
-        } else {
-          command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
-        }
-        if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
-        }
-      }
-      rust_sysroot = "$rebased_rust_sysroot"
     }
 
     tool("rust_macro") {
@@ -503,17 +476,15 @@ template("clang_toolchain") {
       command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
-      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} --extern proc_macro {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} "
+      command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}}"
+      command += " -o {{output}} --extern proc_macro {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{root_out_dir}}"
-      if (invoker.toolchain_os == "mac") {
-        default_output_extension = ".dylib"
-      } else {
-        default_output_extension = ".so"
-      }
+      default_output_extension = _dylib_extension
       output_prefix = "lib"
       rust_sysroot = "$rebased_rust_sysroot"
     }
@@ -531,7 +502,48 @@ template("clang_toolchain") {
       output_prefix = "lib"
     }
 
-    tool("solink") {
+    # The _link_common captures common computations used by the "solink", "solink_module"
+    # and "link" tool() definitions below. In particular it may contain the following
+    # important keys:
+    #
+    # - command
+    # - outputs
+    # - depfile
+    # - depsformat
+    # - rspfile
+    # - rspfile_content
+    #
+    # Note that the 'command' and 'outputs' keys will use template parameters in their
+    # string, with the following values, which must be expanded based on the final
+    # target type:
+    #
+    # - {{UNSTRIPPED_DIR}}: name of directory holding unstripped binaries. 'lib.unstripped'
+    #   for shared libraries and modules, and 'exe.unstripped' for executables.
+    #
+    # - {{STRIP_ARGS}}: Arguments to the strip command, only present when 'use_strip' is true
+    #   and when not generating MacOS binaries. Should be "--strip-sections" when generating
+    #   Fuchsia executables (not shared objects), and "--strip-all" otherwise.
+    #
+    # - {{BREAKPAD_NAME}}: Either an empty string, or "-n \"$breakpad_name\" "
+    #   (note the trailing space) for loadable modules and executables
+    #   (but not shared libraries), when breakpad symbols must be generated. Note that
+    #   this is only used if 'breakpad_name' is defined.
+    #
+    # - {{SOLINK_FLAGS}}: linker flags used to generate shared libraries, should be empty
+    #   for executables. Must use a trailing space if not empty.
+    #
+    # - {{START_GROUP}}: should expand to "-Wl,--start-group " on ELF systems that support it
+    #   when generating executables, and to an empty string otherwise. Must include a trailing
+    #   space if not empty.
+    #
+    # - {{END_GROUP}}: similar to {{START_GROUP}}, but should expand to "-Wl,--end-group "
+    #   instead. Must include a trailing space if not empty.
+    #
+    # Note that the choice of GN-style source expansion parameters is intentional: If by
+    # mistake the parameters are not properly expanded inside the tool() definitions, GN
+    # will complain loudly about it!
+    #
+    _link_common = {
       forward_variables_from(concurrent_jobs.local, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
@@ -539,27 +551,21 @@ template("clang_toolchain") {
 
       use_llvm_ifs =
           invoker.toolchain_os != "mac" && invoker.toolchain_os != "win"
-      if (use_llvm_ifs) {
-        llvm_ifs = "${prefix}/llvm-ifs"
-      }
       unstripped_outfile = outfile
       if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+        unstripped_outfile = "{{output_dir}}/{{UNSTRIPPED_DIR}}/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
+        command = "$ld {{SOLINK_FLAGS}}{{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
         rspfile_content = "{{inputs_newline}}"
-        default_output_extension = ".dylib"
       } else {
         depfile = "$outfile.d"
         depsformat = "gcc"
-        command = "$ld -shared -Wl,-soname=\"$outname\" {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" \"@$rspfile\" {{solibs}} {{libs}}"
+        command = "$ld {{SOLINK_FLAGS}}{{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\""
+        command +=
+            " {{START_GROUP}}\"@$rspfile\" {{solibs}} {{END_GROUP}}{{libs}}"
         rspfile_content = "{{inputs}}"
-        default_output_extension = ".so"
       }
-      description = "SOLINK $outfile"
-      default_output_dir = "{{root_out_dir}}"
-      output_prefix = "lib"
       outputs = [ outfile ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
@@ -569,21 +575,112 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+              " && $strip {{STRIP_ARGS}} \"$unstripped_outfile\" \"$outfile\""
           command +=
               " && $buildidtool -build-id-dir .build-id" +
               " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
               " -entry \".debug=$unstripped_outfile\""
         }
       }
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
+      if (defined(breakpad_name)) {
         outputs += [ "$outfile.sym" ]
-        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+        command += " && $dump_syms -r {{BREAKPAD_NAME}}-o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
       }
       if (output_gsym && invoker.toolchain_os == "fuchsia") {
         outputs += [ "$outfile.gsym" ]
         command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
       }
+    }
+
+    # Expand _link_common into a scope that can be used for "solink" and "solink_module" tools
+    # below directly. All template parameters will be expanded, except BREAKPAD_NAME.
+    _link_solink = {
+      forward_variables_from(_link_common, "*")
+      if (invoker.toolchain_os == "mac") {
+        command = string_replace(
+                command,
+                "{{SOLINK_FLAGS}}",
+                "-shared -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" ")
+      } else {
+        command = string_replace(command,
+                                 "{{SOLINK_FLAGS}}",
+                                 "-shared -Wl,-soname=\"$outname\" ")
+      }
+
+      # Never use --start-group and --end-group for libraries.
+      command = string_replace(command, "{{START_GROUP}}", "")
+      command = string_replace(command, "{{END_GROUP}}", "")
+
+      # Expand STRIP_ARGS, which is always --strip-all for shared objects / libraries.
+      command = string_replace(command, "{{STRIP_ARGS}}", "--strip-all")
+
+      # Expand {{UNSTRIPPED_DIR}}
+      _unstripped_dir = "lib.unstripped"
+      command = string_replace(command, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+      outputs = []
+      foreach(output, _link_common.outputs) {
+        outputs +=
+            [ string_replace(output, "{{UNSTRIPPED_DIR}}", _unstripped_dir) ]
+      }
+    }
+
+    # Expand _link_common into a scope that can be used for the "link" tool below.
+    # All template parameters will be expanded.
+    _link_bin = {
+      forward_variables_from(_link_common, "*")
+
+      # Expand {{UNSTRIPPED_DIR}}
+      _unstripped_dir = "exe.unstripped"
+      command = string_replace(command, "{{UNSTRIPPED_DIR}}", _unstripped_dir)
+      outputs = []
+      foreach(output, _link_common.outputs) {
+        outputs +=
+            [ string_replace(output, "{{UNSTRIPPED_DIR}}", _unstripped_dir) ]
+      }
+
+      # There is no SOLINK_FLAGS for binaries
+      command = string_replace(command, "{{SOLINK_FLAGS}}", "")
+
+      # Expand STRIP_ARGS
+      if (invoker.toolchain_os == "fuchsia") {
+        # As a special case, on Fuchsia, replace --strip-all with --strip-sections.
+        # It is stronger, and thus generates smaller binaries, but also creates
+        # crashes for host binaries (e.g. https://fxbug.dev/49945).
+        command = string_replace(command, "{{STRIP_ARGS}}", "--strip-sections")
+      } else {
+        command = string_replace(command, "{{STRIP_ARGS}}", "--strip-all")
+      }
+
+      # Use --start-group and --eng-group for binaries, except on Mac.
+      # IMPORTANT: The trailing spaces in the replacement strings are critical!
+      if (invoker.toolchain_os != "mac") {
+        command =
+            string_replace(command, "{{START_GROUP}}", "-Wl,--start-group ")
+        command = string_replace(command, "{{END_GROUP}}", "-Wl,--end-group ")
+      } else {
+        command = string_replace(command, "{{START_GROUP}}", "")
+        command = string_replace(command, "{{END_GROUP}}", "")
+      }
+
+      # Expand BREADKPAD_NAME
+      if (defined(breakpad_name)) {
+        command = string_replace(command,
+                                 "{{BREAKPAD_NAME}}",
+                                 "-n \"$breakpad_name\" ")
+      }
+    }
+
+    tool("solink") {
+      forward_variables_from(_link_solink, "*")
+
+      description = "SOLINK $outfile"
+      default_output_dir = "{{root_out_dir}}"
+      default_output_extension = _dylib_extension
+      output_prefix = "lib"
+
+      # Do not use BREAKPAD_NAME in shared libraries.
+      command = string_replace(command, "{{BREAKPAD_NAME}}", "")
+
       if (use_llvm_ifs) {
         # The Ninja dependency for linking in the shared library will be
         # the .ifs file (depend_output), though the actual linking *input*
@@ -595,110 +692,42 @@ template("clang_toolchain") {
         # that the linking ABI has actually changed.
         restat = true
         depend_output = "${outfile}.ifs"
-        link_output = unstripped_outfile
+        link_output = string_replace(unstripped_outfile,
+                                     "{{UNSTRIPPED_DIR}}",
+                                     "lib.unstripped")
         outputs += [ depend_output ]
-        command += " && $llvm_ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
+        command += " && ${prefix}/llvm-ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
       }
     }
 
     tool("solink_module") {
-      forward_variables_from(concurrent_jobs.local, "*")
-      outname = "{{target_output_name}}{{output_extension}}"
-      outfile = "{{output_dir}}/$outname"
-      rspfile = "$outfile.rsp"
-      if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
-      } else {
-        unstripped_outfile = outfile
-      }
-      if (invoker.toolchain_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
-        rspfile_content = "{{inputs_newline}}"
-        default_output_extension = ".dylib"
-      } else {
-        depfile = "$outfile.d"
-        depsformat = "gcc"
-        command = "$ld -shared -Wl,-soname=\"$outname\" {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" \"@$rspfile\" {{solibs}} {{libs}}"
-        rspfile_content = "{{inputs}}"
-        default_output_extension = ".so"
-      }
-      if (use_strip) {
-        if (invoker.toolchain_os == "mac") {
-          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
-        } else {
-          command +=
-              " && $strip --strip-all" + " \"$unstripped_outfile\" \"$outfile\""
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
-        }
-      }
-      outputs = []
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.sym" ]
-        command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-      }
-      if (output_gsym && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.gsym" ]
-        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
-      }
+      forward_variables_from(_link_solink, "*")
+
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
-      outputs += [ outfile ]
-      if (outfile != unstripped_outfile) {
-        outputs += [ unstripped_outfile ]
+      default_output_extension = _dylib_extension
+
+      # Modules do not have a 'lib' prefix.
+
+      # Modules do use breakpad_name, unlike shared libraries.
+      if (defined(breakpad_name)) {
+        command = string_replace(command,
+                                 "{{BREAKPAD_NAME}}",
+                                 "-n \"$breakpad_name\" ")
       }
     }
 
     tool("link") {
-      forward_variables_from(concurrent_jobs.local, "*")
-      outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-      rspfile = "$outfile.rsp"
-      unstripped_outfile = outfile
-      if (use_strip) {
-        unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
-      }
-      if (invoker.toolchain_os == "mac") {
-        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}} {{frameworks}}"
-        rspfile_content = "{{inputs_newline}}"
-      } else {
-        depfile = "$outfile.d"
-        depsformat = "gcc"
-        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--dependency-file=\"$depfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group \"@$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
-        rspfile_content = "{{inputs}}"
-      }
-      if (use_strip) {
-        if (invoker.toolchain_os == "mac") {
-          command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
-        } else if (invoker.toolchain_os == "fuchsia") {
-          command +=
-              " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
-        } else {
-          command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
-        }
-        if (invoker.toolchain_os != "mac") {
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
-        }
-      }
-      outputs = []
-      if (output_breakpad_syms && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.sym" ]
-        command += " && $dump_syms -r -n \"$breakpad_name\" -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-      }
-      if (output_gsym && invoker.toolchain_os == "fuchsia") {
-        outputs += [ "$outfile.gsym" ]
-        command += " && $gsymutil --convert=\"$unstripped_outfile\" --out-file=\"$outfile.gsym\""
-      }
+      forward_variables_from(_link_bin, "*")
+
       description = "LINK $outfile"
       default_output_dir = "{{root_out_dir}}"
-      outputs += [ outfile ]
-      if (outfile != unstripped_outfile) {
-        outputs += [ unstripped_outfile ]
+
+      # Executables do use breakpad_name.
+      if (defined(breakpad_name)) {
+        command = string_replace(command,
+                                 "{{BREAKPAD_NAME}}",
+                                 "-n \"$breakpad_name\" ")
       }
     }
 
