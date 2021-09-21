@@ -10,6 +10,7 @@ import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/rbe.gni")
+import("//build/toolchain/restat.gni")
 
 # Defines a Clang-based toolchain.
 #
@@ -85,6 +86,18 @@ template("clang_toolchain") {
     }
 
     rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
+
+    # Configure Rust builds to be restat-friendly by preserving timestamps of
+    # unchanged outputs.
+    if (restat_rust) {
+      _restat_wrapper =
+          string_join(" ",
+                      [
+                        rebase_path(python_exe_src, root_build_dir),
+                        "-S",
+                        rebase_path(restat_wrapper, root_build_dir),
+                      ])
+    }
 
     # Configure Rust remote builds.
     _rustc_wrapper = ""
@@ -269,6 +282,7 @@ template("clang_toolchain") {
       depfile = "$outfile.d"
       command = ""
       unstripped_outfile = outfile
+
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/{{UNSTRIPPED_DIR}}/{{target_output_name}}{{output_extension}}"
       }
@@ -304,6 +318,12 @@ template("clang_toolchain") {
       } else {
         # On host, clang seems to be used to perform linking
         link_map_args = "-C link-args=-Wl,--Map=\"{{UNSTRIPPED_OUTFILE}}.map\""
+      }
+
+      if (restat_rust) {
+        command +=
+            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+        restat = true
       }
 
       # Possibly enable remote building for the rustc command.
@@ -413,8 +433,15 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
+      command = ""
+      if (restat_rust) {
+        command +=
+            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+        restat = true
+      }
+
       # Possibly enable remote building for the rustc command.
-      command = _rustc_wrapper
+      command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}}"
@@ -434,8 +461,15 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
+      command = ""
+      if (restat_rust) {
+        command +=
+            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+        restat = true
+      }
+
       # Possibly enable remote building for the rustc command.
-      command = _rustc_wrapper
+      command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}}"
@@ -472,8 +506,15 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
+      command = ""
+      if (restat_rust) {
+        command +=
+            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+        restat = true
+      }
+
       # Possibly enable remote building for the rustc command.
-      command = _rustc_wrapper
+      command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} "

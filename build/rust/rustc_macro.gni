@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/toolchain/rbe.gni")
+import("//build/toolchain/restat.gni")
 
 # Defines a Rust procedural macro
 #
@@ -184,6 +185,12 @@ template("rustc_macro") {
       if (_use_rbe) {
         # Depend on Rust/RBE scripts and tools
         inputs += rust_rbe_deps
+      }
+      if (restat_rust) {
+        inputs += [
+          python_exe_src,
+          restat_wrapper,
+        ]
       }
     }
   } else {

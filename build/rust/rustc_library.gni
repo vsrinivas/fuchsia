@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
+import("//build/toolchain/restat.gni")
 
 # Defines a Rust library
 #
@@ -176,10 +177,17 @@ template("rustc_library") {
   if (defined(invoker.inputs)) {
     _remote_rbe_inputs = invoker.inputs
   }
-  _local_rbe_inputs = _remote_rbe_inputs
+  _local_inputs = _remote_rbe_inputs
   if (_use_rbe) {
     # Depend on Rust/RBE scripts and tools
-    _local_rbe_inputs += rust_rbe_deps
+    _local_inputs += rust_rbe_deps
+  }
+
+  if (restat_rust) {
+    _local_inputs += [
+      python_exe_src,
+      restat_wrapper,
+    ]
   }
 
   rust_library(target_name) {
@@ -214,7 +222,7 @@ template("rustc_library") {
                              "testonly",
                              "visibility",
                            ])
-    inputs = _local_rbe_inputs
+    inputs = _local_inputs
     if (_use_rbe && _remote_rbe_inputs != []) {
       # Signal to rustc-remote-wrapper.sh that there are additional
       # inputs to upload.  This flag is stripped away from the eventual
