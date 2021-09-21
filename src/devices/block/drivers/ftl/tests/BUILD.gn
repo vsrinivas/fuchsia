@@ -75,7 +75,6 @@ test("ftl-integration") {
     }
   }
   sources = [
-    "ftl_fidl_integration_test.cc",
     "ftl_integration_test.cc",
     "ftl_test_observer.cc",
     "integration_main.cc",
@@ -122,8 +121,11 @@ isolated_devmgr_unittest_package("ftl-integration-package") {
   package_name = "ftl-integration"
   executable_path = "test/ftl-integration-test"
   test_specs = {
-    # Flaky build only test.
-    environments = []
+    # Raising log severity limit to allow for NDM init errors which are truly
+    # bad in actual devices, but when init'ing a new device, it is fine.
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
   deps = [
     ":devmgr-integration-test",
