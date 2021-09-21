@@ -66,13 +66,13 @@ template("product_metadata") {
       packages = [
         {
           format = "files"
-          repo_uri = "file://$amber_files"
+          repo_uri = "file:/$amber_files"
         },
       ]
       images = [
         {
           format = "files"
-          base_uri = "file://$image_base"
+          base_uri = "file:/$image_base"
         },
       ]
       manifests = {
