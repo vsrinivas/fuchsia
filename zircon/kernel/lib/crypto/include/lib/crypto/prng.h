@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 #define ZIRCON_KERNEL_LIB_CRYPTO_INCLUDE_LIB_CRYPTO_PRNG_H_
 
+#include <lib/crypto/entropy_pool.h>
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
@@ -42,7 +43,7 @@ class PRNG {
   // Re-seed the PRNG by mixing-in new entropy. |size| is in bytes.
   // |size| MUST NOT be greater than kMaxEntropy.
   // If size is 0, only hash of the current key is used to re-seed.
-  void AddEntropy(const void* data, size_t size) TA_EXCL(mutex_) TA_EXCL(spinlock_);
+  void AddEntropy(const void* data, size_t size) TA_EXCL(add_entropy_lock_) TA_EXCL(pool_lock_);
 
   // Re-seed the PRNG by hash of the current key. This does not mix in new
   // entropy.
@@ -52,12 +53,12 @@ class PRNG {
   // kMinEntropy bytes of entropy have been added to this PRNG.  |size| MUST
   // NOT be greater than kMaxDrawLen.  Identical PRNGs are only guaranteed to
   // produce identical output when given identical inputs.
-  void Draw(void* out, size_t size) TA_EXCL(spinlock_);
+  void Draw(void* out, size_t size) TA_EXCL(pool_lock_);
 
   // Return an integer in the range [0, exclusive_upper_bound) chosen
   // uniformly at random.  This is a wrapper for Draw(), and so has the same
   // caveats.
-  uint64_t RandInt(uint64_t exclusive_upper_bound) TA_EXCL(spinlock_);
+  uint64_t RandInt(uint64_t exclusive_upper_bound) TA_EXCL(pool_lock_);
 
   // Transitions the PRNG to thread-safe mode.  This asserts that the
   // instance is not yet thread-safe.
@@ -85,15 +86,14 @@ class PRNG {
   PRNG& operator=(const PRNG&) = delete;
 
   // Synchronizes calls to |AddEntropy|.
-  DECLARE_MUTEX(PRNG) mutex_;
+  DECLARE_MUTEX(PRNG) add_entropy_lock_;
 
   // Controls access to |key_| |and nonce_|.
-  DECLARE_SPINLOCK(PRNG) spinlock_;
+  DECLARE_SPINLOCK(PRNG) pool_lock_;
 
-  // ChaCha20 key and nonce as described in RFC 7539.  The key length is
-  // enforced by a static assertion in the constructor.
-  uint8_t key_[32] TA_GUARDED(spinlock_);
-  uint128_t nonce_ TA_GUARDED(spinlock_);
+  // ChaCha20 key(pool_) and nonce as described in RFC 7539.
+  EntropyPool pool_ TA_GUARDED(pool_lock_);
+  uint128_t nonce_ TA_GUARDED(pool_lock_);
 
   // Event used to signal when calls to |Draw| may proceed. This is initialized when
   // |BecomeThreadSafe| is called.

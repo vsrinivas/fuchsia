@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/crypto/entropy_pool.h>
 #include <lib/crypto/prng.h>
 #include <lib/fit/defer.h>
 #include <pow2.h>
@@ -27,47 +28,42 @@ namespace {
 
 const uint128_t kNonceOverflow = ((uint128_t)1ULL) << 96;
 
+static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "must be LE");
+
 }  // namespace
 
 PRNG::PRNG(const void* data, size_t size) : PRNG(data, size, NonThreadSafeTag()) {
-  static_assert(sizeof(key_) == SHA256_DIGEST_LENGTH, "Bad key length");
   BecomeThreadSafe();
 }
 
 PRNG::PRNG(const void* data, size_t size, NonThreadSafeTag tag) : nonce_(0), accumulated_(0) {
-  memset(key_, 0, sizeof(key_));
-  memset(&ready_, 0, sizeof(ready_));
   AddEntropy(data, size);
 }
 
 PRNG::~PRNG() {
-  mandatory_memset(key_, 0, sizeof(key_));
+  Guard<SpinLock, IrqSave> spinlock_guard(&pool_lock_);
   nonce_ = 0;
 }
 
 void PRNG::AddEntropy(const void* data, size_t size) {
   DEBUG_ASSERT(data || size == 0);
   ASSERT(size <= kMaxEntropy);
+
   // Concurrent calls to |AddEntropy| must run sequentially.
-  Guard<Mutex> mutex_guard(&mutex_);
-  // Save the key on the stack, but guarantee we clean them up
-  uint8_t key[sizeof(key_)];
-  auto cleanup = fit::defer([&] { mandatory_memset(key, 0, sizeof(key)); });
-  // We mix all of the entropy with the previous key to make the PRNG state
-  // depend on both the entropy added and the sequence in which it was added.
-  SHA256_CTX ctx;
-  SHA256_Init(&ctx);
-  SHA256_Update(&ctx, data, size);
+  Guard<Mutex> add_entropy_guard(&add_entropy_lock_);
+  EntropyPool pool;
   {
-    Guard<SpinLock, IrqSave> spinlock_guard(&spinlock_);
-    memcpy(key, key_, sizeof(key));
+    Guard<SpinLock, IrqSave> pool_guard(&pool_lock_);
+    pool = pool_.Clone();
   }
-  SHA256_Update(&ctx, key, sizeof(key));
-  SHA256_Final(key, &ctx);
+
+  pool.Add(ktl::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data), size));
+
   {
-    Guard<SpinLock, IrqSave> spinlock_guard(&spinlock_);
-    memcpy(key_, key, sizeof(key_));
+    Guard<SpinLock, IrqSave> pool_guard(&pool_lock_);
+    pool_ = std::move(pool);
   }
+
   // Increment how much entropy has been added, and signal if we have enough.
   size_t total_entropy = accumulated_.fetch_add(size) + size;
   if (is_thread_safe() && total_entropy >= kMinEntropy) {
@@ -76,7 +72,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
 }
 
 // AddEntropy() with NULL input effectively reseeds with hash of current key.
-void PRNG::SelfReseed() { AddEntropy(NULL, 0); }
+void PRNG::SelfReseed() { AddEntropy(nullptr, 0); }
 
 void PRNG::Draw(void* out, size_t size) {
   DEBUG_ASSERT(out || size == 0);
@@ -86,19 +82,15 @@ void PRNG::Draw(void* out, size_t size) {
     ready_->Wait();
   }
   // Save these on the stack, but guarantee we clean them up
-  uint8_t key[sizeof(key_)];
+  EntropyPool pool;
   uint128_t nonce;
-  auto cleanup = fit::defer([&] {
-    mandatory_memset(key, 0, sizeof(key));
-    nonce = 0;
-  });
+  auto cleanup = fit::defer([&] { mandatory_memset(&nonce, 0, sizeof(nonce)); });
   {
-    Guard<SpinLock, IrqSave> guard(&spinlock_);
+    Guard<SpinLock, IrqSave> pool_guard(&pool_lock_);
     nonce = ++nonce_;
-    memcpy(key, key_, sizeof(key));
+    pool = pool_.Clone();
   }
   ASSERT(nonce < kNonceOverflow);
-  static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "must be LE");
   uint8_t* nonce_u8 = reinterpret_cast<uint8_t*>(&nonce);
   uint8_t* buf = reinterpret_cast<uint8_t*>(out);
 
@@ -107,7 +99,7 @@ void PRNG::Draw(void* out, size_t size) {
   // |buf| because the encrypted output meets the criteria of the PRNG
   // regardless of its original contents.  We reset the counter to 0 on each
   // request; it can't overflow because of the limit on the overall size.
-  CRYPTO_chacha_20(buf, buf, size, key, nonce_u8, 0);
+  CRYPTO_chacha_20(buf, buf, size, pool.contents().data(), nonce_u8, 0);
 }
 
 uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
