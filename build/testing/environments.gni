@@ -197,6 +197,7 @@ _all_named_fuchsia_envs += [
 with_display_envs = [
   aemu_env,
   astro_env,
+  atlas_env,
   luis_env,
   nelson_env,
   nuc_env,
