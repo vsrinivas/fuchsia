@@ -22,11 +22,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("echo-client") {
-  manifest = "client.cmx"
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("client") {
-  package_name = "echo-launcher-rust-client"
-  deps = [ ":echo-client" ]
 }

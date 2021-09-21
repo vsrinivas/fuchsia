@@ -31,13 +31,13 @@ rustc_binary("bin") {
 # Declare a component for the server, which consists of the manifest and the
 # binary that the component will run.
 fuchsia_component("echo-server") {
-  manifest = "server.cmx"
+  component_name = "echo_server"
+  manifest = "meta/server.cml"
   deps = [ ":bin" ]
 }
 
 # Declare a package that contains a single component, our server.
-fuchsia_package("server") {
-  package_name = "echo-rust-server"
+fuchsia_package("echo-rust-server") {
   deps = [ ":echo-server" ]
 }
 # [END rest]

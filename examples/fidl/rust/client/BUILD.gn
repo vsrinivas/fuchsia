@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+
+# [END imports]
 
 rustc_binary("bin") {
   name = "fidl_echo_rust_client"
@@ -23,12 +26,10 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
+# [START rest]
 fuchsia_component("echo-client") {
-  manifest = "client.cmx"
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
-
-fuchsia_package("client") {
-  package_name = "echo-rust-client"
-  deps = [ ":echo-client" ]
-}
+# [END rest]

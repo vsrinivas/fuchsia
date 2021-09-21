@@ -2,17 +2,53 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("all") {
   testonly = true
   deps = [
-    "client",
-    "client_sync",
+    ":echo-launcher-rust-client",
+    ":echo-rust-client",
+    ":echo-rust-client-sync",
+    ":echo-service-rust-client",
     "fidl_crates",
     "persistence",
-    "request_pipelining/client",
-    "request_pipelining/server",
-    "server",
-    "services/client",
-    "services/server",
+    "server:echo-rust-server",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/rust/basics/client.md
+fuchsia_package("echo-rust-client") {
+  deps = [
+    "client:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/rust/basics/sync-client.md
+fuchsia_package("echo-rust-client-sync") {
+  deps = [
+    "client_sync:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/rust/topics/request-pipelining.md
+fuchsia_package("echo-launcher-rust-client") {
+  deps = [
+    "request_pipelining/client:echo-client",
+    "request_pipelining/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/rust/topics/services.md
+fuchsia_package("echo-service-rust-client") {
+  deps = [
+    "services/client:echo-client",
+    "services/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
   ]
 }

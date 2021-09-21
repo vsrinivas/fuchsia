@@ -1,0 +1,54 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    // Declare the server and client as child components.
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+        {
+            name: "echo_client",
+            url: "#meta/echo_client.cm",
+        },
+    ],
+
+    // Route capabilities to components within the realm.
+    offer: [
+        // Route the Echo protocol from server to client.
+        {
+            protocol: "fuchsia.examples.Echo",
+            from: "#echo_server",
+            to: "#echo_client",
+        },
+
+        // Route the EchoLauncher protocol from server to client.
+        {
+            protocol: "fuchsia.examples.EchoLauncher",
+            from: "#echo_server",
+            to: "#echo_client",
+        },
+
+        // Route the Echo unified service from server to client.
+        {
+            service: "fuchsia.examples.EchoService",
+            from: "#echo_server",
+            to: "#echo_client",
+        },
+
+        // Route logging support to both children.
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#echo_client",
+                "#echo_server",
+            ],
+        },
+    ],
+}
+
+// [END example_snippet]

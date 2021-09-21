@@ -6,6 +6,7 @@
 group("services") {
   visibility = [
     "//examples/components/services:*",
+    "//examples/fidl/*",
     "//tools/cmc:*",
   ]
 }

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// [START deps]
+// [START imports]
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_examples::{EchoMarker, EchoSynchronousProxy};
+use fidl_fuchsia_examples::{EchoEvent, EchoMarker, EchoSynchronousProxy};
 use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_zircon::{self as zx, prelude::*};
-// [END deps]
+// [END imports]
 
 // [START main]
 fn main() -> Result<(), Error> {
@@ -25,6 +25,10 @@ fn main() -> Result<(), Error> {
 
     // Make a SendString request
     echo.send_string("hi")?;
+    // Wait for a single OnString event.
+    let EchoEvent::OnString { response } =
+        echo.wait_for_event(zx::Time::after(1.second())).context("error receiving events")?;
+    println!("Received OnString event for string {:?}", response);
 
     Ok(())
 }
