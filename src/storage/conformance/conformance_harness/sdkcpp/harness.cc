@@ -26,14 +26,9 @@ zx_status_t DummyWriter(std::vector<uint8_t>) { return ZX_OK; }
 
 class SdkCppHarness : public fuchsia::io::test::Io1Harness {
  public:
-  explicit SdkCppHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    vfs_loop_.StartThread("sdkcpp_vfs_thread");
-  }
+  explicit SdkCppHarness() = default;
 
-  ~SdkCppHarness() override {
-    vfs_loop_.Quit();
-    vfs_loop_.JoinThreads();
-  }
+  ~SdkCppHarness() override = default;
 
   void GetConfig(GetConfigCallback callback) final {
     fuchsia::io::test::Io1Config config;
@@ -74,7 +69,7 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
       }
     }
 
-    zx_status_t status = dir->Serve(flags, directory_request.TakeChannel(), vfs_loop_.dispatcher());
+    zx_status_t status = dir->Serve(flags, directory_request.TakeChannel());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve directory!");
     directories_.push_back(std::move(dir));
   }
@@ -118,7 +113,6 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
   }
 
   std::vector<std::unique_ptr<vfs::PseudoDir>> directories_;
-  async::Loop vfs_loop_;
 };
 
 int main(int argc, const char** argv) {
