@@ -51,8 +51,13 @@ impl From<&OfferSource> for CapabilitySourceType {
             OfferSource::Framework => Self::Framework,
             OfferSource::Parent => Self::Parent,
             OfferSource::Child(ChildRef { name, collection }) => {
-                // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
-                assert_eq!(collection, &None);
+                // This crate only runs over static `ComponentDecl`s, where
+                // dynamic offers don't make sense.
+                assert_eq!(
+                    *collection, None,
+                    "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: {:?}",
+                    source
+                );
                 Self::Child(name.to_string())
             }
             OfferSource::Self_ => Self::Self_,

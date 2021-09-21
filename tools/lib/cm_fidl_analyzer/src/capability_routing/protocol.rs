@@ -90,8 +90,13 @@ impl<'a> CapabilityRouteVerifier<'a> for ProtocolCapabilityRouteVerifier {
         offer_decl: &'a OfferProtocolDecl,
     ) -> bool {
         if let OfferTarget::Child(ChildRef { name: child_name, collection }) = &offer_decl.target {
-            // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
-            assert_eq!(collection, &None);
+            // This crate only runs over static `ComponentDecl`s, where dynamic
+            // offers don't make sense.
+            assert_eq!(
+                *collection, None,
+                "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: {:?}",
+                offer_decl
+            );
             return (&child_name.as_str(), &offer_decl.target_name)
                 == (&target_moniker.as_str(), &target_state.name);
         }
