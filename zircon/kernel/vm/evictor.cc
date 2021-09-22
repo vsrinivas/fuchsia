@@ -275,11 +275,13 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
   const size_t lowest_evict_queue =
       eviction_level == EvictionLevel::IncludeNewest ? 1 : PageQueues::kNumPagerBacked - 1;
 
+  // TODO(fxbug.dev/85056): Always follow the hint for now, i.e. protect hinted pages from eviction
+  // even in the face of OOM.
+  //
+  // Desired future behavior:
   // If we're going to include newest pages, ignore eviction hints as well, i.e. also consider
   // evicting pages with always_need set if we encounter them in LRU order.
-  const VmCowPages::EvictionHintAction hint_action =
-      (eviction_level == EvictionLevel::IncludeNewest) ? VmCowPages::EvictionHintAction::Ignore
-                                                       : VmCowPages::EvictionHintAction::Follow;
+  const VmCowPages::EvictionHintAction hint_action = VmCowPages::EvictionHintAction::Follow;
 
   DEBUG_ASSERT(page_queues_);
   while (count < target_pages) {
