@@ -29,13 +29,13 @@ class SliceExtent : public fbl::WAVLTreeContainable<std::unique_ptr<SliceExtent>
 
   uint64_t GetKey() const { return vslice_start_; }
 
-  // Vslice start (inclusive)
+  // Virtual slice offset of the start of the extent (inclusive)
   uint64_t start() const { return vslice_start_; }
 
-  // Vslice end (exclusive)
+  // Virtual slice offset of the end of the extent (exclusive)
   uint64_t end() const { return vslice_start_ + pslices_.size(); }
 
-  // Extent length
+  // Extent length, in slices
   uint64_t size() const { return end() - start(); }
 
   // Look up a pslice given a vslice
