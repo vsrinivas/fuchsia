@@ -41,7 +41,6 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
     ":reference-element",
     ":reference-graphical-presenter",
     ":reference-session",
-    ":reference-session-config",
     "//src/session/bin/element_manager:element_manager_comp",
   ]
 }
@@ -106,10 +105,6 @@ cts_fuchsia_component("reference-session") {
   deps = [ ":reference-session-bin" ]
 }
 
-cts_session_config("reference-session-config") {
-  config = "reference_session_config.json"
-}
-
 cts_copy_to_sdk("build") {
   testonly = true
   sources = [ "BUILD.gn" ]
@@ -132,7 +127,6 @@ sdk_molecule("test_sdks") {
     ":reference-graphical-presenter-bin_sdk",
     ":reference-graphical-presenter_sdk",
     ":reference-session-bin_sdk",
-    ":reference-session-config_sdk",
     ":reference-session_sdk",
   ]
 }

@@ -30,29 +30,13 @@ between:
 Session CTS tests are CFv2 components that launch a Session Framework and the
 session under test in an isolated environment.
 
-The test launches [`session_manager`][glossary-session-manager], which in turn
-launches the session configured for the current product (with the
-[`session_config`][source-session-config] GN rule). This allows the same test to
-run against any session without modifying the test, simply by supplying a new
-configuration.
+The tests start a reference session that is composed from platform-provided
+components. It is intended for testing the Session CTS itself (all tests should
+pass with the reference session), and for integration testing the
+platform-provided components.
 
-Session CTS includes a reference session-under-test that is composed from
-platform-provided components. It is intended for testing the Session CTS itself
-(all tests should pass with the reference session), and for integration testing
-the platform-provided components.
-
-[`element_manager`][source-element-manager] is a platform-provided component
-that serves the `fuchsia.element.Manager` protocol by wrapping the Rust
-[`element_management`][source-element-management] library.
-
-![Diagram of component topology with CTS-provided reference
-session](images/session-cts-topology-1.png)
-
-The product may be configured with a different session-under-test. In this case,
-`session_manager` launches that session instead of the reference session:
-
-![Diagram of component topology with product-provided
-session](images/session-cts-topology-2.png)
+![Diagram of the fuchsia-element-test component
+topology](images/fuchsia-element-test-topology.png)
 
 ## Reference session
 
@@ -87,34 +71,6 @@ element and asserts that the result was successful.
 $ fx set core.x64 --with-base "//sdk/cts"
 $ fx test fuchsia-element-tests -o
 ```
-
-### Configuring session under test
-
-TODO(fxbug.dev/83905): The tests will currently always run the reference-session.
-The instructions below are valid once this test can run the `session_manager`'s
-configured session.
-
-The tests require that the build contains a `session_manager` configuration,
-typically by including a `session_config` target in the base image.
-The CTS tests will use the session specified in this configuration as
-the session under test.
-
-The `fuchsia.element` CTS tests includes a reference session used to validate
-the tests, `reference-session`:
-
-```
-fx set ... --with "//sdk/cts/tests/fidl/fuchsia.element:reference-session-config"
-```
-
-Other sessions can be tested by using a different `session_config`.
-
-Note that the `session_config` rule configures the system to start the session
-on boot. The CTS tests do not use this instance of the session in any way.
-Instead, each test launches a separate instance in an isolated environment,
-used just for that test.
-
-Some products, like workstation, already include a `session_config` in their
-build, so you should not include it in `fx set`.
 
 [doc-cts-rfc]: /docs/contribute/governance/rfcs/0015_cts.md
 [doc-event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
