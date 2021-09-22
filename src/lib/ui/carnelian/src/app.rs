@@ -211,7 +211,6 @@ impl AppContext {
     }
 
     pub fn set_virtcon_mode(&self, virtcon_mode: VirtconMode) {
-        println!("#### AppContext::set_virtcon_mode {:?}", virtcon_mode);
         self.sender
             .unbounded_send(MessageInternal::SetVirtconMode(virtcon_mode))
             .expect("AppContext::set_virtcon_mode - unbounded_send");
@@ -506,7 +505,6 @@ impl App {
                 _ => self.strategy.handle_display_controller_event(event).await,
             },
             MessageInternal::SetVirtconMode(virtcon_mode) => {
-                println!("#### MessageInternal::SetVirtconMode {:?}", virtcon_mode);
                 self.strategy.set_virtcon_mode(virtcon_mode);
             }
             MessageInternal::ImportAndSetGamaTable(display_id, gamma_table_id, r, g, b) => {
