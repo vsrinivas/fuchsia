@@ -50,6 +50,7 @@ group("non_hermetic_deps") {
     "//build/prebuilt/*",
     "//build/rust/*",
     "//scripts/sdk/gn/*",
+    "//src/experiences/bin/settings/license:license-data",
     "//third_party/crashpad/*",
     "//vendor/google/*",
   ]

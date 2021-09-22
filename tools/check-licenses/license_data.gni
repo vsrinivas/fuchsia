@@ -43,6 +43,10 @@ template("license_data") {
     # This shell script sets the CWD and then calls check-licenses.
     script = "//tools/check-licenses/license_data.sh"
 
+    # The license tool scans the whole source tree, so it cannot be hermetic.
+    # TODO(fxb/84924): Improve the way notice files are generated.
+    hermetic_deps = false
+
     license_tool = "//tools/check-licenses($host_toolchain)"
     deps = [ license_tool ]
 
