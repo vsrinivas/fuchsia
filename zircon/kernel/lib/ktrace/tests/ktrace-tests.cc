@@ -95,7 +95,6 @@ struct tests {
     BEGIN_TEST;
 
     constexpr uint32_t kAllGroups = KTRACE_GRP_ALL;
-    constexpr uint32_t kSingleGroups = 0x1;
 
     {
       // Construct a ktrace state and initialize it, providing no group mask.
@@ -112,10 +111,14 @@ struct tests {
       EXPECT_EQ(0u, state.thread_name_report_count_);
       EXPECT_EQ(0u, state.grpmask_.load());
 
+      // Attempting to start with no groups specified is not allowed.  We should
+      // get "INVALID_ARGS" back.
+      ASSERT_EQ(ZX_ERR_INVALID_ARGS, state.Start(0));
+
       // Now go ahead and call start.  This should cause the buffer to become
       // allocated, and for both static and thread names to be reported (static
       // before thread)
-      state.Start(kAllGroups);
+      ASSERT_OK(state.Start(kAllGroups));
       EXPECT_NONNULL(state.buffer_);
       EXPECT_GT(state.bufsize_, 0u);
       EXPECT_LE(state.bufsize_, state.target_bufsize_);
@@ -140,22 +143,6 @@ struct tests {
       EXPECT_EQ(1u, state.thread_name_report_count_);
       EXPECT_LE(state.last_static_name_report_time_, state.last_thread_name_report_time_);
       EXPECT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask_.load());
-
-      // Now go ahead and call start, but this time, with a different group
-      // mask.  Currently, this should cause the thread names to be reported
-      // again, but not the static names, and for the group mask to get updated.
-      const zx_time_t prev_static_time = state.last_static_name_report_time_;
-      const zx_time_t prev_thread_time = state.last_thread_name_report_time_;
-      const uint32_t prev_bufsize_ = state.bufsize_;
-      state.Start(kSingleGroups);
-      EXPECT_NONNULL(state.buffer_);
-      EXPECT_EQ(prev_bufsize_, state.bufsize_);
-      EXPECT_EQ(4096u, state.target_bufsize_);
-      EXPECT_EQ(1u, state.static_name_report_count_);
-      EXPECT_EQ(2u, state.thread_name_report_count_);
-      EXPECT_EQ(prev_static_time, state.last_static_name_report_time_);
-      EXPECT_LE(prev_thread_time, state.last_thread_name_report_time_);
-      EXPECT_EQ(KTRACE_GRP_TO_MASK(kSingleGroups), state.grpmask_.load());
     }
 
     END_TEST;
@@ -513,15 +500,17 @@ struct tests {
     EXPECT_TRUE(state.TestAllRecords(rcnt, checker));
     EXPECT_EQ(2u, rcnt);
 
-    // Rewind.  The offset should return to the beginning, and there should be
-    // no records in the buffer.
-    state.Rewind();
+    // Stop and Rewind.  The offset should return to the beginning, and there
+    // should be no records in the buffer.
+    ASSERT_OK(state.Stop());
+    ASSERT_OK(state.Rewind());
     EXPECT_EQ(expected_offset, state.offset_.load());
-    EXPECT_EQ(KTRACE_GRP_TO_MASK(kGroups), state.grpmask_.load());
+    EXPECT_EQ(0u, state.grpmask_.load());
     EXPECT_TRUE(state.TestAllRecords(rcnt, checker));
     EXPECT_EQ(0u, rcnt);
 
-    // Now, saturate the buffer
+    // Start again, and this time saturate the buffer
+    ASSERT_OK(state.Start(kGroups));
     while (!state.buffer_full_.load()) {
       state.WriteRecord(TAG_PROBE_32(1), kRecordCurrentTimestamp, 5u, 6u);
     }
@@ -529,13 +518,95 @@ struct tests {
     EXPECT_TRUE(state.TestAllRecords(rcnt, checker));
     EXPECT_LT(2u, rcnt);
 
-    // Finally, rewind again.  The offset should return to the beginning, and there should be
-    // no records in the buffer, but we expect that the group mask will remain disabled.
-    state.Rewind();
+    // Finally, stop and rewind again.  The offset should return to the
+    // beginning, and there should be no records in the buffer.
+    ASSERT_OK(state.Stop());
+    ASSERT_OK(state.Rewind());
     EXPECT_EQ(expected_offset, state.offset_.load());
     EXPECT_EQ(0u, state.grpmask_.load());
     EXPECT_TRUE(state.TestAllRecords(rcnt, checker));
     EXPECT_EQ(0u, rcnt);
+
+    END_TEST;
+  }
+
+  static bool state_checks() {
+    BEGIN_TEST;
+
+    constexpr uint32_t kAllGroups = KTRACE_GRP_ALL;
+    constexpr uint32_t kSomeGroups = 0x3;
+
+    {
+      TestKTraceState state;
+      state.Init(4096, 0);
+
+      // We didn't provide a non-zero initial set of groups, so the trace should
+      // not be started right now.  Stopping, rewinding, and reading are all
+      // legal (although, stopping does nothing).  We have not allocated our
+      // buffer yet, so not even the static metadata should be available to
+      // read.
+      ASSERT_OK(state.Stop());
+      ASSERT_EQ(0u, state.ReadUser(nullptr, 0, 0));
+      ASSERT_OK(state.Rewind());
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(0u), state.grpmask_.load());
+
+      // Starting should succeed.
+      ASSERT_OK(state.Start(kAllGroups));
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask_.load());
+
+      // Now that we are started, rewinding or should fail because of the state
+      // check.
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.Rewind());
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask_.load());
+
+      // Starting while already started should succeed, but change the active
+      // group mask.
+      ASSERT_OK(state.Start(kSomeGroups));
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kSomeGroups), state.grpmask_.load());
+
+      // Stopping is still OK, and actually does something now (it clears the
+      // group mask).
+      ASSERT_OK(state.Stop());
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(0u), state.grpmask_.load());
+
+      // Specifically, now that we are stopped, we can read, rewind, and stop
+      // again.  Since we have started before, we expect that the amount of data
+      // available to read should be equal to the size of the two static
+      // metadata records.
+      const ssize_t expected_size = sizeof(ktrace_rec_32b_t) * 2;
+      ASSERT_EQ(expected_size, state.ReadUser(nullptr, 0, 0));
+      ASSERT_OK(state.Rewind());
+      ASSERT_OK(state.Stop());
+    }
+
+    {
+      // Same checks as before, but this time start in the started state after
+      // init by providing a non-zero set of groups.
+      TestKTraceState state;
+      state.Init(4096, kAllGroups);
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask_.load());
+
+      // We are started, so rewinding or reading should fail because of the
+      // state check.
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.Rewind());
+      ASSERT_EQ(ZX_ERR_BAD_STATE, state.ReadUser(nullptr, 0, 0));
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kAllGroups), state.grpmask_.load());
+
+      // "Restarting" should change the active group mask.
+      ASSERT_OK(state.Start(kSomeGroups));
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(kSomeGroups), state.grpmask_.load());
+
+      // Stopping should work.
+      ASSERT_OK(state.Stop());
+      ASSERT_EQ(KTRACE_GRP_TO_MASK(0u), state.grpmask_.load());
+
+      // Stopping again, rewinding, and reading are all OK now.
+      const ssize_t expected_size = sizeof(ktrace_rec_32b_t) * 2;
+      ASSERT_EQ(expected_size, state.ReadUser(nullptr, 0, 0));
+      ASSERT_OK(state.Rewind());
+      ASSERT_OK(state.Stop());
+    }
 
     END_TEST;
   }
@@ -550,4 +621,5 @@ UNITTEST("write record", ktrace_tests::tests::write_records)
 UNITTEST("write tiny record", ktrace_tests::tests::write_tiny_records)
 UNITTEST("saturation", ktrace_tests::tests::saturation)
 UNITTEST("rewind", ktrace_tests::tests::rewind)
+UNITTEST("state check", ktrace_tests::tests::state_checks)
 UNITTEST_END_TESTCASE(ktrace_tests, "ktrace", "KTrace tests")

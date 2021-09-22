@@ -18,30 +18,39 @@ static TagDefinition kTags[] = {
 #pragma GCC diagnostic pop
 
 std::optional<KTraceRecord> KTraceRecord::ParseRecord(uint8_t* data_buf, size_t buf_len) {
-  if (buf_len < KTRACE_HDRSIZE)
+  if (buf_len < KTRACE_HDRSIZE) {
     return std::nullopt;
+  }
 
   KTraceRecord kr;
 
   ktrace_header_t* record = reinterpret_cast<ktrace_header_t*>(data_buf);
 
-  if (buf_len < KTRACE_LEN(record->tag))
+  if (buf_len < KTRACE_LEN(record->tag)) {
     return std::nullopt;
+  }
 
   kr.data_buf_len_ = buf_len;
   kr.is_named_ = KTRACE_FLAGS(record->tag);
 
   if (kr.is_named_) {
+    switch (KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_COUNTER) {
+      case KTRACE_FLAGS_BEGIN:
+        kr.is_begin_ = true;
+        break;
+      case KTRACE_FLAGS_END:
+        kr.is_end_ = true;
+        break;
+      case KTRACE_FLAGS_COUNTER:
+        kr.is_counter_ = true;
+        break;
+      default:
+        break;
+    }
+
     kr.is_probe_group_ = KTRACE_GROUP(record->tag) & KTRACE_GRP_PROBE;
     kr.is_flow_ = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_FLOW;
-    kr.is_begin_ = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_BEGIN;
-    kr.is_end_ = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_END;
     kr.is_duration_ = !kr.is_flow_ && (kr.is_begin_ | kr.is_end_);
-
-    // Beginning and end states are mutually exclusive.
-    if (kr.is_begin_ && kr.is_end_) {
-      return std::nullopt;
-    }
   } else {
     kr.event_ = KTRACE_EVENT(record->tag);
 

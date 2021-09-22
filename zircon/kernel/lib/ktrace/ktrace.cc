@@ -96,15 +96,18 @@ KTraceState::~KTraceState() {
 }
 
 void KTraceState::Init(uint32_t target_bufsize, uint32_t initial_groups) {
+  Guard<Mutex> guard(&lock_);
   ASSERT_MSG(target_bufsize_ == 0,
              "Double init of KTraceState instance (tgt_bs %u, new tgt_bs %u)!", target_bufsize_,
              target_bufsize);
+  ASSERT(is_started_ == false);
 
   target_bufsize_ = target_bufsize;
 
   if (initial_groups != 0) {
     if (AllocBuffer() == ZX_OK) {
       ReportThreadProcessNames();
+      is_started_ = true;
     }
   }
 
@@ -112,20 +115,39 @@ void KTraceState::Init(uint32_t target_bufsize, uint32_t initial_groups) {
 }
 
 zx_status_t KTraceState::Start(uint32_t groups) {
-  DEBUG_ASSERT(groups != 0);
+  Guard<Mutex> guard(&lock_);
+
+  if (groups == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   if (zx_status_t status = AllocBuffer(); status != ZX_OK) {
     return status;
   }
 
-  marker_ = 0;
-  ReportThreadProcessNames();
+  // If we are not yet started, we need to report the current thread and process
+  // names, and update our and buffer bookkeeping. If we are already started,
+  // then this request to start should be treated simply as an update of the
+  // group mask.
+  if (!is_started_) {
+    marker_ = 0;
+    ReportThreadProcessNames();
+    is_started_ = true;
+  }
+
   grpmask_.store(KTRACE_GRP_TO_MASK(groups));
 
   return ZX_OK;
 }
 
-void KTraceState::Stop() {
+zx_status_t KTraceState::Stop() {
+  Guard<Mutex> guard(&lock_);
+
+  // Stopping an already stopped KTrace is OK, the operation is idempotent.
+  if (!is_started_) {
+    return ZX_OK;
+  }
+
   grpmask_.store(0);
   uint32_t n = offset_.load();
   if (n > bufsize_) {
@@ -133,16 +155,32 @@ void KTraceState::Stop() {
   } else {
     marker_ = n;
   }
+
+  is_started_ = false;
+
+  return ZX_OK;
 }
 
-void KTraceState::Rewind() {
+zx_status_t KTraceState::RewindLocked() {
+  if (is_started_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   // roll back to just after the metadata
   offset_.store(KTRACE_RECSIZE * 2);
   buffer_full_.store(false);
   ReportStaticNames();
+
+  return ZX_OK;
 }
 
 ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
+  Guard<Mutex> guard(&lock_);
+
+  if (is_started_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   // Buffer size is limited by the marker if set,
   // otherwise limited by offset (last written point).
   // Offset can end up pointing past the end, so clip
@@ -173,6 +211,7 @@ ssize_t KTraceState::ReadUser(void* ptr, uint32_t off, size_t len) {
   if (arch_copy_to_user(ptr, buffer_ + off, len) != ZX_OK) {
     return ZX_ERR_INVALID_ARGS;
   }
+
   return len;
 }
 
@@ -277,6 +316,8 @@ zx_status_t KTraceState::AllocBuffer() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  DEBUG_ASSERT(is_started_ == false);
+
   zx_status_t status;
   VmAspace* aspace = VmAspace::kernel_aspace();
   if ((status = aspace->Alloc("ktrace", target_bufsize_, reinterpret_cast<void**>(&buffer_), 0,
@@ -300,7 +341,8 @@ zx_status_t KTraceState::AllocBuffer() {
   rec[1].a = static_cast<uint32_t>(n);
   rec[1].b = static_cast<uint32_t>(n >> 32);
 
-  Rewind();
+  [[maybe_unused]] zx_status_t rewind_res = RewindLocked();
+  DEBUG_ASSERT(rewind_res == ZX_OK);
 
   // Report an event for "tracing is all set up now".  This also
   // serves to ensure that there will be at least one static probe
@@ -348,12 +390,10 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
       return KTRACE_STATE.Start(options ? options : KTRACE_GRP_ALL);
 
     case KTRACE_ACTION_STOP:
-      KTRACE_STATE.Stop();
-      return ZX_OK;
+      return KTRACE_STATE.Stop();
 
     case KTRACE_ACTION_REWIND:
-      KTRACE_STATE.Rewind();
-      return ZX_OK;
+      return KTRACE_STATE.Rewind();
 
     case KTRACE_ACTION_NEW_PROBE: {
       const char* const string_in = static_cast<const char*>(ptr);

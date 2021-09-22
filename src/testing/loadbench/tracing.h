@@ -43,6 +43,7 @@ class KTraceRecord {
   bool IsFlow() const { return is_flow_; }
   bool IsBegin() const { return is_begin_; }
   bool IsEnd() const { return is_end_; }
+  bool IsCounter() const { return is_counter_; }
   bool IsDuration() const { return is_duration_; }
   bool HasUnexpectedEvent() const { return has_unexpected_event_; }
 
@@ -57,6 +58,7 @@ class KTraceRecord {
   bool is_flow_ = false;
   bool is_begin_ = false;
   bool is_end_ = false;
+  bool is_counter_ = false;
   bool is_duration_ = false;
   bool has_unexpected_event_ = false;
 };

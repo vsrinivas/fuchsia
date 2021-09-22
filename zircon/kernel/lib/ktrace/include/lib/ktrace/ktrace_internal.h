@@ -13,6 +13,8 @@
 #include <zircon/types.h>
 
 #include <fbl/function.h>
+#include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <ktl/atomic.h>
 #include <ktl/forward.h>
 
@@ -41,12 +43,16 @@ class KTraceState {
   // group mask is zero, allocation is delayed until the first time that start
   // is called.
   //
-  void Init(uint32_t target_bufsize, uint32_t initial_groups);
+  void Init(uint32_t target_bufsize, uint32_t initial_groups) TA_EXCL(lock_);
 
-  zx_status_t Start(uint32_t groups);
-  void Stop();
-  void Rewind();
-  ssize_t ReadUser(void* ptr, uint32_t off, size_t len);
+  [[nodiscard]] zx_status_t Start(uint32_t groups) TA_EXCL(lock_);
+  [[nodiscard]] zx_status_t Stop() TA_EXCL(lock_);
+  [[nodiscard]] zx_status_t Rewind() TA_EXCL(lock_) {
+    Guard<Mutex> guard(&lock_);
+    return RewindLocked();
+  }
+
+  ssize_t ReadUser(void* ptr, uint32_t off, size_t len) TA_EXCL(lock_);
 
   // Write a record to the tracelog.
   //
@@ -64,15 +70,17 @@ class KTraceState {
  protected:
   friend struct ktrace_tests::tests;
 
+  [[nodiscard]] zx_status_t RewindLocked() TA_REQ(lock_);
+
   // Add static names (eg syscalls and probes) to the trace buffer.  Called
   // during a rewind operation immediately after resetting the trace buffer.
   // Declared as virtual to facilitate testing.
-  virtual void ReportStaticNames();
+  virtual void ReportStaticNames() TA_REQ(lock_);
 
   // Add the names of current live threads and processes to the trace buffer.
   // Called during start operations just before setting the group mask. Declared
   // as virtual to facilitate testing.
-  virtual void ReportThreadProcessNames();
+  virtual void ReportThreadProcessNames() TA_REQ(lock_);
 
   // A small printf stand-in which gives tests the ability to disable diagnostic
   // printing during testing.
@@ -89,7 +97,7 @@ class KTraceState {
   }
 
   // Attempt to allocate our buffer, if we have not already done so.
-  zx_status_t AllocBuffer();
+  zx_status_t AllocBuffer() TA_REQ(lock_);
 
   // Allocates a new trace record in the trace buffer. Returns a pointer to the
   // start of the record or nullptr the end of the buffer is reached.
@@ -128,6 +136,12 @@ class KTraceState {
 
   // buffer is full or not
   ktl::atomic<bool> buffer_full_{false};
+
+  // A lock used to serialize all non-write operations.  IOW - this lock ensures
+  // that only a single thread at a time may be involved in operations such as
+  // Start, Stop, Rewind, and ReadUser
+  DECLARE_MUTEX(KTraceState) lock_;
+  bool is_started_ TA_GUARDED(lock_){false};
 };
 
 }  // namespace internal
