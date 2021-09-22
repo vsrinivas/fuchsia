@@ -1,5 +1,5 @@
-hash: d3e3c8098771a69f5efed63f6225bfe6e8e870403d0f4fbda279044e61e95c0b
-updated: 2021-09-21T15:54:21.958731527-07:00
+hash: c890e8f7ead1b2309afc6a5ecc5e0c5c45481b03e75ae721244dd2f1f7a1dc1c
+updated: 2021-09-21T23:53:05.878293289-07:00
 packages:
 - package: libc6
   version: 2.28-10
@@ -113,6 +113,22 @@ packages:
   version: 18.3.6-2+deb10u1
   filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_i386.deb
   hash: a418330a40a4f4275c86c732d52b2a8a5c142a5d58afc82540323cb5887626f3
+- package: libpython3-dev
+  version: 3.7.3-1
+  filename: pool/main/p/python3-defaults/libpython3-dev_3.7.3-1_amd64.deb
+  hash: 5fdcd3ce63c9daf001455db58a99efbe6b7be75755729a9370d59deaecf92ac9
+- package: libpython3-dev
+  version: 3.7.3-1
+  filename: pool/main/p/python3-defaults/libpython3-dev_3.7.3-1_arm64.deb
+  hash: d4166b53b9319b960e38c60c5c1284f3f32b29668a2f60880a0ac1e9c3d8e97d
+- package: libpython3-dev
+  version: 3.7.3-1
+  filename: pool/main/p/python3-defaults/libpython3-dev_3.7.3-1_armhf.deb
+  hash: 34e9216436d4da4e56a5f25cccf0b4d570e4137a392403ac8b235e8a3a015bcf
+- package: libpython3-dev
+  version: 3.7.3-1
+  filename: pool/main/p/python3-defaults/libpython3-dev_3.7.3-1_i386.deb
+  hash: f8e163afb1b76c87b0d0c39933c512d60828276a1503fe79c7d86ae6e1d0b456
 - package: libpython3.7
   version: 3.7.3-2+deb10u3
   filename: pool/main/p/python3.7/libpython3.7_3.7.3-2+deb10u3_amd64.deb

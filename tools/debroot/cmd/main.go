@@ -223,7 +223,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 					var include bool
 					// Use sections as a coarse grained filter.
 					switch p["Section"] {
-					case "libs", "libdevel", "devel", "x11":
+					case "libs", "libdevel", "devel", "x11", "python":
 						include = true
 					}
 					if include {

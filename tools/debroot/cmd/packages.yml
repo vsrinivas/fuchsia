@@ -19,6 +19,7 @@ packages:
   - package: libglapi-mesa
   - package: libpython3.7
   - package: libpython3.7-dev
+  - package: libpython3-dev
   - package: libstdc++-8-dev
   - package: libstdc++6
   - package: libx11-6
