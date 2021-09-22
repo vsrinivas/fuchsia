@@ -6,6 +6,8 @@
 
 if (current_toolchain != default_toolchain) {
   import("//build/dist/generated_resource.gni")
+  import("//build/zbi/kernel_cmdline.gni")
+  import("//build/zbi/zbi_input.gni")
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
   import("//zircon/kernel/phys/qemu.gni")
   import("//zircon/kernel/phys/zbi_executable.gni")
@@ -85,7 +87,8 @@ if (current_toolchain != default_toolchain) {
           timeout = invoker.timeout
         }
       } else {
-        # Set a short timeout since the tests don't reliably reboot the machine.
+        # Set a short timeout since the tests don't reliably reboot the
+        # machine.
         timeout = qemu_short_timeout
       }
     }
@@ -141,9 +144,9 @@ if (current_toolchain != default_toolchain) {
   # Ideally we'd test all four combinations on arm64 and both combinations on
   # x86.  But the common library code is always compiled with shadow-call-stack
   # on arm64 so we can't disable the ABI support for it and with safe-stack on
-  # x86 so we can't disable the ABI support for it there.  The start.S code only
-  # enables extra stack support conditionally so as not to waste space, so there
-  # isn't a good way to test non-default configurations.
+  # x86 so we can't disable the ABI support for it there.  The start.S code
+  # only enables extra stack support conditionally so as not to waste space, so
+  # there isn't a good way to test non-default configurations.
   common_test("phys-unittests") {
     sources = [
       "phys-unittests.cc",
@@ -196,60 +199,178 @@ if (current_toolchain != default_toolchain) {
     data_deps = [ ":decompress-test-data" ]
   }
 
-  zbi_executable("chain-load-test") {
-    visibility = [ ":*" ]
+  # Define a Turducken ZBI test.
+  #
+  # This takes a zbi_executable() or other zbi_input()-compatible target that
+  # supplies the bootable ZBI kernel item.  It packs a ZBI using that kernel
+  # and a payload (usually ZBI_TYPE_STORAGE_KERNEL) usually containing a
+  # compressed ZBI image and makes that a zbi_test() target with $target_name.
+  # The inner zbi_input() target is called "$target_name.input".
+  #
+  # Parameters
+  #
+  #  * kernel
+  #    - Required: Label of a zbi_executable() target, expected to have
+  #      //zircon/kernel/phys/test:turducken in its own $deps.
+  #    - Type: label
+  #
+  #  * args
+  #    - Optional: As for zbi_input().
+  #    - Type: list(string)
+  #    - Default: [ "--compressed=zstd.max" ]
+  #
+  #  * data_deps, deps
+  #    - Optional: As for zbi_input().
+  #    - Type: list(label)
+  #
+  #  * sources
+  #    - Optional: As for zbi_input().
+  #    - Type: list(file)
+  #
+  #  * timeout
+  #    - Optional: As for phys_zbi_test().
+  #    - Type: integer or false
+  #
+  #  * type
+  #    - Optional: As for zbi_input().
+  #    - Type: string
+  #    - Default: "kernel"
+  #
+  template("turducken_zbi_test") {
+    turducken = target_name
+    turkey = invoker.kernel
+    duck = "$target_name.input"
+
+    phys_zbi_test(turducken) {
+      forward_variables_from(invoker,
+                             [
+                               "timeout",
+                               "visibility",
+                             ])
+      test_deps = [
+        ":$duck",
+        turkey,
+      ]
+    }
+
+    zbi_input(duck) {
+      visibility = [ ":*" ]
+      testonly = true
+
+      if (defined(invoker.type)) {
+        type = invoker.type
+      } else {
+        type = "kernel"
+      }
+
+      if (defined(invoker.args)) {
+        args = invoker.args
+      } else {
+        args = [ "--compressed=zstd.max" ]
+      }
+
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "deps",
+                               "sources",
+                             ])
+    }
+  }
+
+  # A Mobius Turducken test packs itself inside itself.
+  template("mobius_turducken_test") {
+    turducken_zbi_test(target_name) {
+      sources = []
+      forward_variables_from(invoker, [ "visibility" ])
+      forward_variables_from(invoker, "*", [ "visibility" ])
+      sources += get_target_outputs(kernel)
+    }
+  }
+
+  source_set("turducken") {
     testonly = true
-    sources = [ "chain-load-test.cc" ]
-    deps = [
-      ":zbi-test-main",
+    public = [ "turducken.h" ]
+    public_deps = [
       "..:allocation",
-      "..:boot-zbi",
-      "..:zbi-memory",
-      "..:zbitl-allocation",
+      "..:symbolize",
+      "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/zbitl",
-      "//zircon/system/ulib/zxc",
+    ]
+    sources = [ "turducken.cc" ]
+    deps = [
+      ":zbi-test-main",
+      "..:boot-zbi",
+      "..:zbi-memory",
+      "..:zbitl-allocation",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
     ]
 
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
 
-  phys_zbi_test("zbi-chain-load-hello-world-test") {
-    test_deps = [
-      ":chain-load-hello-world-test-data",
-      ":chain-load-test",
-    ]
-  }
-
-  zbi_input("chain-load-hello-world-test-data") {
+  zbi_executable("chain-load-test") {
     visibility = [ ":*" ]
     testonly = true
-    type = "ramdisk"
-    args = [ "--compressed=zstd.max" ]
+    sources = [ "chain-load-test.cc" ]
+    deps = [ ":turducken" ]
+  }
+
+  turducken_zbi_test("zbi-chain-load-hello-world-test") {
+    kernel = ":chain-load-test"
     deps = [ ":zbi-hello-world-test.executable" ]
     sources = get_target_outputs(deps[0])
   }
 
-  phys_zbi_test("zbi-chain-load-core-tests") {
-    test_deps = [
-      ":chain-load-core-tests-data",
-      ":chain-load-test",
-    ]
+  core_tests_label =
+      "//zircon/system/utest/core:core-tests.zbi($default_toolchain)"
+  core_tests_zbi =
+      get_label_info(core_tests_label, "target_out_dir") + "/core-tests.zbi"
+
+  # This wraps the deps on the core-tests ZBI with a metadata barrier that
+  # prevents it from rolling up into zbi() targets.
+  group("core-tests.deps") {
+    visibility = [ ":*" ]
+    testonly = true
+    deps = [ core_tests_label ]
+    metadata = {
+      zbi_input_barrier = []
+    }
+  }
+
+  turducken_zbi_test("zbi-chain-load-core-tests") {
+    kernel = ":chain-load-test"
+
+    sources = [ core_tests_zbi ]
+    deps = [ ":core-tests.deps" ]
 
     # Once it chain-loads Zircon, it will shut down by itself, but not
     # necessarily really quickly since the tests take a little while to run.
     timeout = false
   }
 
-  zbi_input("chain-load-core-tests-data") {
+  zbi_executable("turducken-test") {
     visibility = [ ":*" ]
     testonly = true
-    type = "ramdisk"
-    args = [ "--compressed=zstd.max" ]
-    deps = [ "//zircon/system/utest/core:core-tests.zbi($default_toolchain)" ]
-    sources = [ get_label_info(deps[0], "target_out_dir") + "/core-tests.zbi" ]
+    sources = [ "turducken-test.cc" ]
+    deps = [ ":turducken" ]
+    data_deps = [ ":turducken-cmdline" ]
+  }
+
+  kernel_cmdline("turducken-cmdline") {
+    args = [
+      "turducken-test.smoke",
+      "turducken-test.flavor=turkey",
+    ]
+  }
+
+  mobius_turducken_test("turducken-zbi-test") {
+    kernel = ":turducken-test"
   }
 
   group("test") {
@@ -258,6 +379,7 @@ if (current_toolchain != default_toolchain) {
       ":backtrace-test",
       ":hello-world-test",
       ":phys-unittests",
+      ":turducken-zbi-test",
       ":zbi-chain-load-core-tests",
       ":zbi-chain-load-hello-world-test",
       ":zbi-decompress-test",

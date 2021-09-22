@@ -58,7 +58,8 @@ class Image : public View<Storage> {
 
     const uint32_t size = sizeof(zbi_header_t) + current_length;
     const uint32_t new_item_offset = size;
-    const uint32_t new_size = ZBI_ALIGN(new_item_offset + sizeof(new_header) + new_header.length);
+    const uint32_t new_size =
+        ZBI_ALIGN(new_item_offset + static_cast<uint32_t>(sizeof(new_header)) + new_header.length);
     // Overflow would have happened if `new_size` is now less than or equal to
     // any of the constituent elements in its defining sum, including
     // `ZBI_ALIGNMENT`; this reduces to the following predicate.
@@ -77,7 +78,8 @@ class Image : public View<Storage> {
 
     uint32_t padding_size = ZBI_ALIGN(new_header.length) - new_header.length;
     if (padding_size > 0) {
-      uint32_t payload_end = new_item_offset + sizeof(new_header) + new_header.length;
+      uint32_t payload_end =
+          new_item_offset + static_cast<uint32_t>(sizeof(new_header)) + new_header.length;
       constexpr std::byte kZero[ZBI_ALIGNMENT - 1] = {};
       auto padding = AsBytes(kZero).subspan(0, padding_size);
       if (auto result = Traits::Write(this->storage(), payload_end, padding); result.is_error()) {
