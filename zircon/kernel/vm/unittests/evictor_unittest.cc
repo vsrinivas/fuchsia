@@ -775,6 +775,71 @@ static bool evictor_continuous_repeated_test() {
   END_TEST;
 }
 
+// Test that the evictor can evict inactive pager backed pages as expected.
+static bool evictor_inactive_pager_backed_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed vmo with committed pages.
+  fbl::RefPtr<VmObjectPaged> vmo1;
+  static constexpr size_t kNumPages = 5;
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo1));
+
+  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction). This will
+  // put these pages in the inactive queue.
+  vmo1->PromoteForReclamation();
+  // Now touch these pages, changing the queue stashed in their vm_page_t without actually moving
+  // them from the inactive queue. The expectation is that the next eviction attempt will fix up the
+  // queue for these pages.
+  for (size_t i = 0; i < kNumPages; i++) {
+    uint8_t data;
+    ASSERT_EQ(ZX_OK, vmo1->Read(&data, i * PAGE_SIZE, sizeof(data)));
+  }
+
+  // Create another pager backed vmo, which has newer pages compared to the previous one. This will
+  // supply the pages below that actually get evicted.
+  fbl::RefPtr<VmObjectPaged> vmo2;
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo2));
+
+  // Promote the pages for eviction i.e. mark them inactive. This will put these pages in the
+  // inactive queue in LRU order, i.e. they will be considered for eviction only after vmo1's pages.
+  vmo2->PromoteForReclamation();
+
+  TestPmmNode node;
+  // Only evict from pager backed vmos.
+  node.evictor()->SetDiscardableEvictionsPercent(0);
+
+  auto target = Evictor::EvictionTarget{
+      .pending = true,
+      .free_pages_target = 5,
+      .min_pages_to_free = 5,
+      .level = Evictor::EvictionLevel::IncludeNewest,
+  };
+
+  // The node starts off with zero pages.
+  uint64_t free_count = node.FreePages();
+  EXPECT_EQ(free_count, 0u);
+
+  node.evictor()->SetOneShotEvictionTarget(target);
+  auto counts = node.evictor()->EvictOneShotFromPreloadedTarget();
+
+  // No discardable pages were evicted.
+  EXPECT_EQ(counts.discardable, 0u);
+  // Free pages target was the same as min pages target. So precisely free pages target must have
+  // been evicted.
+  EXPECT_EQ(counts.pager_backed, target.free_pages_target);
+  EXPECT_GE(counts.pager_backed, target.min_pages_to_free);
+  // The node has the desired number of free pages now, and a minimum of min pages have been freed.
+  free_count = node.FreePages();
+  EXPECT_EQ(free_count, target.free_pages_target);
+  EXPECT_GE(free_count, target.min_pages_to_free);
+
+  // vmo1 should have no pages evicted from it.
+  EXPECT_EQ(kNumPages, vmo1->AttributedPages());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(evictor_tests)
 VM_UNITTEST(evictor_set_target_test)
 VM_UNITTEST(evictor_combine_targets_test)
@@ -785,6 +850,7 @@ VM_UNITTEST(evictor_free_target_test)
 VM_UNITTEST(evictor_continuous_test)
 VM_UNITTEST(evictor_continuous_combine_targets_test)
 VM_UNITTEST(evictor_continuous_repeated_test)
+VM_UNITTEST(evictor_inactive_pager_backed_test)
 UNITTEST_END_TESTCASE(evictor_tests, "evictor", "Evictor tests")
 
 }  // namespace vm_unittest

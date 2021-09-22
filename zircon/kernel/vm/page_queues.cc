@@ -330,12 +330,43 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest_queue) {
-  {
+  // Peek the tail of the inactive queue first.
+  while (true) {
+    // Process a single page each time to keep the critical section for the lock small.
     Guard<CriticalMutex> guard{&lock_};
-    // Peek the tail of the inactive queue first.
+    if (list_is_empty(&page_queues_[PageQueuePagerBackedInactive])) {
+      break;
+    }
     vm_page_t* page =
         list_peek_tail_type(&page_queues_[PageQueuePagerBackedInactive], vm_page_t, queue_node);
-    if (page) {
+
+    // Might need to fix up the queue for this page.
+    PageQueue page_queue =
+        (PageQueue)page->object.get_page_queue_ref().load(fbl::memory_order_relaxed);
+
+    // The page is no longer inactive, we need to move this page out of the inactive queue.
+    // It's possible for MarkAccessed to race and change the queue again from under us, but the
+    // queue can't become PageQueuePagerBackedInactive since we need the lock for that.
+    if (page_queue != PageQueuePagerBackedInactive) {
+      // If page_queue is still valid, move it to that queue. Otherwise, this page is very old
+      // and should be moved to the lru queue and page counts should be updated accordingly. It's
+      // possible that the page is so old that the queues have wrapped again and its page_queue
+      // appears to be valid. However there isn't a way to distinguish that here, so respect the
+      // validity of the queue as returned by queue_is_valid.
+      if (queue_is_valid(page_queue, lru_gen_to_queue(), mru_gen_to_queue())) {
+        list_delete(&page->queue_node);
+        list_add_head(&page_queues_[page_queue], &page->queue_node);
+      } else {
+        PageQueue new_queue = lru_gen_to_queue();
+        PageQueue old_queue = (PageQueue)page->object.get_page_queue_ref().exchange(new_queue);
+        page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
+        page_queue_counts_[new_queue].fetch_add(1, ktl::memory_order_relaxed);
+        list_delete(&page->queue_node);
+        list_add_head(&page_queues_[new_queue], &page->queue_node);
+      }
+    } else {
+      // It's possible for MarkAccessed to race and change the queue from under us, i.e. if the page
+      // is accessed exactly when we're trying to evict it. Ignore that race, and let eviction win.
       VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
       uint64_t page_offset = page->object.get_page_offset();
       DEBUG_ASSERT(cow);
