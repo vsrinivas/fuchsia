@@ -86,6 +86,9 @@ pub enum RealmError {
     #[error("failed to create child component: {:?}", _0)]
     FailedToCreateChild(anyhow::Error),
 
+    #[error("failed to destroy child: {0:?}")]
+    FailedToDestroyChild(anyhow::Error),
+
     #[error("failed to set mock component for {0}: {1:?}")]
     FailedToSetMock(Moniker, frealmbuilder::RealmBuilderError),
 }

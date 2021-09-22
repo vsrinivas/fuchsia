@@ -292,7 +292,9 @@ impl Drop for RealmInstance {
                 fasync::Task::local(async move {
                     // move the mocks_runner into this block
                     let _mocks_runner_task = mocks_runner_task;
-                    destroy_waiter.await.expect("failed to wait for realm destruction");
+                    // There's nothing to be done if we fail to destroy the child, perhaps someone
+                    // else already destroyed it for us. Ignore any error we could get here.
+                    let _ = destroy_waiter.await;
                 })
                 .detach();
             }
@@ -315,7 +317,7 @@ impl RealmInstance {
         }
         let destroy_waiter = self.root.take_destroy_waiter();
         drop(self);
-        destroy_waiter.await.expect("failed to wait for realm destruction");
+        destroy_waiter.await.map_err(RealmError::FailedToDestroyChild)?;
         Ok(())
     }
 }
@@ -982,5 +984,75 @@ mod tests {
         //    res = component_2_drop_receiver => res.expect("failed to receive stop notification"),
         //    default => panic!("component_2 should have stopped by now"),
         //}
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn out_of_band_child_destruction_doesnt_panic_on_destroy() {
+        let mut builder = RealmBuilder::new().await.unwrap();
+        builder
+            .add_component(
+                "component_1",
+                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                    Box::pin(async move {
+                        std::future::pending::<()>().await;
+                        Ok(())
+                    })
+                }),
+            )
+            .await
+            .expect("failed to add component_1");
+
+        let realm_instance = builder.build().create().await.expect("failed to make realm");
+
+        let realm_proxy = fclient::realm().expect("failed to connect to realm");
+        realm_proxy
+            .destroy_child(&mut fsys::ChildRef {
+                name: realm_instance.root.child_name.clone(),
+                collection: Some(DEFAULT_COLLECTION_NAME.to_string()),
+            })
+            .await
+            .expect("failed to send destroy child")
+            .expect("destroy child returned an error");
+
+        match realm_instance.destroy().await {
+            Err(Error::Realm(RealmError::FailedToDestroyChild(_))) => (),
+            Ok(()) => panic!("destroy should have errored"),
+            Err(e) => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn out_of_band_child_destruction_doesnt_panic_on_drop() {
+        let mut builder = RealmBuilder::new().await.unwrap();
+        builder
+            .add_component(
+                "component_1",
+                ComponentSource::mock(move |_mh: mock::MockHandles| {
+                    Box::pin(async move {
+                        std::future::pending::<()>().await;
+                        Ok(())
+                    })
+                }),
+            )
+            .await
+            .expect("failed to add component_1");
+
+        let realm_instance = builder.build().create().await.expect("failed to make realm");
+
+        let realm_proxy = fclient::realm().expect("failed to connect to realm");
+        realm_proxy
+            .destroy_child(&mut fsys::ChildRef {
+                name: realm_instance.root.child_name.clone(),
+                collection: Some(DEFAULT_COLLECTION_NAME.to_string()),
+            })
+            .await
+            .expect("failed to send destroy child")
+            .expect("destroy child returned an error");
+
+        drop(realm_instance);
+        // We want to test that a fuchsia_async::Task spawned by the realm_instance's drop impl
+        // doesn't panic in this case, but we don't have a good way to know when the task is
+        // complete. Let's give it a second to execute, which should be more than enough time.
+        fasync::Timer::new(std::time::Duration::from_secs(1)).await;
     }
 }

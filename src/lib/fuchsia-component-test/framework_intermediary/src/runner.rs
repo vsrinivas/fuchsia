@@ -434,9 +434,9 @@ async fn run_v1_controller(
             fcrunner::ComponentControllerRequest::Stop { .. }
             | fcrunner::ComponentControllerRequest::Kill { .. } => {
                 // We don't actually care much if this succeeds. If we can no longer successfully
-                // talk to the topology builder library then the test probably crashed, and the
-                // mock has thus stopped anyway.
-                v1_controller.kill().await.expect("failed to kill v1 component");
+                // talk to appmgr then we're probably undergoing system shutdown, and the legacy
+                // component has thus stopped anyway.
+                let _ = v1_controller.kill().await;
 
                 break;
             }
