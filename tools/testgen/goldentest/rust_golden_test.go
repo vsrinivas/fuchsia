@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	autotest = flag.String("autotest", "", "Path to autotest binary")
+	testgen  = flag.String("testgen", "", "Path to autotest binary")
 	cm       = flag.String("cm", "", "Path to cm file")
 	golden   = flag.String("golden", "", "Path to golden file directory for rust")
 	language = flag.String("language", "", "Accepts 'cpp' or 'rust'")
@@ -25,8 +25,8 @@ var (
 )
 
 func setUp(t *testing.T) {
-	if _, err := os.Stat(*autotest); os.IsNotExist(err) {
-		t.Fatalf("Invalid autotest path %q err: %s", *autotest, err)
+	if _, err := os.Stat(*testgen); os.IsNotExist(err) {
+		t.Fatalf("Invalid testgen path %q err: %s", *testgen, err)
 	}
 	if _, err := os.Stat(*cm); os.IsNotExist(err) {
 		t.Fatalf("Invalid cm path %q err: %s", *cm, err)
@@ -39,10 +39,10 @@ func setUp(t *testing.T) {
 	}
 }
 
-func runAutoTest(t *testing.T) {
-	autotest_abs, err := filepath.Abs(*autotest)
+func runTestGen(t *testing.T) {
+	testgen_abs, err := filepath.Abs(*testgen)
 	if err != nil {
-		t.Fatalf("Cannot find absolute path to autotest binary %s, error: %v", *autotest, err)
+		t.Fatalf("Cannot find absolute path to testgen binary %s, error: %v", *testgen, err)
 	}
 	cm_abs, err := filepath.Abs(*cm)
 	if err != nil {
@@ -63,7 +63,7 @@ func runAutoTest(t *testing.T) {
 	}
 	cmd := exec.CommandContext(
 		context.Background(),
-		autotest_abs,
+		testgen_abs,
 		args...,
 	)
 	cmd.Dir = td
@@ -147,6 +147,6 @@ func compareGolden(t *testing.T) {
 }
 func Test_Golden(t *testing.T) {
 	setUp(t)
-	runAutoTest(t)
+	runTestGen(t)
 	compareGolden(t)
 }
