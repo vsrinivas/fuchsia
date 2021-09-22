@@ -364,6 +364,58 @@ Example: see
 
 ### Test setup - one Flatland child view (TBD)
 
+### Test setup - Realm Builder
+
+The [Touch Input Test](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
+is constructed using the Realm Builder [library](https://fuchsia.dev/fuchsia-src/development/components/v2/realm_builder?hl=en).
+This library is used to construct the test [Realm](https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms)
+in which the components under test operate. The test suite, hereafter test
+driver component, is a v2 component. This is in contrast to the components in
+the constructed realm, e.g. `scenic`, that are at the moment v1 components. This
+is so because Realm Builder provides a v1 "bridge" that allows for Realms
+constructed to include v1 and v2 components.
+
+Realm Builder (and CFv2 in general) allows us to be explicit about what capabilities
+are routed to and from components. This is crucial for testing because it allows
+test authors to have fine-grained control over the test environment of their
+components. Take for example `scenic`. In `touch-input-test`, a handle to
+`fuchsia.hardware.display.Provider` from `fake-hardware-display-controller-provider#meta/hdcp.cmx`
+is routed. By providing a fake hardware display provider, we can write integration
+tests without having to use the real display controller. This mapping of
+source and target is explicitly written in the test [file](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
+during Realm construction.
+
+Since the Realm is populated by v1 components at the moment, it's worth mentioning
+how this works at a high level. Components added to a Realm constructed with
+Realm Builder work in the same way as typical Realm construction statically. In other
+words, Realm Builder doesn't do anything special. It simply allows for the construction
+of Realms at runtime, instead of statically via manifests. It generates the
+necessary manifests and clauses, e.g. offer capability foo to #child-a, behind
+the scene when a user invokes a method like `realm_builder->AddRoute(...)`. For
+v1 components, this is somewhat still true. The major difference is that Realm
+Builder constructs a wrapper v2 component to launch a v1 component. When the
+wrapper component is started, it launches the v1 component by creating a
+singleton `fuchsia.sys.NestedEnvironment`. This NestedEnvironment will only
+contain the v1 component, and won't contain any services except for those
+explicitly routed to it during Realm construction.
+
+A sample diagram of a Realm constructed with RealmBuilder would look like:
+
+        <root>
+        /    \
+  <wrapper>  <wrapper>
+    /            \
+scenic.cmx    root_presenter.cmx
+
+
+In production, the environment would look more like:
+
+     <appmgr>
+         |
+     <modular>
+     /       \
+scenic.cmx  root_presenter.cmx
+
 ## Modeling complex scenarios
 
 The graphics API allows each product to generate an arbitrarily complex scene
