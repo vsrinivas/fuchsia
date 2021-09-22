@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"regexp"
 	"strings"
 	"testing"
@@ -30,6 +31,7 @@ const (
 	testFunc        = "Test"
 	copySinksFunc   = "EnsureSinks"
 	runSnapshotFunc = "RunSnapshot"
+	closeFunc       = "Close"
 )
 
 // When returned by Test(), errFatal should cause testrunner to stop running any
@@ -56,6 +58,7 @@ func (t *fakeTester) Test(_ context.Context, test testsharder.Test, stdout, stde
 }
 
 func (t *fakeTester) Close() error {
+	t.funcCalls = append(t.funcCalls, closeFunc)
 	return nil
 }
 
@@ -570,4 +573,120 @@ func TestRunAndOutputTest(t *testing.T) {
 			t.Errorf("expected test failure, got: %s", results[0].Result)
 		}
 	})
+}
+
+func TestExecute(t *testing.T) {
+	tests := []testsharder.Test{
+		{
+			Test: build.Test{
+				Name:       "bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			RunAlgorithm: testsharder.StopOnFailure,
+			Runs:         2,
+		}, {
+			Test: build.Test{
+				Name:       "baz",
+				Path:       "/foo/baz",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/baz",
+			},
+			RunAlgorithm: testsharder.StopOnSuccess,
+			Runs:         2,
+		},
+	}
+	cases := []struct {
+		name             string
+		sshKeyFile       string
+		serialSocketPath string
+		wantErr          bool
+	}{
+		{
+			name:       "ssh tester",
+			sshKeyFile: "sshkey",
+		},
+		{
+			name:             "serial tester",
+			serialSocketPath: "socketpath",
+		},
+		{
+			name:       "nil ssh tester",
+			sshKeyFile: "sshkey",
+			wantErr:    true,
+		},
+		{
+			name:             "nil serial tester",
+			serialSocketPath: "socketpath",
+			wantErr:          true,
+		},
+		{
+			name:    "missing socket path",
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Revert fakes.
+			oldSSHTester := sshTester
+			oldSerialTester := serialTester
+			defer func() {
+				sshTester = oldSSHTester
+				serialTester = oldSerialTester
+			}()
+			fuchsiaTester := &fakeTester{}
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ time.Duration) (tester, error) {
+				if c.wantErr {
+					return nil, fmt.Errorf("failed to get tester")
+				}
+				return fuchsiaTester, nil
+			}
+			serialTester = func(_ context.Context, _ string, _ time.Duration) (tester, error) {
+				if c.wantErr {
+					return nil, fmt.Errorf("failed to get tester")
+				}
+				return fuchsiaTester, nil
+			}
+			var buf bytes.Buffer
+			producer := tap.NewProducer(&buf)
+			o, err := createTestOutputs(producer, "")
+			if err != nil {
+				t.Fatalf("failed to create a test outputs object: %s", err)
+			}
+			defer o.Close()
+			err = execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir")
+			if c.wantErr {
+				if err == nil {
+					t.Errorf("got nil error, want an error for failing to initialize a tester")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("got error: %v", err)
+			}
+			funcCalls := strings.Join(fuchsiaTester.funcCalls, ",")
+			testCount := strings.Count(funcCalls, testFunc)
+			copySinksCount := strings.Count(funcCalls, copySinksFunc)
+			snapshotCount := strings.Count(funcCalls, runSnapshotFunc)
+			closeCount := strings.Count(funcCalls, closeFunc)
+			if testCount != 3 {
+				t.Errorf("ran %d tests, want: 3", testCount)
+			}
+			if copySinksCount != 1 {
+				t.Errorf("ran CopySinks %d times, want: 1", copySinksCount)
+			}
+			if snapshotCount != 1 {
+				t.Errorf("ran RunSnapshot %d times, want: 1", snapshotCount)
+			}
+			if closeCount != 1 {
+				t.Errorf("ran Close %d times, want: 1", closeCount)
+			}
+			// Ensure CopySinks, RunSnapshot, and Close are run after all calls to Test.
+			lastCalls := fuchsiaTester.funcCalls[len(fuchsiaTester.funcCalls)-3:]
+			expectedLastCalls := []string{runSnapshotFunc, copySinksFunc, closeFunc}
+			if diff := cmp.Diff(expectedLastCalls, lastCalls); diff != "" {
+				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
+			}
+		})
+	}
 }

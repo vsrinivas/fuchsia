@@ -151,7 +151,7 @@ func getModuleBuildIDs(test string) ([]string, error) {
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func newSubprocessTester(dir string, env []string, localOutputDir string, perTestTimeout time.Duration) *subprocessTester {
+func newSubprocessTester(dir string, env []string, localOutputDir string, perTestTimeout time.Duration) tester {
 	return &subprocessTester{
 		dir:               dir,
 		env:               env,
@@ -288,7 +288,7 @@ type fuchsiaSSHTester struct {
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, perTestTimeout time.Duration) (*fuchsiaSSHTester, error) {
+func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, perTestTimeout time.Duration) (tester, error) {
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
@@ -490,7 +490,7 @@ type fuchsiaSerialTester struct {
 	localOutputDir string
 }
 
-func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (*fuchsiaSerialTester, error) {
+func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (tester, error) {
 	// We set the socket IO timeout to a slightly longer timeout than the test
 	// timeout so that runtests has time to enforce its own timeout. The IO timeout
 	// will then act as a fallback timeout in case the serial socket hangs.

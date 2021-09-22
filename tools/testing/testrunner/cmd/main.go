@@ -208,7 +208,12 @@ type tester interface {
 	RunSnapshot(context.Context, string) error
 }
 
-// TODO: write tests for this function. Tests were deleted in fxrev.dev/407968 as part of a refactoring.
+// for testability
+var (
+	sshTester    = newFuchsiaSSHTester
+	serialTester = newFuchsiaSerialTester
+)
+
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
@@ -222,13 +227,13 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
-					fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
+					fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
 				} else {
 					if serialSocketPath == "" {
 						finalError = fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
 						break
 					}
-					fuchsiaTester, err = newFuchsiaSerialTester(ctx, serialSocketPath, perTestTimeout)
+					fuchsiaTester, err = serialTester(ctx, serialSocketPath, perTestTimeout)
 				}
 				if err != nil {
 					finalError = fmt.Errorf("failed to initialize fuchsia tester: %w", err)
@@ -250,7 +255,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
 				var err error
-				fuchsiaTester, err = newFuchsiaSSHTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
+				fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
