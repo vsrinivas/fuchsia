@@ -480,6 +480,7 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
 
   zx_status_t status = ZX_OK;
   size_t hint = 0;
+  size_t total_slices_reserved = 0;
 
   {
     fbl::AutoLock lock(&vp->lock_);
@@ -525,14 +526,13 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
       AllocatePhysicalSlice(vp, pslice, vslice);
       hint = pslice + 1;
     }
+
+    total_slices_reserved = vp->NumSlicesLocked();
   }
 
   if ((status = WriteFvmLocked()) == ZX_OK) {
     VPartitionEntry* entry = GetVPartEntryLocked(vp->entry_index());
-    diagnostics().OnAllocateSlices({
-        .vpart_name = entry->name(),
-        .count = count,
-    });
+    diagnostics().UpdatePartitionMetrics(entry->name(), total_slices_reserved);
   } else {
     // Undo allocation in the event of failure; avoid holding VPartition lock while writing to fvm.
     fbl::AutoLock lock(&vp->lock_);
@@ -597,10 +597,15 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
   }
 
   bool valid_range = false;
+  std::string partition_name;
+  size_t total_slices_reserved = 0;
   {
     fbl::AutoLock lock(&vp->lock_);
     if (vp->IsKilledLocked())
       return ZX_ERR_BAD_STATE;
+
+    auto entry = GetVPartEntryLocked(vp->entry_index());
+    partition_name = entry->name();
 
     if (vslice_start == 0) {
       // Special case: Freeing entire VPartition
@@ -617,7 +622,6 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
       if (vp->zxdev()) {
         vp->DdkAsyncRemove();
       }
-      auto entry = GetVPartEntryLocked(vp->entry_index());
       entry->Release();
       vp->KillLocked();
       valid_range = true;
@@ -633,13 +637,18 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
         }
       }
     }
+    total_slices_reserved = vp->NumSlicesLocked();
   }
 
   if (!valid_range) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return WriteFvmLocked();
+  zx_status_t status = WriteFvmLocked();
+  if (status == ZX_OK) {
+    diagnostics().UpdatePartitionMetrics(partition_name, total_slices_reserved);
+  }
+  return status;
 }
 
 void VPartitionManager::Query(volume_info_t* info) {

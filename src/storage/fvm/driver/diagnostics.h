@@ -58,14 +58,8 @@ class Diagnostics {
   // Reports the initial state of the FVM instance. Should be called once on mount.
   void OnMount(OnMountArgs args);
 
-  struct OnAllocateSlicesArgs {
-    // The name of the partition which requested the slices.
-    std::string_view vpart_name = "";
-    // The number of slices requested.
-    size_t count = 0;
-  };
-  // Reports that a vpartition allocated slices.
-  void OnAllocateSlices(const OnAllocateSlicesArgs& args);
+  // Reports the metrics stored for a partition.
+  void UpdatePartitionMetrics(const std::string& partition_name, size_t num_slices);
 
   // Returns a read-only duplicate of the VMO this object writes to. Suitable for giving out to an
   // external process which would like to subscribe to FVM's diagnostics.
@@ -95,7 +89,6 @@ class Diagnostics {
     // Root node which all of the per-partition metrics live under.
     inspect::Node root;
 
-    inspect::UintProperty num_slice_reservations;
     inspect::UintProperty total_slices_reserved;
   };
   inspect::Node per_partition_node_;

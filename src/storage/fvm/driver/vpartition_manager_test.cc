@@ -259,9 +259,6 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
     ASSERT_NE(node, nullptr);
     EXPECT_EQ(
-        node->node().get_property<inspect::UintPropertyValue>("num_slice_reservations")->value(),
-        1u);
-    EXPECT_EQ(
         node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
         3u);
   }
@@ -274,9 +271,6 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
     ASSERT_TRUE(hierarchy.is_ok());
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(
-        node->node().get_property<inspect::UintPropertyValue>("num_slice_reservations")->value(),
-        2u);
     EXPECT_EQ(
         node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
         4u);
