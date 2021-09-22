@@ -617,6 +617,8 @@ explained in [Routing terminology](#routing-terminology).
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
     -   `framework`: The Component Framework runtime.
+    -   `#<capability-name>`: The name of another capability from which the
+        exposed capability is derived.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance.
 -   `to` _(optional)_: The capability target. Either `parent` or `framework`.
@@ -678,6 +680,8 @@ explained in [Routing terminology](#routing-terminology).
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
     -   `framework`: The Component Framework runtime.
+    -   `#<capability-name>`: The name of another capability from which the
+        offered capability is derived.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance. This source can only be used when offering protocol,
         directory, or runner capabilities.
