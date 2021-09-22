@@ -1,0 +1,50 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Provides a shortcut to the prebuilt GNU diagnostic tools
+
+## usage: fx gnu TOOL [ARGUMENTS...]
+##
+##    -h|--help     Shows this help and lists all available GNU tools
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+readonly BINUTILS_BIN="${PREBUILT_3P_DIR}/binutils-gdb/${HOST_PLATFORM}/bin"
+
+function binutils {
+  fx-config-read
+
+  if [[ $# -lt 1 ]]; then
+    fx-command-help
+    exit 1
+  fi
+
+  if [[ "$1" == -h || "$1" == "--help" ]]; then
+    fx-print-command-help "$0"
+    echo -e "\nThe list of GNU tools accessible is:"
+
+    local f t
+    for f in "$BINUTILS_BIN"/*; do
+      if [[ -x "$f" ]]; then
+        t="$(basename "$f")"
+        echo "   $t"
+      fi
+    done
+    exit 0
+  fi
+
+  local tool="${1}"
+  shift
+  local tool_path="${BINUTILS_BIN}/${tool}"
+
+  if [[ ! -x "${tool_path}" ]]; then
+    fx-error "Prebuilt GNU tool doesn't exist or is not executable: '${tool_path}'"
+    exit 1
+  fi
+
+  "${tool_path}" "$@"
+}
+
+binutils "$@"
