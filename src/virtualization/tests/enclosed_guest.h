@@ -188,11 +188,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 };
 
-using AllGuestTypes = ::testing::Types<ZirconEnclosedGuest
-#if __x86_64__
-                                       ,
-                                       DebianEnclosedGuest, TerminaEnclosedGuest
-#endif  // __x86_64__
-                                       >;
+using AllGuestTypes =
+    ::testing::Types<ZirconEnclosedGuest, DebianEnclosedGuest, TerminaEnclosedGuest>;
 
 #endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_

@@ -266,12 +266,8 @@ class VirtioBlockGuestTest : public GuestTest<T> {
   }
 };
 
-using GuestTypes = ::testing::Types<VirtioBlockZirconGuest
-#if __x86_64__
-                                    ,
-                                    VirtioBlockDebianGuest
-#endif  // __x86_64__
-                                    >;
+using GuestTypes = ::testing::Types<VirtioBlockZirconGuest, VirtioBlockDebianGuest>;
+
 TYPED_TEST_SUITE(VirtioBlockGuestTest, GuestTypes);
 
 TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
