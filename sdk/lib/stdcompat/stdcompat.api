@@ -7,7 +7,7 @@
   "pkg/stdcompat/include/lib/stdcompat/functional.h": "8886db99066f35cbb78e1ae529b65e5e",
   "pkg/stdcompat/include/lib/stdcompat/internal/algorithm.h": "8cde04a950be607ca29377b749683b50",
   "pkg/stdcompat/include/lib/stdcompat/internal/array.h": "b86fbc2d33a82e9c6790f34ddd1be048",
-  "pkg/stdcompat/include/lib/stdcompat/internal/atomic.h": "fcf83e79581a9c1570abb6774c1b869b",
+  "pkg/stdcompat/include/lib/stdcompat/internal/atomic.h": "ae3f59813568920d7045676e1d5b9ab5",
   "pkg/stdcompat/include/lib/stdcompat/internal/bit.h": "ea6446b0b7e70d00d2500540561032c0",
   "pkg/stdcompat/include/lib/stdcompat/internal/constructors.h": "664276aef7a6132071fbf93b5ee3fe75",
   "pkg/stdcompat/include/lib/stdcompat/internal/exception.h": "36e3245793a2229c969370af46d7f692",

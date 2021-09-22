@@ -71,6 +71,15 @@ struct alignment<T, std::enable_if_t<cpp17::is_pointer_v<T> || cpp17::is_floatin
 template <typename T>
 static constexpr bool unqualified = cpp17::is_same_v<T, std::remove_cv_t<T>>;
 
+template <typename T>
+bool compare_exchange(T* ptr, std::remove_volatile_t<T>& expected,
+                      std::remove_volatile_t<T> desired, bool is_weak, std::memory_order success,
+                      std::memory_order failure) {
+  return __atomic_compare_exchange(ptr, cpp17::addressof(expected), cpp17::addressof(desired),
+                                   is_weak, to_builtin_memory_order(success),
+                                   to_builtin_memory_order(failure));
+}
+
 // Provide atomic operations based on compiler builtins.
 template <typename Derived, typename T>
 class atomic_ops {
@@ -112,9 +121,8 @@ class atomic_ops {
   bool compare_exchange_weak(T& expected, T desired, std::memory_order success,
                              std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
-    return __atomic_compare_exchange(ptr(), cpp17::addressof(expected), cpp17::addressof(desired),
-                                     /*weak=*/true, to_builtin_memory_order(success),
-                                     to_builtin_memory_order(failure));
+    return compare_exchange(ptr(), expected, desired,
+                            /*is_weak=*/true, success, failure);
   }
 
   bool compare_exchange_strong(
@@ -127,9 +135,8 @@ class atomic_ops {
   bool compare_exchange_strong(T& expected, T desired, std::memory_order success,
                                std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
-    return __atomic_compare_exchange(ptr(), cpp17::addressof(expected), cpp17::addressof(desired),
-                                     /*weak=*/false, to_builtin_memory_order(success),
-                                     to_builtin_memory_order(failure));
+    return compare_exchange(ptr(), expected, desired,
+                            /*is_weak=*/false, success, failure);
   }
 
  private:
@@ -189,12 +196,11 @@ using difference_t = typename arithmetic_ops_helper<T>::operand_type;
 template <typename Derived, typename T, typename Enabled = void>
 class arithmetic_ops {};
 
-// Pointer and Integral operations.
+// Non volatile pointers Pointer and Integral operations.
 template <typename Derived, typename T>
-class arithmetic_ops<
-    Derived, T,
-    std::enable_if_t<(cpp17::is_integral_v<T> && unqualified<T> && !cpp17::is_same_v<T, bool>) ||
-                     cpp17::is_pointer_v<T>>> {
+class arithmetic_ops<Derived, T,
+                     std::enable_if_t<cpp17::is_integral_v<T> ||
+                                      (cpp17::is_pointer_v<T> && !cpp17::is_volatile_v<T>)>> {
   using return_t = typename arithmetic_ops_helper<T>::return_type;
   using operand_t = typename arithmetic_ops_helper<T>::operand_type;
   using ptr_t = typename arithmetic_ops_helper<T>::ptr_type;
@@ -225,24 +231,26 @@ class arithmetic_ops<
 // Floating point arithmetic operations.
 // Based on CAS cycles to perform atomic add and sub.
 template <typename Derived, typename T>
-class arithmetic_ops<Derived, T,
-                     std::enable_if_t<cpp17::is_floating_point_v<T> && unqualified<T>>> {
+class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>> {
+ private:
+  using value_t = std::remove_volatile_t<T>;
+
  public:
   T fetch_add(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
-    T old_value = derived()->load(std::memory_order_relaxed);
-    T new_value = old_value + operand;
+    value_t old_value = derived()->load(std::memory_order_relaxed);
+    value_t new_value = old_value + operand;
     while (
-        !derived()->compare_exchange_weak(old_value, new_value, order, std::memory_order_relaxed)) {
+        !compare_exchange(ptr(), old_value, new_value, false, order, std::memory_order_relaxed)) {
       new_value = old_value + operand;
     }
     return old_value;
   }
 
   T fetch_sub(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
-    T old_value = derived()->load(std::memory_order_relaxed);
-    T new_value = old_value - operand;
+    value_t old_value = derived()->load(std::memory_order_relaxed);
+    value_t new_value = old_value - operand;
     while (
-        !derived()->compare_exchange_weak(old_value, new_value, order, std::memory_order_relaxed)) {
+        !compare_exchange(ptr(), old_value, new_value, false, order, std::memory_order_relaxed)) {
       new_value = old_value - operand;
     }
     return old_value;
@@ -252,7 +260,7 @@ class arithmetic_ops<Derived, T,
   T operator-=(T operand) const noexcept { return fetch_sub(operand) - operand; }
 
  private:
-  constexpr T ptr() const { return static_cast<const Derived*>(this)->ptr_; }
+  constexpr T* ptr() const { return static_cast<const Derived*>(this)->ptr_; }
   constexpr const Derived* derived() const { return static_cast<const Derived*>(this); }
 };
 
@@ -269,9 +277,7 @@ template <typename Derived, typename T, typename Enabled = void>
 class bitwise_ops {};
 
 template <typename Derived, typename T>
-class bitwise_ops<
-    Derived, T,
-    std::enable_if_t<cpp17::is_integral_v<T> && unqualified<T> && !cpp17::is_same_v<T, bool>>> {
+class bitwise_ops<Derived, T, std::enable_if_t<cpp17::is_integral_v<T>>> {
  public:
   T fetch_and(T operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_and(ptr(), operand, to_builtin_memory_order(order));

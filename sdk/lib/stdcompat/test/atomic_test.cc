@@ -5,6 +5,7 @@
 #include "lib/stdcompat/internal/atomic.h"
 
 #include <lib/stdcompat/atomic.h>
+#include <lib/stdcompat/type_traits.h>
 
 #include <array>
 #include <limits>
@@ -69,12 +70,13 @@ std::enable_if_t<!cpp17::is_pointer_v<T>, T> cast_helper(U u) {
   return static_cast<T>(u);
 }
 
-struct CheckAtomicOps {
-  // For const types this operations would fail to compile.
-  template <typename T>
+template <typename T, typename = void>
+struct CheckAtomicOpsMutable {
   static void CheckStoreAndExchange() {}
+};
 
-  template <typename T, typename std::enable_if_t<!cpp17::is_const_v<T>>>
+template <typename T>
+struct CheckAtomicOpsMutable<T, std::enable_if_t<!cpp17::is_const_v<T>>> {
   static void CheckStoreAndExchange() {
     T zero = cast_helper<T>(0);
     T one = cast_helper<T>(1);
@@ -93,27 +95,31 @@ struct CheckAtomicOps {
     ref = zero;
     EXPECT_EQ(obj, zero);
   }
+};
 
-  // For volatiles this operations would fail to compile.
-  template <typename T>
+template <typename T, typename = void>
+struct CheckAtomicOpsCompareExchange {
   static void CheckCompareExchange() {}
+};
 
-  template <typename T, typename std::enable_if_t<cpp20::atomic_internal::unqualified<T>>>
-  static void CheckCheckCompareExchange() {
+template <typename T>
+struct CheckAtomicOpsCompareExchange<T, std::enable_if_t<cpp20::atomic_internal::unqualified<T>>> {
+  static void CheckCompareExchange() {
     T zero = cast_helper<T>(0);
     T one = cast_helper<T>(1);
 
-    T obj = zero;
+    std::remove_const_t<T> obj = zero;
     cpp20::atomic_ref<T> ref(obj);
 
     obj = zero;
-    T exp = one;
-    EXPECT_FALSE(ref.compare_exchange_weak(exp, zero));
+    std::remove_const_t<T> exp = one;
+
+    EXPECT_FALSE(ref.compare_exchange_weak(exp, one));
     EXPECT_EQ(obj, zero);
 
     obj = zero;
     exp = one;
-    EXPECT_FALSE(ref.compare_exchange_strong(exp, zero));
+    EXPECT_FALSE(ref.compare_exchange_strong(exp, one));
     EXPECT_EQ(obj, zero);
 
     obj = zero;
@@ -154,8 +160,8 @@ void CheckAtomicOperations() {
   // * |volatile T| does not support compare_and_exchange operations.
   //
   // The following checks, will be No-Op depending on |T|.
-  CheckAtomicOps::CheckStoreAndExchange<T>();
-  CheckAtomicOps::CheckCompareExchange<T>();
+  CheckAtomicOpsMutable<T>::CheckStoreAndExchange();
+  CheckAtomicOpsCompareExchange<T>::CheckCompareExchange();
 }
 
 template <typename T>
@@ -367,20 +373,8 @@ struct TriviallyCopyable {
 static_assert(cpp17::is_trivially_copyable_v<TriviallyCopyable>, "");
 
 TEST(AtomicRefTest, NoSpecialization) {
-  CheckAtomicOperations<bool>();
-  CheckNoSpecialization<bool>();
-
   CheckAtomicOperations<TriviallyCopyable>();
   CheckNoSpecialization<TriviallyCopyable>();
-
-  CheckAtomicOperations<volatile int>();
-  CheckNoSpecialization<volatile int>();
-
-  CheckAtomicOperations<volatile float>();
-  CheckNoSpecialization<volatile float>();
-
-  CheckAtomicOperations<const int>();
-  CheckNoSpecialization<const int>();
 }
 
 TEST(AtomicRefTest, IntegerSpecialization) {
@@ -406,6 +400,20 @@ TEST(AtomicRefTest, IntegerSpecialization) {
   CheckIntegerSpecialization<uint64_t>();
   CheckIntegerOperations<uint64_t>();
 
+  CheckAtomicOperations<volatile int>();
+  CheckIntegerSpecialization<volatile int>();
+  CheckIntegerOperations<volatile int>();
+
+  CheckAtomicOperations<const int>();
+  CheckIntegerSpecialization<const int>();
+  // All operations fromt he specialization would attempt to mutate the underlying object, which
+  // would fail to compile.
+
+  // Both gcc and clang treat bool as int specialization, just certain functions will fail to
+  // compile.
+  CheckAtomicOperations<bool>();
+  CheckIntegerSpecialization<bool>();
+
   // 16 bytes -- if supported, to silence oversized atomic operations.
   if (!cpp20::atomic_ref<int128_t>::is_always_lockfree) {
     return;
@@ -427,6 +435,13 @@ TEST(AtomicRefTest, FloatSpecialization) {
   CheckAtomicOperations<double>();
   CheckFloatSpecialization<double>();
   CheckFloatOperations<double>();
+
+  CheckAtomicOperations<volatile float>();
+  CheckFloatSpecialization<volatile float>();
+  CheckFloatOperations<volatile float>();
+
+  CheckAtomicOperations<const float>();
+  CheckFloatSpecialization<const float>();
 }
 
 TEST(AtomicRefTest, PointerSpecialization) {
@@ -450,6 +465,48 @@ TEST(AtomicRefTest, ConstFromNonConst) {
   cpp20::atomic_ref<const int> b(a);
   EXPECT_EQ(b.load(), a);
 }
+
+#if __cpp_lib_atomic_ref < 201806L || defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+TEST(AtomicRefTest, InvalidFailOrderAborts) {
+  ASSERT_DEATH(
+      {
+        int a;
+        int c = 1;
+        cpp20::atomic_ref<int> b(a);
+        b.compare_exchange_strong(c, 2, std::memory_order_relaxed, std::memory_order_acq_rel);
+      },
+      ".*");
+
+  ASSERT_DEATH(
+      {
+        int a;
+        int c = 1;
+        cpp20::atomic_ref<int> b(a);
+        b.compare_exchange_strong(c, 2, std::memory_order_relaxed, std::memory_order_release);
+      },
+      ".*");
+
+  ASSERT_DEATH(
+      {
+        int a;
+        int c = 1;
+        cpp20::atomic_ref<int> b(a);
+        b.compare_exchange_weak(c, 2, std::memory_order_relaxed, std::memory_order_acq_rel);
+      },
+      ".*");
+
+  ASSERT_DEATH(
+      {
+        int a;
+        int c = 1;
+        cpp20::atomic_ref<int> b(a);
+        b.compare_exchange_weak(c, 2, std::memory_order_relaxed, std::memory_order_release);
+      },
+      ".*");
+}
+
+#endif
 
 #if __cpp_lib_atomic_ref >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
