@@ -93,13 +93,11 @@ if (current_toolchain == dart_toolchain) {
   }
 }
 
-if (current_toolchain == default_toolchain) {
-  # A toolchain dedicated to processing and analyzing Dart packages.
-  # The only targets in this toolchain are action() targets, so it
-  # has no real tools.  But every toolchain needs stamp and copy.
-  basic_toolchain("dartlang") {
-    expected_label = dart_toolchain
-  }
+# A toolchain dedicated to processing and analyzing Dart packages.
+# The only targets in this toolchain are action() targets, so it
+# has no real tools.  But every toolchain needs stamp and copy.
+basic_toolchain("dartlang") {
+  expected_label = dart_toolchain
 }
 
 python_host_test("gen_reference_docs_test") {

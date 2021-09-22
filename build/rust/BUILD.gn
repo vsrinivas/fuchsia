@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/testing/host_test_data.gni")
-import("//build/toolchain/basic_toolchain.gni")
 
 group("disable_strict_sources_check_allowlist") {
   #  ________  _________  ________  ________

@@ -6,9 +6,6 @@ import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/toolchain/basic_toolchain.gni")
 
-# A toolchain dedicated to processing FIDL libraries.
-# The only targets in this toolchain are action() targets, so it
-# has no real tools.  But every toolchain needs stamp and copy.
 basic_toolchain("fidling") {
   expected_label = fidl_toolchain
 }
