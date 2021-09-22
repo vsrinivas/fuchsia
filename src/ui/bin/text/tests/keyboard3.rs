@@ -210,6 +210,7 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
 }
 
 #[fasync::run_singlethreaded(test)]
+#[ignore] // TODO(fxbug.dev/85005) debug and re-enable
 async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_injector(
 ) -> Result<()> {
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
