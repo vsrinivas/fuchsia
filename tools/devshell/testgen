@@ -1,0 +1,14 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Test
+### Component integration test auto-generator
+## Usage: fx testgen -l <path/to/.cm> -o <path/to/test/root/dir>
+## See 'fx testgen --help' for more help
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
+
+fx-config-read
+fx-command-exec host-tool testgen "$@"
