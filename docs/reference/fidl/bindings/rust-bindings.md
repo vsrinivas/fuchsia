@@ -488,22 +488,26 @@ impl TicTacToeProxyInterface for FakeTicTacToeProxy {
 
 #### Synchronous {#protocols-client-synchronous}
 
-For synchronous clients of the `TicTacToe` protocols, the FIDL toolchain
+For synchronous clients of the `TicTacToe` protocol, the FIDL toolchain
 generates a `TicTacToeSynchronousProxy` struct with the following methods:
 
 * `new(channel: fidl::Channel) -> TicTacToeSynchronousProxy`: Returns a new
   synchronous proxy over the client end of a channel. The server end is assumed
   to implement the `TicTacToe` protocol.
 * `into_channel(self) -> fidl::Channel`: Convert the proxy back into a channel.
-* `start_game(&mut self, mut a: i64) -> Result<(), fidl::Error>`: Proxy method
+* `start_game(&self, mut a: i64) -> Result<(), fidl::Error>`: Proxy method
   for a fire and forget method: it takes the request parameters as arguments and
   returns an empty result.
-* `make_move(&mut self, mut row: u8, mut col: u8, __deadline: zx::Time) ->
+* `make_move(&self, mut row: u8, mut col: u8, __deadline: zx::Time) ->
   Result<(bool, Option<Box<GameState>>), fidl::Error>`: Proxy method for a two
   way method. It takes the request parameters as arguments followed by a
   deadline parameter, which dictates how long the method call will wait for a
   response (or `zx::Time::INFINITE` to block indefinitely). It returns a
   `Result` of the [response parameters](#request-response-event-parameters).
+* `wait_for_event(&self, deadline: zx::Time) ->
+  Result<TicTacToeEvent, fidl::Error>`: Blocks until an event is received or the
+  deadline expires (use `zx::Time::INFINITE` to block indefinitely). It returns
+  a `Result` of the [`TicTacToeEvent` enum](#protocols-events-client).
 
 An example of setting up a synchronous proxy is available in the
 [Rust tutorial][tutorial].
@@ -566,11 +570,16 @@ following methods:
 
 #### Client {#protocols-events-client}
 
-For receiving events on the client, the FIDL toolchain generates a
+For receiving events on the asynchronous client, the FIDL toolchain generates a
 `TicTacToeEventStream`, which can be obtained using the `take_event_stream()`
 method on the [`TicTacToeProxy`](#protocols-client-asynchronous).
 `TicTacToeEventStream` implements `futures::Stream<Item = Result<TicTacToeEvent,
 fidl::Error>>`.
+
+For receiving events on the synchronous client, the FIDL toolchain generates a
+`wait_for_event` method on the
+[`TicTacToeSynchronousProxy`](#protocols-client-synchronous) that returns a
+`TicTacToeEvent`.
 
 `TicTacToeEvent` is an enum representing the possible events. It has the
 following variants:
