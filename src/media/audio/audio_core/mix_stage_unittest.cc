@@ -9,6 +9,7 @@
 #include <fbl/string_printf.h>
 #include <gmock/gmock.h>
 
+#include "ffl/string.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -17,6 +18,8 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
+#include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/format/constants.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -42,6 +45,16 @@ class MixStageTest : public testing::ThreadingModelFixture {
   static constexpr uint32_t kBlockSizeFrames = 240;
 
   void SetUp() {
+    zx::clock zx_device_clock = clock::CloneOfMonotonic();
+    auto clock_result = audio::clock::DuplicateClock(zx_device_clock);
+    ASSERT_TRUE(clock_result.is_ok());
+    zx::clock zx_clone_device_clock = clock_result.take_value();
+
+    device_clock_ = context().clock_factory()->CreateDeviceFixed(std::move(zx_device_clock),
+                                                                 AudioClock::kMonotonicDomain);
+    clone_of_device_clock_ = context().clock_factory()->CreateDeviceFixed(
+        std::move(zx_clone_device_clock), AudioClock::kMonotonicDomain);
+
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
                                             *device_clock_);
   }
@@ -84,8 +97,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  std::unique_ptr<AudioClock> device_clock_ = context().clock_factory()->CreateDeviceFixed(
-      clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+  std::unique_ptr<AudioClock> device_clock_;
+  std::unique_ptr<AudioClock> clone_of_device_clock_;
 };
 
 TEST_F(MixStageTest, AddInput_MixerSelection) {
@@ -709,71 +722,107 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   }
 }
 
-// When micro-SRC makes a rate change, we preserve our source position. Specifically, a component of
-// position beyond what we capture by frac_source_pos is kept in [source_pos_modulo, rate_modulo,
-// denominator, next_source_pos_modulo], in Bookkeeping x3 and SourceInfo respectively. If rate
-// adjustment occurs and denominator changes, then source_pos_modulo and next_source_pos_modulo are
-// scaled from the old denominator to the new one.
-TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
-  auto audio_clock = context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic());
-  constexpr int32_t dest_frames_per_mix = 12;
+// Double-check the reset of rate-adjustment coefficients upon first ReadLock call, and validate
+// that source_pos_modulo is not being double-incremented.
+TEST_F(MixStageTest, PositionResetAndAdvance) {
+  constexpr int32_t dest_frames_per_mix = 96;
 
-  // We set our timeline slow by 1 frac-frame per nsec.
+  // We set our timeline slow by 1 source_pos_modulo unit per frame.
   auto nsec_to_frac_source =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(kDefaultFormat.frames_per_second()).raw_value() - 1, zx::sec(1).to_nsecs())));
-  std::shared_ptr<PacketQueue> packet_queue =
-      std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_source, std::move(audio_clock));
+  // Set PacketQueue with a clone of the device clock, so micro-SRC doesn't engage.
+  std::shared_ptr<PacketQueue> packet_queue = std::make_shared<PacketQueue>(
+      kDefaultFormat, nsec_to_frac_source, std::move(clone_of_device_clock_));
 
-  auto mixer = mix_stage_->AddInput(packet_queue);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  bool packet_released = false;
+  packet_queue->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(2)));
+  packet_queue->PushPacket(packet_factory.CreatePacket(2.0, zx::msec(2)));
+  packet_queue->PushPacket(packet_factory.CreatePacket(
+      3.0, zx::msec(2), [&packet_released] { packet_released = true; }));
+
+  auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
   auto& info = mixer->source_info();
   auto& bookkeeping = mixer->bookkeeping();
 
   bookkeeping.SetRateModuloAndDenominator(76543, 98765);
-  info.next_source_pos_modulo = 12345;
   bookkeeping.source_pos_modulo = 23456;
 
+  auto source_pos_for_read_lock = Fixed(0);
   // The first mix resets position, so the above will be overwritten and we'll advance from zero.
-  mix_stage_->ReadLock(Fixed(0), dest_frames_per_mix);
+  {
+    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    RunLoopUntilIdle();
 
-  // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
-  EXPECT_EQ(bookkeeping.rate_modulo(),
-            static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-  EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
-  // next_source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
-  EXPECT_EQ(static_cast<int64_t>(bookkeeping.denominator() - info.next_source_pos_modulo),
-            dest_frames_per_mix);
-  // ... which also means we'll be one frac-frame behind.
-  EXPECT_EQ(Fixed(info.next_dest_frame), Fixed(info.next_source_frame + Fixed::FromRaw(1)));
-  // At this point we expect long-running and current source_pos_modulo to be exactly equal.
-  EXPECT_EQ(info.next_source_pos_modulo, bookkeeping.source_pos_modulo)
-      << info.next_source_pos_modulo << " (current pos_mod) should equal "
-      << bookkeeping.source_pos_modulo << "(long-running pos_mod)";
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
-  // Long-running and current source_pos_modulos advance at the same rate, regardless of the actual
-  // rate_modulo/denominator values. To observe source_pos_modulo scaling as denominator changes, we
-  // set them exactly denominator/2 apart. With adaptive micro-SRC, we can't precisely predict our
-  // new denominator, nor where source_pos_modulos will end up. We do know that whatever this new
-  // denominator is, the two source_pos_modulo values should still be denominator/2 apart.
-  bookkeeping.source_pos_modulo = 0;
-  info.next_source_pos_modulo = bookkeeping.denominator() / 2;
-  mix_stage_->ReadLock(Fixed(dest_frames_per_mix), dest_frames_per_mix);
+    // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
+    EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << bookkeeping.step_size;
+    EXPECT_EQ(bookkeeping.rate_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
-  uint64_t source_pos_diff = info.next_source_pos_modulo > bookkeeping.source_pos_modulo
-                                 ? info.next_source_pos_modulo - bookkeeping.source_pos_modulo
-                                 : bookkeeping.source_pos_modulo - info.next_source_pos_modulo;
+    // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
+    EXPECT_EQ(bookkeeping.source_pos_modulo,
+              bookkeeping.denominator() - source_pos_for_read_lock.Floor());
+    // ... which also means we'll be one frac-frame behind.
+    EXPECT_EQ(info.next_source_frame, Fixed(Fixed(info.next_dest_frame) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << info.next_source_frame;
+  }
 
-  // We include the "+1" possibility because theoretically a TLRate-reduced denominator can be odd.
-  // If source_pos_modulo is larger than next_source_pos_modulo after second mix, we may need this.
-  EXPECT_TRUE((source_pos_diff == bookkeeping.denominator() / 2) ||
-              (source_pos_diff == bookkeeping.denominator() / 2 + 1));
+  {
+    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    RunLoopUntilIdle();
 
-  // If denominator becomes zero, source_pos_modulos will also be, even if we didn't correctly scale
-  // source_pos_modulo -- thus we wouldn't have tested the feature. This should never happen, but if
-  // a future micro-SRC design causes this, then the test must be reworked.
-  if (bookkeeping.denominator() == 0) {
-    FX_LOGS(WARNING) << "Post-micro-SRC denom is miraculously 0; pos_mod scaling is untestable";
-    GTEST_SKIP();
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+
+    EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << bookkeeping.step_size;
+    EXPECT_EQ(bookkeeping.rate_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+
+    EXPECT_EQ(bookkeeping.source_pos_modulo,
+              bookkeeping.denominator() - source_pos_for_read_lock.Floor());
+    EXPECT_EQ(info.next_source_frame, Fixed(Fixed(info.next_dest_frame) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << info.next_source_frame;
+  }
+
+  // Subsequent mixes should not reset position, so this change should persist.
+  bookkeeping.source_pos_modulo += 17;
+  {
+    auto buffer = mix_stage_->ReadLock(Fixed(source_pos_for_read_lock), dest_frames_per_mix);
+    RunLoopUntilIdle();
+
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+
+    EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << bookkeeping.step_size;
+    EXPECT_EQ(bookkeeping.rate_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+
+    // source_pos_modulo shows the offset, and still losing 1 source_pos_modulo per dest frame
+    EXPECT_EQ(bookkeeping.source_pos_modulo,
+              bookkeeping.denominator() - source_pos_for_read_lock.Floor() + 17);
+    EXPECT_EQ(info.next_source_frame, Fixed(Fixed(info.next_dest_frame) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << info.next_source_frame;
+  }
+
+  packet_queue->Flush();
+  while (!packet_released) {
+    RunLoopUntilIdle();
   }
 }
 
@@ -816,6 +865,61 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
                                 StreamUsageMask(), 0);
 
   mix_stage_->ProcessMix(*mixer, *input, buffer);
+}
+
+// When a packet starts after the mix starts, position should be advanced per step_size|rate_mod,
+// including updating source_pos_modulo (not simply scaled with a TimelineRate).
+TEST_F(MixStageTest, PositionSkip) {
+  constexpr int32_t dest_frames_per_mix = 48;  // 1ms
+
+  // We set our timeline slow by 1 frac-frame per msec, to create source_pos_modulo activity.
+  auto nsec_to_frac_source =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(kDefaultFormat.frames_per_second()).raw_value() - 1, zx::sec(1).to_nsecs())));
+  std::shared_ptr<PacketQueue> packet_queue = std::make_shared<PacketQueue>(
+      kDefaultFormat, nsec_to_frac_source, std::move(clone_of_device_clock_));
+
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  bool packet_released = false;
+  packet_queue->PushPacket(packet_factory.CreatePacket(
+      1.0, zx::msec(1), [&packet_released] { packet_released = true; }));
+
+  auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
+
+  auto source_pos_for_read_lock = Fixed(-mixer->pos_filter_width() + Fixed::FromRaw(4000));
+  // The first mix resets position, so the above will be overwritten and we'll advance from zero.
+  {
+    auto buffer = mix_stage_->ReadLock(source_pos_for_read_lock, dest_frames_per_mix);
+    RunLoopUntilIdle();
+
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(source_pos_for_read_lock.Floor(), buffer->start().Floor());
+    EXPECT_EQ(dest_frames_per_mix, buffer->length().Floor());
+    source_pos_for_read_lock += Fixed(dest_frames_per_mix);
+
+    // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
+    // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
+    // ... which also means our running source position will be 1 frac-frame behind.
+    auto& bookkeeping = mixer->bookkeeping();
+    EXPECT_EQ(bookkeeping.step_size, Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << bookkeeping.step_size;
+    EXPECT_EQ(bookkeeping.rate_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+
+    auto& info = mixer->source_info();
+    EXPECT_EQ(info.frames_produced, dest_frames_per_mix);
+    EXPECT_EQ(info.next_dest_frame, source_pos_for_read_lock.Floor());
+    EXPECT_EQ(info.next_source_frame, Fixed(Fixed(info.next_dest_frame) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << info.next_source_frame;
+
+    EXPECT_EQ(bookkeeping.source_pos_modulo, bookkeeping.denominator() - dest_frames_per_mix);
+  }
+
+  packet_queue->Flush();
+  while (!packet_released) {
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace media::audio

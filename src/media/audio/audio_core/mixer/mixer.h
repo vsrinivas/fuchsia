@@ -42,12 +42,10 @@ class Mixer {
     // discontinuity occurs. It sets next_dest_frame to the specified value and calculates
     // next_source_frame based on the dest_frames_to_frac_source_frames transform.
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
-      bookkeeping.Reset();
-
       next_dest_frame = target_dest_frame;
       next_source_frame =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
-      next_source_pos_modulo = 0;
+      bookkeeping.source_pos_modulo = 0;
       source_pos_error = zx::duration(0);
       initial_position_is_set = true;
     }
@@ -55,54 +53,72 @@ class Mixer {
     // Used by custom code when debugging.
     std::string PositionsToString(std::string tag = "") {
       return tag + ": next_dest " + std::to_string(next_dest_frame) + ", next_source " +
-             std::to_string(next_source_frame.raw_value()) + ", next_source_pos_mod " +
-             std::to_string(next_source_pos_modulo) + ", pos_err " +
+             std::to_string(next_source_frame.raw_value()) + ", pos_err " +
              std::to_string(source_pos_error.get());
     }
 
+   private:
     // From current values, advance the long-running positions by dest_frames.
     // "Advancing" negatively should be infrequent, but we support it.
-    void AdvanceRunningPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
+    void AdvancePositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping,
+                            bool advance_source_pos_modulo) {
       int64_t frac_source_frame_delta = bookkeeping.step_size.raw_value() * dest_frames;
 
       if (bookkeeping.rate_modulo()) {
         // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
         __int128_t denominator_128 = bookkeeping.denominator();
-        __int128_t source_pos_modulo_delta =
+        __int128_t source_pos_modulo_128 =
             static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
-        __int128_t next_source_pos_modulo_128 = next_source_pos_modulo + source_pos_modulo_delta;
-        __int128_t source_pos_modulo_128 = bookkeeping.source_pos_modulo + source_pos_modulo_delta;
+        if (advance_source_pos_modulo) {
+          source_pos_modulo_128 += bookkeeping.source_pos_modulo;
+        }
+        // else, assume (for now) that source_pos_modulo started at zero.
 
-        // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
-        //
+        // TODO(mpuryear): remove negative-position-advance support, when no longer needed
         // If advance was negative, mod the potentially-negative pos_modulo values up into range.
         // Negative modulo is error-prone and potentially-undefined-behavior; avoiding it is more
         // clear at little additional CPU cost (any negative position advance should be small).
-        while (next_source_pos_modulo_128 < 0) {
-          frac_source_frame_delta -= 1;
-          next_source_pos_modulo_128 += denominator_128;
-        }
         while (source_pos_modulo_128 < 0) {
+          frac_source_frame_delta -= 1;
           source_pos_modulo_128 += denominator_128;
         }
         // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
 
         // mod these back down into range.
-        frac_source_frame_delta += (next_source_pos_modulo_128 / denominator_128);
-        next_source_pos_modulo =
-            static_cast<uint64_t>(next_source_pos_modulo_128 % denominator_128);
-        bookkeeping.source_pos_modulo =
-            static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
+        auto new_source_pos_modulo = static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
+        if (advance_source_pos_modulo) {
+          bookkeeping.source_pos_modulo = new_source_pos_modulo;
+        } else {
+          // source_pos_modulo has already been advanced; it is already at its eventual value.
+          // new_source_pos_modulo is what source_pos_modulo WOULD have become, if it had started at
+          // zero. Now advance source_pos_modulo_128 by the difference (which is what its initial
+          // value must have been), just in case this causes frac_source_frame_delta to increment.
+          source_pos_modulo_128 += bookkeeping.source_pos_modulo;
+          source_pos_modulo_128 -= new_source_pos_modulo;
+          if (bookkeeping.source_pos_modulo < new_source_pos_modulo) {
+            source_pos_modulo_128 += denominator_128;
+          }
+        }
+        frac_source_frame_delta += static_cast<int64_t>(source_pos_modulo_128 / denominator_128);
       }
       next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
       next_dest_frame += dest_frames;
     }
 
+   public:
+    void UpdateRunningPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
+      AdvancePositionsBy(dest_frames, bookkeeping, false);
+    }
+
+    void AdvanceAllPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
+      AdvancePositionsBy(dest_frames, bookkeeping, true);
+    }
+
     // From current values, advance long-running positions to the specified absolute dest frame num.
     // "Advancing" negatively should be infrequent, but we support it.
-    void AdvanceRunningPositionsTo(int64_t dest_target_frame, Bookkeeping& bookkeeping) {
+    void AdvanceAllPositionsTo(int64_t dest_target_frame, Bookkeeping& bookkeeping) {
       int64_t dest_frames = dest_target_frame - next_dest_frame;
-      AdvanceRunningPositionsBy(dest_frames, bookkeeping);
+      AdvancePositionsBy(dest_frames, bookkeeping, true);
     }
 
     // This translates a source reference_clock value into a source subframe value.
@@ -133,11 +149,6 @@ class Mixer {
     // frame value, this stream's running position is reset by recalculating next_source_frame
     // from the dest_frames_to_frac_source_frames TimelineFunction.
     Fixed next_source_frame{0};
-
-    // This field is similar to source_pos_modulo and relates to the same rate_modulo and
-    // denominator. It expresses the stream's long-running position modulo (whereas
-    // source_pos_modulo is per-Mix).
-    uint64_t next_source_pos_modulo = 0;
 
     // This field represents the difference between next_frac_souce_frame (maintained on a relative
     // basis after each Mix() call), and the clock-derived absolute source position (calculated from
@@ -195,41 +206,30 @@ class Mixer {
     uint64_t denominator() const { return denominator_; }
 
     // This parameter (along with denominator) expresses leftover position precision that Mix
-    // paramenter cannot express. When present, source_pos_modulo and denominator express a
-    // fractional value of the source_offset unit to advance, for each dest frame.
+    // parameter cannot express. When present, source_pos_modulo and denominator express a
+    // fractional value of the source_offset unit, for additional precision on current position.
+    // Note: this field is also referenced when updating long-running position fields in SourceInfo.
+    // TODO(fxbug.dev/85108): Refactor Bookkeeping and SourceInfo.
     uint64_t source_pos_modulo = 0;
-
-    // This method resets the local position accounting, but not gain-ramping.
-    void Reset() { source_pos_modulo = 0; }
 
     void SetRateModuloAndDenominator(uint64_t rate_mod, uint64_t denom,
                                      SourceInfo* info = nullptr) {
       FX_CHECK(denom > 0);
       FX_CHECK(rate_mod < denom);
-      if (denom == 1) {
-        source_pos_modulo = 0;
-        if (info != nullptr) {
-          info->next_source_pos_modulo = 0;
-        }
-        denominator_ = 1;
+      if (!rate_mod) {
         rate_modulo_ = 0;
+        denominator_ = 1;
+        source_pos_modulo = 0;
         return;
       }
 
+      rate_modulo_ = rate_mod;
       if (denom != denominator_) {
         __uint128_t temp_source_pos_mod =
             (static_cast<__uint128_t>(source_pos_modulo) * denom) / denominator_;
-        source_pos_modulo = static_cast<uint64_t>(temp_source_pos_mod);
-
-        if (info != nullptr) {
-          __uint128_t temp_next_source_pos_mod =
-              (static_cast<__uint128_t>(info->next_source_pos_modulo) * denom) / denominator_;
-          info->next_source_pos_modulo = static_cast<uint64_t>(temp_next_source_pos_mod);
-        }
-
         denominator_ = denom;
+        source_pos_modulo = static_cast<uint64_t>(temp_source_pos_mod);
       }
-      rate_modulo_ = rate_mod;
     }
 
    private:
@@ -327,7 +327,7 @@ class Mixer {
   // Reset the internal state of the mixer. Will be called every time there is
   // a discontinuity in the source stream. Mixer implementations should reset
   // anything related to their internal filter state.
-  virtual void Reset() { bookkeeping().Reset(); }
+  virtual void Reset() {}
 
   //
   // Filter widths
