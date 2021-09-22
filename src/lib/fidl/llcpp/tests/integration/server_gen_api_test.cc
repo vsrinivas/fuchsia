@@ -695,10 +695,11 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
           std::thread([&worker_start, &worker_running, &server_binding, &num_failures]() {
             ZX_ASSERT(ZX_OK == sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
             for (size_t i = 0; i < kNumEventsPerThread; i++) {
-              zx_status_t status = server_binding->OnEvent(fidl::StringView("a"));
-              if (status != ZX_OK) {
+              fidl::Result result = server_binding->OnEvent(fidl::StringView("a"));
+              if (!result.ok()) {
                 // |ZX_ERR_CANCELED| indicates unbinding has happened.
-                ZX_ASSERT_MSG(status == ZX_ERR_CANCELED, "Unexpected status: %d", status);
+                ZX_ASSERT_MSG(result.status() == ZX_ERR_CANCELED, "Unexpected status: %d",
+                              result.status());
                 num_failures.fetch_add(1);
               }
               if (i == 0) {

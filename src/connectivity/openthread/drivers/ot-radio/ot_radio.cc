@@ -263,10 +263,10 @@ zx_status_t OtRadioDevice::HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t len
   zxlogf(DEBUG, "ot-radio: received frame of len:%d", length);
   if (power_status_ == OT_SPINEL_DEVICE_ON) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(frameBuffer, length);
-    zx_status_t res = (*fidl_binding_)->OnReceiveFrame(std::move(data));
-    if (res != ZX_OK) {
+    fidl::Result result = (*fidl_binding_)->OnReceiveFrame(std::move(data));
+    if (!result.ok()) {
       zxlogf(ERROR, "ot-radio: failed to send OnReceive() event due to %s",
-             zx_status_get_string(res));
+             result.FormatDescription().c_str());
     }
     inbound_allowance_--;
     inbound_cnt_++;

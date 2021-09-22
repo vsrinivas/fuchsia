@@ -321,9 +321,9 @@ zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
 
 void Node::OnBind() const {
   if (controller_ref_) {
-    zx_status_t status = (*controller_ref_)->OnBind();
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to send OnBind event: %s", zx_status_get_string(status));
+    fidl::Result result = (*controller_ref_)->OnBind();
+    if (!result.ok()) {
+      LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().c_str());
     }
   }
 }

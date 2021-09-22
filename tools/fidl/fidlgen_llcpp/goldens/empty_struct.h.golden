@@ -1589,11 +1589,11 @@ class ::fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t Receive(const ::fidl_test_emptystruct::wire::Empty& e) const;
+  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t Receive(::fidl::BufferSpan _buffer,
-                      const ::fidl_test_emptystruct::wire::Empty& e) const;
+  fidl::Result Receive(::fidl::BufferSpan _buffer,
+                       const ::fidl_test_emptystruct::wire::Empty& e) const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_emptystruct::EmptyProtocol> server_end_;
@@ -1603,20 +1603,20 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_emptystruct::EmptyProtocol> {
  public:
-  zx_status_t Receive(const ::fidl_test_emptystruct::wire::Empty& e) const {
+  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().Receive(e);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t Receive(::fidl::BufferSpan _buffer,
-                      const ::fidl_test_emptystruct::wire::Empty& e) const {
+  fidl::Result Receive(::fidl::BufferSpan _buffer,
+                       const ::fidl_test_emptystruct::wire::Empty& e) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().Receive(std::move(_buffer), e);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:

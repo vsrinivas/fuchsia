@@ -189,18 +189,18 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoMinimalNoRetVal(EchoMinimalNoRetValRequestView request,
                            EchoMinimalNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      auto status = server_binding_.value()->EchoMinimalEvent();
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
-                    zx_status_get_string(status));
+      fidl::Result result = server_binding_.value()->EchoMinimalEvent();
+      ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
+                    result.FormatDescription().c_str());
     } else {
       class EventHandler : public fidl::WireSyncEventHandler<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        zx_status_t status() const { return status_; }
+        fidl::Result result() const { return result_; }
 
         void EchoMinimalEvent(fidl::WireResponse<Echo::EchoMinimalEvent>* event) override {
-          status_ = connection_->server_binding_.value()->EchoMinimalEvent();
+          result_ = connection_->server_binding_.value()->EchoMinimalEvent();
         }
 
         zx_status_t Unknown() override {
@@ -210,7 +210,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        zx_status_t status_ = ZX_OK;
+        fidl::Result result_ = fidl::Result::Ok();
       };
 
       EchoClientApp app(request->forward_to_server);
@@ -218,8 +218,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       zx_status_t status = app.EchoMinimalNoRetVal("", event_handler);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
-      ZX_ASSERT_MSG(event_handler.status() == ZX_OK, "Replying with event failed indirect: %s",
-                    zx_status_get_string(event_handler.status()));
+      ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
+                    event_handler.result().FormatDescription().c_str());
     }
   }
 
@@ -256,18 +256,18 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   void EchoStructNoRetVal(EchoStructNoRetValRequestView request,
                           EchoStructNoRetValCompleter::Sync&) override {
     if (request->forward_to_server.empty()) {
-      auto status = server_binding_.value()->EchoEvent(std::move(request->value));
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
-                    zx_status_get_string(status));
+      fidl::Result result = server_binding_.value()->EchoEvent(std::move(request->value));
+      ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
+                    result.FormatDescription().c_str());
     } else {
       class EventHandler : public fidl::WireSyncEventHandler<Echo> {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
-        zx_status_t status() const { return status_; }
+        fidl::Result result() const { return result_; }
 
         void EchoEvent(fidl::WireResponse<Echo::EchoEvent>* event) override {
-          status_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
+          result_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
         }
 
         zx_status_t Unknown() override {
@@ -277,7 +277,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
        private:
         EchoConnection* const connection_;
-        zx_status_t status_ = ZX_OK;
+        fidl::Result result_ = fidl::Result::Ok();
       };
 
       EchoClientApp app(request->forward_to_server);
@@ -285,8 +285,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       zx_status_t status = app.EchoStructNoRetVal(std::move(request->value), "", event_handler);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
-      ZX_ASSERT_MSG(event_handler.status() == ZX_OK, "Replying with event failed indirect: %s",
-                    zx_status_get_string(event_handler.status()));
+      ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
+                    event_handler.result().FormatDescription().c_str());
     }
   }
 

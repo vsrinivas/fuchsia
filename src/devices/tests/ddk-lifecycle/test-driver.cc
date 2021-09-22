@@ -65,8 +65,8 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
   auto id = zxdev_to_id(child->zxdev());
 
   if (lifecycle_event_sender_.is_valid()) {
-    zx_status_t status = lifecycle_event_sender_.OnChildPreRelease(id);
-    ZX_ASSERT(status == ZX_OK);
+    fidl::Result result = lifecycle_event_sender_.OnChildPreRelease(id);
+    ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   // Remove the child from our |children_| vector.
   auto child_matcher = [&](fbl::RefPtr<TestLifecycleDriverChild> child_to_remove) {

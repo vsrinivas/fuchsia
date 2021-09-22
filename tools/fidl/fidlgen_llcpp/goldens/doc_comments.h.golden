@@ -1690,7 +1690,7 @@ class ::fidl::WireEventSender<::fidl_test_doccomments::Interface> {
   /// event comment #1
   ///
   /// event comment #3
-  zx_status_t OnEvent() const;
+  fidl::Result OnEvent() const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end_;
@@ -1703,11 +1703,11 @@ class ::fidl::internal::WireWeakEventSender<
   /// event comment #1
   ///
   /// event comment #3
-  zx_status_t OnEvent() const {
+  fidl::Result OnEvent() const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnEvent();
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:

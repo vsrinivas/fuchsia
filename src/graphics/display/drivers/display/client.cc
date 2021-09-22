@@ -1199,10 +1199,10 @@ void Client::SetOwnership(bool is_owner) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   is_owner_ = is_owner;
 
-  zx_status_t status = binding_state_.SendEvents(
+  fidl::Result result = binding_state_.SendEvents(
       [&](auto&& event_sender) { return event_sender.OnClientOwnershipChange(is_owner); });
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Error writing remove message %d", status);
+  if (!result.ok()) {
+    zxlogf(ERROR, "Error writing remove message: %s", result.FormatDescription().c_str());
   }
 
   // Only apply the current config if the client has previously applied a config.
@@ -1375,13 +1375,13 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   }
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
-    zx_status_t status = binding_state_.SendEvents([&](auto&& event_sender) {
+    fidl::Result result = binding_state_.SendEvents([&](auto&& event_sender) {
       return event_sender.OnDisplaysChanged(
           fidl::VectorView<fhd::wire::Info>::FromExternal(coded_configs),
           fidl::VectorView<uint64_t>::FromExternal(removed_ids));
     });
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Error writing remove message %d", status);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Error writing remove message: %s", result.FormatDescription().c_str());
     }
   }
 }
@@ -1653,7 +1653,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  zx_status_t status = ZX_OK;
+  fidl::Result event_sending_result = fidl::Result::Ok();
 
   uint64_t cookie = 0;
   if (number_of_vsyncs_sent_ >= (kVsyncMessagesWatermark - 1)) {
@@ -1704,8 +1704,8 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     }
     // Make sure status is not ZX_ERR_BAD_HANDLE, otherwise, depending on
     // policy setting channel write will crash
-    ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_HANDLE);
-    if (status == ZX_ERR_NO_MEMORY) {
+    ZX_DEBUG_ASSERT(event_sending_result.status() != ZX_ERR_BAD_HANDLE);
+    if (event_sending_result.status() == ZX_ERR_NO_MEMORY) {
       total_oom_errors_++;
       // OOM errors are most likely not recoverable. Print the error message
       // once every kChannelErrorPrintFreq cycles
@@ -1717,7 +1717,8 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
         chn_oom_print_freq_ = 0;
       }
     } else {
-      zxlogf(WARNING, "Failed to send vsync event %d", status);
+      zxlogf(WARNING, "Failed to send vsync event: %s",
+             event_sending_result.FormatDescription().c_str());
     }
   });
 
@@ -1725,25 +1726,26 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   while (!buffered_vsync_messages_.empty()) {
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
-    status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
+    event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
       return event_sender.OnVsync(v.display_id, v.timestamp,
                                   fidl::VectorView<uint64_t>::FromExternal(v.image_ids, v.count),
                                   0);
     });
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to send all buffered vsync messages %d\n", status);
-      return status;
+    if (!event_sending_result.ok()) {
+      zxlogf(ERROR, "Failed to send all buffered vsync messages: %s\n",
+             event_sending_result.FormatDescription().c_str());
+      return event_sending_result.status();
     }
     number_of_vsyncs_sent_++;
   }
 
   // Send the latest vsync event
-  status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
+  event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
     return event_sender.OnVsync(display_id, timestamp,
                                 fidl::VectorView<uint64_t>::FromExternal(image_ids, count), cookie);
   });
-  if (status != ZX_OK) {
-    return status;
+  if (!event_sending_result.ok()) {
+    return event_sending_result.status();
   }
 
   // Update vsync tracking states

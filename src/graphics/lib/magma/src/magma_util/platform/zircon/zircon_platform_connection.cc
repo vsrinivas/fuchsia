@@ -19,10 +19,10 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
   magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
                                                  uint32_t buffer_offset, uint64_t time,
                                                  uint32_t result_flags) override {
-    zx_status_t status = event_sender_.OnPerformanceCounterReadCompleted(
+    fidl::Result result = event_sender_.OnPerformanceCounterReadCompleted(
         trigger_id, buffer_id, buffer_offset, time,
         fuchsia_gpu_magma::wire::ResultFlags::TruncatingUnknown(result_flags));
-    switch (status) {
+    switch (result.status()) {
       case ZX_OK:
         return MAGMA_STATUS_OK;
       case ZX_ERR_PEER_CLOSED:
@@ -142,20 +142,22 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   bytes_imported_ += size;
 
   if (messages_consumed_ >= kMaxInflightMessages / 2) {
-    zx_status_t status = server_binding_.value()->OnNotifyMessagesConsumed(messages_consumed_);
-    if (status == ZX_OK) {
+    fidl::Result result = server_binding_.value()->OnNotifyMessagesConsumed(messages_consumed_);
+    if (result.ok()) {
       messages_consumed_ = 0;
-    } else if (status != ZX_ERR_PEER_CLOSED && status != ZX_ERR_CANCELED) {
-      DMESSAGE("SendOnNotifyMessagesConsumedEvent failed: %d", status);
+    } else if (result.reason() != fidl::Reason::kPeerClosed &&
+               result.reason() != fidl::Reason::kUnbind) {
+      DMESSAGE("SendOnNotifyMessagesConsumedEvent failed: %s", result.FormatDescription().c_str());
     }
   }
 
   if (bytes_imported_ >= kMaxInflightBytes / 2) {
-    zx_status_t status = server_binding_.value()->OnNotifyMemoryImported(bytes_imported_);
-    if (status == ZX_OK) {
+    fidl::Result result = server_binding_.value()->OnNotifyMemoryImported(bytes_imported_);
+    if (result.ok()) {
       bytes_imported_ = 0;
-    } else if (status != ZX_ERR_PEER_CLOSED && status != ZX_ERR_CANCELED) {
-      DMESSAGE("SendOnNotifyMemoryImportedEvent failed: %d", status);
+    } else if (result.reason() != fidl::Reason::kPeerClosed &&
+               result.reason() != fidl::Reason::kUnbind) {
+      DMESSAGE("SendOnNotifyMemoryImportedEvent failed: %s", result.FormatDescription().c_str());
     }
   }
 }

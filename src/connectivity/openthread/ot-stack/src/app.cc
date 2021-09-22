@@ -540,7 +540,7 @@ void OtStackApp::OnReceiveFrame(fidl::WireResponse<fidl_spinel::Device::OnReceiv
 }
 
 void OtStackApp::OnError(fidl::WireResponse<fidl_spinel::Device::OnError>* event) {
-  handler_status_ = (*binding_)->OnError(event->error, event->did_close);
+  handler_status_ = (*binding_)->OnError(event->error, event->did_close).status();
 }
 
 zx_status_t OtStackApp::Unknown() {

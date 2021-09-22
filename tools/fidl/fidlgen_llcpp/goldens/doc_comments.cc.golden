@@ -201,14 +201,15 @@ void ::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 
-zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
-    const {
+fidl::Result
+fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent() const {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
       _response{::fidl::internal::AllowUnownedInputRef{}};
-  _response.Write(server_end_);
-  return _response.status();
+  auto& _message = _response.GetOutgoingMessage();
+  _message.Write(server_end_);
+  return ::fidl::Result{_message};
 }
 
 #endif  // __Fuchsia__

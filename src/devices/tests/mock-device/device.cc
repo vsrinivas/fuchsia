@@ -448,7 +448,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         zx_status_t status = std::visit(
             matchers{
                 [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.UnbindReplyDone(action.unbind_reply().action_id);
+                  return sender.UnbindReplyDone(action.unbind_reply().action_id).status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -470,7 +470,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         zx_status_t status = std::visit(
             matchers{
                 [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.SuspendReplyDone(action.suspend_reply().action_id);
+                  return sender.SuspendReplyDone(action.suspend_reply().action_id).status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -492,7 +492,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         zx_status_t status = std::visit(
             matchers{
                 [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.ResumeReplyDone(action.resume_reply().action_id);
+                  return sender.ResumeReplyDone(action.resume_reply().action_id).status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))
@@ -538,7 +538,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         status = std::visit(
             matchers{
                 [&](fidl::WireEventSender<device_mock::MockDeviceThread>& sender) {
-                  return sender.AddDeviceDone(add_device_action.action_id);
+                  return sender.AddDeviceDone(add_device_action.action_id).status();
                 },
                 [&](zx::unowned_channel& channel) {
                   return fidl::WireCall<device_mock::MockDevice>(zx::unowned_channel(channel))

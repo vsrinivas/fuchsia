@@ -498,26 +498,28 @@ void ::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 
-zx_status_t
+fidl::Result
 fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     const ::fidl_test_emptystruct::wire::Empty& e) const {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
       _response{::fidl::internal::AllowUnownedInputRef{}, e};
-  _response.Write(server_end_);
-  return _response.status();
+  auto& _message = _response.GetOutgoingMessage();
+  _message.Write(server_end_);
+  return ::fidl::Result{_message};
 }
 
-zx_status_t
+fidl::Result
 fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     ::fidl::BufferSpan _buffer,
     const ::fidl_test_emptystruct::wire::Empty& e) const {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
       _response(_buffer.data, _buffer.capacity, e);
-  _response.Write(server_end_);
-  return _response.status();
+  auto& _message = _response.GetOutgoingMessage();
+  _message.Write(server_end_);
+  return ::fidl::Result{_message};
 }
 
 #endif  // __Fuchsia__

@@ -314,11 +314,11 @@ zx_status_t FakeOtRadioDevice::TrySendClientboundFrame() {
       !clientbound_queue_.empty()) {
     // send out 1 packet
     auto data = fidl::VectorView<uint8_t>::FromExternal(clientbound_queue_.front());
-    zx_status_t res = (*fidl_binding_)->OnReceiveFrame(std::move(data));
-    if (res != ZX_OK) {
+    fidl::Result result = (*fidl_binding_)->OnReceiveFrame(data);
+    if (!result.ok()) {
       zxlogf(ERROR, "fake-ot-radio: failed to send OnReceive() event due to %s",
-             zx_status_get_string(res));
-      return res;
+             result.FormatDescription().c_str());
+      return result.status();
     }
 
     clientbound_allowance_--;

@@ -14,8 +14,8 @@
 using fuchsia_device_instancelifecycle_test::Lifecycle;
 
 void TestLifecycleDriverChild::DdkRelease() {
-  zx_status_t status = lifecycle_.OnRelease();
-  ZX_ASSERT(status == ZX_OK);
+  fidl::Result result = lifecycle_.OnRelease();
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   delete this;
 }
 
@@ -34,17 +34,17 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
 }
 
 void TestLifecycleDriverChild::DdkUnbind(ddk::UnbindTxn txn) {
-  zx_status_t status = lifecycle_.OnUnbind();
-  ZX_ASSERT(status == ZX_OK);
+  fidl::Result result = lifecycle_.OnUnbind();
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   txn.Reply();
 }
 
 zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags) {
-  zx_status_t status = lifecycle_.OnOpen();
-  ZX_ASSERT(status == ZX_OK);
+  fidl::Result result = lifecycle_.OnOpen();
+  ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
 
   auto device = std::make_unique<TestLifecycleDriverChildInstance>(zxdev(), this);
-  status = device->DdkAdd("child-instance", DEVICE_ADD_INSTANCE);
+  zx_status_t status = device->DdkAdd("child-instance", DEVICE_ADD_INSTANCE);
   if (status != ZX_OK) {
     return status;
   }
@@ -59,16 +59,16 @@ zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags)
 
 zx_status_t TestLifecycleDriverChildInstance::DdkClose(uint32_t flags) {
   if (lifecycle_.is_valid()) {
-    zx_status_t status = lifecycle_.OnClose();
-    ZX_ASSERT(status == ZX_OK);
+    fidl::Result result = lifecycle_.OnClose();
+    ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   return ZX_OK;
 }
 
 void TestLifecycleDriverChildInstance::DdkRelease() {
   if (lifecycle_.is_valid()) {
-    zx_status_t status = lifecycle_.OnRelease();
-    ZX_ASSERT(status == ZX_OK);
+    fidl::Result result = lifecycle_.OnRelease();
+    ZX_ASSERT_MSG(result.ok(), "%s", result.FormatDescription().c_str());
   }
   delete this;
 }

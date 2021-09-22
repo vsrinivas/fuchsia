@@ -241,7 +241,7 @@ TEST(EventSenderTest, SendEvent) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client_end, server_end] = std::move(endpoints.value());
   fidl::WireEventSender<test::Frobinator> event_sender(std::move(server_end));
-  ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")));
+  ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")).status());
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

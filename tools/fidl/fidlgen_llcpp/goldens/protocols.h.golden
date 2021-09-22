@@ -17443,10 +17443,10 @@ class ::fidl::WireEventSender<::fidl_test_protocols::HandleRightsProtocol> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t AnEvent(::zx::socket&& h) const;
+  fidl::Result AnEvent(::zx::socket&& h) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
+  fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_protocols::HandleRightsProtocol> server_end_;
@@ -17456,19 +17456,19 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocols::HandleRightsProtocol> {
  public:
-  zx_status_t AnEvent(::zx::socket&& h) const {
+  fidl::Result AnEvent(::zx::socket&& h) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().AnEvent(std::move(h));
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const {
+  fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().AnEvent(std::move(_buffer), std::move(h));
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:
@@ -17783,13 +17783,13 @@ class ::fidl::WireEventSender<
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t OnEmptyResponse() const;
+  fidl::Result OnEmptyResponse() const;
 
-  zx_status_t OnWithResponse(::fidl::StringView ret) const;
+  fidl::Result OnWithResponse(::fidl::StringView ret) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
-                             ::fidl::StringView ret) const;
+  fidl::Result OnWithResponse(::fidl::BufferSpan _buffer,
+                              ::fidl::StringView ret) const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
@@ -17800,27 +17800,27 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocols::WithAndWithoutRequestResponse> {
  public:
-  zx_status_t OnEmptyResponse() const {
+  fidl::Result OnEmptyResponse() const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnEmptyResponse();
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
-  zx_status_t OnWithResponse(::fidl::StringView ret) const {
+  fidl::Result OnWithResponse(::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnWithResponse(ret);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
-                             ::fidl::StringView ret) const {
+  fidl::Result OnWithResponse(::fidl::BufferSpan _buffer,
+                              ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnWithResponse(std::move(_buffer), ret);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:
@@ -17943,10 +17943,10 @@ class ::fidl::WireEventSender<::fidl_test_protocols::Transitional> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t Event(int64_t x) const;
+  fidl::Result Event(int64_t x) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const;
+  fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_protocols::Transitional> server_end_;
@@ -17956,19 +17956,19 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocols::Transitional> {
  public:
-  zx_status_t Event(int64_t x) const {
+  fidl::Result Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().Event(x);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
+  fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().Event(std::move(_buffer), x);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:
@@ -18948,10 +18948,10 @@ class ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t EventA(int64_t a, int64_t b) const;
+  fidl::Result EventA(int64_t a, int64_t b) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
+  fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
 
  private:
   ::fidl::ServerEnd<::fidl_test_protocols::ChannelProtocol> server_end_;
@@ -18961,19 +18961,19 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocols::ChannelProtocol> {
  public:
-  zx_status_t EventA(int64_t a, int64_t b) const {
+  fidl::Result EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().EventA(a, b);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
+  fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().EventA(std::move(_buffer), a, b);
     }
-    return ZX_ERR_CANCELED;
+    return fidl::Result::Unbound();
   }
 
  private:
