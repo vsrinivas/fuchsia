@@ -8,8 +8,8 @@ using fuchsia.io;
 
 @discoverable
 protocol StorageAdmin {
-    /// Opens the isolated directory for the given component. The open request will fail if
-    /// the given component's storage has not been provisioned yet.
+    /// Opens the isolated directory for the given component. The open request will provision
+    /// the storage if it hasn't been already.
     OpenComponentStorage(resource struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         flags uint32;
