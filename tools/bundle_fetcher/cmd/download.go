@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/google/subcommands"
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"google.golang.org/api/iterator"
@@ -146,7 +147,7 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 
 // readAndUpdateProductBundle reads the product bundle from GCS and returns the ProductBundle
 // with updated images/packages paths that point to a GCS URI.
-func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundleJSONPath string) (ProductBundle, error) {
+func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundleJSONPath string) (artifactory.ProductBundle, error) {
 	productBundleData, err := getProductBundleData(ctx, sink, productBundleJSONPath)
 	if err != nil {
 		return productBundleData, err
@@ -154,18 +155,18 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 
 	data := productBundleData.Data
 
-	var newImages []*Image
-	var newPackages []*Package
+	var newImages []*artifactory.Image
+	var newPackages []*artifactory.Package
 
 	logger.Debugf(ctx, "updating images for product bundle %q", productBundleJSONPath)
 	for _, image := range data.Images {
 		if image.Format == fileFormatName {
 			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, image.BaseURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return ProductBundle{}, err
+				return artifactory.ProductBundle{}, err
 			}
 			logger.Debugf(ctx, "gcs_uri is %v for image base_uri %v", gcsURI, image.BaseURI)
-			newImages = append(newImages, &Image{
+			newImages = append(newImages, &artifactory.Image{
 				Format:  fileFormatName,
 				BaseURI: gcsURI,
 			})
@@ -177,16 +178,17 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 		if pkg.Format == fileFormatName {
 			repoURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return ProductBundle{}, err
+				return artifactory.ProductBundle{}, err
 			}
 			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", repoURI, pkg.RepoURI)
 
 			blobURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.BlobURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return ProductBundle{}, err
+				return artifactory.ProductBundle{}, err
 			}
+
 			logger.Debugf(ctx, "gcs_uri is %v for package blob_uri %v", blobURI, pkg.BlobURI)
-			newPackages = append(newPackages, &Package{
+			newPackages = append(newPackages, &artifactory.Package{
 				Format:  fileFormatName,
 				RepoURI: repoURI,
 				BlobURI: blobURI,
@@ -200,8 +202,8 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 	return productBundleData, nil
 }
 
-func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (ProductBundle, error) {
-	var productBundle ProductBundle
+func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (artifactory.ProductBundle, error) {
+	var productBundle artifactory.ProductBundle
 	data, err := sink.readFromGCS(ctx, productBundleJSONPath)
 	if err != nil {
 		return productBundle, err

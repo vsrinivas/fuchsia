@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -318,18 +319,18 @@ func TestGetProductBundleData(t *testing.T) {
 		productBundlePath     string
 		dir                   string
 		dataSinkErr           error
-		expectedProductBundle ProductBundle
+		expectedProductBundle artifactory.ProductBundle
 		expectedErrMessage    string
 	}{
 		{
 			name:              "valid product bundle for emulator",
 			productBundlePath: "builds/123456/images/gen/build/images/emulator.json",
-			expectedProductBundle: ProductBundle{
+			expectedProductBundle: artifactory.ProductBundle{
 				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-				Data: Data{
+				Data: artifactory.Data{
 					Description: "some emulator device",
 					DeviceRefs:  []string{"qemu-x64"},
-					Images: []*Image{
+					Images: []*artifactory.Image{
 						{
 							BaseURI: "gs://fuchsia/builds/123456/images",
 							Format:  "files",
@@ -337,15 +338,15 @@ func TestGetProductBundleData(t *testing.T) {
 					},
 					Type: "product_bundle",
 					Name: "terminal.qemu-x64",
-					Packages: []*Package{
+					Packages: []*artifactory.Package{
 						{
 							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/123456/packages",
 							BlobURI: "gs://fuchsia/blobs",
 						},
 					},
-					Manifests: &Manifests{
-						Emu: &EmuManifest{
+					Manifests: &artifactory.Manifests{
+						Emu: &artifactory.EmuManifest{
 							DiskImages:     []string{"obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"},
 							InitialRamdisk: "fuchsia.zbi",
 							Kernel:         "multiboot.bin",
@@ -358,12 +359,12 @@ func TestGetProductBundleData(t *testing.T) {
 		{
 			name:              "valid product bundle for physical device",
 			productBundlePath: "builds/789123/images/gen/build/images/physical_device.json",
-			expectedProductBundle: ProductBundle{
+			expectedProductBundle: artifactory.ProductBundle{
 				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
-				Data: Data{
+				Data: artifactory.Data{
 					Description: "",
 					DeviceRefs:  []string{"x64"},
-					Images: []*Image{
+					Images: []*artifactory.Image{
 						{
 							BaseURI: "gs://fuchsia/builds/789123/images",
 							Format:  "files",
@@ -371,27 +372,27 @@ func TestGetProductBundleData(t *testing.T) {
 					},
 					Type: "product_bundle",
 					Name: "terminal.x64",
-					Packages: []*Package{
+					Packages: []*artifactory.Package{
 						{
 							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/789123/packages",
 							BlobURI: "gs://fuchsia/blobs",
 						},
 					},
-					Manifests: &Manifests{
-						Flash: &FlashManifest{
+					Manifests: &artifactory.Manifests{
+						Flash: &artifactory.FlashManifest{
 							HWRevision: "x64",
-							Products: []*Product{
+							Products: []*artifactory.Product{
 								{
 									Name:     "fuchsia",
-									OEMFiles: []*OEMFile{},
-									BootloaderPartitions: []*Part{
+									OEMFiles: []*artifactory.OEMFile{},
+									BootloaderPartitions: []*artifactory.Partition{
 										{
 											Name: "fuchsia-esp",
 											Path: "fuchsia.esp.blk",
 										},
 									},
-									Partitions: []*Part{
+									Partitions: []*artifactory.Partition{
 										{
 											Name: "a",
 											Path: "zbi",
@@ -405,7 +406,7 @@ func TestGetProductBundleData(t *testing.T) {
 							},
 						},
 					},
-					Metadata: [][]Metadata{
+					Metadata: [][]artifactory.Metadata{
 						{
 							"build_info_board",
 							"x64",
@@ -424,10 +425,10 @@ func TestGetProductBundleData(t *testing.T) {
 		{
 			name:              "product bundle contains incorrect json schema",
 			productBundlePath: "some/invalid/product_bundle.json",
-			expectedProductBundle: ProductBundle{
+			expectedProductBundle: artifactory.ProductBundle{
 				SchemaID: "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
 			},
-			expectedErrMessage: "json: cannot unmarshal string into Go struct field ProductBundle.data of type main.Data",
+			expectedErrMessage: "json: cannot unmarshal string into Go struct field ProductBundle.data of type artifactory.Data",
 		},
 		{
 			name:               "gcs prefix doesn't exist",

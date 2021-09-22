@@ -23,13 +23,13 @@ go_library("main") {
     "download.go",
     "download_test.go",
     "main.go",
-    "product_bundle.go",
   ]
 
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:google.golang.org/api/iterator",
+    "//tools/artifactory:lib",
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
