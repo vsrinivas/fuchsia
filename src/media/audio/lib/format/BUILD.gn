@@ -32,7 +32,7 @@ source_set("format") {
 
 source_set("constants") {
   sources = [ "constants.h" ]
-  public_deps = [ "//zircon/public/lib/ffl" ]
+  public_deps = [ "//zircon/system/ulib/ffl" ]
 }
 
 executable("unittest-bin") {

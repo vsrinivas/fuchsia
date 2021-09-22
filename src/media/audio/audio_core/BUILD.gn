@@ -177,8 +177,8 @@ source_set("audio_core_lib") {
     "//src/media/audio/lib/clock",
     "//third_party/googletest:gtest_prod",
     "//third_party/rapidjson",
-    "//zircon/public/lib/ffl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/ffl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]

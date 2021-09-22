@@ -49,8 +49,8 @@ source_set("mixer") {
     ":coefficient_table",
     ":constants",
     "//sdk/fidl/fuchsia.media",
-    "//zircon/public/lib/ffl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/ffl",
     "//zircon/system/ulib/trace",
   ]
 
