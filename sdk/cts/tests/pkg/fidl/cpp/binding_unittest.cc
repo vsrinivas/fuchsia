@@ -246,5 +246,47 @@ TEST(Binding, ErrorHandlerCalledWhenInterfacePtrClosed) {
   EXPECT_EQ(ZX_ERR_BAD_STATE, binding.WaitForMessage());
 }
 
+TEST(Binding, PeerClosedBeforeBindingErrorHandlerSet) {
+  fidl::test::AsyncLoopForTest loop;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
+  test::FrobinatorImpl impl;
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
+
+  handle = nullptr;
+  loop.RunUntilIdle();
+
+  int error_count = 0;
+  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+    EXPECT_FALSE(binding.is_bound());
+  });
+  EXPECT_TRUE(binding.has_error_handler());
+  loop.RunUntilIdle();
+  EXPECT_EQ(0, error_count);
+}
+
+TEST(Binding, PeerClosedBeforeBindingAndBindingErrorHandlerSet) {
+  fidl::test::AsyncLoopForTest loop;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
+  test::FrobinatorImpl impl;
+  InterfaceRequest<fidl::test::frobinator::Frobinator> request = handle.NewRequest();
+
+  handle = nullptr;
+  loop.RunUntilIdle();
+
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, std::move(request));
+
+  int error_count = 0;
+  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+    EXPECT_FALSE(binding.is_bound());
+  });
+  EXPECT_TRUE(binding.has_error_handler());
+  loop.RunUntilIdle();
+  EXPECT_EQ(1, error_count);
+}
+
 }  // namespace
 }  // namespace fidl
