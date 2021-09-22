@@ -10,5 +10,6 @@ accept fuchsia.BIND_PCI_DID {
   0x095A,
   0x095B,
   0x24FD,
+  0x2526,
 }
 fuchsia.BIND_COMPOSITE == 1;

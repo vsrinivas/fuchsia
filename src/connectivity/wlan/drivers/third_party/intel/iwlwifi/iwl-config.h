@@ -226,7 +226,7 @@ struct iwl_tt_params {
 #define EEPROM_REGULATORY_BAND_NO_HT40 0
 
 /* lower blocks contain EEPROM image and calibration data */
-#define OTP_LOW_IMAGE_SIZE_2K (2 * 512 * sizeof(uint16_t)) /*  2 KB */
+#define OTP_LOW_IMAGE_SIZE_2K (2 * 512 * sizeof(uint16_t))   /*  2 KB */
 #define OTP_LOW_IMAGE_SIZE_16K (16 * 512 * sizeof(uint16_t)) /* 16 KB */
 #define OTP_LOW_IMAGE_SIZE_32K (32 * 512 * sizeof(uint16_t)) /* 32 KB */
 
@@ -493,7 +493,7 @@ extern const struct iwl_cfg iwl8265_2ac_cfg;
 extern const struct iwl_cfg iwl8275_2ac_cfg;
 extern const struct iwl_cfg iwl4165_2ac_cfg;
 #endif /* CPTCFG_IWLMVM */
-#if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
+#if defined(CPTCFG_IWLMVM) || defined(CPTCFG_IWLFMAC)
 extern const struct iwl_cfg iwl9160_2ac_cfg;
 extern const struct iwl_cfg iwl9260_2ac_cfg;
 extern const struct iwl_cfg iwl9260_killer_2ac_cfg;

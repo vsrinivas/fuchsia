@@ -32,11 +32,8 @@
  *
  *****************************************************************************/
 
-#include <linux/module.h>
-#include <linux/stringify.h>
-
-#include "fw/file.h"
-#include "iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 
 /* Highest firmware API version supported */
 #define IWL9000_UCODE_API_MAX 44
@@ -75,7 +72,7 @@ static const struct iwl_base_params iwl9000_base_params = {
 static const struct iwl_ht_params iwl9000_ht_params = {
     .stbc = true,
     .ldpc = true,
-    .ht40_bands = BIT(NL80211_BAND_2GHZ) | BIT(NL80211_BAND_5GHZ),
+    .ht40_bands = BIT(WLAN_INFO_BAND_2GHZ) | BIT(WLAN_INFO_BAND_5GHZ),
 };
 
 static const struct iwl_tt_params iwl9000_tt_params = {
@@ -100,19 +97,20 @@ static const struct iwl_tt_params iwl9000_tt_params = {
     .support_tx_backoff = true,
 };
 
-#define IWL_DEVICE_9000                                                                            \
-  .ucode_api_max = IWL9000_UCODE_API_MAX, .ucode_api_min = IWL9000_UCODE_API_MIN,                  \
-  .device_family = IWL_DEVICE_FAMILY_9000, .base_params = &iwl9000_base_params,                    \
-  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .non_shared_ant = ANT_B,                 \
-  .dccm_offset = IWL9000_DCCM_OFFSET, .dccm_len = IWL9000_DCCM_LEN,                                \
-  .dccm2_offset = IWL9000_DCCM2_OFFSET, .dccm2_len = IWL9000_DCCM2_LEN,                            \
-  .smem_offset = IWL9000_SMEM_OFFSET, .smem_len = IWL9000_SMEM_LEN,                                \
-  .features = IWL_TX_CSUM_NETIF_FLAGS | NETIF_F_RXCSUM, .thermal_params = &iwl9000_tt_params,      \
-  .apmg_not_supported = true, .mq_rx_supported = true, .vht_mu_mimo_supported = true,              \
-  .mac_addr_from_csr = true, .rf_id = true, .nvm_type = IWL_NVM_EXT, .dbgc_supported = true,       \
-  .min_umac_error_event_table = 0x800000, .csr = &iwl_csr_v1, .d3_debug_data_base_addr = 0x401000, \
-  .d3_debug_data_length = 92 * 1024, .ht_params = &iwl9000_ht_params,                              \
-  .nvm_ver = IWL9000_NVM_VERSION, .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K
+// TODO(fxbug.com/79135): add back .features flags.
+#define IWL_DEVICE_9000                                                                       \
+  .ucode_api_max = IWL9000_UCODE_API_MAX, .ucode_api_min = IWL9000_UCODE_API_MIN,             \
+  .device_family = IWL_DEVICE_FAMILY_9000, .base_params = &iwl9000_base_params,               \
+  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .non_shared_ant = ANT_B,            \
+  .dccm_offset = IWL9000_DCCM_OFFSET, .dccm_len = IWL9000_DCCM_LEN,                           \
+  .dccm2_offset = IWL9000_DCCM2_OFFSET, .dccm2_len = IWL9000_DCCM2_LEN,                       \
+  .smem_offset = IWL9000_SMEM_OFFSET, .smem_len = IWL9000_SMEM_LEN, .features = 0,            \
+  .thermal_params = &iwl9000_tt_params, .apmg_not_supported = true, .mq_rx_supported = true,  \
+  .vht_mu_mimo_supported = true, .mac_addr_from_csr = true, .rf_id = true,                    \
+  .nvm_type = IWL_NVM_EXT, .dbgc_supported = true, .min_umac_error_event_table = 0x800000,    \
+  .csr = &iwl_csr_v1, .d3_debug_data_base_addr = 0x401000, .d3_debug_data_length = 92 * 1024, \
+  .ht_params = &iwl9000_ht_params, .nvm_ver = IWL9000_NVM_VERSION,                            \
+  .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K
 
 const struct iwl_cfg iwl9160_2ac_cfg = {
     .name = "Intel(R) Dual Band Wireless AC 9160",
@@ -241,6 +239,3 @@ const struct iwl_cfg iwl9560_killer_s_2ac_cfg_shared_clk = {
     .integrated = true,
     .soc_latency = 5000,
     .extra_phy_cfg_flags = FW_PHY_CFG_SHARED_CLK};
-
-MODULE_FIRMWARE(IWL9000_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL9260_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));

@@ -461,7 +461,7 @@ static zx_status_t iwl_load_firmware(struct iwl_drv* drv, bool first) {
   }
 #endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
 
-  IWL_DEBUG_INFO(drv, "attempting to load firmware '%s'\n", drv->firmware_name);
+  IWL_INFO(drv, "attempting to load firmware '%s'\n", drv->firmware_name);
 
   // If we cannot load the firmware file (e.g. the specified version is not included on the system),
   // try the next (lower version) firmware file.
