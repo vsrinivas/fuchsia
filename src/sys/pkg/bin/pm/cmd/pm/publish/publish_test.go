@@ -121,6 +121,27 @@ func TestPublishListOfPackages(t *testing.T) {
 	}
 }
 
+func TestPublishValidatesPackageName(t *testing.T) {
+	cfg := build.TestConfig()
+	cfg.PkgName = "INVALIDPACKAGENAME"
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
+
+	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
+
+	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	repoDir := t.TempDir()
+	if err := Run(cfg, []string{"-repo", repoDir, "-depfile", depfilePath, "-lp", "-f", packagesListPath}); err == nil {
+		t.Fatalf("Expected invalid package name to generate error.")
+	}
+}
+
 // mustRelativePath converts the input path relative to the current working
 // directory. Input path is unchanged if it's not an absolute path.
 func mustRelativePath(t *testing.T, p string) string {

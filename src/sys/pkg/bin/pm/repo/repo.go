@@ -393,6 +393,9 @@ func (r *Repo) publishManifest(path string, targets tufData.TargetFiles) ([]stri
 	for _, blob := range packageManifest.Blobs {
 		if blob.Path == "meta/" {
 			p := packageManifest.Package
+			if err := p.Validate(); err != nil {
+				return nil, fmt.Errorf("Validate() failed: %v", err)
+			}
 			name := p.Name + "/" + p.Version
 			f, err := os.Open(blob.SourcePath)
 			if err != nil {

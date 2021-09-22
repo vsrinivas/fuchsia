@@ -8,7 +8,7 @@ use crate::errors::{
 };
 
 pub const MAX_OBJECT_BYTES: usize = 255;
-pub const MAX_PACKAGE_NAME_BYTES: usize = 100;
+pub const MAX_PACKAGE_NAME_BYTES: usize = 255;
 pub const MAX_PACKAGE_VARIANT_BYTES: usize = 100;
 
 /// Checks if `input` is a valid path for a file in a Fuchsia package.
@@ -267,7 +267,7 @@ mod check_package_name_tests {
 
     proptest! {
         #[test]
-        fn test_reject_name_too_long(ref s in r"[-0-9a-z\.]{101, 200}")
+        fn test_reject_name_too_long(ref s in r"[-0-9a-z\.]{256, 300}")
         {
             prop_assert_eq!(
                 check_package_name(s),

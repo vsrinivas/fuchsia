@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build fuchsia
-// +build !build_with_native_toolchain
+//go:build fuchsia && !build_with_native_toolchain
+// +build fuchsia,!build_with_native_toolchain
 
 package pkgfs
 
@@ -151,7 +151,7 @@ func TestAddPackage(t *testing.T) {
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	cfg.PkgName = t.Name()
+	cfg.PkgName = "test-add-package"
 
 	build.BuildTestPackage(cfg)
 

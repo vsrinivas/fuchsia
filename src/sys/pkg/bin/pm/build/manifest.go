@@ -83,7 +83,13 @@ func (m *Manifest) Package() (*pkg.Package, error) {
 	}
 	defer f.Close()
 	var p pkg.Package
-	return &p, json.NewDecoder(f).Decode(&p)
+	if err := json.NewDecoder(f).Decode(&p); err != nil {
+		return nil, fmt.Errorf("Decode() failed: %v", err)
+	}
+	if err := p.Validate(); err != nil {
+		return nil, fmt.Errorf("Validate() failed: %v", err)
+	}
+	return &p, nil
 }
 
 // Content returns the list of files from the manifest that are not to be

@@ -8,6 +8,8 @@ package pkg
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -24,6 +26,10 @@ const InvalidPackageChars = "/="
 // InvalidNames are package names & versions that are invalid
 var InvalidNames = []string{".", ".."}
 
+// ValidPackageName contains RegEx for a valid
+// [package name](https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name)
+var ValidPackageName = regexp.MustCompile(`^[-_\.a-z0-9]{1,255}$`).MatchString
+
 // Package is a representation of basic package metadata
 type Package struct {
 	Name    string `json:"name"`
@@ -32,8 +38,8 @@ type Package struct {
 
 // Validate returns an error if the package contains an invalid value in one of it's fields.
 func (pkg *Package) Validate() error {
-	if strings.ContainsAny(pkg.Name, InvalidPackageChars) {
-		return ErrInvalidPackageName
+	if !ValidPackageName(pkg.Name) {
+		return fmt.Errorf("pkg: invalid package name \"%v\"", pkg.Name)
 	}
 	if strings.ContainsAny(pkg.Version, InvalidPackageChars) {
 		return ErrInvalidPackageVersion

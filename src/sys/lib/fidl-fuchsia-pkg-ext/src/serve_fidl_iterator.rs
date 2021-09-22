@@ -300,7 +300,25 @@ mod tests {
     }
 
     const PACKAGE_INDEX_CHUNK_SIZE_MAX: usize = 818;
-    const PACKAGE_INDEX_CHUNK_SIZE_MIN: usize = 372;
+
+    // FIDL message is at most 65,536 bytes because of zx_channel_write [1].
+    // `PackageIndexIterator.Next()` return value size, encoded [2], is:
+    // 16 bytes FIDK transaction header +
+    // 16 bytes vector header +
+    // N * (16 bytes string header (from url field of struct PackageUrl) +
+    // L bytes string content +
+    // 32 bytes array.
+    // This totals in 32 + N * (48 + L), where L is 8-byte aligned
+    // because secondary objects (e.g. string contents) are 8-byte aligned.
+    //
+    // The shortest possible package url is 29 bytes "fuchsia-pkg://fuchsia.com/a/0".
+    //
+    // And the longest is 283 bytes, which is 288 bytes with 8-byte alignment, so
+    // PACKAGE_INDEX_CHUNK_SIZE_MIN => 65536 <= 32 + N * (48 + 288) => N = 194
+    //
+    // [1] https://fuchsia.dev/fuchsia-src/reference/syscalls/channel_write
+    // [2] https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format
+    const PACKAGE_INDEX_CHUNK_SIZE_MIN: usize = 194;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn package_index_iterator_paginates_shortest_entries() {
