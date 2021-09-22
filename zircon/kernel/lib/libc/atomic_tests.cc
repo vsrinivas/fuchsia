@@ -9,6 +9,8 @@
 #include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 
+// Verify that 16b atomics are unconditionally supported, regardless of compiler intrinsic support.
+// See atomic.cc for details on 'polyfills'.
 namespace {
 
 constexpr unsigned __int128 kValue =

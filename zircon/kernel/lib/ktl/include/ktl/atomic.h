@@ -4,8 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_KTL_ATOMIC_H_
-#define ZIRCON_KERNEL_INCLUDE_KTL_ATOMIC_H_
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ATOMIC_H_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ATOMIC_H_
+
+#include <lib/stdcompat/atomic.h>
 
 #include <atomic>
 
@@ -27,6 +29,8 @@ using std::atomic_init;
 using std::atomic_signal_fence;
 using std::atomic_thread_fence;
 
+using cpp20::atomic_ref;
+
 }  // namespace ktl
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KTL_ATOMIC_H_
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ATOMIC_H_
