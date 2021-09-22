@@ -132,7 +132,7 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
   EXPECT_EQ(msg.GetOutgoingMessage().handles(), nullptr);
 
   auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
-  auto metadata = Metadata::DecodedMessage(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+  auto metadata = Metadata::DecodedMessage(fidl::internal::kLLCPPEncodedWireFormatVersion,
                                            std::move(converted.incoming_message()));
   ASSERT_TRUE(metadata.ok(), "%s", metadata.FormatDescription().c_str());
   ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
@@ -165,7 +165,7 @@ TEST_F(RegistersDeviceTest, InvalidDecodeTest) {
   fidl::OwnedEncodedMessage<Metadata> msg(nullptr);
   auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  auto metadata = Metadata::DecodedMessage(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+  auto metadata = Metadata::DecodedMessage(fidl::internal::kLLCPPEncodedWireFormatVersion,
                                            std::move(converted.incoming_message()));
   EXPECT_FALSE(metadata.ok());
 }

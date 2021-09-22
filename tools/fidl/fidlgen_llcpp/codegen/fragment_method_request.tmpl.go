@@ -41,13 +41,13 @@ struct {{ .WireRequest }} final {
   {{- else }}
     &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   {{- end }}
-  static constexpr uint32_t MaxNumHandles = {{ .Request.TypeShapeV1.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .Request.TypeShapeV1.InlineSize }};
-  static constexpr uint32_t MaxOutOfLine = {{ .Request.TypeShapeV1.MaxOutOfLine }};
-  static constexpr uint32_t AltPrimarySize = {{ .Request.TypeShapeV1.InlineSize }};
-  static constexpr uint32_t AltMaxOutOfLine = {{ .Request.TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasFlexibleEnvelope = {{ .Request.TypeShapeV1.HasFlexibleEnvelope }};
-  static constexpr bool HasPointer = {{ .Request.TypeShapeV1.HasPointer }};
+  static constexpr uint32_t MaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .Request.TypeShapeV2.InlineSize }};
+  static constexpr uint32_t PrimarySizeV1 = {{ .Request.TypeShapeV1.InlineSize }};
+  static constexpr uint32_t MaxOutOfLine = {{ .Request.TypeShapeV2.MaxOutOfLine }};
+  static constexpr uint32_t MaxOutOfLineV1 = {{ .Request.TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool HasFlexibleEnvelope = {{ .Request.TypeShapeV2.HasFlexibleEnvelope }};
+  static constexpr bool HasPointer = {{ .Request.TypeShapeV2.HasPointer }};
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
 
@@ -79,7 +79,7 @@ class {{ .WireRequest}}::UnownedEncodedMessage final {
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
       .iovecs = iovecs_,
       .iovec_capacity = _iovec_capacity,
-  {{- if gt .Request.TypeShapeV1.MaxHandles 0 }}
+  {{- if gt .Request.TypeShapeV2.MaxHandles 0 }}
         .handles = handles_,
         .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
   {{- end }}
@@ -98,7 +98,7 @@ class {{ .WireRequest}}::UnownedEncodedMessage final {
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
         .iovecs = iovecs_,
         .iovec_capacity = _iovec_capacity,
-  {{- if gt .Request.TypeShapeV1.MaxHandles 0 }}
+  {{- if gt .Request.TypeShapeV2.MaxHandles 0 }}
         .handles = handles_,
         .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
   {{- end }}
@@ -131,7 +131,7 @@ class {{ .WireRequest}}::UnownedEncodedMessage final {
 
   private:
   ::fidl::internal::IovecBuffer iovecs_;
-  {{- if gt .Request.TypeShapeV1.MaxHandles 0 }}
+  {{- if gt .Request.TypeShapeV2.MaxHandles 0 }}
     zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
   {{- end }}
   ::fidl::OutgoingMessage message_;

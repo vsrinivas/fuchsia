@@ -16,12 +16,52 @@ void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse::
 void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxHandleInResultResult) ==
-                sizeof(fidl_xunion_t));
+                sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(WithErrorSyntaxHandleInResultResult, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(WithErrorSyntaxHandleInResultResult, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
+::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+    ~WithErrorSyntaxHandleInResultResult() {
+  switch (ordinal_) {
+    case ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kResponse:
+      envelope_
+          .As<::fidl_test_protocols::wire::
+                  WithErrorSyntaxHandleInResultResponse>()
+          .Reset();
+      break;
+    case ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kErr:
+      envelope_.As<uint32_t>().Reset();
+      break;
+    default:
+      break;
+  }
+}
+
+void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::_Move(
+    WithErrorSyntaxHandleInResultResult&& other) {
+  ordinal_ = other.ordinal_;
+  switch (ordinal_) {
+    case ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kResponse:
+      envelope_.As<::fidl_test_protocols::wire::
+                       WithErrorSyntaxHandleInResultResponse>() =
+          std::move(
+              other.envelope_.As<::fidl_test_protocols::wire::
+                                     WithErrorSyntaxHandleInResultResponse>());
+      break;
+    case ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+        Ordinal::kErr:
+      envelope_.As<uint32_t>() = std::move(other.envelope_.As<uint32_t>());
+      break;
+    default:
+      break;
+  }
+}
+
 void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
     _CloseHandles() {
   switch (ordinal_) {
@@ -604,21 +644,21 @@ fidl::WireEventSender<::fidl_test_protocols::HandleRightsProtocol>::AnEvent(
 void ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxResponseAsStructResult) ==
-                sizeof(fidl_xunion_t));
+                sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxErrorAsPrimitiveResult) ==
-                sizeof(fidl_xunion_t));
+                sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_protocols {
@@ -2658,10 +2698,11 @@ auto ::fidl_test_protocols::wire::TheUnion::which() const
 }
 
 void ::fidl_test_protocols::wire::TheUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(TheUnion) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(TheUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(sizeof(TheUnion) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(TheUnion, ordinal_) ==
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(TheUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_protocols {
@@ -3879,11 +3920,11 @@ void ::fidl::WireRequest<
 void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxErrorAsEnumResult) ==
-                sizeof(fidl_xunion_t));
+                sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_protocols {

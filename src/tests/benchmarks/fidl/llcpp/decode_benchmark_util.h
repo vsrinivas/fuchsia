@@ -50,9 +50,9 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+      auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPEncodedWireFormatVersion,
                                                     std::move(converted.incoming_message()));
-      ZX_ASSERT(decoded.ok());
+      ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
       // Include time taken to close handles in |FidlType|.
     }
 

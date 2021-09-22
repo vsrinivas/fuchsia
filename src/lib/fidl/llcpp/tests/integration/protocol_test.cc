@@ -371,6 +371,27 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   }
 }
 
+TEST_F(HandleTest, HandleUnion) {
+  auto client = TakeClient();
+  auto result = client.GetHandleUnion();
+
+  ASSERT_TRUE(result.ok()) << result.error();
+  ASSERT_TRUE(result->value.u.h().is_valid());
+
+  // Dupe the event so we can get the handle count after move.
+  zx::event dupe;
+  ASSERT_EQ(result->value.u.h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
+
+  // Should have two dupes before releasing the original handle.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 2u);
+
+  // A move of a struct holding a handle will move the handle from the result, resulting in a close
+  { auto release = std::move(result->value); }  // ~HandleUnionStruct
+
+  // Only remaining handle should be the dupe.
+  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
+}
+
 class EmptyImpl : public fidl::WireServer<test::Empty> {
  public:
 };

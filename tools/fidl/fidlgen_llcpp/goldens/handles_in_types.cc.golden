@@ -20,12 +20,34 @@ auto ::fidl_test_handlesintypes::wire::UnionWithHandle::which() const
 
 void ::fidl_test_handlesintypes::wire::UnionWithHandle::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(UnionWithHandle) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(UnionWithHandle, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(UnionWithHandle, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
+::fidl_test_handlesintypes::wire::UnionWithHandle::~UnionWithHandle() {
+  switch (ordinal_) {
+    case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
+      envelope_.As<::zx::vmo>().Reset();
+      break;
+    default:
+      break;
+  }
+}
+
+void ::fidl_test_handlesintypes::wire::UnionWithHandle::_Move(
+    UnionWithHandle&& other) {
+  ordinal_ = other.ordinal_;
+  switch (ordinal_) {
+    case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
+      envelope_.As<::zx::vmo>() = std::move(other.envelope_.As<::zx::vmo>());
+      break;
+    default:
+      break;
+  }
+}
+
 void ::fidl_test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
     case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH: {

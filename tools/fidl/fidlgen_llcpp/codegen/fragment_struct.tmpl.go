@@ -21,11 +21,11 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV1.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .TypeShapeV1.InlineSize }};
+  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .TypeShapeV2.InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
+  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .TypeShapeV2.HasPointer }};
 
 {{- range .AnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
@@ -125,7 +125,7 @@ class {{ .Name }}::DecodedMessage final : public ::fidl::internal::DecodedMessag
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                   uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
@@ -200,7 +200,7 @@ struct IsStruct<{{ . }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .OffsetV1 }});
+static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .OffsetV2 }});
 {{- end }}
 static_assert(sizeof({{ . }}) == {{ . }}::PrimarySize);
 {{- if .IsResourceType }}

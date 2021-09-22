@@ -490,20 +490,20 @@ int16_t SetSockOptProcessor::Get(uint32_t* out) {
 template <typename T, typename V>
 struct OptionalStorage {
   T opt;
-  union U {
-    fsocket::wire::Empty empty;
-    V value;
-
-    U() { memset(this, 0x00, sizeof(U)); }
-  } v;
 
   void set_unset() {
-    opt.set_unset(fidl::ObjectView<fsocket::wire::Empty>::FromExternal(&v.empty));
+    // The value is being copied into the inline envelope, such that the
+    // address of the temporary does not outlive its scope.
+    // TODO(fxbug.dev/79578) Use the upcoming LLCPP inline envelope API.
+    fsocket::wire::Empty empty;
+    opt.set_unset(fidl::ObjectView<fsocket::wire::Empty>::FromExternal(&empty));
   }
 
   void set_value(V value) {
-    v.value = value;
-    opt.set_value(fidl::ObjectView<V>::FromExternal(&v.value));
+    // The value is being copied into the inline envelope, such that the
+    // address of the temporary does not outlive its scope.
+    // TODO(fxbug.dev/79578) Use the upcoming LLCPP inline envelope API.
+    opt.set_value(fidl::ObjectView<V>::FromExternal(&value));
   }
 };
 
@@ -535,8 +535,7 @@ struct OptionalUint8CharAllowed {
 template <>
 int16_t SetSockOptProcessor::Get(OptionalUint8CharAllowed* out) {
   if (optlen_ == sizeof(uint8_t)) {
-    out->inner.set_value(out->inner.v.value);
-    memcpy(&out->inner.v.value, optval_, sizeof(uint8_t));
+    out->inner.set_value(*static_cast<const uint8_t*>(optval_));
     return 0;
   }
   return Get(&out->inner);

@@ -108,6 +108,7 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
 
   static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = true;
+  static constexpr bool kValidateEnvelopeInlineBit = false;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     // Empty LLCPP vectors and strings typically have null data portions, which differs
@@ -324,9 +325,6 @@ class FidlEncoder final : public ::fidl::Visitor<WireFormatVersion, fidl::Mutati
     if (out_envelope->num_handles != 0) {
       // FIDL_HANDLE_PRESENT
       memset(out_envelope->inline_value, 0xff, sizeof(out_envelope->inline_value));
-    } else {
-      memcpy(out_envelope->inline_value, in_envelope.inline_value,
-             sizeof(in_envelope.inline_value));
     }
     return Status::kSuccess;
   }

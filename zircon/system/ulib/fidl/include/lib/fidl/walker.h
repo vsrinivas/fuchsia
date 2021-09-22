@@ -496,19 +496,19 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
 
   EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
 
-  bool is_inlined = v2_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-  if (payload_type != nullptr) {
-    bool should_be_inlined =
-        TypeSize<WireFormatVersion>(payload_type) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD;
-    if (unlikely(is_inlined && !should_be_inlined)) {
+  bool is_inline_bit_set = v2_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+
+  bool is_inlined;
+  if (FidlIsZeroEnvelope(v2_envelope)) {
+    is_inlined = false;
+  } else if (payload_type != nullptr) {
+    is_inlined = TypeSize<WireFormatVersion>(payload_type) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD;
+    if (unlikely(VisitorImpl::kValidateEnvelopeInlineBit && is_inlined != is_inline_bit_set)) {
       visitor_->OnError("Invalid inline bit in envelope");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
-    if (unlikely(!is_inlined && should_be_inlined &&
-                 (v2_envelope->num_bytes > 0 || v2_envelope->num_handles > 0))) {
-      visitor_->OnError("Invalid inline bit in envelope");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
+  } else {
+    is_inlined = is_inline_bit_set;
   }
 
   if (is_inlined) {
@@ -702,8 +702,12 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkXUnionV2(
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
     }
     return Result::kContinue;
-  } else if (unlikely(envelope_ptr->num_bytes == 0 && envelope_ptr->num_handles == 0 &&
-                      envelope_ptr->flags == 0)) {
+    // kValidateEnvelopeInlineBit indicates to the walker that the inline bit should have a valid
+    // value. In the case where the envelope is a pointer coming from an encoder this isn't the
+    // case. It is only possible to check if the envelope is zero if the envelope has valid bits for
+    // all of its bits.
+  } else if (unlikely(VisitorImpl::kValidateEnvelopeInlineBit &&
+                      FidlIsZeroEnvelope(envelope_ptr))) {
     visitor_->OnError("empty xunion must have zero as ordinal");
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }

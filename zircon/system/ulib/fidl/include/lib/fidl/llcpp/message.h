@@ -226,7 +226,7 @@ namespace internal {
 template <typename T>
 class DecodedMessageBase;
 
-constexpr WireFormatVersion kLLCPPInMemoryWireFormatVersion = WireFormatVersion::kV1;
+constexpr WireFormatVersion kLLCPPEncodedWireFormatVersion = WireFormatVersion::kV1;
 
 }  // namespace internal
 

@@ -192,790 +192,6 @@ namespace wire {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-
-class WithErrorSyntaxHandleInResultResult {
- public:
-  using Response =
-      fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
-
-  WithErrorSyntaxHandleInResultResult()
-      : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntaxHandleInResultResult::Ordinal::Invalid),
-        envelope_{} {}
-
-  WithErrorSyntaxHandleInResultResult(
-      const WithErrorSyntaxHandleInResultResult&) = delete;
-  WithErrorSyntaxHandleInResultResult& operator=(
-      const WithErrorSyntaxHandleInResultResult&) = delete;
-  WithErrorSyntaxHandleInResultResult(WithErrorSyntaxHandleInResultResult&&) =
-      default;
-  WithErrorSyntaxHandleInResultResult& operator=(
-      WithErrorSyntaxHandleInResultResult&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-               Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-               Ordinal::kResponse;
-  }
-
-  static WithErrorSyntaxHandleInResultResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
-          val) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxHandleInResultResult WithResponse(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
-          elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>(
-            allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
-  response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>(
-        envelope_.data.get());
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
-  }
-
-  static WithErrorSyntaxHandleInResultResult WithErr(
-      ::fidl::ObjectView<uint32_t> val) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxHandleInResultResult WithErr(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxHandleInResultResult result;
-    result.set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_err(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
-    set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-                  Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag which()
-      const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
-  void _CloseHandles();
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Ordinal
-      ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-#endif  // __Fuchsia__
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-
-class WithErrorSyntaxResponseAsStructResult {
- public:
-  using Response =
-      fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse;
-
-  WithErrorSyntaxResponseAsStructResult()
-      : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntaxResponseAsStructResult::Ordinal::Invalid),
-        envelope_{} {}
-
-  WithErrorSyntaxResponseAsStructResult(
-      const WithErrorSyntaxResponseAsStructResult&) = default;
-  WithErrorSyntaxResponseAsStructResult& operator=(
-      const WithErrorSyntaxResponseAsStructResult&) = default;
-  WithErrorSyntaxResponseAsStructResult(
-      WithErrorSyntaxResponseAsStructResult&&) = default;
-  WithErrorSyntaxResponseAsStructResult& operator=(
-      WithErrorSyntaxResponseAsStructResult&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-               Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-               Ordinal::kResponse;
-  }
-
-  static WithErrorSyntaxResponseAsStructResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
-          val) {
-    WithErrorSyntaxResponseAsStructResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxResponseAsStructResult WithResponse(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxResponseAsStructResult result;
-    result.set_response(
-        ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntaxResponseAsStructResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
-          elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntaxResponseAsStructResponse>(
-            allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
-  response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>(
-        envelope_.data.get());
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
-  }
-
-  static WithErrorSyntaxResponseAsStructResult WithErr(
-      ::fidl::ObjectView<uint32_t> val) {
-    WithErrorSyntaxResponseAsStructResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxResponseAsStructResult WithErr(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxResponseAsStructResult result;
-    result.set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_err(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
-    set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Tag
-  which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_protocols::wire::
-                           WithErrorSyntaxResponseAsStructResult::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Ordinal
-      ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-
-class WithErrorSyntaxErrorAsPrimitiveResult {
- public:
-  using Response =
-      fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse;
-
-  WithErrorSyntaxErrorAsPrimitiveResult()
-      : ordinal_(::fidl_test_protocols::wire::
-                     WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::Invalid),
-        envelope_{} {}
-
-  WithErrorSyntaxErrorAsPrimitiveResult(
-      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
-  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
-      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
-  WithErrorSyntaxErrorAsPrimitiveResult(
-      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
-  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
-      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-               Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ ==
-           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-               Ordinal::kResponse;
-  }
-
-  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
-          val) {
-    WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_response(
-        ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntaxErrorAsPrimitiveResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
-          elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<::fidl_test_protocols::wire::
-                               WithErrorSyntaxErrorAsPrimitiveResponse>(
-            allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
-  response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse*>(
-        envelope_.data.get());
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
-  }
-
-  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
-      ::fidl::ObjectView<uint32_t> val) {
-    WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxErrorAsPrimitiveResult result;
-    result.set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_err(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::
-        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
-    set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::
-                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Tag
-  which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_protocols::wire::
-                           WithErrorSyntaxErrorAsPrimitiveResult::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Ordinal
-      ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-extern "C" const fidl_type_t fidl_test_protocols_TheUnionTable;
-
-class TheUnion {
- public:
-  TheUnion()
-      : ordinal_(::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid),
-        envelope_{} {}
-
-  TheUnion(const TheUnion&) = default;
-  TheUnion& operator=(const TheUnion&) = default;
-  TheUnion(TheUnion&&) = default;
-  TheUnion& operator=(TheUnion&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kV = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid;
-  }
-
-  bool is_v() const {
-    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
-  }
-
-  static TheUnion WithV(::fidl::ObjectView<uint32_t> val) {
-    TheUnion result;
-    result.set_v(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static TheUnion WithV(::fidl::AnyArena& allocator, Args&&... args) {
-    TheUnion result;
-    result.set_v(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_v(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_v(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
-    set_v(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint32_t& mutable_v() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  const uint32_t& v() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  ::fidl_test_protocols::wire::TheUnion::Tag which() const;
-
-  static constexpr const fidl_type_t* Type = &fidl_test_protocols_TheUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kV = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::TheUnion::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
-
-class WithErrorSyntaxErrorAsEnumResult {
- public:
-  using Response =
-      fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse;
-
-  WithErrorSyntaxErrorAsEnumResult()
-      : ordinal_(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-                     Ordinal::Invalid),
-        envelope_{} {}
-
-  WithErrorSyntaxErrorAsEnumResult(const WithErrorSyntaxErrorAsEnumResult&) =
-      default;
-  WithErrorSyntaxErrorAsEnumResult& operator=(
-      const WithErrorSyntaxErrorAsEnumResult&) = default;
-  WithErrorSyntaxErrorAsEnumResult(WithErrorSyntaxErrorAsEnumResult&&) =
-      default;
-  WithErrorSyntaxErrorAsEnumResult& operator=(
-      WithErrorSyntaxErrorAsEnumResult&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxErrorAsEnumResult::Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kResponse;
-  }
-
-  static WithErrorSyntaxErrorAsEnumResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
-          val) {
-    WithErrorSyntaxErrorAsEnumResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxErrorAsEnumResult WithResponse(
-      ::fidl::AnyArena& allocator, Args&&... args) {
-    WithErrorSyntaxErrorAsEnumResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(
-      ::fidl::ObjectView<
-          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
-          elem) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-        Ordinal::kResponse;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-        Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
-            allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-                  Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
-  response() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-                  Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse*>(
-        envelope_.data.get());
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::fidl_test_protocols::wire::
-                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr;
-  }
-
-  static WithErrorSyntaxErrorAsEnumResult WithErr(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum> val) {
-    WithErrorSyntaxErrorAsEnumResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static WithErrorSyntaxErrorAsEnumResult WithErr(::fidl::AnyArena& allocator,
-                                                  Args&&... args) {
-    WithErrorSyntaxErrorAsEnumResult result;
-    result.set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_err(
-      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum> elem) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-        Ordinal::kErr;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-        Ordinal::kErr;
-    set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_protocols::wire::ErrorEnum& mutable_err() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
-                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
-    return *static_cast<::fidl_test_protocols::wire::ErrorEnum*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_protocols::wire::ErrorEnum& err() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
-                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
-    return *static_cast<::fidl_test_protocols::wire::ErrorEnum*>(
-        envelope_.data.get());
-  }
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag which()
-      const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Ordinal
-      ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
 
 struct WithErrorSyntaxHandleInResultResponse {
@@ -1080,7 +296,7 @@ class WithErrorSyntaxHandleInResultResponse::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1123,6 +339,1082 @@ class WithErrorSyntaxHandleInResultResponse::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+
+struct WithErrorSyntaxErrorAsPrimitiveResponse {
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
+
+  uint8_t __reserved = {};
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+
+class WithErrorSyntaxErrorAsPrimitiveResponse::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        WithErrorSyntaxErrorAsPrimitiveResponse* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size,
+                        WithErrorSyntaxErrorAsPrimitiveResponse* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<WithErrorSyntaxErrorAsPrimitiveResponse>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class WithErrorSyntaxErrorAsPrimitiveResponse::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsPrimitiveResponse* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      WithErrorSyntaxErrorAsPrimitiveResponse* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class WithErrorSyntaxErrorAsPrimitiveResponse::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<
+          WithErrorSyntaxErrorAsPrimitiveResponse> {
+ public:
+  using DecodedMessageBase<
+      WithErrorSyntaxErrorAsPrimitiveResponse>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  WithErrorSyntaxErrorAsPrimitiveResponse* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<WithErrorSyntaxErrorAsPrimitiveResponse*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+
+struct WithErrorSyntaxErrorAsEnumResponse {
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
+
+  uint8_t __reserved = {};
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+
+class WithErrorSyntaxErrorAsEnumResponse::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        WithErrorSyntaxErrorAsEnumResponse* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size,
+                        WithErrorSyntaxErrorAsEnumResponse* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<WithErrorSyntaxErrorAsEnumResponse>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class WithErrorSyntaxErrorAsEnumResponse::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsEnumResponse* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      WithErrorSyntaxErrorAsEnumResponse* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class WithErrorSyntaxErrorAsEnumResponse::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<
+          WithErrorSyntaxErrorAsEnumResponse> {
+ public:
+  using DecodedMessageBase<
+      WithErrorSyntaxErrorAsEnumResponse>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  WithErrorSyntaxErrorAsEnumResponse* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<WithErrorSyntaxErrorAsEnumResponse*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+
+class WithErrorSyntaxHandleInResultResult {
+ public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
+
+  WithErrorSyntaxHandleInResultResult()
+      : ordinal_(::fidl_test_protocols::wire::
+                     WithErrorSyntaxHandleInResultResult::Ordinal::Invalid),
+        envelope_{} {}
+
+  ~WithErrorSyntaxHandleInResultResult();
+  WithErrorSyntaxHandleInResultResult(
+      WithErrorSyntaxHandleInResultResult&& other) {
+    _Move(std::move(other));
+  }
+  WithErrorSyntaxHandleInResultResult& operator=(
+      WithErrorSyntaxHandleInResultResult&& other) {
+    if (this != &other) {
+      _Move(std::move(other));
+    }
+    return *this;
+  }
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+               Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+               Ordinal::kResponse;
+  }
+
+  static WithErrorSyntaxHandleInResultResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+          val) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_response(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxHandleInResultResult WithResponse(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_response(
+        ::fidl::ObjectView<
+            ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_response(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+          elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
+    envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxHandleInResultResponse>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<
+            ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>(
+            allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
+  mutable_response() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxHandleInResultResponse>()
+        .get_data();
+  }
+  const ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxHandleInResultResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
+  }
+
+  static WithErrorSyntaxHandleInResultResult WithErr(
+      ::fidl::ObjectView<uint32_t> val) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxHandleInResultResult WithErr(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxHandleInResultResult result;
+    result.set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_err(::fidl::ObjectView<uint32_t> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
+    set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
+                  Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag which()
+      const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+  void _CloseHandles();
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+  void _Move(WithErrorSyntaxHandleInResultResult&& other);
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::Ordinal
+      ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+#endif  // __Fuchsia__
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+
+class WithErrorSyntaxResponseAsStructResult {
+ public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse;
+
+  WithErrorSyntaxResponseAsStructResult()
+      : ordinal_(::fidl_test_protocols::wire::
+                     WithErrorSyntaxResponseAsStructResult::Ordinal::Invalid),
+        envelope_{} {}
+
+  WithErrorSyntaxResponseAsStructResult(
+      const WithErrorSyntaxResponseAsStructResult&) = default;
+  WithErrorSyntaxResponseAsStructResult& operator=(
+      const WithErrorSyntaxResponseAsStructResult&) = default;
+  WithErrorSyntaxResponseAsStructResult(
+      WithErrorSyntaxResponseAsStructResult&&) = default;
+  WithErrorSyntaxResponseAsStructResult& operator=(
+      WithErrorSyntaxResponseAsStructResult&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
+               Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
+               Ordinal::kResponse;
+  }
+
+  static WithErrorSyntaxResponseAsStructResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
+          val) {
+    WithErrorSyntaxResponseAsStructResult result;
+    result.set_response(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxResponseAsStructResult WithResponse(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxResponseAsStructResult result;
+    result.set_response(
+        ::fidl::ObjectView<::fidl_test_protocols::wire::
+                               WithErrorSyntaxResponseAsStructResponse>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_response(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse>
+          elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
+    envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxResponseAsStructResponse>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::fidl_test_protocols::wire::
+                               WithErrorSyntaxResponseAsStructResponse>(
+            allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
+  mutable_response() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxResponseAsStructResponse>()
+        .get_data();
+  }
+  const ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxResponseAsStructResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
+  }
+
+  static WithErrorSyntaxResponseAsStructResult WithErr(
+      ::fidl::ObjectView<uint32_t> val) {
+    WithErrorSyntaxResponseAsStructResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxResponseAsStructResult WithErr(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxResponseAsStructResult result;
+    result.set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_err(::fidl::ObjectView<uint32_t> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
+    set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxResponseAsStructResult::Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Tag
+  which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<::fidl_test_protocols::wire::
+                           WithErrorSyntaxResponseAsStructResult::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::Ordinal
+      ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+
+class WithErrorSyntaxErrorAsPrimitiveResult {
+ public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse;
+
+  WithErrorSyntaxErrorAsPrimitiveResult()
+      : ordinal_(::fidl_test_protocols::wire::
+                     WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::Invalid),
+        envelope_{} {}
+
+  WithErrorSyntaxErrorAsPrimitiveResult(
+      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
+      const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult(
+      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
+  WithErrorSyntaxErrorAsPrimitiveResult& operator=(
+      WithErrorSyntaxErrorAsPrimitiveResult&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
+               Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ ==
+           ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
+               Ordinal::kResponse;
+  }
+
+  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
+          val) {
+    WithErrorSyntaxErrorAsPrimitiveResult result;
+    result.set_response(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxErrorAsPrimitiveResult result;
+    result.set_response(
+        ::fidl::ObjectView<::fidl_test_protocols::wire::
+                               WithErrorSyntaxErrorAsPrimitiveResponse>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_response(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
+          elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
+    envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxErrorAsPrimitiveResponse>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<::fidl_test_protocols::wire::
+                               WithErrorSyntaxErrorAsPrimitiveResponse>(
+            allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
+  mutable_response() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxErrorAsPrimitiveResponse>()
+        .get_data();
+  }
+  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::
+                WithErrorSyntaxErrorAsPrimitiveResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
+  }
+
+  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
+      ::fidl::ObjectView<uint32_t> val) {
+    WithErrorSyntaxErrorAsPrimitiveResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxErrorAsPrimitiveResult result;
+    result.set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_err(::fidl::ObjectView<uint32_t> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::
+        WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
+    set_err(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::
+                  WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Tag
+  which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsPrimitiveResult::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Ordinal
+      ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_protocols_TheUnionTable;
+
+class TheUnion {
+ public:
+  TheUnion()
+      : ordinal_(::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid),
+        envelope_{} {}
+
+  TheUnion(const TheUnion&) = default;
+  TheUnion& operator=(const TheUnion&) = default;
+  TheUnion(TheUnion&&) = default;
+  TheUnion& operator=(TheUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kV = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid;
+  }
+
+  bool is_v() const {
+    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+  }
+
+  static TheUnion WithV(::fidl::ObjectView<uint32_t> val) {
+    TheUnion result;
+    result.set_v(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static TheUnion WithV(::fidl::AnyArena& allocator, Args&&... args) {
+    TheUnion result;
+    result.set_v(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_v(::fidl::ObjectView<uint32_t> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_v(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+    set_v(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint32_t& mutable_v() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& v() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_protocols::wire::TheUnion::Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &fidl_test_protocols_TheUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kV = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::TheUnion::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
+
+class WithErrorSyntaxErrorAsEnumResult {
+ public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse;
+
+  WithErrorSyntaxErrorAsEnumResult()
+      : ordinal_(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  WithErrorSyntaxErrorAsEnumResult(const WithErrorSyntaxErrorAsEnumResult&) =
+      default;
+  WithErrorSyntaxErrorAsEnumResult& operator=(
+      const WithErrorSyntaxErrorAsEnumResult&) = default;
+  WithErrorSyntaxErrorAsEnumResult(WithErrorSyntaxErrorAsEnumResult&&) =
+      default;
+  WithErrorSyntaxErrorAsEnumResult& operator=(
+      WithErrorSyntaxErrorAsEnumResult&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kResponse;
+  }
+
+  static WithErrorSyntaxErrorAsEnumResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
+          val) {
+    WithErrorSyntaxErrorAsEnumResult result;
+    result.set_response(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxErrorAsEnumResult WithResponse(
+      ::fidl::AnyArena& allocator, Args&&... args) {
+    WithErrorSyntaxErrorAsEnumResult result;
+    result.set_response(
+        ::fidl::ObjectView<
+            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_response(
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
+          elem) {
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+        Ordinal::kResponse;
+    envelope_
+        .As<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+        Ordinal::kResponse;
+    set_response(
+        ::fidl::ObjectView<
+            ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>(
+            allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
+  mutable_response() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
+        .get_data();
+  }
+  const ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse&
+  response() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                  Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::fidl_test_protocols::wire::
+                           WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr;
+  }
+
+  static WithErrorSyntaxErrorAsEnumResult WithErr(
+      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum> val) {
+    WithErrorSyntaxErrorAsEnumResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static WithErrorSyntaxErrorAsEnumResult WithErr(::fidl::AnyArena& allocator,
+                                                  Args&&... args) {
+    WithErrorSyntaxErrorAsEnumResult result;
+    result.set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_err(
+      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+        Ordinal::kErr;
+    envelope_.As<::fidl_test_protocols::wire::ErrorEnum>().set_data(
+        std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+        Ordinal::kErr;
+    set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_protocols::wire::ErrorEnum& mutable_err() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
+                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
+    return envelope_.As<::fidl_test_protocols::wire::ErrorEnum>().get_data();
+  }
+  const ::fidl_test_protocols::wire::ErrorEnum& err() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::
+                              WithErrorSyntaxErrorAsEnumResult::Ordinal::kErr);
+    return envelope_.As<::fidl_test_protocols::wire::ErrorEnum>().get_data();
+  }
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag which()
+      const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::Ordinal
+      ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
 
 }  // namespace wire
 __LOCAL extern "C" const fidl_type_t
@@ -1198,9 +1490,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1381,9 +1673,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1565,7 +1857,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_HandleRightsProtocolResponseMethodResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1754,7 +2048,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2538,7 +2834,7 @@ class WithErrorSyntaxResponseAsStructResponse::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -2568,286 +2864,6 @@ class WithErrorSyntaxResponseAsStructResponse::DecodedMessage final
   WithErrorSyntaxResponseAsStructResponse* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<WithErrorSyntaxResponseAsStructResponse*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-
-struct WithErrorSyntaxErrorAsPrimitiveResponse {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
-
-  uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-};
-
-class WithErrorSyntaxErrorAsPrimitiveResponse::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        WithErrorSyntaxErrorAsPrimitiveResponse* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size,
-                        WithErrorSyntaxErrorAsPrimitiveResponse* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<WithErrorSyntaxErrorAsPrimitiveResponse>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class WithErrorSyntaxErrorAsPrimitiveResponse::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsPrimitiveResponse* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      WithErrorSyntaxErrorAsPrimitiveResponse* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class WithErrorSyntaxErrorAsPrimitiveResponse::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<
-          WithErrorSyntaxErrorAsPrimitiveResponse> {
- public:
-  using DecodedMessageBase<
-      WithErrorSyntaxErrorAsPrimitiveResponse>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  WithErrorSyntaxErrorAsPrimitiveResponse* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<WithErrorSyntaxErrorAsPrimitiveResponse*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-
-struct WithErrorSyntaxErrorAsEnumResponse {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
-
-  uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-};
-
-class WithErrorSyntaxErrorAsEnumResponse::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        WithErrorSyntaxErrorAsEnumResponse* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size,
-                        WithErrorSyntaxErrorAsEnumResponse* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<WithErrorSyntaxErrorAsEnumResponse>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class WithErrorSyntaxErrorAsEnumResponse::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(WithErrorSyntaxErrorAsEnumResponse* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      WithErrorSyntaxErrorAsEnumResponse* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class WithErrorSyntaxErrorAsEnumResponse::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<
-          WithErrorSyntaxErrorAsEnumResponse> {
- public:
-  using DecodedMessageBase<
-      WithErrorSyntaxErrorAsEnumResponse>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  WithErrorSyntaxErrorAsEnumResponse* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<WithErrorSyntaxErrorAsEnumResponse*>(bytes());
   }
 
   // Release the ownership of the decoded message. That means that the handles
@@ -2972,9 +2988,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3141,9 +3157,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3311,7 +3327,9 @@ struct ::fidl::WireResponse<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3489,9 +3507,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3664,7 +3682,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3848,9 +3868,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4024,9 +4044,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4197,7 +4217,9 @@ struct ::fidl::WireResponse<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4379,9 +4401,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4558,7 +4580,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4739,7 +4763,9 @@ struct ::fidl::WireResponse<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4920,7 +4946,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6601,9 +6629,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
           fidl_test_protocols_TransitionalRequestRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6770,7 +6798,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
           fidl_test_protocols_TransitionalRequestResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -6942,9 +6972,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
           fidl_test_protocols_TransitionalOneWayRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -7107,7 +7137,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
       &::fidl_test_protocols::fidl_test_protocols_TransitionalEventEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -7756,10 +7788,10 @@ struct ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>
       &::fidl_test_protocols::
           fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr uint32_t AltPrimarySize = 40;
-  static constexpr uint32_t AltMaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = true;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -7960,7 +7992,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::MethodWithUnion>
           client_end)
       : client_end_(client_end) {}
 
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
   UnionMethod(::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
@@ -7970,7 +8002,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::MethodWithUnion>
         ::fidl_test_protocols::MethodWithUnion::UnionMethod>(_client_end, u);
   }
 
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
   UnionMethod(::fidl_test_protocols::wire::TheUnion u) && {
@@ -8062,7 +8094,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
   UnionMethod(::fidl_test_protocols::wire::TheUnion u) {
@@ -8225,7 +8257,7 @@ class ProtocolEnds::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -8346,9 +8378,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
           fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -8538,7 +8570,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
           fidl_test_protocols_WithProtocolEndsClientEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -8734,9 +8768,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
           fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -8926,7 +8960,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
           fidl_test_protocols_WithProtocolEndsServerEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -9122,9 +9158,9 @@ struct ::fidl::WireRequest<
           fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -9315,7 +9351,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
   static constexpr uint32_t MaxNumHandles = 4;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -10494,9 +10532,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>
           fidl_test_protocols_ManyParametersFifteenRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -10953,9 +10991,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -11128,8 +11166,10 @@ struct ::fidl::WireResponse<
       &::fidl_test_protocols::
           fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr uint32_t MaxOutOfLineV1 = 24;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -11304,9 +11344,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -11479,8 +11519,10 @@ struct ::fidl::WireResponse<
       &::fidl_test_protocols::
           fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -11654,9 +11696,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -11826,8 +11868,10 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
       &::fidl_test_protocols::
           fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -12002,9 +12046,9 @@ struct ::fidl::WireRequest<
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -12179,8 +12223,10 @@ struct ::fidl::WireResponse<
       &::fidl_test_protocols::
           fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -12968,7 +13014,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
           client_end)
       : client_end_(client_end) {}
 
-  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -12979,7 +13025,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(_client_end);
   }
 
-  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
   ResponseAsStruct() && {
@@ -13009,7 +13055,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         client_end_, _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
@@ -13020,7 +13066,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(_client_end);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   ErrorAsPrimitive() && {
@@ -13050,7 +13096,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         client_end_, _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum(::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
@@ -13059,7 +13105,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(_client_end);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum() && {
@@ -13087,7 +13133,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         client_end_, _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
@@ -13098,7 +13144,7 @@ class ::fidl::internal::WireCaller<::fidl_test_protocols::WithErrorSyntax>
         ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(_client_end);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
   HandleInResult() && {
@@ -13190,7 +13236,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
   ResponseAsStruct() {
@@ -13209,7 +13255,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   ErrorAsPrimitive() {
@@ -13228,7 +13274,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum() {
@@ -13246,7 +13292,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
   }
 
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
   HandleInResult() {
@@ -13520,9 +13566,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -13930,9 +13976,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
           fidl_test_protocols_ChannelProtocolMethodARequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14099,7 +14145,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
           fidl_test_protocols_ChannelProtocolEventAEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14274,9 +14322,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
           fidl_test_protocols_ChannelProtocolMethodBRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14444,7 +14492,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
           fidl_test_protocols_ChannelProtocolMethodBResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14619,9 +14669,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
           fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14793,7 +14843,9 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -14964,9 +15016,9 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
           fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -15149,7 +15201,9 @@ struct ::fidl::WireResponse<
           fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -17992,7 +18046,7 @@ template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::MethodWithUnion>
     final : public ::fidl::internal::ClientBase {
  public:
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result UnionMethod(::fidl_test_protocols::wire::TheUnion u);
 
@@ -18492,7 +18546,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
 
   // Synchronous variant of |ResponseAsStruct.ResponseAsStruct()|.
-  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
   ResponseAsStruct_Sync();
@@ -18526,7 +18580,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
 
   // Synchronous variant of |ErrorAsPrimitive.ErrorAsPrimitive()|.
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   ErrorAsPrimitive_Sync();
@@ -18559,7 +18613,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
 
   // Synchronous variant of |ErrorAsEnum.ErrorAsEnum()|.
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   ErrorAsEnum_Sync();
@@ -18591,7 +18645,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
           ::fidl_test_protocols::WithErrorSyntax::HandleInResult>* _context);
 
   // Synchronous variant of |HandleInResult.HandleInResult()|.
-  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
   HandleInResult_Sync();

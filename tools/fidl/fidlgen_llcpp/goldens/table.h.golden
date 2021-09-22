@@ -61,31 +61,29 @@ class TableWithAttributes final {
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
   TableWithAttributes& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = elem;
+    frame_ptr_->x_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   TableWithAttributes& set_x(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = nullptr;
+    frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -111,7 +109,7 @@ class TableWithAttributes final {
       &fidl_test_table_TableWithAttributesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -238,7 +236,7 @@ class TableWithAttributes::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -287,62 +285,58 @@ class SimpleTable final {
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
   SimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = elem;
+    frame_ptr_->x_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   SimpleTable& set_x(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = nullptr;
+    frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   SimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
-  bool has_y() const {
-    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
-  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
   SimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = elem;
+    frame_ptr_->y_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
   SimpleTable& set_y(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = nullptr;
+    frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   SimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->y_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
@@ -365,7 +359,7 @@ class SimpleTable final {
   static constexpr const fidl_type_t* Type = &fidl_test_table_SimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 96;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 56;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -399,9 +393,9 @@ class SimpleTable final {
     Frame_(Frame_&&) noexcept = default;
     Frame_& operator=(Frame_&&) noexcept = default;
     ::fidl::Envelope<int64_t> x_;
-    ::fidl::Envelope<void> reserved_1_;
-    ::fidl::Envelope<void> reserved_2_;
-    ::fidl::Envelope<void> reserved_3_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
     ::fidl::Envelope<int64_t> y_;
 
     friend class SimpleTable;
@@ -494,7 +488,7 @@ class SimpleTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -543,93 +537,87 @@ class ReverseOrdinalTable final {
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
+    return frame_ptr_->z_.get_data();
   }
   int64_t& z() {
     ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
+    return frame_ptr_->z_.get_data();
   }
-  bool has_z() const {
-    return max_ordinal_ >= 1 && frame_ptr_->z_.data != nullptr;
-  }
+  bool has_z() const { return max_ordinal_ >= 1 && frame_ptr_->z_.has_data(); }
   ReverseOrdinalTable& set_z(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data = elem;
+    frame_ptr_->z_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   ReverseOrdinalTable& set_z(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data = nullptr;
+    frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->z_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
-  bool has_y() const {
-    return max_ordinal_ >= 2 && frame_ptr_->y_.data != nullptr;
-  }
+  bool has_y() const { return max_ordinal_ >= 2 && frame_ptr_->y_.has_data(); }
   ReverseOrdinalTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = elem;
+    frame_ptr_->y_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
     return *this;
   }
   ReverseOrdinalTable& set_y(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = nullptr;
+    frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->y_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
     return *this;
   }
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
-  bool has_x() const {
-    return max_ordinal_ >= 3 && frame_ptr_->x_.data != nullptr;
-  }
+  bool has_x() const { return max_ordinal_ >= 3 && frame_ptr_->x_.has_data(); }
   ReverseOrdinalTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = elem;
+    frame_ptr_->x_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
   }
   ReverseOrdinalTable& set_x(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = nullptr;
+    frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
   }
@@ -655,7 +643,7 @@ class ReverseOrdinalTable final {
       &fidl_test_table_ReverseOrdinalTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -784,7 +772,7 @@ class ReverseOrdinalTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -833,31 +821,29 @@ class OlderSimpleTable final {
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
   OlderSimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = elem;
+    frame_ptr_->x_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   OlderSimpleTable& set_x(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = nullptr;
+    frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   OlderSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -881,7 +867,7 @@ class OlderSimpleTable final {
       &fidl_test_table_OlderSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -1007,7 +993,7 @@ class OlderSimpleTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1056,93 +1042,87 @@ class NewerSimpleTable final {
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
   int64_t& x() {
     ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
+    return frame_ptr_->x_.get_data();
   }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
+  bool has_x() const { return max_ordinal_ >= 1 && frame_ptr_->x_.has_data(); }
   NewerSimpleTable& set_x(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = elem;
+    frame_ptr_->x_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   NewerSimpleTable& set_x(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data = nullptr;
+    frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   NewerSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
 
   const int64_t& y() const {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
   int64_t& y() {
     ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
+    return frame_ptr_->y_.get_data();
   }
-  bool has_y() const {
-    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
-  }
+  bool has_y() const { return max_ordinal_ >= 5 && frame_ptr_->y_.has_data(); }
   NewerSimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = elem;
+    frame_ptr_->y_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
   NewerSimpleTable& set_y(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data = nullptr;
+    frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   NewerSimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->y_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
+    return frame_ptr_->z_.get_data();
   }
   int64_t& z() {
     ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
+    return frame_ptr_->z_.get_data();
   }
-  bool has_z() const {
-    return max_ordinal_ >= 6 && frame_ptr_->z_.data != nullptr;
-  }
+  bool has_z() const { return max_ordinal_ >= 6 && frame_ptr_->z_.has_data(); }
   NewerSimpleTable& set_z(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data = elem;
+    frame_ptr_->z_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
     return *this;
   }
   NewerSimpleTable& set_z(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data = nullptr;
+    frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   NewerSimpleTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->z_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
     return *this;
   }
@@ -1166,7 +1146,7 @@ class NewerSimpleTable final {
       &fidl_test_table_NewerSimpleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -1200,9 +1180,9 @@ class NewerSimpleTable final {
     Frame_(Frame_&&) noexcept = default;
     Frame_& operator=(Frame_&&) noexcept = default;
     ::fidl::Envelope<int64_t> x_;
-    ::fidl::Envelope<void> reserved_1_;
-    ::fidl::Envelope<void> reserved_2_;
-    ::fidl::Envelope<void> reserved_3_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_3_;
     ::fidl::Envelope<int64_t> y_;
     ::fidl::Envelope<int64_t> z_;
 
@@ -1297,7 +1277,7 @@ class NewerSimpleTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1346,2112 +1326,2112 @@ class GreaterThan64OrdinalTable final {
 
   const int64_t& v1() const {
     ZX_ASSERT(has_v1());
-    return *frame_ptr_->v1_.data;
+    return frame_ptr_->v1_.get_data();
   }
   int64_t& v1() {
     ZX_ASSERT(has_v1());
-    return *frame_ptr_->v1_.data;
+    return frame_ptr_->v1_.get_data();
   }
   bool has_v1() const {
-    return max_ordinal_ >= 1 && frame_ptr_->v1_.data != nullptr;
+    return max_ordinal_ >= 1 && frame_ptr_->v1_.has_data();
   }
   GreaterThan64OrdinalTable& set_v1(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v1_.data = elem;
+    frame_ptr_->v1_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v1(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v1_.data = nullptr;
+    frame_ptr_->v1_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v1(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v1_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v1_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
 
   const int64_t& v2() const {
     ZX_ASSERT(has_v2());
-    return *frame_ptr_->v2_.data;
+    return frame_ptr_->v2_.get_data();
   }
   int64_t& v2() {
     ZX_ASSERT(has_v2());
-    return *frame_ptr_->v2_.data;
+    return frame_ptr_->v2_.get_data();
   }
   bool has_v2() const {
-    return max_ordinal_ >= 2 && frame_ptr_->v2_.data != nullptr;
+    return max_ordinal_ >= 2 && frame_ptr_->v2_.has_data();
   }
   GreaterThan64OrdinalTable& set_v2(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v2_.data = elem;
+    frame_ptr_->v2_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v2(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v2_.data = nullptr;
+    frame_ptr_->v2_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v2(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v2_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v2_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
     return *this;
   }
 
   const int64_t& v3() const {
     ZX_ASSERT(has_v3());
-    return *frame_ptr_->v3_.data;
+    return frame_ptr_->v3_.get_data();
   }
   int64_t& v3() {
     ZX_ASSERT(has_v3());
-    return *frame_ptr_->v3_.data;
+    return frame_ptr_->v3_.get_data();
   }
   bool has_v3() const {
-    return max_ordinal_ >= 3 && frame_ptr_->v3_.data != nullptr;
+    return max_ordinal_ >= 3 && frame_ptr_->v3_.has_data();
   }
   GreaterThan64OrdinalTable& set_v3(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v3_.data = elem;
+    frame_ptr_->v3_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v3(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v3_.data = nullptr;
+    frame_ptr_->v3_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v3(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v3_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v3_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
   }
 
   const int64_t& v4() const {
     ZX_ASSERT(has_v4());
-    return *frame_ptr_->v4_.data;
+    return frame_ptr_->v4_.get_data();
   }
   int64_t& v4() {
     ZX_ASSERT(has_v4());
-    return *frame_ptr_->v4_.data;
+    return frame_ptr_->v4_.get_data();
   }
   bool has_v4() const {
-    return max_ordinal_ >= 4 && frame_ptr_->v4_.data != nullptr;
+    return max_ordinal_ >= 4 && frame_ptr_->v4_.has_data();
   }
   GreaterThan64OrdinalTable& set_v4(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v4_.data = elem;
+    frame_ptr_->v4_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v4(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v4_.data = nullptr;
+    frame_ptr_->v4_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v4(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v4_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v4_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
     return *this;
   }
 
   const int64_t& v5() const {
     ZX_ASSERT(has_v5());
-    return *frame_ptr_->v5_.data;
+    return frame_ptr_->v5_.get_data();
   }
   int64_t& v5() {
     ZX_ASSERT(has_v5());
-    return *frame_ptr_->v5_.data;
+    return frame_ptr_->v5_.get_data();
   }
   bool has_v5() const {
-    return max_ordinal_ >= 5 && frame_ptr_->v5_.data != nullptr;
+    return max_ordinal_ >= 5 && frame_ptr_->v5_.has_data();
   }
   GreaterThan64OrdinalTable& set_v5(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v5_.data = elem;
+    frame_ptr_->v5_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v5(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v5_.data = nullptr;
+    frame_ptr_->v5_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v5(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v5_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v5_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(5));
     return *this;
   }
 
   const int64_t& v6() const {
     ZX_ASSERT(has_v6());
-    return *frame_ptr_->v6_.data;
+    return frame_ptr_->v6_.get_data();
   }
   int64_t& v6() {
     ZX_ASSERT(has_v6());
-    return *frame_ptr_->v6_.data;
+    return frame_ptr_->v6_.get_data();
   }
   bool has_v6() const {
-    return max_ordinal_ >= 6 && frame_ptr_->v6_.data != nullptr;
+    return max_ordinal_ >= 6 && frame_ptr_->v6_.has_data();
   }
   GreaterThan64OrdinalTable& set_v6(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v6_.data = elem;
+    frame_ptr_->v6_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v6(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v6_.data = nullptr;
+    frame_ptr_->v6_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v6(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v6_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v6_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(6));
     return *this;
   }
 
   const int64_t& v7() const {
     ZX_ASSERT(has_v7());
-    return *frame_ptr_->v7_.data;
+    return frame_ptr_->v7_.get_data();
   }
   int64_t& v7() {
     ZX_ASSERT(has_v7());
-    return *frame_ptr_->v7_.data;
+    return frame_ptr_->v7_.get_data();
   }
   bool has_v7() const {
-    return max_ordinal_ >= 7 && frame_ptr_->v7_.data != nullptr;
+    return max_ordinal_ >= 7 && frame_ptr_->v7_.has_data();
   }
   GreaterThan64OrdinalTable& set_v7(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v7_.data = elem;
+    frame_ptr_->v7_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(7));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v7(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v7_.data = nullptr;
+    frame_ptr_->v7_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v7(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v7_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v7_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(7));
     return *this;
   }
 
   const int64_t& v8() const {
     ZX_ASSERT(has_v8());
-    return *frame_ptr_->v8_.data;
+    return frame_ptr_->v8_.get_data();
   }
   int64_t& v8() {
     ZX_ASSERT(has_v8());
-    return *frame_ptr_->v8_.data;
+    return frame_ptr_->v8_.get_data();
   }
   bool has_v8() const {
-    return max_ordinal_ >= 8 && frame_ptr_->v8_.data != nullptr;
+    return max_ordinal_ >= 8 && frame_ptr_->v8_.has_data();
   }
   GreaterThan64OrdinalTable& set_v8(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v8_.data = elem;
+    frame_ptr_->v8_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(8));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v8(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v8_.data = nullptr;
+    frame_ptr_->v8_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v8(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v8_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v8_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(8));
     return *this;
   }
 
   const int64_t& v9() const {
     ZX_ASSERT(has_v9());
-    return *frame_ptr_->v9_.data;
+    return frame_ptr_->v9_.get_data();
   }
   int64_t& v9() {
     ZX_ASSERT(has_v9());
-    return *frame_ptr_->v9_.data;
+    return frame_ptr_->v9_.get_data();
   }
   bool has_v9() const {
-    return max_ordinal_ >= 9 && frame_ptr_->v9_.data != nullptr;
+    return max_ordinal_ >= 9 && frame_ptr_->v9_.has_data();
   }
   GreaterThan64OrdinalTable& set_v9(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v9_.data = elem;
+    frame_ptr_->v9_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(9));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v9(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v9_.data = nullptr;
+    frame_ptr_->v9_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v9(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v9_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v9_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(9));
     return *this;
   }
 
   const int64_t& v10() const {
     ZX_ASSERT(has_v10());
-    return *frame_ptr_->v10_.data;
+    return frame_ptr_->v10_.get_data();
   }
   int64_t& v10() {
     ZX_ASSERT(has_v10());
-    return *frame_ptr_->v10_.data;
+    return frame_ptr_->v10_.get_data();
   }
   bool has_v10() const {
-    return max_ordinal_ >= 10 && frame_ptr_->v10_.data != nullptr;
+    return max_ordinal_ >= 10 && frame_ptr_->v10_.has_data();
   }
   GreaterThan64OrdinalTable& set_v10(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v10_.data = elem;
+    frame_ptr_->v10_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(10));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v10(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v10_.data = nullptr;
+    frame_ptr_->v10_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v10(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v10_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v10_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(10));
     return *this;
   }
 
   const int64_t& v11() const {
     ZX_ASSERT(has_v11());
-    return *frame_ptr_->v11_.data;
+    return frame_ptr_->v11_.get_data();
   }
   int64_t& v11() {
     ZX_ASSERT(has_v11());
-    return *frame_ptr_->v11_.data;
+    return frame_ptr_->v11_.get_data();
   }
   bool has_v11() const {
-    return max_ordinal_ >= 11 && frame_ptr_->v11_.data != nullptr;
+    return max_ordinal_ >= 11 && frame_ptr_->v11_.has_data();
   }
   GreaterThan64OrdinalTable& set_v11(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v11_.data = elem;
+    frame_ptr_->v11_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(11));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v11(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v11_.data = nullptr;
+    frame_ptr_->v11_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v11(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v11_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v11_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(11));
     return *this;
   }
 
   const int64_t& v12() const {
     ZX_ASSERT(has_v12());
-    return *frame_ptr_->v12_.data;
+    return frame_ptr_->v12_.get_data();
   }
   int64_t& v12() {
     ZX_ASSERT(has_v12());
-    return *frame_ptr_->v12_.data;
+    return frame_ptr_->v12_.get_data();
   }
   bool has_v12() const {
-    return max_ordinal_ >= 12 && frame_ptr_->v12_.data != nullptr;
+    return max_ordinal_ >= 12 && frame_ptr_->v12_.has_data();
   }
   GreaterThan64OrdinalTable& set_v12(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v12_.data = elem;
+    frame_ptr_->v12_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(12));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v12(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v12_.data = nullptr;
+    frame_ptr_->v12_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v12(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v12_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v12_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(12));
     return *this;
   }
 
   const int64_t& v13() const {
     ZX_ASSERT(has_v13());
-    return *frame_ptr_->v13_.data;
+    return frame_ptr_->v13_.get_data();
   }
   int64_t& v13() {
     ZX_ASSERT(has_v13());
-    return *frame_ptr_->v13_.data;
+    return frame_ptr_->v13_.get_data();
   }
   bool has_v13() const {
-    return max_ordinal_ >= 13 && frame_ptr_->v13_.data != nullptr;
+    return max_ordinal_ >= 13 && frame_ptr_->v13_.has_data();
   }
   GreaterThan64OrdinalTable& set_v13(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v13_.data = elem;
+    frame_ptr_->v13_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(13));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v13(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v13_.data = nullptr;
+    frame_ptr_->v13_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v13(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v13_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v13_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(13));
     return *this;
   }
 
   const int64_t& v14() const {
     ZX_ASSERT(has_v14());
-    return *frame_ptr_->v14_.data;
+    return frame_ptr_->v14_.get_data();
   }
   int64_t& v14() {
     ZX_ASSERT(has_v14());
-    return *frame_ptr_->v14_.data;
+    return frame_ptr_->v14_.get_data();
   }
   bool has_v14() const {
-    return max_ordinal_ >= 14 && frame_ptr_->v14_.data != nullptr;
+    return max_ordinal_ >= 14 && frame_ptr_->v14_.has_data();
   }
   GreaterThan64OrdinalTable& set_v14(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v14_.data = elem;
+    frame_ptr_->v14_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(14));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v14(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v14_.data = nullptr;
+    frame_ptr_->v14_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v14(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v14_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v14_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(14));
     return *this;
   }
 
   const int64_t& v15() const {
     ZX_ASSERT(has_v15());
-    return *frame_ptr_->v15_.data;
+    return frame_ptr_->v15_.get_data();
   }
   int64_t& v15() {
     ZX_ASSERT(has_v15());
-    return *frame_ptr_->v15_.data;
+    return frame_ptr_->v15_.get_data();
   }
   bool has_v15() const {
-    return max_ordinal_ >= 15 && frame_ptr_->v15_.data != nullptr;
+    return max_ordinal_ >= 15 && frame_ptr_->v15_.has_data();
   }
   GreaterThan64OrdinalTable& set_v15(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v15_.data = elem;
+    frame_ptr_->v15_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(15));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v15(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v15_.data = nullptr;
+    frame_ptr_->v15_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v15(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v15_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v15_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(15));
     return *this;
   }
 
   const int64_t& v16() const {
     ZX_ASSERT(has_v16());
-    return *frame_ptr_->v16_.data;
+    return frame_ptr_->v16_.get_data();
   }
   int64_t& v16() {
     ZX_ASSERT(has_v16());
-    return *frame_ptr_->v16_.data;
+    return frame_ptr_->v16_.get_data();
   }
   bool has_v16() const {
-    return max_ordinal_ >= 16 && frame_ptr_->v16_.data != nullptr;
+    return max_ordinal_ >= 16 && frame_ptr_->v16_.has_data();
   }
   GreaterThan64OrdinalTable& set_v16(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v16_.data = elem;
+    frame_ptr_->v16_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(16));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v16(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v16_.data = nullptr;
+    frame_ptr_->v16_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v16(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v16_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v16_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(16));
     return *this;
   }
 
   const int64_t& v17() const {
     ZX_ASSERT(has_v17());
-    return *frame_ptr_->v17_.data;
+    return frame_ptr_->v17_.get_data();
   }
   int64_t& v17() {
     ZX_ASSERT(has_v17());
-    return *frame_ptr_->v17_.data;
+    return frame_ptr_->v17_.get_data();
   }
   bool has_v17() const {
-    return max_ordinal_ >= 17 && frame_ptr_->v17_.data != nullptr;
+    return max_ordinal_ >= 17 && frame_ptr_->v17_.has_data();
   }
   GreaterThan64OrdinalTable& set_v17(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v17_.data = elem;
+    frame_ptr_->v17_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(17));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v17(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v17_.data = nullptr;
+    frame_ptr_->v17_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v17(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v17_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v17_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(17));
     return *this;
   }
 
   const int64_t& v18() const {
     ZX_ASSERT(has_v18());
-    return *frame_ptr_->v18_.data;
+    return frame_ptr_->v18_.get_data();
   }
   int64_t& v18() {
     ZX_ASSERT(has_v18());
-    return *frame_ptr_->v18_.data;
+    return frame_ptr_->v18_.get_data();
   }
   bool has_v18() const {
-    return max_ordinal_ >= 18 && frame_ptr_->v18_.data != nullptr;
+    return max_ordinal_ >= 18 && frame_ptr_->v18_.has_data();
   }
   GreaterThan64OrdinalTable& set_v18(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v18_.data = elem;
+    frame_ptr_->v18_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(18));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v18(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v18_.data = nullptr;
+    frame_ptr_->v18_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v18(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v18_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v18_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(18));
     return *this;
   }
 
   const int64_t& v19() const {
     ZX_ASSERT(has_v19());
-    return *frame_ptr_->v19_.data;
+    return frame_ptr_->v19_.get_data();
   }
   int64_t& v19() {
     ZX_ASSERT(has_v19());
-    return *frame_ptr_->v19_.data;
+    return frame_ptr_->v19_.get_data();
   }
   bool has_v19() const {
-    return max_ordinal_ >= 19 && frame_ptr_->v19_.data != nullptr;
+    return max_ordinal_ >= 19 && frame_ptr_->v19_.has_data();
   }
   GreaterThan64OrdinalTable& set_v19(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v19_.data = elem;
+    frame_ptr_->v19_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(19));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v19(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v19_.data = nullptr;
+    frame_ptr_->v19_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v19(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v19_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v19_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(19));
     return *this;
   }
 
   const int64_t& v20() const {
     ZX_ASSERT(has_v20());
-    return *frame_ptr_->v20_.data;
+    return frame_ptr_->v20_.get_data();
   }
   int64_t& v20() {
     ZX_ASSERT(has_v20());
-    return *frame_ptr_->v20_.data;
+    return frame_ptr_->v20_.get_data();
   }
   bool has_v20() const {
-    return max_ordinal_ >= 20 && frame_ptr_->v20_.data != nullptr;
+    return max_ordinal_ >= 20 && frame_ptr_->v20_.has_data();
   }
   GreaterThan64OrdinalTable& set_v20(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v20_.data = elem;
+    frame_ptr_->v20_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(20));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v20(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v20_.data = nullptr;
+    frame_ptr_->v20_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v20(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v20_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v20_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(20));
     return *this;
   }
 
   const int64_t& v21() const {
     ZX_ASSERT(has_v21());
-    return *frame_ptr_->v21_.data;
+    return frame_ptr_->v21_.get_data();
   }
   int64_t& v21() {
     ZX_ASSERT(has_v21());
-    return *frame_ptr_->v21_.data;
+    return frame_ptr_->v21_.get_data();
   }
   bool has_v21() const {
-    return max_ordinal_ >= 21 && frame_ptr_->v21_.data != nullptr;
+    return max_ordinal_ >= 21 && frame_ptr_->v21_.has_data();
   }
   GreaterThan64OrdinalTable& set_v21(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v21_.data = elem;
+    frame_ptr_->v21_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(21));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v21(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v21_.data = nullptr;
+    frame_ptr_->v21_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v21(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v21_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v21_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(21));
     return *this;
   }
 
   const int64_t& v22() const {
     ZX_ASSERT(has_v22());
-    return *frame_ptr_->v22_.data;
+    return frame_ptr_->v22_.get_data();
   }
   int64_t& v22() {
     ZX_ASSERT(has_v22());
-    return *frame_ptr_->v22_.data;
+    return frame_ptr_->v22_.get_data();
   }
   bool has_v22() const {
-    return max_ordinal_ >= 22 && frame_ptr_->v22_.data != nullptr;
+    return max_ordinal_ >= 22 && frame_ptr_->v22_.has_data();
   }
   GreaterThan64OrdinalTable& set_v22(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v22_.data = elem;
+    frame_ptr_->v22_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(22));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v22(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v22_.data = nullptr;
+    frame_ptr_->v22_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v22(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v22_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v22_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(22));
     return *this;
   }
 
   const int64_t& v23() const {
     ZX_ASSERT(has_v23());
-    return *frame_ptr_->v23_.data;
+    return frame_ptr_->v23_.get_data();
   }
   int64_t& v23() {
     ZX_ASSERT(has_v23());
-    return *frame_ptr_->v23_.data;
+    return frame_ptr_->v23_.get_data();
   }
   bool has_v23() const {
-    return max_ordinal_ >= 23 && frame_ptr_->v23_.data != nullptr;
+    return max_ordinal_ >= 23 && frame_ptr_->v23_.has_data();
   }
   GreaterThan64OrdinalTable& set_v23(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v23_.data = elem;
+    frame_ptr_->v23_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(23));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v23(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v23_.data = nullptr;
+    frame_ptr_->v23_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v23(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v23_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v23_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(23));
     return *this;
   }
 
   const int64_t& v24() const {
     ZX_ASSERT(has_v24());
-    return *frame_ptr_->v24_.data;
+    return frame_ptr_->v24_.get_data();
   }
   int64_t& v24() {
     ZX_ASSERT(has_v24());
-    return *frame_ptr_->v24_.data;
+    return frame_ptr_->v24_.get_data();
   }
   bool has_v24() const {
-    return max_ordinal_ >= 24 && frame_ptr_->v24_.data != nullptr;
+    return max_ordinal_ >= 24 && frame_ptr_->v24_.has_data();
   }
   GreaterThan64OrdinalTable& set_v24(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v24_.data = elem;
+    frame_ptr_->v24_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(24));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v24(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v24_.data = nullptr;
+    frame_ptr_->v24_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v24(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v24_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v24_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(24));
     return *this;
   }
 
   const int64_t& v25() const {
     ZX_ASSERT(has_v25());
-    return *frame_ptr_->v25_.data;
+    return frame_ptr_->v25_.get_data();
   }
   int64_t& v25() {
     ZX_ASSERT(has_v25());
-    return *frame_ptr_->v25_.data;
+    return frame_ptr_->v25_.get_data();
   }
   bool has_v25() const {
-    return max_ordinal_ >= 25 && frame_ptr_->v25_.data != nullptr;
+    return max_ordinal_ >= 25 && frame_ptr_->v25_.has_data();
   }
   GreaterThan64OrdinalTable& set_v25(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v25_.data = elem;
+    frame_ptr_->v25_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(25));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v25(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v25_.data = nullptr;
+    frame_ptr_->v25_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v25(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v25_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v25_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(25));
     return *this;
   }
 
   const int64_t& v26() const {
     ZX_ASSERT(has_v26());
-    return *frame_ptr_->v26_.data;
+    return frame_ptr_->v26_.get_data();
   }
   int64_t& v26() {
     ZX_ASSERT(has_v26());
-    return *frame_ptr_->v26_.data;
+    return frame_ptr_->v26_.get_data();
   }
   bool has_v26() const {
-    return max_ordinal_ >= 26 && frame_ptr_->v26_.data != nullptr;
+    return max_ordinal_ >= 26 && frame_ptr_->v26_.has_data();
   }
   GreaterThan64OrdinalTable& set_v26(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v26_.data = elem;
+    frame_ptr_->v26_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(26));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v26(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v26_.data = nullptr;
+    frame_ptr_->v26_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v26(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v26_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v26_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(26));
     return *this;
   }
 
   const int64_t& v27() const {
     ZX_ASSERT(has_v27());
-    return *frame_ptr_->v27_.data;
+    return frame_ptr_->v27_.get_data();
   }
   int64_t& v27() {
     ZX_ASSERT(has_v27());
-    return *frame_ptr_->v27_.data;
+    return frame_ptr_->v27_.get_data();
   }
   bool has_v27() const {
-    return max_ordinal_ >= 27 && frame_ptr_->v27_.data != nullptr;
+    return max_ordinal_ >= 27 && frame_ptr_->v27_.has_data();
   }
   GreaterThan64OrdinalTable& set_v27(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v27_.data = elem;
+    frame_ptr_->v27_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(27));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v27(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v27_.data = nullptr;
+    frame_ptr_->v27_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v27(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v27_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v27_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(27));
     return *this;
   }
 
   const int64_t& v28() const {
     ZX_ASSERT(has_v28());
-    return *frame_ptr_->v28_.data;
+    return frame_ptr_->v28_.get_data();
   }
   int64_t& v28() {
     ZX_ASSERT(has_v28());
-    return *frame_ptr_->v28_.data;
+    return frame_ptr_->v28_.get_data();
   }
   bool has_v28() const {
-    return max_ordinal_ >= 28 && frame_ptr_->v28_.data != nullptr;
+    return max_ordinal_ >= 28 && frame_ptr_->v28_.has_data();
   }
   GreaterThan64OrdinalTable& set_v28(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v28_.data = elem;
+    frame_ptr_->v28_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(28));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v28(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v28_.data = nullptr;
+    frame_ptr_->v28_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v28(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v28_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v28_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(28));
     return *this;
   }
 
   const int64_t& v29() const {
     ZX_ASSERT(has_v29());
-    return *frame_ptr_->v29_.data;
+    return frame_ptr_->v29_.get_data();
   }
   int64_t& v29() {
     ZX_ASSERT(has_v29());
-    return *frame_ptr_->v29_.data;
+    return frame_ptr_->v29_.get_data();
   }
   bool has_v29() const {
-    return max_ordinal_ >= 29 && frame_ptr_->v29_.data != nullptr;
+    return max_ordinal_ >= 29 && frame_ptr_->v29_.has_data();
   }
   GreaterThan64OrdinalTable& set_v29(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v29_.data = elem;
+    frame_ptr_->v29_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(29));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v29(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v29_.data = nullptr;
+    frame_ptr_->v29_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v29(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v29_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v29_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(29));
     return *this;
   }
 
   const int64_t& v30() const {
     ZX_ASSERT(has_v30());
-    return *frame_ptr_->v30_.data;
+    return frame_ptr_->v30_.get_data();
   }
   int64_t& v30() {
     ZX_ASSERT(has_v30());
-    return *frame_ptr_->v30_.data;
+    return frame_ptr_->v30_.get_data();
   }
   bool has_v30() const {
-    return max_ordinal_ >= 30 && frame_ptr_->v30_.data != nullptr;
+    return max_ordinal_ >= 30 && frame_ptr_->v30_.has_data();
   }
   GreaterThan64OrdinalTable& set_v30(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v30_.data = elem;
+    frame_ptr_->v30_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(30));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v30(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v30_.data = nullptr;
+    frame_ptr_->v30_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v30(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v30_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v30_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(30));
     return *this;
   }
 
   const int64_t& v31() const {
     ZX_ASSERT(has_v31());
-    return *frame_ptr_->v31_.data;
+    return frame_ptr_->v31_.get_data();
   }
   int64_t& v31() {
     ZX_ASSERT(has_v31());
-    return *frame_ptr_->v31_.data;
+    return frame_ptr_->v31_.get_data();
   }
   bool has_v31() const {
-    return max_ordinal_ >= 31 && frame_ptr_->v31_.data != nullptr;
+    return max_ordinal_ >= 31 && frame_ptr_->v31_.has_data();
   }
   GreaterThan64OrdinalTable& set_v31(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v31_.data = elem;
+    frame_ptr_->v31_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(31));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v31(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v31_.data = nullptr;
+    frame_ptr_->v31_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v31(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v31_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v31_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(31));
     return *this;
   }
 
   const int64_t& v32() const {
     ZX_ASSERT(has_v32());
-    return *frame_ptr_->v32_.data;
+    return frame_ptr_->v32_.get_data();
   }
   int64_t& v32() {
     ZX_ASSERT(has_v32());
-    return *frame_ptr_->v32_.data;
+    return frame_ptr_->v32_.get_data();
   }
   bool has_v32() const {
-    return max_ordinal_ >= 32 && frame_ptr_->v32_.data != nullptr;
+    return max_ordinal_ >= 32 && frame_ptr_->v32_.has_data();
   }
   GreaterThan64OrdinalTable& set_v32(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v32_.data = elem;
+    frame_ptr_->v32_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(32));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v32(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v32_.data = nullptr;
+    frame_ptr_->v32_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v32(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v32_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v32_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(32));
     return *this;
   }
 
   const int64_t& v33() const {
     ZX_ASSERT(has_v33());
-    return *frame_ptr_->v33_.data;
+    return frame_ptr_->v33_.get_data();
   }
   int64_t& v33() {
     ZX_ASSERT(has_v33());
-    return *frame_ptr_->v33_.data;
+    return frame_ptr_->v33_.get_data();
   }
   bool has_v33() const {
-    return max_ordinal_ >= 33 && frame_ptr_->v33_.data != nullptr;
+    return max_ordinal_ >= 33 && frame_ptr_->v33_.has_data();
   }
   GreaterThan64OrdinalTable& set_v33(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v33_.data = elem;
+    frame_ptr_->v33_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(33));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v33(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v33_.data = nullptr;
+    frame_ptr_->v33_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v33(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v33_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v33_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(33));
     return *this;
   }
 
   const int64_t& v34() const {
     ZX_ASSERT(has_v34());
-    return *frame_ptr_->v34_.data;
+    return frame_ptr_->v34_.get_data();
   }
   int64_t& v34() {
     ZX_ASSERT(has_v34());
-    return *frame_ptr_->v34_.data;
+    return frame_ptr_->v34_.get_data();
   }
   bool has_v34() const {
-    return max_ordinal_ >= 34 && frame_ptr_->v34_.data != nullptr;
+    return max_ordinal_ >= 34 && frame_ptr_->v34_.has_data();
   }
   GreaterThan64OrdinalTable& set_v34(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v34_.data = elem;
+    frame_ptr_->v34_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(34));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v34(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v34_.data = nullptr;
+    frame_ptr_->v34_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v34(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v34_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v34_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(34));
     return *this;
   }
 
   const int64_t& v35() const {
     ZX_ASSERT(has_v35());
-    return *frame_ptr_->v35_.data;
+    return frame_ptr_->v35_.get_data();
   }
   int64_t& v35() {
     ZX_ASSERT(has_v35());
-    return *frame_ptr_->v35_.data;
+    return frame_ptr_->v35_.get_data();
   }
   bool has_v35() const {
-    return max_ordinal_ >= 35 && frame_ptr_->v35_.data != nullptr;
+    return max_ordinal_ >= 35 && frame_ptr_->v35_.has_data();
   }
   GreaterThan64OrdinalTable& set_v35(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v35_.data = elem;
+    frame_ptr_->v35_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(35));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v35(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v35_.data = nullptr;
+    frame_ptr_->v35_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v35(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v35_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v35_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(35));
     return *this;
   }
 
   const int64_t& v36() const {
     ZX_ASSERT(has_v36());
-    return *frame_ptr_->v36_.data;
+    return frame_ptr_->v36_.get_data();
   }
   int64_t& v36() {
     ZX_ASSERT(has_v36());
-    return *frame_ptr_->v36_.data;
+    return frame_ptr_->v36_.get_data();
   }
   bool has_v36() const {
-    return max_ordinal_ >= 36 && frame_ptr_->v36_.data != nullptr;
+    return max_ordinal_ >= 36 && frame_ptr_->v36_.has_data();
   }
   GreaterThan64OrdinalTable& set_v36(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v36_.data = elem;
+    frame_ptr_->v36_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(36));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v36(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v36_.data = nullptr;
+    frame_ptr_->v36_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v36(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v36_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v36_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(36));
     return *this;
   }
 
   const int64_t& v37() const {
     ZX_ASSERT(has_v37());
-    return *frame_ptr_->v37_.data;
+    return frame_ptr_->v37_.get_data();
   }
   int64_t& v37() {
     ZX_ASSERT(has_v37());
-    return *frame_ptr_->v37_.data;
+    return frame_ptr_->v37_.get_data();
   }
   bool has_v37() const {
-    return max_ordinal_ >= 37 && frame_ptr_->v37_.data != nullptr;
+    return max_ordinal_ >= 37 && frame_ptr_->v37_.has_data();
   }
   GreaterThan64OrdinalTable& set_v37(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v37_.data = elem;
+    frame_ptr_->v37_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(37));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v37(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v37_.data = nullptr;
+    frame_ptr_->v37_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v37(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v37_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v37_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(37));
     return *this;
   }
 
   const int64_t& v38() const {
     ZX_ASSERT(has_v38());
-    return *frame_ptr_->v38_.data;
+    return frame_ptr_->v38_.get_data();
   }
   int64_t& v38() {
     ZX_ASSERT(has_v38());
-    return *frame_ptr_->v38_.data;
+    return frame_ptr_->v38_.get_data();
   }
   bool has_v38() const {
-    return max_ordinal_ >= 38 && frame_ptr_->v38_.data != nullptr;
+    return max_ordinal_ >= 38 && frame_ptr_->v38_.has_data();
   }
   GreaterThan64OrdinalTable& set_v38(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v38_.data = elem;
+    frame_ptr_->v38_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(38));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v38(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v38_.data = nullptr;
+    frame_ptr_->v38_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v38(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v38_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v38_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(38));
     return *this;
   }
 
   const int64_t& v39() const {
     ZX_ASSERT(has_v39());
-    return *frame_ptr_->v39_.data;
+    return frame_ptr_->v39_.get_data();
   }
   int64_t& v39() {
     ZX_ASSERT(has_v39());
-    return *frame_ptr_->v39_.data;
+    return frame_ptr_->v39_.get_data();
   }
   bool has_v39() const {
-    return max_ordinal_ >= 39 && frame_ptr_->v39_.data != nullptr;
+    return max_ordinal_ >= 39 && frame_ptr_->v39_.has_data();
   }
   GreaterThan64OrdinalTable& set_v39(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v39_.data = elem;
+    frame_ptr_->v39_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(39));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v39(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v39_.data = nullptr;
+    frame_ptr_->v39_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v39(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v39_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v39_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(39));
     return *this;
   }
 
   const int64_t& v40() const {
     ZX_ASSERT(has_v40());
-    return *frame_ptr_->v40_.data;
+    return frame_ptr_->v40_.get_data();
   }
   int64_t& v40() {
     ZX_ASSERT(has_v40());
-    return *frame_ptr_->v40_.data;
+    return frame_ptr_->v40_.get_data();
   }
   bool has_v40() const {
-    return max_ordinal_ >= 40 && frame_ptr_->v40_.data != nullptr;
+    return max_ordinal_ >= 40 && frame_ptr_->v40_.has_data();
   }
   GreaterThan64OrdinalTable& set_v40(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v40_.data = elem;
+    frame_ptr_->v40_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(40));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v40(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v40_.data = nullptr;
+    frame_ptr_->v40_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v40(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v40_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v40_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(40));
     return *this;
   }
 
   const int64_t& v41() const {
     ZX_ASSERT(has_v41());
-    return *frame_ptr_->v41_.data;
+    return frame_ptr_->v41_.get_data();
   }
   int64_t& v41() {
     ZX_ASSERT(has_v41());
-    return *frame_ptr_->v41_.data;
+    return frame_ptr_->v41_.get_data();
   }
   bool has_v41() const {
-    return max_ordinal_ >= 41 && frame_ptr_->v41_.data != nullptr;
+    return max_ordinal_ >= 41 && frame_ptr_->v41_.has_data();
   }
   GreaterThan64OrdinalTable& set_v41(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v41_.data = elem;
+    frame_ptr_->v41_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(41));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v41(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v41_.data = nullptr;
+    frame_ptr_->v41_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v41(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v41_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v41_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(41));
     return *this;
   }
 
   const int64_t& v42() const {
     ZX_ASSERT(has_v42());
-    return *frame_ptr_->v42_.data;
+    return frame_ptr_->v42_.get_data();
   }
   int64_t& v42() {
     ZX_ASSERT(has_v42());
-    return *frame_ptr_->v42_.data;
+    return frame_ptr_->v42_.get_data();
   }
   bool has_v42() const {
-    return max_ordinal_ >= 42 && frame_ptr_->v42_.data != nullptr;
+    return max_ordinal_ >= 42 && frame_ptr_->v42_.has_data();
   }
   GreaterThan64OrdinalTable& set_v42(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v42_.data = elem;
+    frame_ptr_->v42_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(42));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v42(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v42_.data = nullptr;
+    frame_ptr_->v42_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v42(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v42_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v42_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(42));
     return *this;
   }
 
   const int64_t& v43() const {
     ZX_ASSERT(has_v43());
-    return *frame_ptr_->v43_.data;
+    return frame_ptr_->v43_.get_data();
   }
   int64_t& v43() {
     ZX_ASSERT(has_v43());
-    return *frame_ptr_->v43_.data;
+    return frame_ptr_->v43_.get_data();
   }
   bool has_v43() const {
-    return max_ordinal_ >= 43 && frame_ptr_->v43_.data != nullptr;
+    return max_ordinal_ >= 43 && frame_ptr_->v43_.has_data();
   }
   GreaterThan64OrdinalTable& set_v43(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v43_.data = elem;
+    frame_ptr_->v43_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(43));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v43(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v43_.data = nullptr;
+    frame_ptr_->v43_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v43(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v43_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v43_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(43));
     return *this;
   }
 
   const int64_t& v44() const {
     ZX_ASSERT(has_v44());
-    return *frame_ptr_->v44_.data;
+    return frame_ptr_->v44_.get_data();
   }
   int64_t& v44() {
     ZX_ASSERT(has_v44());
-    return *frame_ptr_->v44_.data;
+    return frame_ptr_->v44_.get_data();
   }
   bool has_v44() const {
-    return max_ordinal_ >= 44 && frame_ptr_->v44_.data != nullptr;
+    return max_ordinal_ >= 44 && frame_ptr_->v44_.has_data();
   }
   GreaterThan64OrdinalTable& set_v44(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v44_.data = elem;
+    frame_ptr_->v44_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(44));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v44(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v44_.data = nullptr;
+    frame_ptr_->v44_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v44(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v44_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v44_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(44));
     return *this;
   }
 
   const int64_t& v45() const {
     ZX_ASSERT(has_v45());
-    return *frame_ptr_->v45_.data;
+    return frame_ptr_->v45_.get_data();
   }
   int64_t& v45() {
     ZX_ASSERT(has_v45());
-    return *frame_ptr_->v45_.data;
+    return frame_ptr_->v45_.get_data();
   }
   bool has_v45() const {
-    return max_ordinal_ >= 45 && frame_ptr_->v45_.data != nullptr;
+    return max_ordinal_ >= 45 && frame_ptr_->v45_.has_data();
   }
   GreaterThan64OrdinalTable& set_v45(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v45_.data = elem;
+    frame_ptr_->v45_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(45));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v45(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v45_.data = nullptr;
+    frame_ptr_->v45_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v45(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v45_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v45_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(45));
     return *this;
   }
 
   const int64_t& v46() const {
     ZX_ASSERT(has_v46());
-    return *frame_ptr_->v46_.data;
+    return frame_ptr_->v46_.get_data();
   }
   int64_t& v46() {
     ZX_ASSERT(has_v46());
-    return *frame_ptr_->v46_.data;
+    return frame_ptr_->v46_.get_data();
   }
   bool has_v46() const {
-    return max_ordinal_ >= 46 && frame_ptr_->v46_.data != nullptr;
+    return max_ordinal_ >= 46 && frame_ptr_->v46_.has_data();
   }
   GreaterThan64OrdinalTable& set_v46(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v46_.data = elem;
+    frame_ptr_->v46_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(46));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v46(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v46_.data = nullptr;
+    frame_ptr_->v46_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v46(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v46_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v46_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(46));
     return *this;
   }
 
   const int64_t& v47() const {
     ZX_ASSERT(has_v47());
-    return *frame_ptr_->v47_.data;
+    return frame_ptr_->v47_.get_data();
   }
   int64_t& v47() {
     ZX_ASSERT(has_v47());
-    return *frame_ptr_->v47_.data;
+    return frame_ptr_->v47_.get_data();
   }
   bool has_v47() const {
-    return max_ordinal_ >= 47 && frame_ptr_->v47_.data != nullptr;
+    return max_ordinal_ >= 47 && frame_ptr_->v47_.has_data();
   }
   GreaterThan64OrdinalTable& set_v47(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v47_.data = elem;
+    frame_ptr_->v47_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(47));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v47(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v47_.data = nullptr;
+    frame_ptr_->v47_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v47(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v47_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v47_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(47));
     return *this;
   }
 
   const int64_t& v48() const {
     ZX_ASSERT(has_v48());
-    return *frame_ptr_->v48_.data;
+    return frame_ptr_->v48_.get_data();
   }
   int64_t& v48() {
     ZX_ASSERT(has_v48());
-    return *frame_ptr_->v48_.data;
+    return frame_ptr_->v48_.get_data();
   }
   bool has_v48() const {
-    return max_ordinal_ >= 48 && frame_ptr_->v48_.data != nullptr;
+    return max_ordinal_ >= 48 && frame_ptr_->v48_.has_data();
   }
   GreaterThan64OrdinalTable& set_v48(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v48_.data = elem;
+    frame_ptr_->v48_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(48));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v48(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v48_.data = nullptr;
+    frame_ptr_->v48_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v48(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v48_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v48_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(48));
     return *this;
   }
 
   const int64_t& v49() const {
     ZX_ASSERT(has_v49());
-    return *frame_ptr_->v49_.data;
+    return frame_ptr_->v49_.get_data();
   }
   int64_t& v49() {
     ZX_ASSERT(has_v49());
-    return *frame_ptr_->v49_.data;
+    return frame_ptr_->v49_.get_data();
   }
   bool has_v49() const {
-    return max_ordinal_ >= 49 && frame_ptr_->v49_.data != nullptr;
+    return max_ordinal_ >= 49 && frame_ptr_->v49_.has_data();
   }
   GreaterThan64OrdinalTable& set_v49(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v49_.data = elem;
+    frame_ptr_->v49_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(49));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v49(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v49_.data = nullptr;
+    frame_ptr_->v49_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v49(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v49_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v49_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(49));
     return *this;
   }
 
   const int64_t& v50() const {
     ZX_ASSERT(has_v50());
-    return *frame_ptr_->v50_.data;
+    return frame_ptr_->v50_.get_data();
   }
   int64_t& v50() {
     ZX_ASSERT(has_v50());
-    return *frame_ptr_->v50_.data;
+    return frame_ptr_->v50_.get_data();
   }
   bool has_v50() const {
-    return max_ordinal_ >= 50 && frame_ptr_->v50_.data != nullptr;
+    return max_ordinal_ >= 50 && frame_ptr_->v50_.has_data();
   }
   GreaterThan64OrdinalTable& set_v50(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v50_.data = elem;
+    frame_ptr_->v50_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(50));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v50(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v50_.data = nullptr;
+    frame_ptr_->v50_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v50(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v50_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v50_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(50));
     return *this;
   }
 
   const int64_t& v51() const {
     ZX_ASSERT(has_v51());
-    return *frame_ptr_->v51_.data;
+    return frame_ptr_->v51_.get_data();
   }
   int64_t& v51() {
     ZX_ASSERT(has_v51());
-    return *frame_ptr_->v51_.data;
+    return frame_ptr_->v51_.get_data();
   }
   bool has_v51() const {
-    return max_ordinal_ >= 51 && frame_ptr_->v51_.data != nullptr;
+    return max_ordinal_ >= 51 && frame_ptr_->v51_.has_data();
   }
   GreaterThan64OrdinalTable& set_v51(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v51_.data = elem;
+    frame_ptr_->v51_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(51));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v51(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v51_.data = nullptr;
+    frame_ptr_->v51_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v51(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v51_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v51_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(51));
     return *this;
   }
 
   const int64_t& v52() const {
     ZX_ASSERT(has_v52());
-    return *frame_ptr_->v52_.data;
+    return frame_ptr_->v52_.get_data();
   }
   int64_t& v52() {
     ZX_ASSERT(has_v52());
-    return *frame_ptr_->v52_.data;
+    return frame_ptr_->v52_.get_data();
   }
   bool has_v52() const {
-    return max_ordinal_ >= 52 && frame_ptr_->v52_.data != nullptr;
+    return max_ordinal_ >= 52 && frame_ptr_->v52_.has_data();
   }
   GreaterThan64OrdinalTable& set_v52(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v52_.data = elem;
+    frame_ptr_->v52_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(52));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v52(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v52_.data = nullptr;
+    frame_ptr_->v52_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v52(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v52_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v52_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(52));
     return *this;
   }
 
   const int64_t& v53() const {
     ZX_ASSERT(has_v53());
-    return *frame_ptr_->v53_.data;
+    return frame_ptr_->v53_.get_data();
   }
   int64_t& v53() {
     ZX_ASSERT(has_v53());
-    return *frame_ptr_->v53_.data;
+    return frame_ptr_->v53_.get_data();
   }
   bool has_v53() const {
-    return max_ordinal_ >= 53 && frame_ptr_->v53_.data != nullptr;
+    return max_ordinal_ >= 53 && frame_ptr_->v53_.has_data();
   }
   GreaterThan64OrdinalTable& set_v53(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v53_.data = elem;
+    frame_ptr_->v53_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(53));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v53(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v53_.data = nullptr;
+    frame_ptr_->v53_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v53(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v53_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v53_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(53));
     return *this;
   }
 
   const int64_t& v54() const {
     ZX_ASSERT(has_v54());
-    return *frame_ptr_->v54_.data;
+    return frame_ptr_->v54_.get_data();
   }
   int64_t& v54() {
     ZX_ASSERT(has_v54());
-    return *frame_ptr_->v54_.data;
+    return frame_ptr_->v54_.get_data();
   }
   bool has_v54() const {
-    return max_ordinal_ >= 54 && frame_ptr_->v54_.data != nullptr;
+    return max_ordinal_ >= 54 && frame_ptr_->v54_.has_data();
   }
   GreaterThan64OrdinalTable& set_v54(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v54_.data = elem;
+    frame_ptr_->v54_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(54));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v54(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v54_.data = nullptr;
+    frame_ptr_->v54_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v54(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v54_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v54_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(54));
     return *this;
   }
 
   const int64_t& v55() const {
     ZX_ASSERT(has_v55());
-    return *frame_ptr_->v55_.data;
+    return frame_ptr_->v55_.get_data();
   }
   int64_t& v55() {
     ZX_ASSERT(has_v55());
-    return *frame_ptr_->v55_.data;
+    return frame_ptr_->v55_.get_data();
   }
   bool has_v55() const {
-    return max_ordinal_ >= 55 && frame_ptr_->v55_.data != nullptr;
+    return max_ordinal_ >= 55 && frame_ptr_->v55_.has_data();
   }
   GreaterThan64OrdinalTable& set_v55(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v55_.data = elem;
+    frame_ptr_->v55_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(55));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v55(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v55_.data = nullptr;
+    frame_ptr_->v55_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v55(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v55_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v55_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(55));
     return *this;
   }
 
   const int64_t& v56() const {
     ZX_ASSERT(has_v56());
-    return *frame_ptr_->v56_.data;
+    return frame_ptr_->v56_.get_data();
   }
   int64_t& v56() {
     ZX_ASSERT(has_v56());
-    return *frame_ptr_->v56_.data;
+    return frame_ptr_->v56_.get_data();
   }
   bool has_v56() const {
-    return max_ordinal_ >= 56 && frame_ptr_->v56_.data != nullptr;
+    return max_ordinal_ >= 56 && frame_ptr_->v56_.has_data();
   }
   GreaterThan64OrdinalTable& set_v56(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v56_.data = elem;
+    frame_ptr_->v56_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(56));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v56(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v56_.data = nullptr;
+    frame_ptr_->v56_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v56(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v56_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v56_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(56));
     return *this;
   }
 
   const int64_t& v57() const {
     ZX_ASSERT(has_v57());
-    return *frame_ptr_->v57_.data;
+    return frame_ptr_->v57_.get_data();
   }
   int64_t& v57() {
     ZX_ASSERT(has_v57());
-    return *frame_ptr_->v57_.data;
+    return frame_ptr_->v57_.get_data();
   }
   bool has_v57() const {
-    return max_ordinal_ >= 57 && frame_ptr_->v57_.data != nullptr;
+    return max_ordinal_ >= 57 && frame_ptr_->v57_.has_data();
   }
   GreaterThan64OrdinalTable& set_v57(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v57_.data = elem;
+    frame_ptr_->v57_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(57));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v57(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v57_.data = nullptr;
+    frame_ptr_->v57_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v57(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v57_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v57_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(57));
     return *this;
   }
 
   const int64_t& v58() const {
     ZX_ASSERT(has_v58());
-    return *frame_ptr_->v58_.data;
+    return frame_ptr_->v58_.get_data();
   }
   int64_t& v58() {
     ZX_ASSERT(has_v58());
-    return *frame_ptr_->v58_.data;
+    return frame_ptr_->v58_.get_data();
   }
   bool has_v58() const {
-    return max_ordinal_ >= 58 && frame_ptr_->v58_.data != nullptr;
+    return max_ordinal_ >= 58 && frame_ptr_->v58_.has_data();
   }
   GreaterThan64OrdinalTable& set_v58(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v58_.data = elem;
+    frame_ptr_->v58_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(58));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v58(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v58_.data = nullptr;
+    frame_ptr_->v58_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v58(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v58_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v58_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(58));
     return *this;
   }
 
   const int64_t& v59() const {
     ZX_ASSERT(has_v59());
-    return *frame_ptr_->v59_.data;
+    return frame_ptr_->v59_.get_data();
   }
   int64_t& v59() {
     ZX_ASSERT(has_v59());
-    return *frame_ptr_->v59_.data;
+    return frame_ptr_->v59_.get_data();
   }
   bool has_v59() const {
-    return max_ordinal_ >= 59 && frame_ptr_->v59_.data != nullptr;
+    return max_ordinal_ >= 59 && frame_ptr_->v59_.has_data();
   }
   GreaterThan64OrdinalTable& set_v59(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v59_.data = elem;
+    frame_ptr_->v59_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(59));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v59(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v59_.data = nullptr;
+    frame_ptr_->v59_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v59(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v59_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v59_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(59));
     return *this;
   }
 
   const int64_t& v60() const {
     ZX_ASSERT(has_v60());
-    return *frame_ptr_->v60_.data;
+    return frame_ptr_->v60_.get_data();
   }
   int64_t& v60() {
     ZX_ASSERT(has_v60());
-    return *frame_ptr_->v60_.data;
+    return frame_ptr_->v60_.get_data();
   }
   bool has_v60() const {
-    return max_ordinal_ >= 60 && frame_ptr_->v60_.data != nullptr;
+    return max_ordinal_ >= 60 && frame_ptr_->v60_.has_data();
   }
   GreaterThan64OrdinalTable& set_v60(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v60_.data = elem;
+    frame_ptr_->v60_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(60));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v60(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v60_.data = nullptr;
+    frame_ptr_->v60_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v60(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v60_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v60_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(60));
     return *this;
   }
 
   const int64_t& v61() const {
     ZX_ASSERT(has_v61());
-    return *frame_ptr_->v61_.data;
+    return frame_ptr_->v61_.get_data();
   }
   int64_t& v61() {
     ZX_ASSERT(has_v61());
-    return *frame_ptr_->v61_.data;
+    return frame_ptr_->v61_.get_data();
   }
   bool has_v61() const {
-    return max_ordinal_ >= 61 && frame_ptr_->v61_.data != nullptr;
+    return max_ordinal_ >= 61 && frame_ptr_->v61_.has_data();
   }
   GreaterThan64OrdinalTable& set_v61(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v61_.data = elem;
+    frame_ptr_->v61_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(61));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v61(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v61_.data = nullptr;
+    frame_ptr_->v61_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v61(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v61_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v61_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(61));
     return *this;
   }
 
   const int64_t& v62() const {
     ZX_ASSERT(has_v62());
-    return *frame_ptr_->v62_.data;
+    return frame_ptr_->v62_.get_data();
   }
   int64_t& v62() {
     ZX_ASSERT(has_v62());
-    return *frame_ptr_->v62_.data;
+    return frame_ptr_->v62_.get_data();
   }
   bool has_v62() const {
-    return max_ordinal_ >= 62 && frame_ptr_->v62_.data != nullptr;
+    return max_ordinal_ >= 62 && frame_ptr_->v62_.has_data();
   }
   GreaterThan64OrdinalTable& set_v62(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v62_.data = elem;
+    frame_ptr_->v62_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(62));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v62(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v62_.data = nullptr;
+    frame_ptr_->v62_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v62(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v62_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v62_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(62));
     return *this;
   }
 
   const int64_t& v63() const {
     ZX_ASSERT(has_v63());
-    return *frame_ptr_->v63_.data;
+    return frame_ptr_->v63_.get_data();
   }
   int64_t& v63() {
     ZX_ASSERT(has_v63());
-    return *frame_ptr_->v63_.data;
+    return frame_ptr_->v63_.get_data();
   }
   bool has_v63() const {
-    return max_ordinal_ >= 63 && frame_ptr_->v63_.data != nullptr;
+    return max_ordinal_ >= 63 && frame_ptr_->v63_.has_data();
   }
   GreaterThan64OrdinalTable& set_v63(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v63_.data = elem;
+    frame_ptr_->v63_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(63));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v63(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v63_.data = nullptr;
+    frame_ptr_->v63_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v63(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v63_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v63_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(63));
     return *this;
   }
 
   const int64_t& v64() const {
     ZX_ASSERT(has_v64());
-    return *frame_ptr_->v64_.data;
+    return frame_ptr_->v64_.get_data();
   }
   int64_t& v64() {
     ZX_ASSERT(has_v64());
-    return *frame_ptr_->v64_.data;
+    return frame_ptr_->v64_.get_data();
   }
   bool has_v64() const {
-    return max_ordinal_ >= 64 && frame_ptr_->v64_.data != nullptr;
+    return max_ordinal_ >= 64 && frame_ptr_->v64_.has_data();
   }
   GreaterThan64OrdinalTable& set_v64(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v64_.data = elem;
+    frame_ptr_->v64_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(64));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v64(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v64_.data = nullptr;
+    frame_ptr_->v64_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v64(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v64_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v64_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(64));
     return *this;
   }
 
   const int64_t& v65() const {
     ZX_ASSERT(has_v65());
-    return *frame_ptr_->v65_.data;
+    return frame_ptr_->v65_.get_data();
   }
   int64_t& v65() {
     ZX_ASSERT(has_v65());
-    return *frame_ptr_->v65_.data;
+    return frame_ptr_->v65_.get_data();
   }
   bool has_v65() const {
-    return max_ordinal_ >= 65 && frame_ptr_->v65_.data != nullptr;
+    return max_ordinal_ >= 65 && frame_ptr_->v65_.has_data();
   }
   GreaterThan64OrdinalTable& set_v65(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v65_.data = elem;
+    frame_ptr_->v65_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(65));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v65(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v65_.data = nullptr;
+    frame_ptr_->v65_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v65(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v65_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v65_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(65));
     return *this;
   }
 
   const int64_t& v66() const {
     ZX_ASSERT(has_v66());
-    return *frame_ptr_->v66_.data;
+    return frame_ptr_->v66_.get_data();
   }
   int64_t& v66() {
     ZX_ASSERT(has_v66());
-    return *frame_ptr_->v66_.data;
+    return frame_ptr_->v66_.get_data();
   }
   bool has_v66() const {
-    return max_ordinal_ >= 66 && frame_ptr_->v66_.data != nullptr;
+    return max_ordinal_ >= 66 && frame_ptr_->v66_.has_data();
   }
   GreaterThan64OrdinalTable& set_v66(::fidl::ObjectView<int64_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v66_.data = elem;
+    frame_ptr_->v66_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(66));
     return *this;
   }
   GreaterThan64OrdinalTable& set_v66(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v66_.data = nullptr;
+    frame_ptr_->v66_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v66(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->v66_.data =
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->v66_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(66));
     return *this;
   }
@@ -3479,7 +3459,7 @@ class GreaterThan64OrdinalTable final {
       &fidl_test_table_GreaterThan64OrdinalTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 1584;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 1056;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -3671,7 +3651,7 @@ class GreaterThan64OrdinalTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -3860,7 +3840,7 @@ class EmptyTable::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}

@@ -245,7 +245,8 @@ zx_status_t AmlThermal::Init() {
     THERMAL_ERROR("could not read device metadata");
     return ZX_ERR_NO_MEMORY;
   }
-  fidl::DecodedMessage<fthermal::wire::ThermalDeviceInfo> decoded(raw_metadata.data(), size);
+  fidl::DecodedMessage<fthermal::wire::ThermalDeviceInfo> decoded(
+      fidl::internal::kLLCPPEncodedWireFormatVersion, raw_metadata.data(), size);
   if (!decoded.ok()) {
     THERMAL_ERROR("could not decode device metadata: %d", status);
     return decoded.status();

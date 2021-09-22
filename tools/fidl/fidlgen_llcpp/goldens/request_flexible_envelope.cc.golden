@@ -6,10 +6,11 @@
 
 void ::fidl_test_requestflexibleenvelope::wire::StrictFoo::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(StrictFoo, ordinal_) ==
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(StrictFoo, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 auto ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::which() const
     -> ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag {
@@ -28,11 +29,11 @@ auto ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::which() const
 
 void ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(FlexibleFoo) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(FlexibleFoo) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(FlexibleFoo, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(FlexibleFoo, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_requestflexibleenvelope {

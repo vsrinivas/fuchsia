@@ -87,9 +87,9 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> final {
       &::fidl_test_inheritance::fidl_test_inheritance_superfooRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -253,7 +253,9 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo> final {
       &::fidl_test_inheritance::fidl_test_inheritance_superfooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -765,9 +767,9 @@ struct ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> final {
       &::fidl_test_inheritance::fidl_test_inheritance_subfooRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 32;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 32;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -930,7 +932,9 @@ struct ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo> final {
       &::fidl_test_inheritance::fidl_test_inheritance_subfooResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySizeV1 = 24;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

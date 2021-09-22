@@ -21,20 +21,20 @@ auto ::fidl_test_placementofattributes::wire::ExampleXUnion::which() const
 
 void ::fidl_test_placementofattributes::wire::ExampleXUnion::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(ExampleXUnion, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(ExampleXUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 void ::fidl_test_placementofattributes::wire::ExampleUnion::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(ExampleUnion, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(ExampleUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_placementofattributes {

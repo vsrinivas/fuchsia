@@ -27,15 +27,23 @@ class {{ .Name }} {
 
   {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
 
-  {{ if .IsResourceType -}}
-  {{ .Name }}(const {{ .Name }}&) = delete;
-  {{ .Name }}& operator=(const {{ .Name }}&) = delete;
+  {{ if .IsResourceType }}
+  ~{{ .Name }}();
+  {{ .Name }}({{ .Name }}&& other) {
+    _Move(std::move(other));
+  }
+  {{ .Name }}& operator=({{ .Name }}&& other) {
+    if (this != &other) {
+      _Move(std::move(other));
+    }
+    return *this;
+  }
   {{- else -}}
   {{ .Name }}(const {{ .Name }}&) = default;
   {{ .Name }}& operator=(const {{ .Name }}&) = default;
-  {{- end }}
   {{ .Name }}({{ .Name }}&&) = default;
   {{ .Name }}& operator=({{ .Name }}&&) = default;
+  {{- end }}
 
   enum class {{ .TagEnum.Self }} : fidl_xunion_tag_t {
   {{- range .Members }}
@@ -69,7 +77,7 @@ class {{ .Name }} {
   {{- .Docs }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ordinal_ = {{ .WireOrdinalName }};
-    envelope_.data = ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<{{ .Type }}>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -81,11 +89,11 @@ class {{ .Name }} {
   {{- .Docs }}
   {{ .Type }}& mutable_{{ .Name }}() {
     ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
-    return *static_cast<{{ .Type }}*>(envelope_.data.get());
+    return envelope_.As<{{ .Type }}>().get_data();
   }
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
-    return *static_cast<{{ .Type }}*>(envelope_.data.get());
+    return envelope_.As<{{ .Type }}>().get_data();
   }
   {{- end }}
 
@@ -99,11 +107,11 @@ class {{ .Name }} {
   {{- end }}
 
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV1.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .TypeShapeV1.InlineSize }};
+  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .TypeShapeV2.InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
+  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .TypeShapeV2.HasPointer }};
 
   {{- if .IsResourceType }}
 
@@ -118,12 +126,16 @@ class {{ .Name }} {
   {{- end }}
   };
 
+  {{- if .IsResourceType }}
+  void _Move({{ .Name }}&& other);
+  {{- end }}
+
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
   {{ .WireOrdinalEnum }} ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 {{- if .IsResourceType }}
@@ -152,12 +164,37 @@ auto {{ . }}::which() const -> {{ .TagEnum }} {
 {{- end }}
 
 void {{ . }}::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
-  static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
+  static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
 {{- if .IsResourceType }}
+{{ . }}::~{{ .Name }}() {
+  switch (ordinal_) {
+  {{- range .Members }}
+    case {{ .WireOrdinalName }}: 
+      envelope_.As<{{ .Type }}>().Reset();
+      break;
+  {{- end }}
+    default:
+      break;
+  }
+}
+
+void {{ . }}::_Move({{ .Name }}&& other) {
+  ordinal_ = other.ordinal_;
+  switch (ordinal_) {
+  {{- range .Members }}
+    case {{ .WireOrdinalName }}:
+      envelope_.As<{{ .Type }}>() = std::move(other.envelope_.As<{{ .Type }}>());
+      break;
+  {{- end }}
+    default:
+      break;
+  }
+}
+
 void {{ . }}::_CloseHandles() {
   switch (ordinal_) {
   {{- range .Members }}

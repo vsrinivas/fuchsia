@@ -71,7 +71,8 @@ zx_status_t AmlPwmRegulator::Create(void* ctx, zx_device_t* parent) {
 
   // Parse
   fidl::DecodedMessage<fuchsia_hardware_vreg::wire::Metadata> decoded(
-      bytes.get(), static_cast<uint32_t>(metadata_size), nullptr, 0);
+      fidl::internal::kLLCPPEncodedWireFormatVersion, bytes.get(),
+      static_cast<uint32_t>(metadata_size), nullptr, 0);
   if (!decoded.ok()) {
     zxlogf(ERROR, "Unable to parse metadata %s", decoded.FormatDescription().c_str());
     return ZX_ERR_INTERNAL;

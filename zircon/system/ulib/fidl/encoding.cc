@@ -90,6 +90,8 @@ class FidlEncoder final
 
   static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = true;
+  // TODO(fxbug.dev/85067) Enable validation of inline bits.
+  static constexpr bool kValidateEnvelopeInlineBit = false;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     SetError("absent pointer disallowed in non-nullable collection");

@@ -100,8 +100,7 @@ class UnionSize8Alignment4 {
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
         kVariant;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -115,12 +114,12 @@ class UnionSize8Alignment4 {
   uint32_t& mutable_variant() {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize8Alignment4::Ordinal::kVariant);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& variant() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize8Alignment4::Ordinal::kVariant);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -131,8 +130,8 @@ class UnionSize8Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_UnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
  private:
@@ -144,7 +143,7 @@ class UnionSize8Alignment4 {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize36Alignment4Table;
@@ -194,8 +193,7 @@ class UnionSize36Alignment4 {
   void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>> elem) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::
         kVariant;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::Array<uint8_t, 32>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -209,12 +207,12 @@ class UnionSize36Alignment4 {
   ::fidl::Array<uint8_t, 32>& mutable_variant() {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize36Alignment4::Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
   const ::fidl::Array<uint8_t, 32>& variant() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize36Alignment4::Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
   ::fidl_test_unionsandwich::wire::UnionSize36Alignment4::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -225,7 +223,7 @@ class UnionSize36Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_UnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
 
@@ -238,7 +236,7 @@ class UnionSize36Alignment4 {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_unionsandwich::wire::UnionSize36Alignment4::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize12Alignment4Table;
@@ -288,8 +286,7 @@ class UnionSize12Alignment4 {
   void set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>> elem) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::
         kVariant;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::Array<uint8_t, 6>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -303,12 +300,12 @@ class UnionSize12Alignment4 {
   ::fidl::Array<uint8_t, 6>& mutable_variant() {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize12Alignment4::Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
   const ::fidl::Array<uint8_t, 6>& variant() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize12Alignment4::Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
   ::fidl_test_unionsandwich::wire::UnionSize12Alignment4::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -319,7 +316,7 @@ class UnionSize12Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_UnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -332,7 +329,7 @@ class UnionSize12Alignment4 {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_unionsandwich::wire::UnionSize12Alignment4::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_unionsandwich_UnionSize24Alignment8Table;
@@ -387,8 +384,8 @@ class UnionSize24Alignment8 {
                        elem) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::
         kVariant;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_unionsandwich::wire::StructSize16Alignment8>()
+        .set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -403,17 +400,17 @@ class UnionSize24Alignment8 {
   ::fidl_test_unionsandwich::wire::StructSize16Alignment8& mutable_variant() {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize24Alignment8::Ordinal::kVariant);
-    return *static_cast<
-        ::fidl_test_unionsandwich::wire::StructSize16Alignment8*>(
-        envelope_.data.get());
+    return envelope_
+        .As<::fidl_test_unionsandwich::wire::StructSize16Alignment8>()
+        .get_data();
   }
   const ::fidl_test_unionsandwich::wire::StructSize16Alignment8& variant()
       const {
     ZX_ASSERT(ordinal_ == ::fidl_test_unionsandwich::wire::
                               UnionSize24Alignment8::Ordinal::kVariant);
-    return *static_cast<
-        ::fidl_test_unionsandwich::wire::StructSize16Alignment8*>(
-        envelope_.data.get());
+    return envelope_
+        .As<::fidl_test_unionsandwich::wire::StructSize16Alignment8>()
+        .get_data();
   }
   ::fidl_test_unionsandwich::wire::UnionSize24Alignment8::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -424,7 +421,7 @@ class UnionSize24Alignment8 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_UnionSize24Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
 
@@ -437,7 +434,7 @@ class UnionSize24Alignment8 {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_unionsandwich::wire::UnionSize24Alignment8::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t
@@ -447,8 +444,8 @@ struct SandwichUnionSize8Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
   uint32_t before = {};
@@ -545,7 +542,7 @@ class SandwichUnionSize8Alignment4::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -590,7 +587,7 @@ struct SandwichUnionSize36Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
 
@@ -688,7 +685,7 @@ class SandwichUnionSize36Alignment4::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -733,7 +730,7 @@ struct SandwichUnionSize12Alignment4 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -831,7 +828,7 @@ class SandwichUnionSize12Alignment4::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -971,7 +968,7 @@ class StructSize16Alignment8::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1016,7 +1013,7 @@ struct SandwichUnionSize24Alignment8 {
   static constexpr const fidl_type_t* Type =
       &fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
 
@@ -1114,7 +1111,7 @@ class SandwichUnionSize24Alignment8::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1181,7 +1178,7 @@ static_assert(
              union_) == 8);
 static_assert(
     offsetof(::fidl_test_unionsandwich::wire::SandwichUnionSize8Alignment4,
-             after) == 32);
+             after) == 24);
 static_assert(
     sizeof(::fidl_test_unionsandwich::wire::SandwichUnionSize8Alignment4) ==
     ::fidl_test_unionsandwich::wire::SandwichUnionSize8Alignment4::PrimarySize);
@@ -1212,7 +1209,7 @@ static_assert(
              union_) == 8);
 static_assert(
     offsetof(::fidl_test_unionsandwich::wire::SandwichUnionSize36Alignment4,
-             after) == 32);
+             after) == 24);
 static_assert(
     sizeof(::fidl_test_unionsandwich::wire::SandwichUnionSize36Alignment4) ==
     ::fidl_test_unionsandwich::wire::SandwichUnionSize36Alignment4::
@@ -1244,7 +1241,7 @@ static_assert(
              union_) == 8);
 static_assert(
     offsetof(::fidl_test_unionsandwich::wire::SandwichUnionSize12Alignment4,
-             after) == 32);
+             after) == 24);
 static_assert(
     sizeof(::fidl_test_unionsandwich::wire::SandwichUnionSize12Alignment4) ==
     ::fidl_test_unionsandwich::wire::SandwichUnionSize12Alignment4::
@@ -1292,7 +1289,7 @@ static_assert(
              union_) == 8);
 static_assert(
     offsetof(::fidl_test_unionsandwich::wire::SandwichUnionSize24Alignment8,
-             after) == 32);
+             after) == 24);
 static_assert(
     sizeof(::fidl_test_unionsandwich::wire::SandwichUnionSize24Alignment8) ==
     ::fidl_test_unionsandwich::wire::SandwichUnionSize24Alignment8::

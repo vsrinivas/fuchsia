@@ -74,7 +74,7 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
       auto& incoming = converted.incoming_message();
       uint32_t byte_actual = incoming.byte_actual();
       fidl::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded{
-          fidl::internal::kLLCPPInMemoryWireFormatVersion, std::move(incoming)};
+          fidl::internal::kLLCPPEncodedWireFormatVersion, std::move(incoming)};
       if (!decoded.ok()) {
         completer.Reply(status);
         return;

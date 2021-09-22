@@ -155,6 +155,7 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
 
   static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = false;
+  static constexpr bool kValidateEnvelopeInlineBit = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     SetError("absent pointer disallowed in non-nullable collection");

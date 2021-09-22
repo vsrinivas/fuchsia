@@ -87,12 +87,16 @@ class LLCPPStyleUnion {
     kPrimitive = 1,  // 0x1
   };
 
-  void reset_ptr(::fidl::ObjectView<void> new_ptr) { envelope_.data = new_ptr; }
+  void reset_ptr(::fidl::ObjectView<void> new_ptr) {
+    reinterpret_cast<::fidl::Envelope<uint64_t>*>(&envelope_)
+        ->set_data(
+            ::fidl::ObjectView<uint64_t>::FromExternal(static_cast<uint64_t*>(new_ptr.get())));
+  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 struct LLCPPStyleUnionStruct {

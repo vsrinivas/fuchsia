@@ -331,997 +331,6 @@ class SomeProtocolSomeMethodResult;
 class SomeProtocol;
 namespace wire {
 
-extern "C" const fidl_type_t fidl_test_anonymous_UnionMemberTable;
-
-class UnionMember {
- public:
-  UnionMember()
-      : ordinal_(::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid),
-        envelope_{} {}
-
-  UnionMember(const UnionMember&) = default;
-  UnionMember& operator=(const UnionMember&) = default;
-  UnionMember(UnionMember&&) = default;
-  UnionMember& operator=(UnionMember&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kUnionData = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid;
-  }
-
-  bool is_union_data() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-  }
-
-  static UnionMember WithUnionData(::fidl::ObjectView<uint8_t> val) {
-    UnionMember result;
-    result.set_union_data(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionMember WithUnionData(::fidl::AnyArena& allocator,
-                                   Args&&... args) {
-    UnionMember result;
-    result.set_union_data(
-        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_union_data(::fidl::ObjectView<uint8_t> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_union_data(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    set_union_data(
-        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint8_t& mutable_union_data() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
-    return *static_cast<uint8_t*>(envelope_.data.get());
-  }
-  const uint8_t& union_data() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
-    return *static_cast<uint8_t*>(envelope_.data.get());
-  }
-  ::fidl_test_anonymous::wire::UnionMember::Tag which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_UnionMemberTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kUnionData = 2,  // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::UnionMember::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-extern "C" const fidl_type_t fidl_test_anonymous_TableMemberTable;
-
-class TableMember final {
- public:
-  using TableData = fidl_test_anonymous::wire::TableData;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
-
-  const ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data()
-      const {
-    ZX_ASSERT(has_table_data());
-    return *frame_ptr_->table_data_.data;
-  }
-  ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data() {
-    ZX_ASSERT(has_table_data());
-    return *frame_ptr_->table_data_.data;
-  }
-  bool has_table_data() const {
-    return max_ordinal_ >= 2 && frame_ptr_->table_data_.data != nullptr;
-  }
-  TableMember& set_table_data(
-      ::fidl::ObjectView<
-          ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
-          elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.data = elem;
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-  TableMember& set_table_data(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.data = nullptr;
-    return *this;
-  }
-  template <typename... Args>
-  TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.data = ::fidl::ObjectView<
-        ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>(
-        allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-
-  TableMember() = default;
-  explicit TableMember(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a Arena).
-  // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or
-  // for another table.
-  explicit TableMember(::fidl::ObjectView<Frame_>&& frame)
-      : frame_ptr_(std::move(frame)) {}
-  ~TableMember() = default;
-  TableMember(const TableMember& other) noexcept = default;
-  TableMember& operator=(const TableMember& other) noexcept = default;
-  TableMember(TableMember&& other) noexcept = default;
-  TableMember& operator=(TableMember&& other) noexcept = default;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_TableMemberTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 64;
-  static constexpr bool HasPointer = true;
-
-  void Allocate(::fidl::AnyArena& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
-  }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
-    max_ordinal_ = 0;
-    frame_ptr_ = std::move(frame_ptr);
-  }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<void> reserved_0_;
-    ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
-        table_data_;
-
-    friend class TableMember;
-  };
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
-};
-
-class TableMember::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        TableMember* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size, TableMember* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<TableMember>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class TableMember::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(TableMember* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Construct a message using owned buffers.
-  // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
-  // the input FIDL object, which is not owned by it.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned, TableMember* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::InlineMessageBuffer<80> backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class TableMember::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<TableMember> {
- public:
-  using DecodedMessageBase<TableMember>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  TableMember* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<TableMember*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t fidl_test_anonymous_FunctionApplicationTable;
-
-class FunctionApplication final {
- public:
-  using Flags = fidl_test_anonymous::wire::Flags;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  class Frame_;
-
-  const ::fidl::StringView& func() const {
-    ZX_ASSERT(has_func());
-    return *frame_ptr_->func_.data;
-  }
-  ::fidl::StringView& func() {
-    ZX_ASSERT(has_func());
-    return *frame_ptr_->func_.data;
-  }
-  bool has_func() const {
-    return max_ordinal_ >= 1 && frame_ptr_->func_.data != nullptr;
-  }
-  FunctionApplication& set_func(::fidl::ObjectView<::fidl::StringView> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->func_.data = elem;
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  FunctionApplication& set_func(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->func_.data = nullptr;
-    return *this;
-  }
-  template <typename... Args>
-  FunctionApplication& set_func(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->func_.data = ::fidl::ObjectView<::fidl::StringView>(
-        allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-
-  const ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args()
-      const {
-    ZX_ASSERT(has_args());
-    return *frame_ptr_->args_.data;
-  }
-  ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args() {
-    ZX_ASSERT(has_args());
-    return *frame_ptr_->args_.data;
-  }
-  bool has_args() const {
-    return max_ordinal_ >= 3 && frame_ptr_->args_.data != nullptr;
-  }
-  FunctionApplication& set_args(
-      ::fidl::ObjectView<
-          ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
-          elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->args_.data = elem;
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
-    return *this;
-  }
-  FunctionApplication& set_args(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->args_.data = nullptr;
-    return *this;
-  }
-  template <typename... Args>
-  FunctionApplication& set_args(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->args_.data = ::fidl::ObjectView<
-        ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>(
-        allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
-    return *this;
-  }
-
-  const ::fidl_test_anonymous::wire::Flags& flags() const {
-    ZX_ASSERT(has_flags());
-    return *frame_ptr_->flags_.data;
-  }
-  ::fidl_test_anonymous::wire::Flags& flags() {
-    ZX_ASSERT(has_flags());
-    return *frame_ptr_->flags_.data;
-  }
-  bool has_flags() const {
-    return max_ordinal_ >= 4 && frame_ptr_->flags_.data != nullptr;
-  }
-  FunctionApplication& set_flags(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.data = elem;
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
-    return *this;
-  }
-  FunctionApplication& set_flags(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.data = nullptr;
-    return *this;
-  }
-  template <typename... Args>
-  FunctionApplication& set_flags(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.data =
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags>(
-            allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
-    return *this;
-  }
-
-  FunctionApplication() = default;
-  explicit FunctionApplication(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a Arena).
-  // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or
-  // for another table.
-  explicit FunctionApplication(::fidl::ObjectView<Frame_>&& frame)
-      : frame_ptr_(std::move(frame)) {}
-  ~FunctionApplication() = default;
-  FunctionApplication(const FunctionApplication& other) noexcept = default;
-  FunctionApplication& operator=(const FunctionApplication& other) noexcept =
-      default;
-  FunctionApplication(FunctionApplication&& other) noexcept = default;
-  FunctionApplication& operator=(FunctionApplication&& other) noexcept =
-      default;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_FunctionApplicationTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr bool HasPointer = true;
-
-  void Allocate(::fidl::AnyArena& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
-  }
-  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
-    max_ordinal_ = 0;
-    frame_ptr_ = std::move(frame_ptr);
-  }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
-  // Frame_s are managed automatically by the Arena class.
-  // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a Arena. Once created, a frame can only be used for one
-  // single table.
-  class Frame_ final {
-   public:
-    Frame_() = default;
-    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
-    // ObjectView is assigned before a move or copy, then it will reference the
-    // old invalid object. Because this is unsafe, copies are disallowed and
-    // moves are only allowed by friend classes that operate safely.
-    Frame_(const Frame_&) = delete;
-    Frame_& operator=(const Frame_&) = delete;
-
-   private:
-    Frame_(Frame_&&) noexcept = default;
-    Frame_& operator=(Frame_&&) noexcept = default;
-    ::fidl::Envelope<::fidl::StringView> func_;
-    ::fidl::Envelope<void> reserved_1_;
-    ::fidl::Envelope<
-        ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
-        args_;
-    ::fidl::Envelope<::fidl_test_anonymous::wire::Flags> flags_;
-
-    friend class FunctionApplication;
-  };
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<Frame_> frame_ptr_;
-};
-
-class FunctionApplication::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        FunctionApplication* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size,
-                        FunctionApplication* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<FunctionApplication>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class FunctionApplication::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(FunctionApplication* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Construct a message using owned buffers.
-  // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
-  // the input FIDL object, which is not owned by it.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned,
-      FunctionApplication* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
-      backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class FunctionApplication::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<FunctionApplication> {
- public:
-  using DecodedMessageBase<FunctionApplication>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  FunctionApplication* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<FunctionApplication*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t fidl_test_anonymous_ExpressionTable;
-
-class Expression {
- public:
-  using FunctionApplication = fidl_test_anonymous::wire::FunctionApplication;
-  using BinOp = fidl_test_anonymous::wire::OverrideTest;
-
-  Expression()
-      : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
-        envelope_{} {}
-
-  Expression(const Expression&) = default;
-  Expression& operator=(const Expression&) = default;
-  Expression(Expression&&) = default;
-  Expression& operator=(Expression&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kValue = 1,                // 0x1
-    kBinOp = 2,                // 0x2
-    kFunctionApplication = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::Expression::Ordinal::Invalid;
-  }
-
-  bool is_value() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
-  }
-
-  static Expression WithValue(::fidl::ObjectView<uint64_t> val) {
-    Expression result;
-    result.set_value(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static Expression WithValue(::fidl::AnyArena& allocator, Args&&... args) {
-    Expression result;
-    result.set_value(
-        ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_value(::fidl::ObjectView<uint64_t> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_value(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
-    set_value(
-        ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
-  }
-
-  uint64_t& mutable_value() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
-    return *static_cast<uint64_t*>(envelope_.data.get());
-  }
-  const uint64_t& value() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
-    return *static_cast<uint64_t*>(envelope_.data.get());
-  }
-
-  bool is_bin_op() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-  }
-
-  static Expression WithBinOp(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> val) {
-    Expression result;
-    result.set_bin_op(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static Expression WithBinOp(::fidl::AnyArena& allocator, Args&&... args) {
-    Expression result;
-    result.set_bin_op(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_bin_op(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_bin_op(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-    set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_anonymous::wire::OverrideTest& mutable_bin_op() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return *static_cast<::fidl_test_anonymous::wire::OverrideTest*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_anonymous::wire::OverrideTest& bin_op() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return *static_cast<::fidl_test_anonymous::wire::OverrideTest*>(
-        envelope_.data.get());
-  }
-
-  bool is_function_application() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::
-                           kFunctionApplication;
-  }
-
-  static Expression WithFunctionApplication(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
-          val) {
-    Expression result;
-    result.set_function_application(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static Expression WithFunctionApplication(::fidl::AnyArena& allocator,
-                                            Args&&... args) {
-    Expression result;
-    result.set_function_application(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_function_application(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
-          elem) {
-    ordinal_ =
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_function_application(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
-    set_function_application(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
-            allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_anonymous::wire::FunctionApplication&
-  mutable_function_application() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
-    return *static_cast<::fidl_test_anonymous::wire::FunctionApplication*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_anonymous::wire::FunctionApplication& function_application()
-      const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
-    return *static_cast<::fidl_test_anonymous::wire::FunctionApplication*>(
-        envelope_.data.get());
-  }
-  ::fidl_test_anonymous::wire::Expression::Tag which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_ExpressionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kValue = 1,                // 0x1
-    kBinOp = 2,                // 0x2
-    kFunctionApplication = 3,  // 0x3
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::Expression::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
-extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
-
-class SomeProtocolSomeMethodResult {
- public:
-  using Err = fidl_test_anonymous::wire::SomeProtocolSomeMethodError;
-  using Response = fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse;
-
-  SomeProtocolSomeMethodResult()
-      : ordinal_(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-                     Ordinal::Invalid),
-        envelope_{} {}
-
-  SomeProtocolSomeMethodResult(const SomeProtocolSomeMethodResult&) = default;
-  SomeProtocolSomeMethodResult& operator=(const SomeProtocolSomeMethodResult&) =
-      default;
-  SomeProtocolSomeMethodResult(SomeProtocolSomeMethodResult&&) = default;
-  SomeProtocolSomeMethodResult& operator=(SomeProtocolSomeMethodResult&&) =
-      default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::Invalid;
-  }
-
-  bool is_response() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::kResponse;
-  }
-
-  static SomeProtocolSomeMethodResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
-          val) {
-    SomeProtocolSomeMethodResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SomeProtocolSomeMethodResult WithResponse(::fidl::AnyArena& allocator,
-                                                   Args&&... args) {
-    SomeProtocolSomeMethodResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_response(::fidl::ObjectView<
-                    ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
-                        elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kResponse;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kResponse;
-    set_response(::fidl::ObjectView<
-                 ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
-      const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
-    return *static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse*>(
-        envelope_.data.get());
-  }
-
-  bool is_err() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::kErr;
-  }
-
-  static SomeProtocolSomeMethodResult WithErr(
-      ::fidl::ObjectView<
-          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
-          val) {
-    SomeProtocolSomeMethodResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SomeProtocolSomeMethodResult WithErr(::fidl::AnyArena& allocator,
-                                              Args&&... args) {
-    SomeProtocolSomeMethodResult result;
-    result.set_err(::fidl::ObjectView<
-                   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_err(::fidl::ObjectView<
-               ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
-                   elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kErr;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kErr;
-    set_err(::fidl::ObjectView<
-            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kErr);
-    return *static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError*>(
-        envelope_.data.get());
-  }
-  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kErr);
-    return *static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError*>(
-        envelope_.data.get());
-  }
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
-};
-
 extern "C" const fidl_type_t fidl_test_anonymous_TableDataTable;
 
 struct TableData {
@@ -1419,7 +428,7 @@ class TableData::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1449,147 +458,6 @@ class TableData::DecodedMessage final
   TableData* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<TableData*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
-
-struct OverrideTest {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_OverrideTestTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 56;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr bool HasPointer = true;
-  using Op = fidl_test_anonymous::wire::Op;
-
-  ::fidl_test_anonymous::wire::Op op = {};
-
-  ::fidl_test_anonymous::wire::Expression left = {};
-
-  ::fidl_test_anonymous::wire::Expression right = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-};
-
-class OverrideTest::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        OverrideTest* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size, OverrideTest* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<OverrideTest>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class OverrideTest::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(OverrideTest* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned, OverrideTest* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
-      backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class OverrideTest::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<OverrideTest> {
- public:
-  using DecodedMessageBase<OverrideTest>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  OverrideTest* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<OverrideTest*>(bytes());
   }
 
   // Release the ownership of the decoded message. That means that the handles
@@ -1700,7 +568,7 @@ class SomeProtocolSomeMethodResponse::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -1730,6 +598,1136 @@ class SomeProtocolSomeMethodResponse::DecodedMessage final
   SomeProtocolSomeMethodResponse* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<SomeProtocolSomeMethodResponse*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
+extern "C" const fidl_type_t fidl_test_anonymous_UnionMemberTable;
+
+class UnionMember {
+ public:
+  UnionMember()
+      : ordinal_(::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid),
+        envelope_{} {}
+
+  UnionMember(const UnionMember&) = default;
+  UnionMember& operator=(const UnionMember&) = default;
+  UnionMember(UnionMember&&) = default;
+  UnionMember& operator=(UnionMember&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnionData = 2,  // 0x2
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid;
+  }
+
+  bool is_union_data() const {
+    return ordinal_ ==
+           ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+  }
+
+  static UnionMember WithUnionData(::fidl::ObjectView<uint8_t> val) {
+    UnionMember result;
+    result.set_union_data(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static UnionMember WithUnionData(::fidl::AnyArena& allocator,
+                                   Args&&... args) {
+    UnionMember result;
+    result.set_union_data(
+        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_union_data(::fidl::ObjectView<uint8_t> elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    envelope_.As<uint8_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_union_data(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    set_union_data(
+        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint8_t& mutable_union_data() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+    return envelope_.As<uint8_t>().get_data();
+  }
+  const uint8_t& union_data() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+    return envelope_.As<uint8_t>().get_data();
+  }
+  ::fidl_test_anonymous::wire::UnionMember::Tag which() const;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_UnionMemberTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kUnionData = 2,  // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_anonymous::wire::UnionMember::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_anonymous_TableMemberTable;
+
+class TableMember final {
+ public:
+  using TableData = fidl_test_anonymous::wire::TableData;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  class Frame_;
+
+  const ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data()
+      const {
+    ZX_ASSERT(has_table_data());
+    return frame_ptr_->table_data_.get_data();
+  }
+  ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data() {
+    ZX_ASSERT(has_table_data());
+    return frame_ptr_->table_data_.get_data();
+  }
+  bool has_table_data() const {
+    return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
+  }
+  TableMember& set_table_data(
+      ::fidl::ObjectView<
+          ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
+          elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+  TableMember& set_table_data(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(
+        ::fidl::ObjectView<
+            ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>(
+            allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  TableMember() = default;
+  explicit TableMember(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
+  explicit TableMember(::fidl::ObjectView<Frame_>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+  ~TableMember() = default;
+  TableMember(const TableMember& other) noexcept = default;
+  TableMember& operator=(const TableMember& other) noexcept = default;
+  TableMember(TableMember&& other) noexcept = default;
+  TableMember& operator=(TableMember&& other) noexcept = default;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_TableMemberTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 48;
+  static constexpr bool HasPointer = true;
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+  }
+  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+
+  // Frame_s are managed automatically by the Arena class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
+  class Frame_ final {
+   public:
+    Frame_() = default;
+    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
+    Frame_(const Frame_&) = delete;
+    Frame_& operator=(const Frame_&) = delete;
+
+   private:
+    Frame_(Frame_&&) noexcept = default;
+    Frame_& operator=(Frame_&&) noexcept = default;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
+    ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
+        table_data_;
+
+    friend class TableMember;
+  };
+
+ private:
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<Frame_> frame_ptr_;
+};
+
+class TableMember::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        TableMember* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, TableMember* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<TableMember>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class TableMember::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(TableMember* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Construct a message using owned buffers.
+  // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+  // the input FIDL object, which is not owned by it.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned, TableMember* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<80> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class TableMember::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<TableMember> {
+ public:
+  using DecodedMessageBase<TableMember>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  TableMember* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<TableMember*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
+extern "C" const fidl_type_t fidl_test_anonymous_FunctionApplicationTable;
+
+class FunctionApplication final {
+ public:
+  using Flags = fidl_test_anonymous::wire::Flags;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  class Frame_;
+
+  const ::fidl::StringView& func() const {
+    ZX_ASSERT(has_func());
+    return frame_ptr_->func_.get_data();
+  }
+  ::fidl::StringView& func() {
+    ZX_ASSERT(has_func());
+    return frame_ptr_->func_.get_data();
+  }
+  bool has_func() const {
+    return max_ordinal_ >= 1 && frame_ptr_->func_.has_data();
+  }
+  FunctionApplication& set_func(::fidl::ObjectView<::fidl::StringView> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->func_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+  FunctionApplication& set_func(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->func_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  FunctionApplication& set_func(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->func_.set_data(::fidl::ObjectView<::fidl::StringView>(
+        allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  const ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args()
+      const {
+    ZX_ASSERT(has_args());
+    return frame_ptr_->args_.get_data();
+  }
+  ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args() {
+    ZX_ASSERT(has_args());
+    return frame_ptr_->args_.get_data();
+  }
+  bool has_args() const {
+    return max_ordinal_ >= 3 && frame_ptr_->args_.has_data();
+  }
+  FunctionApplication& set_args(
+      ::fidl::ObjectView<
+          ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
+          elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->args_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+  FunctionApplication& set_args(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->args_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  FunctionApplication& set_args(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->args_.set_data(
+        ::fidl::ObjectView<
+            ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>(
+            allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+
+  const ::fidl_test_anonymous::wire::Flags& flags() const {
+    ZX_ASSERT(has_flags());
+    return frame_ptr_->flags_.get_data();
+  }
+  ::fidl_test_anonymous::wire::Flags& flags() {
+    ZX_ASSERT(has_flags());
+    return frame_ptr_->flags_.get_data();
+  }
+  bool has_flags() const {
+    return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
+  }
+  FunctionApplication& set_flags(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->flags_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
+    return *this;
+  }
+  FunctionApplication& set_flags(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->flags_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  FunctionApplication& set_flags(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->flags_.set_data(
+        ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags>(
+            allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
+    return *this;
+  }
+
+  FunctionApplication() = default;
+  explicit FunctionApplication(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
+  explicit FunctionApplication(::fidl::ObjectView<Frame_>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+  ~FunctionApplication() = default;
+  FunctionApplication(const FunctionApplication& other) noexcept = default;
+  FunctionApplication& operator=(const FunctionApplication& other) noexcept =
+      default;
+  FunctionApplication(FunctionApplication&& other) noexcept = default;
+  FunctionApplication& operator=(FunctionApplication&& other) noexcept =
+      default;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_FunctionApplicationTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
+  }
+  void Init(::fidl::ObjectView<Frame_>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+
+  // Frame_s are managed automatically by the Arena class.
+  // The only direct usage is when performance is key and a frame needs to be
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
+  class Frame_ final {
+   public:
+    Frame_() = default;
+    // In its intended usage, Frame_ will be referenced by an ObjectView. If the
+    // ObjectView is assigned before a move or copy, then it will reference the
+    // old invalid object. Because this is unsafe, copies are disallowed and
+    // moves are only allowed by friend classes that operate safely.
+    Frame_(const Frame_&) = delete;
+    Frame_& operator=(const Frame_&) = delete;
+
+   private:
+    Frame_(Frame_&&) noexcept = default;
+    Frame_& operator=(Frame_&&) noexcept = default;
+    ::fidl::Envelope<::fidl::StringView> func_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
+    ::fidl::Envelope<
+        ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
+        args_;
+    ::fidl::Envelope<::fidl_test_anonymous::wire::Flags> flags_;
+
+    friend class FunctionApplication;
+  };
+
+ private:
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<Frame_> frame_ptr_;
+};
+
+class FunctionApplication::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        FunctionApplication* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size,
+                        FunctionApplication* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<FunctionApplication>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class FunctionApplication::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(FunctionApplication* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Construct a message using owned buffers.
+  // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+  // the input FIDL object, which is not owned by it.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned,
+      FunctionApplication* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+      backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class FunctionApplication::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<FunctionApplication> {
+ public:
+  using DecodedMessageBase<FunctionApplication>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  FunctionApplication* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<FunctionApplication*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
+extern "C" const fidl_type_t fidl_test_anonymous_ExpressionTable;
+
+class Expression {
+ public:
+  using FunctionApplication = fidl_test_anonymous::wire::FunctionApplication;
+  using BinOp = fidl_test_anonymous::wire::OverrideTest;
+
+  Expression()
+      : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
+        envelope_{} {}
+
+  Expression(const Expression&) = default;
+  Expression& operator=(const Expression&) = default;
+  Expression(Expression&&) = default;
+  Expression& operator=(Expression&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kValue = 1,                // 0x1
+    kBinOp = 2,                // 0x2
+    kFunctionApplication = 3,  // 0x3
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_anonymous::wire::Expression::Ordinal::Invalid;
+  }
+
+  bool is_value() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+  }
+
+  static Expression WithValue(::fidl::ObjectView<uint64_t> val) {
+    Expression result;
+    result.set_value(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static Expression WithValue(::fidl::AnyArena& allocator, Args&&... args) {
+    Expression result;
+    result.set_value(
+        ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_value(::fidl::ObjectView<uint64_t> elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+    envelope_.As<uint64_t>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_value(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+    set_value(
+        ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint64_t& mutable_value() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
+    return envelope_.As<uint64_t>().get_data();
+  }
+  const uint64_t& value() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
+    return envelope_.As<uint64_t>().get_data();
+  }
+
+  bool is_bin_op() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
+  }
+
+  static Expression WithBinOp(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> val) {
+    Expression result;
+    result.set_bin_op(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static Expression WithBinOp(::fidl::AnyArena& allocator, Args&&... args) {
+    Expression result;
+    result.set_bin_op(
+        ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_bin_op(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
+    envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().set_data(
+        std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_bin_op(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
+    set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_anonymous::wire::OverrideTest& mutable_bin_op() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
+    return envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().get_data();
+  }
+  const ::fidl_test_anonymous::wire::OverrideTest& bin_op() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
+    return envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().get_data();
+  }
+
+  bool is_function_application() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::
+                           kFunctionApplication;
+  }
+
+  static Expression WithFunctionApplication(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
+          val) {
+    Expression result;
+    result.set_function_application(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static Expression WithFunctionApplication(::fidl::AnyArena& allocator,
+                                            Args&&... args) {
+    Expression result;
+    result.set_function_application(
+        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_function_application(
+      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
+          elem) {
+    ordinal_ =
+        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
+    envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>().set_data(
+        std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_function_application(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ =
+        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
+    set_function_application(
+        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
+            allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_anonymous::wire::FunctionApplication&
+  mutable_function_application() {
+    ZX_ASSERT(
+        ordinal_ ==
+        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
+    return envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>()
+        .get_data();
+  }
+  const ::fidl_test_anonymous::wire::FunctionApplication& function_application()
+      const {
+    ZX_ASSERT(
+        ordinal_ ==
+        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
+    return envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>()
+        .get_data();
+  }
+  ::fidl_test_anonymous::wire::Expression::Tag which() const;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_ExpressionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kValue = 1,                // 0x1
+    kBinOp = 2,                // 0x2
+    kFunctionApplication = 3,  // 0x3
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_anonymous::wire::Expression::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t
+    fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+
+class SomeProtocolSomeMethodResult {
+ public:
+  using Err = fidl_test_anonymous::wire::SomeProtocolSomeMethodError;
+  using Response = fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse;
+
+  SomeProtocolSomeMethodResult()
+      : ordinal_(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  SomeProtocolSomeMethodResult(const SomeProtocolSomeMethodResult&) = default;
+  SomeProtocolSomeMethodResult& operator=(const SomeProtocolSomeMethodResult&) =
+      default;
+  SomeProtocolSomeMethodResult(SomeProtocolSomeMethodResult&&) = default;
+  SomeProtocolSomeMethodResult& operator=(SomeProtocolSomeMethodResult&&) =
+      default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::
+                           SomeProtocolSomeMethodResult::Ordinal::Invalid;
+  }
+
+  bool is_response() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::
+                           SomeProtocolSomeMethodResult::Ordinal::kResponse;
+  }
+
+  static SomeProtocolSomeMethodResult WithResponse(
+      ::fidl::ObjectView<
+          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
+          val) {
+    SomeProtocolSomeMethodResult result;
+    result.set_response(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static SomeProtocolSomeMethodResult WithResponse(::fidl::AnyArena& allocator,
+                                                   Args&&... args) {
+    SomeProtocolSomeMethodResult result;
+    result.set_response(
+        ::fidl::ObjectView<
+            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
+            allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_response(::fidl::ObjectView<
+                    ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
+                        elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kResponse;
+    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kResponse;
+    set_response(::fidl::ObjectView<
+                 ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse&
+  mutable_response() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
+                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .get_data();
+  }
+  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
+      const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
+                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
+    return envelope_
+        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .get_data();
+  }
+
+  bool is_err() const {
+    return ordinal_ == ::fidl_test_anonymous::wire::
+                           SomeProtocolSomeMethodResult::Ordinal::kErr;
+  }
+
+  static SomeProtocolSomeMethodResult WithErr(
+      ::fidl::ObjectView<
+          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
+          val) {
+    SomeProtocolSomeMethodResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static SomeProtocolSomeMethodResult WithErr(::fidl::AnyArena& allocator,
+                                              Args&&... args) {
+    SomeProtocolSomeMethodResult result;
+    result.set_err(::fidl::ObjectView<
+                   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_err(::fidl::ObjectView<
+               ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
+                   elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kErr;
+    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+        .set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kErr;
+    set_err(::fidl::ObjectView<
+            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
+                              SomeProtocolSomeMethodResult::Ordinal::kErr);
+    return envelope_
+        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+        .get_data();
+  }
+  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
+                              SomeProtocolSomeMethodResult::Ordinal::kErr);
+    return envelope_
+        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+        .get_data();
+  }
+  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
+
+struct OverrideTest {
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_anonymous_OverrideTestTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 40;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr bool HasPointer = true;
+  using Op = fidl_test_anonymous::wire::Op;
+
+  ::fidl_test_anonymous::wire::Op op = {};
+
+  ::fidl_test_anonymous::wire::Expression left = {};
+
+  ::fidl_test_anonymous::wire::Expression right = {};
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+
+class OverrideTest::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        OverrideTest* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, OverrideTest* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<OverrideTest>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class OverrideTest::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(OverrideTest* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned, OverrideTest* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES>
+      backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class OverrideTest::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<OverrideTest> {
+ public:
+  using DecodedMessageBase<OverrideTest>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  OverrideTest* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<OverrideTest*>(bytes());
   }
 
   // Release the ownership of the decoded message. That means that the handles
@@ -1798,10 +1796,10 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
       &::fidl_test_anonymous::
           fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 56;
-  static constexpr uint32_t MaxOutOfLine = 72;
-  static constexpr uint32_t AltPrimarySize = 56;
-  static constexpr uint32_t AltMaxOutOfLine = 72;
+  static constexpr uint32_t PrimarySize = 48;
+  static constexpr uint32_t PrimarySizeV1 = 56;
+  static constexpr uint32_t MaxOutOfLine = 48;
+  static constexpr uint32_t MaxOutOfLineV1 = 72;
   static constexpr bool HasFlexibleEnvelope = true;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -1983,8 +1981,10 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
       &::fidl_test_anonymous::
           fidl_test_anonymous_SomeProtocolSomeMethodResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
-  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -2302,7 +2302,7 @@ class ::fidl::internal::WireCaller<::fidl_test_anonymous::SomeProtocol> final {
       ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client_end)
       : client_end_(client_end) {}
 
-  // Allocates 176 bytes of message buffer on the stack. No heap allocation
+  // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod(
@@ -2313,7 +2313,7 @@ class ::fidl::internal::WireCaller<::fidl_test_anonymous::SomeProtocol> final {
         _client_end, union_member, table_member);
   }
 
-  // Allocates 176 bytes of message buffer on the stack. No heap allocation
+  // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
@@ -2413,7 +2413,7 @@ class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-  // Allocates 176 bytes of message buffer on the stack. No heap allocation
+  // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
@@ -2555,7 +2555,7 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_anonymous::wire::OverrideTest>);
 static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, op) == 0);
 static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, left) == 8);
-static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, right) == 32);
+static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, right) == 24);
 static_assert(sizeof(::fidl_test_anonymous::wire::OverrideTest) ==
               ::fidl_test_anonymous::wire::OverrideTest::PrimarySize);
 
@@ -2635,7 +2635,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
-        table_member) == 40);
+        table_member) == 32);
 
 template <>
 struct IsFidlType<
@@ -2681,7 +2681,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
     final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |SomeProtocol.SomeMethod()|.
-  // Allocates 128 bytes of request buffer on the stack. The callback is stored
+  // Allocates 96 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
                   ::fidl_test_anonymous::wire::TableMember table_member,
@@ -2709,7 +2709,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
           ::fidl_test_anonymous::SomeProtocol::SomeMethod>* _context);
 
   // Synchronous variant of |SomeMethod.SomeMethod()|.
-  // Allocates 176 bytes of message buffer on the stack. No heap allocation
+  // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod_Sync(::fidl_test_anonymous::wire::UnionMember union_member,

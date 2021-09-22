@@ -378,7 +378,8 @@ zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
     return (status == ZX_OK ? ZX_ERR_INVALID_ARGS : status);
   }
 
-  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(buffer, metadata_size);
+  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
+      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
   fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded.PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);

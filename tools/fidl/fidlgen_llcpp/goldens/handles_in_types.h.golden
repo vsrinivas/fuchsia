@@ -62,10 +62,14 @@ class UnionWithHandle {
                      Invalid),
         envelope_{} {}
 
-  UnionWithHandle(const UnionWithHandle&) = delete;
-  UnionWithHandle& operator=(const UnionWithHandle&) = delete;
-  UnionWithHandle(UnionWithHandle&&) = default;
-  UnionWithHandle& operator=(UnionWithHandle&&) = default;
+  ~UnionWithHandle();
+  UnionWithHandle(UnionWithHandle&& other) { _Move(std::move(other)); }
+  UnionWithHandle& operator=(UnionWithHandle&& other) {
+    if (this != &other) {
+      _Move(std::move(other));
+    }
+    return *this;
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kH = 1,  // 0x1
@@ -98,8 +102,7 @@ class UnionWithHandle {
 
   void set_h(::fidl::ObjectView<::zx::vmo> elem) {
     ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::zx::vmo>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -112,20 +115,20 @@ class UnionWithHandle {
   ::zx::vmo& mutable_h() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
-    return *static_cast<::zx::vmo*>(envelope_.data.get());
+    return envelope_.As<::zx::vmo>().get_data();
   }
   const ::zx::vmo& h() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
-    return *static_cast<::zx::vmo*>(envelope_.data.get());
+    return envelope_.As<::zx::vmo>().get_data();
   }
   ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_handlesintypes_UnionWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
   void _CloseHandles();
@@ -135,11 +138,12 @@ class UnionWithHandle {
     Invalid = 0,
     kH = 1,  // 0x1
   };
+  void _Move(UnionWithHandle&& other);
 
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 #endif  // __Fuchsia__
 
@@ -156,31 +160,29 @@ class TableWithHandle final {
 
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h());
-    return *frame_ptr_->h_.data;
+    return frame_ptr_->h_.get_data();
   }
   ::zx::vmo& h() {
     ZX_ASSERT(has_h());
-    return *frame_ptr_->h_.data;
+    return frame_ptr_->h_.get_data();
   }
-  bool has_h() const {
-    return max_ordinal_ >= 1 && frame_ptr_->h_.data != nullptr;
-  }
+  bool has_h() const { return max_ordinal_ >= 1 && frame_ptr_->h_.has_data(); }
   TableWithHandle& set_h(::fidl::ObjectView<::zx::vmo> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->h_.data = elem;
+    frame_ptr_->h_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   TableWithHandle& set_h(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->h_.data = nullptr;
+    frame_ptr_->h_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   TableWithHandle& set_h(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->h_.data =
-        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->h_.set_data(
+        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -204,7 +206,7 @@ class TableWithHandle final {
       &fidl_test_handlesintypes_TableWithHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -333,7 +335,7 @@ class TableWithHandle::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -385,7 +387,7 @@ struct HandlesInTypes {
   static constexpr const fidl_type_t* Type =
       &fidl_test_handlesintypes_HandlesInTypesTable;
   static constexpr uint32_t MaxNumHandles = 4294967295;
-  static constexpr uint32_t PrimarySize = 104;
+  static constexpr uint32_t PrimarySize = 96;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -492,7 +494,7 @@ class HandlesInTypes::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}

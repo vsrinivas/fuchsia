@@ -6,11 +6,11 @@
 
 void ::fidl_test_doccomments::wire::StrictUnion::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(StrictUnion, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(StrictUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_doccomments {
@@ -228,9 +228,9 @@ auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const
 
 void ::fidl_test_doccomments::wire::FlexibleUnion::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_t));
+  static_assert(sizeof(FlexibleUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(FlexibleUnion, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(FlexibleUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }

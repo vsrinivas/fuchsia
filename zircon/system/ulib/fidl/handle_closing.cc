@@ -44,6 +44,7 @@ class FidlHandleCloser final
 
   static constexpr bool kOnlyWalkResources = true;
   static constexpr bool kContinueAfterConstraintViolation = true;
+  static constexpr bool kValidateEnvelopeInlineBit = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     SetError("absent pointer disallowed in non-nullable collection");

@@ -36,32 +36,32 @@ public:
   {{- .Docs }}
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_ptr_->{{ .Name }}_.data;
+    return frame_ptr_->{{ .Name }}_.get_data();
   }
   {{ .Type }}& {{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_ptr_->{{ .Name }}_.data;
+    return frame_ptr_->{{ .Name }}_.get_data();
   }
   bool {{ .MethodHasName }}() const {
-    return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
+    return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.has_data();
   }
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   {{ $.Name }}& set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->{{ .Name }}_.data = elem;
+    frame_ptr_->{{ .Name }}_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
   {{ $.Name }}& set_{{ .Name }}(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->{{ .Name }}_.data = nullptr;
+    frame_ptr_->{{ .Name }}_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   {{ $.Name }}& set_{{ .Name }}(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->{{ .Name }}_.data =
-        ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...);
+    frame_ptr_->{{ .Name }}_.set_data(
+        ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
@@ -82,11 +82,11 @@ public:
   {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
 
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV1.MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .TypeShapeV1.InlineSize }};
+  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .TypeShapeV2.InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
+  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .TypeShapeV2.HasPointer }};
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
@@ -128,7 +128,7 @@ public:
       {{- if $item }}
     ::fidl::Envelope<{{ $item.Type }}> {{ $item.Name }}_;
       {{- else }}
-    ::fidl::Envelope<void> reserved_{{ $index }}_;
+    [[maybe_unused]] ::fidl::UntypedEnvelope reserved_{{ $index }}_;
       {{- end }}
     {{- end }}
 
@@ -220,7 +220,7 @@ class {{ .Name }}::DecodedMessage final : public ::fidl::internal::DecodedMessag
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                   uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 

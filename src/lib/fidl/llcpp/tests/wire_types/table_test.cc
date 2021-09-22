@@ -112,20 +112,51 @@ TEST(Table, SubTables) {
   EXPECT_FALSE(table.at()[0].has_x());
 }
 
+TEST(Table, SettingUnsettingHandles) {
+  namespace test = fidl_llcpp_types_test;
+  fidl::Arena allocator;
+  test::wire::TestHandleTable table(allocator);
+
+  auto event_ref_count = [](const zx::event& event) {
+    zx_info_handle_count_t handle_count;
+    ZX_ASSERT(ZX_OK == event.get_info(ZX_INFO_HANDLE_COUNT, &handle_count, sizeof(handle_count),
+                                      nullptr, nullptr));
+    return handle_count.handle_count;
+  };
+
+  zx::event event1;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &event1));
+  zx::event event1_dup;
+  event1.duplicate(ZX_RIGHT_SAME_RIGHTS, &event1_dup);
+  table.set_hs(allocator, test::wire::HandleStruct{
+                              .h = std::move(event1),
+                          });
+  ASSERT_EQ(2u, event_ref_count(event1_dup));
+
+  zx::event event2;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &event2));
+  zx::event event2_dup;
+  event2.duplicate(ZX_RIGHT_SAME_RIGHTS, &event2_dup);
+  table.set_hs(allocator, test::wire::HandleStruct{
+                              .h = std::move(event2),
+                          });
+  ASSERT_EQ(1u, event_ref_count(event1_dup));
+  ASSERT_EQ(2u, event_ref_count(event2_dup));
+
+  table.set_hs(nullptr);
+  ASSERT_EQ(1u, event_ref_count(event2_dup));
+}
+
 TEST(Table, UnknownHandlesResource) {
   namespace test = fidl_llcpp_types_test;
 
   auto bytes = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01,  // txn header
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // max ordinal of 2
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector present
-      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope 1 (8 bytes, 0 handles)
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-      0x08, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,  // unknown envelope (8 bytes, 3 handles)
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-      0xab, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope 1 data
-      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown data
+      0xab, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,  // inline envelope 1 (0 handles)
+      0xde, 0xad, 0xbe, 0xef, 0x03, 0x00, 0x01, 0x00,  // unknown inline envelope (3 handles)
   };
 
   zx_handle_t h1, h2, h3;
@@ -135,7 +166,7 @@ TEST(Table, UnknownHandlesResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check = [](const test::wire::TestResourceTable& table) {
-    EXPECT_TRUE(table.has_x());
+    ASSERT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
@@ -146,16 +177,12 @@ TEST(Table, UnknownHandlesNonResource) {
   namespace test = fidl_llcpp_types_test;
 
   auto bytes = std::vector<uint8_t>{
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,  // txn header
+      0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x01,  // txn header
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // max ordinal of 2
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector present
-      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope 1 (8 bytes, 0 handles)
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-      0x08, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,  // unknown envelope (8 bytes, 3 handles)
-      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
-      0xab, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope 1 data
-      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x00, 0x00,  // unknown data
+      0xab, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,  // inline envelope 1 (0 handles)
+      0xde, 0xad, 0xbe, 0xef, 0x03, 0x00, 0x01, 0x00,  // unknown inline envelope (3 handles)
   };
 
   zx_handle_t h1, h2, h3;
@@ -165,7 +192,7 @@ TEST(Table, UnknownHandlesNonResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check = [](const test::wire::TestTable& table) {
-    EXPECT_TRUE(table.has_x());
+    ASSERT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<

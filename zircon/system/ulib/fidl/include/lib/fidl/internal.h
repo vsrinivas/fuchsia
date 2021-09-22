@@ -108,6 +108,10 @@ static inline bool FidlAddOutOfLine(uint32_t offset, uint32_t size, uint32_t* ou
   return true;
 }
 
+inline bool FidlIsZeroEnvelope(const fidl_envelope_v2_t* envelope) {
+  return envelope->num_bytes == 0 && envelope->num_handles == 0 && envelope->flags == 0;
+}
+
 // Checks that the handle meets specified type and rights requirements. If the
 // handle has execess rights, the rights will be reduced to the required rights.
 //

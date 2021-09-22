@@ -12,23 +12,23 @@ const fragmentProtocolTmpl = `
 
 
 {{- define "Method:ClientAllocationComment:Helper" -}}
-  {{- if SyncCallTotalStackSizeV1 . -}}
-    Allocates {{ SyncCallTotalStackSizeV1 . }} bytes of {{ "" -}}
-    {{- if not .Request.ClientAllocationV1.IsStack -}}
+  {{- if SyncCallTotalStackSizeV2 . -}}
+    Allocates {{ SyncCallTotalStackSizeV2 . }} bytes of {{ "" -}}
+    {{- if not .Request.ClientAllocationV2.IsStack -}}
       response 
     {{- else -}}
-      {{- if not .Response.ClientAllocationV1.IsStack -}}
+      {{- if not .Response.ClientAllocationV2.IsStack -}}
         request
       {{- else -}}
         message
       {{- end -}}
     {{- end }} buffer on the stack.
   {{- end }}
-  {{- if and .Request.ClientAllocationV1.IsStack .Response.ClientAllocationV1.IsStack -}}
+  {{- if and .Request.ClientAllocationV2.IsStack .Response.ClientAllocationV2.IsStack -}}
     {{ "" }} No heap allocation necessary.
   {{- else }}
-    {{- if not .Request.ClientAllocationV1.IsStack }} Request is heap-allocated. {{- end }}
-    {{- if not .Response.ClientAllocationV1.IsStack }} Response is heap-allocated. {{- end }}
+    {{- if not .Request.ClientAllocationV2.IsStack }} Request is heap-allocated. {{- end }}
+    {{- if not .Response.ClientAllocationV2.IsStack }} Response is heap-allocated. {{- end }}
   {{- end }}
 {{- end }}
 
@@ -98,7 +98,7 @@ struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
 static_assert(sizeof({{ .WireRequest }})
     == {{ .WireRequest }}::PrimarySize);
 {{- range $index, $param := .RequestArgs }}
-static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.OffsetV1 }});
+static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
 {{- end }}
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
@@ -116,7 +116,7 @@ struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
 static_assert(sizeof({{ .WireResponse }})
     == {{ .WireResponse }}::PrimarySize);
 {{- range $index, $param := .ResponseArgs }}
-static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.OffsetV1 }});
+static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
 {{- end }}
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}

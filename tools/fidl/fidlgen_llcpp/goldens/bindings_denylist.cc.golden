@@ -6,10 +6,11 @@
 
 void ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::
     SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(OnlyLlcpp, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(sizeof(OnlyLlcpp) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(OnlyLlcpp, ordinal_) ==
+                offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(OnlyLlcpp, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
+                offsetof(fidl_xunion_v2_t, envelope));
 }
 
 namespace fidl_test_bindingsdenylist {

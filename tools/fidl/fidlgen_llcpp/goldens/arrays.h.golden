@@ -91,8 +91,7 @@ class UnionSmallArray {
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
     ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -105,12 +104,12 @@ class UnionSmallArray {
   ::fidl::Array<uint32_t, 2>& mutable_a() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
-    return *static_cast<::fidl::Array<uint32_t, 2>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
   }
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
-    return *static_cast<::fidl::Array<uint32_t, 2>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
   }
   ::fidl_test_arrays::wire::UnionSmallArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -121,7 +120,7 @@ class UnionSmallArray {
   static constexpr const fidl_type_t* Type =
       &fidl_test_arrays_UnionSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -134,7 +133,7 @@ class UnionSmallArray {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
@@ -180,8 +179,7 @@ class UnionLargeArray {
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -194,12 +192,12 @@ class UnionLargeArray {
   ::fidl::Array<uint32_t, 100>& mutable_a() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
-    return *static_cast<::fidl::Array<uint32_t, 100>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
   }
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
-    return *static_cast<::fidl::Array<uint32_t, 100>*>(envelope_.data.get());
+    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
   }
   ::fidl_test_arrays::wire::UnionLargeArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -210,7 +208,7 @@ class UnionLargeArray {
   static constexpr const fidl_type_t* Type =
       &fidl_test_arrays_UnionLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 400;
   static constexpr bool HasPointer = true;
 
@@ -223,7 +221,7 @@ class UnionLargeArray {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
@@ -237,31 +235,29 @@ class TableSmallArray final {
 
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
-    return *frame_ptr_->a_.data;
+    return frame_ptr_->a_.get_data();
   }
   ::fidl::Array<uint32_t, 2>& a() {
     ZX_ASSERT(has_a());
-    return *frame_ptr_->a_.data;
+    return frame_ptr_->a_.get_data();
   }
-  bool has_a() const {
-    return max_ordinal_ >= 1 && frame_ptr_->a_.data != nullptr;
-  }
+  bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
   TableSmallArray& set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = elem;
+    frame_ptr_->a_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   TableSmallArray& set_a(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = nullptr;
+    frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   TableSmallArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = ::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...);
+    frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -285,7 +281,7 @@ class TableSmallArray final {
       &fidl_test_arrays_TableSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -411,7 +407,7 @@ class TableSmallArray::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -460,32 +456,30 @@ class TableLargeArray final {
 
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());
-    return *frame_ptr_->a_.data;
+    return frame_ptr_->a_.get_data();
   }
   ::fidl::Array<uint32_t, 100>& a() {
     ZX_ASSERT(has_a());
-    return *frame_ptr_->a_.data;
+    return frame_ptr_->a_.get_data();
   }
-  bool has_a() const {
-    return max_ordinal_ >= 1 && frame_ptr_->a_.data != nullptr;
-  }
+  bool has_a() const { return max_ordinal_ >= 1 && frame_ptr_->a_.has_data(); }
   TableLargeArray& set_a(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = elem;
+    frame_ptr_->a_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   TableLargeArray& set_a(std::nullptr_t) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = nullptr;
+    frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
   template <typename... Args>
   TableLargeArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->a_.data = ::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...);
+    frame_ptr_->a_.set_data(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -509,7 +503,7 @@ class TableLargeArray final {
       &fidl_test_arrays_TableLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 416;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 408;
   static constexpr bool HasPointer = true;
 
   void Allocate(::fidl::AnyArena& allocator) {
@@ -635,7 +629,7 @@ class TableLargeArray::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -771,7 +765,7 @@ class StructSmallArray::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -907,7 +901,7 @@ class StructLargeArray::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}

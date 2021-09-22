@@ -241,6 +241,13 @@ constexpr bool CheckVisitorInterface() {
       std::is_same<decltype(ImplSubType::kContinueAfterConstraintViolation), const bool>::value,
       "ImplSubType must declare constexpr bool kContinueAfterConstraintViolation");
 
+  // kValidateEnvelopeInlineBit:
+  // - When true, the walker validates the inline bit is set if the size is <= 4 (and the envelope
+  //   is non-zero) and unset otherwise.
+  // - When false, the walker skips validation.
+  static_assert(std::is_same<decltype(ImplSubType::kValidateEnvelopeInlineBit), const bool>::value,
+                "ImplSubType must declare constexpr bool kValidateEnvelopeInlineBit");
+
   static_assert(
       internal::SameInterface<decltype(&Visitor::VisitAbsentPointerInNonNullableCollection),
                               decltype(&ImplSubType::VisitAbsentPointerInNonNullableCollection)>,

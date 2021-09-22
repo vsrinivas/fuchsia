@@ -69,7 +69,7 @@ class LinearSnap {
     snap_handles_count_ = outgoing_message.handle_actual();
     outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
-    decoded_.emplace(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+    decoded_.emplace(fidl::internal::kLLCPPEncodedWireFormatVersion,
                      std::move(outgoing_to_incoming_result_.value().incoming_message()));
     ZX_ASSERT(decoded_.value().ok());
   }

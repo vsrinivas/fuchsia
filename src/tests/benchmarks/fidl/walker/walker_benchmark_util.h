@@ -31,9 +31,9 @@ bool WalkerBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     ZX_ASSERT(encoded.ok());
     auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
     ZX_ASSERT(converted.ok());
-    auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+    auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPEncodedWireFormatVersion,
                                                   std::move(converted.incoming_message()));
-    ZX_ASSERT(decoded.ok());
+    ZX_ASSERT_MSG(decoded.ok(), "%s", decoded.FormatDescription().c_str());
 
     while (state->KeepRunning()) {
       internal::Walk(FidlType::Type, reinterpret_cast<uint8_t*>(decoded.PrimaryObject()));

@@ -60,7 +60,8 @@ class PackagedDriver {
 
 zx_status_t PackagedDriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                                 void** driver) {
-  fdf::wire::DriverStartArgs::DecodedMessage decoded(msg);
+  fdf::wire::DriverStartArgs::DecodedMessage decoded(fidl::internal::kLLCPPEncodedWireFormatVersion,
+                                                     msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

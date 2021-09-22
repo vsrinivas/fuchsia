@@ -93,6 +93,140 @@ struct Empty;
 
 class XUnionContainingEmptyStruct;
 
+extern "C" const fidl_type_t fidl_test_union_EmptyTable;
+
+struct Empty {
+  static constexpr const fidl_type_t* Type = &fidl_test_union_EmptyTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
+
+  uint8_t __reserved = {};
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+
+class Empty::UnownedEncodedMessage final {
+ public:
+  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
+                        Empty* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
+                              backing_buffer_size, value) {}
+  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                        uint32_t backing_buffer_size, Empty* value)
+      : message_(::fidl::OutgoingMessage::ConstructorArgs{
+            .iovecs = iovecs_,
+            .iovec_capacity = iovec_capacity,
+            .backing_buffer = backing_buffer,
+            .backing_buffer_capacity = backing_buffer_size,
+        }) {
+    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
+    message_.Encode<Empty>(value);
+  }
+  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.status() == ZX_OK; }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+ private:
+  ::fidl::internal::IovecBuffer iovecs_;
+  ::fidl::OutgoingMessage message_;
+};
+
+class Empty::OwnedEncodedMessage final {
+ public:
+  explicit OwnedEncodedMessage(Empty* value)
+      : message_(1u, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  // Internal constructor.
+  explicit OwnedEncodedMessage(
+      ::fidl::internal::AllowUnownedInputRef allow_unowned, Empty* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
+  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+  zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+  const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+  bool ok() const { return message_.ok(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
+
+  ::fidl::OutgoingMessage& GetOutgoingMessage() {
+    return message_.GetOutgoingMessage();
+  }
+
+ private:
+  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
+  UnownedEncodedMessage message_;
+};
+
+class Empty::DecodedMessage final
+    : public ::fidl::internal::DecodedMessageBase<Empty> {
+ public:
+  using DecodedMessageBase<Empty>::DecodedMessageBase;
+
+  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 uint8_t* bytes, uint32_t byte_actual,
+                 zx_handle_info_t* handles = nullptr,
+                 uint32_t handle_actual = 0)
+      : DecodedMessageBase(
+            wire_format_version,
+            ::fidl::IncomingMessage(
+                bytes, byte_actual, handles, handle_actual,
+                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+  DecodedMessage(const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  // Internal constructor for specifying a specific wire format version.
+  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
+                 const fidl_incoming_msg_t* c_msg)
+      : DecodedMessage(wire_format_version,
+                       reinterpret_cast<uint8_t*>(c_msg->bytes),
+                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
+
+  Empty* PrimaryObject() {
+    ZX_DEBUG_ASSERT(ok());
+    return reinterpret_cast<Empty*>(bytes());
+  }
+
+  // Release the ownership of the decoded message. That means that the handles
+  // won't be closed When the object is destroyed. After calling this method,
+  // the |DecodedMessage| object should not be used anymore.
+  void ReleasePrimaryObject() { ResetBytes(); }
+};
+
 extern "C" const fidl_type_t fidl_test_union_UnionWithAttributesTable;
 
 class UnionWithAttributes {
@@ -139,8 +273,7 @@ class UnionWithAttributes {
 
   void set_x(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int64_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -152,19 +285,19 @@ class UnionWithAttributes {
   int64_t& mutable_x() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
   const int64_t& x() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
   ::fidl_test_union::wire::UnionWithAttributes::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_UnionWithAttributesTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -177,7 +310,7 @@ class UnionWithAttributes {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::UnionWithAttributes::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_UnionTable;
@@ -223,8 +356,7 @@ class Union {
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -236,11 +368,11 @@ class Union {
 
   int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
 
   bool is_string_needs_constructor() const {
@@ -267,8 +399,7 @@ class Union {
   void set_string_needs_constructor(
       ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -282,12 +413,12 @@ class Union {
   ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_vector_string_also_needs_constructor() const {
@@ -316,8 +447,8 @@ class Union {
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::VectorView<::fidl::StringView>>().set_data(
+        std::move(elem));
   }
 
   template <typename... Args>
@@ -334,15 +465,13 @@ class Union {
   mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::fidl_test_union::wire::Union::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -351,7 +480,7 @@ class Union {
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -366,7 +495,7 @@ class Union {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::Union::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StrictUnionTable;
@@ -414,8 +543,7 @@ class StrictUnion {
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -428,12 +556,12 @@ class StrictUnion {
   int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
 
   bool is_string_needs_constructor() const {
@@ -461,8 +589,7 @@ class StrictUnion {
       ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ =
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -478,13 +605,13 @@ class StrictUnion {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_vector_string_also_needs_constructor() const {
@@ -513,8 +640,8 @@ class StrictUnion {
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::VectorView<::fidl::StringView>>().set_data(
+        std::move(elem));
   }
 
   template <typename... Args>
@@ -531,15 +658,13 @@ class StrictUnion {
   mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::fidl_test_union::wire::StrictUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -548,7 +673,7 @@ class StrictUnion {
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_StrictUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -563,7 +688,7 @@ class StrictUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::StrictUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StrictSimpleXUnionTable;
@@ -610,8 +735,7 @@ class StrictSimpleXUnion {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -623,12 +747,12 @@ class StrictSimpleXUnion {
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
 
   bool is_f() const {
@@ -651,8 +775,7 @@ class StrictSimpleXUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -664,12 +787,12 @@ class StrictSimpleXUnion {
   float& mutable_f() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
   const float& f() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
 
   bool is_s() const {
@@ -692,8 +815,7 @@ class StrictSimpleXUnion {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -706,12 +828,12 @@ class StrictSimpleXUnion {
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   ::fidl_test_union::wire::StrictSimpleXUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -722,7 +844,7 @@ class StrictSimpleXUnion {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_StrictSimpleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -737,7 +859,7 @@ class StrictSimpleXUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StrictFooTable;
@@ -782,8 +904,7 @@ class StrictFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -795,11 +916,11 @@ class StrictFoo {
 
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -822,8 +943,7 @@ class StrictFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -834,11 +954,11 @@ class StrictFoo {
 
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_union::wire::StrictFoo::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -847,7 +967,7 @@ class StrictFoo {
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -861,7 +981,7 @@ class StrictFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::StrictFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StrictBoundedXUnionTable;
@@ -910,8 +1030,7 @@ class StrictBoundedXUnion {
 
   void set_v(::fidl::ObjectView<::fidl::VectorView<uint8_t>> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::kV;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::VectorView<uint8_t>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -924,12 +1043,12 @@ class StrictBoundedXUnion {
   ::fidl::VectorView<uint8_t>& mutable_v() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::kV);
-    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<uint8_t>>().get_data();
   }
   const ::fidl::VectorView<uint8_t>& v() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::kV);
-    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<uint8_t>>().get_data();
   }
   ::fidl_test_union::wire::StrictBoundedXUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -940,7 +1059,7 @@ class StrictBoundedXUnion {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_StrictBoundedXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
 
@@ -953,7 +1072,7 @@ class StrictBoundedXUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ReverseOrdinalUnionTable;
@@ -1002,8 +1121,7 @@ class ReverseOrdinalUnion {
 
   void set_second(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1016,12 +1134,12 @@ class ReverseOrdinalUnion {
   uint32_t& mutable_second() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& second() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
 
   bool is_first() const {
@@ -1046,8 +1164,7 @@ class ReverseOrdinalUnion {
 
   void set_first(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1060,12 +1177,12 @@ class ReverseOrdinalUnion {
   uint32_t& mutable_first() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& first() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   ::fidl_test_union::wire::ReverseOrdinalUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1076,8 +1193,8 @@ class ReverseOrdinalUnion {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_ReverseOrdinalUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
  private:
@@ -1090,7 +1207,7 @@ class ReverseOrdinalUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StrictPizzaOrPastaTable;
@@ -1139,8 +1256,7 @@ class StrictPizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pizza>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1153,12 +1269,12 @@ class StrictPizzaOrPasta {
   ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
   const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
 
   bool is_pasta() const {
@@ -1184,8 +1300,7 @@ class StrictPizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pasta>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1198,12 +1313,12 @@ class StrictPizzaOrPasta {
   ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   ::fidl_test_union::wire::StrictPizzaOrPasta::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1214,7 +1329,7 @@ class StrictPizzaOrPasta {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_StrictPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -1228,7 +1343,7 @@ class StrictPizzaOrPasta {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_PizzaOrPastaTable;
@@ -1274,8 +1389,7 @@ class PizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPizza;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pizza>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1288,12 +1402,12 @@ class PizzaOrPasta {
   ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
   const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
 
   bool is_pasta() const {
@@ -1317,8 +1431,7 @@ class PizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPasta;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pasta>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1331,12 +1444,12 @@ class PizzaOrPasta {
   ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   ::fidl_test_union::wire::PizzaOrPasta::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1345,7 +1458,7 @@ class PizzaOrPasta {
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_PizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -1359,7 +1472,7 @@ class PizzaOrPasta {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::PizzaOrPasta::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_FlexiblePizzaOrPastaTable;
@@ -1410,8 +1523,7 @@ class FlexiblePizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pizza>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1424,12 +1536,12 @@ class FlexiblePizzaOrPasta {
   ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
   const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
 
   bool is_pasta() const {
@@ -1455,8 +1567,7 @@ class FlexiblePizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pasta>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1469,19 +1580,19 @@ class FlexiblePizzaOrPasta {
   ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   ::fidl_test_union::wire::FlexiblePizzaOrPasta::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_FlexiblePizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -1495,7 +1606,7 @@ class FlexiblePizzaOrPasta {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ExplicitPizzaOrPastaTable;
@@ -1545,8 +1656,7 @@ class ExplicitPizzaOrPasta {
 
   void set_pizza(::fidl::ObjectView<::fidl_test_union::wire::Pizza> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pizza>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1559,12 +1669,12 @@ class ExplicitPizzaOrPasta {
   ::fidl_test_union::wire::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
   const ::fidl_test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza);
-    return *static_cast<::fidl_test_union::wire::Pizza*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pizza>().get_data();
   }
 
   bool is_pasta() const {
@@ -1590,8 +1700,7 @@ class ExplicitPizzaOrPasta {
 
   void set_pasta(::fidl::ObjectView<::fidl_test_union::wire::Pasta> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Pasta>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1604,12 +1713,12 @@ class ExplicitPizzaOrPasta {
   ::fidl_test_union::wire::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   const ::fidl_test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta);
-    return *static_cast<::fidl_test_union::wire::Pasta*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Pasta>().get_data();
   }
   ::fidl_test_union::wire::ExplicitPizzaOrPasta::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -1620,7 +1729,7 @@ class ExplicitPizzaOrPasta {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_ExplicitPizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -1634,7 +1743,7 @@ class ExplicitPizzaOrPasta {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_OlderSimpleUnionTable;
@@ -1681,8 +1790,7 @@ class OlderSimpleUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int64_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1694,12 +1802,12 @@ class OlderSimpleUnion {
   int64_t& mutable_i() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
 
   bool is_f() const {
@@ -1722,8 +1830,7 @@ class OlderSimpleUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1735,19 +1842,19 @@ class OlderSimpleUnion {
   float& mutable_f() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
   const float& f() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
   ::fidl_test_union::wire::OlderSimpleUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -1761,7 +1868,7 @@ class OlderSimpleUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::OlderSimpleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_NewerSimpleUnionTable;
@@ -1809,8 +1916,7 @@ class NewerSimpleUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int64_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1822,12 +1928,12 @@ class NewerSimpleUnion {
   int64_t& mutable_i() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
 
   bool is_s() const {
@@ -1850,8 +1956,7 @@ class NewerSimpleUnion {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1864,12 +1969,12 @@ class NewerSimpleUnion {
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_v() const {
@@ -1893,8 +1998,8 @@ class NewerSimpleUnion {
 
   void set_v(::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kV;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::VectorView<::fidl::StringView>>().set_data(
+        std::move(elem));
   }
 
   template <typename... Args>
@@ -1907,21 +2012,19 @@ class NewerSimpleUnion {
   ::fidl::VectorView<::fidl::StringView>& mutable_v() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kV);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   const ::fidl::VectorView<::fidl::StringView>& v() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kV);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::fidl_test_union::wire::NewerSimpleUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -1936,7 +2039,7 @@ class NewerSimpleUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::NewerSimpleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_FlexibleUnionTable;
@@ -1985,8 +2088,7 @@ class FlexibleUnion {
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -1999,12 +2101,12 @@ class FlexibleUnion {
   int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
 
   bool is_string_needs_constructor() const {
@@ -2032,8 +2134,7 @@ class FlexibleUnion {
       ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kStringNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2048,12 +2149,12 @@ class FlexibleUnion {
   ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_vector_string_also_needs_constructor() const {
@@ -2082,8 +2183,8 @@ class FlexibleUnion {
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::
         kVectorStringAlsoNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::VectorView<::fidl::StringView>>().set_data(
+        std::move(elem));
   }
 
   template <typename... Args>
@@ -2100,22 +2201,20 @@ class FlexibleUnion {
   mutable_vector_string_also_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(
-        envelope_.data.get());
+    return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::fidl_test_union::wire::FlexibleUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -2130,7 +2229,7 @@ class FlexibleUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::FlexibleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_FlexibleFooTable;
@@ -2176,8 +2275,7 @@ class FlexibleFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2189,11 +2287,11 @@ class FlexibleFoo {
 
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -2216,8 +2314,7 @@ class FlexibleFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2228,17 +2325,17 @@ class FlexibleFoo {
 
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_union::wire::FlexibleFoo::Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -2252,7 +2349,7 @@ class FlexibleFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::FlexibleFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_FieldCollisionTable;
@@ -2300,8 +2397,7 @@ class FieldCollision {
   void set_field_collision_tag(::fidl::ObjectView<int32_t> elem) {
     ordinal_ =
         ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2316,13 +2412,13 @@ class FieldCollision {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& field_collision_tag() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_union::wire::FieldCollision::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -2332,8 +2428,8 @@ class FieldCollision {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_FieldCollisionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
  private:
@@ -2345,7 +2441,7 @@ class FieldCollision {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::FieldCollision::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ExplicitXUnionTable;
@@ -2392,8 +2488,7 @@ class ExplicitXUnion {
 
   void set_i(::fidl::ObjectView<int64_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int64_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2404,11 +2499,11 @@ class ExplicitXUnion {
 
   int64_t& mutable_i() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kI);
-    return *static_cast<int64_t*>(envelope_.data.get());
+    return envelope_.As<int64_t>().get_data();
   }
 
   bool is_f() const {
@@ -2431,8 +2526,7 @@ class ExplicitXUnion {
 
   void set_f(::fidl::ObjectView<float> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2443,18 +2537,18 @@ class ExplicitXUnion {
 
   float& mutable_f() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
   const float& f() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF);
-    return *static_cast<float*>(envelope_.data.get());
+    return envelope_.As<float>().get_data();
   }
   ::fidl_test_union::wire::ExplicitXUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -2468,7 +2562,7 @@ class ExplicitXUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ExplicitXUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
@@ -2515,8 +2609,7 @@ class ExplicitUnion {
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2529,12 +2622,12 @@ class ExplicitUnion {
   int32_t& mutable_primitive() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
 
   bool is_string_needs_constructor() const {
@@ -2562,8 +2655,7 @@ class ExplicitUnion {
       ::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::
         kStringNeedsConstructor;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2578,12 +2670,12 @@ class ExplicitUnion {
   ::fidl::StringView& mutable_string_needs_constructor() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                               kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                               kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   ::fidl_test_union::wire::ExplicitUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -2593,7 +2685,7 @@ class ExplicitUnion {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_ExplicitUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -2607,7 +2699,7 @@ class ExplicitUnion {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ExplicitUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ExplicitStrictFooTable;
@@ -2653,8 +2745,7 @@ class ExplicitStrictFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2667,12 +2758,12 @@ class ExplicitStrictFoo {
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -2695,8 +2786,7 @@ class ExplicitStrictFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2708,12 +2798,12 @@ class ExplicitStrictFoo {
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_union::wire::ExplicitStrictFoo::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -2724,7 +2814,7 @@ class ExplicitStrictFoo {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_ExplicitStrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -2738,7 +2828,7 @@ class ExplicitStrictFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_ExplicitFooTable;
@@ -2784,8 +2874,7 @@ class ExplicitFoo {
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2797,11 +2886,11 @@ class ExplicitFoo {
 
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -2824,8 +2913,7 @@ class ExplicitFoo {
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2836,17 +2924,17 @@ class ExplicitFoo {
 
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_union::wire::ExplicitFoo::Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fidl_test_union_ExplicitFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -2860,7 +2948,7 @@ class ExplicitFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::ExplicitFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_XUnionContainingEmptyStructTable;
@@ -2913,8 +3001,7 @@ class XUnionContainingEmptyStruct {
   void set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty> elem) {
     ordinal_ =
         ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl_test_union::wire::Empty>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -2929,21 +3016,21 @@ class XUnionContainingEmptyStruct {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty);
-    return *static_cast<::fidl_test_union::wire::Empty*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Empty>().get_data();
   }
   const ::fidl_test_union::wire::Empty& empty() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty);
-    return *static_cast<::fidl_test_union::wire::Empty*>(envelope_.data.get());
+    return envelope_.As<::fidl_test_union::wire::Empty>().get_data();
   }
   ::fidl_test_union::wire::XUnionContainingEmptyStruct::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_XUnionContainingEmptyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
  private:
@@ -2955,7 +3042,7 @@ class XUnionContainingEmptyStruct {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
@@ -2964,7 +3051,7 @@ struct StructWithNullableXUnion {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_StructWithNullableXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -3057,7 +3144,7 @@ class StructWithNullableXUnion::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -3192,7 +3279,7 @@ class Pizza::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -3326,7 +3413,7 @@ class Pasta::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -3422,9 +3509,9 @@ struct ::fidl::WireRequest<::fidl_test_union::TestProtocol::
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3601,8 +3688,10 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
       &::fidl_test_union::
           fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 32;
+  static constexpr uint32_t MaxOutOfLineV1 = 32;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3785,9 +3874,9 @@ struct ::fidl::WireRequest<::fidl_test_union::TestProtocol::
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -3962,8 +4051,10 @@ struct ::fidl::WireResponse<::fidl_test_union::TestProtocol::
       &::fidl_test_union::
           fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasFlexibleEnvelope = true;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -4465,7 +4556,7 @@ class ::fidl::internal::WireCaller<::fidl_test_union::TestProtocol> final {
       ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> client_end)
       : client_end_(client_end) {}
 
-  // Allocates 88 bytes of message buffer on the stack. No heap allocation
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   static ::fidl::WireResult<::fidl_test_union::TestProtocol::
                                 StrictXUnionHenceResponseMayBeStackAllocated>
@@ -4476,7 +4567,7 @@ class ::fidl::internal::WireCaller<::fidl_test_union::TestProtocol> final {
         _client_end);
   }
 
-  // Allocates 88 bytes of message buffer on the stack. No heap allocation
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocated>
@@ -4617,7 +4708,7 @@ class ::fidl::WireSyncClient<::fidl_test_union::TestProtocol> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-  // Allocates 88 bytes of message buffer on the stack. No heap allocation
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocated>
@@ -4787,7 +4878,7 @@ struct NullableUnionStruct {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_NullableUnionStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -4881,7 +4972,7 @@ class NullableUnionStruct::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -4925,7 +5016,7 @@ struct UnionSandwich {
   static constexpr const fidl_type_t* Type =
       &fidl_test_union_UnionSandwichTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
@@ -5021,7 +5112,7 @@ class UnionSandwich::DecodedMessage final
                  zx_handle_info_t* handles = nullptr,
                  uint32_t handle_actual = 0)
       : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
+            ::fidl::internal::kLLCPPEncodedWireFormatVersion,
             ::fidl::IncomingMessage(
                 bytes, byte_actual, handles, handle_actual,
                 ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
@@ -5051,140 +5142,6 @@ class UnionSandwich::DecodedMessage final
   UnionSandwich* PrimaryObject() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<UnionSandwich*>(bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles
-  // won't be closed When the object is destroyed. After calling this method,
-  // the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t fidl_test_union_EmptyTable;
-
-struct Empty {
-  static constexpr const fidl_type_t* Type = &fidl_test_union_EmptyTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
-
-  uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-};
-
-class Empty::UnownedEncodedMessage final {
- public:
-  UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
-                        Empty* value)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, value) {}
-  UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
-                        uint32_t backing_buffer_size, Empty* value)
-      : message_(::fidl::OutgoingMessage::ConstructorArgs{
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        }) {
-    ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
-    message_.Encode<Empty>(value);
-  }
-  UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-  UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-  UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.status() == ZX_OK; }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
- private:
-  ::fidl::internal::IovecBuffer iovecs_;
-  ::fidl::OutgoingMessage message_;
-};
-
-class Empty::OwnedEncodedMessage final {
- public:
-  explicit OwnedEncodedMessage(Empty* value)
-      : message_(1u, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  // Internal constructor.
-  explicit OwnedEncodedMessage(
-      ::fidl::internal::AllowUnownedInputRef allow_unowned, Empty* value)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
-                 static_cast<uint32_t>(backing_buffer_.size()), value) {}
-  OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-  OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-  OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-  zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-  const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-  bool ok() const { return message_.ok(); }
-  std::string FormatDescription() const { return message_.FormatDescription(); }
-  const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
-
-  ::fidl::OutgoingMessage& GetOutgoingMessage() {
-    return message_.GetOutgoingMessage();
-  }
-
- private:
-  ::fidl::internal::InlineMessageBuffer<8> backing_buffer_;
-  UnownedEncodedMessage message_;
-};
-
-class Empty::DecodedMessage final
-    : public ::fidl::internal::DecodedMessageBase<Empty> {
- public:
-  using DecodedMessageBase<Empty>::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            ::fidl::internal::kLLCPPInMemoryWireFormatVersion,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 uint8_t* bytes, uint32_t byte_actual,
-                 zx_handle_info_t* handles = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessageBase(
-            wire_format_version,
-            ::fidl::IncomingMessage(
-                bytes, byte_actual, handles, handle_actual,
-                ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
-
-  DecodedMessage(const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  // Internal constructor for specifying a specific wire format version.
-  DecodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
-                 const fidl_incoming_msg_t* c_msg)
-      : DecodedMessage(wire_format_version,
-                       reinterpret_cast<uint8_t*>(c_msg->bytes),
-                       c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {}
-
-  Empty* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<Empty*>(bytes());
   }
 
   // Release the ownership of the decoded message. That means that the handles
@@ -5475,7 +5432,7 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_union::wire::UnionSandwich>);
 static_assert(offsetof(::fidl_test_union::wire::UnionSandwich, a) == 0);
 static_assert(offsetof(::fidl_test_union::wire::UnionSandwich, u) == 8);
-static_assert(offsetof(::fidl_test_union::wire::UnionSandwich, b) == 32);
+static_assert(offsetof(::fidl_test_union::wire::UnionSandwich, b) == 24);
 static_assert(sizeof(::fidl_test_union::wire::UnionSandwich) ==
               ::fidl_test_union::wire::UnionSandwich::PrimarySize);
 
@@ -5598,7 +5555,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
 
   // Synchronous variant of
   // |StrictXUnionHenceResponseMayBeStackAllocated.StrictXUnionHenceResponseMayBeStackAllocated()|.
-  // Allocates 88 bytes of message buffer on the stack. No heap allocation
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_union::TestProtocol::
                          StrictXUnionHenceResponseMayBeStackAllocated>

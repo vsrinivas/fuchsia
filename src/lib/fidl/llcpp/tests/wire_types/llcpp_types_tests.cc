@@ -223,12 +223,11 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
     auto encoded_with_iovecs = std::make_unique<fidl::OwnedEncodedMessage<VectorStruct>>(
         fidl::internal::AllowUnownedInputRef{}, &vector_struct);
     ASSERT_TRUE(encoded_with_iovecs->ok());
-    ASSERT_GT(encoded_with_iovecs->GetOutgoingMessage().iovec_actual(), 1u);
   }
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fidl::DecodedMessage<VectorStruct> decoded(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+  fidl::DecodedMessage<VectorStruct> decoded(fidl::internal::kLLCPPEncodedWireFormatVersion,
                                              std::move(converted.incoming_message()));
 
   ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());

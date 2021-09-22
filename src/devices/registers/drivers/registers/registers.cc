@@ -280,7 +280,8 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   }
 
   // Parse
-  fidl::DecodedMessage<Metadata> decoded(bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
+  fidl::DecodedMessage<Metadata> decoded(fidl::internal::kLLCPPEncodedWireFormatVersion,
+                                         bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
   if (!decoded.ok()) {
     zxlogf(ERROR, "Unable to parse metadata %s", decoded.FormatDescription().c_str());
     return ZX_ERR_INTERNAL;

@@ -5,43 +5,101 @@
 #ifndef LIB_FIDL_LLCPP_ENVELOPE_H_
 #define LIB_FIDL_LLCPP_ENVELOPE_H_
 
-#include <zircon/fidl.h>
-
 #include <lib/fidl/llcpp/object_view.h>
+#include <zircon/fidl.h>
 
 namespace fidl {
 
-// Envelope is a typed version of fidl_envelope_t.
-template <typename T>
-struct Envelope {
-  // The size of the entire envelope contents, including any additional out-of-line objects that the
-  // envelope may contain. For example, a vector<string>'s num_bytes for ["hello", "world"] would
-  // include the string contents in the size, not just the outer vector. Always a multiple of 8;
-  // must be zero in transit if envelope is null.
-  uint32_t num_bytes = 0;
+// Envelope is a typed version of fidl_envelope_t and represents the in-memory
+// structure of LLCPP envelopes.
+// Envelope has three template specializations:
+// - sizeof(T) > 4 - Out-of-line - envelope is a pointer to out-of-line data.
+// - sizeof(T) <= 4 - Inline - envelope contains the value within its body.
+// - T == void - used in unions to hold data until it is cast to one of the
+//   other types.
+template <typename T, typename = void>
+class Envelope {
+ public:
+  bool has_data() const { return data_ != nullptr; }
+  const T& get_data() const { return *data_; }
+  T& get_data() { return *data_; }
+  void set_data(ObjectView<T> value) { data_ = std::move(value); }
+  void Reset() { data_ = nullptr; }
 
-  // The number of handles in the envelope, including any additional out-of-line objects that the
-  // envelope contains. Must be zero in transit if envelope is null.
-  uint32_t num_handles = 0;
-
-  // A pointer to the out-of-line envelope data.
-  ObjectView<T> data;
+ private:
+  ObjectView<T> data_;
 };
 
-static_assert(sizeof(Envelope<void>) == sizeof(fidl_envelope_t),
-              "Envelope<T> must have the same size as fidl_envelope_t");
-static_assert(offsetof(Envelope<void>, num_bytes) == offsetof(fidl_envelope_t, num_bytes),
-              "num_bytes must have the same offset in Envelope<T> and fidl_envelope_t");
-static_assert(sizeof(Envelope<void>().num_bytes) == sizeof(fidl_envelope_t().num_bytes),
-              "num_bytes must have the same size in Envelope<T> and fidl_envelope_t");
-static_assert(offsetof(Envelope<void>, num_handles) == offsetof(fidl_envelope_t, num_handles),
-              "num_handles must have the same offset in Envelope<T> and fidl_envelope_t");
-static_assert(sizeof(Envelope<void>().num_handles) == sizeof(fidl_envelope_t().num_handles),
-              "num_handles must have the same size in Envelope<T> and fidl_envelope_t");
-static_assert(offsetof(Envelope<void>, data) == offsetof(fidl_envelope_t, data),
-              "data must have the same offset in Envelope<T> and fidl_envelope_t");
-static_assert(sizeof(Envelope<void>().data) == sizeof(fidl_envelope_t().data),
-              "data must have the same size in Envelope<T> and fidl_envelope_t");
+// This definition of Envelope is for inline data.
+// To maintain the existing interface for unions and tables, bytes are copied into
+// the inline value rather than storing it natively.
+template <typename T>
+class Envelope<T, std::enable_if_t<sizeof(T) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD>> {
+#if __Fuchsia__
+  static constexpr bool kIsHandle = std::is_base_of<zx::object_base, T>::value;
+#else
+  static constexpr bool kIsHandle = false;
+#endif
+
+ public:
+  bool has_data() const { return (flags_ & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0; }
+  const T& get_data() const {
+    ZX_ASSERT(has_data());
+    return inline_value_;
+  }
+  T& get_data() {
+    ZX_ASSERT(has_data());
+    return inline_value_;
+  }
+  void set_data(ObjectView<T> value) {
+    if (value == nullptr) {
+      Reset();
+      return;
+    }
+    inline_value_ = std::move(*value);
+    num_handles_ =
+        (kIsHandle && reinterpret_cast<zx_handle_t&>(inline_value_) != ZX_HANDLE_INVALID) ? 1 : 0;
+    flags_ |= FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+  }
+  void Reset() {
+    // Assign zero to all envelope fields, making this the zero envelope.
+    // T{} is guaranteed to have zeroed bytes.
+    // - primitive types - it is trivially zero.
+    // - handle types - initialized to ZX_INVALID_HANDLE.
+    inline_value_ = T{};
+    num_handles_ = 0;
+    flags_ = 0;
+  }
+
+ private:
+  T inline_value_ = {};
+  alignas(4) [[maybe_unused]] uint16_t num_handles_ = 0;
+  uint16_t flags_ = 0;
+};
+
+// Used in unions to represent an untyped envelope before it is cast to a typed
+// envelope.
+class UntypedEnvelope {
+ public:
+  template <typename T>
+  const Envelope<T>& As() const {
+    return *reinterpret_cast<const Envelope<T>*>(this);
+  }
+  template <typename T>
+  Envelope<T>& As() {
+    return *reinterpret_cast<Envelope<T>*>(this);
+  }
+
+ private:
+  [[maybe_unused]] uint64_t unused_ = 0;
+};
+
+static_assert(sizeof(Envelope<uint8_t>) == sizeof(fidl_envelope_v2_t),
+              "Envelope<T> must have the same size as fidl_envelope_v2_t");
+static_assert(sizeof(Envelope<uint64_t>) == sizeof(fidl_envelope_v2_t),
+              "Envelope<T> must have the same size as fidl_envelope_v2_t");
+static_assert(sizeof(UntypedEnvelope) == sizeof(fidl_envelope_v2_t),
+              "UntypedEnvelope must have the same size as fidl_envelope_v2_t");
 
 }  // namespace fidl
 

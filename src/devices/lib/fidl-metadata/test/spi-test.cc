@@ -15,8 +15,8 @@ static void check_encodes(cpp20::span<const fidl_metadata::spi::Channel> spi_cha
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(data.data(),
-                                                                           data.size());
+  fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
+      fidl::internal::kLLCPPEncodedWireFormatVersion, data.data(), data.size());
   ASSERT_OK(decoded.status());
 
   auto metadata = decoded.PrimaryObject();

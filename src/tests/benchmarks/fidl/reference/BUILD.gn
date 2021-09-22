@@ -31,7 +31,9 @@ executable("bin") {
     "main.cc",
     "padded_struct_tree.cc",
     "struct_tree.cc",
-    "uint8_table.cc",
+
+    # TODO(fxbug.dev/84116) Re-enable once v2 wire format migration is complete.
+    #"uint8_table.cc",
   ]
   deps = [
     ":benchmark_suite_reference",

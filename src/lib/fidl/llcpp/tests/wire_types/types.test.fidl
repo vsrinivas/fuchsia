@@ -126,6 +126,14 @@ type TestResourceTable = resource table {
     1: x uint8;
 };
 
+type HandleStruct = resource struct {
+    h zx.handle:EVENT;
+};
+
+type TestHandleTable = resource table {
+    1: hs HandleStruct;
+};
+
 /// Certain traits are only implemented for top level (i.e. request/response struct)
 /// types, since LLCPP only calls encode/decode on those top level types.
 /// Types used in tests that exercise these codepaths (e.g. involving HasFlexibleEnvelope)

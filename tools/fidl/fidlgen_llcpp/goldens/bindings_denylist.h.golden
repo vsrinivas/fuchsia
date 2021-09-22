@@ -88,8 +88,7 @@ class OnlyLlcpp {
 
   void set_x(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -101,12 +100,12 @@ class OnlyLlcpp {
   uint32_t& mutable_x() {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& x() const {
     ZX_ASSERT(ordinal_ ==
               ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
-    return *static_cast<uint32_t*>(envelope_.data.get());
+    return envelope_.As<uint32_t>().get_data();
   }
   ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -117,8 +116,8 @@ class OnlyLlcpp {
   static constexpr const fidl_type_t* Type =
       &fidl_test_bindingsdenylist_OnlyLlcppTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
  private:
@@ -130,7 +129,7 @@ class OnlyLlcpp {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 }  // namespace wire
@@ -186,9 +185,9 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -355,7 +354,9 @@ struct ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySizeV1 = 16;
   static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

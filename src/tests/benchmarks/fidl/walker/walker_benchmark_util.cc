@@ -25,7 +25,7 @@ struct Position {
 struct EnvelopeCheckpoint {};
 
 class NoOpVisitor final
-    : public fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait, Position,
+    : public fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V2, fidl::MutatingVisitorTrait, Position,
                            EnvelopeCheckpoint> {
  public:
   NoOpVisitor() {}
@@ -34,6 +34,7 @@ class NoOpVisitor final
 
   static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = true;
+  static constexpr bool kValidateEnvelopeInlineBit = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
     OnError("absent pointer disallowed in non-nullable collection");
@@ -88,7 +89,7 @@ class NoOpVisitor final
 
 void Walk(const fidl_type_t* fidl_type, uint8_t* data) {
   NoOpVisitor visitor;
-  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(visitor, fidl_type, NoOpVisitor::Position{data});
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V2>(visitor, fidl_type, NoOpVisitor::Position{data});
   ZX_ASSERT(visitor.error() == nullptr);
 }
 

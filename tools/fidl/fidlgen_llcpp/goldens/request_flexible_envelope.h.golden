@@ -90,8 +90,7 @@ class StrictFoo {
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -106,13 +105,13 @@ class StrictFoo {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -137,8 +136,7 @@ class StrictFoo {
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -152,13 +150,13 @@ class StrictFoo {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -169,7 +167,7 @@ class StrictFoo {
   static constexpr const fidl_type_t* Type =
       &fidl_test_requestflexibleenvelope_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -183,7 +181,7 @@ class StrictFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
@@ -233,8 +231,7 @@ class FlexibleFoo {
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -249,13 +246,13 @@ class FlexibleFoo {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data.get());
+    return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
@@ -280,8 +277,7 @@ class FlexibleFoo {
   void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
-    envelope_.data =
-        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
@@ -295,20 +291,20 @@ class FlexibleFoo {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
     ZX_ASSERT(
         ordinal_ ==
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data.get());
+    return envelope_.As<int32_t>().get_data();
   }
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
       &fidl_test_requestflexibleenvelope_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
 
@@ -322,7 +318,7 @@ class FlexibleFoo {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
-  ::fidl::Envelope<void> envelope_;
+  ::fidl::UntypedEnvelope envelope_;
 };
 
 }  // namespace wire
@@ -390,10 +386,10 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
       &::fidl_test_requestflexibleenvelope::
           fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 40;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -575,8 +571,10 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
       &::fidl_test_requestflexibleenvelope::
           fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = true;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -764,10 +762,10 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
       &::fidl_test_requestflexibleenvelope::
           fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 40;
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = true;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
@@ -950,8 +948,10 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
       &::fidl_test_requestflexibleenvelope::
           fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t PrimarySizeV1 = 40;
   static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasFlexibleEnvelope = false;
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =

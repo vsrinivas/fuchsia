@@ -13,8 +13,8 @@ const fragmentMethodClientImplAsyncTmpl = `
     //
   {{- end }}
   // Asynchronous variant of |{{ .Protocol.Name }}.{{ .Name }}()|.
-  {{- if .Request.ClientAllocationV1.IsStack }}
-    // Allocates {{ .Request.ClientAllocationV1.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
+  {{- if .Request.ClientAllocationV2.IsStack }}
+    // Allocates {{ .Request.ClientAllocationV2.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
   {{- else }}
     // The request and callback are allocated on the heap.
   {{- end }}

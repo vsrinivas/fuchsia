@@ -65,9 +65,12 @@ const fileHeaderTmpl = `
 {{- if Eq .Kind Kinds.Union }}{{ template "Union:ForwardDeclaration:Header" . }}{{- end }}
 {{- end }}
 
-{{- /* Declare tables and unions first, since they store their members
-    out-of-line and so they only need forward declarations.
-    See fxbug.dev/7919 formore context. */}}
+{{- /* Resolve inline object declaration order by defining small inline structs first
+       (size <= 4 so can't contain a table or a union), then tables and unions, then
+       the remaining types. */}}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Struct }}{{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:Header" . }}{{ end }}{{- end }}
+{{- end }}
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Table }}{{ template "Table:Header" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "Union:Header" . }}{{- end }}
@@ -80,7 +83,7 @@ const fileHeaderTmpl = `
 {{ template "Protocol:Header" $protocol }}
 {{- end }}{{ end }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "Service:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "Struct:Header" . }}{{- end }}
+{{- if Eq .Kind Kinds.Struct }}{{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:Header" . }}{{ end }}{{- end }}
 {{- end }}
 {{ "" }}
 
