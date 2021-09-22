@@ -46,8 +46,7 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
                             // Defaults to allow test mocks to override.
                             MsiAllocFn msi_alloc_fn = msi_alloc_block,
                             MsiFreeFn msi_free_fn = msi_free_block,
-                            MsiSupportedFn msi_support_fn = msi_is_supported,
-                            ResourceDispatcher::ResourceStorage* rsrc_storage = nullptr);
+                            MsiSupportedFn msi_support_fn = msi_is_supported);
 
   ~MsiAllocation();
 
@@ -62,13 +61,9 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   Lock<SpinLock>& lock() TA_EXCL(lock_) TA_RET_CAP(lock_) { return lock_; }
 
  private:
-  explicit MsiAllocation(fbl::RefPtr<ResourceDispatcher>&& resource, const msi_block_t block,
-                         MsiFreeFn msi_free_fn)
-      : resource_(ktl::move(resource)), msi_free_fn_(msi_free_fn), block_(block) {}
+  explicit MsiAllocation(const msi_block_t block, MsiFreeFn msi_free_fn)
+      : msi_free_fn_(msi_free_fn), block_(block) {}
 
-  // MsiAllocationInterface abstraction methods to allow mocking but not add complexity
-  // to users of the object via requiring templates.
-  fbl::RefPtr<ResourceDispatcher> resource_;
   // A pointer to the function to free the block when the object is released.
   MsiFreeFn msi_free_fn_;
   // Function pointers for MSI platform functions to facilitate unit tests.

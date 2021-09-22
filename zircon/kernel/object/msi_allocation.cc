@@ -23,8 +23,7 @@ KCOUNTER(msi_destroy_count, "msi.destroy")
 
 zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* obj,
                                   MsiAllocFn msi_alloc_fn, MsiFreeFn msi_free_fn,
-                                  MsiSupportedFn msi_support_fn,
-                                  ResourceDispatcher::ResourceStorage* rsrc_storage) {
+                                  MsiSupportedFn msi_support_fn) {
   if (!msi_support_fn()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -59,22 +58,8 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
              block.base_irq_id + block.num_irq - 1);
   }
 
-  KernelHandle<ResourceDispatcher> kres;
-  zx_rights_t rights;
-  // We've allocated a block of IRQs from the InterruptManager/GIC and now need
-  // to ensure they're exclusively reserved at the resource level. The
-  // ResourceDispatcher has its own mutex so we need to temporarily release the
-  // spinlock. This is fine because at this point Create() hasn't returned this
-  // MsiAllocation to a caller.
-  st = ResourceDispatcher::Create(&kres, &rights, ZX_RSRC_KIND_IRQ, block.base_irq_id,
-                                  block.num_irq, ZX_RSRC_FLAG_EXCLUSIVE, name.data(), rsrc_storage);
-  if (st != ZX_OK) {
-    return st;
-  }
-
   fbl::AllocChecker ac;
-  auto msi =
-      fbl::AdoptRef<MsiAllocation>(new (&ac) MsiAllocation(kres.release(), block, msi_free_fn));
+  auto msi = fbl::AdoptRef<MsiAllocation>(new (&ac) MsiAllocation(block, msi_free_fn));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

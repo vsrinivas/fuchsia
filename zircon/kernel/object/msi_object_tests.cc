@@ -49,22 +49,11 @@ void MsiFreeAssert(msi_block_t* /* unused */) { assert(false); }
 }  // namespace
 const uint32_t kVectorMax = 256u;
 
-zx_status_t create_resource_storage_and_allocation(
-    ResourceDispatcher::ResourceStorage* rsrc_storage, fbl::RefPtr<MsiAllocation>* alloc,
-    uint32_t cnt) {
+zx_status_t create_allocation(fbl::RefPtr<MsiAllocation>* alloc, uint32_t cnt) {
   zx_status_t status;
-  if ((status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
-                                                        rsrc_storage)) != ZX_OK) {
+  if ((status =
+           MsiAllocation::Create(cnt, alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue) != ZX_OK)) {
     return status;
-  }
-
-  if ((status = MsiAllocation::Create(cnt, alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
-                                      rsrc_storage) != ZX_OK)) {
-    return status;
-  }
-
-  if (rsrc_storage->resource_list.size_slow() != 1u) {
-    return ZX_ERR_NO_MEMORY;
   }
 
   return ZX_OK;
@@ -112,9 +101,8 @@ static bool allocation_creation_and_info_test() {
   BEGIN_TEST;
 
   const uint32_t test_irq_cnt = 8;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
-  ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc, test_irq_cnt));
+  ASSERT_EQ(ZX_OK, create_allocation(&alloc, test_irq_cnt));
 
   zx_info_msi_t info = {};
   alloc->GetInfo(&info);
@@ -142,17 +130,17 @@ static bool allocation_irq_count_test() {
   for (uint32_t cnt = 1; cnt < MsiAllocation::kMsiAllocationCountMax; cnt++) {
     fbl::RefPtr<MsiAllocation> alloc;
     zx_status_t expected = ispow2(cnt) ? ZX_OK : ZX_ERR_INVALID_ARGS;
-    ASSERT_EQ(expected, MsiAllocation::Create(cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
-                                              &rsrc_storage));
+    ASSERT_EQ(expected,
+              MsiAllocation::Create(cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue));
   }
 
   fbl::RefPtr<MsiAllocation> alloc;
   // And check the failure cases.
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, MsiAllocation::Create(0, &alloc, MsiAllocate, MsiFree,
-                                                       MsiIsSupportedTrue, &rsrc_storage));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            MsiAllocation::Create(0, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             MsiAllocation::Create(MsiAllocation::kMsiAllocationCountMax + 1, &alloc, MsiAllocate,
-                                  MsiFree, MsiIsSupportedTrue, &rsrc_storage));
+                                  MsiFree, MsiIsSupportedTrue));
 
   END_TEST;
 }
@@ -160,10 +148,8 @@ static bool allocation_irq_count_test() {
 static bool allocation_reservation_test() {
   BEGIN_TEST;
 
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
-  ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
-                                                          MsiAllocation::kMsiAllocationCountMax));
+  ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
 
   // Verify the bounds checking and state of id reservations.
   ASSERT_EQ(ZX_ERR_BAD_STATE, alloc->ReleaseId(0));
@@ -177,16 +163,11 @@ static bool allocation_reservation_test() {
 
 static bool allocation_support_test() {
   BEGIN_TEST;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
-  ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
-                                                           &rsrc_storage));
 
   {
     fbl::RefPtr<MsiAllocation> alloc;
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-              MsiAllocation::Create(1, &alloc, MsiAllocateAssert, MsiFreeAssert,
-                                    MsiIsSupportedFalse, &rsrc_storage));
-    ASSERT_EQ(0u, rsrc_storage.resource_list.size_slow());
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, MsiAllocation::Create(1, &alloc, MsiAllocateAssert,
+                                                          MsiFreeAssert, MsiIsSupportedFalse));
   }
 
   END_TEST;
@@ -199,10 +180,8 @@ void register_fn(const msi_block_t*, uint, int_handler, void*) { register_call_c
 
 static bool interrupt_duplication_test() {
   BEGIN_TEST;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
-  ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
-                                                          MsiAllocation::kMsiAllocationCountMax));
+  ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
 
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
@@ -228,10 +207,8 @@ static bool interrupt_duplication_test() {
 static bool interrupt_vmo_test() {
   BEGIN_TEST;
   register_call_count = 0;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
-  ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
-                                                          MsiAllocation::kMsiAllocationCountMax));
+  ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
 
   // This test emulates a block of MSI interrupts each taking up a given bit in a register for
   // their own masking. It validates that the MsiDispatcher masks / unmasks the correct bit, and
@@ -275,10 +252,8 @@ static bool interrupt_vmo_test() {
 
 static bool interrupt_creation_mask_test() {
   BEGIN_TEST;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   fbl::RefPtr<MsiAllocation> alloc;
-  ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
-                                                          MsiAllocation::kMsiAllocationCountMax));
+  ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
   volatile MsiCapability* cap;
@@ -356,7 +331,6 @@ static bool interrupt_creation_mask_test() {
 
 static bool out_of_order_ownership_test() {
   BEGIN_TEST;
-  ResourceDispatcher::ResourceStorage rsrc_storage;
   KernelHandle<InterruptDispatcher> interrupt1, interrupt2;
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
@@ -366,8 +340,7 @@ static bool out_of_order_ownership_test() {
   {
     zx_rights_t rights;
     fbl::RefPtr<MsiAllocation> alloc;
-    ASSERT_EQ(ZX_OK, create_resource_storage_and_allocation(&rsrc_storage, &alloc,
-                                                            MsiAllocation::kMsiAllocationCountMax));
+    ASSERT_EQ(ZX_OK, create_allocation(&alloc, MsiAllocation::kMsiAllocationCountMax));
     ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, /*msi_id=*/0, vmo, /*cap_offset=*/0,
                                            /*options=*/0, &rights, &interrupt1, register_fn));
     ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, /*msi_id=*/1, vmo, /*cap_offset=*/0,
