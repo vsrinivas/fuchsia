@@ -16,9 +16,6 @@ declare_args() {
   # This is sort of a "catch all" component that consists of all the area / packages that weren't
   # specified in the components list below.
   #
-  # core_creep_limit(number): maximum size creep (in bytes) per-CL allocated for the core system and/or services.
-  # This may be enforced by Gerrit.
-  #
   # components(object array): a list of component objects. Each object should contain the following keys:
   #
   #   component(string): name of the component.
@@ -33,51 +30,22 @@ declare_args() {
   #   The $for_pkg corresponds to the $for_pkg field in config.gni.
   #
   #   limit(number): maximum size (in bytes) allocated for the component.
-  #   creep_limit(number): maxmium size creep (in bytes) per-CL allocated for the component.
-  #   This may be enforced by Gerrit.
-  #
-  # distributed_shlibs(string array): a list of shared libraries which are distributed in the Fuchsia SDK for
-  # partners to use in their prebuilt packages.
-  #
-  # distributed_shlibs_limit(number): maximum size (in bytes) allocated for distributed shared libraries.
-  #
-  # distributed_shlibs_creep_limit(number): maximum size creep (in bytes) allocated for distributed shared
-  # libraries. This may be enforced by Gerrit.
-  #
-  # icu_data(string array): a list of files which contribute to the ICU data limit.
-  #
-  # icu_data_limit(number): maximum size (in bytes) allocated to ICU data files.
-  #
-  # icu_data_creep_limit(number): maximum size creep (in bytes) allocated to ICU data files. This may be
-  # enforced by Gerrit.
   #
   # Example:
   # size_checker_input = {
   #   asset_ext = [ ".ttf" ]
   #   asset_limit = 10240
   #   core_limit = 10240
-  #   core_creep_limit = 320
-  #   distributed_shlibs = [
-  #     "lib/ld.so.1",
-  #     "lib/libc++.so.2",
-  #   ]
-  #   distributed_shlibs_limit = 10240
-  #   distributed_shlibs_creep_limit = 320
-  #   icu_data = [ "icudtl.dat" ]
-  #   icu_data_limit = 20480
-  #   icu_data_creep_limit = 320
   #   components = [
   #     {
   #       component = "Foo"
   #       src = [ "topaz/runtime/foo_runner" ]
   #       limit = 10240
-  #       creep_limit = 320
   #     },
   #     {
   #       component = "Bar"
   #       src = [ "build/images" ]
   #       limit = 20480
-  #       creep_limit = 640
   #     },
   #   ]
   # }
