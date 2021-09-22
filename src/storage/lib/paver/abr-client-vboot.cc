@@ -127,6 +127,11 @@ zx::status<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b
         // from.
         gpt_cros_attr_set_priority(&part->flags, max_prio - 1);
       }
+
+      // Make sure the recovery slot is always marked as successful.
+      if (slot_index.value_or(kAbrSlotIndexA) == kAbrSlotIndexR) {
+        gpt_cros_attr_set_successful(&part->flags, true);
+      }
       continue;
     }
 

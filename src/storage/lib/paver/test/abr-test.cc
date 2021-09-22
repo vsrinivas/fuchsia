@@ -212,6 +212,25 @@ class ChromebookX64AbrTests : public zxtest::Test {
                                                       nullptr);
   }
 
+  gpt_partition_t* GetPartitionByName(std::unique_ptr<gpt::GptDevice>& gpt, const char* name) {
+    gpt_partition_t* part = nullptr;
+    uint16_t name_utf16[sizeof(part->name) / sizeof(uint16_t)];
+    memset(name_utf16, 0, sizeof(name_utf16));
+    cstring_to_utf16(name_utf16, name, countof(name_utf16));
+    for (uint32_t i = 0; i < gpt->EntryCount(); i++) {
+      auto ret = gpt->GetPartition(i);
+      if (ret.is_error()) {
+        continue;
+      }
+
+      if (!memcmp(ret.value()->name, name_utf16, sizeof(name_utf16))) {
+        part = ret.value();
+        break;
+      }
+    }
+    return part;
+  }
+
   std::unique_ptr<BlockDevice> disk_;
   IsolatedDevmgr devmgr_;
   async::Loop dispatcher_;
@@ -246,6 +265,24 @@ TEST_F(ChromebookX64AbrTests, GetSlotInfoSucceeds) {
   ASSERT_TRUE(info->is_bootable);
   ASSERT_TRUE(info->is_marked_successful);
   ASSERT_EQ(info->num_tries_remaining, 0);
+}
+
+TEST_F(ChromebookX64AbrTests, AbrAlwaysMarksRSuccessful) {
+  ASSERT_NO_FATAL_FAILURES(SetupPartitions(kAbrSlotIndexA));
+  auto client = GetAbrClient();
+  ASSERT_OK(client.status_value());
+  // Force a write to the A/B/R data by marking a slot successful and then marking it unbootable.
+  ASSERT_OK(client->MarkSlotSuccessful(kAbrSlotIndexA).status_value());
+  ASSERT_OK(client->Flush().status_value());
+  ASSERT_OK(client->MarkSlotUnbootable(kAbrSlotIndexA).status_value());
+  ASSERT_OK(client->Flush().status_value());
+
+  std::unique_ptr<gpt::GptDevice> gpt;
+  ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
+                                   /*blocks=*/disk_->block_count(), &gpt));
+  gpt_partition_t* part = GetPartitionByName(gpt, GPT_ZIRCON_R_NAME);
+  ASSERT_NE(part, nullptr);
+  ASSERT_TRUE(gpt_cros_attr_get_successful(part->flags));
 }
 
 class CurrentSlotUuidTest : public zxtest::Test {
