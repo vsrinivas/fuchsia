@@ -43,9 +43,7 @@ rustc_library("io_conformance_util") {
   ]
 
   sources = [
-    "src/directory_request_logger.rs",
     "src/flags.rs",
-    "src/io1_request_logger_factory.rs",
     "src/lib.rs",
     "src/test_harness.rs",
   ]

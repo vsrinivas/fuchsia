@@ -14,7 +14,6 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::StreamExt,
-    io_conformance_util::io1_request_logger_factory::Io1RequestLoggerFactory,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
 };
 
@@ -341,8 +340,7 @@ async fn validate_execfile_rights() {
     );
 }
 
-// Example test to start up a v2 component harness to test when opening a path that goes through a
-// remote mount point, the server forwards the request to the remote correctly.
+/// Creates a directory with a remote mount inside of it, and checks that the remote can be opened.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
     let harness = TestHarness::new().await;
@@ -355,41 +353,75 @@ async fn open_remote_directory_test() {
 
     let remote_name = "remote_directory";
 
-    // Request an extra directory connection from the harness to use as the remote,
-    // and interpose the requests from the server under test to this remote.
-    let (logger, mut rx) = Io1RequestLoggerFactory::new();
-    let remote_dir_server =
-        logger.get_logged_directory(remote_name.to_string(), remote_dir_server).await;
+    // Request an extra directory connection from the harness to use as the remote.
     let root = root_directory(vec![]);
     harness
         .proxy
         .get_directory(root, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, remote_dir_server)
         .expect("Cannot get empty remote directory");
 
-    let (test_dir_proxy, test_dir_server) =
-        create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+    // Create a directory with a remote directory inside of it.
+    let root_dir = harness.get_directory_with_remote_directory(
+        remote_dir_client,
+        remote_name,
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+    );
+
+    open_node::<io::DirectoryMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+        io::MODE_TYPE_DIRECTORY,
+        remote_name,
+    )
+    .await;
+}
+
+/// Creates a directory with a remote mount containing a file inside of it, and checks that the
+/// file can be opened through the remote.
+#[fasync::run_singlethreaded(test)]
+async fn open_remote_file_test() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_remote_dir.unwrap_or_default() {
+        return;
+    }
+
+    let (remote_dir_client, remote_dir_server) =
+        create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints");
+
+    let remote_name = "remote_directory";
+
+    // Request an extra directory connection from the harness to use as the remote.
+    let root = root_directory(vec![file(TEST_FILE, vec![])]);
     harness
         .proxy
-        .get_directory_with_remote_directory(
-            remote_dir_client,
-            remote_name,
-            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
-            test_dir_server,
-        )
-        .expect("Cannot get test harness directory");
+        .get_directory(root, io::OPEN_RIGHT_READABLE, remote_dir_server)
+        .expect("Cannot get empty remote directory");
 
-    let (_remote_dir_proxy, remote_dir_server) =
-        create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
-    test_dir_proxy
-        .open(io::OPEN_RIGHT_READABLE, io::MODE_TYPE_DIRECTORY, remote_name, remote_dir_server)
-        .expect("Cannot open remote directory");
+    // Create a directory with a remote directory inside of it.
+    let root_dir = harness.get_directory_with_remote_directory(
+        remote_dir_client,
+        remote_name,
+        io::OPEN_RIGHT_READABLE,
+    );
 
-    // Wait on an open call to the interposed remote directory.
-    let open_request_string = rx.next().await.expect("Local tx/rx channel was closed");
+    // Test opening file by opening the remote directory first and then opening the file.
+    let remote_dir_proxy = open_node::<io::DirectoryMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_DIRECTORY,
+        remote_name,
+    )
+    .await;
+    open_node::<io::NodeMarker>(&remote_dir_proxy, io::OPEN_RIGHT_READABLE, 0, TEST_FILE).await;
 
-    // TODO(fxbug.dev/45613):: Bare-metal testing against returned request string. We need
-    // to find a more ergonomic return format.
-    assert_eq!(open_request_string, "remote_directory flags:1, mode:16384, path:.");
+    // Test opening file directly though local directory by crossing remote automatically.
+    open_node::<io::NodeMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_DIRECTORY,
+        [remote_name, "/", TEST_FILE].join("").as_str(),
+    )
+    .await;
 }
 
 /// Creates a directory with all rights, and checks it can be opened for all subsets of rights.

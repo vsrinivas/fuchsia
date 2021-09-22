@@ -11,6 +11,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/vfs/cpp/vmo_file.h>
 #include <zircon/status.h>
 
@@ -32,22 +33,24 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
 
   void GetConfig(GetConfigCallback callback) final {
     fuchsia::io::test::Io1Config config;
-    // TODO(fxbug.dev/82672): Need to update the following configuration options to ensure
-    // that all features of the SDK VFS library are being tested correctly.
-    config.set_no_vmofile(true);     // vfs::VmoFile
-    config.set_no_get_buffer(true);  // Appears to be supported.
-    config.set_no_remote_dir(true);  // vfs::RemoteDir
-    config.set_no_admin(true);       // ?
-    // TODO(fxbug.dev/82672): Validate the following are still unsupported.
-    config.set_no_execfile(true);
-    config.set_immutable_dir(true);
-    config.set_no_rename(true);
-    config.set_no_link(true);
-    config.set_no_set_attr(true);
-    // Validated configuration options:
-    config.set_immutable_file(false);               // Files are mutable.
+
+    // Supported configuration options:
+    config.set_immutable_file(false);  // Files are mutable.
+    config.set_no_remote_dir(false);   // vfs::RemoteDir
+
+    // Unsupported configuration options:
+    config.set_immutable_dir(true);                 // OPEN_FLAG_CREATE is not supported.
+    config.set_no_admin(true);                      // Admin flag is not supported.
+    config.set_no_rename(true);                     // vfs::PseudoDir does not support Rename.
+    config.set_no_link(true);                       // Link/Unlink is not supported.
+    config.set_no_set_attr(true);                   // SetAttr is not supported.
     config.set_no_get_token(true);                  // GetToken is unsupported.
     config.set_non_conformant_path_handling(true);  // Path handling is currently inconsistent.
+
+    // TODO(fxbug.dev/45287): Support VmoFile, ExecFile, and GetBuffer.
+    config.set_no_vmofile(true);
+    config.set_no_execfile(true);
+    config.set_no_get_buffer(true);
 
     callback(std::move(config));
   }
@@ -55,8 +58,15 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
   void GetDirectoryWithRemoteDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> remote_directory, std::string dirname,
       uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
-    // TODO(fxbug.dev/82672): Add support for remote directory nodes.
-    ZX_ASSERT_MSG(false, "TODO(fxbug.dev/82672): Serving directory with remote not supported yet!");
+    auto root = std::make_unique<vfs::PseudoDir>();
+    auto remote_dir_entry = std::make_unique<vfs::RemoteDir>(std::move(remote_directory));
+
+    zx_status_t status = root->AddEntry(dirname, std::move(remote_dir_entry));
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to add Remote directory entry!");
+    status = root->Serve(flags, directory_request.TakeChannel());
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve remote directory!");
+
+    directories_.push_back(std::move(root));
   }
 
   void GetDirectory(fuchsia::io::test::Directory root, uint32_t flags,
@@ -69,8 +79,8 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
       }
     }
 
-    zx_status_t status = dir->Serve(flags, directory_request.TakeChannel());
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve directory!");
+    ZX_ASSERT_MSG(dir->Serve(flags, directory_request.TakeChannel()) == ZX_OK,
+                  "Failed to serve directory!");
     directories_.push_back(std::move(dir));
   }
 
@@ -84,7 +94,8 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
             AddEntry(*child_entry, *dir_entry);
           }
         }
-        dest.AddEntry(entry.directory().name(), std::move(dir_entry));
+        ZX_ASSERT_MSG(dest.AddEntry(entry.directory().name(), std::move(dir_entry)) == ZX_OK,
+                      "Failed to add Directory entry!");
         break;
       }
       case fuchsia::io::test::DirectoryEntry::Tag::kFile: {
@@ -97,7 +108,8 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
         };
         auto file_entry = std::make_unique<vfs::PseudoFile>(std::numeric_limits<size_t>::max(),
                                                             read_handler, DummyWriter);
-        dest.AddEntry(entry.file().name(), std::move(file_entry));
+        ZX_ASSERT_MSG(dest.AddEntry(entry.file().name(), std::move(file_entry)) == ZX_OK,
+                      "Failed to add File entry!");
         break;
       }
       case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile: {

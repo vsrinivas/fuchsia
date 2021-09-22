@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::flags::Rights, fidl::endpoints::create_proxy, fidl_fuchsia_io as io,
-    fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    crate::flags::Rights,
+    fidl::endpoints::{create_proxy, ClientEnd},
+    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon as zx,
 };
 
 /// Helper struct for connecting to an io1 test harness and running a conformance test on it.
@@ -46,12 +48,26 @@ impl TestHarness {
         TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights, execfile_rights }
     }
 
-    /// Creates and returns a Directory with the given structure from the test harness.
+    /// Creates a DirectoryProxy with the given root directory structure.
     pub fn get_directory(&self, root: io_test::Directory, flags: u32) -> io::DirectoryProxy {
         let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
         self.proxy
             .get_directory(root, flags, server)
             .expect("Cannot get directory from test harness");
+        client
+    }
+
+    /// Creates a DirectoryProxy with the specified remote directory mounted at the given path.
+    pub fn get_directory_with_remote_directory(
+        &self,
+        remote_dir: ClientEnd<io::DirectoryMarker>,
+        path: &str,
+        flags: u32,
+    ) -> io::DirectoryProxy {
+        let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+        self.proxy
+            .get_directory_with_remote_directory(remote_dir, path, flags, server)
+            .expect("Cannot get remote directory from test harness");
         client
     }
 }

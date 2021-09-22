@@ -7,13 +7,6 @@
 //! Crate to provide fidl logging and test setup helpers for conformance tests
 //! for io.fidl.
 
-/// Allows logging of requests from a io.Directory channel.
-pub mod directory_request_logger;
-
-/// Allows aggregating requests from many io1 protocol channel loggers into one
-/// source.
-pub mod io1_request_logger_factory;
-
 /// Test harness helper struct.
 pub mod test_harness;
 
