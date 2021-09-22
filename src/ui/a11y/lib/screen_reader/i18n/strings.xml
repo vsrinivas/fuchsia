@@ -34,12 +34,23 @@
         <xliff:g id="name" example="first option">{name}</xliff:g>, radio button unselected</string>
     <!-- Spoken message that describes a table. For example, a <table> html tag. -->
     <string name="role_table">Table</string>
+    <!-- Spoken message that describes a table row. -->
+    <string name="role_table_row">Row</string>
+    <!-- Spoken message that describes a table row header. -->
+    <string name="role_table_row_header">Row header</string>
+    <!-- Spoken message that describes a table column header. -->
+    <string name="role_table_column_header">Column header</string>
+    <!-- Spoken message that describes a table cell. -->
+    <string name="role_table_cell">Cell</string>
     <!-- Spoken message that summarizes a table. -->
     <string name="table_summary">
         <xliff:g id="table_name" example="days of the week">{table_name}</xliff:g>,        <xliff:g id="table_rows" example="10">{table_rows}</xliff:g> by <xliff:g id="table_columns" example="7">{table_columns}</xliff:g>
     </string>
     <!-- Spoken message that summarizes a table cell. -->
     <string name="cell_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g> column <xliff:g id="column_index" example="1">{column_index}</xliff:g>
+    </string>
+    <!-- Spoken message that summarizes a table row. -->
+    <string name="row_summary">Row <xliff:g id="row_index" example="2">{row_index}</xliff:g>
     </string>
     <!-- Spoken message that describes an element that is checked. For example, a check box is checked in a html form. -->
     <string name="element_checked">Checked</string>
