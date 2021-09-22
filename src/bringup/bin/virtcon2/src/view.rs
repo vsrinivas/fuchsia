@@ -93,6 +93,12 @@ const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
 // Amount of change to font size when zooming.
 const FONT_SIZE_INCREMENT: f32 = 14.0;
 
+// Maximum terminal size.
+// TODO(fxbug.dev/85164): Increase these when Mold/Carnelian is not limited to
+// 65536 layers.
+const MAX_COLUMNS: usize = 240;
+const MAX_ROWS: usize = 135;
+
 struct Animation {
     // Artboard has weak references to data owned by file.
     _file: rive::File,
@@ -221,9 +227,15 @@ impl VirtualConsoleViewAssistant {
 
     // Resize all terminals for 'new_size'.
     fn resize_terminals(&mut self, new_size: &Size, new_font_size: f32) {
-        let floored_size = new_size.floor();
         let cell_size = font_to_cell_size(new_font_size, new_font_size * CELL_PADDING_FACTOR);
-        let size = Size::new(floored_size.width, floored_size.height - cell_size.height);
+        let grid_size =
+            Size::new(new_size.width / cell_size.width, new_size.height / cell_size.height).floor();
+        let clamped_grid_size = grid_size.min(Size::new(MAX_COLUMNS as f32, MAX_ROWS as f32));
+        let clamped_size = Size::new(
+            clamped_grid_size.width * cell_size.width,
+            clamped_grid_size.height * cell_size.height,
+        );
+        let size = Size::new(clamped_size.width, clamped_size.height - cell_size.height);
         let size_info = SizeInfo {
             width: size.width,
             height: size.height,
