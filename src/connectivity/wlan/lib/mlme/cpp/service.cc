@@ -33,25 +33,6 @@ std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg) {
   }
 }
 
-zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCode result_code) {
-  debugfn();
-  wlan_mlme::JoinConfirm conf;
-  conf.result_code = result_code;
-  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_JoinConf_Ordinal);
-}
-
-zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            wlan_mlme::AuthenticateResultCode code) {
-  debugfn();
-  wlan_mlme::AuthenticateConfirm conf;
-  peer_sta.CopyTo(conf.peer_sta_address.data());
-  // TODO(tkilbourn): set this based on the actual auth type
-  conf.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
-  conf.result_code = code;
-  return SendServiceMsg(device, &conf,
-                        fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_Ordinal);
-}
-
 zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                wlan_mlme::AuthenticationTypes auth_type) {
   debugfn();
@@ -77,17 +58,6 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
   ind.reason_code = code;
   return SendServiceMsg(device, &ind,
                         fuchsia::wlan::mlme::internal::kMLME_DeauthenticateInd_Ordinal);
-}
-
-zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCode code,
-                             uint16_t aid) {
-  debugfn();
-  ZX_DEBUG_ASSERT(code != wlan_mlme::AssociateResultCode::SUCCESS || aid != 0);
-
-  wlan_mlme::AssociateConfirm conf;
-  conf.result_code = code;
-  conf.association_id = aid;
-  return SendServiceMsg(device, &conf, fuchsia::wlan::mlme::internal::kMLME_AssociateConf_Ordinal);
 }
 
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,

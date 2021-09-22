@@ -237,7 +237,7 @@ type WlanJoinResult = strict enum : uint8 {
 };
 
 type WlanifJoinConfirm = struct {
-    result_code WlanJoinResult;
+    result_code ieee80211.StatusCode;
 };
 
 type WlanAuthResult = strict enum : uint8 {
@@ -252,7 +252,7 @@ type WlanAuthResult = strict enum : uint8 {
 type WlanifAuthConfirm = struct {
     peer_sta_address ieee80211.MacAddr;
     auth_type WlanAuthType;
-    result_code WlanAuthResult;
+    result_code ieee80211.StatusCode;
 };
 
 type WlanifAuthResp = struct {
@@ -285,7 +285,7 @@ type WlanAssocResult = strict enum : uint8 {
 };
 
 type WlanifAssocConfirm = struct {
-    result_code WlanAssocResult;
+    result_code ieee80211.StatusCode;
     association_id uint16;
     wmm_param_present bool;
     wmm_param array<uint8, WLAN_WMM_PARAM_LEN>;

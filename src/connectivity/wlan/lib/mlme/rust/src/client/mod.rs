@@ -240,7 +240,7 @@ impl ClientMlme {
                 ));
                 self.ctx.device.access_sme_sender(|sender| {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
-                        result_code: fidl_mlme::JoinResultCode::Success,
+                        result_code: fidl_ieee80211::StatusCode::Success,
                     })
                 })
             }
@@ -248,9 +248,7 @@ impl ClientMlme {
                 error!("Error setting up device for join: {}", e);
                 self.ctx.device.access_sme_sender(|sender| {
                     sender.send_join_conf(&mut fidl_mlme::JoinConfirm {
-                        // TODO(fxbug.dev/44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
-                        // Can we do better?
-                        result_code: fidl_mlme::JoinResultCode::JoinFailureTimeout,
+                        result_code: fidl_ieee80211::StatusCode::JoinFailure,
                     })
                 })?;
                 Err(e)
@@ -861,7 +859,7 @@ impl<'a> BoundClient<'a> {
     fn send_authenticate_conf(
         &mut self,
         auth_type: fidl_mlme::AuthenticationTypes,
-        result_code: fidl_mlme::AuthenticateResultCode,
+        result_code: fidl_ieee80211::StatusCode,
     ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut fidl_mlme::AuthenticateConfirm {
@@ -876,7 +874,7 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-ASSOCIATE.confirm message to the SME.
-    fn send_associate_conf_failure(&mut self, result_code: fidl_mlme::AssociateResultCode) {
+    fn send_associate_conf_failure(&mut self, result_code: fidl_ieee80211::StatusCode) {
         // AID used for reporting failed associations to SME.
         const FAILED_ASSOCIATION_AID: mac::Aid = 0;
 
@@ -909,7 +907,7 @@ impl<'a> BoundClient<'a> {
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id,
             capability_info: capability_info.raw(),
-            result_code: fidl_mlme::AssociateResultCode::Success,
+            result_code: fidl_ieee80211::StatusCode::Success,
             rates: vec![],
             wmm_param: None,
             ht_cap: None,
@@ -2274,7 +2272,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 capability_info: 0x1234,
-                result_code: fidl_mlme::AssociateResultCode::Success,
+                result_code: fidl_ieee80211::StatusCode::Success,
                 rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
                 wmm_param: None,
                 ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
@@ -2293,7 +2291,7 @@ mod tests {
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        client.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedExternalReason);
+        client.send_associate_conf_failure(fidl_ieee80211::StatusCode::DeniedNoMoreStas);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
@@ -2303,7 +2301,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 capability_info: 0,
-                result_code: fidl_mlme::AssociateResultCode::RefusedExternalReason,
+                result_code: fidl_ieee80211::StatusCode::DeniedNoMoreStas,
                 rates: vec![],
                 wmm_param: None,
                 ht_cap: None,

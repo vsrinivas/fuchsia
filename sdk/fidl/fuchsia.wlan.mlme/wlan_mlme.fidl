@@ -110,7 +110,7 @@ type JoinResultCode = strict enum {
 };
 
 type JoinConfirm = struct {
-    result_code JoinResultCode;
+    result_code ieee80211.StatusCode;
 };
 
 // MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
@@ -148,7 +148,7 @@ type AuthenticateResultCode = strict enum {
 type AuthenticateConfirm = struct {
     peer_sta_address ieee80211.MacAddr;
     auth_type AuthenticationTypes;
-    result_code AuthenticateResultCode;
+    result_code ieee80211.StatusCode;
 
 // etc
 };
@@ -228,7 +228,7 @@ type AssociateResultCode = strict enum {
 };
 
 type AssociateConfirm = struct {
-    result_code AssociateResultCode;
+    result_code ieee80211.StatusCode;
     // CapabilityInformation
     association_id uint16;
 

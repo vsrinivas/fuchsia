@@ -390,7 +390,7 @@ mod tests {
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
         let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
-            fidl_mlme::AuthenticateResultCode::Refused,
+            fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
         ));
         let stats = stats_collector.report_connect_finished(result.clone());
 

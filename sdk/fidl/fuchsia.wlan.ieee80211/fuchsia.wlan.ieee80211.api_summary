@@ -116,6 +116,7 @@ enum/member fuchsia.wlan.ieee80211/StatusCode.INSUFFICIENT_TCLAS_PROCESSING_RESO
 enum/member fuchsia.wlan.ieee80211/StatusCode.INVALID_PARAMETERS 38
 enum/member fuchsia.wlan.ieee80211/StatusCode.INVALID_RSNE 72
 enum/member fuchsia.wlan.ieee80211/StatusCode.INVALID_RSNE_CAPABILITIES 45
+enum/member fuchsia.wlan.ieee80211/StatusCode.JOIN_FAILURE 256
 enum/member fuchsia.wlan.ieee80211/StatusCode.MAF_LIMIT_EXCEEDED 101
 enum/member fuchsia.wlan.ieee80211/StatusCode.MCCAOP_RESERVATION_CONFLICT 100
 enum/member fuchsia.wlan.ieee80211/StatusCode.MCCA_TRACK_LIMIT_EXCEEDED 102
@@ -156,6 +157,7 @@ enum/member fuchsia.wlan.ieee80211/StatusCode.RESTRICTION_FROM_AUTHORIZED_GDB 10
 enum/member fuchsia.wlan.ieee80211/StatusCode.ROBUST_MANAGEMENT_POLICY_VIOLATION 31
 enum/member fuchsia.wlan.ieee80211/StatusCode.SECURITY_DISABLED 5
 enum/member fuchsia.wlan.ieee80211/StatusCode.SERVER_UNREACHABLE 65
+enum/member fuchsia.wlan.ieee80211/StatusCode.SPURIOUS_DEAUTH_OR_DISASSOC 257
 enum/member fuchsia.wlan.ieee80211/StatusCode.STATUS_CIPHER_OUT_OF_POLICY 46
 enum/member fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_AKMP 43
 enum/member fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_ELEMENT 40

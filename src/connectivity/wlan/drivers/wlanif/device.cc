@@ -733,7 +733,7 @@ void Device::JoinConf(const wlanif_join_confirm_t* resp) {
   wlan_mlme::JoinConfirm fidl_resp;
 
   // result_code
-  fidl_resp.result_code = ConvertJoinResultCode(resp->result_code);
+  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
 
   binding_->events().JoinConf(std::move(fidl_resp));
 }
@@ -756,7 +756,7 @@ void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
   fidl_resp.auth_type = ConvertAuthType(resp->auth_type);
 
   // result_code
-  fidl_resp.result_code = ConvertAuthResultCode(resp->result_code);
+  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
 
   binding_->events().AuthenticateConf(std::move(fidl_resp));
 }
@@ -839,7 +839,7 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
   wlan_mlme::AssociateConfirm fidl_resp;
 
   // result_code
-  fidl_resp.result_code = ConvertAssocResultCode(resp->result_code);
+  fidl_resp.result_code = static_cast<wlan_ieee80211::StatusCode>(resp->result_code);
 
   // association_id
   fidl_resp.association_id = resp->association_id;

@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
+#include "ddk/hw/wlan/ieee80211/c/banjo.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
@@ -135,7 +136,7 @@ class AssocTest : public SimTest {
     std::vector<uint8_t> ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
 
     // There should be one result for each association response received
-    std::list<wlan_assoc_result_t> expected_results;
+    std::list<status_code_t> expected_results;
     std::vector<uint8_t> expected_wmm_param;
 
     // An optional function to call when we see the association request go out.
@@ -443,7 +444,7 @@ TEST_F(AssocTest, SignalReportTest) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -469,7 +470,7 @@ TEST_F(AssocTest, StatsQueryReqTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   ap.EnableBeacon(zx::msec(100));
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::SendStatsQuery, this), zx::msec(30));
@@ -551,7 +552,7 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   ap.EnableBeacon(zx::msec(100));
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   DetailedHistogramErrorInject();
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
@@ -661,7 +662,7 @@ TEST_F(AssocTest, NoAps) {
 
   const common::MacAddr kBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
   context_.bssid = kBssid;
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   context_.ssid = {.len = 6, .data = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 
@@ -682,7 +683,7 @@ TEST_F(AssocTest, SimpleTest) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -703,7 +704,7 @@ TEST_F(AssocTest, SsidTest) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -733,7 +734,7 @@ TEST_F(AssocTest, WrongIds) {
   simulation::FakeAp ap3(env_.get(), kDefaultBssid, kWrongSsid, kDefaultChannel);
   aps_.push_back(&ap3);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -755,9 +756,9 @@ TEST_F(AssocTest, RepeatedAssocTest) {
 
   // The associations at 11ms and 12ms should be immediately refused (because there is already an
   // association in progress), and eventually the association that was in progress should succeed.
-  context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
-  context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
-  context_.expected_results.push_back(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_back(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(11));
@@ -778,7 +779,7 @@ TEST_F(AssocTest, ApIgnoredRequest) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -802,7 +803,7 @@ TEST_F(AssocTest, ApTemporarilyRefusedRequest) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED_TEMPORARILY);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_TEMPORARILY);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -833,7 +834,7 @@ TEST_F(AssocTest, ApRefusedRequest) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -869,7 +870,7 @@ TEST_F(AssocTest, SimFwIgnoreAssocReq) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_back(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   AssocErrorInject();
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(50));
@@ -914,7 +915,7 @@ TEST_F(AssocTest, IgnoreRespMismatch) {
 
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendBadResp, this);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
@@ -976,7 +977,7 @@ TEST_F(AssocTest, IgnoreExtraResp) {
   // Create our device instance
   Init();
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
   context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
 
@@ -997,7 +998,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
@@ -1025,7 +1026,7 @@ TEST_F(AssocTest, AssocWithWmm) {
 
   uint8_t expected_wmm_param[] = {0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
                                   0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00};
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_wmm_param.insert(context_.expected_wmm_param.end(), expected_wmm_param,
                                      expected_wmm_param + sizeof(expected_wmm_param));
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendAssocRespWithWmm, this);
@@ -1047,7 +1048,7 @@ TEST_F(AssocTest, DisassocFromSelfTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   start_disassoc_ = true;
@@ -1087,7 +1088,7 @@ TEST_F(AssocTest, DisassocNotSelfTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   start_disassoc_ = true;
@@ -1108,7 +1109,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   disassoc_from_ap_ = true;
@@ -1136,7 +1137,7 @@ TEST_F(AssocTest, LinkEventTest) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   disassoc_from_ap_ = true;
@@ -1161,7 +1162,7 @@ TEST_F(AssocTest, deauth_from_ap) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   deauth_from_ap_ = true;
@@ -1187,7 +1188,7 @@ TEST_F(AssocTest, deauth_from_self) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   deauth_from_ap_ = false;
@@ -1213,8 +1214,8 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   ap.EnableBeacon(zx::msec(100));
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::DeauthClient, this), zx::sec(1));
@@ -1239,8 +1240,8 @@ TEST_F(AssocTest, simple_reassoc) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
@@ -1261,8 +1262,8 @@ TEST_F(AssocTest, deauth_during_reassoc) {
   simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
+  context_.expected_results.push_front(STATUS_CODE_SUCCESS);
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::DisassocFromAp, this), zx::sec(2));
@@ -1291,7 +1292,7 @@ TEST_F(AssocTest, AssocMaxRetries) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   zx_status_t status;
   uint32_t max_assoc_retries = 5;
@@ -1329,7 +1330,7 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedOut) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
@@ -1356,7 +1357,7 @@ TEST_F(AssocTest, AssocNoRetries) {
   ap.SetAssocHandling(simulation::FakeAp::ASSOC_REFUSED);
   aps_.push_back(&ap);
 
-  context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  context_.expected_results.push_front(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   zx_status_t status;
   uint32_t max_assoc_retries = 0;

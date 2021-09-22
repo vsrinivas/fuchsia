@@ -162,7 +162,7 @@ impl Joining {
         context: &mut Context,
     ) -> Result<Authenticating, Idle> {
         match conf.result_code {
-            fidl_mlme::JoinResultCode::Success => {
+            fidl_ieee80211::StatusCode::Success => {
                 context.info.report_auth_started();
                 let (auth_type, sae_password) = match &self.cmd.protection {
                     Protection::Rsna(rsna) => match rsna.supplicant.get_auth_cfg() {
@@ -220,7 +220,7 @@ impl Authenticating {
         context: &mut Context,
     ) -> Result<Associating, Idle> {
         match conf.result_code {
-            fidl_mlme::AuthenticateResultCode::Success => {
+            fidl_ieee80211::StatusCode::Success => {
                 context.info.report_assoc_started();
                 send_mlme_assoc_req(
                     self.cmd.bss.bssid.clone(),
@@ -240,16 +240,7 @@ impl Authenticating {
             }
             other => {
                 let msg = format!("Authenticate request failed: {:?}", other);
-                match other {
-                    // TODO(fxbug.dev/79114): These result codes should never make it to here
-                    // since they should be separately processed by the SAE handshake.
-                    fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired
-                    | fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
-                        error!("{}", msg)
-                    }
-                    _ => warn!("{}", msg),
-                }
-
+                warn!("{}", msg);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
                     context,
@@ -274,7 +265,7 @@ impl Authenticating {
             &mut self.cmd.connect_txn_sink,
             context,
             ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
-                fidl_mlme::AuthenticateResultCode::Refused,
+                fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             )),
         );
         state_change_ctx.set_msg(msg);
@@ -353,7 +344,7 @@ impl Associating {
                 }
             });
         let link_state = match conf.result_code {
-            fidl_mlme::AssociateResultCode::Success => {
+            fidl_ieee80211::StatusCode::Success => {
                 context.info.report_assoc_success(context.att_id);
                 if let Some(capability_info) = self.capability_info.as_ref() {
                     let negotiated_cap = intersect_with_ap_as_client(capability_info, &conf.into());
@@ -374,8 +365,7 @@ impl Associating {
                             ConnectResult::Failed(
                                 AssociationFailure {
                                     bss_protection: self.cmd.bss.protection(),
-                                    code:
-                                        fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
+                                    code: fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch,
                                 }
                                 .into(),
                             ),
@@ -463,7 +453,7 @@ impl Associating {
             ConnectResult::Failed(
                 AssociationFailure {
                     bss_protection: self.cmd.bss.protection(),
-                    code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                    code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
                 }
                 .into(),
             ),
@@ -487,7 +477,7 @@ impl Associating {
             ConnectResult::Failed(
                 AssociationFailure {
                     bss_protection: self.cmd.bss.protection(),
-                    code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                    code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
                 }
                 .into(),
             ),
@@ -534,7 +524,7 @@ impl Associating {
                     ConnectResult::Failed(
                         AssociationFailure {
                             bss_protection: self.cmd.bss.protection(),
-                            code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                            code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                         }
                         .into(),
                     ),
@@ -1515,19 +1505,19 @@ mod tests {
         expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
-        let join_conf = create_join_conf(fidl_mlme::JoinResultCode::Success);
+        let join_conf = create_join_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(join_conf, &mut h.context);
 
         expect_auth_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AuthenticateConf as a response
-        let auth_conf = create_auth_conf(bssid.clone(), fidl_mlme::AuthenticateResultCode::Success);
+        let auth_conf = create_auth_conf(bssid.clone(), fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(auth_conf, &mut h.context);
 
         expect_assoc_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are connected
@@ -1552,7 +1542,7 @@ mod tests {
         expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
-        let join_conf = create_join_conf(fidl_mlme::JoinResultCode::Success);
+        let join_conf = create_join_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(join_conf, &mut h.context);
 
         // (sme->mlme) Expect an SetKeysRequest
@@ -1566,13 +1556,13 @@ mod tests {
         );
 
         // (mlme->sme) Send an AuthenticateConf as a response
-        let auth_conf = create_auth_conf(bssid.clone(), fidl_mlme::AuthenticateResultCode::Success);
+        let auth_conf = create_auth_conf(bssid.clone(), fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(auth_conf, &mut h.context);
 
         expect_assoc_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are connected
@@ -1598,19 +1588,19 @@ mod tests {
         expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
-        let join_conf = create_join_conf(fidl_mlme::JoinResultCode::Success);
+        let join_conf = create_join_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(join_conf, &mut h.context);
 
         expect_auth_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AuthenticateConf as a response
-        let auth_conf = create_auth_conf(bssid.clone(), fidl_mlme::AuthenticateResultCode::Success);
+        let auth_conf = create_auth_conf(bssid.clone(), fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(auth_conf, &mut h.context);
 
         expect_assoc_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         expect_finalize_association_req(
             &mut h.mlme_stream,
@@ -1662,19 +1652,19 @@ mod tests {
         expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
-        let join_conf = create_join_conf(fidl_mlme::JoinResultCode::Success);
+        let join_conf = create_join_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(join_conf, &mut h.context);
 
         expect_auth_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AuthenticateConf as a response
-        let auth_conf = create_auth_conf(bssid.clone(), fidl_mlme::AuthenticateResultCode::Success);
+        let auth_conf = create_auth_conf(bssid.clone(), fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(auth_conf, &mut h.context);
 
         expect_assoc_req(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         expect_finalize_association_req(
             &mut h.mlme_stream,
@@ -1727,16 +1717,14 @@ mod tests {
 
         // (mlme->sme) Send an unsuccessful JoinConf
         let join_conf = MlmeEvent::JoinConf {
-            resp: fidl_mlme::JoinConfirm {
-                result_code: fidl_mlme::JoinResultCode::JoinFailureTimeout,
-            },
+            resp: fidl_mlme::JoinConfirm { result_code: fidl_ieee80211::StatusCode::JoinFailure },
         };
         let state = state.on_mlme_event(join_conf, &mut h.context);
         assert_idle(state);
 
         // User should be notified that connection attempt failed
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
-            assert_eq!(result, ConnectFailure::JoinFailure(fidl_mlme::JoinResultCode::JoinFailureTimeout).into());
+            assert_eq!(result, ConnectFailure::JoinFailure(fidl_ieee80211::StatusCode::JoinFailure).into());
         });
     }
 
@@ -1760,7 +1748,7 @@ mod tests {
             resp: fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: connect_command_one().0.bss.bssid.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::Refused,
+                result_code: fidl_ieee80211::StatusCode::DeniedNoMoreStas,
             },
         };
         let state = state.on_mlme_event(auth_conf, &mut h.context);
@@ -1768,7 +1756,7 @@ mod tests {
 
         // User should be notified that connection attempt failed
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
-            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_mlme::AuthenticateResultCode::Refused).into());
+            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_ieee80211::StatusCode::DeniedNoMoreStas).into());
         });
     }
 
@@ -1789,8 +1777,7 @@ mod tests {
         }));
 
         // (mlme->sme) Send an unsuccessful AssociateConf
-        let assoc_conf =
-            create_assoc_conf(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::RefusedReasonUnspecified);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         assert_idle(state);
 
@@ -1798,7 +1785,7 @@ mod tests {
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, AssociationFailure {
                 bss_protection,
-                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }
             .into());
         });
@@ -1861,7 +1848,7 @@ mod tests {
         };
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
         assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
-            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_mlme::AuthenticateResultCode::Refused).into());
+            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc).into());
         });
         assert_idle(state);
     }
@@ -1883,7 +1870,7 @@ mod tests {
         assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, AssociationFailure {
                 bss_protection,
-                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             }
             .into());
         });
@@ -1907,7 +1894,7 @@ mod tests {
         assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, AssociationFailure {
                 bss_protection,
-                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             }
             .into());
         });
@@ -1925,7 +1912,7 @@ mod tests {
         suppl_mock.set_start_failure(format_err!("failed to start supplicant"));
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
@@ -2046,7 +2033,7 @@ mod tests {
             capability_info: None,
             protection_ie: None,
         }));
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
@@ -2355,7 +2342,7 @@ mod tests {
             capability_info: None,
             protection_ie: None,
         }));
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // Verify ping timeout is scheduled
@@ -2462,7 +2449,7 @@ mod tests {
         expect_assoc_req(&mut h.mlme_stream, bss.bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are reconnected
@@ -2497,15 +2484,14 @@ mod tests {
         expect_assoc_req(&mut h.mlme_stream, bss.bssid);
 
         // (mlme->sme) Send an AssociateConf
-        let assoc_conf =
-            create_assoc_conf(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::RefusedReasonUnspecified);
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that reconnection attempt failed
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect })) => {
             assert_eq!(result, AssociationFailure {
                 bss_protection: BssProtection::Open,
-                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }.into());
             assert!(is_reconnect);
         });
@@ -2716,7 +2702,7 @@ mod tests {
         let mut h = TestHelper::new();
         let (cmd, _connect_txn_stream) = connect_command_one();
         let resp = fidl_mlme::AssociateConfirm {
-            result_code: fidl_mlme::AssociateResultCode::Success,
+            result_code: fidl_ieee80211::StatusCode::Success,
             association_id: 1,
             capability_info: 0,
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],

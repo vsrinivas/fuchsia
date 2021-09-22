@@ -125,9 +125,9 @@ class AuthTest : public SimTest {
 
   simulation::FakeAp ap_;
 
-  wlan_join_result_t join_status_ = WLAN_JOIN_RESULT_SUCCESS;
-  wlan_auth_result_t auth_status_ = WLAN_AUTH_RESULT_SUCCESS;
-  wlan_assoc_result_t assoc_status_ = WLAN_ASSOC_RESULT_SUCCESS;
+  status_code_t join_status_ = STATUS_CODE_SUCCESS;
+  status_code_t auth_status_ = STATUS_CODE_SUCCESS;
+  status_code_t assoc_status_ = STATUS_CODE_SUCCESS;
   std::list<AuthFrameContent> rx_auth_frames_;
   std::list<AuthFrameContent> expect_auth_frames_;
 
@@ -260,7 +260,7 @@ void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
 
 void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   join_status_ = resp->result_code;
-  if (join_status_ != WLAN_JOIN_RESULT_SUCCESS) {
+  if (join_status_ != STATUS_CODE_SUCCESS) {
     return;
   }
 
@@ -324,7 +324,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
 
 void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   auth_status_ = resp->result_code;
-  if (auth_status_ != WLAN_AUTH_RESULT_SUCCESS) {
+  if (auth_status_ != STATUS_CODE_SUCCESS) {
     return;
   }
 
@@ -514,7 +514,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
 
 void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   assoc_status_ = resp->result_code;
-  if (assoc_status_ != WLAN_ASSOC_RESULT_SUCCESS) {
+  if (assoc_status_ != STATUS_CODE_SUCCESS) {
     return;
   }
 
@@ -670,7 +670,7 @@ TEST_F(AuthTest, WEP40ChallengeFailure) {
   VerifyAuthFrames();
 
   // Assoc should have failed
-  EXPECT_NE(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+  EXPECT_NE(assoc_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WEPOPEN) {
@@ -699,7 +699,7 @@ TEST_F(AuthTest, AuthFailTest) {
   env_->ScheduleNotification(std::bind(&AuthTest::StartAuth, this), zx::msec(10));
 
   env_->Run(kTestDuration);
-  EXPECT_NE(auth_status_, WLAN_AUTH_RESULT_SUCCESS);
+  EXPECT_NE(auth_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WEPIgnoreTest) {
@@ -725,7 +725,7 @@ TEST_F(AuthTest, WEPIgnoreTest) {
                                      wlan_ieee80211::StatusCode::SUCCESS);
   }
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
 }
 
 TEST_F(AuthTest, WPA1Test) {
@@ -743,7 +743,7 @@ TEST_F(AuthTest, WPA1Test) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA1FailTest) {
@@ -758,7 +758,7 @@ TEST_F(AuthTest, WPA1FailTest) {
   env_->Run(kTestDuration);
 
   // Assoc should have failed
-  EXPECT_NE(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+  EXPECT_NE(assoc_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA2Test) {
@@ -776,7 +776,7 @@ TEST_F(AuthTest, WPA2Test) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
 }
 
 TEST_F(AuthTest, WPA2FailTest) {
@@ -789,7 +789,7 @@ TEST_F(AuthTest, WPA2FailTest) {
 
   env_->Run(kTestDuration);
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_NE(join_status_, WLAN_JOIN_RESULT_SUCCESS);
+  EXPECT_NE(join_status_, STATUS_CODE_SUCCESS);
 }
 
 // This test case verifies that auth req will be refused when security types of client and AP are
@@ -819,7 +819,7 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   }
 
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
 
 // Verify a normal SAE authentication work flow in driver.
@@ -843,7 +843,7 @@ TEST_F(AuthTest, WPA3Test) {
 
   VerifyAuthFrames();
   // Make sure that OnAssocConf is called, so the check inside is called.
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_SUCCESS);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_SUCCESS);
   EXPECT_EQ(sae_auth_state_, DONE);
 }
 
@@ -861,7 +861,7 @@ TEST_F(AuthTest, WPA3ApIgnoreTest) {
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 
@@ -887,7 +887,7 @@ TEST_F(AuthTest, WPA3SupplicantIgnoreTest) {
                                    wlan_ieee80211::StatusCode::SUCCESS);
   VerifyAuthFrames();
 
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, CONFIRM);
 }
 
@@ -916,7 +916,7 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
   expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_SAE,
                                    wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 
@@ -943,7 +943,7 @@ TEST_F(AuthTest, WPA3WrongBssid) {
 
   // No auth frame will be sent out.
   VerifyAuthFrames();
-  EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_status_, STATUS_CODE_REJECTED_SEQUENCE_TIMEOUT);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
 

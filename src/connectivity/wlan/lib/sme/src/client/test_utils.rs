@@ -7,8 +7,8 @@ use {
         capabilities::{ClientCapabilities, StaCapabilities},
         client::{rsn::Supplicant, ServingApInfo},
     },
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     futures::channel::mpsc,
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
@@ -75,13 +75,13 @@ pub fn fake_wmm_param() -> fidl_mlme::WmmParameter {
     wmm_param
 }
 
-pub fn create_join_conf(result_code: fidl_mlme::JoinResultCode) -> fidl_mlme::MlmeEvent {
+pub fn create_join_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::JoinConf { resp: fidl_mlme::JoinConfirm { result_code } }
 }
 
 pub fn create_auth_conf(
     bssid: Bssid,
-    result_code: fidl_mlme::AuthenticateResultCode,
+    result_code: fidl_ieee80211::StatusCode,
 ) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AuthenticateConf {
         resp: fidl_mlme::AuthenticateConfirm {
@@ -112,7 +112,7 @@ pub fn fake_negotiated_channel_and_capabilities() -> (channel::Channel, ClientCa
     )
 }
 
-pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCode) -> fidl_mlme::MlmeEvent {
+pub fn create_assoc_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AssociateConf {
         resp: fidl_mlme::AssociateConfirm {
             result_code,

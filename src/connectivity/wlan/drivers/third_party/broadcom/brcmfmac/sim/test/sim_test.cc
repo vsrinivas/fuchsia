@@ -117,7 +117,7 @@ void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
 
   stats_.assoc_results.push_back(*resp);
 
-  if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
+  if (resp->result_code == STATUS_CODE_SUCCESS) {
     assoc_ctx_.state = AssocContext::kAssociated;
     stats_.assoc_successes++;
   } else {
@@ -145,7 +145,7 @@ void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // We only support open authentication, for now
   ZX_ASSERT(resp->auth_type == WLAN_AUTH_TYPE_OPEN_SYSTEM);
 
-  if (resp->result_code != WLAN_AUTH_RESULT_SUCCESS) {
+  if (resp->result_code != STATUS_CODE_SUCCESS) {
     assoc_ctx_.state = AssocContext::kNone;
     return;
   }
@@ -180,7 +180,7 @@ void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
 
   stats_.join_results.push_back(resp->result_code);
 
-  if (resp->result_code != WLAN_JOIN_RESULT_SUCCESS) {
+  if (resp->result_code != STATUS_CODE_SUCCESS) {
     assoc_ctx_.state = AssocContext::kNone;
     return;
   }

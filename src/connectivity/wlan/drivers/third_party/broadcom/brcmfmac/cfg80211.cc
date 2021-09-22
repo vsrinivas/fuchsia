@@ -1756,7 +1756,7 @@ void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confi
   }
 }
 
-void brcmf_return_assoc_result(struct net_device* ndev, wlan_assoc_result_t assoc_result) {
+void brcmf_return_assoc_result(struct net_device* ndev, status_code_t status_code) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping association callback");
@@ -1767,12 +1767,12 @@ void brcmf_return_assoc_result(struct net_device* ndev, wlan_assoc_result_t asso
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlanif_assoc_confirm_t conf;
 
-  conf.result_code = assoc_result;
+  conf.result_code = status_code;
   BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
   set_assoc_conf_wmm_param(cfg, &conf);
 
-  BRCMF_IFDBG(WLANIF, ndev, "Sending assoc result to SME. result: %" PRIu8 ", aid: %" PRIu16,
+  BRCMF_IFDBG(WLANIF, ndev, "Sending assoc result to SME. result: %" PRIu16 ", aid: %" PRIu16,
               conf.result_code, conf.association_id);
 
   wlanif_impl_ifc_assoc_conf(&ndev->if_proto, &conf);
@@ -1820,7 +1820,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
     err = ZX_ERR_BAD_STATE;
     BRCMF_WARN("Connection not possible. Another connection attempt in progress.");
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
     goto done;
   }
 
@@ -1911,7 +1911,7 @@ fail:
   if (err != ZX_OK) {
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     BRCMF_DBG(CONN, "Failed during join: %s", zx_status_get_string(err));
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   }
 
 done:
@@ -3575,7 +3575,7 @@ void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req) {
                 MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
 #endif /* !defined(NDEBUG) */
 
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   } else {
     brcmf_cfg80211_connect(ndev, req);
   }
@@ -4586,7 +4586,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
 
   if (!resp) {
     BRCMF_ERR("Invalid arguments, resp is nullptr.");
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_EXTERNAL_REASON);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -4609,7 +4609,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
   auto ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_list, ifp->bss.ies_count);
   if (ssid.empty()) {
     BRCMF_ERR("No SSID IE in BSS");
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   }
 
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
@@ -4625,7 +4625,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
   if (err != ZX_OK) {
     BRCMF_ERR("Set iovar assoc_mgr_cmd fail. err: %s, fw_err: %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   }
 
   return err;
@@ -4681,7 +4681,7 @@ zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* fr
   if (err != ZX_OK) {
     BRCMF_ERR("Error sending SAE auth frame. err: %s, fw_err: %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
-    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+    brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED);
   }
 
   return err;
@@ -5070,7 +5070,7 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
 }
 
 static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status,
-                                          wlan_assoc_result_t assoc_result) {
+                                          status_code_t assoc_result) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
   BRCMF_DBG(TRACE, "Enter");
@@ -5092,7 +5092,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
           // Indicate the rssi soon after connection
           cfg80211_signal_ind(ndev);
         }
-        brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_SUCCESS);
+        brcmf_return_assoc_result(ndev, STATUS_CODE_SUCCESS);
         break;
       }
       case brcmf_connect_status_t::ASSOC_REQ_FAILED: {
@@ -5131,7 +5131,7 @@ static void brcmf_connect_timeout_worker(WorkItem* work) {
   // In case the timeout happens in SAE process.
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
   brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTING_TIMEOUT,
-                         WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+                         STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
 
 static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
@@ -5144,7 +5144,7 @@ static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
             brcmf_fweh_get_auth_type_str(e->auth_type), e->flags);
   BRCMF_DBG(CONN, "Linkup\n");
 
-  brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, WLAN_ASSOC_RESULT_SUCCESS);
+  brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, STATUS_CODE_SUCCESS);
   brcmf_net_setcarrier(ifp, true);
 
   BRCMF_DBG(TRACE, "Exit\n");
@@ -5158,39 +5158,7 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   // For this event, e->reason is in the StatusCode enum space.
-  wlan_assoc_result_t assoc_result = {};
-  switch (static_cast<wlan_ieee80211::StatusCode>(e->reason)) {
-    case wlan_ieee80211::StatusCode::SUCCESS:
-      assoc_result = WLAN_ASSOC_RESULT_SUCCESS;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_CAPABILITIES_MISMATCH:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_EXTERNAL_REASON:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_AP_OUT_OF_MEMORY:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_AP_OUT_OF_MEMORY;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_BASIC_RATES_MISMATCH:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_BASIC_RATES_MISMATCH;
-      break;
-    case wlan_ieee80211::StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
-      assoc_result = WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED;
-      break;
-    case wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY;
-      break;
-    default:
-      assoc_result = WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED;
-      break;
-  }
+  status_code_t assoc_result = e->reason;
 
   return brcmf_bss_connect_done(ifp,
                                 (e->status == BRCMF_E_STATUS_SUCCESS)
@@ -5318,7 +5286,7 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
       brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
     }
     brcmf_bss_connect_done(ifp, brcmf_connect_status_t::AUTHENTICATION_FAILED,
-                           WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
+                           STATUS_CODE_REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED);
   }
 
   // Only care about the authentication frames during SAE process.
@@ -5383,7 +5351,7 @@ static void brcmf_indicate_no_network(struct brcmf_if* ifp) {
 
   BRCMF_DBG(CONN, "No network\n");
   brcmf_bss_connect_done(ifp, brcmf_connect_status_t::NO_NETWORK,
-                         WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON);
+                         STATUS_CODE_REFUSED_EXTERNAL_REASON);
   brcmf_disconnect_done(cfg);
 }
 
@@ -5409,8 +5377,8 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   BRCMF_INFO_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
   brcmf_bss_connect_done(ifp, connect_status,
                          (connect_status == brcmf_connect_status_t::CONNECTED)
-                             ? WLAN_ASSOC_RESULT_SUCCESS
-                             : WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+                             ? STATUS_CODE_SUCCESS
+                             : STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 
   wlan_ieee80211::ReasonCode reason_code = (connect_status == brcmf_connect_status_t::LINK_FAILED)
                                                ? wlan_ieee80211::ReasonCode::MLME_LINK_FAILED
@@ -5536,7 +5504,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("Received roaming notification - unsupported");
     } else {
-      brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, WLAN_ASSOC_RESULT_SUCCESS);
+      brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, STATUS_CODE_SUCCESS);
       brcmf_net_setcarrier(ifp, true);
     }
   }

@@ -79,17 +79,17 @@ impl Joined {
                 return Err(());
             }
         };
-        match algorithm.initiate(sta) {
-            Ok(akm::AkmState::Failed) | Err(_) => {
-                sta.send_authenticate_conf(
-                    algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCode::Refused,
-                );
-                error!("Failed to initiate authentication");
-                Err(())
-            }
-            _ => Ok(algorithm),
-        }
+
+        let auth_type = algorithm.auth_type();
+        let result = match algorithm.initiate(sta) {
+            Ok(akm::AkmState::Failed) => Err(fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm),
+            Err(_) => Err(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+            Ok(_) => Ok(algorithm),
+        };
+        result.map_err(|status_code| {
+            sta.send_authenticate_conf(auth_type, status_code);
+            error!("Failed to initiate authentication");
+        })
     }
 }
 
@@ -110,24 +110,26 @@ impl Authenticating {
             Ok(akm::AkmState::AuthComplete) => {
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCode::Success,
+                    fidl_ieee80211::StatusCode::Success,
                 );
                 akm::AkmState::AuthComplete
             }
             Ok(akm::AkmState::InProgress) => akm::AkmState::InProgress,
             Ok(akm::AkmState::Failed) => {
                 error!("authentication with BSS failed");
+                // TODO(fxbug.dev/83828): pass the status code from the original auth frame
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
+                    fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                 );
                 akm::AkmState::Failed
             }
             Err(e) => {
                 error!("Internal error while authenticating: {}", e);
+                // TODO(fxbug.dev/83828): pass the status code from the original auth frame
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
+                    fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                 );
                 akm::AkmState::Failed
             }
@@ -185,7 +187,7 @@ impl Authenticating {
         self.algorithm.cancel(sta);
         sta.send_authenticate_conf(
             self.algorithm.auth_type(),
-            fidl_mlme::AuthenticateResultCode::Refused,
+            fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
         );
     }
 
@@ -199,7 +201,7 @@ impl Authenticating {
             Ok(akm::AkmState::Failed) => {
                 sta.send_authenticate_conf(
                     self.algorithm.auth_type(),
-                    fidl_mlme::AuthenticateResultCode::AuthFailureTimeout,
+                    fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
                 );
             }
             _ => (),
@@ -239,7 +241,7 @@ impl Authenticated {
             }
             Err(e) => {
                 error!("Error sending association request frame: {}", e);
-                sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedTemporarily);
+                sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
                 Err(())
             }
         }
@@ -327,7 +329,8 @@ impl Associating {
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
                 sta.send_associate_conf_failure(
-                    fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                    fidl_ieee80211::StatusCode::from_primitive(status_code.0)
+                        .unwrap_or(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                 );
                 Err(())
             }
@@ -343,7 +346,7 @@ impl Associating {
         sta.ctx.timer.cancel_event(self.timeout);
 
         warn!("received unexpected disassociation frame while associating");
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
+        sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc);
     }
 
     /// Processes an inbound deauthentication frame.
@@ -357,7 +360,7 @@ impl Associating {
              association failed: {:?}",
             { deauth_hdr.reason_code }
         );
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
+        sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc);
     }
 
     /// Invoked when the pending timeout fired. The original association request is now
@@ -369,7 +372,7 @@ impl Associating {
         // ensure the timeout is canceled in any case.
         sta.ctx.timer.cancel_event(self.timeout);
 
-        sta.send_associate_conf_failure(fidl_mlme::AssociateResultCode::RefusedTemporarily);
+        sta.send_associate_conf_failure(fidl_ieee80211::StatusCode::RefusedTemporarily);
     }
 
     fn on_sme_deauthenticate(&self, sta: &mut BoundClient<'_>) {
@@ -1317,7 +1320,7 @@ mod tests {
     fn empty_associate_conf() -> fidl_mlme::AssociateConfirm {
         fidl_mlme::AssociateConfirm {
             association_id: 0,
-            result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+            result_code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             capability_info: 0,
             rates: vec![],
             wmm_param: None,
@@ -1470,7 +1473,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::Refused,
+                result_code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }
         );
     }
@@ -1508,7 +1511,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::Success,
+                result_code: fidl_ieee80211::StatusCode::Success,
             }
         );
     }
@@ -1546,7 +1549,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::AuthenticationRejected,
+                result_code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }
         );
     }
@@ -1573,7 +1576,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::AuthFailureTimeout,
+                result_code: fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
             }
         );
     }
@@ -1602,7 +1605,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCode::Refused,
+                result_code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             }
         );
     }
@@ -1671,7 +1674,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
-                result_code: fidl_mlme::AssociateResultCode::Success,
+                result_code: fidl_ieee80211::StatusCode::Success,
                 capability_info: 52,
                 ..empty_associate_conf()
             }
@@ -1711,7 +1714,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
-                result_code: fidl_mlme::AssociateResultCode::Success,
+                result_code: fidl_ieee80211::StatusCode::Success,
                 capability_info: 52,
                 ..empty_associate_conf()
             }
@@ -1751,7 +1754,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                result_code: fidl_ieee80211::StatusCode::NotInSameBss,
                 ..empty_associate_conf()
             }
         );
@@ -1780,7 +1783,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCode::RefusedTemporarily,
+                result_code: fidl_ieee80211::StatusCode::RefusedTemporarily,
                 ..empty_associate_conf()
             }
         );
@@ -1811,7 +1814,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                result_code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
                 ..empty_associate_conf()
             }
         );
@@ -1842,7 +1845,7 @@ mod tests {
             msg,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                result_code: fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
                 ..empty_associate_conf()
             }
         );

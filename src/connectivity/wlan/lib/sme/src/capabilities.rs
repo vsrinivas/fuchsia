@@ -143,7 +143,7 @@ impl StaCapabilities {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         wlan_common::{ie, mac},
     };
 
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn fidl_assoc_conf_to_cap() {
         let ac = fidl_mlme::AssociateConfirm {
-            result_code: fidl_mlme::AssociateResultCode::Success,
+            result_code: fidl_ieee80211::StatusCode::Success,
             association_id: 123,
             capability_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129],

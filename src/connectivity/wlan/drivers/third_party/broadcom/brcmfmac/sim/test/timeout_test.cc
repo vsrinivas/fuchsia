@@ -93,7 +93,7 @@ TEST_F(TimeoutTest, AssocTimeout) {
   EXPECT_EQ(client_ifc_.stats_.assoc_attempts, 1U);
   const auto assoc_results = &client_ifc_.stats_.assoc_results;
   EXPECT_EQ(assoc_results->size(), 1U);
-  EXPECT_EQ(assoc_results->front().result_code, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  EXPECT_EQ(assoc_results->front().result_code, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
 
 // verify the disassociation timeout is triggered.

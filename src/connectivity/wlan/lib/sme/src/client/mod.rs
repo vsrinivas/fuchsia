@@ -244,23 +244,20 @@ pub enum ConnectFailure {
     // TODO(fxbug.dev/68531): SME no longer performs scans when connecting. Remove the
     //                        `ScanFailure` variant.
     ScanFailure(fidl_mlme::ScanResultCode),
-    JoinFailure(fidl_mlme::JoinResultCode),
-    AuthenticationFailure(fidl_mlme::AuthenticateResultCode),
+    JoinFailure(fidl_ieee80211::StatusCode),
+    AuthenticationFailure(fidl_ieee80211::StatusCode),
     AssociationFailure(AssociationFailure),
     EstablishRsnaFailure(EstablishRsnaFailure),
 }
 
 impl ConnectFailure {
+    // TODO(fxbug.dev/82654): ConnectFailure::is_timeout is not useful, remove it
     pub fn is_timeout(&self) -> bool {
-        // Note: we don't return true for JoinFailureTimeout because it's the only join failure
-        //       type, so in practice it's returned whether there's a timeout or not.
-        //       For association, we don't have a failure type for timeout, so cannot deduce
+        // Note: For association, we don't have a failure type for timeout, so cannot deduce
         //       whether an association failure is due to timeout.
-        //
-        // TODO(fxbug.dev/29897): Change JOIN_FAILURE_TIMEOUT -> JOIN_FAILURE
         match self {
             ConnectFailure::AuthenticationFailure(failure) => match failure {
-                fidl_mlme::AuthenticateResultCode::AuthFailureTimeout => true,
+                fidl_ieee80211::StatusCode::RejectedSequenceTimeout => true,
                 _ => false,
             },
             ConnectFailure::EstablishRsnaFailure(failure) => match failure {
@@ -317,7 +314,7 @@ impl ConnectFailure {
             // credentials for a deprecated WEP association.
             ConnectFailure::AssociationFailure(AssociationFailure {
                 bss_protection: BssProtection::Wep,
-                code: fidl_mlme::AssociateResultCode::RefusedNotAuthenticated,
+                code: fidl_ieee80211::StatusCode::RefusedUnauthenticatedAccessNotSupported,
             }) => true,
             _ => false,
         }
@@ -340,7 +337,7 @@ impl From<SelectNetworkFailure> for ConnectFailure {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AssociationFailure {
     pub bss_protection: BssProtection,
-    pub code: fidl_mlme::AssociateResultCode,
+    pub code: fidl_ieee80211::StatusCode,
 }
 
 impl From<AssociationFailure> for ConnectFailure {
@@ -941,7 +938,7 @@ mod tests {
     fn test_detection_of_rejected_wep_credentials() {
         let failure = ConnectFailure::AssociationFailure(AssociationFailure {
             bss_protection: BssProtection::Wep,
-            code: fidl_mlme::AssociateResultCode::RefusedNotAuthenticated,
+            code: fidl_ieee80211::StatusCode::RefusedUnauthenticatedAccessNotSupported,
         });
         assert!(failure.likely_due_to_credential_rejected());
     }
@@ -953,7 +950,7 @@ mod tests {
 
         let failure = ConnectFailure::AssociationFailure(AssociationFailure {
             bss_protection: BssProtection::Wpa2Personal,
-            code: fidl_mlme::AssociateResultCode::RefusedNotAuthenticated,
+            code: fidl_ieee80211::StatusCode::RefusedUnauthenticatedAccessNotSupported,
         });
         assert!(!failure.likely_due_to_credential_rejected());
     }
@@ -1453,9 +1450,9 @@ mod tests {
         req.multiple_bss_candidates = false;
         let _connect_fut = sme.on_connect_command(req);
 
-        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::Success));
-        sme.on_mlme_event(create_auth_conf(bssid, fidl_mlme::AuthenticateResultCode::Success));
-        sme.on_mlme_event(create_assoc_conf(fidl_mlme::AssociateResultCode::Success));
+        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
+        sme.on_mlme_event(create_auth_conf(bssid, fidl_ieee80211::StatusCode::Success));
+        sme.on_mlme_event(create_assoc_conf(fidl_ieee80211::StatusCode::Success));
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
@@ -1487,8 +1484,8 @@ mod tests {
         let bssid = Bssid(bss_description.bssid);
         report_fake_scan_result(&mut sme, bss_description);
 
-        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::Success));
-        let auth_failure = fidl_mlme::AuthenticateResultCode::Refused;
+        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
+        let auth_failure = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
         sme.on_mlme_event(create_auth_conf(bssid, auth_failure));
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
@@ -1516,7 +1513,7 @@ mod tests {
         let _connect_fut = sme.on_connect_command(req);
 
         // Stop connecting attempt early since we just want to get ConnectStats
-        sme.on_mlme_event(create_join_conf(fidl_mlme::JoinResultCode::JoinFailureTimeout));
+        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::JoinFailure));
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
             assert_variant!(stats.candidate_network, Some(candidate_network) => {

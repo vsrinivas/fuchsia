@@ -139,7 +139,7 @@ class DataFrameTest : public SimTest {
     std::vector<uint8_t> ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
 
     // There should be one result for each association response received
-    std::list<wlan_assoc_result_t> expected_results;
+    std::list<status_code_t> expected_results;
 
     // Track number of association responses
     size_t assoc_resp_count = 0;
@@ -331,7 +331,7 @@ void DataFrameTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
     return;
   }
   assoc_context_.deauth_ind_count++;
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   // Do a re-association right after deauth.
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(200));
 }
@@ -466,7 +466,7 @@ TEST_F(DataFrameTest, TxDataFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a data frame from driver to the AP
@@ -505,7 +505,7 @@ TEST_F(DataFrameTest, TxMalformedDataFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a illegal ethernet frame from us to the AP
@@ -530,7 +530,7 @@ TEST_F(DataFrameTest, TxEapolFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(10));
 
   // Simulate sending a EAPOL packet from us to the AP
@@ -565,7 +565,7 @@ TEST_F(DataFrameTest, RxDataFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
@@ -597,7 +597,7 @@ TEST_F(DataFrameTest, RxMalformedDataFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
 
   // ethernet frame too small to hold ethernet header
@@ -626,7 +626,7 @@ TEST_F(DataFrameTest, RxEapolFrame) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(30));
 
   // Want to send packet from test to driver
@@ -657,7 +657,7 @@ TEST_F(DataFrameTest, RxEapolFrameAfterAssoc) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
@@ -690,7 +690,7 @@ TEST_F(DataFrameTest, RxUcastBeforeAssoc) {
   aps_.push_back(&ap);
 
   // Assoc driver with fake AP
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), delay);
 
   // Want to send packet from test to driver
@@ -722,7 +722,7 @@ TEST_F(DataFrameTest, DeauthWhenRxFreeze) {
   simulation::FakeAp ap(env_.get(), kApBssid, kApSsid, kDefaultChannel);
   aps_.push_back(&ap);
 
-  assoc_context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  assoc_context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), kFirstAssocDelay);
 
   env_->Run(kRxFreezeTestDuration);

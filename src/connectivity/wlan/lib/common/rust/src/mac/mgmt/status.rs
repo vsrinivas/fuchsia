@@ -116,4 +116,11 @@ impl StatusCode {
     pub const RESTRICTION_FROM_AUTHORIZED_GDB: Self = Self(106);
     pub const AUTHORIZATION_DEENABLED: Self = Self(107);
     // 108-65535 Reserved
+
+    /// Reserved values we will use for our own purposes.
+    /// -----
+    /// Join failure.
+    pub const JOIN_FAILURE: Self = Self(256);
+    /// Authenticate or associate fails due to spurious deauth or diassoc.
+    pub const SPURIOUS_DEAUTH_OR_DISASSOC: Self = Self(257);
 }

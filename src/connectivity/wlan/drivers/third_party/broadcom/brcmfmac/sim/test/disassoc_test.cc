@@ -42,7 +42,7 @@ TEST_F(SimTest, Disassoc) {
   // Make sure association was successful
   ASSERT_EQ(client_ifc.stats_.assoc_attempts, 1U);
   ASSERT_EQ(client_ifc.stats_.assoc_results.size(), 1U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, WLAN_ASSOC_RESULT_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, STATUS_CODE_SUCCESS);
 
   // Make sure disassociation was successful
   EXPECT_EQ(ap.GetNumAssociatedClient(), 0U);
@@ -88,8 +88,8 @@ TEST_F(SimTest, SmeDeauthFollowedByFwDisassoc) {
   // Make sure associations were successful
   ASSERT_EQ(client_ifc.stats_.assoc_attempts, 2U);
   ASSERT_EQ(client_ifc.stats_.assoc_results.size(), 2U);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, WLAN_ASSOC_RESULT_SUCCESS);
-  ASSERT_EQ(client_ifc.stats_.assoc_results.back().result_code, WLAN_ASSOC_RESULT_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.assoc_results.front().result_code, STATUS_CODE_SUCCESS);
+  ASSERT_EQ(client_ifc.stats_.assoc_results.back().result_code, STATUS_CODE_SUCCESS);
 
   // Make sure disassociation was successful
   EXPECT_EQ(ap.GetNumAssociatedClient(), 0U);

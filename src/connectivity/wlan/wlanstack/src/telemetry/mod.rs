@@ -1030,7 +1030,7 @@ mod tests {
     fn test_log_connect_stats_auth_failure() {
         let connect_stats = ConnectStats {
             result: ConnectFailure::AuthenticationFailure(
-                fidl_mlme::AuthenticateResultCode::Refused,
+                fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             )
             .into(),
             ..fake_connect_stats()
@@ -1057,7 +1057,7 @@ mod tests {
         let connect_stats = ConnectStats {
             result: ConnectFailure::AssociationFailure(AssociationFailure {
                 bss_protection: BssProtection::Open,
-                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             })
             .into(),
             ..fake_connect_stats()

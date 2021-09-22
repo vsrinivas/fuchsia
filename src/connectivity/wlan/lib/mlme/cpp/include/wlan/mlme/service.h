@@ -146,17 +146,11 @@ namespace service {
 
 // Returns the peer MAC address for messages which carry one, none otherwise.
 std::optional<common::MacAddr> GetPeerAddr(const BaseMlmeMsg& msg);
-zx_status_t SendJoinConfirm(DeviceInterface* device,
-                            ::fuchsia::wlan::mlme::JoinResultCode result_code);
-zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
-                            ::fuchsia::wlan::mlme::AuthenticateResultCode code);
 zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                ::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                  ::fuchsia::wlan::ieee80211::ReasonCode code);
-zx_status_t SendAssocConfirm(DeviceInterface* device,
-                             ::fuchsia::wlan::mlme::AssociateResultCode code, uint16_t aid = 0);
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                 uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
                                 std::optional<fbl::Span<const uint8_t>> rsn_body);

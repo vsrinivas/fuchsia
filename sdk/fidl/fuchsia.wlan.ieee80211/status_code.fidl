@@ -110,4 +110,11 @@ type StatusCode = strict enum : uint16 {
     ENABLEMENT_DENIED = 105;
     RESTRICTION_FROM_AUTHORIZED_GDB = 106;
     AUTHORIZATION_DEENABLED = 107;
+
+    /// Reserved values we will use for our own purposes.
+    /// -----
+    /// Join failure.
+    JOIN_FAILURE = 256;
+    /// Authenticate or associate fails due to spurious deauth or diassoc.
+    SPURIOUS_DEAUTH_OR_DISASSOC = 257;
 };

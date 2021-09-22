@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
@@ -120,43 +120,43 @@ pub(super) fn convert_to_fail_at_dim(
 }
 
 pub(super) fn convert_auth_error_code(
-    code: fidl_mlme::AuthenticateResultCode,
+    code: fidl_ieee80211::StatusCode,
 ) -> metrics::AuthenticationFailureMetricDimensionErrorCode {
     use metrics::AuthenticationFailureMetricDimensionErrorCode::*;
     match code {
-        fidl_mlme::AuthenticateResultCode::Success => {
+        fidl_ieee80211::StatusCode::Success => {
             warn!("unexpected success code in auth failure");
             Refused
         }
-        fidl_mlme::AuthenticateResultCode::Refused => Refused,
-        fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired => AntiCloggingTokenRequired,
-        fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
-            FiniteCyclicGroupNotSupported
-        }
-        fidl_mlme::AuthenticateResultCode::AuthenticationRejected => AuthenticationRejected,
-        fidl_mlme::AuthenticateResultCode::AuthFailureTimeout => AuthFailureTimeout,
+        fidl_ieee80211::StatusCode::AntiCloggingTokenRequired => AntiCloggingTokenRequired,
+        fidl_ieee80211::StatusCode::UnsupportedFiniteCyclicGroup => FiniteCyclicGroupNotSupported,
+        fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm => AuthenticationRejected,
+        fidl_ieee80211::StatusCode::RejectedSequenceTimeout => AuthFailureTimeout,
+        _ => Refused,
     }
 }
 
 pub(super) fn convert_assoc_error_code(
-    code: fidl_mlme::AssociateResultCode,
+    code: fidl_ieee80211::StatusCode,
 ) -> metrics::AssociationFailureMetricDimensionErrorCode {
     use metrics::AssociationFailureMetricDimensionErrorCode::*;
     match code {
-        fidl_mlme::AssociateResultCode::Success => {
+        fidl_ieee80211::StatusCode::Success => {
             warn!("unexpected success code in assoc failure");
             RefusedReasonUnspecified
         }
-        fidl_mlme::AssociateResultCode::RefusedReasonUnspecified => RefusedReasonUnspecified,
-        fidl_mlme::AssociateResultCode::RefusedNotAuthenticated => RefusedNotAuthenticated,
-        fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch => RefusedCapabilitiesMismatch,
-        fidl_mlme::AssociateResultCode::RefusedExternalReason => RefusedExternalReason,
-        fidl_mlme::AssociateResultCode::RefusedApOutOfMemory => RefusedApOutOfMemory,
-        fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch => RefusedBasicRatesMismatch,
-        fidl_mlme::AssociateResultCode::RejectedEmergencyServicesNotSupported => {
+        fidl_ieee80211::StatusCode::RefusedUnauthenticatedAccessNotSupported => {
+            RefusedNotAuthenticated
+        }
+        fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch => RefusedCapabilitiesMismatch,
+        fidl_ieee80211::StatusCode::RefusedExternalReason => RefusedExternalReason,
+        fidl_ieee80211::StatusCode::RefusedApOutOfMemory => RefusedApOutOfMemory,
+        fidl_ieee80211::StatusCode::RefusedBasicRatesMismatch => RefusedBasicRatesMismatch,
+        fidl_ieee80211::StatusCode::RejectedEmergencyServicesNotSupported => {
             RejectedEmergencyServicesNotSupported
         }
-        fidl_mlme::AssociateResultCode::RefusedTemporarily => RefusedTemporarily,
+        fidl_ieee80211::StatusCode::RefusedTemporarily => RefusedTemporarily,
+        _ => RefusedReasonUnspecified,
     }
 }
 
