@@ -47,28 +47,21 @@ shared_library("zxcrypt-fdio") {
     "volume.cc",
   ]
   public_deps = [
-    # fdio-volume.h has #include <lib/fdio/cpp/caller.h>
-    "//zircon/system/ulib/fdio-caller",
-
     # volume.h includes crypto/aead.h (among others).
     "//src/security/fcrypto",
   ]
   configs += [ "//build/config/fuchsia:integer-paranoia" ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/lib/fdio",
-    "//src/security/kms-stateless",
     "//third_party/boringssl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
@@ -92,8 +85,6 @@ source_set("zxcrypt-client") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/lib/fdio",
     "//src/security/kms-stateless",
-    "//third_party/boringssl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",

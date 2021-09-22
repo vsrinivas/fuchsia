@@ -5,7 +5,6 @@
 #ifndef SRC_SECURITY_ZXCRYPT_FDIO_VOLUME_H_
 #define SRC_SECURITY_ZXCRYPT_FDIO_VOLUME_H_
 
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 
