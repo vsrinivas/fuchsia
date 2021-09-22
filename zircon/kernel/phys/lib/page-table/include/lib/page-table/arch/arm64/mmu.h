@@ -162,7 +162,7 @@ struct PteLowerAttrs {
 //
 // [arm/v8]: D5.3.1 VMSAv8-64 translation table level 0, level 1, and level 2 descriptor formats.
 // [arm/v8]: D5.3.2 Armv8 translation table level 3 descriptor formats
-struct PageTableEntry {
+struct alignas(sizeof(uint64_t)) PageTableEntry {
   // Bit definitions when this PageTableEntry is a block descriptor.
   struct BlockDescriptor {
     uint64_t raw;
