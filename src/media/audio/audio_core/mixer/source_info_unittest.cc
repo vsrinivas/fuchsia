@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "ffl/string.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
 namespace media::audio::mixer {
@@ -16,13 +17,20 @@ class StubMixer : public Mixer {
   bool Mix(float*, int64_t, int64_t*, const void*, int64_t, Fixed*, bool) final { return false; }
 };
 
-TEST(SourceInfoTest, Defaults) {
-  StubMixer mixer;
-  auto& info = mixer.source_info();
+class SourceInfoTest : public testing::Test {
+ protected:
+  void TestPositionAdvanceNoRateModulo(bool advance_source_pos_modulo);
+  void TestPositionAdvanceWithRateModulo(bool advance_source_pos_modulo);
+  void TestPositionAdvanceNegative(bool advance_source_pos_modulo);
+
+  StubMixer mixer_;
+};
+
+TEST_F(SourceInfoTest, Defaults) {
+  auto& info = mixer_.source_info();
 
   EXPECT_EQ(info.next_dest_frame, 0);
   EXPECT_EQ(info.next_source_frame, 0);
-  EXPECT_EQ(info.next_source_pos_modulo, 0ull);
   EXPECT_EQ(info.source_pos_error, zx::duration(0));
 
   EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
@@ -37,19 +45,18 @@ TEST(SourceInfoTest, Defaults) {
 }
 
 // Reset with dest_frame: sets the running dest and frac_src position counters appropriately.
-// next_source_frame is set according to dest_to_frac_source transform, next_source_pos_modulo
+// next_source_frame is set according to dest_to_frac_source transform, source_pos_modulo
 // according to rate_modulo and denominator.
-TEST(SourceInfoTest, ResetPositions) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
+TEST_F(SourceInfoTest, ResetPositions) {
+  auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.SetRateModuloAndDenominator(5, 7);
 
-  auto& info = mixer.source_info();
+  auto& info = mixer_.source_info();
   info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
   // All these values will be overwritten
+  bookkeeping.source_pos_modulo = 1u;
   info.next_dest_frame = -97;
   info.next_source_frame = Fixed(7);
-  info.next_source_pos_modulo = 1u;
   info.source_pos_error = zx::duration(-777);
 
   info.ResetPositions(100, bookkeeping);
@@ -59,128 +66,142 @@ TEST(SourceInfoTest, ResetPositions) {
   EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(1700));
 
   // cleared by ResetPositions
-  EXPECT_EQ(info.next_source_pos_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
   EXPECT_EQ(info.source_pos_error, zx::duration(0));
 }
 
-// Bookkeeping::Reset clears its own struct but should not affect SourceInfo.
-TEST(SourceInfoTest, UnaffectedByBookkeepingReset) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
-  bookkeeping.SetRateModuloAndDenominator(5, 7);
-  bookkeeping.source_pos_modulo = 3u;
-
-  auto& info = mixer.source_info();
-  info.next_dest_frame = 13;
-  info.next_source_frame = Fixed(11);
-  info.next_source_pos_modulo = 2;
-  info.source_pos_error = zx::duration(-17);
-
-  bookkeeping.Reset();
-
-  EXPECT_EQ(info.next_dest_frame, 13);
-  EXPECT_EQ(info.next_source_frame, Fixed(11));
-  EXPECT_EQ(info.next_source_pos_modulo, 2ull);
-  EXPECT_EQ(info.source_pos_error, zx::duration(-17));
-}
-
-// From current values, AdvanceRunningPositions advances running positions for dest, source and
-// source_modulo by given dest frames, based on the step_size, rate_modulo and denominator.
-TEST(SourceInfoTest, AdvanceRunningPositions_NoRateModulo) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
+// From current values, AdvanceAllPositionsTo advances running positions for dest, source and
+// source_modulo to a given dest frame, based on the step_size, rate_modulo and denominator.
+void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_modulo) {
+  auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
   bookkeeping.SetRateModuloAndDenominator(0, 1);
-  bookkeeping.source_pos_modulo = 3;
+  bookkeeping.source_pos_modulo = 1;
 
-  auto& info = mixer.source_info();
+  auto& info = mixer_.source_info();
   info.next_source_frame = Fixed(3);
-  info.next_source_pos_modulo = 1;
   info.source_pos_error = zx::duration(-17);
   info.next_dest_frame = 2;
 
-  info.AdvanceRunningPositionsBy(9, bookkeeping);
+  if (advance_source_pos_modulo) {
+    info.AdvanceAllPositionsTo(11, bookkeeping);
+  } else {
+    info.UpdateRunningPositionsBy(9, bookkeeping);
+  }
 
-  // This should be unchanged
+  // These should be unchanged
   EXPECT_EQ(info.source_pos_error, zx::duration(-17));
-  EXPECT_EQ(info.next_source_pos_modulo, 1u);
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 3u);
+  EXPECT_EQ(bookkeeping.source_pos_modulo, 1u);
 
   // These should be updated
   EXPECT_EQ(info.next_dest_frame, 11u);  // starts at 2, advance 9
-  //
   // Source starts at 3, step_size "1.002", advance by 9 dest, adds 9 frames 18 subframes
   // We expect new source_pos to be 12 frames, 18 subframes.
   EXPECT_EQ(info.next_source_frame, Fixed(12) + Fixed::FromRaw(18))
-      << "next_source_frame "
-      << (info.next_source_frame.raw_value() >> Fixed::Format::FractionalBits) << "."
-      << info.next_source_frame.Fraction().raw_value();
+      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
 }
 
-TEST(SourceInfoTest, AdvanceRunningPositionsTo) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
+TEST_F(SourceInfoTest, AdvanceAllPositions_NoRateModulo) {
+  TestPositionAdvanceNoRateModulo(/* advance_source_pos_modulo = */ true);
+}
+TEST_F(SourceInfoTest, UpdateRunningPositions_NoRateModulo) {
+  TestPositionAdvanceNoRateModulo(/* advance_source_pos_modulo = */ false);
+}
+
+void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_modulo) {
+  auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
   bookkeeping.SetRateModuloAndDenominator(2, 5);
-  bookkeeping.source_pos_modulo = 3;
+  bookkeeping.source_pos_modulo = 2;
 
-  auto& info = mixer.source_info();
+  auto& info = mixer_.source_info();
   info.next_dest_frame = 2;
   info.next_source_frame = Fixed(3);
-  info.next_source_pos_modulo = 1;
   info.source_pos_error = zx::duration(-17);
 
-  info.AdvanceRunningPositionsTo(11, bookkeeping);
+  if (advance_source_pos_modulo) {
+    info.AdvanceAllPositionsTo(11, bookkeeping);
+  } else {
+    info.UpdateRunningPositionsBy(9, bookkeeping);
+  }
 
   // This should be unchanged
   EXPECT_EQ(info.source_pos_error, zx::duration(-17));
 
   // These should be updated
-  //
   // Source starts at 3 with position modulo 1/5, step_size "1.002" with rate_modulo 2/5.
-  // Advancing by 9 dest frames adds (9 * 1.002) to source_pos, plus rate_modulo effects.
-  // source_pos_modulo should increase by (9 * 2), from 1 to 19.
-  // source_pos_modulo / denominator 19/5 (3) means that source_pos += "0.003"
-  // and source_pos_modulo becomes 19 % 5 == 4
-  // We expect new source_pos to be 12 frames, 21 subframes, modulo 4/5.
+  // Advancing by 9 dest frames will add 9 * (1frame + 2subframes) to source_pos
+  // (9 frames + 18 subframes), plus any source_pos_modulo effects.
+  if (advance_source_pos_modulo) {
+    // rate_mod/denom is 2/5, so source_pos_modulo should increase by (9 * 2), from 2 to 20.
+    // source_pos_modulo / denominator (20 / 5) is 4, so source_pos adds 4 subframes.
+    // The remaining source_pos_modulo (20 % 5) is 0.
+    // Thus new source_pos should be 12 frames (3+9), 22 subframes (18+4), modulo 0/5.
+    EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
+  } else {
+    // rate_mod/denom is 2/5, so source_pos_modulo increased by (9 * 2) and ended up as 2 (22).
+    // source_pos_modulo / denominator (22 / 5) is 4, so source_pos adds 4 subframes.
+    // The remaining source_pos_modulo (22 % 5) is 2.
+    // Thus new source_pos should be 12 frames (3+9), 22 subframes (18+4), modulo 2/5.
+    EXPECT_EQ(bookkeeping.source_pos_modulo, 2ull);
+  }
   EXPECT_EQ(info.next_dest_frame, 11u);
-  EXPECT_EQ(info.next_source_frame, Fixed(Fixed(12) + Fixed::FromRaw(21)))
-      << "next_source_frame "
-      << (info.next_source_frame.raw_value() >> Fixed::Format::FractionalBits) << "."
-      << info.next_source_frame.Fraction().raw_value();
-  EXPECT_EQ(info.next_source_pos_modulo, 4ull);
-  // Starts at position modulo 3 (out of 5). Advance by 9 with rate_modulo 2.
-  // Position mod: expect 3 + (9 * 2) = 21, %5 becomes position modulo 1.
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 1u);
+  EXPECT_EQ(info.next_source_frame, Fixed(Fixed(12) + Fixed::FromRaw(22)))
+      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
 }
 
-// Also validate AdvanceRunningPositions for negative offsets.
-TEST(SourceInfoTest, NegativeAdvanceRunningPositionBy) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
+TEST_F(SourceInfoTest, AdvanceAllPositions_WithRateModulo) {
+  TestPositionAdvanceWithRateModulo(/* advance_source_pos_modulo = */ true);
+}
+TEST_F(SourceInfoTest, UpdateRunningPositions_WithRateModulo) {
+  TestPositionAdvanceWithRateModulo(/* advance_source_pos_modulo = */ false);
+}
+
+// Also validate AdvanceAllPositionsTo for negative offsets.
+void SourceInfoTest::TestPositionAdvanceNegative(bool advance_source_pos_modulo) {
+  auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
   bookkeeping.SetRateModuloAndDenominator(2, 5);
 
-  auto& info = mixer.source_info();
+  auto& info = mixer_.source_info();
   info.next_dest_frame = 12;
   info.next_source_frame = Fixed(3);
-  info.next_source_pos_modulo = 0;
+  bookkeeping.source_pos_modulo = 0;
 
-  info.AdvanceRunningPositionsBy(-3, bookkeeping);
+  // Advance by -3 dest frames at a step_size of [1 frame + 2 subframes + mod 2/5]
+  // For -3 dest frames, this is an "advance" of -3 frames, -6 subframes, -6/5 mod.
+  if (advance_source_pos_modulo) {
+    info.AdvanceAllPositionsTo(9, bookkeeping);
 
-  // source_pos starts at 3 frames, 0 subframes, with position modulo 0 out of 5.
-  // Advanced by -3 dest frames at a step_size of [1 frame + 2 subframes+ mod 2/5]
-  // For -3 dest frames, this is a source advance of -3 frames, -6 subframes, -6/5 mod.
-  // source_pos_mod was 0/5, plus -6/5, is now -6/5, but negative modulo must be reduced.
-  // 0 subframes + mod -6/5 becomes -2 subframe + mod 4/5.
-  //
-  // source advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
+    // source_pos starts at 3 frames, 0 subframes, with position modulo 3 out of 5.
+    // source was 3 frames 0 subframes, plus -3f -6sf, is now 0 frames -6 subframes.
+    // source_pos_mod was 0/5, plus -6/5, is now -6/5 (negative modulo must be reduced).
+    // -6 subframes -6/5 becomes 8 subframes + mod 4/5.
+    // Thus source become 0 frames -8 subframes, pos_mod 4/5.
+    EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(-8))
+        << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
+    EXPECT_EQ(bookkeeping.source_pos_modulo, 4ul);
+  } else {
+    info.UpdateRunningPositionsBy(-3, bookkeeping);
+
+    // source_pos starts at 3 frames, 0 subframes, with final position modulo 0 / 5.
+    // 3 frames 0 subframes, plus -3 frames -6 subframes, is now 0 frames -6 subframes.
+    // Unknown source_pos_mod, plus -6/5, is now 0/5 (or -5/5 reduced: must have started at 1/5).
+    // -6 subframes -5/5 becomes -7 subframes + mod 0/5.
+    //
+    // source become 0 frames -7 subframes, pos_mod 0/5.
+    EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(-7))
+        << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
+    EXPECT_EQ(bookkeeping.source_pos_modulo, 0ul);
+  }
   EXPECT_EQ(info.next_dest_frame, 9u);
-  EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(-8))
-      << "next_source_frame "
-      << (info.next_source_frame.raw_value() >> Fixed::Format::FractionalBits) << "."
-      << info.next_source_frame.Fraction().raw_value();
-  EXPECT_EQ(info.next_source_pos_modulo, 4ul);
+}
+
+TEST_F(SourceInfoTest, AdvanceAllPositions_Negative) {
+  TestPositionAdvanceNegative(/* advance_source_pos_modulo = */ true);
+}
+TEST_F(SourceInfoTest, UpdateRunningPositions_Negative) {
+  TestPositionAdvanceNegative(/* advance_source_pos_modulo = */ false);
 }
 
 }  // namespace

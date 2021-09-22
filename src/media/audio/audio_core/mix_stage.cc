@@ -338,8 +338,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
   // If there was insufficient supply to meet our demand, we may not have mixed enough frames, but
   // we advance our destination frame count as if we did, because time rolls on. Same for source.
   auto& bookkeeping = mixer.bookkeeping();
-  info.AdvanceRunningPositionsTo(cur_mix_job_.dest_start_frame + cur_mix_job_.buf_frames,
-                                 bookkeeping);
+  info.AdvanceAllPositionsTo(cur_mix_job_.dest_start_frame + cur_mix_job_.buf_frames, bookkeeping);
   cur_mix_job_.accumulate = true;
 }
 
@@ -415,7 +414,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // If neither of the above, then evidently this source packet intersects our mixer's filter.
   // Compute the offset into the dest buffer where our first generated sample should land, and the
   // offset into the source packet where we should start sampling.
-  int64_t dest_offset = 0;
+  int64_t initial_dest_advance = 0;
   Fixed source_offset = source_for_first_mix_job_frame - source_for_first_packet_frame;
   Fixed source_pos_edge_first_mix_frame = source_for_first_mix_job_frame + pos_width;
 
@@ -427,8 +426,8 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // in frac_frames), converted into frames in the destination timeline. As we scale the source
     // frac_frame delta into dest frames, we want to "round up" any subframes that are present; any
     // source subframes should push our dest frame up to the next integer. Because we entered this
-    // IF in the first place, we have a non-zero fractional source delta, thus dest_offset is
-    // guaranteed to become greater than zero.
+    // IF in the first place, we have a non-zero fractional source delta, thus initial_dest_advance
+    // is guaranteed to become greater than zero.
     //
     // When a position is round-trip converted to another timeline and back again, there is no
     // guarantee that it will result in the exact original value. To make source -> dest -> source
@@ -436,11 +435,14 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // backward), we "round up" when translating from source (fractional) to dest (integral).
     auto first_source_mix_point =
         Fixed(source_for_first_packet_frame - source_pos_edge_first_mix_frame);
-    dest_offset = dest_to_frac_source.Inverse().Scale(first_source_mix_point.raw_value(),
-                                                      TimelineRate::RoundingMode::Ceiling);
-    FX_CHECK(dest_offset > 0);
-
-    source_offset += Fixed::FromRaw(dest_to_frac_source.Scale(dest_offset));
+    initial_dest_advance = dest_to_frac_source.Inverse().Scale(first_source_mix_point.raw_value(),
+                                                               TimelineRate::RoundingMode::Ceiling);
+    auto previous_source_running_position = info.next_source_frame;
+    FX_CHECK(initial_dest_advance > 0);
+    info.AdvanceAllPositionsBy(initial_dest_advance, bookkeeping);
+    auto new_source_running_position = info.next_source_frame;
+    source_offset += new_source_running_position;
+    source_offset -= previous_source_running_position;
 
     // Packet is within the mix window but starts after mix start. MixStream breaks mix jobs into
     // multiple pieces so that each packet gets its own ProcessMix call; this means there was no
@@ -452,6 +454,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // TODO(mpuryear): move packet discontinuity (gap/overlap) detection up into the
     // Renderer/PacketQueue, and remove PartialUnderflow reporting and the metric altogether.
   }
+  int64_t dest_offset = initial_dest_advance;
 
   // Looks like we are ready to go. Mix.
   bool consumed_source;
@@ -506,7 +509,9 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   }
 
   FX_DCHECK(dest_offset <= dest_frames_left);
-  info.AdvanceRunningPositionsBy(dest_offset, bookkeeping);
+  // Bookkeeping (including source_pos_modulo) has already advanced -- now update long-running
+  // position (without double-incrementing source_pos_modulo).
+  info.UpdateRunningPositionsBy(dest_offset - initial_dest_advance, bookkeeping);
 
   if (consumed_source) {
     FX_DCHECK(source_offset + mixer.pos_filter_width() >= source_buffer.length());
@@ -620,11 +625,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   }
 
   if constexpr (kAllowPositionRollback) {
-    // If mix_job starts at a dest position before the prev one ended (within tolerance), roll pos
-    // back using step_size, so that this is not treated as a dest position discontinuity.
+    // If mix_job starts at a dest position before the prev one ended (within tolerance), roll all
+    // positions backwards using step_size so this is not considered a dest position discontinuity.
     if (dest_frame < info.next_dest_frame &&
         dest_frame + kDestPosRollbackTolerance >= info.next_dest_frame) {
-      info.AdvanceRunningPositionsTo(dest_frame, bookkeeping);
+      info.AdvanceAllPositionsTo(dest_frame, bookkeeping);
     }
   }
 

@@ -32,25 +32,5 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }
 
-// Upon Reset, Bookkeeping should clear position modulo. It does not complete in-progress ramps.
-TEST(BookkeepingTest, Reset) {
-  StubMixer mixer;
-  auto& bookkeeping = mixer.bookkeeping();
-  bookkeeping.SetRateModuloAndDenominator(5, 7);
-  bookkeeping.source_pos_modulo = 3;
-  bookkeeping.gain.SetSourceGainWithRamp(-42.0f, zx::sec(1),
-                                         fuchsia::media::audio::RampType::SCALE_LINEAR);
-  EXPECT_TRUE(bookkeeping.gain.IsRamping());
-
-  bookkeeping.Reset();
-
-  // Rate should not be changed, but position modulo should be.
-  EXPECT_EQ(bookkeeping.rate_modulo(), 5ull);
-  EXPECT_EQ(bookkeeping.denominator(), 7ull);
-  EXPECT_TRUE(bookkeeping.gain.IsRamping());
-
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
-}
-
 }  // namespace
 }  // namespace media::audio::mixer
