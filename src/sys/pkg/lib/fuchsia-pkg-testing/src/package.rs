@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fdio::SpawnBuilder,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileObject, NodeInfo},
+    fidl_fuchsia_io::{DirectoryProxy, FileInfo, FileMarker, FileObject, NodeInfo, Representation},
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg::{MetaContents, MetaPackage},
     fuchsia_zircon::{self as zx, prelude::*, Status},
@@ -265,19 +265,35 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
 
     let mut events = file.take_event_stream();
     let open = async move {
-        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } =
-            events.next().await.expect("Some(event)").expect("no fidl error");
+        let event = match events.next().await.expect("Some(event)").expect("no fidl error") {
+            fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } => {
+                match Status::ok(s) {
+                    Err(Status::NOT_FOUND) => {
+                        Err(VerificationError::MissingFile { path: path.to_owned() })
+                    }
+                    Err(status) => {
+                        Err(format_err!("unable to open {:?}: {:?}", path, status).into())
+                    }
+                    Ok(()) => Ok(()),
+                }?;
 
-        match Status::ok(s) {
-            Err(Status::NOT_FOUND) => Err(VerificationError::MissingFile { path: path.to_owned() }),
-            Err(status) => Err(format_err!("unable to open {:?}: {:?}", path, status).into()),
-            Ok(()) => Ok(()),
-        }?;
-
-        let event = match *info.expect("FileEvent to have NodeInfo") {
-            NodeInfo::File(FileObject { event, stream: None }) => event,
-            other => {
-                panic!("NodeInfo from FileEventStream to be File variant with event: {:?}", other)
+                match *info.expect("FileEvent to have NodeInfo") {
+                    NodeInfo::File(FileObject { event, .. }) => event,
+                    other => {
+                        panic!(
+                            "NodeInfo from FileEventStream to be File variant with event: {:?}",
+                            other
+                        )
+                    }
+                }
+            }
+            fidl_fuchsia_io::FileEvent::OnConnectionInfo { info } => {
+                match info.representation {
+                    Some(Representation::File(FileInfo { observer, .. })) => observer,
+                    other => {
+                        panic!("ConnectionInfo from FileEventStream to be File variant with event: {:?}", other)
+                    }
+                }
             }
         };
 

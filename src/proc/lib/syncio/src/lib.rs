@@ -258,13 +258,37 @@ impl Drop for Zxio {
     }
 }
 
+enum NodeKind {
+    File,
+    Directory,
+    Unknown,
+}
+
+impl NodeKind {
+    fn from(info: &fio::NodeInfo) -> NodeKind {
+        match info {
+            fio::NodeInfo::File(_) => NodeKind::File,
+            fio::NodeInfo::Directory(_) => NodeKind::Directory,
+            _ => NodeKind::Unknown,
+        }
+    }
+
+    fn from2(representation: &fio::Representation) -> NodeKind {
+        match representation {
+            fio::Representation::File(_) => NodeKind::File,
+            fio::Representation::Directory(_) => NodeKind::Directory,
+            _ => NodeKind::Unknown,
+        }
+    }
+}
+
 /// A fuchsia.io.Node along with its NodeInfo.
 ///
 /// The NodeInfo provides information about the concrete protocol spoken by the
 /// node.
-pub struct DescribedNode {
-    pub node: fio::NodeSynchronousProxy,
-    pub info: fio::NodeInfo,
+struct DescribedNode {
+    node: fio::NodeSynchronousProxy,
+    kind: NodeKind,
 }
 
 /// Open the given path in the given directory.
@@ -276,7 +300,7 @@ pub struct DescribedNode {
 /// until the directory describes the newly opened node.
 ///
 /// Returns the opened Node, along with its NodeInfo, or an error.
-pub fn directory_open(
+fn directory_open(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,
     flags: u32,
@@ -289,11 +313,16 @@ pub fn directory_open(
     directory.open(flags, mode, path, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;
     let node = fio::NodeSynchronousProxy::new(client_end);
 
-    let fio::NodeEvent::OnOpen_ { s: status, info } =
-        node.wait_for_event(deadline).map_err(|_| zx::Status::IO)?;
-
-    zx::Status::ok(status)?;
-    Ok(DescribedNode { node, info: *info.ok_or(zx::Status::IO)? })
+    match node.wait_for_event(deadline).map_err(|_| zx::Status::IO)? {
+        fio::NodeEvent::OnOpen_ { s: status, info } => {
+            zx::Status::ok(status)?;
+            Ok(DescribedNode { node, kind: NodeKind::from(&*info.ok_or(zx::Status::IO)?) })
+        }
+        fio::NodeEvent::OnConnectionInfo { info } => Ok(DescribedNode {
+            node,
+            kind: NodeKind::from2(&info.representation.ok_or(zx::Status::IO)?),
+        }),
+    }
 }
 
 /// Open a VMO at the given path in the given directory.
@@ -321,8 +350,8 @@ pub fn directory_open_vmo(
     }
 
     let description = directory_open(directory, path, open_flags, 0, deadline)?;
-    let file = match description.info {
-        fio::NodeInfo::File(_) => fio::FileSynchronousProxy::new(description.node.into_channel()),
+    let file = match description.kind {
+        NodeKind::File => fio::FileSynchronousProxy::new(description.node.into_channel()),
         _ => return Err(zx::Status::IO),
     };
 
@@ -431,8 +460,8 @@ mod test {
             0,
             zx::Time::INFINITE,
         )?;
-        assert!(match description.info {
-            fio::NodeInfo::File(_) => true,
+        assert!(match description.kind {
+            NodeKind::File => true,
             _ => false,
         });
         Ok(())

@@ -209,7 +209,19 @@ protocol Node {
         info NodeInfo:optional;
     });
 
-    // TODO: Add OnConnectionInfo from fuchsia.io2.
+    /// An event produced eagerly by the server if requested by
+    /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
+    /// first message from the server, and is sent exactly once.
+    ///
+    /// - `info` See [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    ///   All members should be present.
+    ///
+    /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
+    /// always manifested as an epitaph.
+    @selector("fuchsia.io/Node.OnConnectionInfo")
+    -> OnConnectionInfo(resource struct {
+        info ConnectionInfo;
+    });
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///

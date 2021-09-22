@@ -1663,16 +1663,27 @@ mod tests {
                 .await
                 .expect("cannot clone socket");
         let mut events = alice_cloned.take_event_stream();
-        let psocket::DatagramSocketEvent::OnOpen_ { s, info } =
-            events.next().await.expect("stream closed").expect("failed to decode");
-        assert_eq!(s, zx::sys::ZX_OK);
-        let info = info.unwrap();
-        match *info {
-            fidl_fuchsia_io::NodeInfo::DatagramSocket(_) => (),
-            info => panic!(
-                "Socket Describe call did not return Node of type Socket, got {:?} instead",
-                info
-            ),
+        match events.next().await.expect("stream closed").expect("failed to decode") {
+            psocket::DatagramSocketEvent::OnOpen_ { s, info } => {
+                assert_eq!(s, zx::sys::ZX_OK);
+                let info = info.unwrap();
+                match *info {
+                    fidl_fuchsia_io::NodeInfo::DatagramSocket(_) => (),
+                    info => panic!(
+                        "Socket Describe call did not return Node of type Socket, got {:?} instead",
+                        info
+                    ),
+                }
+            }
+            psocket::DatagramSocketEvent::OnConnectionInfo { info } => {
+                match info.representation.expect("missing representation") {
+                    fidl_fuchsia_io::Representation::DatagramSocket(_) => (),
+                    representation => panic!(
+                        "Socket Describe call did not return Node of type Socket, got {:?} instead",
+                        representation
+                    ),
+                }
+            }
         }
         // describe() explicitly.
         let info = alice_cloned.describe().await.expect("Describe call succeeds");
@@ -2004,9 +2015,16 @@ mod tests {
         let cloned = socket_clone(&socket, flags).await.unwrap();
         {
             let mut events = cloned.take_event_stream();
-            let psocket::DatagramSocketEvent::OnOpen_ { s, .. } =
-                events.next().await.expect("stream closed").expect("failed to decode");
-            assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
+            if let Some(result) = events.next().await {
+                match result.expect("failed to decode") {
+                    psocket::DatagramSocketEvent::OnOpen_ { s, .. } => {
+                        assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
+                    }
+                    psocket::DatagramSocketEvent::OnConnectionInfo { .. } => {
+                        assert!(false);
+                    }
+                }
+            }
         }
         assert!(cloned.into_channel().unwrap().is_closed());
     }

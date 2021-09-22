@@ -4,7 +4,10 @@
 
 use {
     super::*,
-    fidl_fuchsia_io::{DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo},
+    fidl_fuchsia_io::{
+        DirectoryProxy, FileEvent, FileInfo, FileMarker, FileObject, FileProxy, NodeInfo,
+        Representation,
+    },
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
     futures::StreamExt,
@@ -75,16 +78,29 @@ async fn open_blob(
     blobfs.open(flags, 0, merkle, server_end).expect("open blob");
 
     let mut events = file.take_event_stream();
-    let FileEvent::OnOpen_ { s: status, info } = events
+    let event = match events
         .next()
         .await
         .expect("FileEvent stream to be non-empty")
-        .expect("FileEvent stream not to FIDL error");
-    Status::ok(status)?;
-
-    let event = match *info.expect("FileEvent to have NodeInfo") {
-        NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
-        other => panic!("NodeInfo from FileEventStream to be File variant with event: {:?}", other),
+        .expect("FileEvent stream not to FIDL error")
+    {
+        FileEvent::OnOpen_ { s: status, info } => {
+            Status::ok(status)?;
+            match *info.expect("FileEvent to have NodeInfo") {
+                NodeInfo::File(FileObject { event: Some(event), .. }) => event,
+                other => panic!(
+                    "NodeInfo from FileEventStream to be File variant with event: {:?}",
+                    other
+                ),
+            }
+        }
+        FileEvent::OnConnectionInfo { info } => match info.representation {
+            Some(Representation::File(FileInfo { observer: Some(event), .. })) => event,
+            other => panic!(
+                "ConnectionInfo from FileEventStream to be File variant with event: {:?}",
+                other
+            ),
+        },
     };
     Ok((file, event))
 }

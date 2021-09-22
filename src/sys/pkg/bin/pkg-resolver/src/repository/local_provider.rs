@@ -65,6 +65,10 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
                         status = Some(Status::ok(s));
                         break;
                     }
+                    Ok(FileEvent::OnConnectionInfo { .. }) => {
+                        status = Some(Ok(()));
+                        break;
+                    }
                     Err(e) => {
                         return Err(make_opaque_error(anyhow!(e).context("waiting for OnOpen")))
                     }

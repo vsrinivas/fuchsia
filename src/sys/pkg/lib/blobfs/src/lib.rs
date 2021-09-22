@@ -169,20 +169,29 @@ impl Client {
 
         let mut events = file.take_event_stream();
 
-        let fidl_fuchsia_io::FileEvent::OnOpen_ { s, info } = match events.next().await {
-            Some(Ok(event)) => event,
-            _ => return false,
-        };
+        let event = match events.next().await {
+            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_ { s, info })) => {
+                if Status::from_raw(s) != Status::OK {
+                    return false;
+                }
 
-        if Status::from_raw(s) != Status::OK {
-            return false;
-        }
-
-        let event = match info {
-            Some(info) => match *info {
-                NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
-                _ => return false,
-            },
+                match info {
+                    Some(info) => match *info {
+                        NodeInfo::File(FileObject { event: Some(event), stream: None }) => event,
+                        _ => return false,
+                    },
+                    _ => return false,
+                }
+            }
+            Some(Ok(fidl_fuchsia_io::FileEvent::OnConnectionInfo { info })) => {
+                match info.representation {
+                    Some(fidl_fuchsia_io::Representation::File(fidl_fuchsia_io::FileInfo {
+                        observer: Some(event),
+                        ..
+                    })) => event,
+                    _ => return false,
+                }
+            }
             _ => return false,
         };
 

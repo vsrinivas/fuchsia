@@ -288,6 +288,11 @@ class _FileConnection extends File {
     return Stream.fromIterable([d]);
   }
 
+  // TODO(https://fxbug.dev/77623): Switch from onOpen to onConnectionInfo when
+  // clients are ready.
+  @override
+  Stream<ConnectionInfo> get onConnectionInfo async* {}
+
   @override
   Future<void> clone(int flags, fidl.InterfaceRequest<Node> object) async {
     if (!Flags.inputPrecondition(flags)) {

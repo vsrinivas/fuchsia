@@ -35,9 +35,14 @@ const EMPTY_NODE_ATTRS: io::NodeAttributes = io::NodeAttributes {
 /// Listens for the `OnOpen` event and returns its [Status].
 async fn get_open_status(node_proxy: &io::NodeProxy) -> zx::Status {
     let mut events = node_proxy.take_event_stream();
-    let io::NodeEvent::OnOpen_ { s, info: _ } =
-        events.next().await.expect("OnOpen event not received").expect("FIDL error");
-    zx::Status::from_raw(s)
+    if let Some(result) = events.next().await {
+        match result.expect("FIDL error") {
+            io::NodeEvent::OnOpen_ { s, info: _ } => zx::Status::from_raw(s),
+            io::NodeEvent::OnConnectionInfo { .. } => zx::Status::OK,
+        }
+    } else {
+        zx::Status::PEER_CLOSED
+    }
 }
 
 async fn assert_on_open_not_received(node_proxy: &io::NodeProxy) {

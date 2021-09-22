@@ -7,9 +7,10 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
-        DirectoryObject, DirectoryProxy, FileObject, NodeEvent, NodeInfo, NodeMarker, NodeProxy,
-        Service, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        ConnectorInfo, DirectoryInfo, DirectoryObject, DirectoryProxy, FileInfo, FileObject,
+        NodeEvent, NodeInfo, NodeMarker, NodeProxy, Representation, Service,
+        CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+        MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX,
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
@@ -533,6 +534,13 @@ async fn verify_directory_opened(node: NodeProxy, flag: u32) -> Result<(), Error
                 assert_eq!(*boxed, NodeInfo::Directory(DirectoryObject {}));
                 return Ok(());
             }
+            Some(Ok(NodeEvent::OnConnectionInfo { info })) => {
+                assert_eq!(
+                    info.representation,
+                    Some(Representation::Directory(DirectoryInfo::EMPTY))
+                );
+                return Ok(());
+            }
             Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Some(Err(e)) => return Err(e).context("failed to call onopen"),
             None => return Err(anyhow!("no events!")),
@@ -563,6 +571,13 @@ async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
                     assert_eq!(*boxed, NodeInfo::Service(Service));
                     return Ok(());
                 }
+                Some(Ok(NodeEvent::OnConnectionInfo { info })) => {
+                    assert_eq!(
+                        info.representation,
+                        Some(Representation::Connector(ConnectorInfo::EMPTY))
+                    );
+                    return Ok(());
+                }
                 Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
                 Some(Err(e)) => return Err(e).context("failed to call onopen"),
                 None => return Err(anyhow!("no events!")),
@@ -573,6 +588,17 @@ async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
                     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                     match *boxed {
                         NodeInfo::File(FileObject { event: Some(event), stream: None }) => {
+                            match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+                                Ok(_) => return Ok(()),
+                                Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
+                            }
+                        }
+                        _ => return Err(anyhow!("expected FileObject")),
+                    };
+                }
+                Some(Ok(NodeEvent::OnConnectionInfo { info })) => {
+                    match info.representation {
+                        Some(Representation::File(FileInfo { observer: Some(event), .. })) => {
                             match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
                                 Ok(_) => return Ok(()),
                                 Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
@@ -606,6 +632,10 @@ async fn verify_meta_as_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
                     _ => return Err(anyhow!("wrong NodeInfo returned")),
                 }
             }
+            Some(Ok(NodeEvent::OnConnectionInfo { info })) => match info.representation {
+                Some(Representation::File(_)) => return Ok(()),
+                _ => return Err(anyhow!("wrong NodeInfo returned")),
+            },
             Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Some(Err(e)) => return Err(e).context("failed to call onopen"),
             None => return Err(anyhow!("no events!")),

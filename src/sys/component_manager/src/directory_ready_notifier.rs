@@ -112,6 +112,7 @@ impl DirectoryReadyNotifier {
         match events.next().await {
             Some(Ok(NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
                 .map_err(|_| ModelError::open_directory_error(target_moniker.to_partial(), path)),
+            Some(Ok(NodeEvent::OnConnectionInfo { .. })) => Ok(()),
             _ => Err(ModelError::open_directory_error(target_moniker.to_partial(), path)),
         }
     }

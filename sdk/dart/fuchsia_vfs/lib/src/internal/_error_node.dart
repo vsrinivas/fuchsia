@@ -33,6 +33,11 @@ class ErrorNodeForSendingEvent extends Node {
     _bindings.close();
   }
 
+  // TODO(https://fxbug.dev/77623): Switch from onOpen to onConnectionInfo when
+  // clients are ready.
+  @override
+  Stream<ConnectionInfo> get onConnectionInfo async* {}
+
   @override
   Future<void> clone(int flags, InterfaceRequest<Node> object) async {
     // nothing to clone, left blank

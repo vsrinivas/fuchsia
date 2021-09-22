@@ -6,8 +6,8 @@
 
 use {
     fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileObject, FileProxy,
-        NodeEvent, NodeInfo, NodeProxy, Vmofile,
+        DirectoryEvent, DirectoryObject, DirectoryProxy, FileEvent, FileInfo, FileObject,
+        FileProxy, NodeEvent, NodeInfo, NodeProxy, Representation, Vmofile,
     },
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
@@ -105,6 +105,7 @@ pub enum Kind {
     DatagramSocket,
     StreamSocket,
     RawSocket,
+    Unknown,
 }
 
 impl Kind {
@@ -135,6 +136,38 @@ impl Kind {
         match info {
             NodeInfo::Directory(DirectoryObject) => Ok(()),
             other => Err(Kind::kind_of(&other)),
+        }
+    }
+
+    fn kind_of2(representation: &Representation) -> Kind {
+        match representation {
+            Representation::Connector(_) => Kind::Service,
+            Representation::Directory(_) => Kind::Directory,
+            Representation::File(_) => Kind::File,
+            Representation::Memory(_) => Kind::Vmofile,
+            Representation::Pipe(_) => Kind::Pipe,
+            Representation::Device(_) => Kind::Device,
+            Representation::Tty(_) => Kind::Tty,
+            Representation::DatagramSocket(_) => Kind::DatagramSocket,
+            Representation::StreamSocket(_) => Kind::StreamSocket,
+            Representation::RawSocket(_) => Kind::RawSocket,
+            _ => Kind::Unknown,
+        }
+    }
+
+    fn expect_file2(representation: &Representation) -> Result<(), Kind> {
+        match representation {
+            Representation::File(FileInfo { stream: None, .. }) | Representation::Memory(_) => {
+                Ok(())
+            }
+            other => Err(Kind::kind_of2(other)),
+        }
+    }
+
+    fn expect_directory2(representation: &Representation) -> Result<(), Kind> {
+        match representation {
+            Representation::Directory(_) => Ok(()),
+            other => Err(Kind::kind_of2(other)),
         }
     }
 }
@@ -176,15 +209,18 @@ pub async fn close(node: NodeProxy) -> Result<(), CloseError> {
 /// the expected type or an error otherwise.
 pub(crate) async fn verify_node_describe_event(node: NodeProxy) -> Result<NodeProxy, OpenError> {
     let mut events = node.take_event_stream();
-    let NodeEvent::OnOpen_ { s: status, info } = events
+    match events
         .next()
         .await
         .ok_or(OpenError::OnOpenEventStreamClosed)?
-        .map_err(OpenError::OnOpenDecode)?;
-
-    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
-
-    info.ok_or(OpenError::MissingOnOpenInfo)?;
+        .map_err(OpenError::OnOpenDecode)?
+    {
+        NodeEvent::OnOpen_ { s: status, info } => {
+            let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
+            info.ok_or(OpenError::MissingOnOpenInfo)?;
+        }
+        NodeEvent::OnConnectionInfo { .. } => (),
+    }
 
     Ok(node)
 }
@@ -195,18 +231,26 @@ pub(crate) async fn verify_directory_describe_event(
     node: DirectoryProxy,
 ) -> Result<DirectoryProxy, OpenError> {
     let mut events = node.take_event_stream();
-    let DirectoryEvent::OnOpen_ { s: status, info } = events
+    match events
         .next()
         .await
         .ok_or(OpenError::OnOpenEventStreamClosed)?
-        .map_err(OpenError::OnOpenDecode)?;
-
-    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
-
-    let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
-
-    let () = Kind::expect_directory(*info)
-        .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual })?;
+        .map_err(OpenError::OnOpenDecode)?
+    {
+        DirectoryEvent::OnOpen_ { s: status, info } => {
+            let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
+            let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
+            let () = Kind::expect_directory(*info).map_err(|actual| {
+                OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
+            })?;
+        }
+        DirectoryEvent::OnConnectionInfo { info } => {
+            let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
+            let () = Kind::expect_directory2(&representation).map_err(|actual| {
+                OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
+            })?;
+        }
+    }
 
     Ok(node)
 }
@@ -215,18 +259,25 @@ pub(crate) async fn verify_directory_describe_event(
 /// expected type or an error otherwise.
 pub(crate) async fn verify_file_describe_event(node: FileProxy) -> Result<FileProxy, OpenError> {
     let mut events = node.take_event_stream();
-    let FileEvent::OnOpen_ { s: status, info } = events
+
+    match events
         .next()
         .await
         .ok_or(OpenError::OnOpenEventStreamClosed)?
-        .map_err(OpenError::OnOpenDecode)?;
-
-    let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
-
-    let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
-
-    let _event = Kind::expect_file(*info)
-        .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
+        .map_err(OpenError::OnOpenDecode)?
+    {
+        FileEvent::OnOpen_ { s: status, info } => {
+            let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
+            let info = info.ok_or(OpenError::MissingOnOpenInfo)?;
+            let () = Kind::expect_file(*info)
+                .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
+        }
+        FileEvent::OnConnectionInfo { info } => {
+            let representation = info.representation.ok_or(OpenError::MissingOnOpenInfo)?;
+            let () = Kind::expect_file2(&representation)
+                .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
+        }
+    }
 
     Ok(node)
 }

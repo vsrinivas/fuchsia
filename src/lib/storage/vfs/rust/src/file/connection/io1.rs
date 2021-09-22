@@ -476,9 +476,9 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            FileEvent, FileProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE,
-            NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
-            VMO_FLAG_EXEC, VMO_FLAG_READ,
+            FileEvent, FileInfo, FileProxy, NodeInfo, Representation, CLONE_FLAG_SAME_RIGHTS,
+            MODE_TYPE_FILE, NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+            NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, VMO_FLAG_EXEC, VMO_FLAG_READ,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
@@ -873,6 +873,9 @@ mod tests {
             Some(FileEvent::OnOpen_ { s, info: Some(boxed) }) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 assert_eq!(*boxed, NodeInfo::File(FileObject { event: None, stream: None }));
+            }
+            Some(FileEvent::OnConnectionInfo { info }) => {
+                assert_eq!(info.representation, Some(Representation::File(FileInfo::EMPTY)));
             }
             e => panic!("Expected OnOpen event with NodeInfo::File, got {:?}", e),
         }

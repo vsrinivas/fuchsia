@@ -296,14 +296,21 @@ impl FailingWriteFileStreamHandler {
                 // one based on the actual OnOpen from the backing file.
                 let mut event_stream = self.backing_file.take_event_stream();
                 let event = event_stream.try_next().await.unwrap();
-                let FileEvent::OnOpen_ { s, mut info } =
-                    event.expect("failed to received file event");
-
-                // info comes as an Option<Box<NodeInfo>>, but we need to return an
-                // Option<&mut NodeInfo>. Transform it.
-                let node_info = info.as_mut().map(|b| &mut **b);
-
-                control_handle.send_on_open_(s, node_info).expect("send on open to fake file");
+                match event.expect("failed to received file event") {
+                    FileEvent::OnOpen_ { s, mut info } => {
+                        // info comes as an Option<Box<NodeInfo>>, but we need to return an
+                        // Option<&mut NodeInfo>. Transform it.
+                        let node_info = info.as_mut().map(|b| &mut **b);
+                        control_handle
+                            .send_on_open_(s, node_info)
+                            .expect("send on open to fake file");
+                    }
+                    FileEvent::OnConnectionInfo { info } => {
+                        control_handle
+                            .send_on_connection_info(info)
+                            .expect("send on open to fake file");
+                    }
+                }
             }
 
             while let Some(req) = stream.next().await {

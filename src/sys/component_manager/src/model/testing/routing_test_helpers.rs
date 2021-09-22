@@ -31,9 +31,10 @@ use {
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, NodeMarker,
-        Vmofile, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, MemoryInfo, NodeInfo,
+        NodeMarker, Representation, Vmofile, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -1275,12 +1276,21 @@ pub mod capability_util {
         let file_proxy = FileProxy::new(node_proxy.into_channel().unwrap());
         let mut event_stream = file_proxy.take_event_stream();
         let event = event_stream.try_next().await.unwrap();
-        let FileEvent::OnOpen_ { s, info } = event.expect("failed to received file event");
-        assert_eq!(s, zx::sys::ZX_OK);
-        assert!(matches!(
-            *info.expect("failed to receive node info"),
-            NodeInfo::Vmofile(Vmofile { vmo: _, offset: _, length: _ })
-        ));
+        match event.expect("failed to received file event") {
+            FileEvent::OnOpen_ { s, info } => {
+                assert_eq!(s, zx::sys::ZX_OK);
+                assert!(matches!(
+                    *info.expect("failed to receive node info"),
+                    NodeInfo::Vmofile(Vmofile { .. })
+                ));
+            }
+            FileEvent::OnConnectionInfo { info } => {
+                assert!(matches!(
+                    info.representation.expect("failed to receive node info"),
+                    Representation::Memory(MemoryInfo { .. })
+                ));
+            }
+        }
     }
 
     /// Attempts to read ${path}/hippo in `abs_moniker`'s exposed directory. The file should

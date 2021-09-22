@@ -487,10 +487,14 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
 
 async fn assert_open_status(proxy: &NodeProxy, expected: zx::Status) {
     let mut events = proxy.take_event_stream();
-    let NodeEvent::OnOpen_ { s: actual, info: _ } =
-        events.next().await.expect("event").expect("no error");
-
-    assert_eq!(zx::Status::from_raw(actual), expected);
+    match events.next().await.expect("event").expect("no error") {
+        NodeEvent::OnOpen_ { s: actual, info: _ } => {
+            assert_eq!(zx::Status::from_raw(actual), expected);
+        }
+        NodeEvent::OnConnectionInfo { info: _ } => {
+            assert_eq!(zx::Status::OK, expected);
+        }
+    }
 }
 
 async fn assert_read<'a>(
