@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error, Result},
-    errors::ffx_bail,
-    fidl::endpoints::{ProtocolMarker, Proxy},
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    anyhow::Result,
+    errors::{ffx_bail, ffx_error},
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
-    moniker::{ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
-    std::path::PathBuf,
+    fuchsia_zircon_status::Status,
 };
 
 pub const SELECTOR_FORMAT_HELP: &str =
@@ -32,52 +31,23 @@ Example:
 'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
 will all return information about the appmgr component.";
 
-pub const COMPONENT_BIND_HELP: &str = "Moniker format: {name}/{name}
-Example: 'core/brightness_manager'";
-
-pub const COMPONENT_STOP_HELP: &str = "Moniker format: {name}/{name}
-Example: 'core/brightness_manager'";
-
-/// Parse the given string as an relative moniker. The string should be a '/' delimited series
-/// of child monikers without any instance identifiers, e.g. "/name1/name2"
-pub fn parse_moniker(moniker: &str) -> Result<RelativeMoniker, Error> {
-    let mut formatted_moniker = String::from("./");
-    formatted_moniker.push_str(&moniker);
-
-    let formatted_moniker = RelativeMoniker::parse_string_without_instances(&formatted_moniker)?;
-
-    // TODO(fxbug.dev/77451): remove the unsupported error once LifecycleController supports instanceless monikers.
-    if formatted_moniker.up_path().len() > 0 {
-        ffx_bail!("monikers with non-empty up_path are not supported")
-    }
-    for child_moniker in formatted_moniker.down_path() {
-        if child_moniker.collection().is_some() {
-            ffx_bail!("monikers for instances in collections are not supported.
-For more information about collections: https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms?hl=en#collections.")
-        }
-    }
-
-    Ok(formatted_moniker)
-}
-
-/// Return the lifecycle controller proxy to allow component tools to resolve, bind,
-/// stop component manifests.
-pub async fn get_lifecycle_controller_proxy(
-    root: fio::DirectoryProxy,
-) -> Result<fsys::LifecycleControllerProxy, Error> {
-    let lifecycle_controller_path =
-        PathBuf::from("debug").join(fsys::LifecycleControllerMarker::NAME);
-    match io_util::open_node(
-        &root,
-        lifecycle_controller_path.as_path(),
-        fio::OPEN_RIGHT_READABLE,
-        0,
-    ) {
-        Ok(node_proxy) => Ok(fsys::LifecycleControllerProxy::from_channel(
-            node_proxy.into_channel().expect("could not get channel from proxy"),
-        )),
-        Err(e) => ffx_bail!("could not open node proxy: {}", e),
-    }
+pub async fn connect_to_lifecycle_controller(
+    rcs_proxy: &rc::RemoteControlProxy,
+) -> Result<fsys::LifecycleControllerProxy> {
+    let (hub, server_end) = create_proxy::<fio::DirectoryMarker>()?;
+    rcs_proxy
+        .open_hub(server_end)
+        .await?
+        .map_err(|i| ffx_error!("Could not open hub: {}", Status::from_raw(i)))?;
+    let (lifecycle_controller, server_end) = create_proxy::<fsys::LifecycleControllerMarker>()?;
+    let server_end = server_end.into_channel();
+    hub.open(
+        fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_READABLE,
+        fio::MODE_TYPE_SERVICE,
+        "debug/fuchsia.sys2.LifecycleController",
+        server_end.into(),
+    )?;
+    Ok(lifecycle_controller)
 }
 
 /// Verifies that `url` can be parsed as a fuchsia-pkg CM URL
@@ -85,66 +55,26 @@ pub async fn get_lifecycle_controller_proxy(
 pub fn verify_fuchsia_pkg_cm_url(url: &str) -> Result<String> {
     let url = match PkgUrl::parse(url) {
         Ok(url) => url,
-        Err(e) => {
-            return Err(anyhow!("URL parsing error: {:?}", e));
-        }
+        Err(e) => ffx_bail!("URL parsing error: {:?}", e),
     };
 
-    let resource = url.resource().ok_or(anyhow!("URL does not contain a path to a manifest"))?;
+    let resource = url.resource().ok_or(ffx_error!("URL does not contain a path to a manifest"))?;
     let manifest = resource
         .split('/')
         .last()
-        .ok_or(anyhow!("Could not extract manifest filename from URL"))?;
+        .ok_or(ffx_error!("Could not extract manifest filename from URL"))?;
 
     if let Some(name) = manifest.strip_suffix(".cm") {
         Ok(name.to_string())
     } else if manifest.ends_with(".cmx") {
-        Err(anyhow!(
+        ffx_bail!(
             "{} is a legacy component manifest. Run it using `ffx component run-legacy`",
             manifest
-        ))
+        )
     } else {
-        Err(anyhow!(
+        ffx_bail!(
             "{} is not a component manifest! Component manifests must end in the `cm` extension.",
             manifest
-        ))
+        )
     }
-}
-
-/// Create a v2 component instance with the given `name` and `url` under the given `collection`
-/// using the given `realm_proxy`.
-pub async fn create_component_instance(
-    realm_proxy: &fsys::RealmProxy,
-    name: String,
-    url: String,
-    collection: String,
-) -> Result<()> {
-    let mut collection = fsys::CollectionRef { name: collection };
-    let decl = fsys::ChildDecl {
-        name: Some(name),
-        url: Some(url),
-        startup: Some(fsys::StartupMode::Lazy),
-        environment: None,
-        ..fsys::ChildDecl::EMPTY
-    };
-
-    realm_proxy
-        .create_child(&mut collection, decl, fsys::CreateChildArgs::EMPTY)
-        .await?
-        .map_err(|e| anyhow!("Error creating child: {:?}", e))
-}
-
-/// Destroy a v2 component instance with the given `name` under the given `collection`
-/// using the given `realm_proxy`.
-pub async fn destroy_component_instance(
-    realm_proxy: &fsys::RealmProxy,
-    name: String,
-    collection: String,
-) -> Result<()> {
-    let mut child_ref = fsys::ChildRef { name, collection: Some(collection) };
-
-    realm_proxy
-        .destroy_child(&mut child_ref)
-        .await?
-        .map_err(|e| anyhow!("Error destroying child: {:?}", e))
 }

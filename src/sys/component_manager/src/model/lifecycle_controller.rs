@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::framework::RealmCapabilityHost,
     crate::model::{
-        component::{BindReason, ComponentInstance},
+        component::{BindReason, ComponentInstance, WeakComponentInstance},
         error::ModelError,
         model::Model,
     },
@@ -16,10 +17,8 @@ use {
         AbsoluteMonikerBase, MonikerError, PartialAbsoluteMoniker, PartialRelativeMoniker,
         RelativeMonikerBase,
     },
-    std::{
-        convert::TryFrom,
-        sync::{Arc, Weak},
-    },
+    std::convert::TryFrom,
+    std::sync::{Arc, Weak},
 };
 
 #[derive(Clone)]
@@ -28,26 +27,14 @@ pub struct LifecycleController {
     prefix: PartialAbsoluteMoniker,
 }
 
-#[derive(Debug)]
-enum LifecycleOperation {
-    Bind,
-    Resolve,
-    Stop,
-}
-
 impl LifecycleController {
     pub fn new(model: Weak<Model>, prefix: PartialAbsoluteMoniker) -> Self {
         Self { model, prefix }
     }
 
-    async fn perform_operation(
-        &self,
-        operation: LifecycleOperation,
-        moniker: String,
-        recursive_stop: bool,
-    ) -> Result<(), fcomponent::Error> {
+    fn construct_moniker(&self, input: &str) -> Result<PartialAbsoluteMoniker, fcomponent::Error> {
         let relative_moniker =
-            PartialRelativeMoniker::try_from(moniker.as_str()).map_err(|e: MonikerError| {
+            PartialRelativeMoniker::try_from(input).map_err(|e: MonikerError| {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
                 fcomponent::Error::InvalidArguments
             })?;
@@ -62,9 +49,18 @@ impl LifecycleController {
                 debug!("lifecycle controller received invalid component moniker: {}", e);
                 fcomponent::Error::InvalidArguments
             })?;
+
+        Ok(abs_moniker)
+    }
+
+    async fn resolve_component(
+        &self,
+        moniker: &str,
+    ) -> Result<Arc<ComponentInstance>, fcomponent::Error> {
+        let abs_moniker = self.construct_moniker(moniker)?;
         let model = self.model.upgrade().ok_or(fcomponent::Error::Internal)?;
 
-        let component = model.look_up(&abs_moniker).await.map_err(|e| match e {
+        model.look_up(&abs_moniker).await.map_err(|e| match e {
             e @ ModelError::ResolverError { .. } | e @ ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::ResolveFailed { .. }
             } => {
@@ -93,49 +89,91 @@ impl LifecycleController {
                 );
                 fcomponent::Error::Internal
             }
+        })
+    }
+
+    async fn resolve(&self, moniker: String) -> Result<(), fcomponent::Error> {
+        self.resolve_component(&moniker).await?;
+        Ok(())
+    }
+
+    async fn bind(&self, moniker: String) -> Result<(), fcomponent::Error> {
+        let component = self.resolve_component(&moniker).await?;
+        component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
+            debug!(
+                "lifecycle controller failed to bind to component instance {}: {:?}",
+                moniker, e
+            );
+            fcomponent::Error::InstanceCannotStart
         })?;
-        match operation {
-            LifecycleOperation::Resolve => Ok(()),
-            LifecycleOperation::Bind => {
-                let _: Arc<ComponentInstance> =
-                    component.bind(&BindReason::Debug).await.map_err(|e: ModelError| {
-                        debug!(
-                            "lifecycle controller failed to bind to component instance {}: {:?}",
-                            abs_moniker, e
-                        );
-                        fcomponent::Error::InstanceCannotStart
-                    })?;
-                Ok(())
-            }
-            LifecycleOperation::Stop => {
-                component.stop_instance(false, recursive_stop).await.map_err(|e: ModelError| {
-                    debug!(
-                        "lifecycle controller failed to stop component instance {} (recursive_stop={}): {:?}",
-                        abs_moniker, recursive_stop, e
-                    );
-                    fcomponent::Error::Internal
-                })
-            }
-        }
+        Ok(())
+    }
+
+    async fn stop(&self, moniker: String, is_recursive: bool) -> Result<(), fcomponent::Error> {
+        let component = self.resolve_component(&moniker).await?;
+        component.stop_instance(false, is_recursive).await.map_err(|e: ModelError| {
+            debug!(
+                "lifecycle controller failed to stop component instance {} (is_recursive={}): {:?}",
+                moniker, is_recursive, e
+            );
+            fcomponent::Error::Internal
+        })
+    }
+
+    async fn create_child(
+        &self,
+        parent_moniker: String,
+        collection: fsys::CollectionRef,
+        child_decl: fsys::ChildDecl,
+        child_args: fsys::CreateChildArgs,
+    ) -> Result<(), fcomponent::Error> {
+        let parent_component = self.resolve_component(&parent_moniker).await?;
+        let parent_component = WeakComponentInstance::new(&parent_component);
+        RealmCapabilityHost::create_child(&parent_component, collection, child_decl, child_args)
+            .await
+    }
+
+    async fn destroy_child(
+        &self,
+        parent_moniker: String,
+        child: fsys::ChildRef,
+    ) -> Result<(), fcomponent::Error> {
+        let parent_component = self.resolve_component(&parent_moniker).await?;
+        let parent_component = WeakComponentInstance::new(&parent_component);
+        RealmCapabilityHost::destroy_child(&parent_component, child).await
     }
 
     pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
         while let Ok(Some(operation)) = stream.try_next().await {
             match operation {
                 fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
-                    let mut res =
-                        self.perform_operation(LifecycleOperation::Resolve, moniker, false).await;
+                    let mut res = self.resolve(moniker).await;
                     let _ = responder.send(&mut res);
                 }
                 fsys::LifecycleControllerRequest::Bind { moniker, responder } => {
-                    let mut res =
-                        self.perform_operation(LifecycleOperation::Bind, moniker, false).await;
+                    let mut res = self.bind(moniker).await;
                     let _ = responder.send(&mut res);
                 }
                 fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive } => {
-                    let mut res = self
-                        .perform_operation(LifecycleOperation::Stop, moniker, is_recursive)
-                        .await;
+                    let mut res = self.stop(moniker, is_recursive).await;
+                    let _ = responder.send(&mut res);
+                }
+                fsys::LifecycleControllerRequest::CreateChild {
+                    parent_moniker,
+                    collection,
+                    decl,
+                    args,
+                    responder,
+                } => {
+                    let mut res = self.create_child(parent_moniker, collection, decl, args).await;
+                    let _ = responder.send(&mut res);
+                }
+                fsys::LifecycleControllerRequest::DestroyChild {
+                    parent_moniker,
+                    child,
+                    responder,
+                } => {
+                    let mut res = self.destroy_child(parent_moniker, child).await;
                     let _ = responder.send(&mut res);
                 }
             }

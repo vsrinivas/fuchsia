@@ -62,7 +62,7 @@ impl RemoteControlService {
                         &mut io_util::connect_in_namespace(
                             HUB_ROOT,
                             server.into_channel(),
-                            io::OPEN_RIGHT_READABLE,
+                            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
                         )
                         .map_err(|i| i.into_raw()),
                     )?;

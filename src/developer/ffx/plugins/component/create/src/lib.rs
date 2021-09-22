@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
-    errors::ffx_error,
-    ffx_component::{create_component_instance, verify_fuchsia_pkg_cm_url},
+    anyhow::Result,
+    errors::{ffx_bail, ffx_error},
+    ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
     ffx_component_create_args::CreateComponentCommand,
     ffx_core::ffx_plugin,
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2::RealmMarker,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_developer_remotecontrol as rc,
+    fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
 };
 
@@ -19,21 +18,21 @@ component instance in a collection. To learn more about collections, visit \
 https://fuchsia.dev/fuchsia-src/concepts/components/v2/realms#collections";
 
 #[ffx_plugin]
-pub async fn create_component(
-    rcs_proxy: rc::RemoteControlProxy,
-    create: CreateComponentCommand,
-) -> Result<()> {
-    create_component_cmd(rcs_proxy, create.moniker, create.url, &mut std::io::stdout()).await
+pub async fn create(rcs_proxy: rc::RemoteControlProxy, cmd: CreateComponentCommand) -> Result<()> {
+    let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
+    create_impl(lifecycle_controller, cmd.moniker, cmd.url, &mut std::io::stdout()).await
 }
 
-async fn create_component_cmd<W: std::io::Write>(
-    rcs_proxy: rc::RemoteControlProxy,
+async fn create_impl<W: std::io::Write>(
+    lifecycle_controller: fsys::LifecycleControllerProxy,
     moniker: String,
     url: String,
     writer: &mut W,
 ) -> Result<()> {
+    verify_fuchsia_pkg_cm_url(url.as_str())?;
+
     let moniker = PartialAbsoluteMoniker::parse_string_without_instances(&moniker)
-        .context("Parsing moniker")?;
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     let parent = moniker
         .parent()
         .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
@@ -45,29 +44,35 @@ async fn create_component_cmd<W: std::io::Write>(
         .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
     let name = leaf.name();
 
-    // This is a hack that takes the parent moniker and creates a selector for fuchsia.sys2.Realm
-    // in the incoming namespace. The `create` command expects such a `use` declaration to exist
-    // in the parent because the collection can only be modified if the parent uses that protocol.
-    let mut parent = parent.to_string_without_instances();
-    assert!(parent.starts_with("/"));
-    parent.remove(0);
-    let selector = format!("{}:in:fuchsia.sys2.Realm", parent);
-    log::debug!("Attempting to connect to {}", selector);
+    writeln!(writer, "URL: {}", url)?;
+    writeln!(writer, "Moniker: {}", moniker)?;
+    writeln!(writer, "Creating component instance...")?;
 
-    let selector =
-        selectors::parse_selector(&selector).context("Parsing selector derived from moniker")?;
-    let (realm_proxy, server) = create_proxy::<RealmMarker>()?;
-    let server = server.into_channel();
-    rcs_proxy
-        .connect(selector, server)
+    let mut collection = fsys::CollectionRef { name: collection.to_string() };
+    let decl = fsys::ChildDecl {
+        name: Some(name.to_string()),
+        url: Some(url.clone()),
+        startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
+        ..fsys::ChildDecl::EMPTY
+    };
+    // LifecycleController accepts PartialRelativeMonikers only
+    let parent_moniker = format!(".{}", parent.to_string_without_instances());
+
+    let result = lifecycle_controller
+        .create_child(&parent_moniker, &mut collection, decl, fsys::CreateChildArgs::EMPTY)
         .await
-        .context("Awaiting connect call")?
-        .map_err(|e| ffx_error!("Connecting to selector: {:?}", e))?;
+        .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
 
-    verify_fuchsia_pkg_cm_url(url.as_str())?;
-
-    writeln!(writer, "Creating component instance: {}", name)?;
-    create_component_instance(&realm_proxy, name.to_string(), url, collection.to_string()).await
+    match result {
+        Err(fcomponent::Error::InstanceAlreadyExists) => {
+            ffx_bail!("Component instance already exists. Component instances can be destroyed with the `ffx component destroy` command.")
+        }
+        Err(e) => {
+            ffx_bail!("Lifecycle protocol could not create component instance: {:?}", e);
+        }
+        Ok(()) => Ok(()),
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,75 +81,53 @@ async fn create_component_cmd<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use {
-        super::*,
-        fidl::endpoints::RequestStream,
-        fidl::handle::AsyncChannel,
-        fidl_fuchsia_sys2::{RealmRequest, RealmRequestStream},
-        futures::TryStreamExt,
+        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
         std::io::BufWriter,
     };
 
-    fn setup_fake_realm_service(
-        mut stream: RealmRequestStream,
+    fn setup_fake_lifecycle_controller(
+        expected_moniker: &'static str,
         expected_collection: &'static str,
         expected_name: &'static str,
-    ) {
+        expected_url: &'static str,
+    ) -> fsys::LifecycleControllerProxy {
+        let (lifecycle_controller, mut stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
         fuchsia_async::Task::local(async move {
-            while let Ok(Some(req)) = stream.try_next().await {
-                match req {
-                    RealmRequest::CreateChild { collection, decl, responder, .. } => {
-                        assert_eq!(expected_collection, collection.name);
-                        assert_eq!(expected_name, decl.name.unwrap());
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    _ => assert!(false),
+            let req = stream.try_next().await.unwrap().unwrap();
+            match req {
+                fsys::LifecycleControllerRequest::CreateChild {
+                    parent_moniker,
+                    collection,
+                    decl,
+                    responder,
+                    ..
+                } => {
+                    assert_eq!(expected_moniker, parent_moniker);
+                    assert_eq!(expected_collection, collection.name);
+                    assert_eq!(expected_name, decl.name.unwrap());
+                    assert_eq!(expected_url, decl.url.unwrap());
+                    responder.send(&mut Ok(())).unwrap();
                 }
-                // We should only get one request per stream. We want subsequent calls to fail if more are
-                // made.
-                break;
+                _ => panic!("Unexpected Lifecycle Controller request"),
             }
         })
         .detach();
-    }
-
-    fn setup_fake_remote_server(
-        expected_selector: &'static str,
-        expected_collection: &'static str,
-        expected_name: &'static str,
-    ) -> rc::RemoteControlProxy {
-        setup_fake_rcs_proxy(move |req| match req {
-            rc::RemoteControlRequest::Connect { selector, service_chan, responder } => {
-                let selector = selectors::selector_to_string(selector).unwrap();
-                assert_eq!(expected_selector, selector);
-
-                setup_fake_realm_service(
-                    RealmRequestStream::from_channel(
-                        AsyncChannel::from_channel(service_chan).unwrap(),
-                    ),
-                    expected_collection,
-                    expected_name,
-                );
-
-                let _ = responder
-                    .send(&mut Ok(rc::ServiceMatch {
-                        moniker: vec![String::from("core")],
-                        subdir: String::from("in"),
-                        service: String::from("fuchsia.sys2.Realm"),
-                    }))
-                    .unwrap();
-            }
-            _ => assert!(false, "got unexpected {:?}", req),
-        })
+        lifecycle_controller
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success() -> Result<()> {
         let mut output = String::new();
         let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-        let remote_proxy =
-            setup_fake_remote_server("core:in:fuchsia.sys2.Realm", "ffx-laboratory", "test");
-        let response = create_component_cmd(
-            remote_proxy,
+        let lifecycle_controller = setup_fake_lifecycle_controller(
+            "./core",
+            "ffx-laboratory",
+            "test",
+            "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
+        );
+        let response = create_impl(
+            lifecycle_controller,
             "/core/ffx-laboratory:test".to_string(),
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             &mut writer,

@@ -18,6 +18,30 @@ protocol LifecycleController {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (struct {}) error fuchsia.component.Error;
 
+    /// Creates a child component instance dynamically. This method is equivalent to
+    /// fuchsia.sys2/Realm.CreateChild. See its documentation for more details.
+    ///
+    /// `parent_moniker` is the moniker of the component that owns the collection
+    /// in which the child will be created, relative to the component to which
+    /// the protocol is scoped.
+    CreateChild(resource struct {
+        parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        collection CollectionRef;
+        decl ChildDecl;
+        args CreateChildArgs;
+    }) -> (struct {}) error fuchsia.component.Error;
+
+    /// Destroys a dynamically-created component instance. This method is equivalent to
+    /// fuchsia.sys2/Realm.DestroyChild. See its documentation for more details.
+    ///
+    /// `parent_moniker` is the moniker of the component that owns the collection
+    /// in which the child will be destroyed, relative to the component to which
+    /// the protocol is scoped.
+    DestroyChild(struct {
+        parent_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        child ChildRef;
+    }) -> (struct {}) error fuchsia.component.Error;
+
     /// Binds to the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
     ///

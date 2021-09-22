@@ -3,71 +3,95 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, format_err, Context, Result},
-    component_hub::io::Directory,
-    errors::ffx_bail,
-    ffx_component::{get_lifecycle_controller_proxy, COMPONENT_STOP_HELP},
+    anyhow::Result,
+    errors::{ffx_bail, ffx_error},
+    ffx_component::connect_to_lifecycle_controller,
     ffx_component_stop_args::ComponentStopCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
-    fuchsia_zircon_status::Status,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
 };
 
-#[ffx_plugin()]
+#[ffx_plugin]
 pub async fn stop(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStopCommand) -> Result<()> {
-    stop_impl(rcs_proxy, &cmd.moniker, cmd.recursive, &mut std::io::stdout()).await
+    let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
+    stop_impl(lifecycle_controller, cmd.moniker, cmd.recursive, &mut std::io::stdout()).await
 }
 
 async fn stop_impl<W: std::io::Write>(
-    rcs_proxy: rc::RemoteControlProxy,
-    moniker: &str,
+    lifecycle_controller: fsys::LifecycleControllerProxy,
+    moniker: String,
     recursive: bool,
     writer: &mut W,
 ) -> Result<()> {
-    if !moniker.starts_with('/') {
-        ffx_bail!("Command requires an absolute moniker. To learn more about monikers, visit https://fuchsia.dev/fuchsia-src/concepts/components/v2/monikers#absolute_monikers");
-    }
-    let moniker = format!(".{}", moniker);
-
-    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("creating hub root proxy")?;
-    rcs_proxy
-        .open_hub(dir_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening hub")?;
-
-    let hub_dir = Directory::from_proxy(root);
-    if !hub_dir.exists("debug").await? {
-        ffx_bail!("Unable to find a 'debug' directory in the hub. This may mean you're using an old Fuchsia image. Please report this issue to the ffx team.")
-    }
+    let moniker = PartialAbsoluteMoniker::parse_string_without_instances(&moniker)
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
+    writeln!(writer, "Moniker: {}", moniker)?;
 
     if recursive {
-        writeln!(writer, "Stopping the component with moniker '{}' recursively", moniker)?;
+        writeln!(writer, "Stopping component instances recursively...")?;
     } else {
-        writeln!(writer, "Stopping the component with moniker '{}'", moniker)?;
+        writeln!(writer, "Stopping component instance...")?;
     }
 
-    match get_lifecycle_controller_proxy(hub_dir.proxy).await {
-        Ok(proxy) => match proxy.stop(&moniker, recursive).await {
-            Ok(Ok(())) => {
-                writeln!(writer, "Successfully stopped the component with moniker '{}'", moniker)?;
-            }
-            Ok(Err(e)) => {
-                ffx_bail!(
-                    "Failed to stop the component with moniker '{}': {:?}\n{}",
-                    moniker,
-                    e,
-                    COMPONENT_STOP_HELP
-                );
-            }
-            Err(e) => bail!("FIDL error: {}\n", e),
-        },
-        Err(e) => {
-            Err(format_err!("Failed to stop the component with moniker '{}': {}\n", moniker, e)
-                .context(format!("stopping the component with moniker '{}'", moniker)))?
+    // LifecycleController accepts PartialRelativeMonikers only
+    let moniker = format!(".{}", moniker.to_string_without_instances());
+    match lifecycle_controller.stop(&moniker, recursive).await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => {
+            ffx_bail!("Lifecycle protocol could not stop the component instance: {:?}", e)
         }
+        Err(e) => ffx_bail!("FIDL error: {:?}", e),
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// tests
+
+#[cfg(test)]
+mod test {
+    use {
+        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
+        std::io::BufWriter,
+    };
+
+    fn setup_fake_lifecycle_controller(
+        expected_moniker: &'static str,
+        expected_is_recursive: bool,
+    ) -> fsys::LifecycleControllerProxy {
+        let (lifecycle_controller, mut stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+        fuchsia_async::Task::local(async move {
+            let req = stream.try_next().await.unwrap().unwrap();
+            match req {
+                fsys::LifecycleControllerRequest::Stop {
+                    moniker, is_recursive, responder, ..
+                } => {
+                    assert_eq!(expected_moniker, moniker);
+                    assert_eq!(expected_is_recursive, is_recursive);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => panic!("Unexpected Lifecycle Controller request"),
+            }
+        })
+        .detach();
+        lifecycle_controller
     }
 
-    Ok(())
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_success() -> Result<()> {
+        let mut output = String::new();
+        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let lifecycle_controller =
+            setup_fake_lifecycle_controller("./core/ffx-laboratory:test", true);
+        let response = stop_impl(
+            lifecycle_controller,
+            "/core/ffx-laboratory:test".to_string(),
+            true,
+            &mut writer,
+        )
+        .await;
+        response.unwrap();
+        Ok(())
+    }
 }

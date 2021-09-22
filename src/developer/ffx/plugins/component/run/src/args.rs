@@ -25,8 +25,8 @@ pub struct RunComponentCommand {
     pub url: String,
 
     #[argh(option, short = 'n')]
-    /// name of this instance. If not specified, the component name will be chosen
-    /// as the instance name.
+    /// specify a name for the component instance.
+    /// if this flag is not set, the instance name is derived from the component URL.
     pub name: Option<String>,
 }
 

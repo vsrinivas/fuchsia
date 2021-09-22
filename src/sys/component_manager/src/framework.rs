@@ -149,7 +149,7 @@ impl RealmCapabilityHost {
         Ok(())
     }
 
-    async fn create_child(
+    pub async fn create_child(
         component: &WeakComponentInstance,
         collection: fsys::CollectionRef,
         child_decl: fsys::ChildDecl,
@@ -274,7 +274,7 @@ impl RealmCapabilityHost {
         Ok(())
     }
 
-    async fn destroy_child(
+    pub async fn destroy_child(
         component: &WeakComponentInstance,
         child: fsys::ChildRef,
     ) -> Result<(), fcomponent::Error> {

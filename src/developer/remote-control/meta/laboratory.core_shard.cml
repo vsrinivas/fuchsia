@@ -6,7 +6,7 @@
             // TODO(78792): This collection needs a formal name.
             name: "ffx-laboratory",
             environment: "#universe-resolver-env",
-            durability: "single_run",
+            durability: "transient",
         },
     ],
     capabilities: [
@@ -27,14 +27,6 @@
             subdir: "laboratory-cache",
             backing_dir: "tmp",
             storage_id: "static_instance_id_or_moniker",
-        },
-    ],
-    use: [
-        // The Realm service is accessed by ffx to create arbitrary components
-        // in the `ffx-laboratory` collection.
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
         },
     ],
     offer: [
