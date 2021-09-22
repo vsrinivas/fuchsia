@@ -4,6 +4,7 @@
 
 #include "sockscripter.h"
 
+#include <arpa/inet.h>
 #include <getopt.h>
 #include <net/if.h>
 #include <unistd.h>
@@ -550,31 +551,35 @@ bool SockScripter::LogBindToDevice(char* arg) {
 }
 
 bool SockScripter::SetIpMcastIf4(char* arg) {
-  LocalIfAddr if_addr;
-  if (!if_addr.Set(arg)) {
-    return false;
-  }
-  if (!if_addr.IsSet()) {
+  auto [if_addr, if_id] = ParseIpv4WithScope(arg);
+  if (!if_addr.has_value() && !if_id.has_value()) {
     LOG(ERROR) << "Error-No IPv4 address or local interface id given for "
                << "IP_MULTICAST_IF";
     return false;
   }
 
-  struct ip_mreqn mreq;
-  memset(&mreq, 0, sizeof(mreq));
+  struct ip_mreqn mreq = {};
   // mreq.imr_multiaddr is not set
-  if (if_addr.HasAddr4()) {
-    mreq.imr_address = if_addr.GetAddr4();
+  if (if_addr.has_value()) {
+    mreq.imr_address = if_addr.value();
   }
-  if (if_addr.HasId()) {
-    mreq.imr_ifindex = if_addr.GetId();
+  if (if_id.has_value()) {
+    mreq.imr_ifindex = if_id.value();
   }
   if (api_->setsockopt(sockfd_, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq)) < 0) {
     LOG(ERROR) << "Error-Setting IP_MULTICAST_IF failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  LOG(INFO) << "Set IP_MULTICAST_IF to " << if_addr.Name();
+  std::stringstream o;
+  if (if_addr.has_value()) {
+    char buf[INET_ADDRSTRLEN] = {};
+    o << inet_ntop(AF_INET, &if_addr.value(), buf, sizeof(buf));
+  }
+  if (if_id.has_value()) {
+    o << '%' << if_id.value();
+  }
+  LOG(INFO) << "Set IP_MULTICAST_IF to " << o.str();
   return true;
 }
 
@@ -587,25 +592,18 @@ bool SockScripter::LogIpMcastIf4(char* arg) {
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  LocalIfAddr if_addr;
-  if (!if_addr.Set(&addr, addr_len)) {
-    return false;
-  }
-  LOG(INFO) << "IP_MULTICAST_IF is set to " << if_addr.Name();
+  char buf[INET_ADDRSTRLEN] = {};
+  LOG(INFO) << "IP_MULTICAST_IF is set to " << inet_ntop(AF_INET, &addr, buf, sizeof(buf));
   return true;
 }
 
 bool SockScripter::SetIpMcastIf6(char* arg) {
-  LocalIfAddr if_addr;
-  if (!if_addr.Set(arg)) {
-    return false;
-  }
-  if (!if_addr.HasId()) {
-    LOG(ERROR) << "Error-No local interface ID given for IPV6_MULTICAST_IF";
+  int id;
+  if (!str2int(arg, &id) || id < 0) {
+    LOG(ERROR) << "Error-Invalid local interface ID given for IPV6_MULTICAST_IF: " << arg;
     return false;
   }
 
-  int id = if_addr.GetId();
   if (api_->setsockopt(sockfd_, IPPROTO_IPV6, IPV6_MULTICAST_IF, &id, sizeof(id)) < 0) {
     LOG(ERROR) << "Error-Setting IPV6_MULTICAST_IF to " << id << " failed-[" << errno << "]"
                << strerror(errno);
@@ -628,50 +626,42 @@ bool SockScripter::LogIpMcastIf6(char* arg) {
 }
 
 bool SockScripter::LogBoundToAddress(char* arg) {
-  struct sockaddr* addr = GetSockAddrStorage();
-  socklen_t addr_len = sizeof(sockaddr_store_);
+  sockaddr_storage addr;
+  socklen_t addr_len = sizeof(addr);
 
-  if (api_->getsockname(sockfd_, addr, &addr_len) < 0) {
+  if (api_->getsockname(sockfd_, reinterpret_cast<sockaddr*>(&addr), &addr_len) < 0) {
     LOG(ERROR) << "Error-Calling getsockname failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  SockAddrIn bound_addr;
-  bound_addr.Set(addr, addr_len);
-  LOG(INFO) << "Bound to " << bound_addr.Name();
+  LOG(INFO) << "Bound to " << Format(addr);
   return true;
 }
 
 bool SockScripter::LogPeerAddress(char* arg) {
-  struct sockaddr* addr = GetSockAddrStorage();
-  socklen_t addr_len = sizeof(sockaddr_store_);
+  sockaddr_storage addr;
+  socklen_t addr_len = sizeof(addr);
 
-  if (api_->getpeername(sockfd_, addr, &addr_len) < 0) {
+  if (api_->getpeername(sockfd_, reinterpret_cast<sockaddr*>(&addr), &addr_len) < 0) {
     LOG(ERROR) << "Error-Calling getpeername failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  SockAddrIn bound_addr;
-  bound_addr.Set(addr, addr_len);
-  LOG(INFO) << "Connected to " << bound_addr.Name();
+  LOG(INFO) << "Connected to " << Format(addr);
   return true;
 }
 
 bool SockScripter::Bind(char* arg) {
-  SockAddrIn bind_addr;
-  if (!bind_addr.Set(arg)) {
+  std::optional addr = Parse(arg);
+  if (!addr.has_value()) {
     return false;
   }
 
-  LOG(INFO) << "Bind(fd:" << sockfd_ << ") to " << bind_addr.Name();
+  LOG(INFO) << "Bind(fd:" << sockfd_ << ") to " << Format(addr.value());
 
-  struct sockaddr* addr = GetSockAddrStorage();
-  int addr_len = sizeof(sockaddr_store_);
-  if (!bind_addr.Fill(addr, &addr_len)) {
-    return false;
-  }
+  socklen_t addr_len = sizeof(addr.value());
 
-  if (api_->bind(sockfd_, addr, addr_len) < 0) {
+  if (api_->bind(sockfd_, reinterpret_cast<sockaddr*>(&addr.value()), addr_len) < 0) {
     LOG(ERROR) << "Error-Bind(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
@@ -717,20 +707,16 @@ bool SockScripter::Shutdown(char* arg) {
 }
 
 bool SockScripter::Connect(char* arg) {
-  SockAddrIn connect_addr;
-  if (!connect_addr.Set(arg)) {
+  std::optional addr = Parse(arg);
+  if (!addr.has_value()) {
     return false;
   }
 
-  LOG(INFO) << "Connect(fd:" << sockfd_ << ") to " << connect_addr.Name();
+  LOG(INFO) << "Connect(fd:" << sockfd_ << ") to " << Format(addr.value());
 
-  struct sockaddr* addr = GetSockAddrStorage();
-  int addr_len = sizeof(sockaddr_store_);
-  if (!connect_addr.Fill(addr, &addr_len, true)) {
-    return false;
-  }
+  socklen_t addr_len = sizeof(addr.value());
 
-  if (api_->connect(sockfd_, addr, addr_len) < 0) {
+  if (api_->connect(sockfd_, reinterpret_cast<sockaddr*>(&addr.value()), addr_len) < 0) {
     LOG(ERROR) << "Error-Connect(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
@@ -767,26 +753,26 @@ bool SockScripter::JoinOrDrop4(const char* func, char* arg, int optname, const c
     return false;
   }
 
-  InAddr mcast_addr;
-  if (!mcast_addr.Set(mcast_ip_str) || !mcast_addr.IsAddr4()) {
+  std::optional mcast_addr = Parse(mcast_ip_str, std::nullopt);
+  if (!mcast_addr.has_value() || mcast_addr.value().ss_family != AF_INET) {
     LOG(ERROR) << "Error-" << func << " got invalid mcast address='" << mcast_ip_str << "'!";
     return false;
   }
 
-  LocalIfAddr if_addr;
-  if (!if_addr.Set(ip_id_str)) {
+  auto [if_addr, if_id] = ParseIpv4WithScope(ip_id_str);
+  if (!if_addr.has_value() && !if_id.has_value()) {
     LOG(ERROR) << "Error-" << func << " got invalid interface='" << ip_id_str << "'!";
     return false;
   }
 
-  struct ip_mreqn mreq;
-  memset(&mreq, 0, sizeof(mreq));
-  mreq.imr_multiaddr = mcast_addr.GetAddr4();
-  if (if_addr.HasAddr4()) {
-    mreq.imr_address = if_addr.GetAddr4();
+  struct ip_mreqn mreq = {
+      .imr_multiaddr = reinterpret_cast<sockaddr_in*>(&mcast_addr.value())->sin_addr,
+  };
+  if (if_addr.has_value()) {
+    mreq.imr_address = if_addr.value();
   }
-  if (if_addr.HasId()) {
-    mreq.imr_ifindex = if_addr.GetId();
+  if (if_id.has_value()) {
+    mreq.imr_ifindex = if_id.value();
   }
 
   if (api_->setsockopt(sockfd_, IPPROTO_IP, optname, &mreq, sizeof(mreq)) < 0) {
@@ -794,7 +780,15 @@ bool SockScripter::JoinOrDrop4(const char* func, char* arg, int optname, const c
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  LOG(INFO) << "Set " << optname_str << " for " << mcast_addr.Name() << " on " << if_addr.Name()
+  std::stringstream o;
+  if (if_addr.has_value()) {
+    char buf[INET_ADDRSTRLEN] = {};
+    o << inet_ntop(AF_INET, &if_addr.value(), buf, sizeof(buf));
+  }
+  if (if_id.has_value()) {
+    o << '%' << if_id.value();
+  }
+  LOG(INFO) << "Set " << optname_str << " for " << Format(mcast_addr.value()) << " on " << o.str()
             << ".";
 
   return true;
@@ -823,29 +817,29 @@ bool SockScripter::JoinOrDrop6(const char* func, char* arg, int optname, const c
     return false;
   }
 
-  InAddr mcast_addr;
-  if (!mcast_addr.Set(mcast_ip_str) || !mcast_addr.IsAddr6()) {
+  std::optional mcast_addr = Parse(mcast_ip_str, std::nullopt);
+  if (!mcast_addr.has_value() || mcast_addr.value().ss_family != AF_INET6) {
     LOG(ERROR) << "Error-" << func << " got invalid mcast address='" << mcast_ip_str << "'!";
     return false;
   }
 
-  LocalIfAddr if_addr;
-  if (!if_addr.Set(id_str)) {  // || !if_addr.HasId()) {
+  int if_id;
+  if (!str2int(id_str, &if_id) || if_id < 0) {
     LOG(ERROR) << "Error-" << func << " got invalid interface='" << id_str << "'!";
     return false;
   }
 
-  struct ipv6_mreq mreq;
-  memset(&mreq, 0, sizeof(mreq));
-  mreq.ipv6mr_multiaddr = mcast_addr.GetAddr6();
-  mreq.ipv6mr_interface = if_addr.GetId();
+  struct ipv6_mreq mreq = {
+      .ipv6mr_multiaddr = reinterpret_cast<sockaddr_in6*>(&mcast_addr.value())->sin6_addr,
+      .ipv6mr_interface = static_cast<unsigned int>(if_id),
+  };
 
   if (api_->setsockopt(sockfd_, IPPROTO_IPV6, optname, &mreq, sizeof(mreq)) < 0) {
     LOG(ERROR) << "Error-Setting " << optname_str << " failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
-  LOG(INFO) << "Set " << optname_str << " for " << mcast_addr.Name() << " on " << if_addr.Name()
+  LOG(INFO) << "Set " << optname_str << " for " << Format(mcast_addr.value()) << " on " << if_id
             << ".";
 
   return true;
@@ -871,25 +865,20 @@ bool SockScripter::Listen(char* arg) {
 }
 
 bool SockScripter::Accept(char* arg) {
-  struct sockaddr* addr = GetSockAddrStorage();
-  socklen_t addr_len = sizeof(sockaddr_store_);
+  sockaddr_storage addr;
+  socklen_t addr_len = sizeof(addr);
 
   LOG(INFO) << "Accepting(fd:" << sockfd_ << ")...";
 
-  int fd = api_->accept(sockfd_, addr, &addr_len);
+  int fd = api_->accept(sockfd_, reinterpret_cast<sockaddr*>(&addr), &addr_len);
   if (fd < 0) {
     LOG(ERROR) << "Error-Accept(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
     return false;
   }
 
-  SockAddrIn remote_addr;
-  if (!remote_addr.Set(addr, addr_len)) {
-    return false;
-  }
-
   LOG(INFO) << "  accepted(fd:" << sockfd_ << ") new connection "
-            << "(fd:" << fd << ") from " << remote_addr.Name();
+            << "(fd:" << fd << ") from " << Format(addr);
 
   // Switch to the newly created connection, remember the previous one.
   prev_sock_fd_ = sockfd_;
@@ -898,24 +887,18 @@ bool SockScripter::Accept(char* arg) {
 }
 
 bool SockScripter::SendTo(char* arg) {
-  SockAddrIn dst;
-  if (!dst.Set(arg)) {
+  std::optional addr = Parse(arg);
+  if (!addr.has_value()) {
     return false;
   }
 
   auto snd_buf = snd_buf_gen_.GetSndStr();
 
   LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << snd_buf << "' on fd:" << sockfd_
-            << " to " << dst.Name();
+            << " to " << Format(addr.value());
 
-  struct sockaddr* addr = GetSockAddrStorage();
-  int addr_len = sizeof(sockaddr_store_);
-  if (!dst.Fill(addr, &addr_len)) {
-    return false;
-  }
-
-  ssize_t sent =
-      api_->sendto(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_, addr, addr_len);
+  ssize_t sent = api_->sendto(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_,
+                              reinterpret_cast<sockaddr*>(&addr.value()), sizeof(addr.value()));
   if (sent < 0) {
     LOG(ERROR) << "Error-sendto(fd:" << sockfd_ << ") failed-"
                << "[" << errno << "]" << strerror(errno);
@@ -941,14 +924,14 @@ bool SockScripter::Send(char* arg) {
 }
 
 bool SockScripter::RecvFromInternal(bool ping) {
-  struct sockaddr* addr = GetSockAddrStorage();
-  socklen_t addr_len = sizeof(sockaddr_store_);
+  sockaddr_storage addr;
+  socklen_t addr_len = sizeof(addr);
 
   LOG(INFO) << "RecvFrom(fd:" << sockfd_ << ")...";
 
   memset(recv_buf_, 0, sizeof(recv_buf_));
-  ssize_t recvd =
-      api_->recvfrom(sockfd_, recv_buf_, sizeof(recv_buf_) - 1, recv_flags_, addr, &addr_len);
+  ssize_t recvd = api_->recvfrom(sockfd_, recv_buf_, sizeof(recv_buf_) - 1, recv_flags_,
+                                 reinterpret_cast<sockaddr*>(&addr), &addr_len);
   if (recvd < 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       LOG(INFO) << "  returned EAGAIN or EWOULDBLOCK!";
@@ -959,15 +942,11 @@ bool SockScripter::RecvFromInternal(bool ping) {
     return false;
   }
 
-  SockAddrIn src_addr;
-  if (!src_addr.Set(addr, addr_len)) {
-    return false;
-  }
-
   LOG(INFO) << "  received(fd:" << sockfd_ << ") [" << recvd << "]'" << recv_buf_ << "' "
-            << "from " << src_addr.Name();
+            << "from " << Format(addr);
   if (ping) {
-    if (api_->sendto(sockfd_, recv_buf_, recvd, snd_flags_, addr, addr_len) < 0) {
+    if (api_->sendto(sockfd_, recv_buf_, recvd, snd_flags_, reinterpret_cast<sockaddr*>(&addr),
+                     addr_len) < 0) {
       LOG(ERROR) << "Error-sendto(fd:" << sockfd_ << ") failed-"
                  << "[" << errno << "]" << strerror(errno);
       return false;
@@ -1027,11 +1006,6 @@ bool SockScripter::Sleep(char* arg) {
   }
   LOG(INFO) << "Wake up!";
   return true;
-}
-
-struct sockaddr* SockScripter::GetSockAddrStorage() {
-  memset(&sockaddr_store_, 0, sizeof(sockaddr_store_));
-  return reinterpret_cast<struct sockaddr*>(&sockaddr_store_);
 }
 
 std::string SendBufferGenerator::GetSndStr() {

@@ -99,7 +99,6 @@ class SockScripter {
 
   int sockfd_ = -1;
   int prev_sock_fd_ = -1;
-  struct sockaddr_storage sockaddr_store_ {};
   int snd_flags_ = 0;
   int recv_flags_ = 0;
   SendBufferGenerator snd_buf_gen_;

@@ -4,96 +4,111 @@
 
 #include "addr.h"
 
+#include <arpa/inet.h>
+
 #include <gtest/gtest.h>
 
-TEST(AddrTest, TestInAddr) {
-  InAddr addr;
-  EXPECT_FALSE(addr.IsSet());
-  EXPECT_EQ(addr.Name(), "<unspec>");
-  EXPECT_TRUE(addr.Set("192.168.0.1"));
-  EXPECT_TRUE(addr.IsAddr4());
-  EXPECT_EQ(addr.Name(), "192.168.0.1");
-  union {
-    uint8_t b[4];
-    uint32_t x;
-  } ip4 = {{192, 168, 0, 1}};
-  EXPECT_EQ(addr.GetAddr4().s_addr, ip4.x);
-  EXPECT_TRUE(addr.Set("FF01:0:0:0:0:0:0:1"));
-  EXPECT_TRUE(addr.IsAddr6());
-  EXPECT_EQ(addr.Name(), "[FF01:0:0:0:0:0:0:1]");
-  const uint8_t cmp[] = {0xFF, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
-  EXPECT_EQ(memcmp(addr.GetAddr6().s6_addr, cmp, 16), 0);
-  EXPECT_TRUE(addr.Set("null"));
-  EXPECT_FALSE(addr.IsSet());
-  EXPECT_TRUE(addr.Set("any"));
-  EXPECT_TRUE(addr.IsAddr4());
-  EXPECT_EQ(addr.GetAddr4().s_addr, 0u);
-  EXPECT_TRUE(addr.Set("any6"));
-  EXPECT_TRUE(addr.IsAddr6());
-  const uint8_t zeros[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  EXPECT_EQ(memcmp(addr.GetAddr6().s6_addr, zeros, 16), 0);
+#define EXPECT_NO_VALUE(expr)                     \
+  do {                                            \
+    const std::optional val = expr;               \
+    EXPECT_FALSE(val.has_value()) << val.value(); \
+  } while (0)
 
-  EXPECT_FALSE(addr.Set("bad"));
-  EXPECT_FALSE(addr.Set("192.168.0."));
-  EXPECT_FALSE(addr.Set("FF01::jk"));
+#define EXPECT_NO_VALUE_FMT(expr, format)                 \
+  do {                                                    \
+    const std::optional val = expr;                       \
+    EXPECT_FALSE(val.has_value()) << format(val.value()); \
+  } while (0)
+
+TEST(AddrTest, TestParseFormatNoPort) {
+  {
+    std::optional addr = Parse("192.168.0.1", std::nullopt);
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_EQ(addr.value().ss_family, AF_INET);
+    EXPECT_EQ(Format(addr.value()), "192.168.0.1");
+  }
+  {
+    std::optional addr = Parse("FF01:0:0:0:0:0:0:1", std::nullopt);
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_EQ(addr.value().ss_family, AF_INET6);
+    EXPECT_EQ(Format(addr.value()), "[ff01::1]");
+  }
+  EXPECT_NO_VALUE_FMT(Parse("bad", std::nullopt), Format);
+  EXPECT_NO_VALUE_FMT(Parse("192.168.0.", std::nullopt), Format);
+  EXPECT_NO_VALUE_FMT(Parse("FF01::jk", std::nullopt), Format);
 }
 
-TEST(AddrTest, LocalIfAddr) {
-  LocalIfAddr addr;
-  EXPECT_FALSE(addr.IsSet());
-  EXPECT_FALSE(addr.HasAddr4());
-  EXPECT_FALSE(addr.HasAddr6());
-  EXPECT_FALSE(addr.HasId());
-  EXPECT_TRUE(addr.Set("192.168.0.1%2"));
-  EXPECT_TRUE(addr.HasAddr4());
-  EXPECT_TRUE(addr.HasId());
-  EXPECT_EQ(addr.Name(), "192.168.0.1%2");
-  EXPECT_EQ(addr.GetId(), 2);
-  EXPECT_TRUE(addr.Set("192.168.0.1"));
-  EXPECT_TRUE(addr.HasAddr4());
-  EXPECT_FALSE(addr.HasId());
-  EXPECT_EQ(addr.Name(), "192.168.0.1");
-  EXPECT_TRUE(addr.Set("FF01:0:0:0:0:0:0:1%3"));
-  EXPECT_TRUE(addr.HasAddr6());
-  EXPECT_TRUE(addr.HasId());
-  EXPECT_EQ(addr.GetId(), 3);
-  EXPECT_EQ(addr.Name(), "[FF01:0:0:0:0:0:0:1]%3");
-  EXPECT_FALSE(addr.Set("192.168.0.1%abc"));
+TEST(AddrTest, TestParseIpv4WithScopeFormat) {
+  {
+    auto [addr, id] = ParseIpv4WithScope("192.168.0.1%2");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_TRUE(id.has_value());
+    char buf[INET_ADDRSTRLEN] = {};
+    EXPECT_STREQ(inet_ntop(AF_INET, &addr.value(), buf, sizeof(buf)), "192.168.0.1");
+    EXPECT_EQ(id.value(), 2);
+  }
+  {
+    auto [addr, id] = ParseIpv4WithScope("192.168.0.1");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_NO_VALUE(id);
+    char buf[INET_ADDRSTRLEN] = {};
+    EXPECT_STREQ(inet_ntop(AF_INET, &addr.value(), buf, sizeof(buf)), "192.168.0.1");
+  }
+  {
+    auto [addr, id] = ParseIpv4WithScope("FF01:0:0:0:0:0:0:1%3");
+    char buf[INET_ADDRSTRLEN] = {};
+    EXPECT_FALSE(addr.has_value()) << inet_ntop(AF_INET, &addr.value(), buf, sizeof(buf));
+    EXPECT_TRUE(id.has_value());
+    EXPECT_EQ(id.value(), 3);
+  }
+  {
+    auto [addr, id] = ParseIpv4WithScope("192.168.0.1%abc");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_NO_VALUE(id);
+    char buf[INET_ADDRSTRLEN] = {};
+    EXPECT_STREQ(inet_ntop(AF_INET, &addr.value(), buf, sizeof(buf)), "192.168.0.1");
+  }
 }
 
-TEST(AddrTest, SockAddrIn) {
-  SockAddrIn addr;
-  EXPECT_TRUE(addr.Set("192.168.0.1:2020"));
-  EXPECT_EQ(addr.Name(), "192.168.0.1:2020");
-  struct sockaddr_storage store {};
-  auto* sock = reinterpret_cast<struct sockaddr*>(&store);
-  int l = sizeof(store);
-  EXPECT_TRUE(addr.Fill(sock, &l));
-  EXPECT_EQ(sock->sa_family, AF_INET);
-  union {
-    uint8_t b[4];
-    uint32_t x;
-  } ip4 = {{192, 168, 0, 1}};
-  auto* addr_in = reinterpret_cast<struct sockaddr_in*>(&store);
-  EXPECT_EQ(addr_in->sin_addr.s_addr, ip4.x);
-  EXPECT_EQ(addr_in->sin_port, htons(2020));
-  EXPECT_TRUE(addr.Set("[FF01:0:0:0:0:0:0:1]:4040"));
-  EXPECT_EQ(addr.Name(), "[FF01:0:0:0:0:0:0:1]:4040");
-  l = sizeof(store);
-  EXPECT_TRUE(addr.Fill(sock, &l));
-  auto* addr_in6 = reinterpret_cast<struct sockaddr_in6*>(&store);
-  const uint8_t cmp[] = {0xFF, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
-  EXPECT_EQ(memcmp(addr_in6->sin6_addr.s6_addr, cmp, 16), 0);
-  EXPECT_EQ(addr_in6->sin6_port, htons(4040));
+TEST(AddrTest, TestParseFormat) {
+  {
+    std::optional addr = Parse("192.168.0.1:2020");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_EQ(Format(addr.value()), "192.168.0.1:2020");
+    EXPECT_EQ(addr.value().ss_family, AF_INET);
+    const sockaddr_in& addr_in = *reinterpret_cast<struct sockaddr_in*>(&addr.value());
+    union {
+      uint8_t b[4];
+      uint32_t x;
+    } ip4 = {{192, 168, 0, 1}};
+    EXPECT_EQ(addr_in.sin_addr.s_addr, ip4.x);
+    EXPECT_EQ(addr_in.sin_port, htons(2020));
+  }
+  {
+    std::optional addr = Parse("[FF01:0:0:0:0:0:0:1]:4040");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_EQ(Format(addr.value()), "[ff01::1]:4040");
+    EXPECT_EQ(addr.value().ss_family, AF_INET6);
+    const sockaddr_in6& addr_in6 = *reinterpret_cast<struct sockaddr_in6*>(&addr.value());
+    const uint8_t cmp[] = {0xFF, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+    EXPECT_EQ(memcmp(addr_in6.sin6_addr.s6_addr, cmp, 16), 0);
+    EXPECT_EQ(addr_in6.sin6_port, htons(4040));
+  }
+  {
+    std::optional addr = Parse("[ff02::2%100]:3");
+    EXPECT_TRUE(addr.has_value());
+    EXPECT_EQ(Format(addr.value()), "[ff02::2%100]:3");
+    EXPECT_EQ(addr.value().ss_family, AF_INET6);
+    const sockaddr_in6& addr_in6 = *reinterpret_cast<struct sockaddr_in6*>(&addr.value());
+    EXPECT_EQ(addr_in6.sin6_scope_id, 100u);
+  }
 
-  EXPECT_FALSE(addr.Set(""));
-  EXPECT_FALSE(addr.Set(":0"));
-  EXPECT_FALSE(addr.Set("any::0"));
-  EXPECT_FALSE(addr.Set("[]"));
-  EXPECT_FALSE(addr.Set("[]:0"));
-  EXPECT_FALSE(addr.Set("[::]"));
-  EXPECT_FALSE(addr.Set("[::]::0"));
+  EXPECT_NO_VALUE_FMT(Parse(""), Format);
+  EXPECT_NO_VALUE_FMT(Parse(":0"), Format);
+  EXPECT_NO_VALUE_FMT(Parse("any::0"), Format);
+  EXPECT_NO_VALUE_FMT(Parse("[]"), Format);
+  EXPECT_NO_VALUE_FMT(Parse("[]:0"), Format);
+  EXPECT_NO_VALUE_FMT(Parse("[::]"), Format);
+  EXPECT_NO_VALUE_FMT(Parse("[::]::0"), Format);
 }

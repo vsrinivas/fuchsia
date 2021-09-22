@@ -168,9 +168,11 @@ TEST(CommandLine, UdpBindSendToRecvFrom) {
                     .s_addr = htonl(INADDR_ANY),
                 },
         };
-        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        EXPECT_GE(addrlen, sizeof(expected_addr));
         const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        EXPECT_EQ(addr_in.sin_family, expected_addr.sin_family);
+        EXPECT_EQ(addr_in.sin_port, expected_addr.sin_port);
+        EXPECT_EQ(addr_in.sin_addr.s_addr, expected_addr.sin_addr.s_addr);
         return 0;
       });
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
@@ -184,14 +186,16 @@ TEST(CommandLine, UdpBindSendToRecvFrom) {
         };
         EXPECT_EQ(1, inet_pton(expected_addr.sin_family, "192.168.0.1", &expected_addr.sin_addr))
             << strerror(errno);
-        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        EXPECT_GE(addrlen, sizeof(expected_addr));
         const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        EXPECT_EQ(addr_in.sin_family, expected_addr.sin_family);
+        EXPECT_EQ(addr_in.sin_port, expected_addr.sin_port);
+        EXPECT_EQ(addr_in.sin_addr.s_addr, expected_addr.sin_addr.s_addr);
         return len;
       });
   EXPECT_CALL(test, recvfrom(kSockFd, testing::_, testing::_, testing::_, testing::_, testing::_))
       .WillOnce(testing::Return(0));
-  EXPECT_EQ(test.RunCommandLine("udp bind any:2020 sendto 192.168.0.1:2021 recvfrom"), 0);
+  EXPECT_EQ(test.RunCommandLine("udp bind 0.0.0.0:2020 sendto 192.168.0.1:2021 recvfrom"), 0);
 }
 
 TEST(CommandLine, TcpBindConnectSendRecv) {
@@ -207,9 +211,11 @@ TEST(CommandLine, TcpBindConnectSendRecv) {
                     .s_addr = htonl(INADDR_ANY),
                 },
         };
-        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        EXPECT_GE(addrlen, sizeof(expected_addr));
         const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        EXPECT_EQ(addr_in.sin_family, expected_addr.sin_family);
+        EXPECT_EQ(addr_in.sin_port, expected_addr.sin_port);
+        EXPECT_EQ(addr_in.sin_addr.s_addr, expected_addr.sin_addr.s_addr);
         return 0;
       });
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
@@ -221,9 +227,11 @@ TEST(CommandLine, TcpBindConnectSendRecv) {
         };
         EXPECT_EQ(1, inet_pton(expected_addr.sin_family, "192.168.0.1", &expected_addr.sin_addr))
             << strerror(errno);
-        EXPECT_EQ(addrlen, sizeof(expected_addr));
+        EXPECT_GE(addrlen, sizeof(expected_addr));
         const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        EXPECT_EQ(memcmp(&addr_in, &expected_addr, sizeof(expected_addr)), 0);
+        EXPECT_EQ(addr_in.sin_family, expected_addr.sin_family);
+        EXPECT_EQ(addr_in.sin_port, expected_addr.sin_port);
+        EXPECT_EQ(addr_in.sin_addr.s_addr, expected_addr.sin_addr.s_addr);
         return 0;
       });
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
@@ -236,7 +244,7 @@ TEST(CommandLine, TcpBindConnectSendRecv) {
   EXPECT_CALL(test, getpeername(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, recv(kSockFd, testing::_, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, close(kSockFd)).WillOnce(testing::Return(0));
-  EXPECT_EQ(test.RunCommandLine("tcp bind any:0 connect 192.168.0.1:2021 send recv close"), 0);
+  EXPECT_EQ(test.RunCommandLine("tcp bind 0.0.0.0:0 connect 192.168.0.1:2021 send recv close"), 0);
 }
 
 TEST(CommandLine, TcpShutdown) {
@@ -292,7 +300,9 @@ TEST(CommandLine, JoinDropMcast) {
                             socklen_t optlen) {
         EXPECT_EQ(optlen, sizeof(expected));
         const auto& mreq = *reinterpret_cast<const struct ip_mreqn*>(optval);
-        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        EXPECT_EQ(mreq.imr_multiaddr.s_addr, expected.imr_multiaddr.s_addr);
+        EXPECT_EQ(mreq.imr_address.s_addr, expected.imr_address.s_addr);
+        EXPECT_EQ(mreq.imr_ifindex, expected.imr_ifindex);
         return 0;
       });
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_DROP_MEMBERSHIP, testing::_, testing::_))
@@ -300,7 +310,9 @@ TEST(CommandLine, JoinDropMcast) {
                             socklen_t optlen) {
         EXPECT_EQ(optlen, sizeof(expected));
         const auto& mreq = *reinterpret_cast<const struct ip_mreqn*>(optval);
-        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        EXPECT_EQ(mreq.imr_multiaddr.s_addr, expected.imr_multiaddr.s_addr);
+        EXPECT_EQ(mreq.imr_address.s_addr, expected.imr_address.s_addr);
+        EXPECT_EQ(mreq.imr_ifindex, expected.imr_ifindex);
         return 0;
       });
   EXPECT_EQ(test.RunCommandLine("udp join4 224.0.0.1-192.168.0.1%1 drop4 224.0.0.1-192.168.0.1%1"),
@@ -311,28 +323,31 @@ TEST(CommandLine, JoinDropMcast6) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
   EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)).WillOnce(testing::Return(kSockFd));
-  struct ipv6_mreq expected = {
-      .ipv6mr_interface = 1,
-  };
-  ASSERT_EQ(1, inet_pton(AF_INET6, "ff02:0::01", &expected.ipv6mr_multiaddr)) << strerror(errno);
+  constexpr char multiaddr[] = "ff02::1";
+  constexpr unsigned interface = 1;
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, testing::_, testing::_))
-      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
-                            socklen_t optlen) {
-        EXPECT_EQ(optlen, sizeof(expected));
+      .WillOnce([multiaddr, interface](testing::Unused, testing::Unused, testing::Unused,
+                                       const void* optval, socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(ipv6_mreq));
         const auto& mreq = *reinterpret_cast<const struct ipv6_mreq*>(optval);
-        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        char buf[INET6_ADDRSTRLEN];
+        EXPECT_STREQ(inet_ntop(AF_INET6, &mreq.ipv6mr_multiaddr, buf, sizeof(buf)), multiaddr);
+        EXPECT_EQ(mreq.ipv6mr_interface, interface);
         return 0;
       });
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IPV6, IPV6_LEAVE_GROUP, testing::_, testing::_))
-      .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,
-                            socklen_t optlen) {
-        EXPECT_EQ(optlen, sizeof(expected));
+      .WillOnce([multiaddr, interface](testing::Unused, testing::Unused, testing::Unused,
+                                       const void* optval, socklen_t optlen) {
+        EXPECT_EQ(optlen, sizeof(ipv6_mreq));
         const auto& mreq = *reinterpret_cast<const struct ipv6_mreq*>(optval);
-        EXPECT_EQ(memcmp(&mreq, &expected, sizeof(expected)), 0);
+        char buf[INET6_ADDRSTRLEN];
+        EXPECT_STREQ(inet_ntop(AF_INET6, &mreq.ipv6mr_multiaddr, buf, sizeof(buf)), multiaddr);
+        EXPECT_EQ(mreq.ipv6mr_interface, interface);
         return 0;
       });
-  EXPECT_EQ(test.RunCommandLine("udp join6 ff02:0::01-ff02:0::02%1 drop6 ff02:0::01-ff02:0::02%1"),
-            0);
+  std::stringstream o;
+  o << "udp join6 " << multiaddr << '-' << interface << " drop6 " << multiaddr << '-' << interface;
+  EXPECT_EQ(test.RunCommandLine(o.str()), 0) << o.str();
 }
 
 struct SockOptParam {
@@ -392,7 +407,7 @@ TEST_P(SockOptTest, SetGetParam) {
         return 0;
       });
   cmd << "tcp set-" << param.name << " " << param.arg << " log-" << param.name;
-  EXPECT_EQ(test.RunCommandLine(cmd.str()), 0);
+  EXPECT_EQ(test.RunCommandLine(cmd.str()), 0) << cmd.str();
 }
 
 TEST(SockOptTestMulticastIf, SetGetParam) {
@@ -422,18 +437,18 @@ TEST(SockOptTestMulticastIf, SetGetParam) {
 
 INSTANTIATE_TEST_SUITE_P(
     ParameterizedSockOpt, SockOptTest,
-    testing::Values(
-        MakeSockOptParam("broadcast", "1", SOL_SOCKET, SO_BROADCAST, 1),
+    testing::Values(MakeSockOptParam("broadcast", "1", SOL_SOCKET, SO_BROADCAST, 1),
 #ifdef SO_BINDTODEVICE
-        MakeSockOptParam("bindtodevice", "device", SOL_SOCKET, SO_BINDTODEVICE, "device"),
+                    MakeSockOptParam("bindtodevice", "device", SOL_SOCKET, SO_BINDTODEVICE,
+                                     "device"),
 #endif
-        MakeSockOptParam("reuseaddr", "1", SOL_SOCKET, SO_REUSEADDR, 1),
-        MakeSockOptParam("reuseport", "1", SOL_SOCKET, SO_REUSEPORT, 1),
-        MakeSockOptParam("unicast-ttl", "20", IPPROTO_IP, IP_TTL, 20),
-        MakeSockOptParam("unicast-hops", "10", IPPROTO_IPV6, IPV6_UNICAST_HOPS, 10),
-        MakeSockOptParam("mcast-ttl", "10", IPPROTO_IP, IP_MULTICAST_TTL, 10),
-        MakeSockOptParam("mcast-loop4", "1", IPPROTO_IP, IP_MULTICAST_LOOP, 1),
-        MakeSockOptParam("mcast-hops", "15", IPPROTO_IPV6, IPV6_MULTICAST_HOPS, 15),
-        MakeSockOptParam("mcast-loop6", "1", IPPROTO_IPV6, IPV6_MULTICAST_LOOP, 1),
-        MakeSockOptParam("mcast-if6", "ff02:0::01%1", IPPROTO_IPV6, IPV6_MULTICAST_IF, 1),
-        MakeSockOptParam("ipv6-only", "1", IPPROTO_IPV6, IPV6_V6ONLY, 1)));
+                    MakeSockOptParam("reuseaddr", "1", SOL_SOCKET, SO_REUSEADDR, 1),
+                    MakeSockOptParam("reuseport", "1", SOL_SOCKET, SO_REUSEPORT, 1),
+                    MakeSockOptParam("unicast-ttl", "20", IPPROTO_IP, IP_TTL, 20),
+                    MakeSockOptParam("unicast-hops", "10", IPPROTO_IPV6, IPV6_UNICAST_HOPS, 10),
+                    MakeSockOptParam("mcast-ttl", "10", IPPROTO_IP, IP_MULTICAST_TTL, 10),
+                    MakeSockOptParam("mcast-loop4", "1", IPPROTO_IP, IP_MULTICAST_LOOP, 1),
+                    MakeSockOptParam("mcast-hops", "15", IPPROTO_IPV6, IPV6_MULTICAST_HOPS, 15),
+                    MakeSockOptParam("mcast-loop6", "1", IPPROTO_IPV6, IPV6_MULTICAST_LOOP, 1),
+                    MakeSockOptParam("mcast-if6", "1", IPPROTO_IPV6, IPV6_MULTICAST_IF, 1),
+                    MakeSockOptParam("ipv6-only", "1", IPPROTO_IPV6, IPV6_V6ONLY, 1)));
