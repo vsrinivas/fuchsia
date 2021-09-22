@@ -12,7 +12,6 @@ group("drivers") {
     "drivers/usb-composite",
     "drivers/usb-dfu",
     "drivers/usb-hub",
-    "drivers/usb-hub-rewrite",
     "drivers/usb-peripheral",
     "drivers/usb-peripheral-test",
     "drivers/usb-virtual-bus:usb-virtual-bus",

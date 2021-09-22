@@ -216,7 +216,6 @@
 //src/devices/usb/drivers/usb-bus:usb-bus-driver
 //src/devices/usb/drivers/usb-composite:usb-composite-driver
 //src/devices/usb/drivers/usb-dfu:usb-dfu-driver
-//src/devices/usb/drivers/usb-hub-rewrite:usb-hub-rewrite-driver
 //src/devices/usb/drivers/usb-hub:usb-hub-driver
 //src/devices/usb/drivers/usb-peripheral-test:usb-peripheral-test-driver
 //src/devices/usb/drivers/usb-peripheral:usb-peripheral-driver

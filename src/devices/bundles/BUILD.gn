@@ -95,8 +95,8 @@ group("usb-host-stack") {
     "//src/devices/usb/drivers/usb-bus",
     "//src/devices/usb/drivers/usb-composite",
     "//src/devices/usb/drivers/usb-dfu",
+    "//src/devices/usb/drivers/usb-hub",
   ]
-  deps += [ "//src/devices/usb/drivers/usb-hub-rewrite" ]
 }
 
 group("usb-peripheral-stack") {

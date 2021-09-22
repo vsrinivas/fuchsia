@@ -1,21 +1,18 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/test.gni")
 
-driver_bind_rules("usb_hub_bind") {
-  rules = "usb_hub.bind"
+driver_bind_rules("bind") {
+  rules = "usb-hub.bind"
   header_output = "usb_hub_bind.h"
-  tests = "tests.json"
+  bind_output = "usb-hub.bindbc"
   deps = [ "//src/devices/bind/fuchsia.usb" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":usb_hub_bind_test" ]
 }
 
 driver_module("usb-hub-driver") {
@@ -25,26 +22,74 @@ driver_module("usb-hub-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "usb-hub.c" ]
+  sources = [ "usb-hub.cc" ]
   deps = [
-    ":usb_hub_bind",
+    ":bind",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor:fuchsia.hardware.usb.hubdescriptor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//sdk/lib/fit-promise",
     "//src/devices/lib/driver",
+    "//src/devices/lib/synchronous-executor",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("usb-hub") {
   component_name = "usb-hub"
   deps = [ ":usb-hub-driver" ]
+}
+
+test("usb-hub-test") {
+  configs += [
+    "//build/config:all_source",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [
+    "usb-hub-test.cc",
+    "usb-hub.cc",
+  ]
+  defines = [ "UNITTEST" ]
+  deps = [
+    ":bind",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor:fuchsia.hardware.usb.hubdescriptor_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
+    "//src/devices/lib/synchronous-executor",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+fuchsia_unittest_package("usb-hub-package") {
+  deps = [ ":usb-hub-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":usb-hub-package" ]
 }

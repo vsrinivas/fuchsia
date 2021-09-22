@@ -14,7 +14,7 @@
 #include <zircon/types.h>
 
 #include "lib/sync/completion.h"
-#include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
+#include "src/devices/usb/drivers/usb-hub/usb_hub_bind.h"
 
 namespace usb_hub {
 
@@ -590,4 +590,4 @@ static zx_driver_ops_t usb_hub_driver_ops = {
     .bind = usb_hub::UsbHubDevice::Bind,
 };
 
-ZIRCON_DRIVER(usb_hub_rewrite, usb_hub_driver_ops, "fuchsia", "0.1");
+ZIRCON_DRIVER(usb_hub, usb_hub_driver_ops, "fuchsia", "0.1");

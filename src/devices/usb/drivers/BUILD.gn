@@ -12,7 +12,6 @@ group("tests") {
     "usb-bus:tests",
     "usb-composite:tests",
     "usb-hub:tests",
-    "usb-hub-rewrite:tests",
     "usb-peripheral:tests",
     "usb-peripheral-test:tests",
     "usb-virtual-bus:tests",

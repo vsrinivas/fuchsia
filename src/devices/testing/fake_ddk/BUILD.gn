@@ -134,7 +134,7 @@ zx_library("fake_ddk") {
     "//src/devices/thermal/drivers/aml-thermistor/test/*",
     "//src/devices/usb/drivers/aml-usb-phy-v2/*",
     "//src/devices/usb/drivers/usb-bus/*",
-    "//src/devices/usb/drivers/usb-hub-rewrite/*",
+    "//src/devices/usb/drivers/usb-hub/*",
     "//src/devices/usb/drivers/usb-peripheral/*",
     "//src/devices/usb/drivers/usb-virtual-bus/*",
     "//src/devices/usb/drivers/xhci-rewrite/*",
