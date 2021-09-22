@@ -56,6 +56,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity-rustc",
+    "//src/devices/lib/device-watcher/rust",
     "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",

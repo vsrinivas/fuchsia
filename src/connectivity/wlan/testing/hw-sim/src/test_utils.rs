@@ -14,7 +14,7 @@ use {
     fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
-    futures::{channel::oneshot, FutureExt, StreamExt, TryStreamExt},
+    futures::{channel::oneshot, FutureExt, StreamExt},
     ieee80211::{Bssid, Ssid},
     log::{debug, info},
     pin_utils::pin_mut,
@@ -95,62 +95,6 @@ impl TestHelper {
         helper.wait_for_wlanmac_start().await;
         helper
     }
-    // In Component Framework v1, the isolated device manager build rule allowed for a flag that
-    // would prevent serving /dev until a certain file enumerated.  In WLAN's case, that file was
-    // /dev/sys/test/wlantapctl.  In Components Framework v2, we need to manually wait until
-    // /dev/sys/test/wlantapctl appears before attempting to create a WLAN PHY device.
-    async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
-        let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
-            dir,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )?)
-        .await?;
-        while let Some(msg) = watcher.try_next().await? {
-            if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
-                && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
-            {
-                continue;
-            }
-            if msg.filename.to_str().unwrap() == name {
-                return Ok(());
-            }
-        }
-        unreachable!();
-    }
-    async fn recursive_open_node(
-        initial_dir: &DirectoryProxy,
-        name: &str,
-    ) -> Result<fidl_fuchsia_io::NodeProxy, anyhow::Error> {
-        let mut dir = io_util::clone_directory(initial_dir, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
-        let path = std::path::Path::new(name);
-        let components = path.components().collect::<Vec<_>>();
-        for i in 0..(components.len() - 1) {
-            let component = &components[i];
-            match component {
-                std::path::Component::Normal(file) => {
-                    TestHelper::wait_for_file(&dir, file.to_str().unwrap()).await?;
-                    dir = io_util::open_directory(
-                        &dir,
-                        std::path::Path::new(file),
-                        io_util::OPEN_RIGHT_READABLE,
-                    )?;
-                }
-                _ => panic!("Path must contain only normal components"),
-            }
-        }
-        match components[components.len() - 1] {
-            std::path::Component::Normal(file) => {
-                TestHelper::wait_for_file(&dir, file.to_str().unwrap()).await?;
-                io_util::open_node(
-                    &dir,
-                    std::path::Path::new(file),
-                    fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                    fidl_fuchsia_io::MODE_TYPE_SERVICE,
-                )
-            }
-            _ => panic!("Path must contain only normal components"),
-        }
-    }
     async fn create_phy_and_helper(config: wlantap::WlantapPhyConfig) -> Self {
         // If injected, wlancfg does not start automatically in a test component.
         // Connecting to the service to start wlancfg so that it can create new interfaces.
@@ -164,7 +108,7 @@ impl TestHelper {
         let async_channel = fuchsia_async::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
         let dir = DirectoryProxy::from_channel(async_channel);
-        assert!(TestHelper::recursive_open_node(&dir, "sys/test/wlantapctl")
+        assert!(device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl")
             .expect_within(5.seconds(), "wlantapctl did not appear in time")
             .await
             .is_ok());

@@ -57,88 +57,14 @@ mod log_err_with_debug_assert_tests {
 /// Export the `connect_to_driver` function to be used throughout the crate.
 pub use connect_to_driver::connect_to_driver;
 mod connect_to_driver {
-    use anyhow::{format_err, Context, Error};
+    use anyhow::{format_err, Error};
     use fidl::endpoints::Proxy as _;
-    use fidl_fuchsia_io::{
-        DirectoryProxy, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    };
-    use fuchsia_vfs_watcher::{WatchEvent, Watcher};
-    use futures::TryStreamExt as _;
-    use std::path::Path;
-
-    /// Waits for a file with `name` in the given `dir` to exist. In this context, a "file" can be
-    /// either an actual file entry or a directory. We refer to both as a "file" here to be
-    /// consistent with the Watcher API.
-    async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), Error> {
-        let mut watcher = Watcher::new(io_util::clone_directory(dir, OPEN_RIGHT_READABLE)?).await?;
-        while let Some(msg) = watcher.try_next().await? {
-            match msg.event {
-                WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
-                    if msg.filename.to_str().context("Failed to convert filename to string")?
-                        == name
-                    {
-                        return Ok(());
-                    }
-                }
-                _ => {}
-            }
-        }
-        unreachable!();
-    }
-
-    /// Recursively tries to open the file with `name`. This function is described as "recursive"
-    /// because it will verify that each directory in the `name` path exists, starting in
-    /// `initial_dir`.
-    ///
-    /// Shamelessly copied (then modified) from src/devices/tests/ddk-firmware-test/test.rs.
-    async fn recursive_open_node(
-        initial_dir: &DirectoryProxy,
-        name: &str,
-    ) -> Result<NodeProxy, Error> {
-        let mut dir =
-            io_util::clone_directory(initial_dir, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)?;
-
-        let mut components = Path::new(name)
-            .components()
-            .map(|c| match c {
-                std::path::Component::Normal(file) => Ok(file),
-                component => Err(format_err!("Invalid component {:?}", component)),
-            })
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter();
-        let last_component =
-            components.next_back().ok_or(format_err!("Failed to get last component"))?;
-
-        for component in components {
-            wait_for_file(
-                &dir,
-                component.to_str().ok_or(format_err!("Failed to convert component to string"))?,
-            )
-            .await?;
-            dir = io_util::open_directory(
-                &dir,
-                Path::new(component),
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            )?;
-        }
-
-        wait_for_file(
-            &dir,
-            last_component.to_str().ok_or(format_err!("Failed to convert component to string"))?,
-        )
-        .await?;
-        io_util::open_node(
-            &dir,
-            Path::new(&last_component),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_SERVICE,
-        )
-    }
+    use fidl_fuchsia_io::{NodeProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 
     /// Returns a NodeProxy opened at `path`. The path is guaranteed to exist before the connection
     /// is opened.
     async fn connect_channel(path: &str) -> Result<NodeProxy, Error> {
-        recursive_open_node(
+        device_watcher::recursive_wait_and_open_node(
             &io_util::open_directory_in_namespace(
                 "/dev",
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -179,6 +105,7 @@ mod connect_to_driver {
             OPEN_RIGHT_WRITABLE,
         };
         use fuchsia_async as fasync;
+        use futures::TryStreamExt as _;
         use std::sync::Arc;
         use vfs::{
             directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,

@@ -111,72 +111,10 @@ mod tests {
     };
 
     #[cfg(feature = "v2")]
-    use {fidl_fuchsia_io::DirectoryProxy, wlan_dev::DeviceEnv};
+    use wlan_dev::DeviceEnv;
 
     #[cfg(not(feature = "v2"))]
     use isolated_devmgr::IsolatedDeviceEnv;
-
-    // In Component Framework v1, the isolated device manager build rule allowed for a flag that
-    // would prevent serving /dev until a certain file enumerated.  In WLAN's case, that file was
-    // /dev/sys/test/wlantapctl.  In Components Framework v2, we need to manually wait until
-    // /dev/sys/test/wlantapctl appears before attempting to create a WLAN PHY device.
-    #[cfg(feature = "v2")]
-    async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
-        let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
-            dir,
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        )?)
-        .await?;
-        while let Some(msg) = watcher.try_next().await? {
-            if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
-                && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
-            {
-                continue;
-            }
-            if msg.filename.to_str().unwrap() == name {
-                return Ok(());
-            }
-        }
-        unreachable!();
-    }
-
-    #[cfg(feature = "v2")]
-    async fn recursive_open_node(
-        initial_dir: &DirectoryProxy,
-        name: &str,
-    ) -> Result<fidl_fuchsia_io::NodeProxy, anyhow::Error> {
-        let mut dir = io_util::clone_directory(initial_dir, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
-
-        let path = std::path::Path::new(name);
-        let components = path.components().collect::<Vec<_>>();
-
-        for i in 0..(components.len() - 1) {
-            let component = &components[i];
-            match component {
-                std::path::Component::Normal(file) => {
-                    wait_for_file(&dir, file.to_str().unwrap()).await?;
-                    dir = io_util::open_directory(
-                        &dir,
-                        std::path::Path::new(file),
-                        io_util::OPEN_RIGHT_READABLE,
-                    )?;
-                }
-                _ => panic!("Path must contain only normal components"),
-            }
-        }
-        match components[components.len() - 1] {
-            std::path::Component::Normal(file) => {
-                wait_for_file(&dir, file.to_str().unwrap()).await?;
-                io_util::open_node(
-                    &dir,
-                    std::path::Path::new(file),
-                    fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
-                    fidl_fuchsia_io::MODE_TYPE_SERVICE,
-                )
-            }
-            _ => panic!("Path must contain only normal components"),
-        }
-    }
 
     // TODO(78050): When all WLAN components migrate to Component Framework v2 and the v1 manifests
     // are deprecated, enable this test.
@@ -195,7 +133,7 @@ mod tests {
         let async_channel = fasync::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
         let dir = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
-        let monitor_fut = recursive_open_node(&dir, "sys/test/wlantapctl");
+        let monitor_fut = device_watcher::recursive_wait_and_open_node(&dir, "sys/test/wlantapctl");
         pin_mut!(monitor_fut);
         exec.run_singlethreaded(async {
             monitor_fut

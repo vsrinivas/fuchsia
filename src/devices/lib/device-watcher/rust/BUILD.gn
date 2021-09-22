@@ -1,0 +1,35 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+import("//build/rust/rustc_library.gni")
+
+common_deps = [
+  "//garnet/lib/rust/io_util",
+  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//src/lib/storage/fuchsia-vfs-watcher",
+  "//third_party/rust_crates:anyhow",
+]
+
+rustc_library("rust") {
+  name = "device-watcher"
+  deps = common_deps
+  sources = [ "src/lib.rs" ]
+}
+
+rustc_test("device_watcher_tests") {
+  deps = common_deps + [ "//src/lib/storage/vfs/rust:vfs" ]
+  sources = [ "src/lib.rs" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":device_watcher_tests_package" ]
+}
+fuchsia_unittest_package("device_watcher_tests_package") {
+  package_name = "device_watcher_tests"
+  deps = [ ":device_watcher_tests" ]
+}
