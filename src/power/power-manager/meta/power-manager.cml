@@ -25,6 +25,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.Stats",
                 "fuchsia.settings.Input",
                 "fuchsia.sys2.SystemController",

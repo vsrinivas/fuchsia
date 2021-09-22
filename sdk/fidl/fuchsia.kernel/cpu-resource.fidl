@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.kernel;
+
+using zx;
+
+/// Protocol for providing a `ZX_RSRC_KIND_SYSTEM` with base
+/// `ZX_RSRC_SYSTEM_CPU_BASE`.
+@discoverable
+protocol CpuResource {
+    /// Get a info resource handle as `info_resource`.
+    Get() -> (resource struct {
+        cpu_resource zx.handle:RESOURCE;
+    });
+};

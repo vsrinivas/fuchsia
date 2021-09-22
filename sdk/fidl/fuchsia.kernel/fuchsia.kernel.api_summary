@@ -1,6 +1,8 @@
 protocol/member fuchsia.kernel/Counter.GetInspectVmo() -> (int32 status,fuchsia.mem/Buffer buffer)
 protocol/member fuchsia.kernel/Counter.UpdateInspectVmo() -> (int32 status)
 protocol fuchsia.kernel/Counter
+protocol/member fuchsia.kernel/CpuResource.Get() -> (zx/handle:RESOURCE cpu_resource)
+protocol fuchsia.kernel/CpuResource
 struct/member fuchsia.kernel/CpuStats.actual_num_cpus uint64
 struct/member fuchsia.kernel/CpuStats.per_cpu_stats vector<fuchsia.kernel/PerCpuStats>:<512,optional>
 struct fuchsia.kernel/CpuStats

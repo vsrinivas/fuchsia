@@ -98,6 +98,7 @@ template("component_manager") {
     "src/binder.rs",
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
+    "src/builtin/cpu_resource.rs",
     "src/builtin/crash_introspect.rs",
     "src/builtin/debug_resource.rs",
     "src/builtin/fuchsia_boot_resolver.rs",

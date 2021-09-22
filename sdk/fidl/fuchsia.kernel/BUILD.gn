@@ -9,6 +9,7 @@ fidl("fuchsia.kernel") {
   api = "fuchsia.kernel.api"
 
   sources = [
+    "cpu-resource.fidl",
     "debug-resource.fidl",
     "hypervisor-resource.fidl",
     "info-resource.fidl",

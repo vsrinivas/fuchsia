@@ -336,6 +336,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.kernel.CpuResource" ],
+            from: "parent",
+            to: "#power_manager",
+        },
+        {
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
             to: "#fshost",

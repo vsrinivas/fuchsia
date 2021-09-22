@@ -37,6 +37,7 @@ typedef uint64_t zx_rsrc_system_base_t;
 #define ZX_RSRC_SYSTEM_VMEX_BASE ((zx_rsrc_system_base_t)1u)
 #define ZX_RSRC_SYSTEM_DEBUG_BASE ((zx_rsrc_system_base_t)2u)
 #define ZX_RSRC_SYSTEM_INFO_BASE ((zx_rsrc_system_base_t)3u)
-#define ZX_RSRC_SYSTEM_COUNT ((zx_rsrc_system_base_t)4u)
+#define ZX_RSRC_SYSTEM_CPU_BASE ((zx_rsrc_system_base_t)4u)
+#define ZX_RSRC_SYSTEM_COUNT ((zx_rsrc_system_base_t)5u)
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_RESOURCE_H_

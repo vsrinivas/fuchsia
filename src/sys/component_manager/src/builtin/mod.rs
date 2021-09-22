@@ -4,6 +4,7 @@
 
 pub mod arguments;
 pub mod capability;
+pub mod cpu_resource;
 pub mod crash_introspect;
 pub mod debug_resource;
 pub mod fuchsia_boot_resolver;

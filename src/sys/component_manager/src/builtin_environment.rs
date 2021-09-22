@@ -8,6 +8,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            cpu_resource::CpuResource,
             crash_introspect::{CrashIntrospectSvc, CrashRecords},
             debug_resource::DebugResource,
             fuchsia_boot_resolver::{FuchsiaBootResolver, SCHEME as BOOT_SCHEME},
@@ -310,6 +311,7 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    pub cpu_resource: Option<Arc<CpuResource>>,
     pub debug_resource: Option<Arc<DebugResource>>,
     pub hypervisor_resource: Option<Arc<HypervisorResource>>,
     pub info_resource: Option<Arc<InfoResource>>,
@@ -520,6 +522,27 @@ impl BuiltinEnvironment {
             }
         }
 
+        // Set up the CpuResource service.
+        let cpu_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_CPU_BASE,
+                    1,
+                    b"cpu",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let cpu_resource = cpu_resource_handle.map(CpuResource::new);
+        if let Some(cpu_resource) = cpu_resource.as_ref() {
+            model.root().hooks.install(cpu_resource.hooks()).await;
+        }
+
         // Set up the DebugResource service.
         let debug_resource_handle = system_resource_handle
             .as_ref()
@@ -705,6 +728,7 @@ impl BuiltinEnvironment {
             kernel_stats,
             read_only_log,
             write_only_log,
+            cpu_resource,
             debug_resource,
             mmio_resource,
             hypervisor_resource,

@@ -23,6 +23,8 @@ lazy_static! {
     static ref PACKAGE_RESOLVER_ALLOWED_URL: String = policy_url!("package_resolver_allowed.cmx");
     static ref ROOT_JOB_DENIED_URL: String = policy_url!("root_job_denied.cmx");
     static ref ROOT_JOB_ALLOWED_URL: String = policy_url!("root_job_allowed.cmx");
+    static ref CPU_RESOURCE_DENIED_URL: String = policy_url!("cpu_resource_denied.cmx");
+    static ref CPU_RESOURCE_ALLOWED_URL: String = policy_url!("cpu_resource_allowed.cmx");
     static ref DEBUG_RESOURCE_DENIED_URL: String = policy_url!("debug_resource_denied.cmx");
     static ref DEBUG_RESOURCE_ALLOWED_URL: String = policy_url!("debug_resource_allowed.cmx");
     static ref HYPERVISOR_RESOURCE_DENIED_URL: String =
@@ -111,6 +113,18 @@ async fn root_job_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn root_job_denied() -> Result<(), Error> {
     assert_launch_denied(&ROOT_JOB_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn cpu_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&CPU_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn cpu_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&CPU_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 
