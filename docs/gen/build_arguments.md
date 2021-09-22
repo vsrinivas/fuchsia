@@ -843,19 +843,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/18bb61d482f59e45a5d9d24fc23af1edbd9be6e5/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/bbe2fed9a30d00a02d5f644e709c4a25f89e241b/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/18bb61d482f59e45a5d9d24fc23af1edbd9be6e5/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/bbe2fed9a30d00a02d5f644e709c4a25f89e241b/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/18bb61d482f59e45a5d9d24fc23af1edbd9be6e5/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/bbe2fed9a30d00a02d5f644e709c4a25f89e241b/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -2424,13 +2424,13 @@ From //build/images/fvm.gni:56
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/8f7a60f2c637f2a3c5d25f320739b3de7c2e325d/build/platform.gni#31)
+From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/14b219d5d503e305a6d853e64de201659cfcbe2d/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/8f7a60f2c637f2a3c5d25f320739b3de7c2e325d/build/platform.gni#30)
+From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/14b219d5d503e305a6d853e64de201659cfcbe2d/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3201,6 +3201,15 @@ above changes.
 
 From //build/security.gni:36
 
+### restat_rust
+Set to true to make rust compiles preserve timestamps of unchanged outputs.
+This can lead to on-the-fly pruning of the overall action graph.
+This also works on local builds, without RBE.
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/restat.gni:14
+
 ### run_slow_bssl_tests
 
 **Current value (from the default):** `false`
@@ -3522,6 +3531,9 @@ core_limit(number): maximum size (in bytes) allocated for the core system and/or
 This is sort of a "catch all" component that consists of all the area / packages that weren't
 specified in the components list below.
 
+core_creep_limit(number): maximum size creep (in bytes) per-CL allocated for the core system and/or services.
+This may be enforced by Gerrit.
+
 components(object array): a list of component objects. Each object should contain the following keys:
 
   component(string): name of the component.
@@ -3536,29 +3548,58 @@ components(object array): a list of component objects. Each object should contai
   The $for_pkg corresponds to the $for_pkg field in config.gni.
 
   limit(number): maximum size (in bytes) allocated for the component.
+  creep_limit(number): maxmium size creep (in bytes) per-CL allocated for the component.
+  This may be enforced by Gerrit.
+
+distributed_shlibs(string array): a list of shared libraries which are distributed in the Fuchsia SDK for
+partners to use in their prebuilt packages.
+
+distributed_shlibs_limit(number): maximum size (in bytes) allocated for distributed shared libraries.
+
+distributed_shlibs_creep_limit(number): maximum size creep (in bytes) allocated for distributed shared
+libraries. This may be enforced by Gerrit.
+
+icu_data(string array): a list of files which contribute to the ICU data limit.
+
+icu_data_limit(number): maximum size (in bytes) allocated to ICU data files.
+
+icu_data_creep_limit(number): maximum size creep (in bytes) allocated to ICU data files. This may be
+enforced by Gerrit.
 
 Example:
 size_checker_input = {
   asset_ext = [ ".ttf" ]
   asset_limit = 10240
   core_limit = 10240
+  core_creep_limit = 320
+  distributed_shlibs = [
+    "lib/ld.so.1",
+    "lib/libc++.so.2",
+  ]
+  distributed_shlibs_limit = 10240
+  distributed_shlibs_creep_limit = 320
+  icu_data = [ "icudtl.dat" ]
+  icu_data_limit = 20480
+  icu_data_creep_limit = 320
   components = [
     {
       component = "Foo"
       src = [ "topaz/runtime/foo_runner" ]
       limit = 10240
+      creep_limit = 320
     },
     {
       component = "Bar"
       src = [ "build/images" ]
       limit = 20480
+      creep_limit = 640
     },
   ]
 }
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/cmd/BUILD.gn:52
+From //tools/size_checker/cmd/BUILD.gn:84
 
 ### smp_max_cpus
 
@@ -3886,6 +3927,14 @@ From //src/chromium/build_args.gni:14
 **Current value (from the default):** `false`
 
 From //src/graphics/lib/gbm/gbm.gni:6
+
+### use_direct_for_carnelian_examples
+Include a config in the example packages to attempt to use view mode
+direct.
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/carnelian/BUILD.gn:29
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
