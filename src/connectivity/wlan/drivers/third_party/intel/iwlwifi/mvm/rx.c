@@ -74,17 +74,16 @@ void iwl_mvm_rx_rx_phy_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 static void iwl_mvm_get_signal_strength(const struct iwl_mvm* mvm,
                                         const struct iwl_rx_phy_info* phy_info,
                                         wlan_rx_info_t* rx_info) {
-  const int kS8Min = -128;
   int energy_a, energy_b, energy_c, max_energy;
   uint32_t val;
 
   val = le32_to_cpu(phy_info->non_cfg_phy[IWL_RX_INFO_ENERGY_ANT_ABC_IDX]);
   energy_a = (val & IWL_RX_INFO_ENERGY_ANT_A_MSK) >> IWL_RX_INFO_ENERGY_ANT_A_POS;
-  energy_a = energy_a ? -energy_a : kS8Min;
+  energy_a = energy_a ? -energy_a : S8_MIN;
   energy_b = (val & IWL_RX_INFO_ENERGY_ANT_B_MSK) >> IWL_RX_INFO_ENERGY_ANT_B_POS;
-  energy_b = energy_b ? -energy_b : kS8Min;
+  energy_b = energy_b ? -energy_b : S8_MIN;
   energy_c = (val & IWL_RX_INFO_ENERGY_ANT_C_MSK) >> IWL_RX_INFO_ENERGY_ANT_C_POS;
-  energy_c = energy_c ? -energy_c : kS8Min;
+  energy_c = energy_c ? -energy_c : S8_MIN;
   max_energy = MAX(energy_a, energy_b);
   max_energy = MAX(max_energy, energy_c);
 

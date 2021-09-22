@@ -2391,7 +2391,7 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   // TODO(51295): we don't align the length when we enable A-MSDU in the future.
   const uint16_t aligned_len = ROUND_UP(tb1_len, 4);
   if (tb1_len != aligned_len) {
-    IWL_WARN(trans, "Adjusted the tb1_len=%d ==> aligned_len=%d\n", tb1_len, aligned_len);
+    IWL_DEBUG_TX(trans, "Adjusted the tb1_len=%d ==> aligned_len=%d\n", tb1_len, aligned_len);
     tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_MH_PAD);
   }
 

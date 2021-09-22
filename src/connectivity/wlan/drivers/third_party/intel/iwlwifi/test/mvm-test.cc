@@ -64,6 +64,11 @@ class TestRxcb : public iwl_rx_cmd_buffer {
   ~TestRxcb() { iwl_iobuf_release(_iobuf); }
 };
 
+struct TestCtx {
+  wlan_rx_info_t rx_info;
+  size_t frame_len;
+};
+
 class MvmTest : public SingleApTest {
  public:
   MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -88,15 +93,16 @@ class MvmTest : public SingleApTest {
  protected:
   // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
   // save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this function.
-  void MockRecv(wlan_rx_info_t* rx_info) {
+  void MockRecv(TestCtx* ctx) {
     // TODO(fxbug.dev/43218): replace rxq->napi with interface instance so that we can map to
     // mvmvif.
-    mvmvif_->ifc.ctx = rx_info;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
-                                 // with 'wlan_rx_info_t*'.
+    mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
+                             // with 'TestCtx*'.
     mvmvif_->ifc.ops->recv = [](void* ctx, uint32_t flags, const uint8_t* data_buffer,
                                 size_t data_size, const wlan_rx_info_t* info) {
-      wlan_rx_info_t* rx_info = reinterpret_cast<wlan_rx_info_t*>(ctx);
-      *rx_info = *info;
+      TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
+      test_ctx->rx_info = *info;
+      test_ctx->frame_len = data_size;
     };
   }
 
@@ -144,17 +150,121 @@ TEST_F(MvmTest, rxMpdu) {
   };
   TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
 
-  wlan_rx_info_t rx_info = {};
-  MockRecv(&rx_info);
+  TestCtx test_ctx = {};
+  MockRecv(&test_ctx);
   iwl_mvm_rx_rx_mpdu(mvm_, nullptr /* napi */, &mpdu_rxcb);
 
-  EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE, rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
-  EXPECT_EQ(TO_HALF_MBPS(18), rx_info.data_rate);
-  EXPECT_EQ(kExpChan, rx_info.channel.primary);
-  EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
-  EXPECT_EQ(static_cast<int8_t>(-10), rx_info.rssi_dbm);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE,
+            test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
+  EXPECT_EQ(TO_HALF_MBPS(18), test_ctx.rx_info.data_rate);
+  EXPECT_EQ(kExpChan, test_ctx.rx_info.channel.primary);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
+  EXPECT_EQ(static_cast<int8_t>(-10), test_ctx.rx_info.rssi_dbm);
 }
 
+// Basic test for Rx MQ (no padding by FW)
+TEST_F(MvmTest, rxMqMpdu) {
+  const int kExpChan = 11;
+
+  // Simulate the previous PHY_INFO packet
+  struct iwl_rx_phy_info phy_info = {
+      .non_cfg_phy_cnt = IWL_RX_INFO_ENERGY_ANT_ABC_IDX + 1,
+      .phy_flags = cpu_to_le16(0),
+      .channel = cpu_to_le16(kExpChan),
+      .non_cfg_phy =
+          {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+              [IWL_RX_INFO_ENERGY_ANT_ABC_IDX] = 0x000a28,  // RSSI C:n/a B:-10, A:-40
+#pragma GCC diagnostic pop
+          },
+      .rate_n_flags = cpu_to_le32(0x7),  // IWL_RATE_18M_PLCP
+  };
+  TestRxcb phy_info_rxcb(sim_trans_.iwl_trans()->dev, &phy_info, sizeof(phy_info));
+  iwl_mvm_rx_rx_phy_cmd(mvm_, &phy_info_rxcb);
+
+  // Now, it comes the MPDU packet.
+  const size_t kMacPayloadLen = 60;
+  struct {
+    char mpdu_desc[IWL_RX_DESC_SIZE_V1];
+    struct ieee80211_frame_header frame;
+    uint8_t mac_payload[kMacPayloadLen];
+  } __packed mpdu = {};
+  struct iwl_rx_mpdu_desc* desc = (struct iwl_rx_mpdu_desc*)mpdu.mpdu_desc;
+  desc->mpdu_len = kMacPayloadLen + sizeof(mpdu.frame);
+  desc->v1.channel = kExpChan;
+  desc->v1.energy_a = 0x7f;
+  desc->v1.energy_b = 0x28;
+  desc->status = 0x1007;
+  desc->v1.rate_n_flags = 0x820a;
+  mpdu.frame.frame_ctrl = 0x8;  // Data frame
+  TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
+
+  TestCtx test_ctx = {};
+  MockRecv(&test_ctx);
+  iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
+
+  EXPECT_EQ(desc->mpdu_len, test_ctx.frame_len);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE,
+            test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
+  EXPECT_EQ(TO_HALF_MBPS(1), test_ctx.rx_info.data_rate);
+  EXPECT_EQ(kExpChan, test_ctx.rx_info.channel.primary);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
+  EXPECT_EQ(static_cast<int8_t>(-40), test_ctx.rx_info.rssi_dbm);
+}
+
+// Test checks to see frame header padding added by FW is removed by the driver for Rx MQ
+TEST_F(MvmTest, rxMqMpdu_with_header_padding) {
+  const int kExpChan = 11;
+
+  // Simulate the previous PHY_INFO packet
+  struct iwl_rx_phy_info phy_info = {
+      .non_cfg_phy_cnt = IWL_RX_INFO_ENERGY_ANT_ABC_IDX + 1,
+      .phy_flags = cpu_to_le16(0),
+      .channel = cpu_to_le16(kExpChan),
+      .non_cfg_phy =
+          {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+              [IWL_RX_INFO_ENERGY_ANT_ABC_IDX] = 0x000a28,  // RSSI C:n/a B:-10, A:-40
+#pragma GCC diagnostic pop
+          },
+      .rate_n_flags = cpu_to_le32(0x7),  // IWL_RATE_18M_PLCP
+  };
+  TestRxcb phy_info_rxcb(sim_trans_.iwl_trans()->dev, &phy_info, sizeof(phy_info));
+  iwl_mvm_rx_rx_phy_cmd(mvm_, &phy_info_rxcb);
+
+  // Now, it comes the MPDU packet.
+  const size_t kMacPayloadLen = 60;
+  struct {
+    char mpdu_desc[IWL_RX_DESC_SIZE_V1];
+    // struct ieee80211_frame_header frame;
+    uint8_t frame_header[28];
+    uint8_t mac_payload[kMacPayloadLen];
+  } __packed mpdu = {};
+  struct iwl_rx_mpdu_desc* desc = (struct iwl_rx_mpdu_desc*)mpdu.mpdu_desc;
+  struct ieee80211_frame_header* frame_header = (struct ieee80211_frame_header*)mpdu.frame_header;
+  desc->mpdu_len = kMacPayloadLen + 28;
+  desc->v1.channel = kExpChan;
+  desc->v1.energy_a = 0x7f;
+  desc->v1.energy_b = 0x28;
+  desc->status = 0x1007;
+  desc->v1.rate_n_flags = 0x820a;
+  desc->mac_flags2 = IWL_RX_MPDU_MFLG2_PAD;
+  frame_header->frame_ctrl = 0x288;  // QOS data frame
+  TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
+
+  TestCtx test_ctx = {};
+  MockRecv(&test_ctx);
+  iwl_mvm_rx_mpdu_mq(mvm_, nullptr /* napi */, &mpdu_rxcb, 0);
+
+  // Received frame length should be 2 bytes less than the actual receive length
+  EXPECT_EQ(desc->mpdu_len - 2, test_ctx.frame_len);
+  EXPECT_EQ(TO_HALF_MBPS(1), test_ctx.rx_info.data_rate);
+  EXPECT_EQ(kExpChan, test_ctx.rx_info.channel.primary);
+  EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, test_ctx.rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
+  EXPECT_EQ(static_cast<int8_t>(-40), test_ctx.rx_info.rssi_dbm);
+}
 // The antenna index will be toggled after each call.
 // Check 'ucode_phy_sku' in test/single-ap-test.cc for the fake antenna setting.
 TEST_F(MvmTest, toggleTxAntenna) {

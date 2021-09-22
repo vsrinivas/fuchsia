@@ -62,7 +62,7 @@ static inline bool iwl_have_debug_level(uint32_t level) {
   } while (0)
 
 #define __IWL_DEBUG_DEV(dev, level, limit, fmt, args...) \
-    __iwl_dbg(dev, level, limit, __func__, fmt, ##args)
+  __iwl_dbg(dev, level, limit, __func__, fmt, ##args)
 #define IWL_DEBUG(m, level, fmt, args...) __IWL_DEBUG_DEV((m)->dev, level, false, fmt, ##args)
 #define IWL_DEBUG_DEV(dev, level, fmt, args...) __IWL_DEBUG_DEV(dev, level, false, fmt, ##args)
 #define IWL_DEBUG_LIMIT(m, level, fmt, args...) __IWL_DEBUG_DEV((m)->dev, level, true, fmt, ##args)

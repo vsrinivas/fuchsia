@@ -19,7 +19,7 @@ typedef uint16_t __be16;
 typedef uint64_t __le64;
 typedef uint32_t __le32;
 typedef uint16_t __le16;
-typedef uint8_t __s8;
+typedef int8_t __s8;
 typedef uint8_t __u8;
 
 #if defined(__cplusplus)
@@ -32,6 +32,19 @@ using std::memory_order_seq_cst;
 #else  // defined(__cplusplus)
 #include <stdatomic.h>
 #endif
+
+#define U8_MAX ((uint8_t)0xFF)
+#define S8_MAX ((int8_t)0x7F)
+#define S8_MIN ((int8_t)0x80)
+#define U16_MAX ((uint16_t)0xFFFF)
+#define S16_MAX ((int16_t)0x7FFF)
+#define S16_MIN ((int16_t)0x8000)
+#define U32_MAX ((uint32_t)0xFFFFFFFF)
+#define S32_MAX ((int32_t)0x7FFFFFFF)
+#define S32_MIN ((int32_t)0x80000000)
+#define U64_MAX ((uint64_t)0xFFFFFFFFFFFFFFFF)
+#define S64_MAX ((int64_t)0x7FFFFFFFFFFFFFFF)
+#define S64_MIN ((int64_t)0x8000000000000000)
 
 typedef struct {
   _Atomic(int32_t) value;
