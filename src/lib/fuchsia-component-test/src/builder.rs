@@ -204,7 +204,12 @@ pub enum ComponentSource {
 
 impl ComponentSource {
     pub fn url(url: impl Into<String>) -> Self {
-        Self::Url(url.into())
+        let url: String = url.into();
+        assert!(
+            !url.ends_with(".cmx"),
+            "You are referencing a legacy component and should use ComponentSource::legacy_url"
+        );
+        Self::Url(url)
     }
 
     pub fn mock<M>(mock_fn: M) -> Self
@@ -218,7 +223,12 @@ impl ComponentSource {
     }
 
     pub fn legacy_url(url: impl Into<String>) -> Self {
-        Self::LegacyUrl(url.into())
+        let url: String = url.into();
+        assert!(
+            !url.ends_with(".cm"),
+            "You are referencing a modern component and should use ComponentSource::url"
+        );
+        Self::LegacyUrl(url)
     }
 }
 
