@@ -1,0 +1,70 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.virtualization;
+
+using fuchsia.hardware.network;
+
+/// Provides control over virtualization network configuration.
+@discoverable
+protocol Control {
+    /// Create a new network with configurable upstream connectivity.
+    ///
+    /// The network itself is always guaranteed to be created, but upstream
+    /// connectivity may not be established initially and may be lost at
+    /// any time.
+    ///
+    /// + request `config` network configuration.
+    /// + request `network` provides control over the created network.
+    CreateNetwork(resource struct {
+        config flexible union {
+            /// Create a bridged network.
+            ///
+            /// The server will attempt to find a suitable interface to
+            /// attach to the bridge for providing upstream connectivity. The
+            /// selection process will be repeated to find a replacement
+            /// iff the interface attached to the bridge with Internet
+            /// connectivity is removed.
+            1: bridged table {};
+        };
+        network server_end:Network;
+    });
+};
+
+/// Provides control over a network.
+///
+/// This protocol encodes the lifetime of the underlying network in both
+/// directions, that is:
+/// - if the client end is closed: all interfaces added to the network
+///     (not including any used to provide upstream connectivity) will be
+///     removed and destroyed, and the network will be removed;
+/// - if the server end is closed, all interfaces on the network and the
+///     network itself have been destroyed.
+protocol Network {
+    /// Add a device to the network.
+    ///
+    /// + request `port_id` the netdevice port ID.
+    /// + request `device` the network device to be added.
+    /// + request `interface` provides control over the device.
+    AddDevice(resource struct {
+        port_id fuchsia.hardware.network.port_id;
+        device client_end:fuchsia.hardware.network.Device;
+        interface server_end:Interface;
+    });
+};
+
+/// Provides control over an interface.
+///
+/// This protocol encodes the lifetime of the underlying interface in both
+/// directions, that is:
+/// - if the client end is closed, the server will detach the interface
+///     from the network it belongs to and detach the network device;
+/// - if the server end is closed, the interface has been detached from
+///     the network it was attached to and destroyed.
+///
+/// Terminated with the epitaph `ZX_ERR_WRONG_TYPE` if the device could not
+/// be added to the network due to incompatibility, e.g. if the network is
+/// bridged and the device does not support the same L2 protocol as other
+/// devices on the bridge.
+protocol Interface {};
