@@ -21,7 +21,7 @@ use {
 /// static GCS_CLIENT_FACTORY: OnceCell<ClientFactory> = OnceCell::new();
 /// let client_factory = GCS_CLIENT_FACTORY.get_or_init(|| {
 ///     let auth = [...];
-///     ClientFactory::new_with_auth(auth)
+///     ClientFactory::new_with_auth(auth).expect(...)
 /// });
 /// ```
 /// If more than one GCS ClientFactory with auth is active at the same time, the
@@ -102,6 +102,11 @@ impl Client {
         }
         bail!("Failed to fetch file, result status: {:?}", res.status());
     }
+
+    /// List objects in `bucket` with matching `prefix`.
+    pub async fn list(&self, bucket: &str, prefix: &str) -> Result<Vec<String>> {
+        self.token_store.list(&self.https, bucket, prefix).await
+    }
 }
 
 #[cfg(test)]
@@ -132,7 +137,8 @@ mod test {
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
         let refresh =
             read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
-        let auth = TokenStore::new_with_auth(refresh, /*access_token=*/ None);
+        let auth =
+            TokenStore::new_with_auth(refresh, /*access_token=*/ None).expect("new with auth");
         let client_factory = ClientFactory::new(auth);
         let client = client_factory.create_client();
 

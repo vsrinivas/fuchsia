@@ -33,4 +33,5 @@
 //! ```
 
 pub mod client;
+pub mod gs_url;
 pub mod token_store;

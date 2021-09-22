@@ -27,6 +27,7 @@ rustc_library("lib") {
 
   sources = [
     "src/client.rs",
+    "src/gs_url.rs",
     "src/lib.rs",
     "src/token_store.rs",
   ]

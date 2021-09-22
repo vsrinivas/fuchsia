@@ -12,13 +12,12 @@ use {
     args::{Args, CatArgs, ConfigArgs, CpArgs, ListArgs, SubCommand},
     fuchsia_hyper::new_https_client,
     gcs::{
-        client::{Client, ClientFactory},
+        client::ClientFactory,
+        gs_url::split_gs_url,
         token_store::{auth_code_url, TokenStore},
     },
     home::home_dir,
-    hyper::Uri,
     std::{
-        convert::TryFrom,
         fs::OpenOptions,
         io::{self, BufRead, BufReader, Read, Write},
         path::{Path, PathBuf},
@@ -28,11 +27,10 @@ use {
 mod args;
 mod config;
 
-const VERSION: &str = "0.1";
+const VERSION: &str = "0.3";
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<()> {
-    println!("\nWIP download tool -- This isn't useful yet, stay tuned.\n\n");
     let args: Args = argh::from_env();
     main_helper(args).await
 }
@@ -59,7 +57,7 @@ async fn main_helper(args: Args) -> Result<()> {
 async fn create_client_factory(config_path: &Path) -> Result<ClientFactory> {
     let config = read_config(&config_path).await?;
     let refresh_token = config.gcs.require_refresh_token()?.to_string();
-    let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None);
+    let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None)?;
     Ok(ClientFactory::new(token_store))
 }
 
@@ -75,26 +73,16 @@ fn build_config_path() -> Result<PathBuf> {
 ///
 /// Loop over a list of gs URLs printing contents to stdout.
 async fn cat_command(args: &CatArgs, config_path: &Path) -> Result<()> {
+    if args.gs_url.is_empty() {
+        bail!("One or more URLs are required. (e.g. gs://foo/bar)");
+    }
     let factory = create_client_factory(config_path).await?;
     let client = factory.create_client();
     let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    write_downloads(&mut handle, &client, &args.gs_url).await?;
-    Ok(())
-}
-
-async fn write_downloads<W>(writer: &mut W, client: &Client, urls: &[String]) -> Result<()>
-where
-    W: Write,
-{
-    if urls.is_empty() {
-        bail!("One or more URLs are required. (e.g. gs://foo/bar)");
-    }
-    for gs_url in urls {
-        let url = Uri::try_from(gs_url)?;
-        let bucket = url.host().ok_or(anyhow!("A bucket is required: {:?}", gs_url))?;
-        let object = url.path();
-        client.write(bucket, object, writer).await?;
+    let mut writer = stdout.lock();
+    for split in args.gs_url.iter().map(split_gs_url) {
+        let (bucket, object) = split?;
+        client.write(bucket, object, &mut writer).await?;
     }
     Ok(())
 }
@@ -131,16 +119,29 @@ async fn cp_command(args: &CpArgs, config_path: &Path) -> Result<()> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)
+        .create(true)
         .truncate(true)
         .open(&args.destination)
         .context("create output file")?;
-    write_downloads(&mut file, &client, &vec![args.source.to_string()]).await
+    let (bucket, object) = split_gs_url(&args.source)?;
+    client.write(bucket, object, &mut file).await
 }
 
 /// Handle the `ls` (list) command and its args.
-async fn list_command(_args: &ListArgs, config_path: &Path) -> Result<()> {
-    let _config = read_config(&config_path).await?;
-    println!("The list command is a WIP. Nothing here yet.");
+async fn list_command(args: &ListArgs, config_path: &Path) -> Result<()> {
+    if args.gs_url.is_empty() {
+        bail!("One or more URLs are required. (e.g. gs://foo/bar)");
+    }
+    let factory = create_client_factory(config_path).await?;
+    let client = factory.create_client();
+    let stdout = io::stdout();
+    let mut writer = stdout.lock();
+    for split in args.gs_url.iter().map(split_gs_url) {
+        let (bucket, object_prefix) = split?;
+        for item in client.list(bucket, object_prefix).await? {
+            writeln!(&mut writer, "{}", item)?;
+        }
+    }
     Ok(())
 }
 

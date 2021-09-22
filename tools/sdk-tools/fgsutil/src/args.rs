@@ -61,4 +61,8 @@ pub struct CpArgs {
 
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "list", description = "list providers, buckets, or objects")]
-pub struct ListArgs {}
+pub struct ListArgs {
+    /// one or more queries to list.
+    #[argh(positional)]
+    pub gs_url: Vec<String>,
+}

@@ -111,6 +111,25 @@ struct ExchangeAuthCodeResponse {
     refresh_token: String,
 }
 
+/// Response from the `/b/<bucket>/o` object listing API.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ListResponse {
+    /// Continuation token; only present when there is more data.
+    next_page_token: Option<String>,
+
+    /// List of objects, sorted by name.
+    #[serde(default)]
+    items: Vec<ListResponseItem>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ListResponseItem {
+    /// GCS object name.
+    name: String,
+}
+
 /// User credentials for use with GCS.
 ///
 /// Specifically to:
@@ -147,23 +166,38 @@ impl TokenStore {
 
     /// Allow access to public and private (auth-required) GCS data.
     ///
+    /// The `refresh_token` must not be an empty string (this will generate an
+    /// Err Result.
+    ///
     /// The `access_token` is not required, but if it happens to be available,
     /// i.e. if a code exchange was just done, it avoids an extra round-trip to
     /// provide it here.
-    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Self
+    pub fn new_with_auth<T>(refresh_token: String, access_token: T) -> Result<Self>
     where
         T: Into<Option<String>>,
     {
+        if refresh_token.is_empty() {
+            bail!("Empty refresh token passed to new_with_auth. Please report this as a bug.");
+        }
         let access_token = Mutex::new(access_token.into().unwrap_or("".to_string()));
-        Self {
+        Ok(Self {
             _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
             storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
             refresh_token: Some(refresh_token),
             access_token,
-        }
+        })
     }
 
+    /// Allow access to public and private GCS data.
+    ///
+    /// The `https_client` will be used to exchange the auth code for a refresh
+    /// token.
+    /// The `auth_code` must not be an empty string (this will generate an Err
+    /// Result.
     pub async fn new_with_code(https_client: &HttpsClient, auth_code: &str) -> Result<Self> {
+        if auth_code.is_empty() {
+            bail!("Empty auth code passed to new_with_code. Please report this as a bug.");
+        }
         // Add POST parameters to exchange the auth_code for a refresh_token
         // and possibly an access_token.
         let body = form_urlencoded::Serializer::new(String::new())
@@ -300,13 +334,95 @@ impl TokenStore {
         object: &str,
     ) -> Result<Response<Body>> {
         let url = self.storage_base.join(&format!("{}/{}", bucket, object))?;
+        self.send_request(https_client, url).await
+    }
 
+    /// Make one attempt to request data from GCS.
+    ///
+    /// Callers are expected to handle errors and call attempt_download() again
+    /// as desired (e.g. follow redirects).
+    async fn send_request(&self, https_client: &HttpsClient, url: Url) -> Result<Response<Body>> {
         let req = Request::builder().method(Method::GET).uri(url.into_string());
         let req = self.authenticate(req).await?;
         let req = req.body(Body::from(""))?;
 
         let res = https_client.request(req).await?;
         Ok(res)
+    }
+
+    /// List objects from GCS in `bucket` with matching `prefix`.
+    ///
+    /// A leading slash "/" on `prefix` will be ignored.
+    pub async fn list(
+        &self,
+        https_client: &HttpsClient,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<Vec<String>> {
+        // If the bucket and prefix are from a gs:// URL, the prefix may have a
+        // undesirable leading slash. Trim it if present.
+        let prefix = if prefix.starts_with('/') { &prefix[1..] } else { prefix };
+
+        Ok(match self.attempt_list(https_client, bucket, prefix).await {
+            Err(e) => {
+                match &self.refresh_token {
+                    Some(_) => {
+                        // Refresh the access token and make one extra try.
+                        self.refresh_access_token(&https_client).await?;
+                        self.attempt_list(https_client, bucket, prefix).await?
+                    }
+                    None => {
+                        // With no refresh token, there's no option to retry.
+                        return Err(e);
+                    }
+                }
+            }
+            Ok(value) => value,
+        })
+    }
+
+    /// Make one attempt to list objects from GCS.
+    async fn attempt_list(
+        &self,
+        https_client: &HttpsClient,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<Vec<String>> {
+        let mut base_url = Url::parse(API_BASE).expect("parse API_BASE");
+        base_url.path_segments_mut().unwrap().extend(&["b", bucket, "o"]);
+        base_url
+            .query_pairs_mut()
+            .append_pair("prefix", prefix)
+            .append_pair("prettyPrint", "false")
+            .append_pair("fields", "nextPageToken,items/name");
+        let mut results = Vec::new();
+        let mut page_token: Option<String> = None;
+        loop {
+            // Create a new URL for each "page" of results.
+            let mut url = base_url.clone();
+            if let Some(t) = page_token {
+                url.query_pairs_mut().append_pair("pageToken", t.as_str());
+            }
+            let res = self.send_request(https_client, url).await?;
+            match res.status() {
+                StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
+                    bail!("Auth required to list {}", base_url);
+                }
+                StatusCode::OK => {
+                    let bytes = hyper::body::to_bytes(res.into_body()).await?;
+                    let info: ListResponse = serde_json::from_slice(&bytes)?;
+                    results.extend(info.items.into_iter().map(|i| i.name));
+                    if info.next_page_token.is_none() {
+                        break;
+                    }
+                    page_token = info.next_page_token;
+                }
+                _ => {
+                    bail!("Failed to list {:?} {:?}", base_url, res);
+                }
+            }
+        }
+        Ok(results)
     }
 }
 
@@ -408,7 +524,8 @@ mod test {
         let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
         let refresh_token =
             read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
-        let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None);
+        let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None)
+            .expect("new with auth");
         let https = new_https_client();
         token_store.refresh_access_token(&https).await.expect("refresh_access_token");
         let bucket = "fuchsia-sdk";
