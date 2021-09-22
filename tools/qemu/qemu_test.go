@@ -195,7 +195,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			User: &NetdevUser{},
 			Device: Device{
 				Model:   DeviceModelVirtioNetPCI,
-				options: []string{"mac=52:54:00:63:5e:7a"},
+				options: []string{"mac=52:54:00:63:5e:7a", "vectors=8"},
 			},
 		},
 	)
@@ -217,7 +217,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
 			"-serial", "chardev:char0",
 			"-netdev", "user,id=net0",
-			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,netdev=net0",
+			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,vectors=8,netdev=net0",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
 		err: nil,
 	}, cmd, err)
@@ -245,7 +245,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
 			"-serial", "chardev:char0",
 			"-netdev", "user,id=net0",
-			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,netdev=net0",
+			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,vectors=8,netdev=net0",
 			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
 			"-device", "usb-storage,drive=usb",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
@@ -269,7 +269,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-chardev", "stdio,id=char0,logfile=logfile.txt,signal=off",
 			"-serial", "chardev:char0",
 			"-netdev", "user,id=net0",
-			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,netdev=net0",
+			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,vectors=8,netdev=net0",
 			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
 			"-device", "usb-storage,drive=usb",
 			"-device", "qemu-xhci,id=xhci",

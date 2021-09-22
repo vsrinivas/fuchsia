@@ -281,6 +281,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		Device: qemu.Device{Model: qemu.DeviceModelVirtioNetPCI},
 	}
 	netdev.Device.AddOption("mac", net.HardwareAddr(t.mac[:]).String())
+	netdev.Device.AddOption("vectors", "8")
 	if t.config.UserNetworking {
 		netdev.User = &qemu.NetdevUser{}
 	} else {
