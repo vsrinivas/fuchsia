@@ -187,7 +187,7 @@ func TestGetProductBundleData(t *testing.T) {
 			  ],
 			  "images": [
 				{
-				  "base_uri": "file:/../../..",
+				  "base_uri": "file:/../../../..",
 				  "format": "files"
 				}
 			  ],
@@ -195,7 +195,8 @@ func TestGetProductBundleData(t *testing.T) {
 			  "packages": [
 				{
 				  "format": "files",
-				  "repo_uri": "file:/../../../../packages"
+				  "blob_uri": "file:/../../../../../../../blobs",
+				  "repo_uri": "file:/../../../../../packages"
 				}
 			  ],
 			  "type": "product_bundle",
@@ -219,7 +220,7 @@ func TestGetProductBundleData(t *testing.T) {
 				  ],
 				  "images": [
 					{
-					  "base_uri": "file:/../../..",
+					  "base_uri": "file:/../../../..",
 					  "format": "files"
 					}
 				  ],
@@ -260,7 +261,8 @@ func TestGetProductBundleData(t *testing.T) {
 				  "packages": [
 					{
 					  "format": "files",
-					  "repo_uri": "file:/../../../../packages"
+					  "blob_uri": "file:/../../../../../../../blobs",
+				      "repo_uri": "file:/../../../../../packages"
 					}
 				  ],
 				  "type": "product_bundle"
@@ -275,7 +277,7 @@ func TestGetProductBundleData(t *testing.T) {
 				  ],
 				  "images": [
 					{
-					  "base_uri": "file:/../../..",
+					  "base_uri": "file:/../../../..",
 					  "format": "files"
 					}
 				  ],
@@ -283,7 +285,8 @@ func TestGetProductBundleData(t *testing.T) {
 				  "packages": [
 					{
 					  "format": "files",
-					  "repo_uri": "file:/../../../../packages"
+					  "blob_uri": "file:/../../../../../../../blobs",
+					  "repo_uri": "file:/../../../../../packages"
 					}
 				  ],
 				  "type": "product_bundle",
@@ -307,6 +310,7 @@ func TestGetProductBundleData(t *testing.T) {
 		"builds/123456/packages": []byte(""),
 		"builds/789123/images":   []byte(""),
 		"builds/789123/packages": []byte(""),
+		"blobs":                  []byte(""),
 	}
 	ctx := context.Background()
 	var tests = []struct {
@@ -337,6 +341,7 @@ func TestGetProductBundleData(t *testing.T) {
 						{
 							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/123456/packages",
+							BlobURI: "gs://fuchsia/blobs",
 						},
 					},
 					Manifests: &Manifests{
@@ -370,6 +375,7 @@ func TestGetProductBundleData(t *testing.T) {
 						{
 							Format:  "files",
 							RepoURI: "gs://fuchsia/builds/789123/packages",
+							BlobURI: "gs://fuchsia/blobs",
 						},
 					},
 					Manifests: &Manifests{

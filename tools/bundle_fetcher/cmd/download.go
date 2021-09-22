@@ -132,9 +132,7 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 	if err != nil {
 		return "", err
 	}
-	productBundleDirPath := filepath.Dir(productBundleJSONPath)
-	baseURI := filepath.Join(productBundleDirPath, u.Path)
-
+	baseURI := filepath.Join(productBundleJSONPath, u.Path)
 	// Check that the path actually exists in GCS.
 	validPath, err := sink.doesPathExist(ctx, baseURI)
 	if err != nil {
@@ -177,15 +175,21 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 	logger.Debugf(ctx, "updating packages for product bundle %q", productBundleJSONPath)
 	for _, pkg := range data.Packages {
 		if pkg.Format == fileFormatName {
-			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
+			repoURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
 				return ProductBundle{}, err
 			}
-			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", gcsURI, pkg.RepoURI)
+			logger.Debugf(ctx, "gcs_uri is %v for package repo_uri %v", repoURI, pkg.RepoURI)
+
+			blobURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.BlobURI, productBundleJSONPath, sink.getBucketName())
+			if err != nil {
+				return ProductBundle{}, err
+			}
+			logger.Debugf(ctx, "gcs_uri is %v for package blob_uri %v", blobURI, pkg.BlobURI)
 			newPackages = append(newPackages, &Package{
 				Format:  fileFormatName,
-				RepoURI: gcsURI,
-				BlobURI: pkg.BlobURI,
+				RepoURI: repoURI,
+				BlobURI: blobURI,
 			})
 		}
 	}
