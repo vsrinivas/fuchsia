@@ -621,6 +621,7 @@ mod tests {
         },
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         ieee80211::Bssid,
+        std::convert::TryFrom,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, mac::CapabilityInfo,
             test_utils::fake_frames::fake_wpa2_rsne,
@@ -642,7 +643,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0).with_ess(true),
@@ -693,7 +694,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -713,7 +714,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -759,7 +760,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -791,7 +792,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -837,7 +838,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -891,7 +892,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0).with_short_preamble(true).with_ess(true),
@@ -945,7 +946,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -989,7 +990,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1027,7 +1028,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1081,7 +1082,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1133,7 +1134,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1183,7 +1184,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
-                ssid: Some(Ssid::from("coolnet").into()),
+                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
                 capability_info: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
@@ -1198,7 +1199,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1243,7 +1244,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1288,7 +1289,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1330,7 +1331,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1371,7 +1372,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1444,7 +1445,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1491,7 +1492,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1564,7 +1565,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1627,7 +1628,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1701,7 +1702,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1767,7 +1768,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1801,7 +1802,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1851,7 +1852,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -1921,7 +1922,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2001,7 +2002,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2051,7 +2052,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2085,7 +2086,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             mac::CapabilityInfo(33),
@@ -2129,7 +2130,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(33),
@@ -2163,7 +2164,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(33),
@@ -2222,7 +2223,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(33),
@@ -2279,7 +2280,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from([1, 2, 3, 4, 5]),
+            Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(33),
@@ -2316,7 +2317,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2368,7 +2369,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2391,7 +2392,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),
@@ -2546,7 +2547,7 @@ mod tests {
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         let mut bss = InfraBss::new(
             &mut ctx,
-            Ssid::from("coolnet"),
+            Ssid::try_from("coolnet").unwrap(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
             2,
             CapabilityInfo(0),

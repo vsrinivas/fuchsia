@@ -247,7 +247,10 @@ async fn handle_client_request_connect(
     network: &fidl_policy::NetworkIdentifier,
 ) -> Result<oneshot::Receiver<()>, Error> {
     let network_config = saved_networks
-        .lookup(NetworkIdentifier::new(network.ssid.clone(), network.type_.into()))
+        .lookup(NetworkIdentifier::new(
+            client_types::Ssid::from_bytes_unchecked(network.ssid.clone()),
+            network.type_.into(),
+        ))
         .await
         .pop()
         .ok_or_else(|| format_err!("Requested network not found in saved networks"))?;
@@ -484,6 +487,7 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
+        std::convert::TryFrom,
         wlan_common::{assert_variant, random_fidl_bss_description},
     };
 
@@ -694,13 +698,13 @@ mod tests {
     // test will have a unique persistent store behind it.
     fn test_setup(connect_succeeds: bool) -> TestValues {
         let presaved_default_configs = vec![
-            (NetworkIdentifier::new("foobar", SecurityType::None), Credential::None),
+            (NetworkIdentifier::try_from("foobar", SecurityType::None).unwrap(), Credential::None),
             (
-                NetworkIdentifier::new("foobar-protected", SecurityType::Wpa2),
+                NetworkIdentifier::try_from("foobar-protected", SecurityType::Wpa2).unwrap(),
                 Credential::Password(b"supersecure".to_vec()),
             ),
             (
-                NetworkIdentifier::new("foobar-psk", SecurityType::Wpa2),
+                NetworkIdentifier::try_from("foobar-psk", SecurityType::Wpa2).unwrap(),
                 Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()),
             ),
         ];
@@ -743,7 +747,7 @@ mod tests {
 
     #[fuchsia::test]
     fn connect_request_unknown_network() {
-        let ssid = b"foobar-unknown".to_vec();
+        let ssid = client_types::Ssid::try_from("foobar-unknown").unwrap();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
@@ -765,7 +769,7 @@ mod tests {
 
         // Issue connect request.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
-            ssid: ssid.clone(),
+            ssid: ssid.to_vec(),
             type_: fidl_policy::SecurityType::None,
         });
         pin_mut!(connect_fut);
@@ -1439,7 +1443,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
 
         // Save the network directly.
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"password".to_vec());
         let save_fut = saved_networks.store(network_id.clone(), credential.clone());
         pin_mut!(save_fut);
@@ -1577,7 +1581,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
 
         // Save the network directly.
-        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let save_fut = saved_networks.store(network_id.clone(), credential.clone());
         pin_mut!(save_fut);
@@ -1617,7 +1621,7 @@ mod tests {
     #[fuchsia::test]
     fn get_saved_network() {
         // save a network
-        let network_id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"password".to_vec());
         let saved_networks = vec![(network_id.clone(), credential.clone())];
 
@@ -1641,14 +1645,14 @@ mod tests {
         let mut expected_configs = vec![];
         for index in 0..MAX_CONFIGS_PER_RESPONSE + 1 {
             // Create unique network config to be saved.
-            let ssid = format!("some_config{}", index).into_bytes();
+            let ssid = client_types::Ssid::try_from(format!("some_config{}", index)).unwrap();
             let net_id = NetworkIdentifier::new(ssid.clone(), SecurityType::None);
             saved_networks.push((net_id, Credential::None));
 
             // Create corresponding FIDL value and add to list of expected configs/
-            let ssid = format!("some_config{}", index).into_bytes();
+            let ssid = client_types::Ssid::try_from(format!("some_config{}", index)).unwrap();
             let net_id = fidl_policy::NetworkIdentifier {
-                ssid: ssid,
+                ssid: ssid.to_vec(),
                 type_: fidl_policy::SecurityType::None,
             };
             let credential = fidl_policy::Credential::None(fidl_policy::Empty);
@@ -2080,7 +2084,7 @@ mod tests {
     #[fuchsia::test]
     async fn get_correct_config() {
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let cfg = NetworkConfig::new(
             network_id.clone(),
             Credential::Password(b"password".to_vec()),
@@ -2107,7 +2111,7 @@ mod tests {
             None,
             get_config(
                 saved_networks.clone(),
-                NetworkIdentifier::new("foo", SecurityType::Wpa2),
+                NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap(),
                 Credential::Password(b"not-saved".to_vec())
             )
             .await

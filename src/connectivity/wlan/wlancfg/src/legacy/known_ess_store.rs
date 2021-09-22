@@ -182,9 +182,7 @@ impl<'a> TempFile<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Write;
-    use tempfile;
+    use {super::*, std::convert::TryFrom, std::io::Write, tempfile};
 
     const STORE_JSON_PATH: &str = "store.json";
 
@@ -198,10 +196,12 @@ mod tests {
 
         assert_eq!(None, store.lookup(b"foo"));
         assert_eq!(0, store.known_network_count());
-        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::try_from("foo").unwrap(), ess(b"qwerty")).expect("storing 'foo' failed");
         assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
-        store.store(Ssid::from("foo"), ess(b"12345")).expect("storing 'foo' again failed");
+        store
+            .store(Ssid::try_from("foo").unwrap(), ess(b"12345"))
+            .expect("storing 'foo' again failed");
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
 
@@ -211,7 +211,7 @@ mod tests {
         assert_eq!(1, store.known_network_count());
 
         // Make sure that overwriting the existing file works
-        store.store(Ssid::from("bar"), ess(b"zxcvb")).expect("storing 'bar' failed");
+        store.store(Ssid::try_from("bar").unwrap(), ess(b"zxcvb")).expect("storing 'bar' failed");
         let store = create_ess_store(temp_dir.path());
         assert_eq!(Some(ess(b"12345")), store.lookup(b"foo"));
         assert_eq!(Some(ess(b"zxcvb")), store.lookup(b"bar"));
@@ -234,7 +234,7 @@ mod tests {
         assert!(!path.exists());
 
         // Writing an entry should create the file
-        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::try_from("foo").unwrap(), ess(b"qwerty")).expect("storing 'foo' failed");
         assert!(path.exists());
     }
 
@@ -247,7 +247,9 @@ mod tests {
         )
         .expect("Failed to create a KnownEssStore");
 
-        let e = store.store(Ssid::from("foo"), ess(b"qwerty")).expect_err("expected store to fail");
+        let e = store
+            .store(Ssid::try_from("foo").unwrap(), ess(b"qwerty"))
+            .expect_err("expected store to fail");
         assert!(
             e.to_string().contains("Failed to rename")
                 && e.to_string().contains("into /dev/null/foo"),
@@ -264,7 +266,7 @@ mod tests {
         // exist yet
         let store = create_ess_store(temp_dir.path());
 
-        store.store(Ssid::from("foo"), ess(b"qwerty")).expect("storing 'foo' failed");
+        store.store(Ssid::try_from("foo").unwrap(), ess(b"qwerty")).expect("storing 'foo' failed");
         assert_eq!(Some(ess(b"qwerty")), store.lookup(b"foo"));
         assert_eq!(1, store.known_network_count());
         store.clear().expect("clearing store failed");

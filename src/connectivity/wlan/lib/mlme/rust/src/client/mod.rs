@@ -1112,6 +1112,7 @@ mod tests {
             device::FakeDevice,
         },
         fidl_fuchsia_wlan_common as fidl_common,
+        std::convert::TryFrom,
         wlan_common::{
             assert_variant, fake_fidl_bss_description, ie, stats::SignalStrengthAverage,
             test_utils::fake_frames::*, TimeUnit,
@@ -1263,7 +1264,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
+            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1280,7 +1281,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("foo")),
+            selected_bss: fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1298,7 +1299,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Wpa1, ssid: Ssid::from("foo")),
+            selected_bss: fake_fidl_bss_description!(Wpa1, ssid: Ssid::try_from("foo").unwrap()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1316,7 +1317,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
+            selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1619,7 +1620,7 @@ mod tests {
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        client.sta.ssid = Ssid::from([11, 22, 33, 44]);
+        client.sta.ssid = Ssid::try_from([11, 22, 33, 44]).unwrap();
         client
             .send_assoc_req_frame(
                 0x1234,                               // capability info

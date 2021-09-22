@@ -5,6 +5,7 @@
 use {
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
+    std::convert::TryFrom,
     wlan_common::bss::Protection,
     wlan_hw_sim::*,
 };
@@ -15,9 +16,9 @@ const BSS_WEP: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x72]);
 const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
 
 lazy_static! {
-    static ref SSID_WPA1: Ssid = Ssid::from("wpa1___how_nice");
-    static ref SSID_WEP: Ssid = Ssid::from("wep_is_soooo_secure");
-    static ref SSID_MIXED: Ssid = Ssid::from("this_is_fine");
+    static ref SSID_WPA1: Ssid = Ssid::try_from("wpa1___how_nice").unwrap();
+    static ref SSID_WEP: Ssid = Ssid::try_from("wep_is_soooo_secure").unwrap();
+    static ref SSID_MIXED: Ssid = Ssid::try_from("this_is_fine").unwrap();
 }
 
 /// Test a client can connect to a wep or wpa network only when configured on.

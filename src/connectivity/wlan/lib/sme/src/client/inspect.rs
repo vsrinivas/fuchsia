@@ -512,6 +512,7 @@ mod tests {
         super::*,
         crate::client::test_utils,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
+        std::convert::TryFrom,
     };
 
     #[test]
@@ -534,7 +535,7 @@ mod tests {
 
         // SME is connecting. Check that "connecting_to" field now appears, and that existing
         // fields are still kept.
-        let status = ClientSmeStatus::Connecting(Ssid::from("foo"));
+        let status = ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {

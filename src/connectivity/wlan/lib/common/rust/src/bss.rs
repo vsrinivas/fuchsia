@@ -560,7 +560,7 @@ impl TryFrom<fidl_internal::BssDescription> for BssDescription {
         let rates = rates.ok_or_else(|| format_err!("Missing rates IE"))?;
 
         Ok(Self {
-            ssid: Ssid::from(&bss.ies[ssid_range]),
+            ssid: Ssid::from_bytes_unchecked(bss.ies[ssid_range].to_vec()),
             bssid: Bssid(bss.bssid),
             bss_type: bss.bss_type,
             beacon_period: bss.beacon_period,
@@ -1070,7 +1070,7 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, vht_cap.clone())
                 .set(IeType::VHT_OPERATION, vht_op.clone())
         );
-        assert_eq!(bss.ssid, Ssid::from("ssidie"));
+        assert_eq!(bss.ssid, Ssid::try_from("ssidie").unwrap());
         assert_eq!(
             bss.rates(),
             &[

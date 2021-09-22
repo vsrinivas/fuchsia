@@ -10,3 +10,4 @@ pub use bssid::MacAddr;
 pub use bssid::NULL_MAC_ADDR;
 pub use bssid::WILDCARD_BSSID;
 pub use ssid::Ssid;
+pub use ssid::SsidError;

@@ -21,7 +21,7 @@ use {
     lazy_static::lazy_static,
     log::{debug, error},
     pin_utils::pin_mut,
-    std::{future::Future, marker::Unpin},
+    std::{convert::TryFrom, future::Future, marker::Unpin},
     wlan_common::{
         bss::Protection,
         data_writer,
@@ -54,7 +54,7 @@ mod wlanstack_helper;
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: Bssid = Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
 lazy_static! {
-    pub static ref AP_SSID: Ssid = Ssid::from("ap_ssid");
+    pub static ref AP_SSID: Ssid = Ssid::try_from("ap_ssid").unwrap();
 }
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: fidl_common::WlanChannel = fidl_common::WlanChannel {

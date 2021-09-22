@@ -166,7 +166,10 @@ impl PolicyStash {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, ieee80211::Ssid, wlan_stash_constants::StashedSsid};
+    use {
+        super::*, fuchsia_async as fasync, ieee80211::Ssid, std::convert::TryFrom,
+        wlan_stash_constants::StashedSsid,
+    };
 
     /// The PSK provided must be the bytes form of the 64 hexadecimal character hash. This is a
     /// duplicate of a definition in wlan/wlancfg/src, since I don't think there's a good way to
@@ -177,7 +180,7 @@ mod tests {
     async fn write_and_read() {
         let stash = new_stash("write_and_read").await;
         let cfg_id = NetworkIdentifier {
-            ssid: Ssid::from("foo").to_vec(),
+            ssid: Ssid::try_from("foo").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg = PersistentData {
@@ -276,7 +279,7 @@ mod tests {
         let stash_id = "write_persists";
         let stash = new_stash(stash_id).await;
         let cfg_id = NetworkIdentifier {
-            ssid: Ssid::from("foo").to_vec(),
+            ssid: Ssid::try_from("foo").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg = PersistentData {
@@ -300,7 +303,7 @@ mod tests {
     async fn load_stash() {
         let store = new_stash("load_stash").await;
         let foo_net_id = NetworkIdentifier {
-            ssid: Ssid::from("foo").to_vec(),
+            ssid: Ssid::try_from("foo").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg_foo = PersistentData {
@@ -308,7 +311,7 @@ mod tests {
             has_ever_connected: true,
         };
         let bar_net_id = NetworkIdentifier {
-            ssid: Ssid::from("bar").to_vec(),
+            ssid: Ssid::try_from("bar").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg_bar = PersistentData {
@@ -357,7 +360,7 @@ mod tests {
 
         // add some configs to the stash
         let net_id_foo = NetworkIdentifier {
-            ssid: Ssid::from("foo").to_vec(),
+            ssid: Ssid::try_from("foo").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg_foo = PersistentData {
@@ -365,7 +368,7 @@ mod tests {
             has_ever_connected: true,
         };
         let net_id_bar = NetworkIdentifier {
-            ssid: Ssid::from("bar").to_vec(),
+            ssid: Ssid::try_from("bar").unwrap().to_vec(),
             security_type: SecurityType::Wpa2,
         };
         let cfg_bar = PersistentData {

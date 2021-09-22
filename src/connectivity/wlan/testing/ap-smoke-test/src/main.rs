@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
-    let target_ssid = Ssid::from(opt.target_ssid);
+    let target_ssid = Ssid::try_from(opt.target_ssid)?;
     let target_pwd = opt.target_pwd.as_bytes();
     let target_channel = opt.target_channel;
     let mut test_pass = false;

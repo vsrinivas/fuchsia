@@ -19,6 +19,7 @@ use {
     log::{debug, info},
     pin_utils::pin_mut,
     std::{
+        convert::TryFrom,
         future::Future,
         marker::Unpin,
         pin::Pin,
@@ -275,7 +276,7 @@ pub async fn scan_for_networks(
     let mut scan_results: Vec<ScanResult> = Vec::new();
     for result in scanned_networks {
         let id = result.id.expect("empty network ID");
-        let ssid = Ssid::from(id.ssid);
+        let ssid = Ssid::try_from(id.ssid).unwrap();
         let compatibility = result.compatibility.expect("empty compatibility");
         for entry in result.entries.expect("empty scan entries") {
             let bssid = entry.bssid.expect("empty BSSID");

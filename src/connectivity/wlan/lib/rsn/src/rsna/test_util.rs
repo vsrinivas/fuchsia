@@ -21,7 +21,10 @@ use eapol::KeyFrameTx;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use hex::FromHex;
 use ieee80211::Ssid;
-use std::sync::{Arc, Mutex};
+use std::{
+    convert::TryFrom,
+    sync::{Arc, Mutex},
+};
 use wlan_common::{
     ie::{
         fake_wpa_ie,
@@ -48,7 +51,7 @@ pub fn get_rsne_protection() -> NegotiatedProtection {
 
 pub fn get_wpa2_supplicant() -> Supplicant {
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
-    let psk = psk::compute("ThisIsAPassword".as_bytes(), &Ssid::from("ThisIsASSID"))
+    let psk = psk::compute("ThisIsAPassword".as_bytes(), &Ssid::try_from("ThisIsASSID").unwrap())
         .expect("error computing PSK");
     Supplicant::new_wpa_personal(
         nonce_rdr,
@@ -65,7 +68,7 @@ pub fn get_wpa2_authenticator() -> Authenticator {
     let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
         .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
-    let psk = psk::compute("ThisIsAPassword".as_bytes(), &Ssid::from("ThisIsASSID"))
+    let psk = psk::compute("ThisIsAPassword".as_bytes(), &Ssid::try_from("ThisIsASSID").unwrap())
         .expect("error computing PSK");
     Authenticator::new_wpa2psk_ccmp128(
         nonce_rdr,

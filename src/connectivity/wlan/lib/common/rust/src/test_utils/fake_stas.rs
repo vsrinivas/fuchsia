@@ -22,7 +22,7 @@ use {
         distributions::{Distribution, Standard},
         Rng,
     },
-    std::convert::TryInto,
+    std::convert::{TryFrom, TryInto},
 };
 
 #[rustfmt::skip]
@@ -284,7 +284,7 @@ pub fn build_fake_bss_description_creator__(
         snr_db: 0,
 
         protection_cfg,
-        ssid: Ssid::from("fake-ssid"),
+        ssid: Ssid::try_from("fake-ssid").unwrap(),
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         wmm_param: Some(fake_wmm_param()),
 
@@ -353,10 +353,9 @@ pub fn build_random_bss_description_creator__(
         snr_db: rng.gen::<i8>(),
 
         protection_cfg,
-        ssid: (0..fidl_ieee80211::MAX_SSID_BYTE_LEN)
-            .map(|_| rng.gen::<u8>())
-            .collect::<Vec<u8>>()
-            .into(),
+        ssid: Ssid::from_bytes_unchecked(
+            (0..fidl_ieee80211::MAX_SSID_BYTE_LEN).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>(),
+        ),
         rates,
 
         // WMM is independent of 802.11 QoS, so the capabilities randomly indicated
@@ -545,7 +544,6 @@ mod tests {
             test_utils::fake_frames::{fake_wmm_param_body, fake_wmm_param_header},
         },
         ie::IeType,
-        std::convert::TryFrom,
     };
 
     #[test]
@@ -732,8 +730,8 @@ mod tests {
 
     #[test]
     fn random_fidl_bss_decription_override() {
-        let random_bss = random_bss_description!(ssid: Ssid::from("foo"));
-        assert_eq!(random_bss.ssid, Ssid::from("foo"));
+        let random_bss = random_bss_description!(ssid: Ssid::try_from("foo").unwrap());
+        assert_eq!(random_bss.ssid, Ssid::try_from("foo").unwrap());
     }
 
     #[test]
@@ -801,7 +799,7 @@ mod tests {
     #[test]
     fn ies_overrides() {
         let bss = fake_bss_description!(Wpa1Wpa2,
-            ssid: Ssid::from("fuchsia"),
+            ssid: Ssid::try_from("fuchsia").unwrap(),
             rates: vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
             ies_overrides: IesOverrides::new()
                 .remove(IeType::new_vendor([0x00, 0x0b, 0x86, 0x01, 0x04, 0x08]))

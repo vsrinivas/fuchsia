@@ -70,7 +70,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let network_svc = connect_to_protocol::<StackMarker>()?;
     test_results.connect_to_netstack_service = true;
 
-    let target_ssid = Ssid::from(&opt.target_ssid);
+    let target_ssid = Ssid::try_from(opt.target_ssid.clone())?;
 
     let fut = async {
         let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)

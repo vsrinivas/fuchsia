@@ -5,6 +5,7 @@
 use {
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
+    std::convert::TryFrom,
     wlan_common::bss::Protection,
     wlan_hw_sim::*,
 };
@@ -17,9 +18,9 @@ const BSS_BAZ: Bssid = Bssid([0x62, 0x73, 0x73, 0x62, 0x61, 0x7a]);
 const BSS_BAZ_2: Bssid = Bssid([0x60, 0x70, 0x70, 0x60, 0x60, 0x70]);
 
 lazy_static! {
-    static ref SSID_FOO: Ssid = Ssid::from("foo");
-    static ref SSID_BAR: Ssid = Ssid::from("bar");
-    static ref SSID_BAZ: Ssid = Ssid::from("baz");
+    static ref SSID_FOO: Ssid = Ssid::try_from("foo").unwrap();
+    static ref SSID_BAR: Ssid = Ssid::try_from("bar").unwrap();
+    static ref SSID_BAZ: Ssid = Ssid::try_from("baz").unwrap();
 }
 
 /// Test scan is working by simulating some fake APs that sends out beacon frames on specific

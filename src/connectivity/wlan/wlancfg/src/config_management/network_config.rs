@@ -5,8 +5,7 @@
 use {
     crate::client::types as client_types,
     arbitrary::Arbitrary,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
     std::{
         collections::{HashMap, VecDeque},
@@ -381,14 +380,19 @@ pub struct NetworkIdentifier {
 }
 
 impl NetworkIdentifier {
-    pub fn new(ssid: impl Into<client_types::Ssid>, security_type: SecurityType) -> Self {
+    pub fn new(ssid: client_types::Ssid, security_type: SecurityType) -> Self {
         NetworkIdentifier { ssid: ssid.into(), security_type }
+    }
+
+    #[cfg(test)]
+    pub fn try_from(ssid: &str, security_type: SecurityType) -> Result<Self, anyhow::Error> {
+        Ok(NetworkIdentifier { ssid: client_types::Ssid::try_from(ssid)?, security_type })
     }
 }
 
 impl From<fidl_policy::NetworkIdentifier> for NetworkIdentifier {
     fn from(id: fidl_policy::NetworkIdentifier) -> Self {
-        Self::new(id.ssid, id.type_.into())
+        Self::new(client_types::Ssid::from_bytes_unchecked(id.ssid), id.type_.into())
     }
 }
 
@@ -417,11 +421,9 @@ fn check_config_errors(
     security_type: &SecurityType,
     credential: &Credential,
 ) -> Result<(), NetworkConfigError> {
-    // Verify SSID has at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
+    // Verify SSID has at least 1 byte.
     if ssid.len() < 1 as usize {
         return Err(NetworkConfigError::SsidEmpty);
-    } else if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
-        return Err(NetworkConfigError::SsidExceedsMaxLen);
     }
     // Verify that credentials match the security type. This code only inspects the lengths of
     // passphrases and PSKs; the underlying data is considered opaque here.
@@ -473,7 +475,6 @@ pub enum NetworkConfigError {
     PasswordLen,
     PskLen,
     SsidEmpty,
-    SsidExceedsMaxLen,
     MissingPasswordPsk,
     ConfigMissingId,
     ConfigMissingCredential,
@@ -492,9 +493,6 @@ impl Debug for NetworkConfigError {
             NetworkConfigError::PskLen => write!(f, "invalid PSK length"),
             NetworkConfigError::SsidEmpty => {
                 write!(f, "SSID must have a non-zero length")
-            }
-            NetworkConfigError::SsidExceedsMaxLen => {
-                write!(f, "SSID has max allowed length of {}", fidl_ieee80211::MAX_SSID_BYTE_LEN)
             }
             NetworkConfigError::MissingPasswordPsk => {
                 write!(f, "no password or PSK provided but required by security type")
@@ -528,9 +526,6 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
                 fidl_policy::NetworkConfigChangeError::CredentialLenError
             }
             NetworkConfigError::SsidEmpty => fidl_policy::NetworkConfigChangeError::SsidEmptyError,
-            NetworkConfigError::SsidExceedsMaxLen => {
-                fidl_policy::NetworkConfigChangeError::SsidExceedsMaxLenError
-            }
             NetworkConfigError::ConfigMissingId | NetworkConfigError::ConfigMissingCredential => {
                 fidl_policy::NetworkConfigChangeError::NetworkConfigMissingFieldError
             }
@@ -552,7 +547,7 @@ mod tests {
     fn new_network_config_none_credential() {
         let credential = Credential::None;
         let network_config = NetworkConfig::new(
-            NetworkIdentifier::new("foo", SecurityType::None),
+            NetworkIdentifier::try_from("foo", SecurityType::None).unwrap(),
             credential.clone(),
             false,
         )
@@ -561,7 +556,7 @@ mod tests {
         assert_eq!(
             network_config,
             NetworkConfig {
-                ssid: client_types::Ssid::from("foo"),
+                ssid: client_types::Ssid::try_from("foo").unwrap(),
                 security_type: SecurityType::None,
                 credential: credential,
                 has_ever_connected: false,
@@ -577,7 +572,7 @@ mod tests {
         let credential = Credential::Password(b"foo-password".to_vec());
 
         let network_config = NetworkConfig::new(
-            NetworkIdentifier::new("foo", SecurityType::Wpa2),
+            NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap(),
             credential.clone(),
             false,
         )
@@ -586,7 +581,7 @@ mod tests {
         assert_eq!(
             network_config,
             NetworkConfig {
-                ssid: client_types::Ssid::from("foo"),
+                ssid: client_types::Ssid::try_from("foo").unwrap(),
                 security_type: SecurityType::Wpa2,
                 credential: credential,
                 has_ever_connected: false,
@@ -603,7 +598,7 @@ mod tests {
         let credential = Credential::Psk([1; WPA_PSK_BYTE_LEN].to_vec());
 
         let network_config = NetworkConfig::new(
-            NetworkIdentifier::new("foo", SecurityType::Wpa2),
+            NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap(),
             credential.clone(),
             false,
         )
@@ -612,7 +607,7 @@ mod tests {
         assert_eq!(
             network_config,
             NetworkConfig {
-                ssid: client_types::Ssid::from("foo"),
+                ssid: client_types::Ssid::try_from("foo").unwrap(),
                 security_type: SecurityType::Wpa2,
                 credential: credential,
                 has_ever_connected: false,
@@ -624,24 +619,14 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn new_network_config_ssid_exceeds_max_length() {
-        let credential = Credential::None;
-
-        let config_result = NetworkConfig::new(
-            NetworkIdentifier::new([1; 33], SecurityType::Wpa2),
-            credential,
-            false,
-        );
-
-        assert_variant!(config_result, Err(NetworkConfigError::SsidExceedsMaxLen));
-    }
-
-    #[fuchsia::test]
     fn new_network_config_invalid_password() {
         let credential = Credential::Password([1; 64].to_vec());
 
-        let config_result =
-            NetworkConfig::new(NetworkIdentifier::new("foo", SecurityType::Wpa), credential, false);
+        let config_result = NetworkConfig::new(
+            NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap(),
+            credential,
+            false,
+        );
 
         assert_variant!(config_result, Err(NetworkConfigError::PasswordLen));
     }
@@ -651,7 +636,7 @@ mod tests {
         let credential = Credential::Psk(b"bar".to_vec());
 
         let config_result = NetworkConfig::new(
-            NetworkIdentifier::new("foo", SecurityType::Wpa2),
+            NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap(),
             credential,
             false,
         );
@@ -665,7 +650,7 @@ mod tests {
         let password = Credential::Password(b"1234567".to_vec());
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wep,
                 &password
             ),
@@ -679,7 +664,7 @@ mod tests {
         let short_password = Credential::Password(b"1234567".to_vec());
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa2,
                 &short_password
             ),
@@ -690,7 +675,7 @@ mod tests {
         let long_password = Credential::Password([5, 65].to_vec());
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa2,
                 &long_password
             ),
@@ -703,7 +688,11 @@ mod tests {
         // Unsupported variant (`Psk`).
         let psk = Credential::Psk(b"12345".to_vec());
         assert_variant!(
-            check_config_errors(&client_types::Ssid::from("valid_ssid"), &SecurityType::Wep, &psk),
+            check_config_errors(
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
+                &SecurityType::Wep,
+                &psk
+            ),
             Err(NetworkConfigError::MissingPasswordPsk)
         );
     }
@@ -715,7 +704,7 @@ mod tests {
 
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa2,
                 &short_psk
             ),
@@ -725,7 +714,7 @@ mod tests {
         let long_psk = Credential::Psk([7; WPA_PSK_BYTE_LEN + 1].to_vec());
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa2,
                 &long_psk
             ),
@@ -739,7 +728,7 @@ mod tests {
         let password = Credential::Password(b"password".to_vec());
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::None,
                 &password
             ),
@@ -748,14 +737,18 @@ mod tests {
 
         let psk = Credential::Psk([1; WPA_PSK_BYTE_LEN].to_vec());
         assert_variant!(
-            check_config_errors(&client_types::Ssid::from("valid_ssid"), &SecurityType::None, &psk),
+            check_config_errors(
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
+                &SecurityType::None,
+                &psk
+            ),
             Err(NetworkConfigError::OpenNetworkPassword)
         );
         // Use no password with a protected network.
         let password = Credential::None;
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa,
                 &password
             ),
@@ -764,7 +757,7 @@ mod tests {
 
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa2,
                 &password
             ),
@@ -773,7 +766,7 @@ mod tests {
 
         assert_variant!(
             check_config_errors(
-                &client_types::Ssid::from("valid_ssid"),
+                &client_types::Ssid::try_from("valid_ssid").unwrap(),
                 &SecurityType::Wpa3,
                 &password
             ),
@@ -790,16 +783,6 @@ mod tests {
                 &Credential::None
             ),
             Err(NetworkConfigError::SsidEmpty)
-        );
-    }
-
-    #[fuchsia::test]
-    fn check_config_errors_ssid_exceeds_max_length() {
-        // The longest valid SSID length is 32, so 33 characters is too long.
-        let long_ssid = client_types::Ssid::from([6; 33]);
-        assert_variant!(
-            check_config_errors(&long_ssid, &SecurityType::None, &Credential::None),
-            Err(NetworkConfigError::SsidExceedsMaxLen)
         );
     }
 
@@ -959,7 +942,7 @@ mod tests {
     #[fuchsia::test]
     fn test_hidden_prob_calculation() {
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )
@@ -981,7 +964,7 @@ mod tests {
     #[fuchsia::test]
     fn test_hidden_prob_calc_active_connect() {
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )
@@ -1006,7 +989,7 @@ mod tests {
         // Test that updating hidden probability after not seeing the network in a directed active
         // scan lowers the hidden probability
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )
@@ -1025,7 +1008,7 @@ mod tests {
     #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_lower_past_threshold() {
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )
@@ -1045,7 +1028,7 @@ mod tests {
     #[fuchsia::test]
     fn test_hidden_prob_calc_not_seen_in_active_scan_does_not_change_if_lower_than_threshold() {
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )
@@ -1065,7 +1048,7 @@ mod tests {
         // Test the specific case where we fail to see the network in an active scan after we
         // previously connected to the network after an active scan was required.
         let mut network_config = NetworkConfig::new(
-            NetworkIdentifier::new("some_ssid", SecurityType::None),
+            NetworkIdentifier::try_from("some_ssid", SecurityType::None).unwrap(),
             Credential::None,
             false,
         )

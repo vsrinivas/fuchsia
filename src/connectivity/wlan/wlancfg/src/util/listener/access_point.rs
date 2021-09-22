@@ -107,11 +107,12 @@ mod tests {
         super::{super::generic::CurrentStateCache, *},
         crate::client::types::Ssid,
         fidl_fuchsia_wlan_policy as fidl_policy,
+        std::convert::TryFrom,
     };
 
     fn create_network_id() -> types::NetworkIdentifier {
         types::NetworkIdentifier {
-            ssid: Ssid::from("test"),
+            ssid: Ssid::try_from("test").unwrap(),
             security_type: types::SecurityType::None,
         }
     }
@@ -172,7 +173,7 @@ mod tests {
             fidl_state,
             vec![fidl_policy::AccessPointState {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: Ssid::from("test").to_vec(),
+                    ssid: Ssid::try_from("test").unwrap().to_vec(),
                     type_: fidl_policy::SecurityType::None,
                 }),
                 state: Some(fidl_policy::OperatingState::Starting),

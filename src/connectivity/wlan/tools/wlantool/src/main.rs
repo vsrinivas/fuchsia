@@ -9,7 +9,6 @@ use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker,
     DeviceServiceProxy, QueryIfaceResponse,
 };
-use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
@@ -297,14 +296,7 @@ async fn do_client_connect(
         connect to networks using an SSID."
     );
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
-    if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
-        return Err(format_err!(
-            "SSID is too long ({} bytes). Max is {}",
-            ssid.len(),
-            fidl_ieee80211::MAX_SSID_BYTE_LEN
-        ));
-    }
-    let ssid = Ssid::from(ssid);
+    let ssid = Ssid::try_from(ssid)?;
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
         Err(e) => {
@@ -565,7 +557,7 @@ async fn do_rsn(cmd: opts::RsnCmd) -> Result<(), Error> {
 }
 
 fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
-    let psk = psk::compute(passphrase.as_bytes(), &Ssid::from(ssid))?;
+    let psk = psk::compute(passphrase.as_bytes(), &Ssid::try_from(ssid)?)?;
     let mut psk_hex = String::new();
     psk.write_hex(&mut psk_hex)?;
     return Ok(psk_hex);
@@ -906,8 +898,8 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl::endpoints::create_proxy, futures::task::Poll, matches::assert_matches,
-        pin_utils::pin_mut, wlan_common::assert_variant,
+        super::*, fidl::endpoints::create_proxy, futures::task::Poll, ieee80211::SsidError,
+        matches::assert_matches, pin_utils::pin_mut, wlan_common::assert_variant,
     };
 
     #[test]
@@ -1131,7 +1123,7 @@ mod tests {
         pin_mut!(connect_fut);
 
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Err(e)) => {
-          assert!(format!("{}", e).contains("SSID is too long (33 bytes). Max is 32") );
+          assert_eq!(format!("{}", e), format!("{}", SsidError::Size(33)));
         });
         // No connect request is sent to SME because the command is invalid and rejected.
         assert_variant!(exec.run_until_stalled(&mut wlansvc_stream.next()), Poll::Pending);

@@ -205,7 +205,7 @@ impl AccessPoint {
                     responder,
                 } => {
                     let ssid = match config.id {
-                        Some(id) => types::Ssid::from(id.ssid),
+                        Some(id) => types::Ssid::from_bytes_unchecked(id.ssid),
                         None => {
                             warn!("received disconnect request with no SSID specified");
                             responder.send(fidl_common::RequestStatus::RejectedNotSupported)?;

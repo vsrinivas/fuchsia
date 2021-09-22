@@ -797,6 +797,7 @@ mod tests {
         fidl_fuchsia_wlan_mlme as fidl_mlme,
         ieee80211::MacAddr,
         lazy_static::lazy_static,
+        std::convert::TryFrom,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
@@ -810,7 +811,7 @@ mod tests {
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const CLIENT_ADDR2: MacAddr = [0x22, 0x22, 0x22, 0x22, 0x22, 0x22];
     lazy_static! {
-        static ref SSID: Ssid = Ssid::from([0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41]);
+        static ref SSID: Ssid = Ssid::try_from([0x46, 0x55, 0x43, 0x48, 0x53, 0x49, 0x41]).unwrap();
     }
     const RSNE: &'static [u8] = &[
         0x30, // element id

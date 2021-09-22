@@ -469,7 +469,7 @@ impl ClientSme {
     ) -> ConnectTransactionStream {
         let (mut connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
 
-        let ssid = Ssid::from(req.ssid);
+        let ssid = Ssid::from_bytes_unchecked(req.ssid);
         if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
             // TODO(fxbug.dev/42081): Use a more accurate error (InvalidSsidArg) for this error.
             connect_txn_sink.send_connect_result(SelectNetworkFailure::NoScanResultWithSsid.into());
@@ -773,6 +773,7 @@ mod tests {
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use ieee80211::MacAddr;
+    use std::convert::TryFrom;
     use wlan_common::{
         assert_variant, fake_bss_description, fake_fidl_bss_description,
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
@@ -1078,23 +1079,31 @@ mod tests {
 
         // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
-        let _recv =
-            sme.on_connect_command(connect_req(Ssid::from("foo"), bss_description, credential));
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("foo")), sme.status());
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
+        let _recv = sme.on_connect_command(connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            credential,
+        ));
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
         // We should still be connecting to "foo", but the status should now come from the state
         // machine and not from the scanner.
         let ssid = assert_variant!(sme.state.as_ref().unwrap().status(), ClientSmeStatus::Connecting(ssid) => ssid);
-        assert_eq!(Ssid::from("foo"), ssid);
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("foo")), sme.status());
+        assert_eq!(Ssid::try_from("foo").unwrap(), ssid);
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
         // As soon as connect command is issued for "bar", the status changes immediately
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"));
-        let _recv2 =
-            sme.on_connect_command(connect_req(Ssid::from("bar"), bss_description, credential));
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("bar")), sme.status());
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap());
+        let _recv2 = sme.on_connect_command(connect_req(
+            Ssid::try_from("bar").unwrap(),
+            bss_description,
+            credential,
+        ));
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bar").unwrap()), sme.status());
     }
 
     #[test]
@@ -1113,10 +1122,10 @@ mod tests {
 
         // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("foo")), sme.status());
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
@@ -1127,8 +1136,8 @@ mod tests {
 
         // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description = fake_fidl_bss_description!(Wep, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let mut _connect_fut = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
     }
@@ -1141,10 +1150,11 @@ mod tests {
 
         // Issue a connect command and expect the status to change appropriately.
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("foo")), sme.status());
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("foo").unwrap()), sme.status());
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
@@ -1167,10 +1177,11 @@ mod tests {
             0x3a, 0xed, 0x76, 0x2e, 0x97, 0x10, 0xa1, 0x2e,
         ];
         let credential = fidl_sme::Credential::Psk(psk);
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("IEEE"));
-        let req = connect_req(Ssid::from("IEEE"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("IEEE").unwrap());
+        let req = connect_req(Ssid::try_from("IEEE").unwrap(), bss_description, credential);
         let _recv = sme.on_connect_command(req);
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("IEEE")), sme.status());
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("IEEE").unwrap()), sme.status());
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
@@ -1181,8 +1192,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
@@ -1201,8 +1213,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Psk(b"somepass".to_vec());
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
@@ -1221,8 +1234,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("foo"));
-        let req = connect_req(Ssid::from("foo"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
+        let req = connect_req(Ssid::try_from("foo").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
@@ -1245,11 +1259,12 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("bssname"));
-        let req = connect_req(Ssid::from("bssname"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
+        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
 
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("bssname")), sme.status());
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
         // There should be no message in the connect_txn_stream
         assert_variant!(connect_txn_stream.try_next(), Err(_));
@@ -1262,11 +1277,12 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("bssname"));
-        let req = connect_req(Ssid::from("bssname"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("bssname").unwrap());
+        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
 
-        assert_eq!(ClientSmeStatus::Connecting(Ssid::from("bssname")), sme.status());
+        assert_eq!(ClientSmeStatus::Connecting(Ssid::try_from("bssname").unwrap()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
         // There should be no message in the connect_txn_stream
         assert_variant!(connect_txn_stream.try_next(), Err(_));
@@ -1278,8 +1294,9 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("bssname"));
-        let req = connect_req(Ssid::from("bssname"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("bssname").unwrap());
+        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1301,8 +1318,8 @@ mod tests {
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description =
-            fake_fidl_bss_description!(Wpa3Enterprise, ssid: Ssid::from("bssname"));
-        let req = connect_req(Ssid::from("bssname"), bss_description, credential);
+            fake_fidl_bss_description!(Wpa3Enterprise, ssid: Ssid::try_from("bssname").unwrap());
+        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1324,7 +1341,7 @@ mod tests {
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let bss_description = fake_fidl_bss_description!(
             Wpa2,
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
         );
         // Manually override the privacy bit since fake_fidl_bss_description!()
         // does not allow setting it directly.
@@ -1334,8 +1351,11 @@ mod tests {
                 .0,
             ..bss_description
         };
-        let mut connect_txn_stream =
-            sme.on_connect_command(connect_req(Ssid::from("foo"), bss_description, credential));
+        let mut connect_txn_stream = sme.on_connect_command(connect_req(
+            Ssid::try_from("foo").unwrap(),
+            bss_description,
+            credential,
+        ));
 
         assert_variant!(
             connect_txn_stream.try_next(),
@@ -1350,9 +1370,10 @@ mod tests {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::Password(b"pass".to_vec());
-        let bss_description = fake_fidl_bss_description!(Wpa2, ssid: Ssid::from("foo"));
+        let bss_description =
+            fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap());
         let mut connect_txn_stream = sme.on_connect_command(connect_req(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
             credential,
         ));
@@ -1367,38 +1388,21 @@ mod tests {
     }
 
     #[test]
-    fn connection_rejected_ssid_too_long() {
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from([65; 33]));
-        // SSID is one byte too long
-        let mut connect_txn_stream =
-            sme.on_connect_command(connect_req(Ssid::from([65; 33]), bss_description, credential));
-
-        assert_variant!(
-            connect_txn_stream.try_next(),
-            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
-                assert_eq!(result, SelectNetworkFailure::NoScanResultWithSsid.into());
-            }
-        );
-    }
-
-    #[test]
     fn new_connect_attempt_cancels_pending_connect() {
         let _executor = fuchsia_async::TestExecutor::new();
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         let req = connect_req(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
             fidl_sme::Credential::None(fidl_sme::Empty),
         );
         let mut connect_txn_stream1 = sme.on_connect_command(req);
 
         let req2 = connect_req(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
             fidl_sme::Credential::None(fidl_sme::Empty),
         );
@@ -1417,11 +1421,11 @@ mod tests {
         // that connection attempt will be canceled even in the middle of joining the network
         report_fake_scan_result(
             &mut sme,
-            fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
         );
 
         let req3 = connect_req(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             bss_description,
             fidl_sme::Credential::None(fidl_sme::Empty),
         );
@@ -1444,9 +1448,10 @@ mod tests {
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("bssname"));
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
         let bssid = Bssid(bss_description.bssid);
-        let mut req = connect_req(Ssid::from("bssname"), bss_description, credential);
+        let mut req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         req.multiple_bss_candidates = false;
         let _connect_fut = sme.on_connect_command(req);
 
@@ -1474,9 +1479,10 @@ mod tests {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         let _recv = sme.on_connect_command(connect_req(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             bss_description.clone(),
             credential,
         ));
@@ -1508,8 +1514,9 @@ mod tests {
         let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description = fake_fidl_bss_description!(Open, ssid: Ssid::from("bssname"));
-        let req = connect_req(Ssid::from("bssname"), bss_description, credential);
+        let bss_description =
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
+        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
         let _connect_fut = sme.on_connect_command(req);
 
         // Stop connecting attempt early since we just want to get ConnectStats
@@ -1528,12 +1535,12 @@ mod tests {
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
@@ -1549,7 +1556,7 @@ mod tests {
                 .map(|scan_result| (scan_result.bss_description.ssid.clone(), scan_result.bss_description.bssid))
                 .collect::<Vec<_>>();
             reported_ssid.sort();
-            assert_eq!(reported_ssid, vec![(Ssid::from("foo"), Bssid([3; 6])), (Ssid::from("foo"), Bssid([4; 6]))]);
+            assert_eq!(reported_ssid, vec![(Ssid::try_from("foo").unwrap(), Bssid([3; 6])), (Ssid::try_from("foo").unwrap(), Bssid([4; 6]))]);
         })
     }
 
@@ -1565,7 +1572,7 @@ mod tests {
 
         report_fake_scan_result(
             &mut sme,
-            fake_fidl_bss_description!(Open, ssid: Ssid::from("foo")),
+            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
         );
 
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::DiscoveryScanStats(scan_stats))) => {
@@ -1602,12 +1609,12 @@ mod tests {
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },

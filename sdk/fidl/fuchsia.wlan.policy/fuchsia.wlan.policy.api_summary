@@ -78,7 +78,6 @@ enum/member fuchsia.wlan.policy/NetworkConfigChangeError.INVALID_SECURITY_CREDEN
 enum/member fuchsia.wlan.policy/NetworkConfigChangeError.NETWORK_CONFIG_MISSING_FIELD_ERROR 2
 enum/member fuchsia.wlan.policy/NetworkConfigChangeError.NETWORK_CONFIG_WRITE_ERROR 3
 enum/member fuchsia.wlan.policy/NetworkConfigChangeError.SSID_EMPTY_ERROR 4
-enum/member fuchsia.wlan.policy/NetworkConfigChangeError.SSID_EXCEEDS_MAX_LEN_ERROR 5
 enum/member fuchsia.wlan.policy/NetworkConfigChangeError.UNSUPPORTED_CREDENTIAL_ERROR 8
 strict enum fuchsia.wlan.policy/NetworkConfigChangeError uint32
 protocol/member fuchsia.wlan.policy/NetworkConfigIterator.GetNext() -> (vector<fuchsia.wlan.policy/NetworkConfig> configs)

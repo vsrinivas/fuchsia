@@ -12,9 +12,12 @@ use {
     futures::channel::mpsc,
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
-    std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+    std::{
+        convert::TryFrom,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, Mutex,
+        },
     },
     wlan_common::{
         assert_variant,
@@ -31,7 +34,7 @@ use {
 pub fn fake_serving_ap_info() -> ServingApInfo {
     ServingApInfo {
         bssid: Bssid([55, 11, 22, 3, 9, 70]),
-        ssid: Ssid::from(b"foo".clone()),
+        ssid: Ssid::try_from("foo").unwrap(),
         rssi_dbm: 0,
         snr_db: 0,
         signal_report_time: zx::Time::ZERO,
@@ -209,7 +212,7 @@ fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantCon
 
 const MOCK_PASS: &str = "dummy_password";
 lazy_static! {
-    static ref MOCK_SSID: Ssid = Ssid::from("network_ssid");
+    static ref MOCK_SSID: Ssid = Ssid::try_from("network_ssid").unwrap();
 }
 
 pub fn mock_psk_supplicant() -> (MockSupplicant, MockSupplicantController) {

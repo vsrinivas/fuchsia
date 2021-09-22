@@ -360,8 +360,6 @@ pub enum Error {
     InvalidOuiLength(usize),
     #[error("invalid PMKID length; expected 16 bytes but received {}", _0)]
     InvalidPmkidLength(usize),
-    #[error("invalid ssid length: {}", _0)]
-    InvalidSsidLen(usize),
     #[error("invalid passphrase length: {}", _0)]
     InvalidPassphraseLen(usize),
     #[error("passphrase is not valid UTF-8; failed to parse after byte at index: {:x}", _0)]

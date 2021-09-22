@@ -354,6 +354,7 @@ mod tests {
     use fuchsia_inspect::Inspector;
     use ieee80211::MacAddr;
     use itertools;
+    use std::convert::TryFrom;
     use wlan_common::{assert_variant, fake_fidl_bss_description, hasher::WlanHasher};
 
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -376,7 +377,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -388,7 +389,7 @@ mod tests {
                     txn_id: txn_id + 100, // mismatching transaction id
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -401,7 +402,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [3; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("qux"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("qux").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -428,7 +429,7 @@ mod tests {
         let mut ssid_list =
             bss_description_list.into_iter().map(|bss| bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
-        assert_eq!(vec![Ssid::from("foo"), Ssid::from("qux")], ssid_list);
+        assert_eq!(vec![Ssid::try_from("foo").unwrap(), Ssid::try_from("qux").unwrap()], ssid_list);
     }
 
     #[test]
@@ -445,7 +446,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -458,7 +459,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("baz"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("baz").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -485,7 +486,7 @@ mod tests {
         let mut ssid_list =
             bss_description_list.into_iter().map(|bss| bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
-        assert_eq!(vec![Ssid::from("baz")], ssid_list);
+        assert_eq!(vec![Ssid::try_from("baz").unwrap()], ssid_list);
     }
 
     #[test]
@@ -497,7 +498,7 @@ mod tests {
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
 
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("ssid"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("ssid").unwrap());
         // Add an extra IE so we can distinguish this result.
         let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
         bss.ies.extend_from_slice(ie_marker1);
@@ -505,7 +506,7 @@ mod tests {
             .on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect)
             .expect("expect scan result received");
 
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("ssid"));
+        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("ssid").unwrap());
         // Add an extra IE so we can distinguish this result.
         let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         bss.ies.extend_from_slice(ie_marker2);
@@ -612,7 +613,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -630,7 +631,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -651,7 +652,7 @@ mod tests {
         assert_discovery_scan_result(
             scan_end,
             vec![10, 20],
-            vec![Ssid::from("bar"), Ssid::from("foo")],
+            vec![Ssid::try_from("bar").unwrap(), Ssid::try_from("foo").unwrap()],
         );
     }
 
@@ -698,7 +699,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -713,7 +714,7 @@ mod tests {
         );
 
         // Expect discovery result with 1st and 3rd tokens
-        assert_discovery_scan_result(scan_end, vec![10, 30], vec![Ssid::from("foo")]);
+        assert_discovery_scan_result(scan_end, vec![10, 30], vec![Ssid::try_from("foo").unwrap()]);
 
         // Next mlme_req should be an active scan request
         assert!(mlme_req.is_some());
@@ -728,7 +729,7 @@ mod tests {
                     txn_id,
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -743,7 +744,7 @@ mod tests {
         );
 
         // Expect discovery result with 2nd and 4th tokens
-        assert_discovery_scan_result(scan_end, vec![20, 40], vec![Ssid::from("bar")]);
+        assert_discovery_scan_result(scan_end, vec![20, 40], vec![Ssid::try_from("bar").unwrap()]);
 
         // We don't expect another request to the MLME
         assert!(mlme_req.is_none());
@@ -767,7 +768,7 @@ mod tests {
                     txn_id: txn_id + 1,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
                     },
                 },
                 &sme_inspect,
@@ -786,7 +787,7 @@ mod tests {
                     txn_id: 0,
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
-                        ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
+                        ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
                     },
                 },
                 &sme_inspect,

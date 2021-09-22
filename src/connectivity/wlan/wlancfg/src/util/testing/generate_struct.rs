@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     ieee80211::{Bssid, Ssid},
     rand::Rng as _,
+    std::convert::TryFrom,
     wlan_common::random_fidl_bss_description,
 };
 
@@ -69,7 +70,8 @@ pub fn generate_random_bss() -> types::Bss {
 
 pub fn generate_random_scan_result() -> types::ScanResult {
     let mut rng = rand::thread_rng();
-    let ssid = Ssid::from(format!("scan result rand {}", rng.gen::<i32>()));
+    let ssid = Ssid::try_from(format!("scan result rand {}", rng.gen::<i32>()))
+        .expect("Failed to create random SSID from String");
     types::ScanResult {
         ssid,
         security_type_detailed: types::SecurityTypeDetailed::Wpa1,

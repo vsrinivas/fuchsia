@@ -827,6 +827,7 @@ mod tests {
         futures::{task::Poll, Future},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
+        std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{
             assert_variant, bss::Protection, random_bss_description, random_fidl_bss_description,
@@ -935,7 +936,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -1106,7 +1107,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1308,7 +1309,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1405,7 +1406,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -1571,7 +1572,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1778,7 +1779,7 @@ mod tests {
             iface_id: 1,
         };
 
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let next_security_type = types::SecurityType::None;
         let next_credential = Credential::None;
         let next_network_identifier = types::NetworkIdentifier {
@@ -1923,7 +1924,7 @@ mod tests {
             iface_id: 1,
         };
 
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let next_network_identifier = types::NetworkIdentifier {
             ssid: next_network_ssid.clone(),
             security_type: types::SecurityType::Wpa2,
@@ -2030,7 +2031,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let next_network_ssid = types::Ssid::from("bar");
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2166,8 +2167,8 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let first_network_ssid = types::Ssid::from("foo");
-        let second_network_ssid = types::Ssid::from("bar");
+        let first_network_ssid = types::Ssid::try_from("foo").unwrap();
+        let second_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: first_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2363,7 +2364,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let first_network_ssid = types::Ssid::from("foo");
+        let first_network_ssid = types::Ssid::try_from("foo").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: first_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2477,7 +2478,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        let first_network_ssid = types::Ssid::from("foo");
+        let first_network_ssid = types::Ssid::try_from("foo").unwrap();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2522,7 +2523,7 @@ mod tests {
         let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("test");
+        let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2627,7 +2628,7 @@ mod tests {
         let test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("flaky-network");
+        let network_ssid = types::Ssid::try_from("flaky-network").unwrap();
         let security = types::SecurityType::Wpa2;
         let credential = Credential::Password(b"password".to_vec());
         // Save the network in order to later record the disconnect to it.
@@ -2709,7 +2710,7 @@ mod tests {
         let test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("test");
+        let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2803,7 +2804,7 @@ mod tests {
         ));
         test_values.common_options.network_selector = network_selector;
 
-        let network_ssid = types::Ssid::from("flaky-network");
+        let network_ssid = types::Ssid::try_from("flaky-network").unwrap();
         let security = types::SecurityType::Wpa2;
         let credential = Credential::Password(b"password".to_vec());
         // Save the network in order to later record the disconnect to it.
@@ -2918,7 +2919,7 @@ mod tests {
         let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("test");
+        let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2980,8 +2981,8 @@ mod tests {
         let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let first_network_ssid = types::Ssid::from("foo");
-        let second_network_ssid = types::Ssid::from("bar");
+        let first_network_ssid = types::Ssid::try_from("foo").unwrap();
+        let second_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: first_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -3182,7 +3183,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
-        let network_ssid = types::Ssid::from("foo");
+        let network_ssid = types::Ssid::try_from("foo").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -3356,7 +3357,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let network_ssid = types::Ssid::from("foo");
+        let network_ssid = types::Ssid::try_from("foo").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -3436,7 +3437,7 @@ mod tests {
         ));
         test_values.common_options.network_selector = network_selector;
 
-        let network_ssid = types::Ssid::from("foo");
+        let network_ssid = types::Ssid::try_from("foo").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -3613,7 +3614,7 @@ mod tests {
         let test_values = test_setup();
         let mut _telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("test");
+        let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let (initial_state, connect_txn_stream) =
             connected_state_setup(test_values.common_options, bss_description);
@@ -3649,7 +3650,7 @@ mod tests {
         let test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        let network_ssid = types::Ssid::from("test");
+        let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let (initial_state, connect_txn_stream) =
             connected_state_setup(test_values.common_options, bss_description);
@@ -3763,8 +3764,8 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
-        let previous_network_ssid = types::Ssid::from("foo");
-        let next_network_ssid = types::Ssid::from("bar");
+        let previous_network_ssid = types::Ssid::try_from("foo").unwrap();
+        let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -3904,7 +3905,7 @@ mod tests {
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: types::Ssid::from("no_password"),
+                    ssid: types::Ssid::try_from("no_password").unwrap(),
                     security_type: types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -3965,7 +3966,7 @@ mod tests {
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: types::Ssid::from("no_password"),
+                    ssid: types::Ssid::try_from("no_password").unwrap(),
                     security_type: types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -4024,7 +4025,7 @@ mod tests {
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: types::Ssid::from("no_password"),
+                    ssid: types::Ssid::try_from("no_password").unwrap(),
                     security_type: types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -4124,7 +4125,7 @@ mod tests {
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: types::Ssid::from("no_password"),
+                    ssid: types::Ssid::try_from("no_password").unwrap(),
                     security_type: types::SecurityType::None,
                 },
                 credential: Credential::None,

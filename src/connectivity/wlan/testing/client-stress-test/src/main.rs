@@ -66,7 +66,7 @@ fn duration_to_ms(duration: Duration) -> u128 {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
-    let target_ssid = Ssid::from(&opt.target_ssid);
+    let target_ssid = Ssid::try_from(opt.target_ssid.clone())?;
     let mut scan_test_pass = true;
     let mut connect_test_pass = true;
     let mut disconnect_test_pass = true;

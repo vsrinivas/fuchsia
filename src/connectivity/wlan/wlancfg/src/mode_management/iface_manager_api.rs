@@ -233,6 +233,7 @@ mod tests {
         fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
+        std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{
             assert_variant,
@@ -365,7 +366,7 @@ mod tests {
 
         // Issue a disconnect command and wait for the command to be sent.
         let req = ap_types::NetworkIdentifier {
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
             security_type: ap_types::SecurityType::None,
         };
         let req_reason = client_types::DisconnectReason::NetworkUnsaved;
@@ -405,7 +406,7 @@ mod tests {
 
         // Issue a disconnect command and wait for the command to be sent.
         let req = ap_types::NetworkIdentifier {
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
             security_type: ap_types::SecurityType::None,
         };
         let disconnect_fut = test_values
@@ -447,7 +448,7 @@ mod tests {
         let req = client_types::ConnectRequest {
             target: client_types::ConnectionCandidate {
                 network: client_types::NetworkIdentifier {
-                    ssid: Ssid::from("foo"),
+                    ssid: Ssid::try_from("foo").unwrap(),
                     security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -492,7 +493,7 @@ mod tests {
         let req = client_types::ConnectRequest {
             target: client_types::ConnectionCandidate {
                 network: client_types::NetworkIdentifier {
-                    ssid: Ssid::from("foo"),
+                    ssid: Ssid::try_from("foo").unwrap(),
                     security_type: client_types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -1048,7 +1049,7 @@ mod tests {
     fn create_ap_config() -> ap_fsm::ApConfig {
         ap_fsm::ApConfig {
             id: types::NetworkIdentifier {
-                ssid: Ssid::from("foo"),
+                ssid: Ssid::try_from("foo").unwrap(),
                 security_type: types::SecurityType::None,
             },
             credential: vec![],
@@ -1124,8 +1125,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Stop an AP
-        let stop_fut =
-            test_values.iface_manager.stop_ap(Ssid::from("foo"), "bar".as_bytes().to_vec());
+        let stop_fut = test_values
+            .iface_manager
+            .stop_ap(Ssid::try_from("foo").unwrap(), "bar".as_bytes().to_vec());
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 
@@ -1138,7 +1140,7 @@ mod tests {
             Poll::Ready(Some(IfaceManagerRequest::StopAp(StopApRequest{
                 ssid, password, responder
             }))) => {
-                assert_eq!(ssid, Ssid::from("foo"));
+                assert_eq!(ssid, Ssid::try_from("foo").unwrap());
                 assert_eq!(password, "bar".as_bytes().to_vec());
 
                 responder.send(Ok(())).expect("failed to send stop AP response");
@@ -1157,8 +1159,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Stop an AP
-        let stop_fut =
-            test_values.iface_manager.stop_ap(Ssid::from("foo"), "bar".as_bytes().to_vec());
+        let stop_fut = test_values
+            .iface_manager
+            .stop_ap(Ssid::try_from("foo").unwrap(), "bar".as_bytes().to_vec());
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 

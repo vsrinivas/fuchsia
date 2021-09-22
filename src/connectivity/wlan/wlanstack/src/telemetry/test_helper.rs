@@ -9,6 +9,7 @@ use {
     fuchsia_zircon::DurationNum,
     futures::channel::mpsc,
     ieee80211::{Bssid, Ssid},
+    std::convert::TryFrom,
     wlan_common::{
         bss::Protection as BssProtection,
         channel::{Cbw, Channel},
@@ -86,7 +87,7 @@ pub fn fake_disconnect_info(bssid: [u8; 6]) -> DisconnectInfo {
     DisconnectInfo {
         connected_duration: 30.seconds(),
         bssid: Bssid(bssid),
-        ssid: Ssid::from("foo"),
+        ssid: Ssid::try_from("foo").unwrap(),
         wsc: None,
         protection: BssProtection::Open,
         channel: Channel { primary: 1, cbw: Cbw::Cbw20 },

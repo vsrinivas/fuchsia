@@ -835,8 +835,7 @@ mod tests {
         ieee80211::{Bssid, Ssid},
         maplit::hashset,
         pin_utils::pin_mut,
-        std::collections::HashSet,
-        std::task::Poll,
+        std::{collections::HashSet, convert::TryFrom, task::Poll},
         wlan_common::{
             assert_variant,
             bss::Protection as BssProtection,
@@ -1404,7 +1403,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: Bssid([1u8; 6]),
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
             wsc: Some(fake_probe_resp_wsc_ie()),
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
@@ -1473,7 +1472,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: Bssid([1u8; 6]),
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
             wsc: None,
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
@@ -1537,7 +1536,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: Bssid([1u8; 6]),
-            ssid: Ssid::from("foo"),
+            ssid: Ssid::try_from("foo").unwrap(),
             wsc: None,
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },

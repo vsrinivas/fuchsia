@@ -53,7 +53,7 @@ fn truncate_sha256_digest_to_8_bytes(digest: &[u8; SHA256_DIGEST_LENGTH as usize
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::convert::TryFrom};
 
     const HASH_KEY_X: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
     const HASH_KEY_Y: [u8; 8] = [0, 2, 3, 4, 5, 6, 7, 8];
@@ -87,8 +87,8 @@ mod tests {
     #[test]
     fn test_hash_ssid() {
         let hasher = WlanHasher::new(HASH_KEY_X);
-        let ssid_foo = Ssid::from("foo");
-        let ssid_bar = Ssid::from("bar");
+        let ssid_foo = Ssid::try_from("foo").unwrap();
+        let ssid_bar = Ssid::try_from("bar").unwrap();
         assert!(!hasher.hash_ssid(&ssid_foo).contains("foo"));
         assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo));
         assert_ne!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_bar));

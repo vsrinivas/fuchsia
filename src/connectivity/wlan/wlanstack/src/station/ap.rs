@@ -9,6 +9,7 @@ use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
 use futures::{select, Stream};
+use ieee80211::Ssid;
 use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
@@ -111,7 +112,7 @@ async fn handle_fidl_request(
 
 async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartApResultCode {
     let sme_config = ap_sme::Config {
-        ssid: config.ssid.into(),
+        ssid: Ssid::from_bytes_unchecked(config.ssid),
         password: config.password,
         radio_cfg: RadioConfig::from_fidl(config.radio_cfg),
     };

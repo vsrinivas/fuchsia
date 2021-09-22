@@ -12,6 +12,7 @@ use ieee80211::Ssid;
 use serde::{Deserialize, Serialize};
 use serde_json::{to_value, Value};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 // Testing helper methods
 use crate::wlan::facade::WlanFacade;
@@ -107,9 +108,9 @@ impl Facade for WlanFacade {
             }
             "connect" => {
                 let target_ssid = match args.get("target_ssid") {
-                    Some(ssid) => {
-                        let ssid = match ssid.as_str() {
-                            Some(ssid) => Ssid::from(ssid),
+                    Some(ssid_value) => {
+                        let ssid = match ssid_value.as_str() {
+                            Some(ssid_value) => Ssid::try_from(ssid_value)?,
                             None => {
                                 return Err(format_err!("Please provide a target ssid"));
                             }

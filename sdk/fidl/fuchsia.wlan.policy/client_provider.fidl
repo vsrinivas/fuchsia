@@ -242,9 +242,6 @@ type NetworkConfigChangeError = strict enum {
     // Error for zero length SSID.
     SSID_EMPTY_ERROR = 4;
 
-    // Error for SSID that exceeds max valid length.
-    SSID_EXCEEDS_MAX_LEN_ERROR = 5;
-
     // Error for invalid credential length.
     CREDENTIAL_LEN_ERROR = 6;
 

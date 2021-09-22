@@ -87,6 +87,7 @@ mod tests {
     use futures::task::Poll;
     use ieee80211::Ssid;
     use pin_utils::pin_mut;
+    use std::convert::TryFrom;
     use wlan_common::assert_variant;
 
     #[test]
@@ -135,7 +136,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (ap_sme, server) = create_ap_sme_proxy();
         let mut ap_sme_req = server.into_future();
-        let target_ssid = Ssid::from(ssid);
+        let target_ssid = Ssid::try_from(ssid).unwrap();
         let target_password = password.as_bytes().to_vec();
 
         let config = fidl_sme::ApConfig {

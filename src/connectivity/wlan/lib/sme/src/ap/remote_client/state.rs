@@ -831,6 +831,7 @@ mod tests {
         },
         futures::channel::mpsc,
         ieee80211::{MacAddr, Ssid},
+        std::convert::TryFrom,
         wlan_common::{
             assert_variant,
             ie::rsn::{
@@ -1374,7 +1375,8 @@ mod tests {
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
-        let mut rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let mut rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
         rsn_cfg.rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_GCMP_256),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
@@ -1438,7 +1440,8 @@ mod tests {
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let mut s_rsne_vec = Vec::with_capacity(rsn_cfg.rsne.len());
         rsn_cfg.rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
@@ -1490,7 +1493,8 @@ mod tests {
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let mut s_rsne_vec = Vec::with_capacity(rsn_cfg.rsne.len());
         rsn_cfg.rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
@@ -1628,7 +1632,8 @@ mod tests {
         let mut r_sta = make_remote_client();
         let (mut ctx, mut mlme_stream, mut time_stream) = make_env();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
@@ -1687,7 +1692,8 @@ mod tests {
         let mut r_sta = make_remote_client();
         let (mut ctx, mut mlme_stream, _) = make_env();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
@@ -1740,7 +1746,8 @@ mod tests {
         let mut r_sta = make_remote_client();
         let (mut ctx, _, _) = make_env();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());
@@ -1785,7 +1792,8 @@ mod tests {
         let mut r_sta = make_remote_client();
         let (mut ctx, mut mlme_stream, _) = make_env();
 
-        let rsn_cfg = create_rsn_cfg(&Ssid::from("coolnet"), b"password").unwrap().unwrap();
+        let rsn_cfg =
+            create_rsn_cfg(&Ssid::try_from("coolnet").unwrap(), b"password").unwrap().unwrap();
 
         let s_rsne = Rsne::wpa2_rsne();
         let mut s_rsne_vec = Vec::with_capacity(s_rsne.len());

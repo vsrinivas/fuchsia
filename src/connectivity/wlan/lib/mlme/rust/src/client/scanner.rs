@@ -166,9 +166,6 @@ impl<'a> BoundScanner<'a> {
         if req.max_channel_time < req.min_channel_time {
             send_scan_end_and_return!(req.txn_id, ScanError::MaxChannelTimeLtMin, self);
         }
-        if req.ssid.len() > fidl_ieee80211::MAX_SSID_BYTE_LEN as usize {
-            send_scan_end_and_return!(req.txn_id, ScanError::SsidTooLong, self);
-        }
 
         let wlanmac_info = self.ctx.device.wlanmac_info();
         let hw_scan = (wlanmac_info.driver_features
@@ -183,6 +180,8 @@ impl<'a> BoundScanner<'a> {
             };
             let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
             channels[..channel_list.len()].copy_from_slice(channel_list);
+
+            // fuchsia.wlan.mlme/ScanRequest.ssid is always at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
             let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
             ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
 
@@ -682,29 +681,6 @@ mod tests {
             &mut m.chan_sched,
         );
         assert_variant!(result, Err(ScanError::MaxChannelTimeLtMin));
-        let scan_end = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
-        );
-    }
-
-    #[test]
-    fn test_handle_scan_req_ssid_too_long() {
-        let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        let scan_req = fidl_mlme::ScanRequest { ssid: vec![65; 33], ..scan_req() };
-        let result = scanner.bind(&mut ctx).on_sme_scan(
-            scan_req,
-            m.listener_state.create_channel_listener_fn(),
-            &mut m.chan_sched,
-        );
-        assert_variant!(result, Err(ScanError::SsidTooLong));
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()

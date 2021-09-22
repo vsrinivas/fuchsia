@@ -663,7 +663,10 @@ mod tests {
         },
         pin_utils::pin_mut,
         rand::Rng,
-        std::{convert::TryInto, sync::Arc},
+        std::{
+            convert::{TryFrom, TryInto},
+            sync::Arc,
+        },
         test_case::test_case,
         wlan_common::{assert_variant, random_fidl_bss_description},
     };
@@ -808,7 +811,8 @@ mod tests {
     fn generate_random_saved_network() -> (types::NetworkIdentifier, InternalSavedNetworkData) {
         let mut rng = rand::thread_rng();
         let net_id = types::NetworkIdentifier {
-            ssid: types::Ssid::from(format!("saved network rand {}", rng.gen::<i32>())),
+            ssid: types::Ssid::try_from(format!("saved network rand {}", rng.gen::<i32>()))
+                .expect("Failed to create random SSID from String"),
             security_type: types::SecurityType::Wpa,
         };
         (
@@ -854,14 +858,14 @@ mod tests {
         let test_values = test_setup().await;
 
         // create some identifiers
-        let test_ssid_1 = types::Ssid::from("foo");
+        let test_ssid_1 = types::Ssid::try_from("foo").unwrap();
         let test_security_1 = types::SecurityTypeDetailed::Wpa3Personal;
         let test_id_1 = types::NetworkIdentifier {
             ssid: test_ssid_1.clone(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let test_ssid_2 = types::Ssid::from("bar");
+        let test_ssid_2 = types::Ssid::try_from("bar").unwrap();
         let test_security_2 = types::SecurityTypeDetailed::Wpa1;
         let test_id_2 = types::NetworkIdentifier {
             ssid: test_ssid_2.clone(),
@@ -1019,7 +1023,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let network_id = types::NetworkIdentifier {
-            ssid: types::Ssid::from("test"),
+            ssid: types::Ssid::try_from("test").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let internal_bss = InternalBss {
@@ -1165,12 +1169,12 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -1285,12 +1289,12 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -1410,12 +1414,12 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -1531,12 +1535,12 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -1621,12 +1625,12 @@ mod tests {
             InspectBoundedListNode::new(inspector.root().create_child("test"), 10);
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -1840,7 +1844,7 @@ mod tests {
             zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
         // Add some stale/old results to the cache
         scan_result_guard.results = vec![types::ScanResult {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
             entries: vec![],
             compatibility: types::Compatibility::Supported,
@@ -1883,7 +1887,7 @@ mod tests {
         let test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
@@ -1921,7 +1925,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
@@ -2018,7 +2022,7 @@ mod tests {
 
         // create some identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
@@ -2047,7 +2051,7 @@ mod tests {
             },
         );
         let test_id_2 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("bar"),
+            ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
@@ -2282,7 +2286,7 @@ mod tests {
         let network_selector = test_values.network_selector;
 
         // Save networks with WPA and WPA3 security, same SSIDs, and different passwords.
-        let ssid = types::Ssid::from("foo");
+        let ssid = types::Ssid::try_from("foo").unwrap();
         let wpa_network_id = types::NetworkIdentifier {
             ssid: ssid.clone(),
             security_type: types::SecurityType::Wpa,
@@ -2384,7 +2388,7 @@ mod tests {
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
@@ -2436,7 +2440,7 @@ mod tests {
                 bss_description: random_fidl_bss_description!(
                     Wpa1,
                     bssid: [0, 0, 0, 0, 0, 0],
-                    ssid: types::Ssid::from("other ssid"),
+                    ssid: types::Ssid::try_from("other ssid").unwrap(),
                     rssi_dbm: 0,
                     snr_db: 0,
                     channel: fidl_common::WlanChannel {
@@ -2488,7 +2492,7 @@ mod tests {
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
-            ssid: types::Ssid::from("foo"),
+            ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
 
@@ -2539,12 +2543,12 @@ mod tests {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         // create some identifiers
-        let test_ssid_1 = types::Ssid::from("foo");
+        let test_ssid_1 = types::Ssid::try_from("foo").unwrap();
         let test_id_1 = types::NetworkIdentifier {
             ssid: test_ssid_1.clone(),
             security_type: types::SecurityType::Wpa3,
         };
-        let test_ssid_2 = types::Ssid::from("bar");
+        let test_ssid_2 = types::Ssid::try_from("bar").unwrap();
         let test_id_2 = types::NetworkIdentifier {
             ssid: test_ssid_2.clone(),
             security_type: types::SecurityType::Wpa,

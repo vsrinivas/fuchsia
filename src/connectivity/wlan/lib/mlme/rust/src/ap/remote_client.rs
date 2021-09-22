@@ -1104,6 +1104,7 @@ mod tests {
             timer::{FakeScheduler, Scheduler, Timer},
         },
         ieee80211::Bssid,
+        std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{assert_variant, mac::CapabilityInfo, test_utils::fake_frames::*},
     };
@@ -1590,7 +1591,7 @@ mod tests {
                 &mut ctx,
                 CapabilityInfo(0).with_short_preamble(true),
                 1,
-                Some(Ssid::from("coolnet")),
+                Some(Ssid::try_from("coolnet").unwrap()),
                 vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].iter().map(|r| ie::SupportedRate(*r)).collect(),
                 None,
             )
@@ -1604,7 +1605,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
-                ssid: Some(Ssid::from("coolnet").into()),
+                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
                 capability_info: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: None,
@@ -2256,7 +2257,7 @@ mod tests {
             .handle_mgmt_frame(
                 &mut ctx,
                 mac::CapabilityInfo(0),
-                Some(Ssid::from("coolnet")),
+                Some(Ssid::try_from("coolnet").unwrap()),
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
                     duration: 0,
@@ -2284,7 +2285,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
-                ssid: Some(Ssid::from("coolnet").into()),
+                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
                 capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
@@ -2326,7 +2327,7 @@ mod tests {
             .handle_mgmt_frame(
                 &mut ctx,
                 mac::CapabilityInfo(0),
-                Some(Ssid::from("coolnet")),
+                Some(Ssid::try_from("coolnet").unwrap()),
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
                     duration: 0,
@@ -2347,7 +2348,7 @@ mod tests {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
-                ssid: Some(Ssid::from("coolnet").into()),
+                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
                 capability_info: CapabilityInfo(0).raw(),
                 rates: expected_rates,
                 rsne: None,

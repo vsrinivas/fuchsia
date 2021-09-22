@@ -515,6 +515,7 @@ mod test {
             device::FakeDevice,
             timer::{FakeScheduler, Scheduler},
         },
+        std::convert::TryFrom,
         wlan_common::{assert_variant, mac},
     };
 
@@ -577,7 +578,7 @@ mod test {
         ctx.send_mlme_assoc_ind(
             CLIENT_ADDR,
             1,
-            Some(Ssid::from("coolnet")),
+            Some(Ssid::try_from("coolnet").unwrap()),
             mac::CapabilityInfo(0),
             vec![ie::SupportedRate(1), ie::SupportedRate(2), ie::SupportedRate(3)],
             None,
@@ -591,7 +592,7 @@ mod test {
             fidl_mlme::AssociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
-                ssid: Some(Ssid::from("coolnet").into()),
+                ssid: Some(Ssid::try_from("coolnet").unwrap().into()),
                 capability_info: mac::CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
                 rsne: None,
@@ -839,7 +840,7 @@ mod test {
                 0,
                 TimeUnit(10),
                 mac::CapabilityInfo(33),
-                &Ssid::from([1, 2, 3, 4, 5]),
+                &Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
                 2,
                 &[48, 2, 77, 88][..],
@@ -880,7 +881,7 @@ mod test {
                 0,
                 TimeUnit(10),
                 mac::CapabilityInfo(33),
-                &Ssid::from([1, 2, 3, 4, 5]),
+                &Ssid::try_from([1, 2, 3, 4, 5]).unwrap(),
                 &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
                 2,
                 ie::TimHeader { dtim_count: 1, dtim_period: 2, bmp_ctrl: ie::BitmapControl(0) },

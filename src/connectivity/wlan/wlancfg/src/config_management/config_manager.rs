@@ -26,6 +26,7 @@ use {
     std::{
         clone::Clone,
         collections::{hash_map::Entry, HashMap},
+        convert::TryInto,
         fs, io,
         path::Path,
     },
@@ -368,7 +369,7 @@ impl SavedNetworksManager {
             // before the new storage was in place.
             let credential = Credential::from_bytes(config.password);
             let network_id =
-                NetworkIdentifier::new(config.ssid, credential.derived_security_type());
+                NetworkIdentifier::new(config.ssid.try_into()?, credential.derived_security_type());
             if let Ok(network_config) = NetworkConfig::new(network_id.clone(), credential, false) {
                 saved_networks.entry(network_id).or_default().push(network_config);
             } else {
@@ -836,7 +837,7 @@ mod tests {
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
-        std::{io::Write, mem},
+        std::{convert::TryFrom, io::Write, mem},
         tempfile::TempDir,
         test_case::test_case,
         test_util::{assert_gt, assert_lt},
@@ -853,7 +854,7 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
         assert_eq!(0, saved_networks.known_network_count().await);
@@ -886,7 +887,7 @@ mod tests {
         assert_eq!(1, saved_networks.known_network_count().await);
 
         // Store another network and verify.
-        let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+        let network_id_baz = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
         let psk = Credential::Psk(vec![1; 32]);
         let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false)
             .expect("failed to create network config");
@@ -925,7 +926,7 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
@@ -952,7 +953,7 @@ mod tests {
 
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         // save max + 1 networks with same SSID and different credentials
@@ -982,7 +983,7 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"qwertyuio".to_vec());
         assert!(saved_networks.lookup(network_id.clone()).await.is_empty());
         assert_eq!(0, saved_networks.known_network_count().await);
@@ -1075,7 +1076,7 @@ mod tests {
 
         // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
         // network.
-        let ssid = types::Ssid::from("foo");
+        let ssid = types::Ssid::try_from("foo").unwrap();
         let network_id_wpa2 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
         let network_id_wpa3 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_wpa2 = Credential::Password(b"password".to_vec());
@@ -1127,7 +1128,7 @@ mod tests {
 
         // Store a WPA3 config with a password that will match and a PSK config that won't match
         // to a WPA3 network.
-        let ssid = types::Ssid::from("foo");
+        let ssid = types::Ssid::try_from("foo").unwrap();
         let network_id_psk = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa2);
         let network_id_password = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_psk = Credential::Psk(vec![5; 32]);
@@ -1163,7 +1164,7 @@ mod tests {
 
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
-        let network_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"password".to_vec());
         let bssid = types::Bssid([4; 6]);
 
@@ -1258,8 +1259,8 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
-        let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let net_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
+        let net_id_also_valid = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"some_password".to_vec());
         let bssid = types::Bssid([2; 6]);
 
@@ -1301,7 +1302,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([1; 6]);
         let before_recording = zx::Time::get_monotonic();
@@ -1372,7 +1373,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([0; 6]);
         let before_recording = zx::Time::get_monotonic();
@@ -1424,7 +1425,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![1; 32]);
         let bssid = types::Bssid([1; 6]);
         let recording_time = zx::Time::get_monotonic();
@@ -1463,17 +1464,17 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let saved_seen_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let saved_seen_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let saved_seen_network = types::NetworkIdentifierDetailed {
             ssid: saved_seen_id.ssid.clone(),
             security_type: types::SecurityTypeDetailed::Open,
         };
-        let unsaved_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let unsaved_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let unsaved_network = types::NetworkIdentifierDetailed {
             ssid: unsaved_id.ssid.clone(),
             security_type: types::SecurityTypeDetailed::Wpa2Personal,
         };
-        let saved_unseen_id = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+        let saved_unseen_id = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
         let seen_credential = Credential::None;
         let unseen_credential = Credential::Password(b"password".to_vec());
 
@@ -1510,7 +1511,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"credential".to_vec());
 
         // Save the networks
@@ -1541,7 +1542,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![8; 32]);
 
         // Save the networks
@@ -1573,7 +1574,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foobar", SecurityType::Wpa);
+        let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"credential".to_vec());
 
         // Save the networks
@@ -1613,7 +1614,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![11; 32]);
 
         // Save the networks
@@ -1653,9 +1654,9 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![11; 32]);
-        let diff_ssid = types::Ssid::from("other-ssid");
+        let diff_ssid = types::Ssid::try_from("other-ssid").unwrap();
 
         // Save the networks
         assert!(saved_networks
@@ -1692,7 +1693,7 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"foo-pass".to_vec());
 
         // Save the networks
@@ -1772,7 +1773,7 @@ mod tests {
 
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         assert!(saved_networks
@@ -1828,7 +1829,7 @@ mod tests {
         assert!(!path.exists());
         // Writing an entry should not create the file yet because networks configs don't persist.
         assert_eq!(0, saved_networks.known_network_count().await);
-        let network_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
@@ -1869,14 +1870,14 @@ mod tests {
 
         // Network bar should have been read into the saved networks manager because it is valid
         assert_eq!(1, saved_networks.known_network_count().await);
-        let bar_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let bar_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let bar_config =
             NetworkConfig::new(bar_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
         assert_eq!(vec![bar_config], saved_networks.lookup(bar_id).await);
 
         // Network foo should not have been read into saved networks manager because it is invalid.
-        let foo_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let foo_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         assert!(saved_networks.lookup(foo_id).await.is_empty());
 
         assert!(path.exists());
@@ -1908,7 +1909,7 @@ mod tests {
         assert!(path.exists());
 
         // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
@@ -1968,7 +1969,7 @@ mod tests {
         assert!(path.exists());
 
         // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
@@ -2014,7 +2015,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         // Save a network, which should write to the legacy store
-        let net_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
+        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         assert!(saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
@@ -2050,7 +2051,7 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
 
-        let network_id = NetworkIdentifier::new("foo", SecurityType::None);
+        let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let save_fut = saved_networks.store(network_id, Credential::None);
         pin_mut!(save_fut);
 
@@ -2091,9 +2092,9 @@ mod tests {
     /// Convience function for creating network configs with default values as they would be
     /// initialized when read from KnownEssStore. Credential is password or none, and security
     /// type is WPA2 or none.
-    fn network_config(ssid: impl Into<types::Ssid>, password: impl Into<Vec<u8>>) -> NetworkConfig {
+    fn network_config(ssid: &str, password: impl Into<Vec<u8>>) -> NetworkConfig {
         let credential = Credential::from_bytes(password.into());
-        let id = NetworkIdentifier::new(ssid.into(), credential.derived_security_type());
+        let id = NetworkIdentifier::try_from(ssid, credential.derived_security_type()).unwrap();
         let has_ever_connected = false;
         NetworkConfig::new(id, credential, has_ever_connected).unwrap()
     }
@@ -2114,8 +2115,8 @@ mod tests {
             SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, &tmp_path, cobalt_api)
                 .await
                 .unwrap();
-        let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
-        let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+        let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
+        let network_id_baz = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
         assert_eq!(0, saved_networks.known_network_count().await);
@@ -2183,8 +2184,8 @@ mod tests {
     async fn metrics_count_configs() {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
-        let network_id_foo = NetworkIdentifier::new("foo", SecurityType::Wpa2);
-        let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
+        let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
+        let network_id_baz = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
 
         let networks: NetworkConfigMap = [
             (network_id_foo, vec![]),
@@ -2254,7 +2255,7 @@ mod tests {
     async fn probabilistic_choosing_of_hidden_networks() {
         // Create three networks with 1, 0, 0.5 hidden probability
         let id_hidden = types::NetworkIdentifier {
-            ssid: types::Ssid::from("hidden"),
+            ssid: types::Ssid::try_from("hidden").unwrap(),
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_hidden = NetworkConfig::new(
@@ -2266,7 +2267,7 @@ mod tests {
         net_config_hidden.hidden_probability = 1.0;
 
         let id_not_hidden = types::NetworkIdentifier {
-            ssid: types::Ssid::from("not_hidden"),
+            ssid: types::Ssid::try_from("not_hidden").unwrap(),
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_not_hidden = NetworkConfig::new(
@@ -2278,7 +2279,7 @@ mod tests {
         net_config_not_hidden.hidden_probability = 0.0;
 
         let id_maybe_hidden = types::NetworkIdentifier {
-            ssid: types::Ssid::from("maybe_hidden"),
+            ssid: types::Ssid::try_from("maybe_hidden").unwrap(),
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_maybe_hidden = NetworkConfig::new(
@@ -2332,14 +2333,14 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
         // Seen in active scans
-        let id_1 = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let id_1 = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential_1 = Credential::Password(b"some_password".to_vec());
-        let id_2 = NetworkIdentifier::new("bar", SecurityType::Wpa3);
+        let id_2 = NetworkIdentifier::try_from("bar", SecurityType::Wpa3).unwrap();
         let credential_2 = Credential::Password(b"another_password".to_vec());
         // Seen in active scan but not saved
-        let id_3 = NetworkIdentifier::new("baz", SecurityType::None);
+        let id_3 = NetworkIdentifier::try_from("baz", SecurityType::None).unwrap();
         // Saved and targeted in active scan but not seen
-        let id_4 = NetworkIdentifier::new("foobar", SecurityType::None);
+        let id_4 = NetworkIdentifier::try_from("foobar", SecurityType::None).unwrap();
         let credential_4 = Credential::None;
 
         // Save 3 of the 4 networks
@@ -2409,8 +2410,8 @@ mod tests {
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
-        let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let net_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
+        let net_id_also_valid = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"some_password".to_vec());
         let bssid = types::Bssid([2; 6]);
 

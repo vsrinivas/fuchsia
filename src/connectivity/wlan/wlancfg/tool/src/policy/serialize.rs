@@ -162,7 +162,7 @@ mod tests {
 
         let deserialized: Vec<wlan_policy::NetworkConfig> = vec![wlan_policy::NetworkConfig {
             id: Some(wlan_policy::NetworkIdentifier {
-                ssid: Ssid::from("TestWLAN1").into(),
+                ssid: Ssid::try_from("TestWLAN1").unwrap().into(),
                 type_: wlan_policy::SecurityType::Wpa2,
             }),
             credential: Some(wlan_policy::Credential::Password("12345678".as_bytes().to_vec())),
@@ -184,7 +184,7 @@ mod tests {
         // Add another network that's malformed (has no credential field)
         let mut malformed = vec![wlan_policy::NetworkConfig {
             id: Some(wlan_policy::NetworkIdentifier {
-                ssid: Ssid::from("MALFORMED - NO CREDENTIAL").into(),
+                ssid: Ssid::try_from("MALFORMED - NO CREDENTIAL").unwrap().into(),
                 type_: wlan_policy::SecurityType::Wpa2,
             }),
             ..wlan_policy::NetworkConfig::EMPTY

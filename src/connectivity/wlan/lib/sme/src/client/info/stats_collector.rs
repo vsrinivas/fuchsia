@@ -337,12 +337,13 @@ mod tests {
         },
         anyhow::format_err,
         lazy_static::lazy_static,
+        std::convert::TryFrom,
         wlan_common::{assert_variant, fake_bss_description},
         wlan_rsn::auth,
     };
 
     lazy_static! {
-        static ref SSID: Ssid = Ssid::from("foo");
+        static ref SSID: Ssid = Ssid::try_from("foo").unwrap();
     }
 
     #[test]
@@ -384,7 +385,7 @@ mod tests {
     fn test_connect_stats_finalized_midway() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let bss = fake_bss_description!(Wpa2, ssid: SSID.clone());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
@@ -408,7 +409,7 @@ mod tests {
     fn test_connect_stats_establish_rsna_failure() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         // Connecting should complete other steps first before starting establish RSNA step,
         // but for testing starting with RSNA step right away is sufficient.
         assert!(stats_collector.report_rsna_started().is_ok());
@@ -442,7 +443,7 @@ mod tests {
     fn test_consecutive_connect_attempts_stats() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
         let stats = stats_collector.report_connect_finished(failure1.clone().into());
         assert_variant!(stats, Ok(stats) => {
@@ -450,7 +451,7 @@ mod tests {
             assert_eq!(stats.last_ten_failures, &[failure1.clone()])
         });
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
             reason: EstablishRsnaFailureReason::OverallTimeout,
@@ -462,7 +463,7 @@ mod tests {
             assert_eq!(stats.last_ten_failures, &[failure1.clone(), failure2.clone()]);
         });
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 3);
@@ -470,7 +471,7 @@ mod tests {
         });
 
         // After a successful connection, new connect attempts tracking is reset
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 1);
@@ -482,11 +483,11 @@ mod tests {
     fn test_consecutive_connect_attempts_different_ssid_resets_stats() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
         let _stats = stats_collector.report_connect_finished(failure1.clone().into());
 
-        assert!(stats_collector.report_connect_started(Ssid::from("bar")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("bar").unwrap()).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
             reason: EstablishRsnaFailureReason::OverallTimeout,
@@ -503,7 +504,9 @@ mod tests {
     fn test_consecutive_connect_attempts_only_ten_failures_are_tracked() {
         let mut stats_collector = StatsCollector::default();
         for i in 1..=20 {
-            assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+            assert!(stats_collector
+                .report_connect_started(Ssid::try_from("foo").unwrap())
+                .is_none());
             let stats = stats_collector
                 .report_connect_finished(SelectNetworkFailure::NoScanResultWithSsid.into());
             assert_variant!(stats, Ok(stats) => {
@@ -520,7 +523,7 @@ mod tests {
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
 
         stats_collector.report_disconnect(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
         );
         let stats = simulate_connect_lifecycle(&mut stats_collector);
@@ -539,12 +542,12 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
         stats_collector.report_disconnect(
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
         );
 
         // Attempt to connect but fails
-        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::InternalError).into();
         let stats = stats_collector.report_connect_finished(failure);
 

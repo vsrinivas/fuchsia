@@ -560,6 +560,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         futures::{stream::StreamFuture, task::Poll, Future},
         pin_utils::pin_mut,
+        std::convert::TryFrom,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
@@ -594,7 +595,7 @@ mod tests {
 
     fn create_network_id() -> types::NetworkIdentifier {
         types::NetworkIdentifier {
-            ssid: types::Ssid::from("test_ssid"),
+            ssid: types::Ssid::try_from("test_ssid").unwrap(),
             security_type: types::SecurityType::None,
         }
     }
@@ -1952,7 +1953,7 @@ mod tests {
 
         // Insert a stop request to be processed after starting the AP fails.
         let mut requested_id = create_network_id();
-        requested_id.ssid = types::Ssid::from("second_test_ssid");
+        requested_id.ssid = types::Ssid::try_from("second_test_ssid").unwrap();
 
         let requested_config = ApConfig {
             id: requested_id.clone(),
@@ -2347,7 +2348,7 @@ mod tests {
                 frequency: None,
                 clients: None,
         }) => {
-            let expected_ssid = types::Ssid::from("test_ssid");
+            let expected_ssid = types::Ssid::try_from("test_ssid").unwrap();
             assert_eq!(ssid, &expected_ssid);
         });
 
@@ -2358,7 +2359,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2394,7 +2395,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2407,7 +2408,7 @@ mod tests {
 
         // Consume a status update and expect a new notification to be generated.
         let ap_info = fidl_sme::Ap {
-            ssid: types::Ssid::from("test_ssid").to_vec(),
+            ssid: types::Ssid::try_from("test_ssid").unwrap().to_vec(),
             channel: 6,
             num_clients: 123,
         };
@@ -2422,7 +2423,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2457,7 +2458,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2479,7 +2480,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2501,7 +2502,7 @@ mod tests {
             assert_eq!(access_points.len(), 1);
 
             let expected_id = types::NetworkIdentifier {
-                ssid: types::Ssid::from("test_ssid"),
+                ssid: types::Ssid::try_from("test_ssid").unwrap(),
                 security_type: types::SecurityType::None,
             };
             assert_eq!(access_points[0].id, expected_id);
@@ -2573,7 +2574,7 @@ mod tests {
             .consume_sme_status_update(
                 Cbw::Cbw20,
                 fidl_sme::Ap {
-                    ssid: types::Ssid::from("test_ssid").to_vec(),
+                    ssid: types::Ssid::try_from("test_ssid").unwrap().to_vec(),
                     channel: 6,
                     num_clients: 123,
                 },

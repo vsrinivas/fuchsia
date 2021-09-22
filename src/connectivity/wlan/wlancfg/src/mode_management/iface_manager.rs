@@ -1239,6 +1239,7 @@ mod tests {
         lazy_static::lazy_static,
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
+        std::convert::TryFrom,
         tempfile::TempDir,
         test_case::test_case,
         wlan_common::{
@@ -1254,7 +1255,7 @@ mod tests {
 
     // Fake WLAN network that tests will scan for and connect to.
     lazy_static! {
-        pub static ref TEST_SSID: ap_types::Ssid = ap_types::Ssid::from("test_ssid");
+        pub static ref TEST_SSID: ap_types::Ssid = ap_types::Ssid::try_from("test_ssid").unwrap();
     }
     pub static TEST_PASSWORD: &str = "test_password";
 
@@ -1834,7 +1835,7 @@ mod tests {
     #[fuchsia::test]
     fn test_connect_with_configured_iface() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-        let other_test_ssid = ap_types::Ssid::from("other_ssid_connecting");
+        let other_test_ssid = ap_types::Ssid::try_from("other_ssid_connecting").unwrap();
 
         // Create a configured ClientIfaceContainer.
         let test_values = test_setup(&mut exec);
@@ -2109,7 +2110,7 @@ mod tests {
             create_iface_manager_with_client(&test_values, false);
 
         // Call connect on the IfaceManager
-        let ssid = ap_types::Ssid::from("some_ssid");
+        let ssid = ap_types::Ssid::try_from("some_ssid").unwrap();
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
             security_type: ap_types::SecurityType::Wpa3,
@@ -2139,7 +2140,7 @@ mod tests {
     fn test_connect_wpa3_with_configured_iface() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
         // Build the connect request for connecting to the WPA3 network.
-        let ssid = ap_types::Ssid::from("some_wpa3_network");
+        let ssid = ap_types::Ssid::try_from("some_wpa3_network").unwrap();
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
             security_type: ap_types::SecurityType::Wpa3,
@@ -2323,7 +2324,7 @@ mod tests {
         {
             // Issue a disconnect request for a bogus network configuration.
             let network_id = ap_types::NetworkIdentifier {
-                ssid: ap_types::Ssid::from("nonexistent_ssid"),
+                ssid: ap_types::Ssid::try_from("nonexistent_ssid").unwrap(),
                 security_type: ap_types::SecurityType::Wpa,
             };
             let disconnect_fut = iface_manager
@@ -2364,7 +2365,7 @@ mod tests {
 
         // Call disconnect on the IfaceManager
         let network_id = ap_types::NetworkIdentifier {
-            ssid: ap_types::Ssid::from("nonexistent_ssid"),
+            ssid: ap_types::Ssid::try_from("nonexistent_ssid").unwrap(),
             security_type: ap_types::SecurityType::Wpa,
         };
         let disconnect_fut =
@@ -3170,7 +3171,7 @@ mod tests {
         let initial_start_time = iface_manager.aps[0].enabled_time.clone();
 
         // Now issue a second start command.
-        let alternate_ssid = ap_types::Ssid::from("some_other_ssid");
+        let alternate_ssid = ap_types::Ssid::try_from("some_other_ssid").unwrap();
         let alternate_password = "some_other_password";
         let config = create_ap_config(&alternate_ssid, alternate_password);
         {

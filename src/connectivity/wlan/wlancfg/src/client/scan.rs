@@ -390,7 +390,7 @@ fn insert_bss_to_network_bss_map(
     for scan_result in scan_result_list.into_iter() {
         let entry = bss_by_network
             .entry(SmeNetworkIdentifier {
-                ssid: types::Ssid::from(scan_result.bss_description.ssid.clone()).into(),
+                ssid: scan_result.bss_description.ssid.clone(),
                 protection: scan_result.bss_description.protection().into(),
             })
             .or_insert(vec![]);
@@ -767,7 +767,7 @@ mod tests {
         let bss_desc1 = random_fidl_bss_description!(
             Wpa3Enterprise,
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: types::Ssid::from("duplicated ssid"),
+            ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
             rssi_dbm: 0,
             snr_db: 1,
             channel: fidl_common::WlanChannel {
@@ -779,7 +779,7 @@ mod tests {
         let bss_desc2 = random_fidl_bss_description!(
             Wpa2,
             bssid: [1, 2, 3, 4, 5, 6],
-            ssid: types::Ssid::from("unique ssid"),
+            ssid: types::Ssid::try_from("unique ssid").unwrap(),
             rssi_dbm: 7,
             snr_db: 2,
             channel: fidl_common::WlanChannel {
@@ -791,7 +791,7 @@ mod tests {
         let bss_desc3 = random_fidl_bss_description!(
             Wpa3Enterprise,
             bssid: [7, 8, 9, 10, 11, 12],
-            ssid: types::Ssid::from("duplicated ssid"),
+            ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
             rssi_dbm: 13,
             snr_db: 3,
             channel: fidl_common::WlanChannel {
@@ -810,7 +810,7 @@ mod tests {
         // grouped in the output.
         let passive_internal_aps = vec![
             types::ScanResult {
-                ssid: types::Ssid::from("duplicated ssid"),
+                ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![
                     types::Bss {
@@ -845,7 +845,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
-                ssid: types::Ssid::from("unique ssid"),
+                ssid: types::Ssid::try_from("unique ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
                     bssid: types::Bssid([1, 2, 3, 4, 5, 6]),
@@ -867,7 +867,7 @@ mod tests {
         let passive_fidl_aps = vec![
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("duplicated ssid").into(),
+                    ssid: types::Ssid::try_from("duplicated ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![
@@ -891,7 +891,7 @@ mod tests {
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("unique ssid").into(),
+                    ssid: types::Ssid::try_from("unique ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![fidl_policy::Bss {
@@ -909,7 +909,7 @@ mod tests {
         let bss_desc4 = random_fidl_bss_description!(
             Wpa3Enterprise,
             bssid: [9, 9, 9, 9, 9, 9],
-            ssid: types::Ssid::from("foo active ssid"),
+            ssid: types::Ssid::try_from("foo active ssid").unwrap(),
             rssi_dbm: 0,
             snr_db: 8,
             channel: fidl_common::WlanChannel {
@@ -921,7 +921,7 @@ mod tests {
         let bss_desc5 = random_fidl_bss_description!(
             Wpa2,
             bssid: [8, 8, 8, 8, 8, 8],
-            ssid: types::Ssid::from("misc ssid"),
+            ssid: types::Ssid::try_from("misc ssid").unwrap(),
             rssi_dbm: 7,
             snr_db: 9,
             channel: fidl_common::WlanChannel {
@@ -936,7 +936,7 @@ mod tests {
         ];
         let combined_internal_aps = vec![
             types::ScanResult {
-                ssid: types::Ssid::from("duplicated ssid"),
+                ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![
                     types::Bss {
@@ -971,7 +971,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
-                ssid: types::Ssid::from("foo active ssid"),
+                ssid: types::Ssid::try_from("foo active ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
                 entries: vec![types::Bss {
                     bssid: types::Bssid([9, 9, 9, 9, 9, 9]),
@@ -990,7 +990,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
-                ssid: types::Ssid::from("misc ssid"),
+                ssid: types::Ssid::try_from("misc ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
                     bssid: types::Bssid([8, 8, 8, 8, 8, 8]),
@@ -1009,7 +1009,7 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
-                ssid: types::Ssid::from("unique ssid"),
+                ssid: types::Ssid::try_from("unique ssid").unwrap(),
                 security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 entries: vec![types::Bss {
                     bssid: types::Bssid([1, 2, 3, 4, 5, 6]),
@@ -1031,7 +1031,7 @@ mod tests {
         let combined_fidl_aps = vec![
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("duplicated ssid").into(),
+                    ssid: types::Ssid::try_from("duplicated ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![
@@ -1055,7 +1055,7 @@ mod tests {
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("foo active ssid").into(),
+                    ssid: types::Ssid::try_from("foo active ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![fidl_policy::Bss {
@@ -1070,7 +1070,7 @@ mod tests {
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("misc ssid").into(),
+                    ssid: types::Ssid::try_from("misc ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![fidl_policy::Bss {
@@ -1085,7 +1085,7 @@ mod tests {
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
-                    ssid: types::Ssid::from("unique ssid").into(),
+                    ssid: types::Ssid::try_from("unique ssid").unwrap().into(),
                     type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![fidl_policy::Bss {
@@ -1211,7 +1211,10 @@ mod tests {
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![types::Ssid::from("foo_ssid").into(), types::Ssid::from("bar_ssid").into()],
+            ssids: vec![
+                types::Ssid::try_from("foo_ssid").unwrap().into(),
+                types::Ssid::try_from("bar_ssid").unwrap().into(),
+            ],
             channels: vec![1, 20],
         });
         let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
@@ -1515,7 +1518,7 @@ mod tests {
 
         // Save a network and set its hidden probability to 0
         let network_id = types::NetworkIdentifier {
-            ssid: types::Ssid::from("some ssid"),
+            ssid: types::Ssid::try_from("some ssid").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
         assert!(exec
@@ -1607,7 +1610,7 @@ mod tests {
 
         // Save a network that will NOT be seen in the passive scan.
         let not_seen_net_id = types::NetworkIdentifier {
-            ssid: types::Ssid::from("not_seen_net_id"),
+            ssid: types::Ssid::try_from("not_seen_net_id").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         assert!(exec
@@ -1686,7 +1689,7 @@ mod tests {
 
         // Save a network that will NOT be seen in the either scan and set
         // its initial hidden network probability to 1.0
-        let unseen_ssid = types::Ssid::from("some ssid");
+        let unseen_ssid = types::Ssid::try_from("some ssid").unwrap();
         let unseen_network = types::NetworkIdentifier {
             ssid: unseen_ssid.clone(),
             security_type: types::SecurityType::Wpa3,
@@ -1787,7 +1790,7 @@ mod tests {
         let passive_bss_desc = random_fidl_bss_description!(
             Wpa3Enterprise,
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: types::Ssid::from("duplicated ssid"),
+            ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
             rssi_dbm: 0,
             snr_db: 1,
             channel: fidl_common::WlanChannel {
@@ -1804,7 +1807,7 @@ mod tests {
                 bss_description: random_fidl_bss_description!(
                     Wpa3Enterprise,
                     bssid: [0, 0, 0, 0, 0, 0],
-                    ssid: types::Ssid::from("duplicated ssid"),
+                    ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                         rssi_dbm: 13,
                         snr_db: 3,
                         channel: fidl_common::WlanChannel {
@@ -1817,7 +1820,7 @@ mod tests {
         ];
 
         let expected_id = SmeNetworkIdentifier {
-            ssid: types::Ssid::from("duplicated ssid"),
+            ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
             protection: fidl_sme::Protection::Wpa3Enterprise,
         };
 
@@ -1853,7 +1856,7 @@ mod tests {
         // Create some input data with one duplicate BSSID and one new BSSID
         let active_bss_desc = random_fidl_bss_description!(
             Wpa3Enterprise,
-            ssid: types::Ssid::from("duplicated ssid"),
+            ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
             bssid: [1, 2, 3, 4, 5, 6],
             rssi_dbm: 101,
             snr_db: 101,
@@ -1869,7 +1872,7 @@ mod tests {
                 bss_description: random_fidl_bss_description!(
                     Wpa3Enterprise,
                     bssid: [0, 0, 0, 0, 0, 0],
-                    ssid: types::Ssid::from("duplicated ssid"),
+                    ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                     rssi_dbm: 100,
                     snr_db: 100,
                     channel: fidl_common::WlanChannel {
@@ -1948,7 +1951,7 @@ mod tests {
 
         // Save a network with hidden probability 1.0, which will guarantee an
         // active scan takes place
-        let unseen_ssid = types::Ssid::from("foobarbaz ssid");
+        let unseen_ssid = types::Ssid::try_from("foobarbaz ssid").unwrap();
         let unseen_network = types::NetworkIdentifier {
             ssid: unseen_ssid.clone(),
             security_type: types::SecurityType::Wpa3,
@@ -2286,7 +2289,7 @@ mod tests {
         let saved_networks_manager2 = Arc::new(FakeSavedNetworksManager::new());
 
         // Save a network with 1.0 hidden network probability to guarantee an active scan for scan_fut1.
-        let active_ssid = types::Ssid::from("foo active ssid");
+        let active_ssid = types::Ssid::try_from("foo active ssid").unwrap();
         let active_id = types::NetworkIdentifier {
             ssid: active_ssid.clone(),
             security_type: types::SecurityType::Wpa3,
@@ -2467,7 +2470,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Generate scan results
-        let ssid = types::Ssid::from("some_ssid");
+        let ssid = types::Ssid::try_from("some_ssid").unwrap();
         let sme_scan_result = fidl_sme::ScanResult {
             compatible: true,
             bss_description: random_fidl_bss_description!(
@@ -2640,7 +2643,7 @@ mod tests {
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
-        let desired_ssid = types::Ssid::from("test_ssid");
+        let desired_ssid = types::Ssid::try_from("test_ssid").unwrap();
         let desired_channels = vec![1, 36];
         let scan_fut_desired_ssid = desired_ssid.clone();
         let scan_fut = perform_directed_active_scan(
@@ -2665,7 +2668,7 @@ mod tests {
                 ..generate_random_sme_scan_result()
             },
             fidl_sme::ScanResult {
-                bss_description: random_fidl_bss_description!(Wpa2, ssid: types::Ssid::from("other ssid")),
+                bss_description: random_fidl_bss_description!(Wpa2, ssid: types::Ssid::try_from("other ssid").unwrap()),
                 ..generate_random_sme_scan_result()
             },
         ];

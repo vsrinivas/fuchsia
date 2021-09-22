@@ -262,7 +262,7 @@ mod tests {
         ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::Rng as _,
-        std::convert::TryInto as _,
+        std::convert::{TryFrom as _, TryInto as _},
         wlan_common::{assert_variant, fake_fidl_bss_description},
     };
 
@@ -363,7 +363,8 @@ mod tests {
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
             StatusResponse::Connected => {
-                let serving_ap_info = create_serving_ap_info_using_ssid(Ssid::from([1, 2, 3, 4]));
+                let serving_ap_info =
+                    create_serving_ap_info_using_ssid(Ssid::try_from([1, 2, 3, 4]).unwrap());
                 let mut response = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
@@ -792,8 +793,8 @@ mod tests {
         connected_to_ssid: &str,
         result_code: ConnectResultCode,
     ) -> bool {
-        let target_ssid = Ssid::from(target_ssid);
-        let connected_to_ssid = Ssid::from(connected_to_ssid);
+        let target_ssid = Ssid::try_from(target_ssid).unwrap();
+        let connected_to_ssid = Ssid::try_from(connected_to_ssid).unwrap();
 
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
@@ -848,7 +849,7 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = Ssid::from("TestAp");
+        let target_ssid = Ssid::try_from("TestAp").unwrap();
         let target_password = "password".as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
@@ -877,7 +878,7 @@ mod tests {
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
-        let target_ssid = Ssid::from("TestAp");
+        let target_ssid = Ssid::try_from("TestAp").unwrap();
         let target_password = "".as_bytes();
         let target_bss_desc = generate_random_bss_description();
 
@@ -1024,14 +1025,14 @@ mod tests {
             StatusResponse::Connected => send_status_response(
                 &mut exec,
                 &mut client_sme_req,
-                Some(Ssid::from([1, 2, 3, 4])),
+                Some(Ssid::try_from([1, 2, 3, 4]).unwrap()),
                 None,
             ),
             StatusResponse::Connecting => send_status_response(
                 &mut exec,
                 &mut client_sme_req,
                 None,
-                Some(Ssid::from([1, 2, 3, 4])),
+                Some(Ssid::try_from([1, 2, 3, 4]).unwrap()),
             ),
         }
 
@@ -1104,7 +1105,7 @@ mod tests {
         // due to restrictions for cloning fidl objects, forced to make a copy of the vector here
         let entry1 = create_scan_result(
             [0, 1, 2, 3, 4, 5],
-            Ssid::from("foo"),
+            Ssid::try_from("foo").unwrap(),
             -30,
             20,
             fidl_common::WlanChannel {
@@ -1118,7 +1119,7 @@ mod tests {
         let entry1_copy = entry1.clone();
         let entry2 = create_scan_result(
             [1, 2, 3, 4, 5, 6],
-            Ssid::from("hello"),
+            Ssid::try_from("hello").unwrap(),
             -60,
             10,
             fidl_common::WlanChannel {
