@@ -76,7 +76,7 @@ class ResourceDispatcher final
 
   // Returns a null-terminated name, or the empty string if set_name() has not
   // been called.
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final {
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final {
     name_.get(ZX_MAX_NAME_LEN, out_name);
   }
 

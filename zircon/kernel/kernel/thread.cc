@@ -1453,7 +1453,7 @@ Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
  * Returns "kernel" if there is no owner.
  */
 
-void Thread::OwnerName(char out_name[ZX_MAX_NAME_LEN]) {
+void Thread::OwnerName(char (&out_name)[ZX_MAX_NAME_LEN]) {
   if (user_thread_) {
     user_thread_->process()->get_name(out_name);
     return;

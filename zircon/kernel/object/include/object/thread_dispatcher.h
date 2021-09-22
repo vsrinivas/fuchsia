@@ -117,7 +117,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   bool HasStarted() const TA_EXCL(get_lock());
 
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2)) TA_EXCL(get_lock());
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2)) TA_EXCL(get_lock());
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final TA_EXCL(get_lock());
 
   // Assuming the thread is stopped waiting for an exception response,
   // fill in |*report| with the exception report.

@@ -43,7 +43,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   // SoloDispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_VMO; }
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final;
   zx_status_t set_name(const char* name, size_t len) final;
 
   // Dispatcher implementation.

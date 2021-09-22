@@ -142,7 +142,7 @@ void ProcessDispatcher::on_zero_handles() {
   FinishDeadTransition();
 }
 
-void ProcessDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
+void ProcessDispatcher::get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const {
   name_.get(ZX_MAX_NAME_LEN, out_name);
 }
 

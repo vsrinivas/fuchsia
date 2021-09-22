@@ -61,8 +61,8 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
   // We haven't yet compeleted initialization of |user_thread|, and
   // references to it haven't possibly escaped this thread. We can
   // safely set |core_thread_| outside the lock.
-  [&user_thread,
-   &core_thread]() TA_NO_THREAD_SAFETY_ANALYSIS { user_thread->core_thread_ = core_thread; }();
+  [&user_thread, &core_thread]()
+      TA_NO_THREAD_SAFETY_ANALYSIS { user_thread->core_thread_ = core_thread; }();
 
   // The syscall layer will call Initialize(), which used to be called here.
 
@@ -130,7 +130,7 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
   return ZX_OK;
 }
 
-void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
+void ThreadDispatcher::get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const {
   canary_.Assert();
 
   memset(out_name, 0, ZX_MAX_NAME_LEN);

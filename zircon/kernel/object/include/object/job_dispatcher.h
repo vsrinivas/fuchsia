@@ -27,8 +27,8 @@ class JobNode;
 // Job signal that is active when a job has no children (i.e., no child jobs and no child
 // processes).
 //
-// TODO(fxbug.dev/53986): This is a temporary signal that we don't want userspace using (yet?). Either
-// expose this signal to userspace in "zircon/types.h", or remove this signal.
+// TODO(fxbug.dev/53986): This is a temporary signal that we don't want userspace using (yet?).
+// Either expose this signal to userspace in "zircon/types.h", or remove this signal.
 #define ZX_JOB_NO_CHILDREN __ZX_OBJECT_SIGNAL_6
 
 // Assume the typical set-policy call has 8 items or less.
@@ -92,7 +92,7 @@ class JobDispatcher final
   fbl::RefPtr<JobDispatcher> parent() { return fbl::RefPtr<JobDispatcher>(parent_); }
 
   // Job methods.
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final;
   zx_status_t set_name(const char* name, size_t len) final;
   uint32_t max_height() const { return max_height_; }
 

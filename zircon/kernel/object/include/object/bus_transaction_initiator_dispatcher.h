@@ -51,7 +51,7 @@ class BusTransactionInitiatorDispatcher final
 
   void on_zero_handles() final;
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final;
 
   fbl::RefPtr<Iommu> iommu() const { return iommu_; }
   uint64_t bti_id() const { return bti_id_; }

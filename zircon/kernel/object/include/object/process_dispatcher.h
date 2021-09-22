@@ -98,7 +98,7 @@ class ProcessDispatcher final
   fbl::RefPtr<VmAspace> aspace() { return aspace_; }
   fbl::RefPtr<JobDispatcher> job();
 
-  void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+  void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final;
   zx_status_t set_name(const char* name, size_t len) final;
 
   void Kill(int64_t retcode);

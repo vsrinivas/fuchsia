@@ -738,7 +738,7 @@ struct Thread {
   // Call |migrate_fn| for each thread that was last run on the current CPU.
   static void CallMigrateFnForCpuLocked(cpu_num_t cpu) TA_REQ(thread_lock);
 
-  void OwnerName(char out_name[ZX_MAX_NAME_LEN]);
+  void OwnerName(char (&out_name)[ZX_MAX_NAME_LEN]);
   // Return the number of nanoseconds a thread has been running for.
   zx_duration_t Runtime() const;
 
