@@ -94,7 +94,7 @@ impl SocketFile {
         match self.socket.lock().connected_socket() {
             Some(socket) => Ok(socket),
             None => {
-                send_checked_signal(task, Signal::SIGPIPE);
+                send_checked_signal(task, Signal::SIGPIPE)?;
                 error!(EPIPE)
             }
         }

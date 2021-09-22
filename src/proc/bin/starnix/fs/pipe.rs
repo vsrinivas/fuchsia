@@ -242,7 +242,7 @@ impl Pipe {
         }
 
         if self.reader_count == 0 {
-            send_checked_signal(task, Signal::SIGPIPE);
+            send_checked_signal(task, Signal::SIGPIPE)?;
             return error!(EPIPE);
         }
 

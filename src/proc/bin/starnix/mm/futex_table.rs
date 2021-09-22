@@ -46,7 +46,7 @@ impl FutexTable {
                 return Ok(());
             }
 
-            observers.wait_async(&task.waiter, mask);
+            observers.wait_async(&task.waiter, mask, WaitCallback::none());
         }
         task.waiter.wait_until(deadline)
     }

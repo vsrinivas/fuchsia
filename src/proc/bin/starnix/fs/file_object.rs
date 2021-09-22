@@ -101,9 +101,9 @@ pub trait FileOps: Send + Sync + AsAny {
         file: &FileObject,
         waiter: &Arc<Waiter>,
         events: FdEvents,
-        _handler: Option<WaitHandler>,
+        handler: EventHandler,
     ) {
-        file.node().observers.lock().wait_async(waiter, events.mask())
+        file.node().observers.lock().wait_async(waiter, events.mask(), handler)
     }
 
     fn ioctl(
@@ -447,7 +447,7 @@ impl FileObject {
         loop {
             match op() {
                 Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {
-                    self.ops().wait_async(self, &task.waiter, events, None);
+                    self.ops().wait_async(self, &task.waiter, events, WaitCallback::none());
                     task.waiter.wait()?;
                 }
                 result => return result,
@@ -585,8 +585,9 @@ impl FileObject {
         *self.async_owner.lock() = owner;
     }
 
+    /// TODO - document
     #[allow(dead_code)]
-    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: Option<WaitHandler>) {
+    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
         self.ops().wait_async(self, waiter, events, handler)
     }
 

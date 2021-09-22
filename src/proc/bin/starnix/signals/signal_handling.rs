@@ -131,19 +131,20 @@ pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<()
         return Ok(());
     }
 
-    send_checked_signal(task, Signal::try_from(unchecked_signal)?);
+    send_checked_signal(task, Signal::try_from(unchecked_signal)?)?;
     Ok(())
 }
 
-pub fn send_checked_signal(task: &Task, signal: Signal) {
+pub fn send_checked_signal(task: &Task, signal: Signal) -> Result<(), Errno> {
     let mut scheduler = task.thread_group.kernel.scheduler.write();
     scheduler.add_pending_signal(task.id, signal.clone());
 
     if signal.passes_mask(*task.signal_mask.lock()) {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
-        wake(task.id, &mut scheduler);
+        wake(task.id, &mut scheduler)?;
     }
+    Ok(())
 }
 
 /// Dequeues and handles a pending signal for `ctx.task`.
@@ -191,8 +192,9 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
 }
 
 /// Wakes the task from call to `sigsuspend`.
-fn wake(pid: pid_t, scheduler: &mut Scheduler) {
+fn wake(pid: pid_t, scheduler: &mut Scheduler) -> Result<(), Errno> {
     if let Some(waiter_condvar) = scheduler.remove_suspended_task(pid) {
-        waiter_condvar.wake();
+        waiter_condvar.wake()?;
     }
+    Ok(())
 }

@@ -235,6 +235,14 @@ impl Zxio {
         (handle, signals)
     }
 
+    pub fn wait_end(&self, signals: zx::Signals) -> zxio_signals_t {
+        let mut zxio_signals = zxio::ZXIO_SIGNAL_NONE;
+        unsafe {
+            zxio::zxio_wait_end(self.as_ptr(), signals.bits(), &mut zxio_signals);
+        }
+        zxio_signals
+    }
+
     pub fn create_dirent_iterator(&self) -> Result<DirentIterator, zx::Status> {
         let mut iterator = DirentIterator::default();
         let status =

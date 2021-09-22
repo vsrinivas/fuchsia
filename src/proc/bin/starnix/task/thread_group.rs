@@ -124,12 +124,16 @@ impl ThreadGroup {
             if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
                 parent.zombie_tasks.write().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
-                send_checked_signal(&parent, Signal::SIGCHLD);
+                send_checked_signal(&parent, Signal::SIGCHLD).unwrap_or_else(|err| {
+                    log::warn!("unexpected error with send_checked_signal in ThreadGroup::remove {}", err);
+                });
             }
 
             let waiters = self.kernel.scheduler.write().remove_exit_waiters(self.leader);
             for waiter in waiters {
-                waiter.wake();
+                waiter.wake().unwrap_or_else(|err| {
+                    log::warn!("unexpected error with Waiter::wake in ThreadGroup::remove {}", err);
+                });
             }
 
             self.kernel.pids.write().remove_thread_group(self.leader);

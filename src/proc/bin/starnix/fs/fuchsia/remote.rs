@@ -79,16 +79,32 @@ fn get_zxio_signals_from_events(events: FdEvents) -> zxio::zxio_signals_t {
     let mut signals = zxio::ZXIO_SIGNAL_NONE;
     if events & FdEvents::POLLIN {
         signals |= zxio::ZXIO_SIGNAL_READABLE
-            | zxio::ZXIO_SIGNAL_READ_DISABLED
-            | zxio::ZXIO_SIGNAL_PEER_CLOSED;
+            | zxio::ZXIO_SIGNAL_PEER_CLOSED
+            | zxio::ZXIO_SIGNAL_READ_DISABLED;
     }
     if events & FdEvents::POLLOUT {
-        signals |= zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_PEER_CLOSED;
+        signals |= zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_WRITE_DISABLED;
     }
     if events & FdEvents::POLLRDHUP {
-        signals |= zxio::ZXIO_SIGNAL_WRITE_DISABLED | zxio::ZXIO_SIGNAL_PEER_CLOSED;
+        signals |= zxio::ZXIO_SIGNAL_READ_DISABLED | zxio::ZXIO_SIGNAL_PEER_CLOSED;
     }
     return signals;
+}
+
+fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
+    let mut events = FdEvents::empty();
+
+    if signals & (zxio::ZXIO_SIGNAL_READABLE | zxio::ZXIO_SIGNAL_PEER_CLOSED | zxio::ZXIO_SIGNAL_READ_DISABLED) != 0 {
+        events |= FdEvents::POLLIN;
+    }
+    if signals & (zxio::ZXIO_SIGNAL_WRITABLE | zxio::ZXIO_SIGNAL_WRITE_DISABLED) != 0 {
+        events |= FdEvents::POLLOUT;
+    }
+    if signals & (zxio::ZXIO_SIGNAL_READ_DISABLED | zxio::ZXIO_SIGNAL_PEER_CLOSED) != 0 {
+        events |= FdEvents::POLLRDHUP;
+    }
+
+    events
 }
 
 impl FsNodeOps for RemoteNode {
@@ -183,13 +199,20 @@ fn zxio_write_at(
 }
 
 fn zxio_wait_async(
-    zxio: &Zxio,
+    zxio: &Arc<Zxio>,
     waiter: &Arc<Waiter>,
     events: FdEvents,
-    handler: Option<WaitHandler>,
+    handler: EventHandler,
 ) {
+    let zxio_clone = zxio.clone();
+    let signal_handler = move |signals: zx::Signals| {
+        let observed_zxio_signals = zxio_clone.wait_end(signals);
+        let observed_events = get_events_from_zxio_signals(observed_zxio_signals);
+        handler(observed_events);
+    };
+
     let (handle, signals) = zxio.wait_begin(get_zxio_signals_from_events(events));
-    waiter.wake_and_call_on(&handle, signals, handler).unwrap();
+    waiter.wake_on_signals(&handle, signals, Box::new(signal_handler)).unwrap(); // TODO return error
 }
 
 /// Helper struct to track the context necessary to iterate over dir entries.
@@ -341,12 +364,12 @@ impl FileOps for RemoteDirectoryObject {
 
 struct RemoteFileObject {
     /// The underlying Zircon I/O object.
-    zxio: Zxio,
+    zxio: Arc<Zxio>,
 }
 
 impl RemoteFileObject {
     pub fn new(zxio: Zxio) -> RemoteFileObject {
-        RemoteFileObject { zxio: zxio }
+        RemoteFileObject { zxio: Arc::new(zxio) }
     }
 }
 
@@ -394,7 +417,7 @@ impl FileOps for RemoteFileObject {
         _file: &FileObject,
         waiter: &Arc<Waiter>,
         events: FdEvents,
-        handler: Option<WaitHandler>,
+        handler: EventHandler,
     ) {
         zxio_wait_async(&self.zxio, waiter, events, handler)
     }
@@ -430,7 +453,7 @@ impl FileOps for RemotePipeObject {
         _file: &FileObject,
         waiter: &Arc<Waiter>,
         events: FdEvents,
-        handler: Option<WaitHandler>,
+        handler: EventHandler,
     ) {
         zxio_wait_async(&self.zxio, waiter, events, handler)
     }

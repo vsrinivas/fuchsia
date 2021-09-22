@@ -4,7 +4,6 @@
 
 use fuchsia_zircon as zx;
 use parking_lot::Mutex;
-use std::sync::Arc;
 use zerocopy::AsBytes;
 
 use crate::errno;
@@ -14,6 +13,7 @@ use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
+use std::sync::Arc;
 
 /// A `TimerFile` represents a file created by `timerfd_create`.
 ///
@@ -111,6 +111,16 @@ impl TimerFile {
             zx::Signals::NONE
         }
     }
+
+    fn get_events_from_signals(signals: zx::Signals) -> FdEvents {
+        let mut events = FdEvents::empty();
+
+        if signals.contains(zx::Signals::TIMER_SIGNALED) {
+            events |= FdEvents::POLLIN;
+        }
+
+        events
+    }
 }
 
 impl FileOps for TimerFile {
@@ -173,10 +183,18 @@ impl FileOps for TimerFile {
         _file: &FileObject,
         waiter: &Arc<Waiter>,
         events: FdEvents,
-        handler: Option<WaitHandler>,
+        handler: EventHandler,
     ) {
+        let signal_handler = move |signals: zx::Signals| {
+            let events = TimerFile::get_events_from_signals(signals);
+            handler(events);
+        };
         waiter
-            .wake_and_call_on(&self.timer, TimerFile::get_signals_from_events(events), handler)
-            .unwrap();
+            .wake_on_signals(
+                &self.timer,
+                TimerFile::get_signals_from_events(events),
+                Box::new(signal_handler),
+            )
+            .unwrap(); // TODO return error
     }
 }
