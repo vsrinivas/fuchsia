@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, is_hash, is_name};
-pub use fuchsia_hash::Hash;
-use percent_encoding::{self, percent_decode};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::convert::TryFrom;
-use std::fmt;
-use std::str;
-use url::{Host, Url};
+use {
+    percent_encoding::{self, percent_decode},
+    serde::{Deserialize, Deserializer, Serialize, Serializer},
+    std::{convert::TryFrom, fmt, str},
+    url::{Host, Url},
+};
+
+pub use {
+    crate::{
+        errors::{ParseError, ValidateNameError},
+        parse::{check_resource, is_hash, validate_name},
+    },
+    fuchsia_hash::Hash,
+};
 
 /// Decoded representation of a fuchsia-pkg URL that identifies a package
 /// and optionally, a resource in that package.
@@ -310,7 +315,7 @@ fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
 // Returns a valid name and an optional variant on success.
 fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
     if !path.starts_with('/') {
-        return Err(ParseError::InvalidPath);
+        return Err(ParseError::MissingName);
     }
     path = &path[1..];
     if path.is_empty() {
@@ -318,20 +323,14 @@ fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
     }
     let mut iter = path.split('/').fuse();
     let name = if let Some(s) = iter.next() {
-        if is_name(s) {
-            s
-        } else {
-            return Err(ParseError::InvalidName);
-        }
+        validate_name(s).map_err(ParseError::InvalidName)?;
+        s
     } else {
         return Err(ParseError::MissingName);
     };
     let variant = if let Some(s) = iter.next() {
-        if is_name(s) {
-            Some(s)
-        } else {
-            return Err(ParseError::InvalidVariant);
-        }
+        let () = validate_name(s).map_err(ParseError::InvalidVariant)?;
+        Some(s)
     } else {
         None
     };
@@ -579,27 +578,45 @@ mod tests {
             urls = [
                 "fuchsia-pkg://fuchsia.com//",
             ],
-            err = ParseError::InvalidName,
+            err = ParseError::InvalidName(ValidateNameError::EmptyName),
         }
         test_parse_name_cannot_be_longer_than_255_chars => {
             urls = [
                 &format!("fuchsia-pkg://fuchsia.com/{}", "a".repeat(256)),
             ],
-            err = ParseError::InvalidName,
+            err = ParseError::InvalidName(ValidateNameError::NameTooLong),
         }
         test_parse_name_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/$",
+            ],
+            err = ParseError::InvalidName(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
+        }
+        test_parse_name_cannot_have_invalid_characters_more => {
+            urls = [
                 "fuchsia-pkg://fuchsia.com/foo$bar",
             ],
-            err = ParseError::InvalidName,
+            err = ParseError::InvalidName(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
         }
         test_parse_variant_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/$",
+            ],
+            err = ParseError::InvalidVariant(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
+        }
+        test_parse_variant_cannot_have_invalid_characters_more => {
+            urls = [
                 "fuchsia-pkg://fuchsia.com/fonts/foo$bar",
             ],
-            err = ParseError::InvalidVariant,
+            err = ParseError::InvalidVariant(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
         }
         test_parse_hash_cannot_be_empty => {
             urls = [
@@ -770,7 +787,7 @@ mod tests {
         );
         assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "fonts".to_string(), None),
-            Err(ParseError::InvalidPath)
+            Err(ParseError::MissingName)
         );
         assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/".to_string(), None),
@@ -778,7 +795,7 @@ mod tests {
         );
         assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/fonts/$".to_string(), None),
-            Err(ParseError::InvalidVariant)
+            Err(ParseError::InvalidVariant(ValidateNameError::InvalidCharacter { character: '$' }))
         );
         let url = PkgUrl::new_package(
             "fuchsia.com".to_string(),
@@ -848,7 +865,7 @@ mod tests {
                 None,
                 "foo/bar".to_string()
             ),
-            Err(ParseError::InvalidVariant)
+            Err(ParseError::InvalidVariant(ValidateNameError::InvalidCharacter { character: '$' }))
         );
         let url = PkgUrl::new_resource(
             "fuchsia.com".to_string(),

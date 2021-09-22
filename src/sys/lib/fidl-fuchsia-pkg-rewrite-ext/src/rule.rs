@@ -554,7 +554,7 @@ mod rule_tests {
         let rule = Rule::new("fuchsia.com", "fuchsia.com", "/", "/a+b/").unwrap();
         assert_matches!(
             rule.apply(&"fuchsia-pkg://fuchsia.com/foo".parse().unwrap()),
-            Some(Err(ParseError::InvalidName))
+            Some(Err(ParseError::InvalidName(_)))
         );
     }
 

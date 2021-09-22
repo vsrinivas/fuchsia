@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, is_name};
+pub use crate::parse::{check_resource, validate_name};
 use percent_encoding::percent_decode;
 use std::fmt;
 use url::Url;
@@ -39,9 +39,7 @@ impl BootUrl {
         if !check_path.is_empty() {
             let mut iter = check_path.split('/');
             while let Some(s) = iter.next() {
-                if !is_name(s) {
-                    return Err(ParseError::InvalidPath);
-                }
+                validate_name(s).map_err(ParseError::InvalidPath)?
             }
         }
 
@@ -108,7 +106,7 @@ impl fmt::Display for BootUrl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::errors::ValidateNameError};
 
     macro_rules! test_parse_ok {
         (
@@ -253,28 +251,45 @@ mod tests {
         test_parse_invalid_path => {
             urls = [
                 "fuchsia-boot:////",
+            ],
+            err = ParseError::InvalidPath(ValidateNameError::EmptyName),
+        }
+        test_parse_invalid_path_another => {
+            urls = [
                 "fuchsia-boot:///package:1234",
             ],
-            err = ParseError::InvalidPath,
+            err = ParseError::InvalidPath(
+                ValidateNameError::InvalidCharacter { character: ':'}),
         }
         test_parse_invalid_path_segment => {
             urls = [
                 "fuchsia-boot:///path/foo$bar/baz",
             ],
-            err = ParseError::InvalidPath,
+            err = ParseError::InvalidPath(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
         }
         test_parse_path_cannot_be_longer_than_255_chars => {
             urls = [
                 &format!("fuchsia-boot:///fuchsia.com/{}", "a".repeat(256)),
             ],
-            err = ParseError::InvalidPath,
+            err = ParseError::InvalidPath(ValidateNameError::NameTooLong),
         }
         test_parse_path_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-boot:///$",
+            ],
+            err = ParseError::InvalidPath(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
+        }
+        test_parse_path_cannot_have_invalid_characters_another => {
+            urls = [
                 "fuchsia-boot:///foo$bar",
             ],
-            err = ParseError::InvalidPath,
+            err = ParseError::InvalidPath(
+                ValidateNameError::InvalidCharacter { character: '$' }
+            ),
         }
         test_parse_host_must_be_empty => {
             urls = [

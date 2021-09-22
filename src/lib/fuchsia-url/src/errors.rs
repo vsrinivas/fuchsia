@@ -22,16 +22,16 @@ pub enum ParseError {
     HostMustBeEmpty,
 
     #[error("invalid path")]
-    InvalidPath,
+    InvalidPath(#[source] ValidateNameError),
 
     #[error("invalid name")]
-    InvalidName,
+    InvalidName(#[source] ValidateNameError),
 
     #[error("missing name")]
     MissingName,
 
     #[error("invalid variant")]
-    InvalidVariant,
+    InvalidVariant(#[source] ValidateNameError),
 
     #[error("invalid hash")]
     InvalidHash(#[source] fuchsia_hash::ParseHashError),
@@ -68,4 +68,16 @@ pub enum ParseError {
 
     #[error("url parse error")]
     UrlParseError(#[from] url::ParseError),
+}
+
+#[derive(PartialEq, Debug, Error)]
+pub enum ValidateNameError {
+    #[error("empty name")]
+    EmptyName,
+
+    #[error("name longer than 255 bytes")]
+    NameTooLong,
+
+    #[error("invalid character {character:?}")]
+    InvalidCharacter { character: char },
 }
