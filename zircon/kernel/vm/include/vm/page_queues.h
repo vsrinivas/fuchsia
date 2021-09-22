@@ -52,7 +52,14 @@ class PageQueues {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageQueues);
 
-  void MarkAccessed(vm_page_t* page) {
+  // This is a specialized version of MarkAccessed designed to be called during accessed harvesting.
+  // It does not update active/inactive counts, and this needs to be done separately once harvesting
+  // is complete. It is only permitted to call this in between BeginAccessScan and EndAccessScan
+  // calls.
+  void MarkAccessedDeferredCount(vm_page_t* page) {
+    // Ensure that the page queues is returning the cached counts at the moment, otherwise we might
+    // race.
+    DEBUG_ASSERT(use_cached_queue_counts_.load(ktl::memory_order_relaxed));
     auto queue_ref = page->object.get_page_queue_ref();
     uint8_t old_gen = queue_ref.load(fbl::memory_order_relaxed);
     // Between loading the mru_gen and finally storing it in the queue_ref it's possible for our
@@ -61,14 +68,10 @@ class PageQueues {
     // ProcessLruQueues will notice our queue is invalid and correct our age to be that of lru_gen.
     const uint32_t target_queue = mru_gen_to_queue();
     do {
-      // If we ever find old_gen to not be in the pager backed range then this means the page has
+      // If we ever find old_gen to not be in the active/inactive range then this means the page has
       // either been racily removed from, or was never in, the pager backed queue. In which case we
       // can return as there's nothing to be marked accessed.
-      // We check against the the Inactive queue and not the base queue so that accessing a page can
-      // move it from the inactive list into the LRU queues. To keep this case efficient we require
-      // that the inactive queue be directly before the LRU queues.
-      static_assert(PageQueuePagerBackedInactive + 1 == PageQueuePagerBackedBase);
-      if (old_gen < PageQueuePagerBackedInactive) {
+      if (!queue_is_pager_backed(static_cast<PageQueue>(old_gen))) {
         return;
       }
     } while (!queue_ref.compare_exchange_weak(old_gen, static_cast<uint8_t>(target_queue),
@@ -112,6 +115,11 @@ class PageQueues {
 
   // Variation on MoveToUnswappable that allows for already holding the lock.
   void MoveToUnswappableLocked(vm_page_t* page) TA_REQ(lock_);
+
+  // Tells the page queue this page has been accessed, and it should have its position in the queues
+  // updated. This method will take the internal page queues lock and should not be used for
+  // accessed harvesting, where MarkAccessedDeferredCount should be used instead.
+  void MarkAccessed(vm_page_t* page);
 
   // Provides access to the underlying lock, allowing _Locked variants to be called. Use of this is
   // highly discouraged as the underlying lock is a CriticalMutex which disables preemption.
@@ -183,6 +191,31 @@ class PageQueues {
 
   Counts QueueCounts() const;
 
+  struct ActiveInactiveCounts {
+    // Whether the returned counts were cached values, or the current 'true' values. Cached values
+    // are returned if an accessed scan is ongoing, as the true values cannot be determined in a
+    // race free way.
+    bool cached = false;
+    // Pages that would normally be available for eviction, but are presently considered active and
+    // so will not be evicted.
+    size_t active = 0;
+    // Pages that are available for eviction due to not presently being considered active.
+    size_t inactive = 0;
+
+    bool operator==(const ActiveInactiveCounts& other) const {
+      return cached == other.cached && active == other.active && inactive == other.inactive;
+    }
+    bool operator!=(const ActiveInactiveCounts& other) const { return !(*this == other); }
+  };
+
+  // Retrieves the current active/inactive counts, or a cache of the last known good ones if
+  // accessed harvesting is happening. This method is guaranteed to return in a small window of time
+  // due to only needing to acquire a single lock that has very short critical sections. However,
+  // this means it may have to return old values if accessed scanning is happening. If blocking and
+  // waiting is acceptable then |scanner_synchronized_active_inactive_counts| should be used, which
+  // calls this when it knows accessed scanning is not happening, guaranteeing a live value.
+  ActiveInactiveCounts GetActiveInactiveCounts() const TA_EXCL(lock_);
+
   // These query functions are marked Debug as it is generally a racy way to determine a pages state
   // and these are exposed for the purpose of writing tests or asserts against the pagequeue.
 
@@ -205,6 +238,12 @@ class PageQueues {
   // in between. Similar for EnableAging.
   void DisableAging();
   void EnableAging();
+
+  // Called by the scanner to indicate the beginning of an accessed scan. This allows
+  // MarkAccessedDeferredCount, and will cause the active/inactive counts returned by
+  // GetActiveInactiveCounts to remain unchanged until the accessed scan is complete.
+  void BeginAccessScan();
+  void EndAccessScan();
 
  private:
   // Specifies the indices for both the page_queues_ and the page_queue_counts_
@@ -242,6 +281,53 @@ class PageQueues {
     }
   }
 
+  // Returns whether this queue is pager backed, and hence can be active or inactive. If this
+  // returns false then it is guaranteed that both |queue_is_active| and |queue_is_inactive| would
+  // return false.
+  static constexpr bool queue_is_pager_backed(PageQueue page_queue) {
+    // We check against the the Inactive queue and not the base queue so that accessing a page can
+    // move it from the inactive list into the LRU queues. To keep this case efficient we require
+    // that the inactive queue be directly before the LRU queues.
+    static_assert(PageQueuePagerBackedInactive + 1 == PageQueuePagerBackedBase);
+    return page_queue >= PageQueuePagerBackedInactive;
+  }
+
+  // Calculates the age of a queue against a given mru, with 0 meaning page_queue==mru
+  // This is only meaningful to call on pager backed queues.
+  static constexpr uint queue_age(PageQueue page_queue, PageQueue mru) {
+    DEBUG_ASSERT(page_queue >= PageQueuePagerBackedBase);
+    if (page_queue <= mru) {
+      return mru - page_queue;
+    } else {
+      return (static_cast<uint>(kNumPagerBacked) - page_queue) + mru;
+    }
+  }
+
+  // Returns whether the given page queue would be considered active against a given mru.
+  // This is valid to call on any page queue, not just pager backed ones, and as such this returning
+  // false does not imply the queue is inactive.
+  static constexpr bool queue_is_active(PageQueue page_queue, PageQueue mru) {
+    if (page_queue < PageQueuePagerBackedBase) {
+      return false;
+    }
+    return queue_age(page_queue, mru) < kNumActiveQueues;
+  }
+
+  // Returns whether the given page queue would be considered inactive against a given mru.
+  // This is valid to call on any page queue, not just pager backed ones, and as such this returning
+  // false does not imply the queue is active.
+  static constexpr bool queue_is_inactive(PageQueue page_queue, PageQueue mru) {
+    // The inactive queue does not have an age, and so we cannot call queue_age on it, but it should
+    // definitely be considered part of the inactive set.
+    if (page_queue == PageQueuePagerBackedInactive) {
+      return true;
+    }
+    if (page_queue < PageQueuePagerBackedBase) {
+      return false;
+    }
+    return queue_age(page_queue, mru) >= kNumActiveQueues;
+  }
+
   PageQueue mru_gen_to_queue() const {
     return gen_to_queue(mru_gen_.load(ktl::memory_order_relaxed));
   }
@@ -273,6 +359,18 @@ class PageQueues {
       TA_REQ(lock_);
   void MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
                                  PageQueue queue) TA_REQ(lock_);
+
+  // Updates the active/inactive counts assuming a single page has moved from |old_queue| to
+  // |new_queue|. Either of these can be PageQueueNone to simulate pages being added or removed.
+  void UpdateActiveInactiveLocked(PageQueue old_queue, PageQueue new_queue) TA_REQ(lock_);
+
+  // Recalculates |active_queue_count_| and |inactive_queue_count_|. This is pulled into a helper
+  // method as this needs to be done both when accessed scanning completes, or if the mru_gen_ is
+  // changed.
+  void RecalculateActiveInactiveLocked() TA_REQ(lock_);
+
+  // Internal locked version of GetActiveInactiveCounts.
+  ActiveInactiveCounts GetActiveInactiveCountsLocked() const TA_REQ(lock_);
 
   // Entry point for the thread that will performing aging and increment the mru generation.
   void MruThread();
@@ -360,6 +458,23 @@ class PageQueues {
   // total number of pages in all queues. This approach avoids unnecessary branches when updating
   // counts.
   ktl::array<ktl::atomic<size_t>, PageQueueNumQueues> page_queue_counts_ = {};
+
+  // These are the continuously updated active/inactive queue counts. Continuous here means updated
+  // by all page queue methods except for MarkAccessedDeferredCount. Due to races whilst accessed
+  // harvesting is happening, these could be inaccurate or even become negative, and should not be
+  // read from whilst used_cached_queue_counts_ is true, and need to be completely recalculated
+  // prior to setting |used_cached_queue_counts_| back to false.
+  int64_t active_queue_count_ TA_GUARDED(lock_) = 0;
+  int64_t inactive_queue_count_ TA_GUARDED(lock_) = 0;
+  // When accessed harvesting is happening these hold the last known 'good' values of the
+  // active/inactive queue counts.
+  uint64_t cached_active_queue_count_ TA_GUARDED(lock_) = 0;
+  uint64_t cached_inactive_queue_count_ TA_GUARDED(lock_) = 0;
+  // Indicates whether the cached counts should be returned in queries or not. This also indicates
+  // whether the page queues expect accessed harvesting to be happening. This is only an atomic
+  // so that MarkAccessedDeferredCount can reference it in a DEBUG_ASSERT without triggering
+  // memory safety issues.
+  ktl::atomic<bool> use_cached_queue_counts_ = false;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

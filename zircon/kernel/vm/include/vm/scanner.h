@@ -11,6 +11,7 @@
 
 #include <fbl/macros.h>
 #include <vm/evictor.h>
+#include <vm/page_queues.h>
 
 // Increase the disable count of the scanner. This may need to block until the scanner finishes any
 // current work and so should not be called with other locks held that may conflict with the
@@ -40,6 +41,10 @@ void scanner_disable_page_table_reclaim();
 // This means if an accessed scan already happened more recently this function will immediately
 // return, otherwise it will wait for a new scan to complete.
 void scanner_wait_for_accessed_scan(zx_time_t update_time);
+
+// This is guaranteed to return live ActiveInactiveCounts from the page queue blocking until any
+// current accessed scan completes.
+PageQueues::ActiveInactiveCounts scanner_synchronized_active_inactive_counts();
 
 // AutoVmScannerDisable is an RAII helper for disabling scanning using the
 // scanner_push_disable_count()/scanner_pop_disable_count(). Disabling the scanner is useful in test

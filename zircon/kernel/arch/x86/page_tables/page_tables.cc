@@ -1048,7 +1048,7 @@ void X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table,
       // to update on an access. As the hardware will update any higher level accessed bits for us
       // we do not even ned to remove the accessed bit in that case.
       if (likely(page)) {
-        pmm_page_queues()->MarkAccessed(page);
+        pmm_page_queues()->MarkAccessedDeferredCount(page);
 
         UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e,
                     paddr_from_pte(PageTableLevel::PT_L, pt_val), term_flags,

@@ -256,9 +256,20 @@ void scanner_wait_for_accessed_scan(zx_time_t update_time) {
     const VmAspace::NonTerminalAction action = reclaim_pt
                                                    ? VmAspace::NonTerminalAction::FreeUnaccessed
                                                    : VmAspace::NonTerminalAction::Retain;
+    pmm_page_queues()->BeginAccessScan();
     VmAspace::HarvestAllUserAccessedBits(action);
+    pmm_page_queues()->EndAccessScan();
   }
   last_accessed_scan_complete = current_time();
+}
+
+PageQueues::ActiveInactiveCounts scanner_synchronized_active_inactive_counts() {
+  // Acquire the scanner lock so we know EndAccessScan has been called
+  Guard<Mutex> guard{accessed_scanner_lock::Get()};
+  // Now we know that the pages queues will return us live, and not cached, values.
+  PageQueues::ActiveInactiveCounts counts = pmm_page_queues()->GetActiveInactiveCounts();
+  DEBUG_ASSERT(!counts.cached);
+  return counts;
 }
 
 uint64_t scanner_do_zero_scan(uint64_t limit) {

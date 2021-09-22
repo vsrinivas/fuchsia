@@ -123,6 +123,9 @@ void PageQueues::RotatePagerBackedQueues() {
   Guard<CriticalMutex> guard{&lock_};
   mru_gen_.fetch_add(1, ktl::memory_order_relaxed);
   last_age_time_ = current_time();
+  // Update the active/inactive counts. We could be a bit smarter here since we know exactly which
+  // active bucket might have changed, but this will work.
+  RecalculateActiveInactiveLocked();
 }
 
 ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t target_gen, bool peek) {
@@ -181,6 +184,9 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t targ
         page_queue_counts_[new_queue].fetch_add(1, ktl::memory_order_relaxed);
         list_delete(&page->queue_node);
         list_add_head(&page_queues_[new_queue], &page->queue_node);
+        // We should only have performed this step to move from one inactive bucket to the next,
+        // so there should be no active/inactive count changes needed.
+        DEBUG_ASSERT(!queue_is_active(new_queue, mru_gen_to_queue()));
       }
     }
     if (list_is_empty(&page_queues_[queue])) {
@@ -189,6 +195,52 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t targ
   }
 
   return ktl::nullopt;
+}
+
+void PageQueues::UpdateActiveInactiveLocked(PageQueue old_queue, PageQueue new_queue) {
+  // Short circuit the lock acquisition and logic if not dealing with active/inactive queues
+  if (!queue_is_pager_backed(old_queue) && !queue_is_pager_backed(new_queue)) {
+    return;
+  }
+  // This just blindly updates the active/inactive counts. If accessed scanning is happening, and
+  // used use_cached_queue_counts_ is true, then we could be racing and setting these to garbage
+  // values. That's fine as they will never get returned anywhere, and will get reset to correct
+  // values once access scanning completes.
+  PageQueue mru = mru_gen_to_queue();
+  if (queue_is_active(old_queue, mru)) {
+    active_queue_count_--;
+  } else if (queue_is_inactive(old_queue, mru)) {
+    inactive_queue_count_--;
+  }
+  if (queue_is_active(new_queue, mru)) {
+    active_queue_count_++;
+  } else if (queue_is_inactive(new_queue, mru)) {
+    inactive_queue_count_++;
+  }
+}
+
+void PageQueues::MarkAccessed(vm_page_t* page) {
+  Guard<CriticalMutex> guard{&lock_};
+
+  auto queue_ref = page->object.get_page_queue_ref();
+
+  // We need to check the current queue to see if it is in the pager backed range. Between checking
+  // this and updating the queue it could change, however it would only change as a result of
+  // MarkAccessedDeferredCount, which would only move it to another pager backed queue. No other
+  // change is possible as we are holding lock_.
+  if (queue_ref.load(fbl::memory_order_relaxed) < PageQueuePagerBackedInactive) {
+    return;
+  }
+
+  PageQueue queue = mru_gen_to_queue();
+  PageQueue old_queue = (PageQueue)queue_ref.exchange(queue, fbl::memory_order_relaxed);
+  // Double check again that this was previously pager backed
+  DEBUG_ASSERT(old_queue != PageQueueNone && old_queue >= PageQueuePagerBackedInactive);
+  if (old_queue != queue) {
+    page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
+    page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
+    UpdateActiveInactiveLocked(old_queue, queue);
+  }
 }
 
 void PageQueues::SetQueueLocked(vm_page_t* page, PageQueue queue) {
@@ -206,6 +258,7 @@ void PageQueues::SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t
   page->object.get_page_queue_ref().store(queue, fbl::memory_order_relaxed);
   list_add_head(&page_queues_[queue], &page->queue_node);
   page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
+  UpdateActiveInactiveLocked(PageQueueNone, queue);
 }
 
 void PageQueues::MoveToQueueLocked(vm_page_t* page, PageQueue queue) {
@@ -225,6 +278,7 @@ void PageQueues::MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintpt
   list_add_head(&page_queues_[queue], &page->queue_node);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
   page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
+  UpdateActiveInactiveLocked((PageQueue)old_queue, queue);
 }
 
 void PageQueues::SetWired(vm_page_t* page) {
@@ -284,6 +338,7 @@ void PageQueues::RemoveLocked(vm_page_t* page) {
       page->object.get_page_queue_ref().exchange(PageQueueNone, fbl::memory_order_relaxed);
   DEBUG_ASSERT(old_queue != PageQueueNone);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
+  UpdateActiveInactiveLocked((PageQueue)old_queue, PageQueueNone);
   page->object.set_object(nullptr);
   page->object.set_page_offset(0);
   list_delete(&page->queue_node);
@@ -302,6 +357,50 @@ void PageQueues::RemoveArrayIntoList(vm_page_t** pages, size_t count, list_node_
     RemoveLocked(pages[i]);
     list_add_tail(out_list, &pages[i]->queue_node);
   }
+}
+
+void PageQueues::BeginAccessScan() {
+  Guard<CriticalMutex> guard{&lock_};
+  ASSERT(!use_cached_queue_counts_.load(ktl::memory_order_relaxed));
+  cached_active_queue_count_ = active_queue_count_;
+  cached_inactive_queue_count_ = inactive_queue_count_;
+  use_cached_queue_counts_.store(true, ktl::memory_order_relaxed);
+}
+
+void PageQueues::RecalculateActiveInactiveLocked() {
+  uint64_t active = 0;
+  uint64_t inactive = 0;
+
+  uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
+  uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
+
+  for (uint32_t index = lru; index <= mru; index++) {
+    uint64_t count = page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
+    if (queue_is_active(gen_to_queue(index), gen_to_queue(mru))) {
+      active += count;
+    } else {
+      // As we are only operating on pager backed queues, !active should imply inactive
+      DEBUG_ASSERT(queue_is_inactive(gen_to_queue(index), gen_to_queue(mru)));
+      inactive += count;
+    }
+  }
+  inactive += page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+
+  // Update the counts.
+  active_queue_count_ = active;
+  inactive_queue_count_ = inactive;
+}
+
+void PageQueues::EndAccessScan() {
+  Guard<CriticalMutex> guard{&lock_};
+
+  ASSERT(use_cached_queue_counts_.load(ktl::memory_order_relaxed));
+
+  RecalculateActiveInactiveLocked();
+  // Clear the cached counts.
+  cached_active_queue_count_ = 0;
+  cached_inactive_queue_count_ = 0;
+  use_cached_queue_counts_.store(false, ktl::memory_order_relaxed);
 }
 
 PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
@@ -364,12 +463,7 @@ bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) co
   PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(fbl::memory_order_relaxed);
   if (q >= PageQueuePagerBackedBase && q <= PageQueuePagerBackedLast) {
     if (queue) {
-      PageQueue mru_queue = mru_gen_to_queue();
-      if (q <= mru_queue) {
-        *queue = mru_queue - q;
-      } else {
-        *queue = (kNumPagerBacked - q) + mru_queue;
-      }
+      *queue = queue_age(q, mru_gen_to_queue());
     }
     return true;
   }
@@ -445,4 +539,25 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest
   // The target gen is 1 larger than the lowest queue because evicting from queue X is done by
   // attempting to make the lru queue be X+1.
   return ProcessLruQueue(mru_gen_.load(ktl::memory_order_relaxed) - (lowest_queue - 1), true);
+}
+
+PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCounts() const {
+  Guard<CriticalMutex> guard{&lock_};
+  return GetActiveInactiveCountsLocked();
+}
+
+PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCountsLocked() const {
+  if (use_cached_queue_counts_.load(ktl::memory_order_relaxed)) {
+    return ActiveInactiveCounts{.cached = true,
+                                .active = cached_active_queue_count_,
+                                .inactive = cached_inactive_queue_count_};
+  } else {
+    // With use_cached_queue_counts_ false the counts should have been updated to remove any
+    // negative values that might have been caused by races.
+    ASSERT(active_queue_count_ >= 0);
+    ASSERT(inactive_queue_count_ >= 0);
+    return ActiveInactiveCounts{.cached = false,
+                                .active = static_cast<uint64_t>(active_queue_count_),
+                                .inactive = static_cast<uint64_t>(inactive_queue_count_)};
+  }
 }

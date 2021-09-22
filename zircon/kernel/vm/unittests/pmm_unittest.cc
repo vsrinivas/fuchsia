@@ -842,6 +842,7 @@ static bool pq_rotate_queue() {
   size_t queue;
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
   EXPECT_EQ(queue, 0u);
 
   // Gradually rotate the queue.
@@ -849,28 +850,34 @@ static bool pq_rotate_queue() {
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
   EXPECT_EQ(queue, 1u);
 
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   // Further rotations should not move the page.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   // Moving the page should bring it back to the first queue.
   pq.MoveToPagerBacked(&pager_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
 
   // Just double check one rotation.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   pq.Remove(&wired_page);
   pq.Remove(&pager_page);
