@@ -8,10 +8,10 @@
 #define ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_TESTING_TEST_UTIL_H_
 
 #include <lib/acpi_lite.h>
+#include <lib/stdcompat/span.h>
 
 #include <initializer_list>
 
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 namespace acpi_lite::testing {
@@ -47,7 +47,7 @@ class FakePhysMemReader : public PhysMemReader {
   // A region of physical memory, starting at the given address.
   struct Region {
     zx_paddr_t phys_addr;
-    fbl::Span<const uint8_t> data;
+    cpp20::span<const uint8_t> data;
   };
 
   // Create a FakePhysMemReader.
@@ -56,7 +56,7 @@ class FakePhysMemReader : public PhysMemReader {
   // auto-discovery should take place on the platform.
   //
   // |tables| contains a list of tables to make available to the reader.
-  explicit FakePhysMemReader(zx_paddr_t rsdp, fbl::Span<const Region> regions) : rsdp_(rsdp) {
+  explicit FakePhysMemReader(zx_paddr_t rsdp, cpp20::span<const Region> regions) : rsdp_(rsdp) {
     for (const auto& region : regions) {
       fbl::AllocChecker ac;
       regions_.push_back(region, &ac);
@@ -90,8 +90,8 @@ class FakeAcpiParser : public AcpiParserInterface {
  public:
   FakeAcpiParser() = default;
 
-  FakeAcpiParser(std::initializer_list<fbl::Span<const uint8_t>> tables) {
-    for (fbl::Span<const uint8_t> table : tables) {
+  FakeAcpiParser(std::initializer_list<cpp20::span<const uint8_t>> tables) {
+    for (cpp20::span<const uint8_t> table : tables) {
       ZX_ASSERT(table.size() >= sizeof(AcpiSdtHeader));
       Add(reinterpret_cast<const AcpiSdtHeader*>(table.data()));
     }

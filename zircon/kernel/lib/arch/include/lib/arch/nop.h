@@ -9,11 +9,10 @@
 
 #include <lib/arch/arm64/nop.h>
 #include <lib/arch/x86/nop.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 
 #include <cstddef>
-
-#include <fbl/span.h>
 
 namespace arch {
 
@@ -21,7 +20,7 @@ namespace arch {
 // The function is templatized on a 'nop traits' struct that is expected to
 // have the following static members:
 //
-// * `static constexpr std::array<fbl::Span<const INT_TYPE, NUM>> kNopPatterns`
+// * `static constexpr std::array<ktl::span<const INT_TYPE, NUM>> kNopPatterns`
 //   giving an array of the arch-specific `nop` patterns in descending order of
 //   of size, where INT_TYPE is of instruction width. Some architectures (such
 //   x86 have several different `nop` instructions with different encoding
@@ -41,7 +40,7 @@ template <typename NopTraits
           = X86NopTraits
 #endif
           >
-void NopFill(fbl::Span<std::byte> instructions) {
+void NopFill(cpp20::span<std::byte> instructions) {
   static_assert(!NopTraits::kNopPatterns.empty());
   static_assert(!NopTraits::kNopPatterns[0].empty());
   static constexpr size_t kInsnAlignment = sizeof(NopTraits::kNopPatterns[0][0]);

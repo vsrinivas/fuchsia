@@ -33,6 +33,7 @@ zx_library("acpi_lite") {
   deps = [ "//zircon/system/ulib/pretty" ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
   ]

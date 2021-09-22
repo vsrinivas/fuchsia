@@ -7,10 +7,10 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_NOP_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_NOP_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <array>
 #include <cstddef>
-
-#include <fbl/span.h>
 
 namespace arch {
 
@@ -39,7 +39,7 @@ struct X86NopTraits {
   // clang-format on
 
   // Expected to be in descending order of size.
-  static constexpr std::array<fbl::Span<const uint8_t>, 15> kNopPatterns = {{
+  static constexpr std::array<cpp20::span<const uint8_t>, 15> kNopPatterns = {{
       {kNop15},
       {kNop14},
       {kNop13},

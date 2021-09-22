@@ -16,7 +16,7 @@ namespace {
   EXPECT_EQ(std::basic_string_view<uint8_t>(expected, size), \
             std::basic_string_view<uint8_t>(actual, size))
 
-fbl::Span<std::byte> AsBytes(uint8_t* ptr, size_t size) {
+cpp20::span<std::byte> AsBytes(uint8_t* ptr, size_t size) {
   return {reinterpret_cast<std::byte*>(ptr), size};
 }
 
