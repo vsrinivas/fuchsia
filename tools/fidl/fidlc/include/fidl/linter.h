@@ -5,17 +5,17 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_
 
-#include <array>
-#include <regex>
-#include <set>
-#include <stack>
-#include <utility>
-
 #include <fidl/check_def.h>
 #include <fidl/findings.h>
 #include <fidl/linting_tree_callbacks.h>
 #include <fidl/tree_visitor.h>
 #include <fidl/utils.h>
+
+#include <array>
+#include <regex>
+#include <set>
+#include <stack>
+#include <utility>
 
 namespace fidl::linter {
 

@@ -1,9 +1,38 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
+    "additionalItems": false,
     "description": "An array of diagnostics produced by the compiler",
-    "type": "array",
     "items": {
-        "type": "object",
+        "properties": {
+            "category": {
+                "description": "Category of the diagnostic, encoded as a path with the analyzer name as the root, followed by an arbitrary number of subcategories. Currently, always fidlc/{error, warning}, but could include a different analyzer (e.g. fidl-lint) and a further subcategory for error code/identifier in the future",
+                "type": "string"
+            },
+            "end_char": {
+                "description": "The character of the end position of the diagnostic's source span",
+                "type": "integer"
+            },
+            "end_line": {
+                "description": "The line of the end position of the diagnostic's source span",
+                "type": "integer"
+            },
+            "message": {
+                "description": "The diagnostic message, as a human consumable text string",
+                "type": "string"
+            },
+            "path": {
+                "description": "The path of the file where the diagnostic's source span is located",
+                "type": "string"
+            },
+            "start_char": {
+                "description": "The character of the start position of the diagnostic's source span",
+                "type": "integer"
+            },
+            "start_line": {
+                "description": "The line of the start position of the diagnostic's source span",
+                "type": "integer"
+            }
+        },
         "required": [
             "category",
             "message",
@@ -13,36 +42,7 @@
             "end_line",
             "end_char"
         ],
-        "properties": {
-            "category": {
-                "type": "string",
-                "description": "Category of the diagnostic, encoded as a path with the analyzer name as the root, followed by an arbitrary number of subcategories. Currently, always fidlc/{error, warning}, but could include a different analyzer (e.g. fidl-lint) and a further subcategory for error code/identifier in the future"
-            },
-            "message": {
-                "type": "string",
-                "description": "The diagnostic message, as a human consumable text string"
-            },
-            "path": {
-                "type": "string",
-                "description": "The path of the file where the diagnostic's source span is located"
-            },
-            "start_line": {
-                "type": "integer",
-                "description": "The line of the start position of the diagnostic's source span"
-            },
-            "start_char": {
-                "type": "integer",
-                "description": "The character of the start position of the diagnostic's source span"
-            },
-            "end_line": {
-                "type": "integer",
-                "description": "The line of the end position of the diagnostic's source span"
-            },
-            "end_char": {
-                "type": "integer",
-                "description": "The character of the end position of the diagnostic's source span"
-            }
-        }
+        "type": "object"
     },
-    "additionalItems": false
+    "type": "array"
 }

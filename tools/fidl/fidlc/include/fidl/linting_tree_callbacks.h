@@ -5,12 +5,11 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_
 
+#include <fidl/source_span.h>
+#include <fidl/tree_visitor.h>
 #include <lib/fit/function.h>
 
 #include <vector>
-
-#include <fidl/source_span.h>
-#include <fidl/tree_visitor.h>
 
 namespace fidl::linter {
 

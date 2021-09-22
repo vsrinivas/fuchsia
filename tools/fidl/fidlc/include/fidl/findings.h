@@ -5,12 +5,12 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FINDINGS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FINDINGS_H_
 
+#include <fidl/source_span.h>
+
 #include <list>
 #include <optional>
 #include <sstream>
 #include <string>
-
-#include <fidl/source_span.h>
 
 namespace fidl {
 

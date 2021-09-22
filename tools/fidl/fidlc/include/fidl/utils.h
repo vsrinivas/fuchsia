@@ -6,6 +6,8 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UTILS_H_
 
 #include <errno.h>
+#include <fidl/findings.h>
+#include <fidl/reporter.h>
 
 #include <clocale>
 #include <cstring>
@@ -13,9 +15,6 @@
 #include <set>
 #include <string>
 #include <string_view>
-
-#include <fidl/findings.h>
-#include <fidl/reporter.h>
 
 namespace fidl {
 namespace utils {

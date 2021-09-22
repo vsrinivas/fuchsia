@@ -15,7 +15,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 41,
+        "line": 38,
         "column": 21,
         "length": 72
       },
@@ -47,7 +47,7 @@
           "name": "BIT_ONE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 42,
+            "line": 39,
             "column": 13,
             "length": 7
           },
@@ -66,7 +66,7 @@
           "name": "BIT_TWO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 43,
+            "line": 40,
             "column": 13,
             "length": 7
           },
@@ -93,8 +93,8 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 21,
-        "column": 19,
+        "line": 19,
+        "column": 28,
         "length": 52
       },
       "maybe_attributes": [
@@ -103,8 +103,8 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 21,
-            "column": 9,
+            "line": 19,
+            "column": 18,
             "length": 9
           }
         }
@@ -137,7 +137,7 @@
           "name": "INLINE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 22,
+            "line": 20,
             "column": 13,
             "length": 6
           },
@@ -169,7 +169,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 45,
+        "line": 42,
         "column": 14,
         "length": 67
       },
@@ -179,7 +179,7 @@
           "name": "ERROR_ONE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 46,
+            "line": 43,
             "column": 9,
             "length": 9
           },
@@ -198,7 +198,7 @@
           "name": "ERROR_TWO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 47,
+            "line": 44,
             "column": 9,
             "length": 9
           },
@@ -226,7 +226,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 8,
+        "line": 7,
         "column": 12,
         "length": 88
       },
@@ -236,7 +236,7 @@
           "name": "ADD",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 9,
+            "line": 8,
             "column": 13,
             "length": 3
           },
@@ -255,7 +255,7 @@
           "name": "MUL",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 10,
+            "line": 9,
             "column": 13,
             "length": 3
           },
@@ -274,7 +274,7 @@
           "name": "DIV",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 11,
+            "line": 10,
             "column": 13,
             "length": 3
           },
@@ -300,7 +300,7 @@
       "name": "fidl.test.anonymous/SomeProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 27,
+        "line": 25,
         "column": 10,
         "length": 12
       },
@@ -311,7 +311,7 @@
           "name": "SomeMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 28,
+            "line": 26,
             "column": 5,
             "length": 10
           },
@@ -344,7 +344,7 @@
               "name": "union_member",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-                "line": 30,
+                "line": 27,
                 "column": 9,
                 "length": 12
               },
@@ -384,7 +384,7 @@
               "name": "table_member",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-                "line": 34,
+                "line": 31,
                 "column": 9,
                 "length": 12
               },
@@ -497,8 +497,8 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 36,
-        "column": 34,
+        "line": 33,
+        "column": 35,
         "length": 50
       },
       "is_request_or_response": false,
@@ -529,7 +529,7 @@
           "name": "data",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 37,
+            "line": 34,
             "column": 17,
             "length": 4
           },
@@ -572,9 +572,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 29,
-        "column": 17,
-        "length": 266
+        "line": 26,
+        "column": 28,
+        "length": 267
       },
       "is_request_or_response": true,
       "maybe_attributes": [
@@ -583,8 +583,8 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 29,
-            "column": 5,
+            "line": 26,
+            "column": 16,
             "length": 11
           }
         }
@@ -617,7 +617,7 @@
           "name": "union_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 30,
+            "line": 27,
             "column": 9,
             "length": 12
           },
@@ -657,7 +657,7 @@
           "name": "table_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 34,
+            "line": 31,
             "column": 9,
             "length": 12
           },
@@ -702,7 +702,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 40,
+        "line": 37,
         "column": 12,
         "length": 108
       },
@@ -735,7 +735,7 @@
           "name": "bits_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 41,
+            "line": 38,
             "column": 9,
             "length": 11
           },
@@ -778,7 +778,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 40,
+        "line": 37,
         "column": 11,
         "length": 110
       },
@@ -853,8 +853,8 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 7,
-        "column": 37,
+        "line": 6,
+        "column": 47,
         "length": 184
       },
       "is_request_or_response": false,
@@ -876,16 +876,16 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-                "line": 7,
-                "column": 21,
+                "line": 6,
+                "column": 31,
                 "length": 14
               }
             }
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 7,
-            "column": 5,
+            "line": 6,
+            "column": 15,
             "length": 31
           }
         }
@@ -918,7 +918,7 @@
           "name": "op",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 8,
+            "line": 7,
             "column": 9,
             "length": 2
           },
@@ -958,7 +958,7 @@
           "name": "left",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 13,
+            "line": 12,
             "column": 9,
             "length": 4
           },
@@ -998,7 +998,7 @@
           "name": "right",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 14,
+            "line": 13,
             "column": 9,
             "length": 5
           },
@@ -1044,9 +1044,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 34,
+        "line": 31,
         "column": 22,
-        "length": 131
+        "length": 132
       },
       "members": [
         {
@@ -1054,7 +1054,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 35,
+            "line": 32,
             "column": 13,
             "length": 11
           }
@@ -1111,7 +1111,7 @@
           "name": "table_data",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 36,
+            "line": 33,
             "column": 16,
             "length": 10
           }
@@ -1146,9 +1146,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 16,
+        "line": 15,
         "column": 29,
-        "length": 199
+        "length": 190
       },
       "members": [
         {
@@ -1180,7 +1180,7 @@
           "name": "func",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 17,
+            "line": 16,
             "column": 12,
             "length": 4
           }
@@ -1190,7 +1190,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 18,
+            "line": 17,
             "column": 9,
             "length": 11
           }
@@ -1247,7 +1247,7 @@
           "name": "args",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 19,
+            "line": 18,
             "column": 12,
             "length": 4
           }
@@ -1281,7 +1281,7 @@
           "name": "flags",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 20,
+            "line": 19,
             "column": 12,
             "length": 5
           }
@@ -1320,7 +1320,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 30,
+        "line": 27,
         "column": 22,
         "length": 75
       },
@@ -1330,7 +1330,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 31,
+            "line": 28,
             "column": 13,
             "length": 11
           }
@@ -1363,7 +1363,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 32,
+            "line": 29,
             "column": 16,
             "length": 10
           }
@@ -1400,7 +1400,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-        "line": 40,
+        "line": 37,
         "column": 11,
         "length": 110
       },
@@ -1621,7 +1621,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
-            "line": 16,
+            "line": 15,
             "column": 8,
             "length": 20
           }

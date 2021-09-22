@@ -1780,8 +1780,7 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 }
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(
-    Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-    bool warn_on_typo) const {
+    Reporter* reporter, const std::unique_ptr<Attribute>& attribute, bool warn_on_typo) const {
   auto attribute_name = attribute->name;
 
   auto iter = attribute_schemas_.find(attribute_name);
@@ -2135,8 +2134,8 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
         args.emplace_back(
             std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
       }
-      auto attribute = std::make_unique<Attribute>(raw_attribute->name, raw_attribute->span(),
-                                                   std::move(args));
+      auto attribute =
+          std::make_unique<Attribute>(raw_attribute->name, raw_attribute->span(), std::move(args));
       attributes_builder.Insert(std::move(attribute));
     }
   }
@@ -3380,8 +3379,7 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
   bool ok = true;
   if (attributes && !attributes->attributes.empty()) {
     for (auto& attribute : attributes->attributes) {
-      auto schema =
-          all_libraries_->RetrieveAttributeSchema(reporter_, attribute, true);
+      auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, true);
 
       // Check for duplicate args, and return early if we find them.
       std::set<std::string> seen;
@@ -5209,7 +5207,8 @@ bool LibraryMediator::ResolveParamAsSize(const flat::TypeTemplate* layout,
     }
     case LayoutParameter::kType: {
       auto type_param = static_cast<TypeLayoutParameter*>(param.get());
-      return library_->Fail(ErrExpectedValueButGotType, type_param->span, type_param->type_ctor->name);
+      return library_->Fail(ErrExpectedValueButGotType, type_param->span,
+                            type_param->type_ctor->name);
     }
     case LayoutParameter::Kind::kIdentifier: {
       auto ambig_param = static_cast<IdentifierLayoutParameter*>(param.get());

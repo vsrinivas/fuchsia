@@ -4,11 +4,11 @@
 
 #include "fidl/reporter.h"
 
-#include <cassert>
-#include <sstream>
-
 #include <fidl/diagnostics_json.h>
 #include <fidl/token.h>
+
+#include <cassert>
+#include <sstream>
 
 namespace fidl {
 namespace reporter {

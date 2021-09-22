@@ -3,6 +3,17 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <fidl/c_generator.h>
+#include <fidl/experimental_flags.h>
+#include <fidl/flat_ast.h>
+#include <fidl/json_generator.h>
+#include <fidl/json_schema.h>
+#include <fidl/lexer.h>
+#include <fidl/names.h>
+#include <fidl/ordinals.h>
+#include <fidl/parser.h>
+#include <fidl/source_manager.h>
+#include <fidl/tables_generator.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -18,18 +29,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <fidl/c_generator.h>
-#include <fidl/experimental_flags.h>
-#include <fidl/flat_ast.h>
-#include <fidl/json_generator.h>
-#include <fidl/json_schema.h>
-#include <fidl/lexer.h>
-#include <fidl/names.h>
-#include <fidl/ordinals.h>
-#include <fidl/parser.h>
-#include <fidl/source_manager.h>
-#include <fidl/tables_generator.h>
 
 namespace {
 

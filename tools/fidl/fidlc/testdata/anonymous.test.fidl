@@ -3,8 +3,7 @@ library fidl.test.anonymous;
 @on_expression
 type Expression = flexible union {
     1: value uint64;
-    2: bin_op 
-    @generated_name("OverrideTest") struct {
+    2: bin_op @generated_name("OverrideTest") struct {
         op flexible enum {
             ADD = 1;
             MUL = 2;
@@ -17,23 +16,21 @@ type Expression = flexible union {
         1: func string:100;
         2: reserved;
         3: args vector<Expression:optional>:5;
-        4: flags 
-        @on_flags bits : uint16 {
+        4: flags @on_flags bits : uint16 {
             INLINE = 0x01;
         };
     };
 };
 
 protocol SomeProtocol {
-    SomeMethod(
-    @on_request struct {
+    SomeMethod(@on_request struct {
         union_member union {
             1: reserved;
             2: union_data uint8;
         };
         table_member table {
             1: reserved;
-            2: table_data vector<struct {
+            2: table_data vector< struct {
                 data uint8;
             }>:10;
         };

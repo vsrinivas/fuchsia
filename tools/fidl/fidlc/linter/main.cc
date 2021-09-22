@@ -3,6 +3,13 @@
 // found in the LICENSE file.
 
 #include <errno.h>
+#include <fidl/findings.h>
+#include <fidl/findings_json.h>
+#include <fidl/lexer.h>
+#include <fidl/linter.h>
+#include <fidl/parser.h>
+#include <fidl/source_manager.h>
+#include <fidl/tree_visitor.h>
 #include <lib/cmdline/status.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -13,14 +20,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <fidl/findings.h>
-#include <fidl/findings_json.h>
-#include <fidl/lexer.h>
-#include <fidl/linter.h>
-#include <fidl/parser.h>
-#include <fidl/source_manager.h>
-#include <fidl/tree_visitor.h>
 
 #include "command_line_options.h"
 

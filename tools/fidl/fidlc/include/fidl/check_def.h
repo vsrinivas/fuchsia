@@ -15,11 +15,11 @@
 // findings from other developer tools, such as fidlc.
 ///////////////////////////////////////////////////////////////
 
+#include <fidl/template_string.h>
+
 #include <iostream>
 #include <string>
 #include <utility>
-
-#include <fidl/template_string.h>
 
 namespace fidl::linter {
 

@@ -598,8 +598,8 @@ struct TableMember : public Attributable, public Object {
       : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value))) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type, SourceSpan name,
-              std::unique_ptr<AttributeList> attributes)
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
+              SourceSpan name, std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, nullptr)) {}
@@ -659,8 +659,8 @@ struct UnionMemberUsed : public Object {
 struct UnionMember : public Attributable, public Object {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
-              std::unique_ptr<AttributeList> attributes)
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+              SourceSpan name, std::unique_ptr<AttributeList> attributes)
       : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
         ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}

@@ -396,8 +396,7 @@ class Name final {
         member_name_(std::move(member_name)) {}
 
   const Library* library_;
-  std::variant<std::monostate, SourcedNameContext, AnonymousNameContext,
-               IntrinsicNameContext>
+  std::variant<std::monostate, SourcedNameContext, AnonymousNameContext, IntrinsicNameContext>
       name_context_;
   std::optional<std::string> member_name_;
 
