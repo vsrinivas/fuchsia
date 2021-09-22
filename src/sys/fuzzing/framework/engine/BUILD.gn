@@ -8,6 +8,8 @@ source_set("engine") {
   sources = [
     "corpus.cc",
     "corpus.h",
+    "dictionary.cc",
+    "dictionary.h",
   ]
   public_deps = [
     "//src/lib/fxl",
@@ -20,7 +22,10 @@ source_set("engine") {
 source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true
-  sources = [ "corpus-unittest.cc" ]
+  sources = [
+    "corpus-unittest.cc",
+    "dictionary-unittest.cc",
+  ]
   deps = [
     ":engine",
     "//third_party/googletest:gtest",
