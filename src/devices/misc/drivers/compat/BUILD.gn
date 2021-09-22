@@ -15,17 +15,26 @@ group("tests") {
 
 source_set("lib") {
   sources = [
+    "device.cc",
+    "device.h",
     "loader.cc",
     "loader.h",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_llcpp" ]
+  public_deps = [
+    "//sdk/lib/stdcompat",
+    "//src/devices/lib/driver2:llcpp",
+    "//src/lib/ddk",
+  ]
 }
 
 executable("unittests") {
   testonly = true
   output_name = "compat_test"
 
-  sources = [ "loader_test.cc" ]
+  sources = [
+    "device_test.cc",
+    "loader_test.cc",
+  ]
 
   deps = [
     ":lib",
