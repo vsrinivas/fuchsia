@@ -11,11 +11,16 @@ from sdk_common import Atom
 
 
 def sort_atoms(atoms):
-  def key(ad):
-    return (ad['meta'], ad['type'])
 
-  return sorted(({'meta': a.metadata, 'type': a.type,} for a in atoms),
-                key=key)
+    def key(ad):
+        return (ad['meta'], ad['type'])
+
+    return sorted(
+        ({
+            'meta': a.metadata,
+            'type': a.type,
+        } for a in atoms), key=key)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -40,7 +45,8 @@ def main():
     with open(args.manifest, 'r') as manifest_file:
         manifest = json.load(manifest_file)
 
-    atoms = [Atom(a) for a in manifest['atoms']]
+    # sdk_noop_atoms may contain empty meta, skip them.
+    atoms = [Atom(a) for a in manifest['atoms'] if a['meta']]
     meta = {
         'arch': {
             'host': args.host_arch,

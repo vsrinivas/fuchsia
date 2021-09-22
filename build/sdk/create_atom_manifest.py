@@ -31,10 +31,20 @@ def main():
     parser.add_argument('--category', help='Publication level', required=True)
     parser.add_argument(
         '--meta',
-        help='Path to the atom\'s metadata file in the SDK',
-        required=True)
+        help=
+        'Path to the atom\'s metadata file in the SDK. Required by default unless --noop-atom is set to True.'
+    )
+    parser.add_argument(
+        '--noop-atom',
+        action='store_true',
+        help=
+        'Whether the atom is a sdk_noop_atom. Sets the atom\'s meta to be empty. Defaults to False.'
+    )
     parser.add_argument('--type', help='Type of the atom', required=True)
     args = parser.parse_args()
+
+    if args.meta is None and not args.noop_atom:
+        parser.error("--meta is required.")
 
     # Gather the definitions of other atoms this atom depends on.
     (deps, atoms) = gather_dependencies(args.deps)
@@ -47,14 +57,15 @@ def main():
                 line.strip().split('=', 1)
                 for line in file_list_file.readlines()
             ]
-    files = dict(itertools.chain(args.file, extra_files))
+    files = dict(itertools.chain(
+        args.file, extra_files)) if args.file else dict(extra_files)
 
     atoms.update(
         [
             Atom(
                 {
                     'id': args.id,
-                    'meta': args.meta,
+                    'meta': args.meta or '',
                     'gn-label': args.gn_label,
                     'category': args.category,
                     'deps': sorted(list(deps)),

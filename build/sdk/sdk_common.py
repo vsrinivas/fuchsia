@@ -54,6 +54,10 @@ def gather_dependencies(manifests):
        '''
     direct_deps = set()
     atoms = set()
+
+    if manifests is None:
+        return (direct_deps, atoms)
+
     for dep in manifests:
         with open(dep, 'r') as dep_file:
             dep_manifest = json.load(dep_file)
