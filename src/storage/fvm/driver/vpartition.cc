@@ -193,6 +193,14 @@ void VPartition::SliceFreeLocked(uint64_t vslice) {
   AddBlocksLocked(-(mgr_->slice_size() / info_.block_size));
 }
 
+size_t VPartition::NumSlicesLocked() TA_REQ(lock_) {
+  size_t count = 0;
+  for (const auto& extent : slice_map_) {
+    count += extent.size();
+  }
+  return count;
+}
+
 void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
   ZX_ASSERT(vslice < mgr_->VSliceMax());
   ZX_ASSERT(SliceCanFree(vslice));

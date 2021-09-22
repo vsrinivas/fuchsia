@@ -88,6 +88,9 @@ class VPartition : public PartitionDeviceType,
   // partition, users should call SliceCanFree(vslice) before calling this method.
   void SliceFreeLocked(uint64_t vslice) TA_REQ(lock_);
 
+  // Returns the number of slices which are assigned to the vpartition.
+  size_t NumSlicesLocked() TA_REQ(lock_);
+
   // Destroy the extent containing the vslice.
   void ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_);
 
