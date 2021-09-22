@@ -36,7 +36,7 @@ class AppStateImpl with Disposable implements AppState {
   final PointerEventsService pointerEventsService;
 
   static const kFeedbackUrl =
-      'fuchsia-pkg://fuchsia.com/feedback_settings#meta/feedback_settings.cmx';
+      'https://fuchsia.dev/fuchsia-src/contribute/report-issue';
   static const kLicenseUrl =
       'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
   static const kScreenSaverUrl =

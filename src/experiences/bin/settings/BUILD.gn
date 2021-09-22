@@ -3,8 +3,5 @@
 # found in the LICENSE file.
 
 group("settings") {
-  public_deps = [
-    "//src/experiences/bin/settings/feedback:feedback_settings",
-    "//src/experiences/bin/settings/license:license_settings",
-  ]
+  public_deps = [ "//src/experiences/bin/settings/license:license_settings" ]
 }
