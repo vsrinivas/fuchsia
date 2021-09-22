@@ -147,6 +147,8 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
       }
       case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile:
         ZX_PANIC("VMO files are not supported");
+      case fuchsia::io::test::DirectoryEntry::Tag::kExecFile:
+        ZX_PANIC("Executable files are not supported");
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
         ZX_PANIC("Unknown DirectoryEntry type");
     }

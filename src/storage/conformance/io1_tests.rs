@@ -160,6 +160,7 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
         DirectoryEntry::Directory(entry) => entry.name.as_ref(),
         DirectoryEntry::File(entry) => entry.name.as_ref(),
         DirectoryEntry::VmoFile(entry) => entry.name.as_ref(),
+        DirectoryEntry::ExecFile(entry) => entry.name.as_ref(),
     }
     .expect("DirectoryEntry name is None!")
     .clone()
@@ -239,6 +240,13 @@ fn vmo_file(name: &str, contents: &[u8]) -> io_test::DirectoryEntry {
     })
 }
 
+fn exec_file(name: &str) -> io_test::DirectoryEntry {
+    io_test::DirectoryEntry::ExecFile(io_test::ExecutableFile {
+        name: Some(name.to_string()),
+        ..io_test::ExecutableFile::EMPTY
+    })
+}
+
 // Validate allowed rights for Directory objects.
 #[fasync::run_singlethreaded(test)]
 async fn validate_directory_rights() {
@@ -286,7 +294,7 @@ async fn validate_vmofile_rights() {
     if harness.config.no_vmofile.unwrap_or_default() {
         return;
     }
-    // Create a test directory with a single VmoFile object, and ensure the directory has all rights.
+    // Create a test directory with a VmoFile object, and ensure the directory has all rights.
     let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
     // Opening with READ/WRITE should succeed.
@@ -297,9 +305,36 @@ async fn validate_vmofile_rights() {
         TEST_FILE,
     )
     .await;
-    // Opening with EXECUTE must fail.
+    // Opening with EXECUTE must fail to ensure W^X enforcement.
     assert_eq!(
         open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
+            .await
+            .expect_err("open succeeded"),
+        zx::Status::ACCESS_DENIED
+    );
+}
+
+// Validate allowed rights for ExecFile objects (ensures cannot be opened as writable).
+#[fasync::run_singlethreaded(test)]
+async fn validate_execfile_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_execfile.unwrap_or_default() {
+        return;
+    }
+    // Create a test directory with an ExecFile object, and ensure the directory has all rights.
+    let root = root_directory(vec![exec_file(TEST_FILE)]);
+    let root_dir = harness.get_directory(root, harness.dir_rights.all());
+    // Opening with READABLE/EXECUTABLE should succeed.
+    open_node::<io::NodeMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_EXECUTABLE,
+        0,
+        TEST_FILE,
+    )
+    .await;
+    // Opening with WRITABLE must fail to ensure W^X enforcement.
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_WRITABLE, 0, TEST_FILE)
             .await
             .expect_err("open succeeded"),
         zx::Status::ACCESS_DENIED
@@ -533,7 +568,6 @@ async fn open_file_with_extra_rights() {
 
     // Combinations to test of the form (directory flags, [file flag combinations]).
     // All file flags should have more rights than those of the directory flags.
-    // TODO(fxb/37534): Ensure executable case is covered as well.
     let test_right_combinations = [
         (io::OPEN_RIGHT_READABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE)),
         (io::OPEN_RIGHT_WRITABLE, harness.file_rights.valid_combos_with(io::OPEN_RIGHT_READABLE)),
@@ -950,18 +984,26 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
     }
 
     for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
-        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
+        // Should be able to get a readable VMO in default, exact, and private sharing modes.
+        for sharing_mode in [0, io::VMO_FLAG_EXACT, io::VMO_FLAG_PRIVATE] {
+            let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+            let (buffer, _) = create_file_and_get_buffer(
+                file,
+                &harness,
+                file_flags,
+                io::VMO_FLAG_READ | sharing_mode,
+            )
             .await
             .expect("Failed to create file and obtain buffer");
 
-        // Ensure that the returned VMO's rights are consistent with the expected flags.
-        validate_vmo_rights(&buffer, io::VMO_FLAG_READ);
+            // Ensure that the returned VMO's rights are consistent with the expected flags.
+            validate_vmo_rights(&buffer, io::VMO_FLAG_READ);
 
-        // Check contents of buffer.
-        let mut data = vec![0; buffer.size as usize];
-        buffer.vmo.read(&mut data, 0).expect("VMO read failed");
-        assert_eq!(&data, TEST_FILE_CONTENTS);
+            // Check contents of buffer.
+            let mut data = vec![0; buffer.size as usize];
+            buffer.vmo.read(&mut data, 0).expect("VMO read failed");
+            assert_eq!(&data, TEST_FILE_CONTENTS);
+        }
     }
 }
 
@@ -989,6 +1031,7 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
     if harness.config.no_get_buffer.unwrap_or_default() {
         return;
     }
+    // Writable VMOs currently require private sharing mode.
     const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
 
     for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
@@ -998,7 +1041,7 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
             .expect("Failed to create file and obtain buffer");
 
         // Ensure that the returned VMO's rights are consistent with the expected flags.
-        validate_vmo_rights(&buffer, io::VMO_FLAG_WRITE);
+        validate_vmo_rights(&buffer, VMO_FLAGS);
 
         // Ensure that we can actually write to the VMO.
         buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
@@ -1022,6 +1065,94 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
             zx::Status::ACCESS_DENIED
         );
     }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_executable_buffer_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_get_buffer.unwrap_or_default()
+        || harness.config.no_execfile.unwrap_or_default()
+    {
+        return;
+    }
+
+    // We should be able to get an executable VMO in default, exact, and private sharing modes.
+    // Note that the io.fidl protocol requires the connection to have OPEN_RIGHT_READABLE in
+    // addition to OPEN_RIGHT_EXECUTABLE if passing VMO_FLAG_EXEC to the GetBuffer method.
+    for sharing_mode in [0, io::VMO_FLAG_EXACT, io::VMO_FLAG_PRIVATE] {
+        let file = exec_file(TEST_FILE);
+        let vmo_flags = io::VMO_FLAG_READ | io::VMO_FLAG_EXEC | sharing_mode;
+        let (buffer, _) = create_file_and_get_buffer(
+            file,
+            &harness,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_EXECUTABLE,
+            vmo_flags,
+        )
+        .await
+        .expect("Failed to create file and obtain buffer");
+        // Ensure that the returned VMO's rights are consistent with the expected flags.
+        validate_vmo_rights(&buffer, vmo_flags);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_get_executable_buffer_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_get_buffer.unwrap_or_default()
+        || harness.config.no_execfile.unwrap_or_default()
+    {
+        return;
+    }
+    // We should fail to get the buffer if the connection lacks execute rights.
+    for file_flags in harness.execfile_rights.valid_combos_without(io::OPEN_RIGHT_EXECUTABLE) {
+        let file = exec_file(TEST_FILE);
+        assert_eq!(
+            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_EXEC)
+                .await
+                .expect_err("Error was expected"),
+            zx::Status::ACCESS_DENIED
+        );
+    }
+    // The io.fidl protocol additionally specifies that GetBuffer should fail if VMO_FLAG_EXEC is
+    // specified but connection lacks OPEN_RIGHT_READABLE.
+    for file_flags in harness.execfile_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
+        let file = exec_file(TEST_FILE);
+        assert_eq!(
+            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_EXEC)
+                .await
+                .expect_err("Error was expected"),
+            zx::Status::ACCESS_DENIED
+        );
+    }
+}
+
+// Ensure that passing VMO_FLAG_EXACT to GetBuffer returns the same KOID as the backing VMO.
+#[fasync::run_singlethreaded(test)]
+async fn file_get_buffer_exact_same_koid() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_get_buffer.unwrap_or_default() {
+        return;
+    }
+
+    let size = TEST_FILE_CONTENTS.len() as u64;
+    let vmo = zx::Vmo::create(size).expect("Cannot create VMO");
+    let original_koid = vmo.get_koid();
+    let vmofile_object = io_test::DirectoryEntry::VmoFile(io_test::VmoFile {
+        name: Some(TEST_FILE.to_string()),
+        buffer: Some(fidl_fuchsia_mem::Range { vmo, offset: 0, size }),
+        ..io_test::VmoFile::EMPTY
+    });
+
+    let (buffer, _) = create_file_and_get_buffer(
+        vmofile_object,
+        &harness,
+        io::OPEN_RIGHT_READABLE,
+        io::VMO_FLAG_READ | io::VMO_FLAG_EXACT,
+    )
+    .await
+    .expect("Failed to create file and obtain buffer");
+
+    assert_eq!(original_koid, buffer.vmo.get_koid());
 }
 
 #[fasync::run_singlethreaded(test)]

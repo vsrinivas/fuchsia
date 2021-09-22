@@ -23,6 +23,9 @@ pub struct TestHarness {
 
     /// All VmoFile rights supported by the filesystem.
     pub vmofile_rights: Rights,
+
+    /// All ExecFile rights supported by the filesystem.
+    pub execfile_rights: Rights,
 }
 
 impl TestHarness {
@@ -33,8 +36,14 @@ impl TestHarness {
         let dir_rights = Rights::new(get_supported_dir_rights(&config));
         let file_rights = Rights::new(get_supported_file_rights(&config));
         let vmofile_rights = Rights::new(get_supported_vmofile_rights());
+        let execfile_rights = Rights::new(get_supported_execfile_rights());
 
-        TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights }
+        // TODO(fxbug.dev/77633): Validate configuration options for consistency, e.g.:
+        //  - If no_get_buffer is false, no_vmofile should be false
+        //  - If no_execfile is false, no_get_buffer should be false
+        //  - If no_admin or no_link is false, immutable_dir should be false (what about no_rename?)
+
+        TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights, execfile_rights }
     }
 
     /// Creates and returns a Directory with the given structure from the test harness.
@@ -102,4 +111,11 @@ fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
 /// Must support both read and write.
 fn get_supported_vmofile_rights() -> u32 {
     io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE
+}
+
+/// Returns the aggregate of all rights that are supported for ExecFile objects.
+///
+/// Must support both read and execute.
+fn get_supported_execfile_rights() -> u32 {
+    io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_EXECUTABLE
 }

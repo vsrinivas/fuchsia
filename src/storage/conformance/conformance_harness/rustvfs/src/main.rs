@@ -6,12 +6,14 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_io_test::{
         self as io_test, Io1Config, Io1HarnessRequest, Io1HarnessRequestStream,
     },
     fidl_fuchsia_mem, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_syslog as syslog,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
     log::error,
     std::sync::Arc,
@@ -32,24 +34,39 @@ use {
 
 struct Harness(Io1HarnessRequestStream);
 
-/// Creates and returns a rustvfs VMO file using the contents of the given buffer.
+const HARNESS_EXEC_PATH: &'static str = "/pkg/bin/io_conformance_harness_rustvfs";
+
+/// Creates and returns a Rust VFS VmoFile-backed file using the contents of the given buffer.
+///
+/// The VMO backing the buffer is duplicated so that tests using VMO_FLAG_EXACT can ensure the
+/// same VMO is returned by subsequent GetBuffer calls.
 fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEntry>, Error> {
-    // Copy the data out of the buffer.
     let size = buffer.size;
-    let mut data = vec![0; size as usize];
-    buffer.vmo.read(&mut data, buffer.offset)?;
-    let data = std::sync::Arc::new(data);
-    // Create a new VMO file.
+    // Duplicate the VMO so we can move it into the init closure.
+    let vmo: zx::Vmo = buffer.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
     let init_vmo = move || {
-        let data_clone = data.clone();
-        async move {
-            let vmo = zx::Vmo::create(size)?;
-            vmo.write(&data_clone, 0)?;
-            Ok(vmo::NewVmo { vmo, size, capacity: size })
-        }
+        // Need to clone VMO again as this might be invoked multiple times.
+        let vmo_clone: zx::Vmo =
+            vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO!").into();
+        async move { Ok(vmo::NewVmo { vmo: vmo_clone, size, capacity: size }) }
     };
     let consume_vmo = move |_vmo| async move {};
     Ok(vmo::read_write(init_vmo, consume_vmo))
+}
+
+/// Creates and returns a Rust VFS VmoFile-backed executable file using the contents of the
+/// conformance test harness binary itself.
+fn new_exec_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
+    let init_vmo = || async {
+        let file = fdio::open_fd(
+            HARNESS_EXEC_PATH,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )?;
+        let vmo = fdio::get_vmo_exec_from_file(&file)?;
+        let size = vmo.get_size()?;
+        Ok(vmo::NewVmo { vmo, size, capacity: size })
+    };
+    Ok(vmo::read_exec(init_vmo))
 }
 
 fn add_entry(
@@ -82,6 +99,10 @@ fn add_entry(
             let buffer = vmo_file.buffer.as_ref().expect("VMO file must have a buffer");
             dest.add_entry(name, new_vmo_file(buffer)?)?;
         }
+        io_test::DirectoryEntry::ExecFile(exec_file) => {
+            let name = exec_file.name.as_ref().expect("Exec file must have a name");
+            dest.add_entry(name, new_exec_file()?)?;
+        }
     }
     Ok(())
 }
@@ -94,6 +115,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     immutable_dir: Some(false),
                     immutable_file: Some(false),
                     no_vmofile: Some(false),
+                    no_execfile: Some(false),
                     no_get_buffer: Some(false),
                     no_rename: Some(false),
                     // Link is actually supported, but not using a pseudo filesystem.
@@ -102,8 +124,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     no_get_token: Some(false),
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
                     no_set_attr: Some(true),
-                    // Admin and exec bits aren't supported:
-                    no_execfile: Some(true),
+                    // Admin is not supported:
                     no_admin: Some(true),
                     ..Io1Config::EMPTY
                 };

@@ -144,6 +144,9 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
         test_vmos_.emplace_back(std::move(buffer.vmo));
         break;
       }
+      case fuchsia::io::test::DirectoryEntry::Tag::kExecFile:
+        FX_LOGS(ERROR) << "ExecFile not supported yet";
+        break;
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:
         FX_LOGS(ERROR) << "Unknown DirectoryEntry type";
         break;

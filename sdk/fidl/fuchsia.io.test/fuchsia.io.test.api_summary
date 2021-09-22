@@ -2,9 +2,12 @@ table/member fuchsia.io.test/Directory.entries vector<fuchsia.io.test/DirectoryE
 table/member fuchsia.io.test/Directory.name string
 resource table fuchsia.io.test/Directory
 union/member fuchsia.io.test/DirectoryEntry.directory fuchsia.io.test/Directory
+union/member fuchsia.io.test/DirectoryEntry.exec_file fuchsia.io.test/ExecutableFile
 union/member fuchsia.io.test/DirectoryEntry.file fuchsia.io.test/File
 union/member fuchsia.io.test/DirectoryEntry.vmo_file fuchsia.io.test/VmoFile
 resource strict union fuchsia.io.test/DirectoryEntry
+table/member fuchsia.io.test/ExecutableFile.name string
+table fuchsia.io.test/ExecutableFile
 table/member fuchsia.io.test/File.contents vector<uint8>
 table/member fuchsia.io.test/File.name string
 table fuchsia.io.test/File

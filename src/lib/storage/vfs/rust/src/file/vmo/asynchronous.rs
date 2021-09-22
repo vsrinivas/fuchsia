@@ -98,8 +98,8 @@ impl Future for StubConsumeVmoRes {
 /// Creates a new read-only `VmoFile` backed by the specified `init_vmo` handler.
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all the connection be closed the VMO is discarded, and any new connections will cause
-/// `init_vmo` to be called again.
+/// Should all connections be closed, the VMO will be discarded, and any new connections will
+/// cause `init_vmo` to be called again.
 ///
 /// New connections are only allowed when they specify "read-only" access to the file content.
 ///
@@ -112,6 +112,27 @@ where
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
     VmoFile::new(init_vmo, None, true, false, false)
+}
+
+/// Creates a new read-exec-only `VmoFile` backed by the specified `init_vmo` handler. It is the
+/// responsibility of the caller to ensure that the handler provides a VMO with the correct rights
+/// (namely, it must have both ZX_RIGHT_READ and ZX_RIGHT_EXECUTE).
+///
+/// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
+/// Should all connections be closed, the VMO will be discarded, and any new connections will
+/// cause `init_vmo` to be called again.
+///
+/// New connections are only allowed when they specify read and/or execute access to the file.
+///
+/// For more details on this interaction, see the module documentation.
+pub fn read_exec<InitVmo, InitVmoFuture>(
+    init_vmo: InitVmo,
+) -> Arc<VmoFile<InitVmo, InitVmoFuture, fn(Vmo) -> StubConsumeVmoRes, StubConsumeVmoRes>>
+where
+    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
+    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
+{
+    VmoFile::new(init_vmo, None, true, false, true)
 }
 
 fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
@@ -217,8 +238,8 @@ pub fn simple_init_vmo_resizable_with_capacity(
 /// handlers.
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all the connection be closed the VMO is discarded, and any new connections will cause
-/// `init_vmo` to be called again.
+/// Should all connections be closed, the VMO will be discarded, and any new connections will
+/// cause `init_vmo` to be called again.
 ///
 /// The `consume_vmo` handler is called when the last connection to the file is closed and it can
 /// process the VMO in some way.  Should a new connection be opened, `init_vmo` will be invoked to
@@ -243,8 +264,8 @@ where
 /// Creates new `VmoFile` backed by the specified `init_vmo` and `consume_vmo` handlers.
 ///
 /// The `init_vmo` handler is called to initialize a VMO for the very first connection to the file.
-/// Should all the connection be closed the VMO is discarded, and any new connections will cause
-/// `init_vmo` to be called again.
+/// Should all connections be closed, the VMO will be discarded, and any new connections will
+/// cause `init_vmo` to be called again.
 ///
 /// The `consume_vmo` handler is called when the last connection to the file is closed and it can
 /// process the VMO in some way.  Should a new connection be opened, `init_vmo` will be invoked to
