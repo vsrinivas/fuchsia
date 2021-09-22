@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -43,11 +43,11 @@ func init() {
 func fidlGenTable(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct Table%[1]dStruct {
-	Table%[1]d value;
+type Table%[1]dStruct = struct{
+	value Table%[1]d;
 };
 
-table Table%[1]d {
+type Table%[1]d = table{
 	%[2]s
 };`, size, util.OrdinalFields(types.Uint8, "field", size)), nil
 }

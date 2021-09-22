@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -42,7 +42,7 @@ func init() {
 func fidlGenByteArray(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct ByteArray%[1]d {
-	array<uint8>:%[1]d bytes;
+type ByteArray%[1]d = struct{
+	bytes array<uint8, %[1]d>;
 };`, size), nil
 }

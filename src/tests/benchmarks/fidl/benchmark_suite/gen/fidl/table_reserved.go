@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -36,12 +36,12 @@ func init() {
 func fidlGenTableReserved(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct TableReserved%[1]dStruct {
-	TableReserved%[1]d value;
+type TableReserved%[1]dStruct = struct{
+	value TableReserved%[1]d;
 };
 
-table TableReserved%[1]d {
+type TableReserved%[1]d = table{
 	%[2]s
-	%[1]d: uint8 field%[1]d;
+	%[1]d: field%[1]d uint8;
 };`, size, util.ReservedFields(1, size-1)), nil
 }

@@ -1,6 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
@@ -9,7 +10,7 @@ type Union1Struct = struct {
     u Union1;
 };
 
-type Union1 = strict union {
+type Union1 = union {
     1: field1 uint8;
 };
 
@@ -17,7 +18,7 @@ type Union16Struct = struct {
     u Union16;
 };
 
-type Union16 = strict union {
+type Union16 = union {
     1: field1 uint8;
     2: field2 uint8;
     3: field3 uint8;
@@ -40,7 +41,7 @@ type Union256Struct = struct {
     u Union256;
 };
 
-type Union256 = strict union {
+type Union256 = union {
     1: field1 uint8;
     2: field2 uint8;
     3: field3 uint8;

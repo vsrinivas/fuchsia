@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -17,7 +17,7 @@ func init() {
 		Filename: "enum_array.gen.test.fidl",
 		Gen:      fidlGenEnumArray,
 		ExtraDefinition: `
-enum EnumArrayElement {
+type EnumArrayElement = enum{
 	A = 1;
 	B = 2;
 };`,
@@ -34,7 +34,7 @@ enum EnumArrayElement {
 func fidlGenEnumArray(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct EnumArray%[1]d {
-	array<EnumArrayElement>:%[1]d values;
+type EnumArray%[1]d = struct{
+	values array<EnumArrayElement, %[1]d>;
 };`, size), nil
 }

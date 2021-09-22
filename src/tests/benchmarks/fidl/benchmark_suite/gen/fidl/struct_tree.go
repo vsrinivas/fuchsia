@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -17,9 +17,9 @@ func init() {
 		Filename: "struct_tree.gen.test.fidl",
 		Gen:      fidlGenStructTree,
 		ExtraDefinition: `
-struct StructTree1 {
-	uint8 a;
-	uint8 b;
+type StructTree1 = struct{
+	a uint8;
+	b uint8;
 };`,
 		Definitions: []config.Definition{
 			{
@@ -64,8 +64,8 @@ struct StructTree1 {
 func fidlGenStructTree(config config.Config) (string, error) {
 	depth := config.GetInt("depth")
 	return fmt.Sprintf(`
-struct StructTree%[1]d {
-	StructTree%[2]d left;
-	StructTree%[2]d right;
+type StructTree%[1]d = struct{
+	left StructTree%[2]d;
+	right StructTree%[2]d;
 };`, depth, depth-1), nil
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -60,7 +61,7 @@ func genFidlFile(filepath string, fidl config.FidlFile) error {
 			for i, binding := range definition.Denylist {
 				strs[i] = string(binding)
 			}
-			attribute := "[BindingsDenylist = \"" + strings.Join(strs, ", ") + "\"]"
+			attribute := "@bindings_denylist(\"" + strings.Join(strs, ", ") + "\")"
 			body = attribute + body
 		}
 		definitions = append(definitions, fidlTmplDefinition{

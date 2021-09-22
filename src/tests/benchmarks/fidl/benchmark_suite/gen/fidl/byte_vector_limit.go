@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -29,7 +29,7 @@ func init() {
 func fidlGenByteVectorLimit(config config.Config) (string, error) {
 	limit := config.GetInt("limit")
 	return fmt.Sprintf(`
-struct ByteVectorLimit%[1]d {
-	vector<uint8>:%[1]d bytes;
+type ByteVectorLimit%[1]d = struct{
+	bytes vector<uint8>:%[1]d;
 };`, limit), nil
 }

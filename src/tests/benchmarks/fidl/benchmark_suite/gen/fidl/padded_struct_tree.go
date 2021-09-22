@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -17,10 +17,10 @@ func init() {
 		Filename: "padded_struct_tree.gen.test.fidl",
 		Gen:      fidlGenPaddedStructTree,
 		ExtraDefinition: `
-struct PaddedStructTree1 {
-	uint8 a;
+type PaddedStructTree1 = struct{
+	a uint8;
 	// 3 byte padding
-	uint32 b;
+	b uint32;
 };`,
 		Definitions: []config.Definition{
 			{
@@ -65,8 +65,8 @@ struct PaddedStructTree1 {
 func fidlGenPaddedStructTree(config config.Config) (string, error) {
 	depth := config.GetInt("depth")
 	return fmt.Sprintf(`
-struct PaddedStructTree%[1]d {
-	PaddedStructTree%[2]d left;
-	PaddedStructTree%[2]d right;
+type PaddedStructTree%[1]d = struct{
+	left PaddedStructTree%[2]d;
+	right PaddedStructTree%[2]d;
 };`, depth, depth-1), nil
 }

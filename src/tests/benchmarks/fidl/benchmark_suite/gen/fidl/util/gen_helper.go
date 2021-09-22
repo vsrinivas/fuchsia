@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package util
 
@@ -19,7 +19,7 @@ func StructFields(typ types.FidlType, namePrefix string, n int) string {
 		if i > 1 {
 			builder.WriteRune('\n')
 		}
-		builder.WriteString(fmt.Sprintf("%s %s%d;", typ, namePrefix, i))
+		builder.WriteString(fmt.Sprintf("%s%d %s;", namePrefix, i, typ))
 	}
 	return builder.String()
 }
@@ -31,7 +31,7 @@ func OrdinalFields(typ types.FidlType, namePrefix string, n int) string {
 		if i > 1 {
 			builder.WriteRune('\n')
 		}
-		builder.WriteString(fmt.Sprintf("%d: %s %s%d;", i, typ, namePrefix, i))
+		builder.WriteString(fmt.Sprintf("%d: %s%d %s;", i, namePrefix, i, typ))
 	}
 	return builder.String()
 }

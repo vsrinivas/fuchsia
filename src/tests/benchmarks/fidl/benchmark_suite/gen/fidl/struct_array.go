@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -17,10 +17,10 @@ func init() {
 		Filename: "struct_array.gen.test.fidl",
 		Gen:      fidlGenStructArray,
 		ExtraDefinition: `
-struct StructArrayElement {
-	uint8 a;
+type StructArrayElement = struct{
+	a uint8;
 	// 8 byte padding.
-	uint16 b;
+	b uint16;
 };`,
 		Definitions: []config.Definition{
 			{
@@ -35,7 +35,7 @@ struct StructArrayElement {
 func fidlGenStructArray(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct StructArray%[1]d {
-	array<StructArrayElement>:%[1]d elems;
+type StructArray%[1]d = struct{
+	elems array<StructArrayElement, %[1]d>;
 };`, size), nil
 }

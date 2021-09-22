@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package fidl
 
@@ -40,11 +40,11 @@ func init() {
 func fidlGenUnion(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
-struct Union%[1]dStruct {
-	Union%[1]d u;
+type Union%[1]dStruct = struct{
+	u Union%[1]d;
 };
 
-union Union%[1]d {
+type Union%[1]d = union{
 	%[2]s
 };`, size, util.OrdinalFields(types.Uint8, "field", size)), nil
 }
