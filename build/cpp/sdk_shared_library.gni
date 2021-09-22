@@ -54,6 +54,12 @@ import("//sdk/cts/plasa/plasa_artifacts.gni")
 #     List of labels representing the library's runtime dependencies. This is
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
+#
+#   non_public_headers (optional)
+#     List of header files that are not intended for direct inclusion by users.
+#     Used to help generate stub files, which do not know apriori that a header
+#     is not to be used.  Define these in addition to deps (i.e. repeat them
+#     if they are already mentioned in 'sources').
 
 # The defaults for a sdk_shared_library should match that of a shared_library.
 set_defaults("sdk_shared_library") {
@@ -62,6 +68,9 @@ set_defaults("sdk_shared_library") {
 
 template("sdk_shared_library") {
   assert(defined(invoker.category), "Must define an SDK category")
+
+  # Not all code paths use this option.
+  not_needed(invoker, [ "non_public_headers" ])
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -286,6 +295,7 @@ template("sdk_shared_library") {
                                "testonly",
                                "all_headers",
                                "all_deps",
+                               "non_public_headers",
                              ])
     }
   }

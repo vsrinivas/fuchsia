@@ -46,9 +46,17 @@ import("//sdk/cts/plasa/plasa_artifacts.gni")
 #     List of dependencies that should not be reflected in SDKs.
 #     Mostly useful for code generation.
 #
+#   non_public_headers (optional)
+#     List of header files that are not intended for direct inclusion by users.
+#     Used to help generate stub files, which do not know apriori that a header
+#     is not to be used.  Define these in addition to deps (i.e. repeat them
+#     if they are already mentioned in 'sources').
 template("sdk_source_set") {
   assert(defined(invoker.category), "Must define an SDK category")
   assert(defined(invoker.sdk_name), "Must define an SDK name")
+
+  # Not all code paths use this option.
+  not_needed(invoker, [ "non_public_headers" ])
 
   if (invoker.category == "partner" || invoker.category == "public") {
     api_reference = "${invoker.sdk_name}.api"
@@ -207,6 +215,7 @@ template("sdk_source_set") {
                                "testonly",
                                "all_headers",
                                "all_deps",
+                               "non_public_headers",
                              ])
     }
   }

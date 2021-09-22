@@ -33,6 +33,11 @@ sdk_source_set("zxtest") {
     "include/zxtest/cpp/zxtest.h",
     "include/zxtest/zxtest.h",
   ]
+  non_public_headers = [
+    # These headers are not intended to be included directly into user code.
+    "include/zxtest/c/zxtest.h",
+    "include/zxtest/cpp/zxtest.h",
+  ]
 
   sources = [
     "assertion.cc",

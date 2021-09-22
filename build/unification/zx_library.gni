@@ -85,6 +85,11 @@ import("//build/toolchain/toolchain_environment.gni")
 #     Type: string
 #     Default: target_name
 #
+#   sdk_non_public_headers
+#     Optional: the list of header files that are not intended for direct
+#     inclusion by users. Such header files are part of the SDK package, but
+#     emit an error if included directly.
+#
 #   See source_set() for other parameters.
 #
 template("zx_library") {
@@ -95,7 +100,14 @@ template("zx_library") {
     "sdk_publishable",
   ]
 
-  not_needed(invoker, [ "sdk_name" ])
+  not_needed(invoker,
+             [
+               "sdk_name",
+
+               # Not all template expansion paths use this variable, don't
+               # error out in those paths.
+               "sdk_non_public_headers",
+             ])
 
   if (zircon_toolchain != false) {
     _library_name = target_name
@@ -192,12 +204,18 @@ template("zx_library") {
             build_as_static = true
             category = sdk_category
             sdk_name = name
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         } else {
           extra_target_args = {
             category = sdk_category
             sdk_name = name
             build_as_static = true
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         }
       } else {
@@ -212,12 +230,18 @@ template("zx_library") {
             category = sdk_category
             libcxx_linkage = "static"
             sdk_name = target_name
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         } else {
           extra_target_args = {
             category = sdk_category
             sdk_name = target_name
             libcxx_linkage = "static"
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         }
       } else {
@@ -233,12 +257,18 @@ template("zx_library") {
             libcxx_linkage = "static"
             sdk_name = target_name
             symbols_api = "//sdk/lib/$target_name/$target_name.symbols.api"
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         } else {
           extra_target_args = {
             category = sdk_category
             sdk_name = target_name
             libcxx_linkage = "static"
+            if (defined(invoker.sdk_non_public_headers)) {
+              non_public_headers = invoker.sdk_non_public_headers
+            }
           }
         }
       } else {
