@@ -19,6 +19,8 @@ table/member fuchsia.accessibility.semantics/Attributes.secondary_action_descrip
 table/member fuchsia.accessibility.semantics/Attributes.secondary_label string:16384
 table/member fuchsia.accessibility.semantics/Attributes.set fuchsia.accessibility.semantics/SetAttributes
 table/member fuchsia.accessibility.semantics/Attributes.table_attributes fuchsia.accessibility.semantics/TableAttributes
+table/member fuchsia.accessibility.semantics/Attributes.table_cell_attributes fuchsia.accessibility.semantics/TableCellAttributes
+table/member fuchsia.accessibility.semantics/Attributes.table_row_attributes fuchsia.accessibility.semantics/TableRowAttributes
 table fuchsia.accessibility.semantics/Attributes
 enum/member fuchsia.accessibility.semantics/CheckedState.CHECKED 2
 enum/member fuchsia.accessibility.semantics/CheckedState.MIXED 4
@@ -72,6 +74,7 @@ enum/member fuchsia.accessibility.semantics/Role.LIST_ELEMENT_MARKER 12
 enum/member fuchsia.accessibility.semantics/Role.PARAGRAPH 21
 enum/member fuchsia.accessibility.semantics/Role.RADIO_BUTTON 9
 enum/member fuchsia.accessibility.semantics/Role.ROW_GROUP 20
+enum/member fuchsia.accessibility.semantics/Role.ROW_HEADER 24
 enum/member fuchsia.accessibility.semantics/Role.SEARCH_BOX 22
 enum/member fuchsia.accessibility.semantics/Role.SLIDER 6
 enum/member fuchsia.accessibility.semantics/Role.STATIC_TEXT 13
@@ -111,8 +114,17 @@ table/member fuchsia.accessibility.semantics/States.value string:16384
 table/member fuchsia.accessibility.semantics/States.viewport_offset fuchsia.ui.gfx/vec2
 table fuchsia.accessibility.semantics/States
 table/member fuchsia.accessibility.semantics/TableAttributes.column_span uint32
+table/member fuchsia.accessibility.semantics/TableAttributes.number_of_columns uint32
+table/member fuchsia.accessibility.semantics/TableAttributes.number_of_rows uint32
 table/member fuchsia.accessibility.semantics/TableAttributes.row_span uint32
 table fuchsia.accessibility.semantics/TableAttributes
+table/member fuchsia.accessibility.semantics/TableCellAttributes.column_index uint32
+table/member fuchsia.accessibility.semantics/TableCellAttributes.column_span uint32
+table/member fuchsia.accessibility.semantics/TableCellAttributes.row_index uint32
+table/member fuchsia.accessibility.semantics/TableCellAttributes.row_span uint32
+table fuchsia.accessibility.semantics/TableCellAttributes
+table/member fuchsia.accessibility.semantics/TableRowAttributes.row_index uint32
+table fuchsia.accessibility.semantics/TableRowAttributes
 enum/member fuchsia.accessibility.semantics/ToggledState.INDETERMINATE 3
 enum/member fuchsia.accessibility.semantics/ToggledState.OFF 2
 enum/member fuchsia.accessibility.semantics/ToggledState.ON 1

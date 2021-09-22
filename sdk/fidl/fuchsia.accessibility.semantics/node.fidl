@@ -96,6 +96,9 @@ type Role = strict enum {
     // Role used to represent a text field with an associated combo box (e.g. a
     // dropdown menu).
     TEXT_FIELD_WITH_COMBO_BOX = 23;
+
+    // Role used to represent an aria-rowheader-like element.
+    ROW_HEADER = 24;
 };
 
 /// The possible origins of a label.
@@ -154,12 +157,42 @@ type SetAttributes = table {
     3: set_element_ids vector<uint32>:MAX_SET_ELEMENTS;
 };
 
-/// Attributes that control how a cell inside of a table behaves.
+/// Attributes that control how a table cell node is interpreted.
 type TableAttributes = table {
     /// The number of columns this table cell spans.
+    @deprecated("Use TableCellAttributes for cell nodes instead")
     1: column_span uint32;
+
     /// The number of rows this table cell spans.
+    @deprecated("Use TableCellAttributes for cell nodes instead")
     2: row_span uint32;
+
+    /// Number of rows in this table.
+    3: number_of_rows uint32;
+
+    /// Number of columns in this table.
+    4: number_of_columns uint32;
+};
+
+/// Attributes that control how a table row node is interpreted.
+type TableRowAttributes = table {
+    /// Table row index.
+    1: row_index uint32;
+};
+
+/// Attributes that control how a table cell is interpreted.
+type TableCellAttributes = table {
+    /// Row-index of this cell.
+    1: row_index uint32;
+
+    /// Column-index of this cell.
+    2: column_index uint32;
+
+    /// The number of rows this table cell spans.
+    3: row_span uint32;
+
+    /// The number of columns this table cell spans.
+    4: column_span uint32;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states, attributes do not
@@ -197,7 +230,7 @@ type Attributes = table {
     /// level 1 to 6 in html or markdown.
     8: hierarchical_level uint32;
 
-    /// The table attributes are filled when the element is a cell.
+    /// The table attributes are filled when the element is a table.
     9: table_attributes TableAttributes;
 
     /// The origin of the label of this element.
@@ -206,6 +239,12 @@ type Attributes = table {
     /// Whether the element is part of a virtual keyboard. For example, a key
     /// on an onscreen keyboard.
    11: is_keyboard_key bool;
+
+    /// The table row attributes are filled when the element is a table row.
+   12: table_row_attributes TableRowAttributes;
+
+    /// The table cell attributes are filled when the element is a table cell.
+   13: table_cell_attributes TableCellAttributes;
 };
 
 /// Represents the state of a UI checkbox.
