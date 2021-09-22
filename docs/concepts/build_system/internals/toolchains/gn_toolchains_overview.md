@@ -154,7 +154,7 @@ with various features:
   use GN's builtin support for C++ and Rust compilation.
 
   These are used to generate outputs that are used by other targets in
-  several other toolchains (e.g. language bindings) to allow duplicate work.
+  several other toolchains (e.g. language bindings) to avoid duplicate work.
 
   Note that one basic toolchain is used to build Go binaries, and another
   one for Dart ones, since GN doesn't support these languages at all.

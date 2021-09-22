@@ -83,57 +83,8 @@ pip_exe_src =
 declare_args() {
   # *This should never be set as a build argument.*
   # It exists only to be set in `toolchain_args`.
-  # See //build/toolchain/clang_toolchain.gni for details.
-  # This variable is a scope giving details about the current toolchain:
-  #     `toolchain_variant.base`
-  #         [label] The "base" toolchain for this variant, *often the
-  #         right thing to use in comparisons, not `current_toolchain`.*
-  #         This is the toolchain actually referenced directly in GN
-  #         source code.  If the current toolchain is not
-  #         `shlib_toolchain` or a variant toolchain, this is the same
-  #         as `current_toolchain`.  In one of those derivative
-  #         toolchains, this is the toolchain the GN code probably
-  #         thought it was in.  This is the right thing to use in a test
-  #         like `toolchain_variant.base == target_toolchain`, rather
-  #         rather than comparing against `current_toolchain`.
-  #     `toolchain_variant.name`
-  #         [string] The name of this variant, as used in `variant` fields
-  #         in [`select_variant`](#select_variant) clauses.  In the base
-  #         toolchain and its `shlib_toolchain`, this is `""`.
-  #     `toolchain_variant.suffix`
-  #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
-  #     `toolchain_variant.is_pic_default`
-  #         [bool] This is true in `shlib_toolchain`.
-  #     `toolchain_variant.tags`
-  #         [list of strings] A list of liberal strings, each one describing a
-  #         property of this toolchain instance. See
-  #         //build/toolchain/variant_tags.gni for more details.
-  #     `toolchain_variant.configs`
-  #         [list of configs] A list of configs that are added after the default
-  #         ones to all linkable targets for this toolchain() instance.
-  #     `toolchain_variant.prefix_configs`
-  #         [list of configs] A list of configs that are added before the default
-  #         ones to all linkable targets for this toolchain() instance.
-  #     `toolchain_variant.remove_common_configs`
-  #         [list of configs] A list of configs that are removed from all
-  #         linkable targets for this toolchain() instance. Useful when
-  #         one of the default configs must not be used.
-  #     `toolchain_variant.remove_shared_configs`
-  #         [list of configs] Same a remove_common_configs, but only applies
-  #         to non-executable (e.g. shared_library()) targets.
-  #     `toolchain_variant.instrumented`
-  #         [boolean] A convenience flag that is true iff "instrumented" is
-  #         part of toolchain_variant.tags.
-  #     `toolchain_variant.with_shared`
-  #         [boolean] True iff this toolchain() instance has a secondary
-  #         toolchain to build ELF shared-library code.
-  #     `toolchain_variant.libprefix`
-  #         [string] Installation prefix for instrumented shared libraries,
-  #         or an empty string for non-instrumented ones. For full details,
-  #         see comment below where toolchain_variant.libprefix is defined.
-  #
-  # The other fields are the variant's effects as defined in
-  # [`known_variants`](#known_variants).
+  # See //docs/concepts/build_system/internals/toolchains/build_arguments.md#toolchain_variant
+  # for details and documentation for each field.
   toolchain_variant = {
     base = target_toolchain  # default toolchain
   }
