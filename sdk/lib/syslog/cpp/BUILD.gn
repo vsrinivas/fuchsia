@@ -32,9 +32,14 @@ sdk_source_set("cpp") {
     "macros.cc",
     "macros.h",
   ]
-
-  public_deps = [ "//sdk/lib/fit-promise" ]
-
+  if (is_fuchsia) {
+    public_deps = [
+      "//sdk/lib/fit-promise",
+      "//zircon/public/lib/zx",
+    ]
+  } else {
+    public_deps = [ "//sdk/lib/fit-promise" ]
+  }
   public_configs = [ "//sdk/config" ]
 }
 
@@ -249,15 +254,36 @@ executable("logging_cpp_unittests") {
     "log_settings_unittest.cc",
     "logging_unittest.cc",
   ]
-
-  deps = [
-    ":backend_legacy",
-    ":cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
+  if (is_fuchsia) {
+    deps = [
+      ":backend_legacy",
+      ":cpp",
+      "//sdk/fidl/fuchsia.diagnostics",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+      "//src/diagnostics/lib/cpp-log-decoder:lib",
+      "//src/lib/diagnostics/accessor2logger",
+      "//src/lib/fsl",
+      "//src/lib/fxl",
+      "//src/lib/fxl/test:gtest_main",
+      "//src/lib/uuid",
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+      "//third_party/rapidjson",
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+    ]
+  } else {
+    deps = [
+      ":backend_legacy",
+      ":cpp",
+      "//src/lib/fxl",
+      "//src/lib/fxl/test:gtest_main",
+      "//src/lib/uuid",
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+    ]
+  }
 }
 
 executable("logging_cpp_unittests_structured") {

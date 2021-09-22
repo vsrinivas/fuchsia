@@ -38,12 +38,6 @@ int fx_log_compat_reconfigure(syslog::LogSettings& settings,
       break;
   }
   int fd = -1;
-  if (!settings.log_file.empty()) {
-    fd = open(settings.log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND);
-    if (fd < 0) {
-      fd = -1;
-    }
-  }
   fx_logger_config_t config = {.min_severity = settings.min_log_level,
                                .console_fd = fd,
                                .log_service_channel = ZX_HANDLE_INVALID,

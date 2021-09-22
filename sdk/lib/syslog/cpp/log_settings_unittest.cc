@@ -27,7 +27,7 @@ class LogSettingsFixture : public ::testing::Test {
   LogSeverity old_severity_;
   fbl::unique_fd old_stderr_;
 };
-
+#ifndef __Fuchsia__
 TEST(LogSettings, DefaultOptions) {
   LogSettings settings;
   EXPECT_EQ(LOG_INFO, settings.min_log_level);
@@ -64,6 +64,7 @@ TEST_F(LogSettingsFixture, SetInvalidLogFile) {
 
   EXPECT_NE(0, access(new_settings.log_file.c_str(), R_OK));
 }
+#endif
 
 }  // namespace
 }  // namespace syslog

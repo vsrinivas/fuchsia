@@ -23,10 +23,6 @@ void AppendLoggingArgs(std::vector<std::string>* argv, const char* prefix,
   // Transfer our log settings to the subprogram.
   std::string log_file_arg;
   std::string verbose_or_quiet_arg;
-  if (log_settings.log_file != "") {
-    log_file_arg = fxl::StringPrintf("%s--log-file=%s", prefix, log_settings.log_file.c_str());
-    argv->push_back(log_file_arg);
-  }
   if (log_settings.min_log_level != 0) {
     if (log_settings.min_log_level < 0) {
       verbose_or_quiet_arg =

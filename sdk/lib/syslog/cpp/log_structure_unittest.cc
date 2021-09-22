@@ -156,35 +156,4 @@ TEST(StructuredLogging, LOGS) {
   FX_LOGS(INFO) << str;
 }
 
-TEST(StructuredLogging, Legacy) {
-  const char kTestMessage[] = "TEST MESSAGE";
-
-  LogSettings new_settings;
-  files::ScopedTempDir temp_dir;
-  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
-  SetLogSettings(new_settings);
-
-  FX_LOGS(INFO) << kTestMessage;
-
-  ASSERT_EQ(0, access(new_settings.log_file.c_str(), R_OK));
-  std::string log;
-  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
-  EXPECT_TRUE(log.find(kTestMessage) != std::string::npos);
-}
-
-TEST(StructuredLogging, ToCStr) {
-  syslog_backend::LogBuffer buffer;
-  memset(&buffer, 0, sizeof(buffer));
-  syslog_backend::BeginRecord(&buffer, syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition");
-  syslog_backend::EndRecord(&buffer);
-  auto header = syslog_backend::MsgHeader::CreatePtr(&buffer);
-  // Ensure that null termination only happens once
-  header->c_str();
-  header->c_str();
-  header->WriteString("something after the null terminator");
-  ASSERT_TRUE(std::string(header->c_str()).find("fake tag") != std::string::npos);
-  ASSERT_TRUE(std::string(header->c_str()).find("something after the null terminator") ==
-              std::string::npos);
-}
-
 }  // namespace syslog

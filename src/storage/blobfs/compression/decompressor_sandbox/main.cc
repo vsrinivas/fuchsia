@@ -13,8 +13,6 @@
 #include "src/storage/blobfs/compression/decompressor_sandbox/decompressor_impl.h"
 
 int main(int argc, const char** argv) {
-  syslog::LogSettings settings = {.min_log_level = syslog::LOG_ERROR};
-
   async::Loop trace_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = trace_loop.StartThread();
   if (status != ZX_OK)

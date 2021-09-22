@@ -143,6 +143,7 @@ struct RecordState {
   // Header of the record itself
   uint64_t* header;
   syslog::LogSeverity log_severity;
+  syslog::LogSeverity raw_severity;
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
   WordOffset<log_word_t> arg_size;
@@ -159,8 +160,10 @@ struct RecordState {
   // Message string -- valid if severity is FATAL. For FATAL
   // logs the caller is responsible for ensuring the string
   // is valid for the duration of the call (which our macros
-  // will ensure for current users).
-  const char* msg_string;
+  // will ensure for current users). This must be a
+  // const char* as the type has to be trivially destructable.
+  // This will leak on usage, as the process will crash shortly afterwards.
+  const char* maybe_fatal_string;
   static RecordState* CreatePtr(LogBuffer* buffer) {
     return reinterpret_cast<RecordState*>(&buffer->record_state);
   }
@@ -341,7 +344,6 @@ class LogState {
   // Allowed to be const because descriptor_ is mutable
   cpp17::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
-  cpp17::optional<int> fd() const { return fd_; }
   void Connect();
   void ConnectAsync();
   struct Task : public async_task_t {
@@ -376,7 +378,6 @@ class LogState {
   async::Loop loop_;
   std::optional<async::Executor> executor_;
   std::atomic<syslog::LogSeverity> min_severity_;
-  cpp17::optional<int> fd_;
   zx_koid_t pid_;
   mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
@@ -384,6 +385,8 @@ class LogState {
   size_t num_tags_ = 0;
   async_dispatcher_t* interest_listener_dispatcher_;
   bool serve_interest_listener_;
+  // Handle to a fuchsia.logger.LogSink instance.
+  zx_handle_t fake_archivist_ = ZX_HANDLE_INVALID;
 };
 
 static syslog::LogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severity) {
@@ -408,9 +411,14 @@ void LogState::ConnectAsync() {
   if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
     return;
   }
-  // TODO(https://fxbug.dev/75214): Support for custom names.
-  if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
-    return;
+  if (fake_archivist_ == ZX_HANDLE_INVALID) {
+    // TODO(https://fxbug.dev/75214): Support for custom names.
+    if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
+      return;
+    }
+  } else {
+    logger = zx::channel(fake_archivist_);
+    fake_archivist_ = ZX_HANDLE_INVALID;
   }
   if (log_sink_.Bind(std::move(logger), loop_.dispatcher()) != ZX_OK) {
     return;
@@ -429,6 +437,7 @@ void LogState::ConnectAsync() {
   log_sink_->ConnectStructured(std::move(remote));
   descriptor_ = std::move(local);
 }
+
 void LogState::Connect() {
   // Always disable the interest listener for the DDK.
   // Once structured logging is available in the SDK
@@ -448,14 +457,18 @@ void LogState::Connect() {
     InitializeAsyncTask();
   } else {
     zx::channel logger, logger_request;
-    if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
-      return;
+    if (fake_archivist_ == ZX_HANDLE_INVALID) {
+      if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
+        return;
+      }
+      // TODO(https://fxbug.dev/75214): Support for custom names.
+      if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
+        return;
+      }
+    } else {
+      logger = zx::channel(fake_archivist_);
     }
     ::fuchsia::logger::LogSink_SyncProxy logger_client(std::move(logger));
-    // TODO(https://fxbug.dev/75214): Support for custom names.
-    if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
-      return;
-    }
     zx::socket local, remote;
     if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
       return;
@@ -480,9 +493,25 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   // Ensure we have log state
   auto& log_state = LogState::Get();
   cpp17::optional<int8_t> raw_severity;
-  if (log_state.fd() != -1) {
-    BeginRecordLegacy(buffer, severity, file_name, line, msg, condition);
-    return;
+  // Optional so no allocation overhead
+  // occurs if condition isn't set.
+  std::optional<std::string> modified_msg;
+  if (condition) {
+    std::stringstream s;
+    s << "Check failed: " << condition << ". ";
+    if (msg) {
+      s << msg;
+    }
+    modified_msg = s.str();
+    if (severity == syslog::LOG_FATAL) {
+      // We're crashing -- so leak the string in order to prevent
+      // use-after-free of the maybe_fatal_string.
+      // We need this to prevent a use-after-free in FlushRecord.
+      msg = new char[modified_msg->size() + 1];
+      strcpy(const_cast<char*>(msg), modified_msg->c_str());
+    } else {
+      msg = modified_msg->data();
+    }
   }
   // Validate that the severity matches the FIDL definition in
   // sdk/fidl/fuchsia.diagnostics/severity.fidl.
@@ -502,8 +531,9 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
     state->socket = cpp17::get<zx::socket>(log_state.descriptor()).get();
   }
   if (severity == syslog::LOG_FATAL) {
-    state->msg_string = msg;
+    state->maybe_fatal_string = msg;
   }
+  state->raw_severity = raw_severity.value_or(severity);
   state->log_severity = severity;
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -563,11 +593,6 @@ void BeginRecordWithSocket(LogBuffer* buffer, syslog::LogSeverity severity, cons
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
-  auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    WriteKeyValueLegacy(buffer, key, value);
-    return;
-  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -580,11 +605,6 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
-  auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    WriteKeyValueLegacy(buffer, key, value);
-    return;
-  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -595,11 +615,6 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
-  auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    WriteKeyValueLegacy(buffer, key, value);
-    return;
-  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -610,11 +625,6 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
-  auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    WriteKeyValueLegacy(buffer, key, value);
-    return;
-  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -625,11 +635,6 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
 }
 
 void EndRecord(LogBuffer* buffer) {
-  auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    EndRecordLegacy(buffer);
-    return;
-  }
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -638,9 +643,6 @@ void EndRecord(LogBuffer* buffer) {
 
 bool FlushRecord(LogBuffer* buffer) {
   auto& log_state = LogState::Get();
-  if (log_state.fd() != -1) {
-    return fx_log_compat_flush_record(buffer);
-  }
   auto* state = RecordState::CreatePtr(buffer);
   if (!state->encode_success) {
     return false;
@@ -649,7 +651,12 @@ bool FlushRecord(LogBuffer* buffer) {
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
   if (state->log_severity < log_state.min_severity()) {
-    return true;
+    if (state->log_severity != state->raw_severity) {
+      // Assume we're supposed to generate a log here.
+      // For custom severities, macros.h is supposed to filter for us.
+    } else {
+      return true;
+    }
   }
   auto status = zx_socket_write(state->socket, 0, slice.data(),
                                 slice.slice().ToByteOffset().unsafe_get(), nullptr);
@@ -657,7 +664,7 @@ bool FlushRecord(LogBuffer* buffer) {
     AddDropped(state->dropped_count + 1);
   }
   if (state->log_severity == syslog::LOG_FATAL) {
-    std::cerr << state->msg_string << std::endl;
+    std::cerr << state->maybe_fatal_string << std::endl;
     abort();
   }
   return status != ZX_ERR_BAD_STATE && status != ZX_ERR_PEER_CLOSED &&
@@ -738,7 +745,6 @@ LogState::LogState(const syslog::LogSettings& in_settings,
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
       executor_(loop_.dispatcher()),
       min_severity_(in_settings.min_log_level),
-      fd_(in_settings.log_fd),
       pid_(pid) {
   syslog::LogSettings settings = in_settings;
   interest_listener_dispatcher_ =
@@ -759,19 +765,8 @@ LogState::LogState(const syslog::LogSettings& in_settings,
   }
 
   tag_str_ = tag_str.str();
-
-  std::ofstream file;
-  if (!settings.log_file.empty()) {
-    fd_ = fx_log_compat_reconfigure(settings, tags);
-  }
-  if (fd_ != -1) {
-    return;
-  }
-  if (file.is_open()) {
-    descriptor_ = std::move(file);
-  } else {
-    Connect();
-  }
+  fake_archivist_ = in_settings.archivist_channel_override;
+  Connect();
 }
 
 template <typename T>

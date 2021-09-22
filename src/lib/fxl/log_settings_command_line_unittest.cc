@@ -83,10 +83,11 @@ TEST(LogSettings, ParseValidOptions) {
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--severity=FATAL"}), &settings));
   EXPECT_EQ(syslog::LOG_FATAL, settings.min_log_level);
-
+#ifndef __Fuchsia__
   EXPECT_TRUE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}), &settings));
   EXPECT_EQ("/tmp/custom.log", settings.log_file);
+#endif
 }
 
 TEST(LogSettings, ParseInvalidOptions) {
@@ -182,6 +183,7 @@ TEST_F(LogSettingsFixture, ToArgv) {
 
   // Reset |settings| back to defaults so we don't pick up previous tests.
   settings = syslog::LogSettings{};
+#ifndef __Fuchsia__
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0", "--log-file=/foo"}), &settings));
   EXPECT_TRUE(LogSettingsToArgv(settings) == std::vector<std::string>{"--log-file=/foo"})
@@ -191,6 +193,7 @@ TEST_F(LogSettingsFixture, ToArgv) {
       CommandLineFromInitializerList({"argv0", "--verbose", "--log-file=/foo"}), &settings));
   EXPECT_TRUE(LogSettingsToArgv(settings) ==
               (std::vector<std::string>{"--verbose=1", "--log-file=/foo"}));
+#endif
 }
 
 }  // namespace

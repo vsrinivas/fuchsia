@@ -66,7 +66,13 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
         syslog::LOG_INFO - static_cast<syslog::LogSeverity>(level * syslog::LogVerbosityStepSize),
         syslog::LOG_DEBUG + 1);
   }
-
+#ifndef __Fuchsia__
+  // --log-file=<file>
+  std::string file;
+  if (command_line.GetOptionValue("log-file", &file)) {
+    settings.log_file = file;
+  }
+#endif
   // --quiet=<level>
   // Errors out if --severity is present.
   std::string quietness;
@@ -87,12 +93,6 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
     }
     settings.min_log_level =
         syslog::LOG_INFO + static_cast<syslog::LogSeverity>(level * syslog::LogSeverityStepSize);
-  }
-
-  // --log-file=<file>
-  std::string file;
-  if (command_line.GetOptionValue("log-file", &file)) {
-    settings.log_file = file;
   }
 
   *out_settings = settings;
@@ -135,10 +135,6 @@ std::vector<std::string> LogSettingsToArgv(const syslog::LogSettings& settings) 
       arg = "--severity=FATAL";
     }
     result.push_back(arg);
-  }
-
-  if (settings.log_file != "") {
-    result.emplace_back(StringPrintf("--log-file=%s", settings.log_file.c_str()));
   }
 
   return result;
