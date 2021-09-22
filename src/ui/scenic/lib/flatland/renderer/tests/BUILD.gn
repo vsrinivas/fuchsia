@@ -43,6 +43,7 @@ executable("unittests") {
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland/renderer",
+    "//src/ui/scenic/lib/screenshot",
     "//src/ui/scenic/lib/utils",
   ]
 

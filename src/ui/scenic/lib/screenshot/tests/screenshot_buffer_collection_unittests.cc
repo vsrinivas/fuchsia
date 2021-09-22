@@ -13,6 +13,7 @@
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
+#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
@@ -26,10 +27,13 @@ class ScreenshotBufferCollectionTest : public scenic_impl::gfx::test::VkSessionT
  public:
   void SetUp() override {
     VkSessionTest::SetUp();
-    importer_ = std::make_unique<ScreenshotBufferCollectionImporter>(escher()->GetWeakPtr());
+    renderer_ =
+        std::make_shared<flatland::VkRenderer>(escher()->GetWeakPtr());
+    importer_ = std::make_unique<ScreenshotBufferCollectionImporter>(renderer_);
   }
 
  protected:
+  std::shared_ptr<flatland::VkRenderer> renderer_;
   std::shared_ptr<ScreenshotBufferCollectionImporter> importer_;
 };
 
@@ -61,7 +65,6 @@ VK_TEST_F(ScreenshotBufferCollectionTest, ImportAndReleaseBufferCollection) {
   // Cleanup.
   importer_->ReleaseBufferCollection(collection_id);
 }
-
 VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   const auto pixel_format = GetParam();
@@ -76,7 +79,7 @@ VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
   status = local_token->Sync();
   EXPECT_EQ(status, ZX_OK);
 
-  // Import into GfxBufferCollectionImporter.
+  // Import into ScreenshotBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
                                                   std::move(dup_token));
@@ -89,6 +92,7 @@ VK_TEST_P(ScreenshotBCTestParameterized, ImportBufferImage) {
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
                                                   buffer_collection.NewRequest());
   EXPECT_EQ(status, ZX_OK);
+
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.cpu_domain_supported = true;

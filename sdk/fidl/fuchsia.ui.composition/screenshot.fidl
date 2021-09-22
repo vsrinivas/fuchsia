@@ -3,14 +3,35 @@
 // found in the LICENSE file.
 library fuchsia.ui.composition;
 
+using fuchsia.math;
+using zx;
+
 alias ImageId = uint64;
 
-/// The enum of possible errors following a [`CreateImage`] call.
-type CreateImageError = strict enum {
-    /// One or more arguments are missing in [`CreateImageArgs`].
+/// The enum of possible errors following a [`CreateImage`] or
+/// [`TakeScreenshot`] call.
+type ScreenshotError = strict enum {
+    /// One or more arguments are missing in the table argument.
     MISSING_ARGS = 1;
-    /// A general error occurred in [`CreateImage`].
+    /// A general error occurred during the method call.
     BAD_OPERATION = 2;
+};
+
+/// The rotation to be applied to the image.
+///
+/// If a given display is rotated, say, 270 degrees according to its
+/// `display_info` config file, then applying the equal and opposite rotation,
+/// [`CW_270_DEGREES`], should cancel the display rotation leading to a
+/// correctly rendered screenshot.
+///
+/// Clients should allocate an image according to the final dimensions they
+/// ultimately want to use, i.e. after rotation. These would be identical
+/// to the `width` and `height` values found in the `display_info` config file.
+type Rotation = strict enum {
+    CW_0_DEGREES = 0;
+    CW_90_DEGREES = 1;
+    CW_180_DEGREES = 2;
+    CW_270_DEGREES = 3;
 };
 
 /// The table of arguments passed into the [`CreateImage`] call. Note that all
@@ -26,13 +47,27 @@ type CreateImageArgs = resource table {
     /// The VMO index must be valid and in the range of constraints of the specified
     /// BufferCollection.
     3: vmo_index uint32;
-    /// image_width must be valid and in the range of constraints of the specified
-    /// BufferCollection.
-    4: image_width uint32;
-    /// image_height must be valid and in the range of constraints of the specified
-    /// BufferCollection.
-    5: image_height uint32;
+    /// The size of the image in pixels.
+    4: size fuchsia.math.SizeU;
 };
+
+type RemoveImageArgs = resource table {
+    /// The image ID for the image to be removed.
+    1: image_id ImageId;
+};
+
+type TakeScreenshotArgs = resource table {
+    /// The ID of the image previously allocated with [`CreateImage`].
+    1: image_id ImageId;
+
+    /// The rotation to be applied to the image. Not necessary; default value is
+    /// no rotation.
+    2: rotation Rotation;
+
+    /// The event to fire upon successful completion.
+    3: event zx.handle:EVENT;
+};
+
 
 /// This protocol provides a low-level Screenshot API for clients to use.
 /// Screenshot clients should familiarize themselves with the sysmem and
@@ -48,5 +83,30 @@ protocol Screenshot {
     /// Finally, clients can use their specified `ImageId` in TakeScreenshot().
     CreateImage(resource struct {
         args CreateImageArgs;
-    }) -> (struct {}) error CreateImageError;
+    }) -> (struct {}) error ScreenshotError;
+
+    /// Following a successful call to [`CreateImage`], clients can call
+    /// RemoveImage to delete the image and its associated metadata.
+    RemoveImage(resource struct {
+        args RemoveImageArgs;
+    }) -> (struct {}) error ScreenshotError;
+
+    /// Following a successful call to [`CreateImage`], clients can call
+    /// TakeScreenshot giving that same image ID. Clients are responsible for
+    /// determining the rotation of the display, and applying the corrective
+    /// rotation.
+    ///
+    /// For instance, if the display is mounted 90 degrees clockwise (the "top"
+    /// is on the right, when looking at the display), then the client should specify a
+    /// 270 degree rotation to account for it. Similarly, the clients are
+    /// responsible for specifying a buffer big enough for the rotated image. If
+    /// the buffer is too small, a best effort attempt will be made to render
+    /// the image.
+    ///
+    /// Clients may wait on the zx::event they pass for successful completion of
+    /// the screenshot. It is not guaranteed that the screenshot will be
+    /// completed by the time this function returns.
+    TakeScreenshot(resource struct {
+        args TakeScreenshotArgs;
+    }) -> (struct {}) error ScreenshotError;
 };
