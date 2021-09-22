@@ -85,6 +85,11 @@ class UnionWithHandle {
     return ordinal_ ==
            ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
   }
+  static UnionWithHandle WithH(::zx::vmo val) {
+    UnionWithHandle result;
+    result.set_h(std::move(val));
+    return result;
+  }
 
   static UnionWithHandle WithH(::fidl::ObjectView<::zx::vmo> val) {
     UnionWithHandle result;
@@ -98,6 +103,11 @@ class UnionWithHandle {
     result.set_h(
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_h(::zx::vmo elem) {
+    ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
+    envelope_.As<::zx::vmo>().set_data(std::move(elem));
   }
 
   void set_h(::fidl::ObjectView<::zx::vmo> elem) {
@@ -167,6 +177,12 @@ class TableWithHandle final {
     return frame_ptr_->h_.get_data();
   }
   bool has_h() const { return max_ordinal_ >= 1 && frame_ptr_->h_.has_data(); }
+  TableWithHandle& set_h(::zx::vmo elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->h_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
   TableWithHandle& set_h(::fidl::ObjectView<::zx::vmo> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->h_.set_data(elem);
@@ -178,6 +194,13 @@ class TableWithHandle final {
     frame_ptr_->h_.set_data(nullptr);
     return *this;
   }
+
+  TableWithHandle& clear_h() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->h_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   TableWithHandle& set_h(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

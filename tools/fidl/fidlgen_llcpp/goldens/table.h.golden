@@ -79,6 +79,13 @@ class TableWithAttributes final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
+
+  TableWithAttributes& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -303,6 +310,13 @@ class SimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
+
+  SimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   SimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -332,6 +346,13 @@ class SimpleTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
+
+  SimpleTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   SimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -555,6 +576,13 @@ class ReverseOrdinalTable final {
     frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
+
+  ReverseOrdinalTable& clear_z() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -584,6 +612,13 @@ class ReverseOrdinalTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
+
+  ReverseOrdinalTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -613,6 +648,13 @@ class ReverseOrdinalTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
+
+  ReverseOrdinalTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -839,6 +881,13 @@ class OlderSimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
+
+  OlderSimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   OlderSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1060,6 +1109,13 @@ class NewerSimpleTable final {
     frame_ptr_->x_.set_data(nullptr);
     return *this;
   }
+
+  NewerSimpleTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   NewerSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1089,6 +1145,13 @@ class NewerSimpleTable final {
     frame_ptr_->y_.set_data(nullptr);
     return *this;
   }
+
+  NewerSimpleTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   NewerSimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1118,6 +1181,13 @@ class NewerSimpleTable final {
     frame_ptr_->z_.set_data(nullptr);
     return *this;
   }
+
+  NewerSimpleTable& clear_z() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   NewerSimpleTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1346,6 +1416,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v1_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v1() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v1_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v1(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1378,6 +1455,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v2_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v2() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v2_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v2(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1410,6 +1494,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v3_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v3() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v3_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v3(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1442,6 +1533,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v4_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v4() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v4_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v4(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1474,6 +1572,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v5_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v5() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v5_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v5(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1506,6 +1611,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v6_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v6() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v6_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v6(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1538,6 +1650,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v7_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v7() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v7_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v7(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1570,6 +1689,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v8_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v8() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v8_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v8(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1602,6 +1728,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v9_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v9() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v9_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v9(::fidl::AnyArena& allocator,
                                     Args&&... args) {
@@ -1634,6 +1767,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v10_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v10() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v10_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v10(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1666,6 +1806,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v11_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v11() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v11_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v11(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1698,6 +1845,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v12_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v12() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v12_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v12(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1730,6 +1884,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v13_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v13() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v13_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v13(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1762,6 +1923,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v14_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v14() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v14_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v14(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1794,6 +1962,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v15_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v15() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v15_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v15(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1826,6 +2001,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v16_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v16() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v16_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v16(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1858,6 +2040,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v17_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v17() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v17_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v17(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1890,6 +2079,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v18_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v18() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v18_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v18(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1922,6 +2118,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v19_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v19() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v19_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v19(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1954,6 +2157,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v20_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v20() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v20_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v20(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -1986,6 +2196,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v21_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v21() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v21_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v21(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2018,6 +2235,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v22_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v22() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v22_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v22(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2050,6 +2274,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v23_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v23() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v23_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v23(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2082,6 +2313,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v24_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v24() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v24_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v24(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2114,6 +2352,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v25_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v25() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v25_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v25(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2146,6 +2391,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v26_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v26() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v26_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v26(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2178,6 +2430,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v27_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v27() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v27_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v27(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2210,6 +2469,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v28_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v28() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v28_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v28(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2242,6 +2508,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v29_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v29() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v29_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v29(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2274,6 +2547,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v30_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v30() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v30_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v30(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2306,6 +2586,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v31_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v31() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v31_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v31(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2338,6 +2625,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v32_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v32() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v32_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v32(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2370,6 +2664,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v33_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v33() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v33_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v33(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2402,6 +2703,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v34_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v34() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v34_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v34(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2434,6 +2742,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v35_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v35() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v35_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v35(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2466,6 +2781,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v36_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v36() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v36_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v36(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2498,6 +2820,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v37_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v37() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v37_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v37(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2530,6 +2859,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v38_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v38() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v38_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v38(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2562,6 +2898,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v39_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v39() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v39_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v39(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2594,6 +2937,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v40_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v40() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v40_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v40(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2626,6 +2976,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v41_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v41() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v41_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v41(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2658,6 +3015,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v42_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v42() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v42_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v42(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2690,6 +3054,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v43_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v43() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v43_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v43(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2722,6 +3093,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v44_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v44() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v44_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v44(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2754,6 +3132,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v45_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v45() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v45_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v45(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2786,6 +3171,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v46_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v46() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v46_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v46(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2818,6 +3210,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v47_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v47() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v47_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v47(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2850,6 +3249,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v48_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v48() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v48_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v48(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2882,6 +3288,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v49_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v49() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v49_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v49(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2914,6 +3327,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v50_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v50() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v50_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v50(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2946,6 +3366,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v51_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v51() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v51_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v51(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -2978,6 +3405,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v52_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v52() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v52_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v52(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3010,6 +3444,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v53_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v53() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v53_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v53(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3042,6 +3483,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v54_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v54() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v54_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v54(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3074,6 +3522,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v55_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v55() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v55_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v55(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3106,6 +3561,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v56_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v56() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v56_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v56(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3138,6 +3600,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v57_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v57() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v57_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v57(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3170,6 +3639,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v58_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v58() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v58_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v58(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3202,6 +3678,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v59_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v59() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v59_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v59(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3234,6 +3717,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v60_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v60() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v60_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v60(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3266,6 +3756,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v61_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v61() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v61_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v61(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3298,6 +3795,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v62_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v62() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v62_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v62(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3330,6 +3834,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v63_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v63() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v63_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v63(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3362,6 +3873,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v64_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v64() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v64_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v64(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3394,6 +3912,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v65_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v65() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v65_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v65(::fidl::AnyArena& allocator,
                                      Args&&... args) {
@@ -3426,6 +3951,13 @@ class GreaterThan64OrdinalTable final {
     frame_ptr_->v66_.set_data(nullptr);
     return *this;
   }
+
+  GreaterThan64OrdinalTable& clear_v66() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->v66_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   GreaterThan64OrdinalTable& set_v66(::fidl::AnyArena& allocator,
                                      Args&&... args) {

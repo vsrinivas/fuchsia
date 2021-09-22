@@ -60,6 +60,14 @@ class {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == {{ .WireOrdinalName }}; }
 
+  {{- if .Type.InlineInEnvelope }}
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type }} val) {
+    {{ $.Name }} result;
+    result.set_{{ .Name }}(std::move(val));
+    return result;
+  }
+  {{- end }}
+
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}> val) {
     {{ $.Name }} result;
     result.set_{{ .Name }}(val);
@@ -73,6 +81,16 @@ class {{ .Name }} {
                            std::forward<Args>(args)...));
     return result;
   }
+
+  {{- if .Type.InlineInEnvelope }}
+{{ "" }}
+  {{- .Docs }}
+  void set_{{ .Name }}({{ .Type }} elem) {
+    ordinal_ = {{ .WireOrdinalName }};
+    envelope_.As<{{ .Type }}>().set_data(std::move(elem));
+  }
+  {{- end }}
+
 {{ "" }}
   {{- .Docs }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
@@ -174,7 +192,7 @@ void {{ . }}::SizeAndOffsetAssertionHelper() {
   switch (ordinal_) {
   {{- range .Members }}
     case {{ .WireOrdinalName }}: 
-      envelope_.As<{{ .Type }}>().Reset();
+      envelope_.As<{{ .Type }}>().clear_data();
       break;
   {{- end }}
     default:

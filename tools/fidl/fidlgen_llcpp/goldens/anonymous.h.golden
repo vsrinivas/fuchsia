@@ -633,6 +633,11 @@ class UnionMember {
     return ordinal_ ==
            ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
   }
+  static UnionMember WithUnionData(uint8_t val) {
+    UnionMember result;
+    result.set_union_data(std::move(val));
+    return result;
+  }
 
   static UnionMember WithUnionData(::fidl::ObjectView<uint8_t> val) {
     UnionMember result;
@@ -647,6 +652,11 @@ class UnionMember {
     result.set_union_data(
         ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_union_data(uint8_t elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    envelope_.As<uint8_t>().set_data(std::move(elem));
   }
 
   void set_union_data(::fidl::ObjectView<uint8_t> elem) {
@@ -729,6 +739,13 @@ class TableMember final {
     frame_ptr_->table_data_.set_data(nullptr);
     return *this;
   }
+
+  TableMember& clear_table_data() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -957,6 +974,13 @@ class FunctionApplication final {
     frame_ptr_->func_.set_data(nullptr);
     return *this;
   }
+
+  FunctionApplication& clear_func() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->func_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   FunctionApplication& set_func(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -992,6 +1016,13 @@ class FunctionApplication final {
     frame_ptr_->args_.set_data(nullptr);
     return *this;
   }
+
+  FunctionApplication& clear_args() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->args_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   FunctionApplication& set_args(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1014,6 +1045,12 @@ class FunctionApplication final {
   bool has_flags() const {
     return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
   }
+  FunctionApplication& set_flags(::fidl_test_anonymous::wire::Flags elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->flags_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
+    return *this;
+  }
   FunctionApplication& set_flags(
       ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1026,6 +1063,13 @@ class FunctionApplication final {
     frame_ptr_->flags_.set_data(nullptr);
     return *this;
   }
+
+  FunctionApplication& clear_flags() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->flags_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   FunctionApplication& set_flags(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -1456,6 +1500,12 @@ class SomeProtocolSomeMethodResult {
     return ordinal_ == ::fidl_test_anonymous::wire::
                            SomeProtocolSomeMethodResult::Ordinal::kResponse;
   }
+  static SomeProtocolSomeMethodResult WithResponse(
+      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse val) {
+    SomeProtocolSomeMethodResult result;
+    result.set_response(std::move(val));
+    return result;
+  }
 
   static SomeProtocolSomeMethodResult WithResponse(
       ::fidl::ObjectView<
@@ -1475,6 +1525,14 @@ class SomeProtocolSomeMethodResult {
             ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_response(
+      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kResponse;
+    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .set_data(std::move(elem));
   }
 
   void set_response(::fidl::ObjectView<
@@ -1516,6 +1574,12 @@ class SomeProtocolSomeMethodResult {
     return ordinal_ == ::fidl_test_anonymous::wire::
                            SomeProtocolSomeMethodResult::Ordinal::kErr;
   }
+  static SomeProtocolSomeMethodResult WithErr(
+      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError val) {
+    SomeProtocolSomeMethodResult result;
+    result.set_err(std::move(val));
+    return result;
+  }
 
   static SomeProtocolSomeMethodResult WithErr(
       ::fidl::ObjectView<
@@ -1534,6 +1598,13 @@ class SomeProtocolSomeMethodResult {
                    ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
         allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_err(::fidl_test_anonymous::wire::SomeProtocolSomeMethodError elem) {
+    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
+        Ordinal::kErr;
+    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+        .set_data(std::move(elem));
   }
 
   void set_err(::fidl::ObjectView<

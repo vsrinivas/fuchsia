@@ -27,6 +27,13 @@ TEST(XUnionPayload, Primitive) {
     EXPECT_EQ(5, test_union.primitive());
   }
   {
+    llcpp_test::wire::TestUnion test_union;
+    EXPECT_TRUE(test_union.has_invalid_tag());
+    test_union.set_primitive(5);
+    EXPECT_EQ(llcpp_test::wire::TestUnion::Tag::kPrimitive, test_union.which());
+    EXPECT_EQ(5, test_union.primitive());
+  }
+  {
     int32_t primitive = 5;
     auto test_union = llcpp_test::wire::TestUnion::WithPrimitive(
         fidl::ObjectView<int32_t>::FromExternal(&primitive));

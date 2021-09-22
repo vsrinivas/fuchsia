@@ -45,6 +45,16 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.has_data();
   }
+
+  {{- if .Type.InlineInEnvelope }}
+  {{ $.Name }}& set_{{ .Name }}({{ .Type }} elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->{{ .Name }}_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
+    return *this;
+  }
+  {{- end }}
+
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   {{ $.Name }}& set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -57,6 +67,13 @@ public:
     frame_ptr_->{{ .Name }}_.set_data(nullptr);
     return *this;
   }
+
+  {{ $.Name }}& clear_{{ .Name }}() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->{{ .Name }}_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   {{ $.Name }}& set_{{ .Name }}(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

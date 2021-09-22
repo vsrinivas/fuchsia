@@ -29,7 +29,7 @@ void ::fidl_test_handlesintypes::wire::UnionWithHandle::
 ::fidl_test_handlesintypes::wire::UnionWithHandle::~UnionWithHandle() {
   switch (ordinal_) {
     case ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
-      envelope_.As<::zx::vmo>().Reset();
+      envelope_.As<::zx::vmo>().clear_data();
       break;
     default:
       break;

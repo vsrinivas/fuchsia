@@ -318,6 +318,11 @@ class ExampleXUnion {
     return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
                            Ordinal::kVariant;
   }
+  static ExampleXUnion WithVariant(uint32_t val) {
+    ExampleXUnion result;
+    result.set_variant(std::move(val));
+    return result;
+  }
 
   static ExampleXUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleXUnion result;
@@ -332,6 +337,12 @@ class ExampleXUnion {
     result.set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_variant(uint32_t elem) {
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
+        kVariant;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
@@ -406,6 +417,11 @@ class ExampleUnion {
     return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
                            Ordinal::kVariant;
   }
+  static ExampleUnion WithVariant(uint32_t val) {
+    ExampleUnion result;
+    result.set_variant(std::move(val));
+    return result;
+  }
 
   static ExampleUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleUnion result;
@@ -419,6 +435,12 @@ class ExampleUnion {
     result.set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_variant(uint32_t elem) {
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
+        kVariant;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {
@@ -490,6 +512,12 @@ class ExampleTable final {
   bool has_member() const {
     return max_ordinal_ >= 1 && frame_ptr_->member_.has_data();
   }
+  ExampleTable& set_member(uint32_t elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->member_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
   ExampleTable& set_member(::fidl::ObjectView<uint32_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.set_data(elem);
@@ -501,6 +529,13 @@ class ExampleTable final {
     frame_ptr_->member_.set_data(nullptr);
     return *this;
   }
+
+  ExampleTable& clear_member() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->member_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   ExampleTable& set_member(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

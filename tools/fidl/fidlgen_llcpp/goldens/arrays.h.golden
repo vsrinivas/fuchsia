@@ -253,6 +253,13 @@ class TableSmallArray final {
     frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
+
+  TableSmallArray& clear_a() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->a_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   TableSmallArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -475,6 +482,13 @@ class TableLargeArray final {
     frame_ptr_->a_.set_data(nullptr);
     return *this;
   }
+
+  TableLargeArray& clear_a() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->a_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   TableLargeArray& set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

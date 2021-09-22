@@ -118,6 +118,11 @@ class StrictFoo {
     return ordinal_ ==
            ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
   }
+  static StrictFoo WithI(int32_t val) {
+    StrictFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static StrictFoo WithI(::fidl::ObjectView<int32_t> val) {
     StrictFoo result;
@@ -131,6 +136,12 @@ class StrictFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ =
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -259,6 +270,11 @@ class FlexibleFoo {
     return ordinal_ ==
            ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
   }
+  static FlexibleFoo WithI(int32_t val) {
+    FlexibleFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static FlexibleFoo WithI(::fidl::ObjectView<int32_t> val) {
     FlexibleFoo result;
@@ -272,6 +288,12 @@ class FlexibleFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ =
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {

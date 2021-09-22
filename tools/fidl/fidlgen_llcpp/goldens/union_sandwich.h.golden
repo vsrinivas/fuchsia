@@ -81,6 +81,11 @@ class UnionSize8Alignment4 {
     return ordinal_ == ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::
                            Ordinal::kVariant;
   }
+  static UnionSize8Alignment4 WithVariant(uint32_t val) {
+    UnionSize8Alignment4 result;
+    result.set_variant(std::move(val));
+    return result;
+  }
 
   static UnionSize8Alignment4 WithVariant(::fidl::ObjectView<uint32_t> val) {
     UnionSize8Alignment4 result;
@@ -95,6 +100,12 @@ class UnionSize8Alignment4 {
     result.set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_variant(uint32_t elem) {
+    ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
+        kVariant;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_variant(::fidl::ObjectView<uint32_t> elem) {

@@ -20,6 +20,32 @@ TEST(Table, TablePrimitive) {
   ASSERT_EQ(table.y(), 100);
 }
 
+TEST(Table, InlineSetClear) {
+  namespace test = fidl_llcpp_types_test;
+  fidl::Arena allocator;
+  test::wire::SampleTable table(allocator);
+  table.set_x(3u);
+
+  ASSERT_TRUE(table.has_x());
+  ASSERT_EQ(table.x(), 3u);
+
+  table.clear_x();
+  ASSERT_FALSE(table.has_x());
+}
+
+TEST(Table, OutOfLineSetClear) {
+  namespace test = fidl_llcpp_types_test;
+  fidl::Arena allocator;
+  test::wire::Uint64Table table(allocator);
+  table.set_x(allocator, 3u);
+
+  ASSERT_TRUE(table.has_x());
+  ASSERT_EQ(table.x(), 3u);
+
+  table.clear_x();
+  ASSERT_FALSE(table.has_x());
+}
+
 TEST(Table, TableVectorOfStruct) {
   namespace test = fidl_llcpp_types_test;
   fidl::Arena allocator;

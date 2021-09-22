@@ -131,6 +131,8 @@ type Type struct {
 	ElementType *Type
 	// Valid iff IsArray
 	ElementCount int
+
+	InlineInEnvelope bool
 }
 
 // IsPrimitiveType returns true if this type is primitive.
@@ -414,6 +416,7 @@ func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier)
 func (c *compiler) compileType(val fidlgen.Type) Type {
 	r := Type{}
 	r.Nullable = val.Nullable
+	r.InlineInEnvelope = val.TypeShapeV2.InlineSize <= 4
 	switch val.Kind {
 	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType)

@@ -122,6 +122,10 @@ type TestTable = table {
     1: x uint8;
 };
 
+type Uint64Table = table {
+    1: x uint64;
+};
+
 type TestResourceTable = resource table {
     1: x uint8;
 };

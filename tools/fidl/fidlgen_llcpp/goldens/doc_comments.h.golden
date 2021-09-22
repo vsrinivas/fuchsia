@@ -491,6 +491,12 @@ class Table final {
   bool has_Field() const {
     return max_ordinal_ >= 1 && frame_ptr_->field_.has_data();
   }
+  Table& set_field(int32_t elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->field_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
   Table& set_field(::fidl::ObjectView<int32_t> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->field_.set_data(elem);
@@ -502,6 +508,13 @@ class Table final {
     frame_ptr_->field_.set_data(nullptr);
     return *this;
   }
+
+  Table& clear_field() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->field_.clear_data();
+    return *this;
+  }
+
   template <typename... Args>
   Table& set_field(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -721,6 +734,11 @@ class StrictUnion {
     return ordinal_ ==
            ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
   }
+  static StrictUnion WithField(int32_t val) {
+    StrictUnion result;
+    result.set_field(std::move(val));
+    return result;
+  }
 
   static StrictUnion WithField(::fidl::ObjectView<int32_t> val) {
     StrictUnion result;
@@ -734,6 +752,14 @@ class StrictUnion {
     result.set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  void set_field(int32_t elem) {
+    ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   /// union member comment #1
@@ -820,6 +846,11 @@ class FlexibleUnion {
     return ordinal_ ==
            ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
   }
+  static FlexibleUnion WithField(int32_t val) {
+    FlexibleUnion result;
+    result.set_field(std::move(val));
+    return result;
+  }
 
   static FlexibleUnion WithField(::fidl::ObjectView<int32_t> val) {
     FlexibleUnion result;
@@ -833,6 +864,14 @@ class FlexibleUnion {
     result.set_field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  void set_field(int32_t elem) {
+    ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   /// union member comment #1

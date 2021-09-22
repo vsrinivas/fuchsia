@@ -664,6 +664,11 @@ class SimpleUnion {
   bool is_a() const {
     return ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
   }
+  static SimpleUnion WithA(int32_t val) {
+    SimpleUnion result;
+    result.set_a(std::move(val));
+    return result;
+  }
 
   static SimpleUnion WithA(::fidl::ObjectView<int32_t> val) {
     SimpleUnion result;
@@ -677,6 +682,11 @@ class SimpleUnion {
     result.set_a(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_a(int32_t elem) {
+    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_a(::fidl::ObjectView<int32_t> elem) {
@@ -702,6 +712,11 @@ class SimpleUnion {
   bool is_b() const {
     return ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
   }
+  static SimpleUnion WithB(float val) {
+    SimpleUnion result;
+    result.set_b(std::move(val));
+    return result;
+  }
 
   static SimpleUnion WithB(::fidl::ObjectView<float> val) {
     SimpleUnion result;
@@ -715,6 +730,11 @@ class SimpleUnion {
     result.set_b(
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_b(float elem) {
+    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   void set_b(::fidl::ObjectView<float> elem) {

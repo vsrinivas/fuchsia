@@ -30,11 +30,11 @@ void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
       envelope_
           .As<::fidl_test_protocols::wire::
                   WithErrorSyntaxHandleInResultResponse>()
-          .Reset();
+          .clear_data();
       break;
     case ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
         Ordinal::kErr:
-      envelope_.As<uint32_t>().Reset();
+      envelope_.As<uint32_t>().clear_data();
       break;
     default:
       break;

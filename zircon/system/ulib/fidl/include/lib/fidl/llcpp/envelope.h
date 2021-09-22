@@ -24,7 +24,7 @@ class Envelope {
   const T& get_data() const { return *data_; }
   T& get_data() { return *data_; }
   void set_data(ObjectView<T> value) { data_ = std::move(value); }
-  void Reset() { data_ = nullptr; }
+  void clear_data() { data_ = nullptr; }
 
  private:
   ObjectView<T> data_;
@@ -52,16 +52,19 @@ class Envelope<T, std::enable_if_t<sizeof(T) <= FIDL_ENVELOPE_INLINING_SIZE_THRE
     return inline_value_;
   }
   void set_data(ObjectView<T> value) {
-    if (value == nullptr) {
-      Reset();
-      return;
+    if (value != nullptr) {
+      set_data(std::move(*value));
+    } else {
+      clear_data();
     }
-    inline_value_ = std::move(*value);
+  }
+  void set_data(T value) {
+    inline_value_ = std::move(value);
     num_handles_ =
         (kIsHandle && reinterpret_cast<zx_handle_t&>(inline_value_) != ZX_HANDLE_INVALID) ? 1 : 0;
     flags_ |= FIDL_ENVELOPE_FLAGS_INLINING_MASK;
   }
-  void Reset() {
+  void clear_data() {
     // Assign zero to all envelope fields, making this the zero envelope.
     // T{} is guaranteed to have zeroed bytes.
     // - primitive types - it is trivially zero.

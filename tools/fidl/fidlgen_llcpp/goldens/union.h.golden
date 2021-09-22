@@ -339,6 +339,11 @@ class Union {
   bool is_primitive() const {
     return ordinal_ == ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
   }
+  static Union WithPrimitive(int32_t val) {
+    Union result;
+    result.set_primitive(std::move(val));
+    return result;
+  }
 
   static Union WithPrimitive(::fidl::ObjectView<int32_t> val) {
     Union result;
@@ -352,6 +357,11 @@ class Union {
     result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_primitive(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
@@ -525,6 +535,11 @@ class StrictUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
   }
+  static StrictUnion WithPrimitive(int32_t val) {
+    StrictUnion result;
+    result.set_primitive(std::move(val));
+    return result;
+  }
 
   static StrictUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     StrictUnion result;
@@ -539,6 +554,11 @@ class StrictUnion {
     result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_primitive(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
@@ -718,6 +738,11 @@ class StrictSimpleXUnion {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
   }
+  static StrictSimpleXUnion WithI(int32_t val) {
+    StrictSimpleXUnion result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static StrictSimpleXUnion WithI(::fidl::ObjectView<int32_t> val) {
     StrictSimpleXUnion result;
@@ -731,6 +756,11 @@ class StrictSimpleXUnion {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -758,6 +788,11 @@ class StrictSimpleXUnion {
   bool is_f() const {
     return ordinal_ == ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
   }
+  static StrictSimpleXUnion WithF(float val) {
+    StrictSimpleXUnion result;
+    result.set_f(std::move(val));
+    return result;
+  }
 
   static StrictSimpleXUnion WithF(::fidl::ObjectView<float> val) {
     StrictSimpleXUnion result;
@@ -771,6 +806,11 @@ class StrictSimpleXUnion {
     result.set_f(
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_f(float elem) {
+    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   void set_f(::fidl::ObjectView<float> elem) {
@@ -926,6 +966,11 @@ class StrictFoo {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
   }
+  static StrictFoo WithI(int32_t val) {
+    StrictFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static StrictFoo WithI(::fidl::ObjectView<int32_t> val) {
     StrictFoo result;
@@ -939,6 +984,11 @@ class StrictFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -1103,6 +1153,11 @@ class ReverseOrdinalUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
   }
+  static ReverseOrdinalUnion WithSecond(uint32_t val) {
+    ReverseOrdinalUnion result;
+    result.set_second(std::move(val));
+    return result;
+  }
 
   static ReverseOrdinalUnion WithSecond(::fidl::ObjectView<uint32_t> val) {
     ReverseOrdinalUnion result;
@@ -1117,6 +1172,11 @@ class ReverseOrdinalUnion {
     result.set_second(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_second(uint32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_second(::fidl::ObjectView<uint32_t> elem) {
@@ -1146,6 +1206,11 @@ class ReverseOrdinalUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
   }
+  static ReverseOrdinalUnion WithFirst(uint32_t val) {
+    ReverseOrdinalUnion result;
+    result.set_first(std::move(val));
+    return result;
+  }
 
   static ReverseOrdinalUnion WithFirst(::fidl::ObjectView<uint32_t> val) {
     ReverseOrdinalUnion result;
@@ -1160,6 +1225,11 @@ class ReverseOrdinalUnion {
     result.set_first(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_first(uint32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_first(::fidl::ObjectView<uint32_t> elem) {
@@ -1813,6 +1883,11 @@ class OlderSimpleUnion {
   bool is_f() const {
     return ordinal_ == ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
   }
+  static OlderSimpleUnion WithF(float val) {
+    OlderSimpleUnion result;
+    result.set_f(std::move(val));
+    return result;
+  }
 
   static OlderSimpleUnion WithF(::fidl::ObjectView<float> val) {
     OlderSimpleUnion result;
@@ -1826,6 +1901,11 @@ class OlderSimpleUnion {
     result.set_f(
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_f(float elem) {
+    ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   void set_f(::fidl::ObjectView<float> elem) {
@@ -2070,6 +2150,11 @@ class FlexibleUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
   }
+  static FlexibleUnion WithPrimitive(int32_t val) {
+    FlexibleUnion result;
+    result.set_primitive(std::move(val));
+    return result;
+  }
 
   static FlexibleUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     FlexibleUnion result;
@@ -2084,6 +2169,11 @@ class FlexibleUnion {
     result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_primitive(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
@@ -2297,6 +2387,11 @@ class FlexibleFoo {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
   }
+  static FlexibleFoo WithI(int32_t val) {
+    FlexibleFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static FlexibleFoo WithI(::fidl::ObjectView<int32_t> val) {
     FlexibleFoo result;
@@ -2310,6 +2405,11 @@ class FlexibleFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -2378,6 +2478,11 @@ class FieldCollision {
     return ordinal_ ==
            ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
   }
+  static FieldCollision WithFieldCollisionTag(int32_t val) {
+    FieldCollision result;
+    result.set_field_collision_tag(std::move(val));
+    return result;
+  }
 
   static FieldCollision WithFieldCollisionTag(::fidl::ObjectView<int32_t> val) {
     FieldCollision result;
@@ -2392,6 +2497,12 @@ class FieldCollision {
     result.set_field_collision_tag(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_field_collision_tag(int32_t elem) {
+    ordinal_ =
+        ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_field_collision_tag(::fidl::ObjectView<int32_t> elem) {
@@ -2509,6 +2620,11 @@ class ExplicitXUnion {
   bool is_f() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
   }
+  static ExplicitXUnion WithF(float val) {
+    ExplicitXUnion result;
+    result.set_f(std::move(val));
+    return result;
+  }
 
   static ExplicitXUnion WithF(::fidl::ObjectView<float> val) {
     ExplicitXUnion result;
@@ -2522,6 +2638,11 @@ class ExplicitXUnion {
     result.set_f(
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_f(float elem) {
+    ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
+    envelope_.As<float>().set_data(std::move(elem));
   }
 
   void set_f(::fidl::ObjectView<float> elem) {
@@ -2591,6 +2712,11 @@ class ExplicitUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
   }
+  static ExplicitUnion WithPrimitive(int32_t val) {
+    ExplicitUnion result;
+    result.set_primitive(std::move(val));
+    return result;
+  }
 
   static ExplicitUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
     ExplicitUnion result;
@@ -2605,6 +2731,11 @@ class ExplicitUnion {
     result.set_primitive(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_primitive(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_primitive(::fidl::ObjectView<int32_t> elem) {
@@ -2769,6 +2900,11 @@ class ExplicitStrictFoo {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
   }
+  static ExplicitStrictFoo WithI(int32_t val) {
+    ExplicitStrictFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static ExplicitStrictFoo WithI(::fidl::ObjectView<int32_t> val) {
     ExplicitStrictFoo result;
@@ -2782,6 +2918,11 @@ class ExplicitStrictFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -2896,6 +3037,11 @@ class ExplicitFoo {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
   }
+  static ExplicitFoo WithI(int32_t val) {
+    ExplicitFoo result;
+    result.set_i(std::move(val));
+    return result;
+  }
 
   static ExplicitFoo WithI(::fidl::ObjectView<int32_t> val) {
     ExplicitFoo result;
@@ -2909,6 +3055,11 @@ class ExplicitFoo {
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_i(int32_t elem) {
+    ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
+    envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   void set_i(::fidl::ObjectView<int32_t> elem) {
@@ -2981,6 +3132,12 @@ class XUnionContainingEmptyStruct {
     return ordinal_ == ::fidl_test_union::wire::XUnionContainingEmptyStruct::
                            Ordinal::kEmpty;
   }
+  static XUnionContainingEmptyStruct WithEmpty(
+      ::fidl_test_union::wire::Empty val) {
+    XUnionContainingEmptyStruct result;
+    result.set_empty(std::move(val));
+    return result;
+  }
 
   static XUnionContainingEmptyStruct WithEmpty(
       ::fidl::ObjectView<::fidl_test_union::wire::Empty> val) {
@@ -2996,6 +3153,12 @@ class XUnionContainingEmptyStruct {
     result.set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty>(
         allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_empty(::fidl_test_union::wire::Empty elem) {
+    ordinal_ =
+        ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty;
+    envelope_.As<::fidl_test_union::wire::Empty>().set_data(std::move(elem));
   }
 
   void set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty> elem) {

@@ -71,6 +71,11 @@ class OnlyLlcpp {
     return ordinal_ ==
            ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
   }
+  static OnlyLlcpp WithX(uint32_t val) {
+    OnlyLlcpp result;
+    result.set_x(std::move(val));
+    return result;
+  }
 
   static OnlyLlcpp WithX(::fidl::ObjectView<uint32_t> val) {
     OnlyLlcpp result;
@@ -84,6 +89,11 @@ class OnlyLlcpp {
     result.set_x(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
+  }
+
+  void set_x(uint32_t elem) {
+    ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   void set_x(::fidl::ObjectView<uint32_t> elem) {
