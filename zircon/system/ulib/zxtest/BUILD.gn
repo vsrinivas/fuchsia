@@ -4,32 +4,34 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-zx_library("zxtest") {
-  sdk = "source"
-  sdk_publishable = "cts"
-  sdk_headers = [
-    "zxtest/base/assertion.h",
-    "zxtest/base/death-statement.h",
-    "zxtest/base/environment.h",
-    "zxtest/base/event-broadcaster.h",
-    "zxtest/base/log-sink.h",
-    "zxtest/base/message.h",
-    "zxtest/base/observer.h",
-    "zxtest/base/parameterized-value-impl.h",
-    "zxtest/base/parameterized-value.h",
-    "zxtest/base/reporter.h",
-    "zxtest/base/runner.h",
-    "zxtest/base/test-case.h",
-    "zxtest/base/test-driver.h",
-    "zxtest/base/test-info.h",
-    "zxtest/base/test-internal.h",
-    "zxtest/base/test.h",
-    "zxtest/base/types.h",
-    "zxtest/base/values.h",
-    "zxtest/c/zxtest.h",
-    "zxtest/cpp/internal.h",
-    "zxtest/cpp/zxtest.h",
-    "zxtest/zxtest.h",
+sdk_source_set("zxtest") {
+  sdk_name = "zxtest"
+  category = "cts"
+  build_as_static = true
+
+  public = [
+    "include/zxtest/base/assertion.h",
+    "include/zxtest/base/death-statement.h",
+    "include/zxtest/base/environment.h",
+    "include/zxtest/base/event-broadcaster.h",
+    "include/zxtest/base/log-sink.h",
+    "include/zxtest/base/message.h",
+    "include/zxtest/base/observer.h",
+    "include/zxtest/base/parameterized-value-impl.h",
+    "include/zxtest/base/parameterized-value.h",
+    "include/zxtest/base/reporter.h",
+    "include/zxtest/base/runner.h",
+    "include/zxtest/base/test-case.h",
+    "include/zxtest/base/test-driver.h",
+    "include/zxtest/base/test-info.h",
+    "include/zxtest/base/test-internal.h",
+    "include/zxtest/base/test.h",
+    "include/zxtest/base/types.h",
+    "include/zxtest/base/values.h",
+    "include/zxtest/c/zxtest.h",
+    "include/zxtest/cpp/internal.h",
+    "include/zxtest/cpp/zxtest.h",
+    "include/zxtest/zxtest.h",
   ]
 
   sources = [
@@ -46,37 +48,38 @@ zx_library("zxtest") {
     "test.cc",
     "zxtest-main.cc",
   ]
+
   public_deps = [
-    "//sdk/lib/fit:headers",
-    "//src/zircon/lib/zircon:headers",
+    "//sdk/lib/fit",
+
+    # Needed for <zircon/status.h>
+    "//src/zircon/lib/zircon",
 
     # Needed for cpp17::string_view.
     "//sdk/lib/stdcompat",
 
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
-    "//zircon/system/ulib/fbl:headers",
+    "//zircon/system/ulib/fbl",
   ]
+
+  public_configs = [ ":prod_config" ]
+
   deps = [
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
   ]
+
   if (is_fuchsia) {
     sources += [ "death-statement.cc" ]
 
-    public_deps += [
-      # Needed for <zircon/status.h>
-      "//src/zircon/lib/zircon:headers",
-
-      # Needed for <lib/zx/*>, death-statements.h
-      "//sdk/lib/fit:headers",
-      "//zircon/system/ulib/zx:headers",
-    ]
+    public_deps += [ "//zircon/system/ulib/zx" ]
 
     deps += [
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/zx",
     ]
   }
+
   metadata = {
     # Used by the fuchsia_test_component_manifest() template.
     test_component_manifest_cml = [

@@ -332,7 +332,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/zx-panic-libc/*",
     "//zircon/system/ulib/zx/*",
     "//zircon/system/ulib/zxc/*",
-    "//zircon/system/ulib/zxtest/*",
     "//zircon/third_party/lib/jitterentropy/*",
     "//zircon/third_party/ulib/boringssl/*",
     "//zircon/third_party/ulib/cksum/*",
