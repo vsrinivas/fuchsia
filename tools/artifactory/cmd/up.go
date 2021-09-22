@@ -233,6 +233,8 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	blobDir := path.Join(metadataDir, blobDirName)
 	targetDir := path.Join(metadataDir, targetDirName)
 	buildsNamespaceDir := path.Join(buildsDirName, cmd.namespace)
+	packageNamespaceDir := path.Join(buildsNamespaceDir, packageDirName)
+	imageNamespaceDir := path.Join(buildsNamespaceDir, imageDirName)
 
 	dirs := []artifactory.Upload{
 		{
@@ -242,17 +244,17 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 		{
 			Source:      metadataDir,
-			Destination: path.Join(buildsNamespaceDir, packageDirName, metadataDirName),
+			Destination: path.Join(packageNamespaceDir, metadataDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      keyDir,
-			Destination: path.Join(buildsNamespaceDir, packageDirName, keyDirName),
+			Destination: path.Join(packageNamespaceDir, keyDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      targetDir,
-			Destination: path.Join(buildsNamespaceDir, packageDirName, metadataDirName, targetDirName),
+			Destination: path.Join(packageNamespaceDir, metadataDirName, targetDirName),
 			Deduplicate: false,
 			Recursive:   true,
 		},
@@ -261,15 +263,15 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	files := []artifactory.Upload{
 		{
 			Source:      path.Join(buildDir, blobManifestName),
-			Destination: path.Join(buildsNamespaceDir, packageDirName, blobManifestName),
+			Destination: path.Join(packageNamespaceDir, blobManifestName),
 		},
 		{
 			Source:      path.Join(buildDir, elfSizesManifestName),
-			Destination: path.Join(buildsNamespaceDir, packageDirName, elfSizesManifestName),
+			Destination: path.Join(packageNamespaceDir, elfSizesManifestName),
 		},
 	}
 
-	allBlobsUpload, err := artifactory.BlobsUpload(m, path.Join(buildsNamespaceDir, packageDirName, "all_blobs.json"))
+	allBlobsUpload, err := artifactory.BlobsUpload(m, path.Join(packageNamespaceDir, "all_blobs.json"))
 	if err != nil {
 		return fmt.Errorf("failed to obtain blobs upload: %w", err)
 	}
@@ -281,7 +283,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 
 	// Sign the images for release builds.
-	images, err := artifactory.ImageUploads(m, path.Join(buildsNamespaceDir, imageDirName))
+	images, err := artifactory.ImageUploads(m, imageNamespaceDir)
 	if err != nil {
 		return err
 	}
@@ -292,6 +294,15 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		}
 	}
 	files = append(files, images...)
+
+	productBundle, err := artifactory.ProductBundleUploads(m, packageNamespaceDir, blobDirName, imageNamespaceDir)
+	if err != nil {
+		return err
+	}
+	// Check that an upload isn't nil as product bundle doesn't exist for "bringup" and SDK builds.
+	if productBundle != nil {
+		files = append(files, *productBundle)
+	}
 
 	// Sign the build_info.json for release builds.
 	buildAPIs := artifactory.BuildAPIModuleUploads(m, path.Join(buildsNamespaceDir, buildAPIDirName))

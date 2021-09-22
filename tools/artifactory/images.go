@@ -44,6 +44,10 @@ func imageUploads(mods imgModules, namespace string) ([]Upload, error) {
 	seen := make(map[string]struct{})
 	for _, img := range mods.Images() {
 		if _, ok := seen[img.Path]; !ok {
+			// Skip uploading product_bundle as they are uploaded by ProductBundleUpload.
+			if img.Name == productBundleName && img.Type == productBundleType {
+				continue
+			}
 			if img.Name == uefiImageName {
 				srcPath := filepath.Join(mods.BuildDir(), img.Path)
 				info, err := os.Stat(srcPath)
