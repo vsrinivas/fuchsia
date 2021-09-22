@@ -25,6 +25,9 @@ namespace {
 
 static constexpr uint64_t kMaxLongTermPowerLimit = 0x7FFF;
 
+// Intel recommends a time window of 28s, which corresponds to the following value.
+static constexpr uint64_t kDefaultTimeWindow = 0x6e;
+
 // Intel Volume 3 Section 14.9.3.
 static constexpr uint64_t kPowerLimitPl1Enable = 1ull << 15;
 static constexpr uint64_t kPowerLimitPl1Clamp = 1ull << 16;
@@ -139,9 +142,7 @@ zx_status_t SetPkgPl1(const zx_system_powerctl_arg_t* arg, MsrAccess* msr) {
     t = (y & 0x1F) | ((z & 0x3) << 5);
     rapl |= t << 17;
   } else {
-    // set to default
-    uint64_t t = BITS_SHIFT(msr->read_msr(X86_MSR_PKG_POWER_INFO), 53, 48);
-    rapl |= t << 17;
+    rapl |= kDefaultTimeWindow << 17;
   }
   if (clamp) {
     rapl |= kPowerLimitPl1Clamp;
