@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/testing/signal-coordinator.h"
+#include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 
 namespace fuzzing {
 namespace {

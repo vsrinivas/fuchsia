@@ -6,11 +6,8 @@ source_set("testing") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
-    "signal-coordinator.cc",
-    "signal-coordinator.h",
+    "module.cc",
+    "module.h",
   ]
-  public_deps = [
-    "../common",
-    "//zircon/system/ulib/sync",
-  ]
+  public_deps = [ "../target" ]
 }

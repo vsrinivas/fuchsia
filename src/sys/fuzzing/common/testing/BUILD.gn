@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-
-test("unittests") {
-  output_name = "component_fuzzing_framework_unittests"
+source_set("testing") {
   visibility = [ "../*" ]
   testonly = true
-  deps = [
-    "engine:unittests",
-    "target:unittests",
-    "//src/lib/fxl/test:gtest_main",
+  sources = [
+    "signal-coordinator.cc",
+    "signal-coordinator.h",
+  ]
+  public_deps = [
+    "..:common",
+    "//zircon/system/ulib/sync",
   ]
 }

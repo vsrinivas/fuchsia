@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_FUZZING_TESTING_SIGNAL_COORDINATOR_H_
-#define SRC_SYS_FUZZING_TESTING_SIGNAL_COORDINATOR_H_
+#ifndef SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
+#define SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
 
 #include <lib/sync/completion.h>
 
@@ -45,4 +45,4 @@ class FakeSignalCoordinator final {
 
 }  // namespace fuzzing
 
-#endif  // SRC_SYS_FUZZING_TESTING_SIGNAL_COORDINATOR_H_
+#endif  // SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
