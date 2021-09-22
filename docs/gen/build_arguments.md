@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1434
+From //build/config/BUILDCONFIG.gn:1385
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1214,7 +1214,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1191
+From //build/config/BUILDCONFIG.gn:1142
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2106,7 +2106,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1031
+From //build/config/BUILDCONFIG.gn:982
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3462,7 +3462,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1424
+From //build/config/BUILDCONFIG.gn:1375
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3471,7 +3471,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1429
+From //build/config/BUILDCONFIG.gn:1380
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3515,7 +3515,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1237
+From //build/config/BUILDCONFIG.gn:1188
 
 ### size_checker_input
 The input to the size checker.
@@ -3531,9 +3531,6 @@ core_limit(number): maximum size (in bytes) allocated for the core system and/or
 This is sort of a "catch all" component that consists of all the area / packages that weren't
 specified in the components list below.
 
-core_creep_limit(number): maximum size creep (in bytes) per-CL allocated for the core system and/or services.
-This may be enforced by Gerrit.
-
 components(object array): a list of component objects. Each object should contain the following keys:
 
   component(string): name of the component.
@@ -3548,58 +3545,29 @@ components(object array): a list of component objects. Each object should contai
   The $for_pkg corresponds to the $for_pkg field in config.gni.
 
   limit(number): maximum size (in bytes) allocated for the component.
-  creep_limit(number): maxmium size creep (in bytes) per-CL allocated for the component.
-  This may be enforced by Gerrit.
-
-distributed_shlibs(string array): a list of shared libraries which are distributed in the Fuchsia SDK for
-partners to use in their prebuilt packages.
-
-distributed_shlibs_limit(number): maximum size (in bytes) allocated for distributed shared libraries.
-
-distributed_shlibs_creep_limit(number): maximum size creep (in bytes) allocated for distributed shared
-libraries. This may be enforced by Gerrit.
-
-icu_data(string array): a list of files which contribute to the ICU data limit.
-
-icu_data_limit(number): maximum size (in bytes) allocated to ICU data files.
-
-icu_data_creep_limit(number): maximum size creep (in bytes) allocated to ICU data files. This may be
-enforced by Gerrit.
 
 Example:
 size_checker_input = {
   asset_ext = [ ".ttf" ]
   asset_limit = 10240
   core_limit = 10240
-  core_creep_limit = 320
-  distributed_shlibs = [
-    "lib/ld.so.1",
-    "lib/libc++.so.2",
-  ]
-  distributed_shlibs_limit = 10240
-  distributed_shlibs_creep_limit = 320
-  icu_data = [ "icudtl.dat" ]
-  icu_data_limit = 20480
-  icu_data_creep_limit = 320
   components = [
     {
       component = "Foo"
       src = [ "topaz/runtime/foo_runner" ]
       limit = 10240
-      creep_limit = 320
     },
     {
       component = "Bar"
       src = [ "build/images" ]
       limit = 20480
-      creep_limit = 640
     },
   ]
 }
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/cmd/BUILD.gn:84
+From //tools/size_checker/cmd/BUILD.gn:52
 
 ### smp_max_cpus
 
@@ -3748,57 +3716,8 @@ From //build/config/clang/time_trace.gni:8
 ### toolchain_variant
 *This should never be set as a build argument.*
 It exists only to be set in `toolchain_args`.
-See //build/toolchain/clang_toolchain.gni for details.
-This variable is a scope giving details about the current toolchain:
-    `toolchain_variant.base`
-        [label] The "base" toolchain for this variant, *often the
-        right thing to use in comparisons, not `current_toolchain`.*
-        This is the toolchain actually referenced directly in GN
-        source code.  If the current toolchain is not
-        `shlib_toolchain` or a variant toolchain, this is the same
-        as `current_toolchain`.  In one of those derivative
-        toolchains, this is the toolchain the GN code probably
-        thought it was in.  This is the right thing to use in a test
-        like `toolchain_variant.base == target_toolchain`, rather
-        rather than comparing against `current_toolchain`.
-    `toolchain_variant.name`
-        [string] The name of this variant, as used in `variant` fields
-        in [`select_variant`](#select_variant) clauses.  In the base
-        toolchain and its `shlib_toolchain`, this is `""`.
-    `toolchain_variant.suffix`
-        [string] This is "-${toolchain_variant.name}", "" if name is empty.
-    `toolchain_variant.is_pic_default`
-        [bool] This is true in `shlib_toolchain`.
-    `toolchain_variant.tags`
-        [list of strings] A list of liberal strings, each one describing a
-        property of this toolchain instance. See
-        //build/toolchain/variant_tags.gni for more details.
-    `toolchain_variant.configs`
-        [list of configs] A list of configs that are added after the default
-        ones to all linkable targets for this toolchain() instance.
-    `toolchain_variant.prefix_configs`
-        [list of configs] A list of configs that are added before the default
-        ones to all linkable targets for this toolchain() instance.
-    `toolchain_variant.remove_common_configs`
-        [list of configs] A list of configs that are removed from all
-        linkable targets for this toolchain() instance. Useful when
-        one of the default configs must not be used.
-    `toolchain_variant.remove_shared_configs`
-        [list of configs] Same a remove_common_configs, but only applies
-        to non-executable (e.g. shared_library()) targets.
-    `toolchain_variant.instrumented`
-        [boolean] A convenience flag that is true iff "instrumented" is
-        part of toolchain_variant.tags.
-    `toolchain_variant.with_shared`
-        [boolean] True iff this toolchain() instance has a secondary
-        toolchain to build ELF shared-library code.
-    `toolchain_variant.libprefix`
-        [string] Installation prefix for instrumented shared libraries,
-        or an empty string for non-instrumented ones. For full details,
-        see comment below where toolchain_variant.libprefix is defined.
-
-The other fields are the variant's effects as defined in
-[`known_variants`](#known_variants).
+See //docs/concepts/build_system/internals/toolchains/build_arguments.md#toolchain_variant
+for details and documentation for each field.
 
 **Current value (from the default):**
 ```
@@ -3807,7 +3726,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:137
+From //build/config/BUILDCONFIG.gn:88
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3838,7 +3757,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1221
+From //build/config/BUILDCONFIG.gn:1172
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4364,7 +4283,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:154
+From //build/config/BUILDCONFIG.gn:105
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
