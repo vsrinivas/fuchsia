@@ -46,6 +46,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:uuid",
   ]
 
   sources = [

@@ -43,10 +43,14 @@ const ENV_NAME: &str = "setui_client_test_environment";
 #[macro_export]
 macro_rules! create_service  {
     ($setting_type:path, $( $request:pat => $callback:block ),*) => {{
+        use uuid::Uuid;
 
         let mut fs = ServiceFs::new();
         fs.add_fidl_service($setting_type);
-        let env = fs.create_nested_environment(ENV_NAME)?;
+
+        let mut uuid = Uuid::new_v4().to_string();
+        uuid.push_str(ENV_NAME);
+        let env = fs.create_nested_environment(&uuid)?;
 
         fasync::Task::spawn(fs.for_each_concurrent(None, move |connection| {
             async move {
