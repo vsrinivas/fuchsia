@@ -10,6 +10,7 @@
 #include <string>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
+#include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
 namespace {
@@ -95,9 +96,10 @@ fpromise::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_k
       return fpromise::make_error_promise();
     }
 
-    if (!node->has_states() || !node->states().has_range_value()) {
-      FX_LOGS(INFO)
-          << "ScreenReaderAction: Slider node is missing |range_value|. Nothing to send to TTS.";
+    std::string slider_value = GetSliderValue(*node);
+    if (slider_value.empty()) {
+      FX_LOGS(INFO) << "ScreenReaderAction: Slider node is missing |range_value| and |value|. "
+                       "Nothing to send to TTS.";
       return fpromise::make_error_promise();
     }
 
@@ -105,7 +107,7 @@ fpromise::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_k
     FX_DCHECK(speaker);
 
     Utterance utterance;
-    utterance.set_message(std::to_string(static_cast<int>(node->states().range_value())));
+    utterance.set_message(slider_value);
     return speaker->SpeakMessagePromise(std::move(utterance), {.interrupt = true});
   });
 }

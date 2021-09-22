@@ -25,13 +25,16 @@ static constexpr zx::duration kLongDelay = zx::msec(100);
 
 // Returns a message that describes the label and range value attributes.
 std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node);
+
   std::string message;
   if (node->has_attributes() && node->attributes().has_label()) {
     message += node->attributes().label();
   }
 
-  if (node->has_states() && node->states().has_range_value()) {
-    message = message + ", " + FormatFloat(node->states().range_value());
+  std::string slider_value = GetSliderValue(*node);
+  if (!slider_value.empty()) {
+    message = message + ", " + slider_value;
   }
 
   return message;

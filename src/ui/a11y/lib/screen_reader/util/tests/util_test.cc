@@ -512,5 +512,34 @@ TEST(ScreenReaderUtilTest, GetNodesToExcludeDifferentActionsNoLabel) {
   }
 }
 
+TEST(ScreenReaderUtilTest, GetSliderValueRangeValueOnly) {
+  fuchsia::accessibility::semantics::Node node;
+  fuchsia::accessibility::semantics::States states;
+  states.set_range_value(50.f);
+  node.set_states(std::move(states));
+
+  EXPECT_EQ(a11y::GetSliderValue(node), "50");
+}
+
+TEST(ScreenReaderUtilTest, GetSliderValueValueOnly) {
+  fuchsia::accessibility::semantics::Node node;
+  fuchsia::accessibility::semantics::States states;
+  const std::string value = "50%";
+  states.set_value(value);
+  node.set_states(std::move(states));
+
+  EXPECT_EQ(a11y::GetSliderValue(node), value);
+}
+
+TEST(ScreenReaderUtilTest, GetSliderValueBothValueAndRangeValue) {
+  fuchsia::accessibility::semantics::Node node;
+  fuchsia::accessibility::semantics::States states;
+  states.set_range_value(50.f);
+  states.set_value("should be ignored");
+  node.set_states(std::move(states));
+
+  EXPECT_EQ(a11y::GetSliderValue(node), "50");
+}
+
 }  // namespace
 }  // namespace accessibility_test

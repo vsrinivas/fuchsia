@@ -24,6 +24,12 @@ std::string FormatFloat(float input);
 std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
                                      SemanticsSource* semantics_source);
 
+// Get the string representation of a slider's value. Some sliders use the
+// range_value field to store a float value, while others use the value field
+// to store a string representation. We prefer range_value, but if it's not
+// present, we fall back to value.
+std::string GetSliderValue(const fuchsia::accessibility::semantics::Node& node);
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_UTIL_UTIL_H_

@@ -57,7 +57,7 @@ class ChangeRangeValueActionTest : public ScreenReaderActionTest {
     return node;
   }
 
-  void SetSliderRangeValue(uint32_t value) {
+  void SetSliderRangeValue(uint32_t value, bool use_range_value = true) {
     // Update the slider node's range value so that we can verify that the new
     // value is used to produce the utterance.
     auto* node =
@@ -68,7 +68,11 @@ class ChangeRangeValueActionTest : public ScreenReaderActionTest {
     }
 
     fuchsia::accessibility::semantics::States states;
-    states.set_range_value(value);
+    if (use_range_value) {
+      states.set_range_value(value);
+    } else {
+      states.set_value(std::to_string(static_cast<int>(value)));
+    }
     updated_node.set_states(std::move(states));
     mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
                                                 std::move(updated_node));
@@ -195,6 +199,35 @@ TEST_F(ChangeRangeValueActionTest, RangeControlDecremented) {
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   ASSERT_EQ(mock_speaker()->messages().size(), 1u);
   EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderIntialRangeValue - kSliderDelta));
+}
+
+// Tests the scenario when the Range control is incremented.
+TEST_F(ChangeRangeValueActionTest, RangeControlIncrementedUseValue) {
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
+                                                  ChangeRangeValueActionType::kIncrementAction);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  // Increment the slider value, but store the new value in the range field
+  // instead of the range_value field.
+  mock_semantics_source()->set_custom_action_callback([this]() {
+    SetSliderRangeValue(kSliderIntialRangeValue + kSliderDelta, /* use_range_value = */ false);
+  });
+
+  // Call ChangeRangeValueAction Run()
+  range_value_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, kRootNodeId);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderIntialRangeValue + kSliderDelta));
 }
 
 }  // namespace

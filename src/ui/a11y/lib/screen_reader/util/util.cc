@@ -195,4 +195,20 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
   return nodes_to_exclude;
 }
 
+std::string GetSliderValue(const fuchsia::accessibility::semantics::Node& node) {
+  if (!node.has_states()) {
+    return std::string();
+  }
+
+  if (node.states().has_range_value()) {
+    return std::to_string(static_cast<int>((node.states().range_value())));
+  }
+
+  if (node.states().has_value() && !node.states().value().empty()) {
+    return node.states().value();
+  }
+
+  return std::string();
+}
+
 }  // namespace a11y
