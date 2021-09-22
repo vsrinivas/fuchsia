@@ -9,7 +9,7 @@ use {
     fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
     std::{
-        collections::VecDeque,
+        collections::{HashMap, VecDeque},
         convert::TryFrom,
         fmt::{self, Debug},
     },
@@ -67,11 +67,17 @@ pub struct PerformanceStats {
     pub failure_list: ConnectFailureList,
     /// List of recent disconnects where the connect duration was short.
     pub disconnect_list: DisconnectList,
+    /// Maps from bssid to RSSI and velocity measurements
+    pub rssi_data_by_bssid: HashMap<client_types::Bssid, RssiData>,
 }
 
 impl PerformanceStats {
     pub fn new() -> Self {
-        Self { failure_list: ConnectFailureList::new(), disconnect_list: DisconnectList::new() }
+        Self {
+            failure_list: ConnectFailureList::new(),
+            disconnect_list: DisconnectList::new(),
+            rssi_data_by_bssid: HashMap::<client_types::Bssid, RssiData>::new(),
+        }
     }
 }
 
@@ -150,6 +156,12 @@ impl DisconnectList {
     }
 }
 
+/// Connection quality data related to RSSI
+#[derive(Clone, Debug, PartialEq)]
+pub struct RssiData {
+    pub rssi: f32,
+    pub velocity: f32,
+}
 /// Used to allow hidden probability calculations to make use of what happened most recently
 #[derive(Clone, Copy)]
 pub enum HiddenProbEvent {

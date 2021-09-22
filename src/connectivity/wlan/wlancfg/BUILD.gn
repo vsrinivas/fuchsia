@@ -123,6 +123,8 @@ rustc_library("lib") {
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
+
+  test_deps = [ "//src/lib/test_util" ]
 }
 
 rustc_binary("bin") {

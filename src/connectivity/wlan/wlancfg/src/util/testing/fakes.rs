@@ -7,7 +7,7 @@ use {
     crate::{
         client::types as client_types,
         config_management::{
-            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier,
+            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, RssiData,
             SavedNetworksManagerApi, ScanResultType,
         },
     },
@@ -198,5 +198,15 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
             .map(|cfgs| cfgs.clone())
             .flatten()
             .collect()
+    }
+
+    async fn record_connection_quality_data(
+        &self,
+        _id: &NetworkIdentifier,
+        _credential: &Credential,
+        _bssid: client_types::Bssid,
+        _connection_data: f32,
+    ) -> Option<RssiData> {
+        unimplemented!();
     }
 }

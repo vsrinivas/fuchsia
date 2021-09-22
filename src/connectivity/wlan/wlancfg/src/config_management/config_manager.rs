@@ -6,7 +6,7 @@ use {
     super::{
         network_config::{
             Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
-            NetworkIdentifier, SecurityType,
+            NetworkIdentifier, RssiData, SecurityType,
         },
         stash_conversion::*,
     },
@@ -38,6 +38,9 @@ use {
 };
 
 const MAX_CONFIGS_PER_SSID: usize = 1;
+// Number of previous RSSI measurements to exponentially weigh into average.
+// TODO(fxbug.dev/84870): Tune smoothing factor.
+const EWMA_SMOOTHING_FACTOR: u8 = 25;
 
 /// The Saved Network Manager keeps track of saved networks and provides thread-safe access to
 /// saved networks. Networks are saved by NetworkConfig and accessed by their NetworkIdentifier
@@ -60,6 +63,33 @@ pub enum ScanResultType {
     #[allow(dead_code)]
     Undirected,
     Directed(Vec<types::NetworkIdentifier>), // Contains list of target SSIDs
+}
+
+/// Calculates the expontentially weighted moving average RSSI value after a new RSSI measurement,
+/// using the previous average and a smoothing factor, which is the number of previous measurements
+/// to weigh into the average.
+fn calculate_ewma_rssi(previous_ewma: f32, measured_rssi: f32, smoothing_factor: u8) -> f32 {
+    (2.0 / (1.0 + smoothing_factor as f32) * measured_rssi)
+        + ((1.0 - (2.0 / (1.0 + smoothing_factor as f32))) * previous_ewma)
+}
+
+/// Calculates RSSI velocity across vector of RSSI measurements by determining
+/// the slope of the line of best fit using least squares regression.
+fn calculate_rssi_velocity(historical_rssis: Vec<f32>) -> f32 {
+    let n = historical_rssis.len() as f32;
+    let mut sum_x = 0.0;
+    let mut sum_y = 0.0;
+    let mut sum_xy = 0.0;
+    let mut sum_x2 = 0.0;
+
+    for (i, y) in historical_rssis.iter().enumerate() {
+        let x = i as f32;
+        sum_x += x;
+        sum_y += y;
+        sum_xy += x * y;
+        sum_x2 += x.powf(2.0);
+    }
+    (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powf(2.0))
 }
 
 #[async_trait]
@@ -134,6 +164,18 @@ pub trait SavedNetworksManagerApi: Send + Sync {
 
     // Return a list of every network config that has been saved.
     async fn get_networks(&self) -> Vec<NetworkConfig>;
+
+    // Updates connection quality information for a given network id. Runs filtering and
+    // calculations, stores the values, and returns them.
+    // TODO(fxbug.dev/84867): Replace connection_data (f32), which is currently just rssi, with
+    // struct when integrating connection quality retrieval.
+    async fn record_connection_quality_data(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: types::Bssid,
+        connection_data: f32,
+    ) -> Option<RssiData>;
 }
 
 impl SavedNetworksManager {
@@ -617,6 +659,47 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .flatten()
             .collect()
     }
+
+    async fn record_connection_quality_data(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: types::Bssid,
+        connection_data: f32,
+    ) -> Option<RssiData> {
+        // Find saved networks matching network id.
+        let mut saved_networks = self.saved_networks.lock().await;
+        let networks = match saved_networks.get_mut(&id) {
+            Some(networks) => networks,
+            None => {
+                error!("Failed to find network to record connection quality data.");
+                return None;
+            }
+        };
+        // Find network matching credential
+        for network in networks.iter_mut() {
+            if &network.credential == credential {
+                let rssi_data = match network.perf_stats.rssi_data_by_bssid.get(&bssid) {
+                    Some(rssi_data) => {
+                        let ewma_rssi = calculate_ewma_rssi(
+                            rssi_data.rssi,
+                            connection_data,
+                            EWMA_SMOOTHING_FACTOR,
+                        );
+                        // TODO(fxbug.dev/84872): Use historical RSSI values to calculate smoothed
+                        // velocity.
+                        let velocity = calculate_rssi_velocity(vec![rssi_data.rssi, ewma_rssi]);
+                        RssiData { rssi: ewma_rssi, velocity: velocity }
+                    }
+                    None => RssiData { rssi: connection_data, velocity: 0.0 },
+                };
+                let _ = network.perf_stats.rssi_data_by_bssid.insert(bssid, rssi_data.clone());
+                return Some(rssi_data);
+            }
+        }
+        error!("Failed to find matching network to record connection quality data.");
+        return None;
+    }
 }
 
 /// Returns a subset of potentially hidden saved networks, filtering probabilistically based
@@ -756,6 +839,7 @@ mod tests {
         std::{io::Write, mem},
         tempfile::TempDir,
         test_case::test_case,
+        test_util::{assert_gt, assert_lt},
         wlan_common::assert_variant,
     };
 
@@ -2300,5 +2384,89 @@ mod tests {
 
         // Check that a config was not saved for the identifier that was not saved before.
         assert!(saved_networks.lookup(id_3).await.is_empty());
+    }
+
+    #[fuchsia::test]
+    fn test_ewma_rssi_calculations() {
+        assert_eq!(calculate_ewma_rssi(-25.0, -35.0, 25), -25.769232);
+        assert_eq!(calculate_ewma_rssi(-90.0, -65.0, 12), -86.153846);
+        assert_eq!(calculate_ewma_rssi(-50.4524, -41.2564, 45), -50.052578);
+    }
+
+    #[fuchsia::test]
+    fn test_rssi_velocity_calculations() {
+        assert_eq!(calculate_rssi_velocity(vec![-45.0, -48.0]), -3.0);
+        assert_eq!(calculate_rssi_velocity(vec![-48.0, -45.0]), 3.0);
+        assert_eq!(calculate_rssi_velocity(vec![-60.256, -55.128, -57.512, -60.256]), -0.23840332);
+        assert_eq!(calculate_rssi_velocity(vec![-30.0, -32.0, -30.0, -30.0]), 0.2);
+        assert_eq!(calculate_rssi_velocity(vec![-25.0, -25.0, -25.0, -25.0, -25.0, -25.0]), 0.0);
+    }
+
+    #[fuchsia::test]
+    async fn test_record_connection_quality_data() {
+        let stash_id = rand_string();
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
+        let credential = Credential::Password(b"some_password".to_vec());
+        let bssid = types::Bssid([2; 6]);
+
+        // Save the network.
+        assert!(saved_networks
+            .store(net_id.clone(), credential.clone())
+            .await
+            .expect("Failed save network")
+            .is_none());
+        assert!(saved_networks
+            .store(net_id_also_valid.clone(), credential.clone())
+            .await
+            .expect("Failed save network")
+            .is_none());
+
+        // Record connection quality data
+        let response = saved_networks
+            .record_connection_quality_data(&net_id, &credential, bssid, -50.0)
+            .await
+            .expect("failed to get RSSI data response.");
+
+        // Verify connection quality data we recorded. Values should be the initial
+        // values, since its the first recording.
+        let saved_config = saved_networks
+            .lookup(net_id.clone())
+            .await
+            .pop()
+            .expect("Failed to get saved network config");
+        let rssi_data = saved_config
+            .perf_stats
+            .rssi_data_by_bssid
+            .get(&bssid)
+            .expect("failed to get rssi data.");
+        assert_eq!(response, *rssi_data);
+        assert_eq!(rssi_data.rssi, -50.0);
+        assert_eq!(rssi_data.velocity, 0.0);
+
+        // Record second quality connection data
+        let response = saved_networks
+            .record_connection_quality_data(&net_id, &credential, bssid, -51.0)
+            .await
+            .expect("failed to get RSSI data response.");
+
+        // Verify connection quality data was updated. This is non-determinstic and depends on the
+        // weighting parameters. But the RSSI should be smoothed to between the two values, and the
+        // velocity should be negative.
+        let saved_config =
+            saved_networks.lookup(net_id).await.pop().expect("Failed to get saved network config");
+        let rssi_data = saved_config
+            .perf_stats
+            .rssi_data_by_bssid
+            .get(&bssid)
+            .expect("failed to get rssi data.");
+        assert_eq!(response, *rssi_data);
+        assert_lt!(rssi_data.rssi, -50.0);
+        assert_gt!(rssi_data.rssi, -51.0);
+        assert_lt!(rssi_data.velocity, 0.0);
     }
 }
