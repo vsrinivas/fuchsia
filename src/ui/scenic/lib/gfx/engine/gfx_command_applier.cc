@@ -1290,8 +1290,8 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args), view_tree_updater)) {
     if (!(session->SetViewKoid(view->As<View>()->view_ref_koid()))) {
-      FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
-                        "become a session-terminating error. For more info, see [fxbug.dev/24450].";
+      FX_LOGS(INFO) << "Error: cannot set more than one root view in a session. For more info, see "
+                       "[fxbug.dev/24450] and [fxbug.dev/83903].";
       // TODO(fxbug.dev/24450) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
