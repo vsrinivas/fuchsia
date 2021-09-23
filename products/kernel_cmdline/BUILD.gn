@@ -68,6 +68,10 @@ kernel_cmdline("kernel.oom.behavior--reboot") {
   args = [ "kernel.oom.behavior=reboot" ]
 }
 
+kernel_cmdline("kernel.render-dlog-to-crashlog--true") {
+  args = [ "kernel.render-dlog-to-crashlog=true" ]
+}
+
 kernel_cmdline("kernel.serial--none") {
   args = [ "kernel.serial=none" ]
 }
