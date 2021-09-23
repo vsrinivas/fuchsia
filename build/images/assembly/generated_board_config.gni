@@ -26,6 +26,19 @@ import("//build/zbi/zbi.gni")
 #   use_esp (optional)
 #     [bool] Whether to include ESP bootloaders in the update package.
 #
+#   include_version_and_epoch (optional)
+#     [bool] Whether to add a version and epoch file to the images.
+#
+#   update_package_name (optional; default: "update")
+#     [string] The name to give the update package. For prime builds this
+#     should be "update_prime", so that the package does not override the
+#     non-prime package during publishing.
+#
+#   base_package_name (optional; default: "system_image")
+#     [string] The name to give the base package. For prime builds this
+#     should be "system_image_prime", so that the package does not override the
+#     non-prime package during publishing.
+#
 # MinFS arguments
 #   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
 #     [int] Size options for minfs to pass to the fvm tool.
@@ -73,9 +86,38 @@ template("generated_board_config") {
     use_esp = invoker.use_esp
   }
 
+  include_version_and_epoch = false
+  if (defined(invoker.include_version_and_epoch)) {
+    include_version_and_epoch = invoker.include_version_and_epoch
+  }
+
+  update_package_name = "update"
+  if (defined(invoker.update_package_name)) {
+    update_package_name = invoker.update_package_name
+  }
+
+  base_package_name = "system_image"
+  if (defined(invoker.base_package_name)) {
+    base_package_name = invoker.base_package_name
+  }
+
   generate_fvm = true
   if (defined(invoker.generate_fvm)) {
     generate_fvm = invoker.generate_fvm
+  }
+
+  if (include_version_and_epoch) {
+    labels = {
+      version = "//build/info:latest-commit-date"
+      epoch = "//src/sys/pkg/bin/system-updater:epoch.json"
+    }
+  }
+
+  if (include_version_and_epoch) {
+    files = {
+      version = build_info_files.version
+      epoch = get_label_info(labels.epoch, "target_out_dir") + "/epoch.json"
+    }
   }
 
   generated_file(target_name) {
@@ -90,6 +132,12 @@ template("generated_board_config") {
     }
     if (use_esp) {
       deps += [ "//build/images:esp" ]
+    }
+    if (include_version_and_epoch) {
+      deps += [
+        labels.epoch,
+        labels.version,
+      ]
     }
     if (defined(invoker.recovery)) {
       deps += [ invoker.recovery ]
@@ -147,6 +195,13 @@ template("generated_board_config") {
     }
 
     contents = {
+      if (include_version_and_epoch) {
+        version = rebase_path(files.version, root_build_dir)
+        epoch = rebase_path(files.epoch, root_build_dir)
+      }
+
+      update_package_name = update_package_name
+      base_package_name = base_package_name
       board_name = invoker.board_name
       arch = target_cpu
       zbi = {
@@ -168,9 +223,6 @@ template("generated_board_config") {
             }
           }
         }
-
-        backstop_file =
-            rebase_path(build_info_files.minimum_utc_stamp, root_build_dir)
       }
       if (use_vbmeta) {
         vbmeta = {

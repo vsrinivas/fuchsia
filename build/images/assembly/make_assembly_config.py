@@ -17,17 +17,15 @@ def main():
         '--extra-files-packages-list', type=argparse.FileType('r'))
     parser.add_argument(
         '--extra-deps-files-packages-list', type=argparse.FileType('r'))
-    parser.add_argument('--version-file')
-    parser.add_argument('--epoch-file')
     parser.add_argument(
         '--kernel-cmdline', type=argparse.FileType('r'), required=True)
+    parser.add_argument(
+        '--kernel-clock-backstop', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--kernel-image-metadata', type=argparse.FileType('r'), required=True)
     parser.add_argument('--boot-args', type=argparse.FileType('r'))
     parser.add_argument(
         '--bootfs-entries', type=argparse.FileType('r'), required=True)
-    parser.add_argument('--update-package-name', type=str, required=True)
-    parser.add_argument('--base-package-name', type=str, required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
@@ -37,11 +35,11 @@ def main():
     # Base package config
     if args.base_packages_list is not None:
         base_packages_list = json.load(args.base_packages_list)
-        config["base_packages"] = base_packages_list
+        config["base"] = base_packages_list
 
     if args.cache_packages_list is not None:
         cache_packages_list = json.load(args.cache_packages_list)
-        config["cache_packages"] = cache_packages_list
+        config["cache"] = cache_packages_list
 
     extra_packages = []
     if args.extra_files_packages_list is not None:
@@ -52,13 +50,7 @@ def main():
             args.extra_deps_files_packages_list)
         for extra_dep in extra_deps_file_packages:
             extra_packages.append(extra_dep["package_manifest"])
-    config["extra_packages_for_base_package"] = extra_packages
-
-    if args.version_file is not None:
-        config["version_file"] = args.version_file
-
-    if args.epoch_file is not None:
-        config["epoch_file"] = args.epoch_file
+    config["system"] = extra_packages
 
     # ZBI Config
     kernel_metadata = json.load(args.kernel_image_metadata)
@@ -70,15 +62,16 @@ def main():
         for image in kernel_metadata
         if image["name"] == "kernel" and image["type"] == "zbi"
     ]
-    config["kernel_image"] = kernel_path
-    config["kernel_cmdline"] = json.load(args.kernel_cmdline)
+    config["kernel"] = {
+        "path": kernel_path,
+        "args": json.load(args.kernel_cmdline),
+        "clock_backstop": json.load(args.kernel_clock_backstop),
+    }
 
     if args.boot_args is not None:
         config["boot_args"] = json.load(args.boot_args)
 
     config["bootfs_files"] = json.load(args.bootfs_entries)
-    config["update_package_name"] = args.update_package_name
-    config["base_package_name"] = args.base_package_name
 
     json.dump(config, args.output, indent=2)
 

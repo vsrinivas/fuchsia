@@ -362,9 +362,6 @@ template("assemble_system") {
   generated_product_config(labels.product_config) {
     forward_variables_from(invoker,
                            [
-                             "base_package_name",
-                             "include_version_and_epoch",
-                             "update_package_name",
                              "testonly",
                              "visibility",
                            ])
@@ -431,6 +428,9 @@ template("assemble_system") {
                              "zbi_name",
                              "zbi_signing_script",
                              "zbi_signing_args",
+                             "include_version_and_epoch",
+                             "base_package_name",
+                             "update_package_name",
                            ])
     board_name = invoker.board_name
     generate_fvm = generate_fvm

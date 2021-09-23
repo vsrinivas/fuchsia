@@ -33,7 +33,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
-        Some(construct_base_package(&outdir, &gendir, &product)?)
+        Some(construct_base_package(&outdir, &gendir, &board.base_package_name, &product)?)
     } else {
         info!("Skipping base package creation");
         None
@@ -133,7 +133,5 @@ fn read_configs(
 }
 
 fn has_base_package(product: &ProductConfig) -> bool {
-    return !(product.base_packages.is_empty()
-        && product.cache_packages.is_empty()
-        && product.extra_packages_for_base_package.is_empty());
+    return !(product.base.is_empty() && product.cache.is_empty() && product.system.is_empty());
 }

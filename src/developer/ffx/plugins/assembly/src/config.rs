@@ -9,39 +9,29 @@ use std::io::Read;
 use std::path::PathBuf;
 
 /// The set of information that defines a fuchsia product.
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ProductConfig {
-    /// The path to a file indicating the version of the product.
-    pub version_file: Option<PathBuf>,
-
-    /// The path to a file on the host indicating the OTA backstop.
-    pub epoch_file: Option<PathBuf>,
-
     /// The packages whose files get added to the base package. The
     /// packages themselves are not added, but their individual files are
     /// extracted and added to the base package. These files are needed
     /// to bootstrap pkgfs.
     #[serde(default)]
-    pub extra_packages_for_base_package: Vec<PathBuf>,
+    pub system: Vec<PathBuf>,
 
     /// The packages that are in the base package list, which is added
     /// to the base package (data/static_packages). These packages get
     /// updated by flashing and OTAing, and cannot be garbage collected.
     #[serde(default)]
-    pub base_packages: Vec<PathBuf>,
+    pub base: Vec<PathBuf>,
 
     /// The packages that are in the cache package list, which is added
     /// to the base package (data/cache_packages). These packages get
     /// updated by flashing and OTAing, but can be garbage collected.
     #[serde(default)]
-    pub cache_packages: Vec<PathBuf>,
+    pub cache: Vec<PathBuf>,
 
-    /// The path to the prebuilt kernel.
-    pub kernel_image: PathBuf,
-
-    /// The list of command line arguments to pass to the kernel on startup.
-    #[serde(default)]
-    pub kernel_cmdline: Vec<String>,
+    /// The parameters that specify which kernel to put into the ZBI.
+    pub kernel: KernelConfig,
 
     /// The list of additional boot args to add.
     #[serde(default)]
@@ -50,6 +40,31 @@ pub struct ProductConfig {
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
     pub bootfs_files: Vec<FileEntry>,
+}
+
+/// The information required to specify a kernel and its arguments.
+#[derive(Deserialize, Serialize)]
+pub struct KernelConfig {
+    /// The path to the prebuilt kernel.
+    pub path: PathBuf,
+
+    /// The list of command line arguments to pass to the kernel on startup.
+    #[serde(default)]
+    pub args: Vec<String>,
+
+    /// The backstop UTC time for the clock.
+    /// This is kept separate from the `args` to make it clear that this is a required argument.
+    pub clock_backstop: u64,
+}
+
+/// The set of information that defines a fuchsia board.
+#[derive(Deserialize, Serialize)]
+pub struct BoardConfig {
+    /// The path to a file indicating the version of the product.
+    pub version_file: Option<PathBuf>,
+
+    /// The path to a file on the host indicating the OTA backstop.
+    pub epoch_file: Option<PathBuf>,
 
     /// The name of the update package.
     #[serde(default = "default_update_package_name")]
@@ -58,19 +73,7 @@ pub struct ProductConfig {
     /// The name of the base package.
     #[serde(default = "default_base_package_name")]
     pub base_package_name: String,
-}
 
-fn default_update_package_name() -> String {
-    "update".to_string()
-}
-
-fn default_base_package_name() -> String {
-    "system_image".to_string()
-}
-
-/// The set of information that defines a fuchsia board.
-#[derive(Deserialize, Serialize)]
-pub struct BoardConfig {
     /// The name of the board.
     pub board_name: String,
 
@@ -95,6 +98,14 @@ pub struct BoardConfig {
     /// The information required to update and flash recovery.
     /// TODO(fxbug.dev/76371): Re-design so that recovery is a separate product.
     pub recovery: Option<RecoveryConfig>,
+}
+
+fn default_update_package_name() -> String {
+    "update".to_string()
+}
+
+fn default_base_package_name() -> String {
+    "system_image".to_string()
 }
 
 /// A mapping between a file source and destination.
@@ -170,9 +181,6 @@ pub struct ZbiConfig {
     /// An optional "signing script" to sign/repackage the zbi correctly for
     /// use with the device bootloader.
     pub signing_script: Option<ZbiSigningScript>,
-
-    /// The file that contains the backstop UTC time for the clock.
-    pub backstop_file: PathBuf,
 }
 
 /// The information needed to custom-package a ZBI for use on a board with
@@ -335,33 +343,69 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
+    impl ProductConfig {
+        /// Helper function for tests for constructing a ProductConfig.
+        pub fn new(kernel_path: impl AsRef<Path>, clock_backstop: u64) -> Self {
+            Self {
+                system: Vec::default(),
+                base: Vec::default(),
+                cache: Vec::default(),
+                boot_args: Vec::default(),
+                bootfs_files: Vec::default(),
+                kernel: KernelConfig {
+                    path: kernel_path.as_ref().into(),
+                    args: Vec::default(),
+                    clock_backstop,
+                },
+            }
+        }
+    }
+
+    impl BoardConfig {
+        /// Helper function for tests for constructing a BoardConfig.
+        pub fn new(name: impl AsRef<str>) -> Self {
+            Self {
+                version_file: None,
+                epoch_file: None,
+                update_package_name: default_update_package_name(),
+                base_package_name: default_base_package_name(),
+                board_name: name.as_ref().into(),
+                vbmeta: None,
+                bootloaders: Vec::default(),
+                zbi: ZbiConfig::default(),
+                blobfs: BlobFSConfig::default(),
+                fvm: None,
+                recovery: None,
+            }
+        }
+    }
 
     #[test]
     fn product_from_json_file() {
         let json = r#"
             {
-              "version_file": "path/to/version",
-              "epoch_file": "path/to/epoch",
-              "extra_packages_for_base_package": ["package0"],
-              "base_packages": ["package1", "package2"],
-              "cache_packages": ["package3", "package4"],
-              "kernel_image": "path/to/kernel",
-              "kernel_cmdline": ["arg1", "arg2"],
-              "boot_args": ["arg1", "arg2"],
+              "system": ["package0"],
+              "base": ["package1", "package2"],
+              "cache": ["package3", "package4"],
+              "kernel": {
+                "path": "path/to/kernel",
+                "args": ["arg1", "arg2"],
+                "clock_backstop": 0
+              },
               "bootfs_files": [
                 {
                     "source": "path/to/source",
                     "destination": "path/to/destination"
                 }
-              ],
-              "update_package_name": "update",
-              "base_package_name": "system_image"
+              ]
             }
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
         let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.version_file, Some(PathBuf::from("path/to/version")));
+        assert_eq!(config.kernel.clock_backstop, 0);
     }
 
     #[test]
@@ -369,13 +413,14 @@ mod tests {
         let json = r#"
             {
               // json5 files can have comments in them.
-              version_file: "path/to/version",
-              epoch_file: "path/to/epoch",
-              extra_packages_for_base_package: ["package0"],
-              base_packages: ["package1", "package2"],
-              cache_packages: ["package3", "package4"],
-              kernel_image: "path/to/kernel",
-              kernel_cmdline: ["arg1", "arg2"],
+              system: ["package0"],
+              base: ["package1", "package2"],
+              cache: ["package3", "package4"],
+              kernel: {
+                path: "path/to/kernel",
+                args: ["arg1", "arg2"],
+                clock_backstop: 0,
+              },
               // and lists can have trailing commas
               boot_args: ["arg1", "arg2", ],
               bootfs_files: [
@@ -384,35 +429,38 @@ mod tests {
                     destination: "path/to/destination",
                 }
               ],
-              update_package_name: "update",
-              base_package_name: "system_image",
             }
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
         let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.version_file, Some(PathBuf::from("path/to/version")));
+        assert_eq!(config.kernel.clock_backstop, 0);
     }
 
     #[test]
     fn product_from_minimal_json_file() {
         let json = r#"
             {
-              "version_file": "path/to/version",
-              "epoch_file": "path/to/epoch",
-              "kernel_image": "path/to/kernel"
+              "kernel": {
+                "path": "path/to/kernel",
+                "clock_backstop": 0
+              }
             }
         "#;
 
         let mut cursor = std::io::Cursor::new(json);
         let config: ProductConfig = from_reader(&mut cursor).expect("parse config");
-        assert_eq!(config.version_file, Some(PathBuf::from("path/to/version")));
+        assert_eq!(config.kernel.clock_backstop, 0);
     }
 
     #[test]
     fn board_from_json_file() {
         let json = r#"
             {
+              "version_file": "path/to/version",
+              "epoch_file": "path/to/epoch",
+              "update_package_name": "update",
+              "base_package_name": "system_image",
               "board_name": "my-board",
               "vbmeta": {
                 "partition": "name",
@@ -434,7 +482,6 @@ mod tests {
                 "max_size": 100,
                 "embed_fvm_in_zbi": false,
                 "compression": "zstd.max",
-                "backstop_file": "backstop.txt"
               },
               "fvm": {
                 "partition": "name",

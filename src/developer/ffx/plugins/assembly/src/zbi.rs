@@ -25,7 +25,7 @@ pub fn construct_zbi(
     let mut zbi_builder = ZbiBuilder::new(zbi_tool);
 
     // Add the kernel image.
-    zbi_builder.set_kernel(&product.kernel_image);
+    zbi_builder.set_kernel(&product.kernel.path);
 
     // Add the additional boot args.
     for boot_arg in &product.boot_args {
@@ -36,9 +36,7 @@ pub fn construct_zbi(
     // merkle of the Base Package.
     if let Some(base_package) = &base_package {
         // Indicate the clock UTC backstop.
-        let backstop = std::fs::read_to_string(&board.zbi.backstop_file)
-            .context("Failed to read the backstop file")?;
-        zbi_builder.add_boot_arg(&format!("clock.backstop={}", backstop.trim_end_matches("\n")));
+        zbi_builder.add_boot_arg(&format!("clock.backstop={}", product.kernel.clock_backstop));
 
         // Instruct devmgr that a /system volume is required.
         zbi_builder.add_boot_arg("devmgr.require-system=true");
@@ -50,7 +48,7 @@ pub fn construct_zbi(
         // Add the pkgfs blobs to the boot arguments, so that pkgfs can be bootstrapped out of blobfs,
         // before the blobfs service is available.
         let pkgfs_manifest: PackageManifest = product
-            .base_packages
+            .base
             .iter()
             .find_map(|p| {
                 if let Ok(m) = pkg_manifest_from_path(p) {
@@ -68,7 +66,7 @@ pub fn construct_zbi(
     }
 
     // Add the command line.
-    for cmd in &product.kernel_cmdline {
+    for cmd in &product.kernel.args {
         zbi_builder.add_cmdline_arg(cmd);
     }
 
@@ -137,7 +135,7 @@ mod tests {
     use super::{construct_zbi, vendor_sign_zbi};
 
     use crate::base_package::BasePackage;
-    use crate::config::{BlobFSConfig, BoardConfig, ProductConfig, ZbiConfig, ZbiSigningScript};
+    use crate::config::{BoardConfig, ProductConfig, ZbiSigningScript};
     use assembly_test_util::{generate_fake_tool, generate_fake_tool_nop};
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
@@ -159,42 +157,22 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
 
-        let backstop_path = dir.path().join("backstop.txt");
-        std::fs::write(&backstop_path, "12345\n").unwrap();
-
         // Create fake product/board definitions.
-        let mut product_config = ProductConfig::default();
-        let board_config = BoardConfig {
-            board_name: "board".to_string(),
-            vbmeta: None,
-            bootloaders: Vec::new(),
-            zbi: ZbiConfig {
-                partition: "zbi".to_string(),
-                name: "fuchsia".to_string(),
-                max_size: 0,
-                embed_fvm_in_zbi: false,
-                compression: "zstd".to_string(),
-                signing_script: None,
-                backstop_file: backstop_path,
-            },
-            blobfs: BlobFSConfig::default(),
-            fvm: None,
-            recovery: None,
-        };
+        let kernel_path = dir.path().join("kernel");
+        let mut product_config = ProductConfig::new(&kernel_path, 0);
+        let board_config = BoardConfig::new("board");
 
         // Create a kernel which is equivalent to: zbi --ouput <zbi-name>
-        let kernel_path = dir.path().join("kernel");
         let kernel_bytes = vec![
             0x42, 0x4f, 0x4f, 0x54, 0x00, 0x00, 0x00, 0x00, 0xe6, 0xf7, 0x8c, 0x86, 0x00, 0x00,
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x29, 0x17, 0x78, 0xb5,
             0xd6, 0xe8, 0x87, 0x4a,
         ];
         std::fs::write(&kernel_path, kernel_bytes).unwrap();
-        product_config.kernel_image = kernel_path;
 
         // Create a fake pkgfs.
         let pkgfs_manifest_path = generate_test_manifest_file(dir.path(), "pkgfs");
-        product_config.base_packages.push(pkgfs_manifest_path);
+        product_config.base.push(pkgfs_manifest_path);
 
         // Create a fake base package.
         let base_path = dir.path().join("base.far");
@@ -230,31 +208,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let expected_output = dir.path().join("fuchsia.zbi.signed");
 
-        let backstop_path = dir.path().join("backstop.txt");
-        std::fs::write(&backstop_path, "12345\n").unwrap();
-
         // Create a fake zbi.
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
         // Create fake board definitions.
-        let board_config = BoardConfig {
-            board_name: "board".to_string(),
-            vbmeta: None,
-            bootloaders: Vec::new(),
-            zbi: ZbiConfig {
-                partition: "zbi".to_string(),
-                name: "fuchsia".to_string(),
-                max_size: 0,
-                embed_fvm_in_zbi: false,
-                compression: "zstd".to_string(),
-                signing_script: None,
-                backstop_file: backstop_path,
-            },
-            blobfs: BlobFSConfig::default(),
-            fvm: None,
-            recovery: None,
-        };
+        let mut board_config = BoardConfig::new("board");
+        board_config.zbi.name = "fuchsia".into();
 
         // Create the signing tool that ensures that we pass the correct arguments.
         let tool_path = dir.path().join("tool.sh");

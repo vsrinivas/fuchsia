@@ -17,9 +17,6 @@ import("//build/zbi/kernel_cmdline.gni")
 #   kernel_image (required)
 #     [label] Kernel to add to the ZBI.
 #
-#   include_version_and_epoch (optional)
-#     [bool] Whether to add a version and epoch file to the images.
-#
 #   base_packages (optional)
 #     [list of labels] The packages to include in the base package set.
 #
@@ -43,16 +40,6 @@ import("//build/zbi/kernel_cmdline.gni")
 #   cmdline_deps (optional)
 #     [list of labels] Dependencies with metadata including additional kernel
 #     command arguments to add to the ZBI.
-#
-#   update_package_name (optional; default: "update")
-#     [string] The name to give the update package. For prime builds this
-#     should be "update_prime", so that the package does not override the
-#     non-prime package during publishing.
-#
-#   base_package_name (optional; default: "system_image")
-#     [string] The name to give the base package. For prime builds this
-#     should be "system_image_prime", so that the package does not override the
-#     non-prime package during publishing.
 #
 template("generated_product_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
@@ -84,21 +71,6 @@ template("generated_product_config") {
     boot_args += invoker.boot_args
   }
 
-  include_version_and_epoch = false
-  if (defined(invoker.include_version_and_epoch)) {
-    include_version_and_epoch = invoker.include_version_and_epoch
-  }
-
-  update_package_name = "update"
-  if (defined(invoker.update_package_name)) {
-    update_package_name = invoker.update_package_name
-  }
-
-  base_package_name = "system_image"
-  if (defined(invoker.base_package_name)) {
-    base_package_name = invoker.base_package_name
-  }
-
   # Labels used in this file.
   labels = {
     base_package_list = "${target_name}_package_manifest_list.base"
@@ -110,11 +82,6 @@ template("generated_product_config") {
     kernel_cmdline_args = "${target_name}_kernel_cmdline_args"
     bootfs_entries_metadata = "${target_name}_bootfs_entries_metadata"
     boot_args = "${target_name}_boot_args"
-
-    if (include_version_and_epoch) {
-      version = "//build/info:latest-commit-date"
-      epoch = "//src/sys/pkg/bin/system-updater:epoch.json"
-    }
   }
 
   # Files produced by targets in this file.
@@ -131,11 +98,6 @@ template("generated_product_config") {
     bootfs_entries_metadata =
         "$target_out_dir/${target_name}_bootfs_entries.gn_meta.json"
     boot_args = "$target_out_dir/${target_name}_boot_args"
-
-    if (include_version_and_epoch) {
-      version = build_info_files.version
-      epoch = get_label_info(labels.epoch, "target_out_dir") + "/epoch.json"
-    }
   }
 
   # Helper template to create the package list inputs.
@@ -283,6 +245,7 @@ template("generated_product_config") {
 
     outputs = [ invoker.output_path ]
     inputs = [
+      build_info_files.minimum_utc_stamp,
       files.base_package_list,
       files.cache_package_list,
       files.extra_base_list,
@@ -302,6 +265,7 @@ template("generated_product_config") {
       ":${labels.extra_base_list}",
       ":${labels.kernel_cmdline_args}",
       ":${labels.kernel_image_metadata}",
+      "//build/info:latest-commit-date",
     ]
 
     args = [
@@ -317,33 +281,14 @@ template("generated_product_config") {
       rebase_path(files.kernel_image_metadata, root_build_dir),
       "--kernel-cmdline",
       rebase_path(files.kernel_cmdline_args, root_build_dir),
+      "--kernel-clock-backstop",
+      rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
       "--boot-args",
       rebase_path(files.boot_args, root_build_dir),
       "--bootfs-entries",
       rebase_path(files.bootfs_entries_metadata, root_build_dir),
-      "--update-package-name",
-      update_package_name,
-      "--base-package-name",
-      base_package_name,
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
     ]
-
-    if (include_version_and_epoch) {
-      inputs += [
-        files.version,
-        files.epoch,
-      ]
-      deps += [
-        labels.epoch,
-        labels.version,
-      ]
-      args += [
-        "--version-file",
-        rebase_path(files.version, root_build_dir),
-        "--epoch-file",
-        rebase_path(files.epoch, root_build_dir),
-      ]
-    }
   }
 }

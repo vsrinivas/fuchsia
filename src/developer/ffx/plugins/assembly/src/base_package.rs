@@ -23,21 +23,22 @@ pub struct BasePackage {
 pub fn construct_base_package(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
+    name: impl AsRef<str>,
     product: &ProductConfig,
 ) -> Result<BasePackage> {
     let mut base_pkg_builder = BasePackageBuilder::default();
-    for pkg_manifest_path in &product.extra_packages_for_base_package {
+    for pkg_manifest_path in &product.system {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_files_from_package(pkg_manifest);
     }
-    for pkg_manifest_path in &product.base_packages {
+    for pkg_manifest_path in &product.base {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_base_package(pkg_manifest).context(format!(
             "Failed to add package to base package list with manifest: {}",
             pkg_manifest_path.display()
         ))?;
     }
-    for pkg_manifest_path in &product.cache_packages {
+    for pkg_manifest_path in &product.cache {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_cache_package(pkg_manifest).context(format!(
             "Failed to add package to cache package list with manifest: {}",
@@ -47,7 +48,7 @@ pub fn construct_base_package(
 
     let base_package_path = outdir.as_ref().join("base.far");
     let build_results = base_pkg_builder
-        .build(&outdir, gendir, &product.base_package_name, &base_package_path)
+        .build(&outdir, gendir, name, &base_package_path)
         .context("Failed to build the base package")?;
 
     let base_package = File::open(&base_package_path).context("Failed to open the base package")?;
@@ -83,17 +84,18 @@ mod tests {
         let dir = tempdir().unwrap();
 
         // Prepare package manifests to add to the base package.
-        let mut product_config = ProductConfig::default();
-        let manifest = generate_test_manifest_file(&dir.path(), "extra_base");
-        product_config.extra_packages_for_base_package.push(manifest);
-        let manifest = generate_test_manifest_file(&dir.path(), "test_static");
-        product_config.base_packages.push(manifest);
-        let manifest = generate_test_manifest_file(&dir.path(), "test_cache");
-        product_config.cache_packages.push(manifest);
-        product_config.base_package_name = "system_image".to_string();
+        let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
+        let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
+        let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
+        let mut product_config = ProductConfig::new("kernel", 0);
+        product_config.system.push(system_manifest);
+        product_config.base.push(base_manifest);
+        product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let base_package = construct_base_package(dir.path(), dir.path(), &product_config).unwrap();
+        let base_package =
+            construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
+                .unwrap();
         assert_eq!(base_package.path, dir.path().join("base.far"));
 
         // Read the base package, and assert the contents are correct.
@@ -115,17 +117,18 @@ mod tests {
         let dir = tempdir().unwrap();
 
         // Prepare package manifests to add to the base package.
-        let mut product_config = ProductConfig::default();
-        let manifest = generate_test_manifest_file(&dir.path(), "extra_base");
-        product_config.extra_packages_for_base_package.push(manifest);
-        let manifest = generate_test_manifest_file(&dir.path(), "test_static");
-        product_config.base_packages.push(manifest);
-        let manifest = generate_test_manifest_file(&dir.path(), "test_cache");
-        product_config.cache_packages.push(manifest);
-        product_config.base_package_name = "system_image".to_string();
+        let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
+        let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
+        let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
+        let mut product_config = ProductConfig::new("kernel", 0);
+        product_config.system.push(system_manifest);
+        product_config.base.push(base_manifest);
+        product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let base_package = construct_base_package(dir.path(), dir.path(), &product_config).unwrap();
+        let base_package =
+            construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
+                .unwrap();
         assert_eq!(base_package.path, dir.path().join("base.far"));
 
         // Read the base package, and assert the contents are correct.

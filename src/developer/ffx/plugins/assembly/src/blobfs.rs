@@ -21,10 +21,10 @@ pub fn construct_blobfs(
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
-    for package_manifest_path in &product.base_packages {
+    for package_manifest_path in &product.base {
         blobfs_builder.add_package(&package_manifest_path)?;
     }
-    for package_manifest_path in &product.cache_packages {
+    for package_manifest_path in &product.cache {
         blobfs_builder.add_package(&package_manifest_path)?;
     }
 
@@ -60,7 +60,7 @@ mod tests {
     #[serial]
     fn construct() {
         let dir = tempdir().unwrap();
-        let product_config = ProductConfig::default();
+        let product_config = ProductConfig::new("kernel", 0);
         let blobfs_config = BlobFSConfig { layout: "compact".to_string(), compress: true };
 
         // Create a fake base package.

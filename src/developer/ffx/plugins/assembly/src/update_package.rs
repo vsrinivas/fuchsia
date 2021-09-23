@@ -34,10 +34,10 @@ pub fn construct_update(
 
     // Add several files to the update package.
     let mut update_pkg_builder = UpdatePackageBuilder::new();
-    if let Some(epoch_file) = &product.epoch_file {
+    if let Some(epoch_file) = &board.epoch_file {
         update_pkg_builder.add_file(epoch_file, "epoch.json")?;
     }
-    if let Some(version_file) = &product.version_file {
+    if let Some(version_file) = &board.version_file {
         update_pkg_builder.add_file(version_file, "version")?;
     }
     update_pkg_builder.add_file(&board_name, "board")?;
@@ -78,14 +78,13 @@ pub fn construct_update(
         }
         Ok(())
     };
-    add_packages_to_update(&product.base_packages)?;
-    add_packages_to_update(&product.cache_packages)?;
+    add_packages_to_update(&product.base)?;
+    add_packages_to_update(&product.cache)?;
 
     if let Some(base_package) = &base_package {
         // Add the base package merkle.
-        // TODO(fxbug.dev/76986): Do not hardcode the base package path.
         update_pkg_builder.add_package(
-            PackagePath::from_name_and_variant(&product.base_package_name, "0")?,
+            PackagePath::from_name_and_variant(&board.base_package_name, "0")?,
             base_package.merkle,
         )?;
     }
@@ -93,7 +92,7 @@ pub fn construct_update(
     // Build the update package and return its path.
     let update_package_path = outdir.as_ref().join("update.far");
     let update_contents = update_pkg_builder
-        .build(outdir, gendir, &product.update_package_name, &update_package_path)
+        .build(outdir, gendir, &board.update_package_name, &update_package_path)
         .context("Failed to build the update package")?;
     Ok(UpdatePackage { contents: update_contents, path: update_package_path })
 }
@@ -103,12 +102,11 @@ mod tests {
     use super::construct_update;
 
     use crate::base_package::BasePackage;
-    use crate::config::{BlobFSConfig, BoardConfig, ProductConfig, ZbiConfig};
+    use crate::config::{BoardConfig, ProductConfig};
     use fuchsia_archive::Reader;
     use fuchsia_hash::Hash;
     use std::collections::BTreeMap;
     use std::fs::File;
-    use std::path::PathBuf;
     use std::str::FromStr;
     use tempfile::tempdir;
 
@@ -117,27 +115,8 @@ mod tests {
         let dir = tempdir().unwrap();
 
         // Create fake product/board definitions.
-        let mut product_config = ProductConfig::default();
-        product_config.kernel_image = dir.path().join("kernel");
-        product_config.update_package_name = "update".to_string();
-        product_config.base_package_name = "system_image".to_string();
-        let board_config = BoardConfig {
-            board_name: "board".to_string(),
-            vbmeta: None,
-            bootloaders: Vec::new(),
-            zbi: ZbiConfig {
-                partition: "zbi".to_string(),
-                name: "fuchsia".to_string(),
-                max_size: 0,
-                embed_fvm_in_zbi: false,
-                compression: "zstd".to_string(),
-                signing_script: None,
-                backstop_file: PathBuf::from("backstop.txt"),
-            },
-            blobfs: BlobFSConfig::default(),
-            fvm: None,
-            recovery: None,
-        };
+        let product_config = ProductConfig::new("kernel", 0);
+        let board_config = BoardConfig::new("board");
 
         // Create a fake zbi.
         let zbi_path = dir.path().join("fuchsia.zbi");
@@ -192,27 +171,8 @@ mod tests {
         let dir = tempdir().unwrap();
 
         // Create fake product/board definitions.
-        let mut product_config = ProductConfig::default();
-        product_config.kernel_image = dir.path().join("kernel");
-        product_config.update_package_name = "update".to_string();
-        product_config.base_package_name = "system_image".to_string();
-        let board_config = BoardConfig {
-            board_name: "board".to_string(),
-            vbmeta: None,
-            bootloaders: Vec::new(),
-            zbi: ZbiConfig {
-                partition: "zbi".to_string(),
-                name: "fuchsia".to_string(),
-                max_size: 0,
-                embed_fvm_in_zbi: false,
-                compression: "zstd".to_string(),
-                signing_script: None,
-                backstop_file: PathBuf::from("backstop.txt"),
-            },
-            blobfs: BlobFSConfig::default(),
-            fvm: None,
-            recovery: None,
-        };
+        let product_config = ProductConfig::new("kernel", 0);
+        let board_config = BoardConfig::new("board");
 
         // Create a fake zbi.
         let zbi_path = dir.path().join("fuchsia.zbi");
