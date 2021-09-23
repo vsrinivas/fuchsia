@@ -26,6 +26,6 @@ fidl("fuchsia.wlan.policy") {
 
 measure_tape("measure_tape_for_scan_result") {
   target_binding = "rust"
-  target_type = "fuchsia.wlan.policy/ScanResult"
+  target_types = [ "fuchsia.wlan.policy/ScanResult" ]
   fidls = [ "//sdk/fidl/fuchsia.wlan.policy" ]
 }

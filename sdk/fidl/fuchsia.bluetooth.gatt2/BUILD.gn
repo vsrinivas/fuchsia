@@ -23,6 +23,6 @@ fidl("fuchsia.bluetooth.gatt2") {
 
 measure_tape("hlcpp_measure_tape_for_read_by_type_result") {
   target_binding = "hlcpp"
-  target_type = "fuchsia.bluetooth.gatt2/ReadByTypeResult"
+  target_types = [ "fuchsia.bluetooth.gatt2/ReadByTypeResult" ]
   fidls = [ "//sdk/fidl/fuchsia.bluetooth.gatt2" ]
 }

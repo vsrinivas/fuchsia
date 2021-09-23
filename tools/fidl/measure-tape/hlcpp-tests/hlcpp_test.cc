@@ -388,5 +388,12 @@ TEST(MeasureTape, VectorOfStructsWithTwoHandles) {
   EXPECT_EQ(size.num_handles, 6);
 }
 
+TEST(MeasureTape, AnotherTopLevelThing) {
+  ::measuretape::AnotherTopLevelThing value;
+  auto size = Measure(value);
+  EXPECT_EQ(size.num_bytes, 8);
+  EXPECT_EQ(size.num_handles, 0);
+}
+
 }  // namespace measuretape
 }  // namespace measure_tape

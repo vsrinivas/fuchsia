@@ -21,7 +21,7 @@ To add a measure tape to your project, use the `measure_tape` template:
 ```gn
 measure_tape("measure_tape_for_targettype") {
   target_binding = "hlcpp"
-  target_type = "fuchsia.your.library/TargetType"
+  target_types = [ "fuchsia.your.library/TargetType" ]
   fidls = [ ":fuchsia.your.library" ]
 }
 ```
@@ -32,9 +32,10 @@ _This template must be imported with
  * `target_binding` key indicates what bindings to generate.
    Valid values are currently "hlcpp" and "rust".
 
- * `target_type` key indicates the FIDL target type for which to generate a
-   measure tape. It must be provided in its fully qualified form, e.g.
-   `fuchsia.ui.scenic/Command` or `fuchsia.mem/Buffer`
+ * `target_types` key indicates the list of FIDL target types for which to
+   generate a measure tape. Target types must be provided in its fully qualified
+   form, e.g. `fuchsia.ui.scenic/Command` or `fuchsia.mem/Buffer`. Only the
+   `hlcpp` backend supports multiple target types for now.
 
  * `fidls` key must list all FIDL libraries transitively reachable through the
    target type. For instance, the `fuchsia.ui.scenic/Command` requires
@@ -97,7 +98,7 @@ fx measure-tape \
     -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.input/fuchsia.ui.input.fidl.json \
     -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.scenic/fuchsia.ui.scenic.fidl.json \
     -json out/default/fidling/gen/sdk/fidl/fuchsia.ui.views/fuchsia.ui.views.fidl.json \
-    -target-type fuchsia.ui.scenic/Command \
+    -target-types fuchsia.ui.scenic/Command \
     -target-binding hlcpp \
     -h-include-path lib/ui/scenic/cpp/commands_sizing.h \
     -out-h sdk/lib/ui/scenic/cpp/commands_sizing.h \

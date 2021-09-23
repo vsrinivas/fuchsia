@@ -35,7 +35,7 @@ type tmplParams struct {
 	HIncludePath           string
 	Namespaces             []string
 	LibraryNameWithSlashes string
-	TargetType             string
+	TargetTypes            []string
 	CcIncludes             []string
 }
 
@@ -72,11 +72,13 @@ struct Size {
   const int64_t num_handles;
 };
 
-// Helper function to measure {{ .TargetType }}.
+{{ range $targetType := .TargetTypes }}
+// Helper function to measure {{ $targetType }}.
 //
 // In most cases, the size returned is a precise size. Otherwise, the size
 // returned is a safe upper-bound.
-Size Measure(const {{ .TargetType }}& value);
+Size Measure(const {{ $targetType }}& value);
+{{ end }}
 
 {{ range .RevNamespaces }}
 }  // {{ . }}
@@ -128,11 +130,13 @@ private:
 
 }  // namespace
 
-Size Measure(const {{ .TargetType }}& value) {
+{{ range $targetType := .TargetTypes }}
+Size Measure(const {{ $targetType }}& value) {
   MeasuringTape tape;
   tape.Measure(value);
   return tape.Done();
 }
+{{ end }}
 
 {{ range .RevNamespaces }}
 }  // {{ . }}
@@ -141,9 +145,15 @@ Size Measure(const {{ .TargetType }}& value) {
 
 var pathSeparators = regexp.MustCompile("[/_.-]")
 
-func (p *Printer) newTmplParams(targetMt *measurer.MeasuringTape) tmplParams {
+func (p *Printer) newTmplParams(targetMts []*measurer.MeasuringTape) tmplParams {
+	libraryName := targetMts[0].Name().LibraryName()
+	for _, targetMt := range targetMts[1:] {
+		if otherLibraryName := targetMt.Name().LibraryName(); libraryName != otherLibraryName {
+			panic(fmt.Sprintf("all target types must be in the same library, found %s and %s", libraryName, otherLibraryName))
+		}
+	}
 	namespaces := []string{"measure_tape"}
-	namespaces = append(namespaces, targetMt.Name().LibraryName().Parts()...)
+	namespaces = append(namespaces, libraryName.Parts()...)
 
 	headerTagParts := pathSeparators.Split(p.hIncludePath, -1)
 	for i, part := range headerTagParts {
@@ -152,27 +162,31 @@ func (p *Printer) newTmplParams(targetMt *measurer.MeasuringTape) tmplParams {
 	headerTagParts = append(headerTagParts, "")
 	headerTag := strings.Join(headerTagParts, "_")
 
+	var targetMtsNames []string
+	for _, targetMt := range targetMts {
+		targetMtsNames = append(targetMtsNames, fmtType(targetMt.Name()))
+	}
 	return tmplParams{
 		Year:                   "2020",
 		HeaderTag:              headerTag,
 		HIncludePath:           p.hIncludePath,
-		LibraryNameWithSlashes: strings.Join(targetMt.Name().LibraryName().Parts(), "/"),
-		TargetType:             fmtType(targetMt.Name()),
+		LibraryNameWithSlashes: strings.Join(libraryName.Parts(), "/"),
+		TargetTypes:            targetMtsNames,
 		Namespaces:             namespaces,
 	}
 }
 
-func (p *Printer) WriteH(buf *bytes.Buffer, targetMt *measurer.MeasuringTape) {
-	if err := header.Execute(buf, p.newTmplParams(targetMt)); err != nil {
+func (p *Printer) WriteH(buf *bytes.Buffer, targetMts []*measurer.MeasuringTape) {
+	if err := header.Execute(buf, p.newTmplParams(targetMts)); err != nil {
 		panic(err)
 	}
 }
 
 func (p *Printer) WriteCc(buf *bytes.Buffer,
-	targetMt *measurer.MeasuringTape,
+	targetMts []*measurer.MeasuringTape,
 	allMethods map[measurer.MethodID]*measurer.Method) {
 
-	params := p.newTmplParams(targetMt)
+	params := p.newTmplParams(targetMts)
 	for _, libraryName := range p.m.RootLibraries() {
 		params.CcIncludes = append(params.CcIncludes,
 			fmt.Sprintf("#include <%s/cpp/fidl.h>", strings.Join(libraryName.Parts(), "/")))

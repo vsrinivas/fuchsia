@@ -8,19 +8,19 @@ import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("measure_fuchsia_pkg_index_entry") {
   fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_type = "fuchsia.pkg/PackageIndexEntry"
+  target_types = [ "fuchsia.pkg/PackageIndexEntry" ]
   target_binding = "rust"
 }
 
 measure_tape("measure_fuchsia_pkg_blob_id") {
   fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_type = "fuchsia.pkg/BlobId"
+  target_types = [ "fuchsia.pkg/BlobId" ]
   target_binding = "rust"
 }
 
 measure_tape("measure_fuchsia_pkg_blob_info") {
   fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_type = "fuchsia.pkg/BlobInfo"
+  target_types = [ "fuchsia.pkg/BlobInfo" ]
   target_binding = "rust"
 }
 

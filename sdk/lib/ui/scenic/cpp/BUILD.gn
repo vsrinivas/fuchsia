@@ -80,7 +80,7 @@ compiled_action("gen_command_sizing") {
         root_build_dir),
     "--target-binding",
     "hlcpp",
-    "--target-type",
+    "--target-types",
     "fuchsia.ui.scenic/Command",
     "--out-h",
     rebase_path("commands_sizing.h"),

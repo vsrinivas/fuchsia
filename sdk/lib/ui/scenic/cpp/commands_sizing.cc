@@ -1332,11 +1332,13 @@ private:
 
 }  // namespace
 
+
 Size Measure(const ::fuchsia::ui::scenic::Command& value) {
   MeasuringTape tape;
   tape.Measure(value);
   return tape.Done();
 }
+
 
 
 }  // scenic

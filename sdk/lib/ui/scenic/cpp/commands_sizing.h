@@ -25,11 +25,13 @@ struct Size {
   const int64_t num_handles;
 };
 
+
 // Helper function to measure ::fuchsia::ui::scenic::Command.
 //
 // In most cases, the size returned is a precise size. Otherwise, the size
 // returned is a safe upper-bound.
 Size Measure(const ::fuchsia::ui::scenic::Command& value);
+
 
 
 }  // scenic

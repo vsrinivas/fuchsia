@@ -14,12 +14,12 @@ fidl("fuchsia.test") {
 
 measure_tape("hlcpp_measure_tape_for_case") {
   fidls = [ "//sdk/fidl/fuchsia.test" ]
-  target_type = "fuchsia.test/Case"
+  target_types = [ "fuchsia.test/Case" ]
   target_binding = "hlcpp"
 }
 
 measure_tape("rust_measure_tape_for_case") {
   fidls = [ "//sdk/fidl/fuchsia.test" ]
-  target_type = "fuchsia.test/Case"
+  target_types = [ "fuchsia.test/Case" ]
   target_binding = "rust"
 }

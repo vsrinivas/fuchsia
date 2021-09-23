@@ -32,6 +32,11 @@ type TopLevelUnion = strict resource union {
    23: struct_with_a_vector StructWithAVector;
 };
 
+// 8 bytes (i.e. 4 bytes, aligned to 8)
+type AnotherTopLevelThing = struct {
+    just_a_simple_example uint32;
+};
+
 // 16 bytes + FIDL_ALIGN(string length)
 type StructWithString = struct {
     string string;

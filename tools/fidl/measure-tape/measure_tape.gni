@@ -18,12 +18,13 @@ import("//build/fidl/toolchain.gni")
 #   fidls (required)
 #     A list of GN depedencies. All those depedencies must be `fidl` targets.
 #
-#   target_type (required)
-#     The fully qualified FIDL type for which to generate a measuring tape.
+#   target_types (required)
+#     A list of fully qualified FIDL types for which to generate a measuring
+#     tape.
 template("measure_tape") {
   assert(defined(invoker.target_binding))
   assert(defined(invoker.fidls))
-  assert(defined(invoker.target_type))
+  assert(defined(invoker.target_types))
 
   # targets
   name = target_name
@@ -39,8 +40,6 @@ template("measure_tape") {
   gen_args = [
     "--target-binding",
     invoker.target_binding,
-    "--target-type",
-    invoker.target_type,
     "--out-cc",
     rebase_path(out_cc, root_build_dir),
     "--out-h",
@@ -50,6 +49,12 @@ template("measure_tape") {
     "--h-include-path",
     "measure_tape/hlcpp/${target_name}.h",
   ]
+  foreach(target_type, invoker.target_types) {
+    gen_args += [
+      "--target-types",
+      target_type,
+    ]
+  }
   foreach(fidl, invoker.fidls) {
     fidl_target =
         get_label_info(fidl, "label_no_toolchain") + "($fidl_toolchain)"

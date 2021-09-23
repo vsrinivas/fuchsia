@@ -26,7 +26,7 @@ fidl("fuchsia.bluetooth.le") {
 
 measure_tape("hlcpp_measure_tape_for_peer") {
   target_binding = "hlcpp"
-  target_type = "fuchsia.bluetooth.le/Peer"
+  target_types = [ "fuchsia.bluetooth.le/Peer" ]
   fidls = [
     "//sdk/fidl/fuchsia.bluetooth",
     "//sdk/fidl/fuchsia.bluetooth.le",

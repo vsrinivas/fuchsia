@@ -15,7 +15,7 @@ import("//tools/fidl/measure-tape/measure_tape.gni")
 
 measure_tape("logmessage_measure_tape") {
   target_binding = "rust"
-  target_type = "fuchsia.logger/LogMessage"
+  target_types = [ "fuchsia.logger/LogMessage" ]
   fidls = [ "//sdk/fidl/fuchsia.logger" ]
 }
 

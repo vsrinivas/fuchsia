@@ -32,7 +32,7 @@ fidl("fuchsia.stash") {
 
 measure_tape("rust_measure_tape_for_list_item") {
   target_binding = "rust"
-  target_type = "fuchsia.stash/ListItem"
+  target_types = [ "fuchsia.stash/ListItem" ]
   fidls = [
     "//sdk/fidl/fuchsia.stash",
     "//sdk/fidl/fuchsia.mem",
@@ -41,7 +41,7 @@ measure_tape("rust_measure_tape_for_list_item") {
 
 measure_tape("rust_measure_tape_for_key_value") {
   target_binding = "rust"
-  target_type = "fuchsia.stash/KeyValue"
+  target_types = [ "fuchsia.stash/KeyValue" ]
   fidls = [
     "//sdk/fidl/fuchsia.stash",
     "//sdk/fidl/fuchsia.mem",
