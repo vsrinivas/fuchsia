@@ -537,7 +537,7 @@ mod tests {
             OfferDirectoryDecl, OfferSource, OfferTarget, UseDirectoryDecl, UseSource,
         },
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-        maplit::hashmap,
+        maplit::{hashmap, hashset},
         scrutiny::prelude::{DataController, DataModel},
         scrutiny_testing::fake::fake_data_model,
         serde_json::json,
@@ -723,7 +723,8 @@ mod tests {
         })
         .build("root_url".to_string());
         let tree = build_tree_result.tree.ok_or(anyhow!("Failed to build component tree"))?;
-        model.set(V2ComponentTree::new(tree, build_tree_result.errors))?;
+        let deps = hashset! {};
+        model.set(V2ComponentTree::new(deps, tree, build_tree_result.errors))?;
         Ok(model)
     }
 

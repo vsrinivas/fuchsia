@@ -6,11 +6,13 @@ use {
     cm_fidl_analyzer::component_tree::{ComponentTree, ComponentTreeError},
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
+    std::collections::HashSet,
     uuid::Uuid,
 };
 
 #[derive(Deserialize, Serialize)]
 pub struct V2ComponentTree {
+    pub deps: HashSet<String>,
     // TODO(pesk): start serializing the `tree` field if/when cm_rust::ComponentDecl
     // implements Serialize.
     #[serde(skip)]
@@ -19,8 +21,12 @@ pub struct V2ComponentTree {
 }
 
 impl V2ComponentTree {
-    pub fn new(tree: ComponentTree, errors: Vec<ComponentTreeError>) -> Self {
-        Self { tree, errors }
+    pub fn new(
+        deps: HashSet<String>,
+        tree: ComponentTree,
+        errors: Vec<ComponentTreeError>,
+    ) -> Self {
+        Self { deps, tree, errors }
     }
 }
 

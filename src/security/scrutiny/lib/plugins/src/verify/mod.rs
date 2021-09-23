@@ -93,8 +93,8 @@ mod tests {
         super::*,
         crate::{
             core::collection::{
-                testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
-                Manifests, Zbi,
+                testing::fake_component_src_pkg, Component, Components, CoreDataDeps, Manifest,
+                ManifestData, Manifests, Zbi,
             },
             verify::{
                 collection::V2ComponentTree,
@@ -113,10 +113,13 @@ mod tests {
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
         fidl_fuchsia_sys2 as fsys2,
+        maplit::hashset,
         scrutiny_testing::fake::*,
         serde_json::json,
         std::collections::HashMap,
     };
+
+    static CORE_DEP_STR: &str = "core_dep";
 
     fn data_model() -> Arc<DataModel> {
         fake_data_model()
@@ -225,9 +228,11 @@ mod tests {
             root_component_url.clone().unwrap_or(DEFAULT_ROOT_URL.to_string()),
         );
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
+        let deps = hashset! { CORE_DEP_STR.to_string() };
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
         model.set(Zbi { ..zbi(root_component_url) })?;
+        model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
 
@@ -261,6 +266,8 @@ mod tests {
         let bar_manifest = make_v2_manifest(bar_id, bar_decl)?;
         let baz_manifest = make_v2_manifest(baz_id, baz_decl)?;
 
+        let deps = hashset! { CORE_DEP_STR.to_string() };
+
         model.set(Components::new(vec![
             root_component,
             foo_component,
@@ -270,6 +277,7 @@ mod tests {
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
         model.set(Zbi { ..zbi(None) })?;
+        model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
 
@@ -322,8 +330,9 @@ mod tests {
         );
         assert!(build_tree_result.tree.is_some());
         let tree = build_tree_result.tree.unwrap();
+        let deps = hashset! {};
 
-        model.set(V2ComponentTree::new(tree, build_tree_result.errors))?;
+        model.set(V2ComponentTree::new(deps, tree, build_tree_result.errors))?;
         Ok(model)
     }
 

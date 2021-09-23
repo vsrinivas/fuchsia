@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{
-        collection::{Components, ManifestData, Manifests, Zbi},
-        package::collector::ROOT_RESOURCE,
+    crate::{
+        core::{
+            collection::{Components, CoreDataDeps, ManifestData, Manifests, Zbi},
+            package::collector::ROOT_RESOURCE,
+        },
+        verify::collection::V2ComponentTree,
     },
-    crate::verify::collection::V2ComponentTree,
     anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::component_tree::ComponentTreeBuilder,
     cm_rust::{ComponentDecl, FidlIntoNative},
@@ -129,7 +131,18 @@ impl DataCollector for V2ComponentTreeDataCollector {
                     "V2ComponentTreeDataCollector: Built v2 component tree with {} nodes",
                     tree.len()
                 );
-                model.set(V2ComponentTree::new(tree, build_result.errors))?;
+                let core_deps_collection: Arc<CoreDataDeps> = model.get().map_err(|err| {
+                    anyhow!(
+                        "Failed to read core data deps for v2 component tree data: {}",
+                        err.to_string()
+                    )
+                })?;
+                let deps = core_deps_collection.deps.clone();
+                model.set(V2ComponentTree::new(deps, tree, build_result.errors)).map_err(
+                    |err| {
+                        anyhow!("Failed to store v2 component tree in model: {}", err.to_string())
+                    },
+                )?;
 
                 Ok(())
             }
@@ -141,17 +154,26 @@ impl DataCollector for V2ComponentTreeDataCollector {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::*,
-        crate::core::collection::{
-            testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
-            Manifests,
+        super::{V2ComponentTreeDataCollector, DEFAULT_CONFIG_PATH, DEFAULT_ROOT_URL},
+        crate::{
+            core::collection::{
+                testing::fake_component_src_pkg, Component, Components, CoreDataDeps, Manifest,
+                ManifestData, Manifests, Zbi,
+            },
+            verify::collection::V2ComponentTree,
         },
         anyhow::Result,
-        cm_rust::{ChildDecl, NativeIntoFidl},
+        cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
         fidl::encoding::encode_persistent,
+        fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
         fidl_fuchsia_sys2::StartupMode,
+        maplit::hashset,
+        scrutiny::model::{collector::DataCollector, model::DataModel},
         scrutiny_testing::fake::*,
+        std::{collections::HashMap, sync::Arc},
     };
+
+    static CORE_DEP_STR: &str = "core_dep";
 
     fn data_model() -> Arc<DataModel> {
         fake_data_model()
@@ -200,10 +222,12 @@ pub mod tests {
         let root_component = make_v2_component(root_id, url);
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
         let zbi = Zbi { ..zbi(root_component_url) };
+        let deps = hashset! { CORE_DEP_STR.to_string() };
 
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
         model.set(zbi)?;
+        model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
 
@@ -217,10 +241,12 @@ pub mod tests {
         let v1_component = make_v1_component(v1_id);
         let v1_manifest = make_v1_manifest(v1_id);
         let zbi = Zbi { ..zbi(None) };
+        let deps = hashset! { CORE_DEP_STR.to_string() };
 
         model.set(Components::new(vec![root_component, v1_component]))?;
         model.set(Manifests::new(vec![root_manifest, v1_manifest]))?;
         model.set(zbi)?;
+        model.set(CoreDataDeps { deps })?;
         Ok(model)
     }
 
@@ -256,6 +282,8 @@ pub mod tests {
 
         let zbi = Zbi { ..zbi(None) };
 
+        let deps = hashset! { CORE_DEP_STR.to_string() };
+
         model.set(Components::new(vec![
             root_component,
             foo_component,
@@ -265,6 +293,8 @@ pub mod tests {
 
         model.set(Manifests::new(vec![root_manifest, foo_manifest, bar_manifest, baz_manifest]))?;
         model.set(zbi)?;
+        model.set(CoreDataDeps { deps })?;
+
         Ok(model)
     }
 
@@ -285,6 +315,14 @@ pub mod tests {
         V2ComponentTreeDataCollector::new().collect(model.clone())?;
         let tree = &model.get::<V2ComponentTree>()?.tree;
         assert_eq!(tree.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn single_forward_deps() -> Result<()> {
+        let model = single_v2_component_model(None)?;
+        V2ComponentTreeDataCollector::new().collect(model.clone())?;
+        assert_eq!(&model.get::<V2ComponentTree>()?.deps, &hashset! {CORE_DEP_STR.to_string()});
         Ok(())
     }
 
