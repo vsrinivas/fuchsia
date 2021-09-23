@@ -54,8 +54,7 @@ class TempFileTransformTests(unittest.TestCase):
     def test_transform_basename_prefix_only(self):
         self.assertEqual(
             output_cacher.TempFileTransform(
-                basename_prefix="fake.").transform("bar.o"),
-            "fake.bar.o")
+                basename_prefix="fake.").transform("bar.o"), "fake.bar.o")
         self.assertEqual(
             output_cacher.TempFileTransform(
                 basename_prefix="fake.").transform("foo/bar.o"),
@@ -64,71 +63,89 @@ class TempFileTransformTests(unittest.TestCase):
     def test_transform_basename_prefix_and_temp_dir(self):
         self.assertEqual(
             output_cacher.TempFileTransform(
-                temp_dir="/t/m/p", basename_prefix="xyz-").transform("foo/bar.o"),
+                temp_dir="/t/m/p",
+                basename_prefix="xyz-").transform("foo/bar.o"),
             "/t/m/p/foo/xyz-bar.o")
 
 
 class SplitTransformJoinTest(unittest.TestCase):
 
     def test_no_change(self):
-      self.assertEqual(
-          output_cacher.split_transform_join('text', '=', lambda x: x),
-          'text')
+        self.assertEqual(
+            output_cacher.split_transform_join('text', '=', lambda x: x),
+            'text')
 
     def test_repeat(self):
-      self.assertEqual(
-          output_cacher.split_transform_join('text', '=', lambda x: x+x),
-          'texttext')
+        self.assertEqual(
+            output_cacher.split_transform_join('text', '=', lambda x: x + x),
+            'texttext')
 
     def test_with_split(self):
-      self.assertEqual(
-          output_cacher.split_transform_join('a=b', '=', lambda x: x+x),
-          'aa=bb')
+        self.assertEqual(
+            output_cacher.split_transform_join('a=b', '=', lambda x: x + x),
+            'aa=bb')
 
     def test_with_split_recorded(self):
-      renamed_tokens = {}
+        renamed_tokens = {}
 
-      def recorded_transform(x):
-        new_text = x+x
-        renamed_tokens[x] = new_text
-        return new_text
+        def recorded_transform(x):
+            new_text = x + x
+            renamed_tokens[x] = new_text
+            return new_text
 
-      self.assertEqual(
-          output_cacher.split_transform_join('a=b', '=', recorded_transform),
-          'aa=bb')
-      self.assertEqual(renamed_tokens, {'a': 'aa', 'b': 'bb'})
+        self.assertEqual(
+            output_cacher.split_transform_join('a=b', '=', recorded_transform),
+            'aa=bb')
+        self.assertEqual(renamed_tokens, {'a': 'aa', 'b': 'bb'})
+
+
+class OutputSubstitutionTest(unittest.TestCase):
+
+    def test_no_prev_opt(self):
+        subst = output_cacher.OutputSubstitution('foo')
+        self.assertEqual(subst.output_name, 'foo')
+        self.assertEqual(subst.match_previous_option, '')
+
+    def test_with_prev_opt(self):
+        subst = output_cacher.OutputSubstitution('substitute_after:--out:foo')
+        self.assertEqual(subst.output_name, 'foo')
+        self.assertEqual(subst.match_previous_option, '--out')
+
+    def test_malformed_prev_opt(self):
+        with self.assertRaises(ValueError):
+            output_cacher.OutputSubstitution('substitute_after:--outfoo')
 
 
 class LexicallyRewriteTokenTest(unittest.TestCase):
 
     def test_repeat_text(self):
-      self.assertEqual(output_cacher.lexically_rewrite_token('foo',
-                                                             lambda x: x+x),
-                       'foofoo')
+        self.assertEqual(
+            output_cacher.lexically_rewrite_token('foo', lambda x: x + x),
+            'foofoo')
 
     def test_delimters_only(self):
-      self.assertEqual(output_cacher.lexically_rewrite_token(',,==,=,=,',
-                                                             lambda x: x+x),
-                       ',,==,=,=,')
+        self.assertEqual(
+            output_cacher.lexically_rewrite_token(',,==,=,=,', lambda x: x + x),
+            ',,==,=,=,')
 
     def test_flag_with_value(self):
 
-      def transform(x):
-        if x.startswith('file'):
-          return 'tmp-' + x
-        else:
-          return x
+        def transform(x):
+            if x.startswith('file'):
+                return 'tmp-' + x
+            else:
+                return x
 
-      self.assertEqual(
-          output_cacher.lexically_rewrite_token('--foo=file1', transform),
-          '--foo=tmp-file1')
-      self.assertEqual(
-          output_cacher.lexically_rewrite_token('notfile,file1,file2,notfile',
-                                                transform),
-          'notfile,tmp-file1,tmp-file2,notfile')
-      self.assertEqual(output_cacher.lexically_rewrite_token('--foo=file1,file2',
-                                                             transform),
-                       '--foo=tmp-file1,tmp-file2')
+        self.assertEqual(
+            output_cacher.lexically_rewrite_token('--foo=file1', transform),
+            '--foo=tmp-file1')
+        self.assertEqual(
+            output_cacher.lexically_rewrite_token(
+                'notfile,file1,file2,notfile', transform),
+            'notfile,tmp-file1,tmp-file2,notfile')
+        self.assertEqual(
+            output_cacher.lexically_rewrite_token(
+                '--foo=file1,file2', transform), '--foo=tmp-file1,tmp-file2')
 
 
 class MoveIfDifferentTests(unittest.TestCase):
@@ -192,18 +209,81 @@ class MoveIfDifferentTests(unittest.TestCase):
         mock_remove.assert_called_with("source.txt")
 
 
+class SubstituteCommandTest(unittest.TestCase):
+
+    def test_no_substitutions(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(command=["run.sh"], substitutions={})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh"])
+        self.assertEqual(renamed, {})
+
+    def test_one_suffix(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "out.txt"], substitutions={"out.txt": ""})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh", "out.txt.tmp"])
+        self.assertEqual(renamed, {"out.txt": "out.txt.tmp"})
+
+    def test_require_flag_match_missing_flag(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "out.txt"], substitutions={"out.txt": "-f"})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh", "out.txt"])
+        self.assertEqual(renamed, {})
+
+    def test_require_flag_match_wrong_flag(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "-g", "out.txt"],
+            substitutions={"out.txt": "-f"})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh", "-g", "out.txt"])
+        self.assertEqual(renamed, {})
+
+    def test_require_flag_match_have_flag(self):
+        transform = output_cacher.TempFileTransform(suffix=".tmp")
+        action = output_cacher.Action(
+            command=["run.sh", "-f", "out.txt"],
+            substitutions={"out.txt": "-f"})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh", "-f", "out.txt.tmp"])
+        self.assertEqual(renamed, {"out.txt": "out.txt.tmp"})
+
+    def test_match_only_one_flag(self):
+        transform = output_cacher.TempFileTransform(basename_prefix="tmp-")
+        action = output_cacher.Action(
+            command=["run.sh", "-x", "out.txt", "-f", "out.txt"],
+            substitutions={"out.txt": "-f"})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(repl, ["run.sh", "-x", "out.txt", "-f", "tmp-out.txt"])
+        self.assertEqual(renamed, {"out.txt": "tmp-out.txt"})
+
+    def test_match_only_one_flag_first_occurrence(self):
+        transform = output_cacher.TempFileTransform(basename_prefix="tmp-")
+        action = output_cacher.Action(
+            command=["run.sh", "out.txt", "-f", "out.txt", "out.txt"],
+            substitutions={"out.txt": "-f"})
+        repl, renamed = action.substitute_command(transform)
+        self.assertEqual(
+            repl, ["run.sh", "out.txt", "-f", "tmp-out.txt", "out.txt"])
+        self.assertEqual(renamed, {"out.txt": "tmp-out.txt"})
+
+
 class ReplaceOutputArgsTest(unittest.TestCase):
 
     def test_dry_run(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
-        action = output_cacher.Action(command=["run.sh"], outputs={})
+        action = output_cacher.Action(command=["run.sh"], substitutions={})
         with mock.patch.object(subprocess, "call") as mock_call:
             self.assertEqual(action.run_cached(transform, dry_run=True), 0)
         mock_call.assert_not_called()
 
     def test_command_failed(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
-        action = output_cacher.Action(command=["run.sh"], outputs={})
+        action = output_cacher.Action(command=["run.sh"], substitutions={})
         with mock.patch.object(subprocess, "call", return_value=1) as mock_call:
             with mock.patch.object(output_cacher,
                                    "move_if_different") as mock_update:
@@ -214,7 +294,8 @@ class ReplaceOutputArgsTest(unittest.TestCase):
     def test_command_passed_using_suffix(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
-            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+            command=["run.sh", "in.put", "out.put"],
+            substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher,
                                    "move_if_different") as mock_update:
@@ -227,7 +308,7 @@ class ReplaceOutputArgsTest(unittest.TestCase):
         transform = output_cacher.TempFileTransform(temp_dir="temp/temp")
         action = output_cacher.Action(
             command=["run.sh", "in.put", "foo/out.put"],
-            outputs={"foo/out.put"})
+            substitutions={"foo/out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher,
                                    "move_if_different") as mock_update:
@@ -244,7 +325,7 @@ class RunTwiceCompareTests(unittest.TestCase):
 
     def test_command_failed(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
-        action = output_cacher.Action(command=["run.sh"], outputs={})
+        action = output_cacher.Action(command=["run.sh"], substitutions={})
         with mock.patch.object(subprocess, "call", return_value=1) as mock_call:
             with mock.patch.object(output_cacher, "files_match") as mock_match:
                 with mock.patch.object(os.path, "exists",
@@ -263,7 +344,8 @@ class RunTwiceCompareTests(unittest.TestCase):
     def test_command_passed_and_rerun_matches(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
-            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+            command=["run.sh", "in.put", "out.put"],
+            substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=True) as mock_match:
@@ -292,7 +374,8 @@ class RunTwiceCompareTests(unittest.TestCase):
     def test_command_passed_and_rerun_differs(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
-            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+            command=["run.sh", "in.put", "out.put"],
+            substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=False) as mock_match:
@@ -330,7 +413,10 @@ class RunTwiceCompareTests(unittest.TestCase):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
             command=["run.sh", "in.put", "out.put", "out2.put"],
-            outputs={"out.put", "out2.put"})
+            substitutions={
+                "out.put": "",
+                "out2.put": ""
+            })
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    wraps=fake_match) as mock_match:
@@ -370,7 +456,7 @@ class RunTwiceWithSubstitutionCompareTests(unittest.TestCase):
 
     def test_command_failed(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
-        action = output_cacher.Action(command=["run.sh"], outputs={})
+        action = output_cacher.Action(command=["run.sh"], substitutions={})
         with mock.patch.object(subprocess, "call", return_value=1) as mock_call:
             with mock.patch.object(output_cacher, "files_match") as mock_match:
                 self.assertEqual(
@@ -382,7 +468,8 @@ class RunTwiceWithSubstitutionCompareTests(unittest.TestCase):
     def test_command_passed_and_rerun_matches(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
-            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+            command=["run.sh", "in.put", "out.put"],
+            substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=True) as mock_match:
@@ -402,7 +489,8 @@ class RunTwiceWithSubstitutionCompareTests(unittest.TestCase):
     def test_command_passed_and_rerun_differs(self):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
-            command=["run.sh", "in.put", "out.put"], outputs={"out.put"})
+            command=["run.sh", "in.put", "out.put"],
+            substitutions={"out.put": ""})
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=False) as mock_match:
@@ -431,7 +519,10 @@ class RunTwiceWithSubstitutionCompareTests(unittest.TestCase):
         transform = output_cacher.TempFileTransform(suffix=".tmp")
         action = output_cacher.Action(
             command=["run.sh", "in.put", "out.put", "out2.put"],
-            outputs={"out.put", "out2.put"})
+            substitutions={
+                "out.put": "",
+                "out2.put": ""
+            })
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    wraps=fake_match) as mock_match:

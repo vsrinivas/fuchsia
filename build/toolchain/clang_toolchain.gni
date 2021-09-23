@@ -320,9 +320,9 @@ template("clang_toolchain") {
         link_map_args = "-C link-args=-Wl,--Map=\"{{UNSTRIPPED_OUTFILE}}.map\""
       }
 
-      if (restat_rust) {
-        command +=
-            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+      if (restat_rust) {  # Overwrite an existing output file only if its
+                          # contents have changed.
+        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
         restat = true
       }
 
@@ -434,9 +434,9 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       command = ""
-      if (restat_rust) {
-        command +=
-            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+      if (restat_rust) {  # Overwrite an existing output file only if its
+                          # contents have changed.
+        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
         restat = true
       }
 
@@ -462,9 +462,9 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       command = ""
-      if (restat_rust) {
-        command +=
-            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+      if (restat_rust) {  # Overwrite an existing output file only if its
+                          # contents have changed.
+        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
         restat = true
       }
 
@@ -507,9 +507,9 @@ template("clang_toolchain") {
       depfile = "{{output}}.d"
 
       command = ""
-      if (restat_rust) {
-        command +=
-            "$_restat_wrapper --outputs {{output}} --depfile $depfile -- "
+      if (restat_rust) {  # Overwrite an existing output file only if its
+                          # contents have changed.
+        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
         restat = true
       }
 

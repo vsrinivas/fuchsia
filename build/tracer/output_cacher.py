@@ -10,6 +10,10 @@ output if the output did not already exist or the contents are different.
 This conditional move is done for every declared output that appears in the
 arguments list.
 
+This is intended to be used in build systems like Ninja that support `restat`:
+treating unchanged outputs as up-to-date, which has the potential to prune
+the action graph on-the-fly.
+
 Assumptions:
   Output files can be whole shell tokens in the command's arguments.
     We also support filenames as lexical substrings in tokens like
@@ -32,7 +36,7 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Any, Callable, Collection, Dict, FrozenSet, Iterable, Sequence, Tuple
+from typing import Any, Callable, Collection, Dict, Iterable, Sequence, Tuple
 import dataclasses
 
 
@@ -126,19 +130,54 @@ def lexically_rewrite_token(token: str, transform: Callable[[str], str]) -> str:
     return split_transform_join(token, "=", inner_transform)
 
 
+class OutputSubstitution(object):
+
+    def __init__(self, spec: str):
+        """Constructs an OutputSubstitution.
+
+        Args:
+          spec: a string that is either:
+            * a filename to substitute
+            * a specification of the form 'substitute_after:OPTION:FILENAME'
+              where OPTION is a flag to match, like '--output',
+              and FILENAME is the output file name to substitute.
+            File names may not contain the characters: =:,
+            See help for the --output option.
+        """
+        if spec.startswith('substitute_after:'):
+            tokens = spec.split(':')
+            if len(tokens) != 3:
+                raise ValueError(
+                    f'Expecting a substitution specification FILENAME or ' +
+                    f'substitute_after:OPTION:FILENAME, but got {spec}.')
+            self.match_previous_option = tokens[1]
+            self.output_name = tokens[2]
+        else:
+            # if blank, this will not be used for matching
+            self.match_previous_option = ''
+            self.output_name = spec
+
+
 @dataclasses.dataclass
 class Action(object):
     """Represents a set of parameters of a single build action."""
     command: Sequence[str] = dataclasses.field(default_factory=list)
-    outputs: FrozenSet[str] = dataclasses.field(default_factory=set)
+    substitutions: Dict[str, str] = dataclasses.field(
+        default_factory=dict)  # FrozenDict
     label: str = ""
 
-    def _substitute_command(self, tempfile_transform: TempFileTransform) -> Tuple[Sequence[str], Dict[str, str]]:
+    def substitute_command(
+        self, tempfile_transform: TempFileTransform
+    ) -> Tuple[Sequence[str], Dict[str, str]]:
         # renamed_outputs: keys: original file names, values: transformed temporary file names
         renamed_outputs = {}
 
-        def replace_output_filename(arg: str) -> str:
-            if arg in self.outputs:
+        def replace_output_filename(arg: str, prev_opt: str) -> str:
+            if arg in self.substitutions:
+                match_previous = self.substitutions[arg]
+                # Some output filenames requires the previous option to match.
+                if match_previous != '' and prev_opt != match_previous:
+                    return arg
                 new_arg = tempfile_transform.transform(arg)
                 if arg != new_arg:
                     renamed_outputs[arg] = new_arg
@@ -153,8 +192,9 @@ class Action(object):
             substituted_command += ['/usr/bin/env']
 
         substituted_command += [
-            lexically_rewrite_token(tok, replace_output_filename)
-            for tok in self.command
+            lexically_rewrite_token(
+                tok, lambda x: replace_output_filename(x, prev_opt))
+            for prev_opt, tok in zip([''] + self.command[:-1], self.command)
         ]
 
         return substituted_command, renamed_outputs
@@ -173,7 +213,8 @@ class Action(object):
         """
 
         # renamed_outputs: keys: original file names, values: transformed temporary file names
-        substituted_command, renamed_outputs = self._substitute_command(tempfile_transform)
+        substituted_command, renamed_outputs = self.substitute_command(
+            tempfile_transform)
 
         if verbose or dry_run:
             cmd_str = " ".join(substituted_command)
@@ -239,7 +280,7 @@ class Action(object):
 
         # Backup a copy of all declared outputs.
         renamed_outputs = {}
-        for out in self.outputs:
+        for out in self.substitutions:
             # TODO(fangism): what do we do about symlinks?
             # TODO(fangism): An output *directory* is unexpected, coming from GN,
             # but has been observed.  For now skip it.
@@ -280,7 +321,8 @@ class Action(object):
         """
 
         # renamed_outputs: keys: original file names, values: transformed temporary file names
-        substituted_command, renamed_outputs = self._substitute_command(tempfile_transform)
+        substituted_command, renamed_outputs = self.substitute_command(
+            tempfile_transform)
 
         if verbose:
             cmd_str = " ".join(substituted_command)
@@ -363,9 +405,24 @@ def main_arg_parser() -> argparse.ArgumentParser:
         help="The wrapped target's label",
     )
     parser.add_argument(
-        "--outputs", nargs="*", help="An action's declared outputs")
+        "--outputs",
+        nargs="*",
+        help="An action's declared outputs.  " +
+        "When an element is a plain file name, all occurrences of that file name "
+        +
+        "will be substituted in the command that writes temporary outputs.  " +
+        "When an element has the form 'substitute_after:OPTION:FILENAME', " +
+        "only occurrences of FILENAME found in the option argument of OPTION " +
+        "will be substituted (examples: OPTION=-o or OPTION=--out).  " +
+        "The latter form is recommended when an output filename can occur in " +
+        "multiple locations in a command line.  " +
+        "File names must not contain =,: characters.",
+    )
     parser.add_argument(
-        "--depfile", help="A depfile that is written by the command")
+        "--depfile",
+        help="A depfile that is written by the command.  " +
+        "This supports the same forms as --output.",
+    )
     parser.add_argument(
         "--temp-suffix",
         type=str,
@@ -458,10 +515,20 @@ def main():
     if args.depfile:
         outputs.add(args.depfile)
 
+    try:
+        substitutions = [OutputSubstitution(x) for x in args.outputs]
+    except ValueError as e:
+        print(str(e))
+        return 1
+
+    substitutions_dict = {
+        x.output_name: x.match_previous_option for x in substitutions
+    }
+
     # Run a modified command that can leave unchanged outputs untouched.
     action = Action(
         command=args.command,
-        outputs=outputs,
+        substitutions=substitutions_dict,
         label=args.label,
     )
 
