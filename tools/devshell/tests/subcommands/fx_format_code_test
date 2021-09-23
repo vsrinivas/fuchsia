@@ -81,15 +81,15 @@ TEST_fx-format-code-commands() {
   BT_EXPECT grep -q -E '"yapf.*python3.py"' "${out}"
 }
 
-# Ensure that the command fails if a file has no extension that we can use to
-# choose a formatter.
+# Ensure that the command fails if a file with no extension is specified.
 TEST_fx-format-code-no-extension() {
   local out="${BT_TEMP_DIR}/_fx_format_code_output"
   BT_ASSERT_FAIL "${fx}" format-code --files="${TESTDATA}/no-extension" 2> "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "Unable to determine language"
 }
 
-# Ensure that the command fails if a file has an unsupported extension.
+# Ensure that the command fails if a file with an unsupported extension is
+# specified.
 TEST_fx-format-code-unknown-extension() {
   local out="${BT_TEMP_DIR}/_fx_format_code_output"
   BT_ASSERT_FAIL "${fx}" format-code --files="${TESTDATA}/unknown-extension.blah" 2> "${out}"

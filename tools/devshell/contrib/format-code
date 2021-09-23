@@ -98,6 +98,15 @@ function format-full-file() {
 
 # Format the given file.
 function format-file() {
+  # If the user requested formatting of a single specific file, we want to
+  # loudly alert them to the fact that we can't actually format that file, since
+  # silently exiting would suggest that we *do* know how to format the file and
+  # that it was already properly formatted.
+  must_format=false
+  if $FILES_SPECIFIED && [[ ${#FILES[@]} == 1 ]]; then
+    must_format=true
+  fi
+
   filename="$(basename "$1")"
   case "${filename}" in
     *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
@@ -117,8 +126,18 @@ function format-file() {
     *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
     *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
     *.persist) format-full-file "${JSON5_FMT_CMD}" "$1";;
-    *.*) fx-error "Unsupported extension for file $1" && exit 1;;
-    *) fx-error "Unable to determine language for file $1" && exit 1;;
+    *.*)
+      if $must_format; then
+        fx-error "Unsupported extension for file $1"
+        exit 1
+      fi
+      ;;
+    *)
+      if $must_format; then
+        fx-error "Unable to determine language for file $1"
+        exit 1
+      fi
+      ;;
   esac
 }
 
@@ -145,6 +164,7 @@ DRY_RUN=
 VERBOSE=
 CHANGED_LINES=
 ALL_FILES=0
+FILES_SPECIFIED=false
 
 fx-config-read
 
@@ -164,6 +184,7 @@ while [ $# -gt 0 ]; do
       ALL_FILES=1
       ;;
     --files=*)
+      FILES_SPECIFIED=true
       GET_FILES=:
       FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
       ;;
