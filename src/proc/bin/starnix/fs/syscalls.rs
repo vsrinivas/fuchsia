@@ -923,7 +923,6 @@ pub fn sys_epoll_create(ctx: &SyscallContext<'_>, size: i32) -> Result<SyscallRe
 }
 
 pub fn sys_epoll_create1(ctx: &SyscallContext<'_>, flags: u32) -> Result<SyscallResult, Errno> {
-    not_implemented!("epoll_create1 not implemented");
     if flags & !EPOLL_CLOEXEC != 0 {
         return Err(EINVAL);
     }
@@ -934,25 +933,45 @@ pub fn sys_epoll_create1(ctx: &SyscallContext<'_>, flags: u32) -> Result<Syscall
 }
 
 pub fn sys_epoll_ctl(
-    _ctx: &SyscallContext<'_>,
-    _epfd: FdNumber,
+    ctx: &SyscallContext<'_>,
+    epfd: FdNumber,
     op: u32,
-    _fd: FdNumber,
-    _event: UserRef<epoll_event>,
+    fd: FdNumber,
+    event: UserRef<EpollEvent>,
 ) -> Result<SyscallResult, Errno> {
-    not_implemented!("epoll_ctl not implemented");
-    match op {
-        EPOLL_CTL_ADD => Ok(SUCCESS),
-        EPOLL_CTL_MOD => Ok(SUCCESS),
-        EPOLL_CTL_DEL => Ok(SUCCESS),
-        _ => Err(EINVAL),
+    let file = ctx.task.files.get(epfd)?;
+    let epoll_file = file.downcast_file::<EpollFileObject>().ok_or_else(|| errno!(EINVAL))?;
+
+    let ctl_file = ctx.task.files.get(fd)?;
+
+    // TODO We cannot wait on other epoll fds for fear of deadlocks caused by
+    // loops of dependency - for example, two loops that wait on each
+    // other. Fix this by detecting loops and returning ELOOP.
+    if ctl_file.downcast_file::<EpollFileObject>().is_some() {
+        not_implemented!("epoll_ctl cannot yet add another epoll fd");
+        return error!(ENOSYS);
     }
+
+    let mut epoll_event = EpollEvent { events: 0, data: 0 };
+    match op {
+        EPOLL_CTL_ADD => {
+            ctx.task.mm.read_object(event, &mut epoll_event)?;
+            epoll_file.add(&ctl_file, epoll_event)?;
+        }
+        EPOLL_CTL_MOD => {
+            ctx.task.mm.read_object(event, &mut epoll_event)?;
+            epoll_file.modify(&ctl_file, epoll_event)?;
+        }
+        EPOLL_CTL_DEL => epoll_file.delete(&ctl_file)?,
+        _ => return error!(EINVAL),
+    }
+    Ok(SUCCESS)
 }
 
 pub fn sys_epoll_wait(
     ctx: &SyscallContext<'_>,
     epfd: FdNumber,
-    events: UserRef<epoll_event>,
+    events: UserRef<EpollEvent>,
     max_events: i32,
     timeout: i32,
 ) -> Result<SyscallResult, Errno> {
@@ -960,15 +979,30 @@ pub fn sys_epoll_wait(
 }
 
 pub fn sys_epoll_pwait(
-    _ctx: &SyscallContext<'_>,
-    _epfd: FdNumber,
-    _events: UserRef<epoll_event>,
-    _max_events: i32,
-    _timeout: i32,
-    _sigmask: UserRef<sigset_t>,
+    ctx: &SyscallContext<'_>,
+    epfd: FdNumber,
+    events: UserRef<EpollEvent>,
+    max_events: i32,
+    timeout: i32,
+    sigmask: UserRef<sigset_t>,
 ) -> Result<SyscallResult, Errno> {
-    not_implemented!("epoll_pwait not implemented");
-    Err(ENOSYS)
+    if sigmask != UserRef::new(UserAddress::default()) {
+        not_implemented!("sigmask is ignored in epoll_pwait");
+    }
+    if max_events < 1 {
+        return error!(EINVAL);
+    }
+    let file = ctx.task.files.get(epfd)?;
+    let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
+
+    let active_events = epoll_file.wait(max_events, timeout)?;
+    let mut event_ref = events;
+    for event in active_events.iter() {
+        ctx.task.mm.write_object(UserRef::new(event_ref.addr()), event)?;
+        event_ref = event_ref.next();
+    }
+
+    Ok(active_events.len().into())
 }
 
 pub fn sys_flock(

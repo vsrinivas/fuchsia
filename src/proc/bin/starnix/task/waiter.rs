@@ -37,6 +37,7 @@ impl WaitCallback {
         Box::new(|_| {})
     }
 }
+
 /// A type that can put a thread to sleep waiting for a condition.
 pub struct Waiter {
     /// The underlying Zircon port that the thread sleeps in.
@@ -218,7 +219,6 @@ struct Observer {
     key: WaitKey,
 }
 
-// TODO this code should deal with FdEvents, not u32
 impl ObserverList {
     /// Establish a wait for the given events.
     ///

@@ -1972,13 +1972,6 @@ pub struct vfs_ns_cap_data__bindgen_ty_1 {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct epoll_event {
-    pub events: __u32,
-    pub _not_used: __u32,
-    pub data: __u64,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct f_owner_ex {
     pub type_: crate::x86_64_types::c_int,
     pub pid: __kernel_pid_t,
