@@ -6,7 +6,7 @@ use {
     crate::devmgr_config::DevmgrConfigError,
     scrutiny::prelude::DataCollection,
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     thiserror::Error,
     uuid::Uuid,
 };
@@ -92,7 +92,7 @@ pub type StaticPkgsContents = HashMap<String, String>;
 
 #[derive(Deserialize, Serialize)]
 pub struct StaticPkgsCollection {
-    pub deps: Vec<String>,
+    pub deps: HashSet<String>,
     pub static_pkgs: Option<StaticPkgsContents>,
     pub errors: Vec<StaticPkgsError>,
 }

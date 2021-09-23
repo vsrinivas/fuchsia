@@ -94,8 +94,9 @@ impl VerifyStaticPkgs {
             .collect();
 
         // Write out the depfile.
+        let deps: Vec<String> = static_pkgs_result.deps.into_iter().collect();
         let mut depfile = File::create(&self.depfile_path).context("Failed to read dep file")?;
-        write!(depfile, "{}: {}", self.stamp_path, static_pkgs_result.deps.join(" "))
+        write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
             .context("Failed to write to dep file")?;
 
         let golden_file =

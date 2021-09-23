@@ -36,7 +36,7 @@ plugin!(
             "/verify/build" => VerifyBuildController::default(),
             "/verify/map_tree" => TreeMappingController::default(),
             "/verify/capability_routes" => CapabilityRouteController::default(),
-            "/verify/component_routes" => RouteSourcesController::default(),
+            "/verify/route_sources" => RouteSourcesController::default(),
         }
     ),
     vec![PluginDescriptor::new("CorePlugin")]

@@ -5,7 +5,7 @@
 use {
     scrutiny::prelude::DataCollection,
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     thiserror::Error,
     uuid::Uuid,
 };
@@ -59,7 +59,7 @@ pub type DevmgrConfigContents = HashMap<String, Vec<String>>;
 
 #[derive(Deserialize, Serialize)]
 pub struct DevmgrConfigCollection {
-    pub deps: Vec<String>,
+    pub deps: HashSet<String>,
     pub devmgr_config: Option<DevmgrConfigContents>,
     pub errors: Vec<DevmgrConfigError>,
 }

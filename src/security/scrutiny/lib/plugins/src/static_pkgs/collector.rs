@@ -11,10 +11,12 @@ use {
     fuchsia_archive::Reader as FarReader,
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
+    maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_config::ModelConfig,
     scrutiny_utils::key_value::parse_key_value,
     std::{
+        collections::HashSet,
         fs::{read_to_string, File},
         io::{Cursor, Read},
         path::Path,
@@ -29,7 +31,7 @@ static META_FAR_CONTENTS_LISTING_PATH: &str = "meta/contents";
 static STATIC_PKGS_LISTING_PATH: &str = "data/static_packages";
 
 struct StaticPkgsData {
-    deps: Vec<String>,
+    deps: HashSet<String>,
     static_pkgs: StaticPkgsContents,
 }
 
@@ -217,7 +219,7 @@ fn collect_static_pkgs(
     })?;
 
     Ok(StaticPkgsData {
-        deps: vec![blob_manifest_path, system_image_path, static_pkgs_blob_path],
+        deps: hashset! {blob_manifest_path, system_image_path, static_pkgs_blob_path},
         static_pkgs,
     })
 }
@@ -232,7 +234,7 @@ impl DataCollector for StaticPkgsCollector {
             model
                 .set(StaticPkgsCollection {
                     static_pkgs: None,
-                    deps: vec![],
+                    deps: hashset! {},
                     errors: vec![StaticPkgsError::FailedToReadDevmgrConfigData {
                         model_error: err.to_string(),
                     }],
@@ -289,7 +291,7 @@ mod tests {
         anyhow::{anyhow, Context, Result},
         fuchsia_archive::write as far_write,
         fuchsia_merkle::MerkleTree,
-        maplit::{btreemap, hashmap},
+        maplit::{btreemap, hashmap, hashset},
         scrutiny::model::collector::DataCollector,
         scrutiny_testing::fake::*,
         std::{
@@ -396,7 +398,7 @@ mod tests {
         let model = fake_data_model();
         // Result from devmgr config contains no config.
         let devmgr_config_result =
-            DevmgrConfigCollection { deps: vec![], devmgr_config: None, errors: vec![] };
+            DevmgrConfigCollection { deps: hashset! {}, devmgr_config: None, errors: vec![] };
         model.clone().set(devmgr_config_result).context("Failed to store devmgr config result")?;
         let collector = StaticPkgsCollector::default();
         collector
@@ -417,7 +419,7 @@ mod tests {
         let model = fake_data_model();
         // Result from devmgr config contains no config and an error.
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: None,
             errors: vec![DevmgrConfigError::FailedToOpenZbi {
                 zbi_path: "fuchsia.zbi".to_string(),
@@ -452,7 +454,7 @@ mod tests {
     fn test_missing_pkgfs_cmd_entry() -> Result<()> {
         let model = fake_data_model();
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // Empty devmgr config contains no pkgfs cmd entry.
             devmgr_config: Some(HashMap::new()),
             errors: vec![],
@@ -476,7 +478,7 @@ mod tests {
     fn test_pkgfs_cmd_too_short() -> Result<()> {
         let model = fake_data_model();
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // Too few arguments for launching pkgsvr.
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![PKGFS_BINARY_PATH.to_string()]
@@ -502,7 +504,7 @@ mod tests {
     fn test_pkgfs_cmd_too_long() -> Result<()> {
         let model = fake_data_model();
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // Too many arguments for launching pkgsvr.
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
@@ -531,7 +533,7 @@ mod tests {
         let bad_cmd_name = "unexpected/pkgsvr/path";
         let model = fake_data_model();
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // Unexpected path to pkgsvr.
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
@@ -560,7 +562,7 @@ mod tests {
         let bad_merkle_root = "I am not a merkle root";
         let model = fake_data_model();
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // System image merkle root parameter is not a valid merkle hash.
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
@@ -590,7 +592,7 @@ mod tests {
         // Empty blob manifest: System image will not be found.
         create_blob_manifest(&model.config().blob_manifest_path(), HashMap::new())?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), VALID_MERKLE_HASH.to_string(),
@@ -633,7 +635,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             // Config designates `VALID_MERKLE_HASH`, which maps to a system
             // image, but is not the correct hash for the system image.
             devmgr_config: Some(hashmap! {
@@ -677,7 +679,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), system_image_merkle,
@@ -721,7 +723,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), system_image_merkle,
@@ -771,7 +773,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), system_image_merkle,
@@ -817,7 +819,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), system_image_merkle,
@@ -864,7 +866,7 @@ mod tests {
             },
         )?;
         let devmgr_config_result = DevmgrConfigCollection {
-            deps: vec![],
+            deps: hashset! {},
             devmgr_config: Some(hashmap! {
                 PKGFS_CMD_DEVMGR_CONFIG_KEY.to_string() => vec![
                     PKGFS_BINARY_PATH.to_string(), system_image_merkle,

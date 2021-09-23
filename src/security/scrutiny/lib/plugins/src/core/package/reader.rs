@@ -7,9 +7,11 @@ use {
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     serde_json::Value,
-    std::collections::HashMap,
-    std::io::Cursor,
-    std::str,
+    std::{
+        collections::{HashMap, HashSet},
+        io::Cursor,
+        str,
+    },
 };
 
 // Constants/Statics
@@ -20,16 +22,23 @@ pub const CF_V2_EXT: &str = ".cm";
 /// Used primarily to allow for nicer testing via mocking out the backing `fx serve` instance.
 pub trait PackageReader: Send + Sync {
     /// Returns information for all packages served by an `fx serve` instance.
-    fn read_targets(&self) -> Result<TargetsJson>;
+    fn read_targets(&mut self) -> Result<TargetsJson>;
     /// Takes a package name and a merkle hash and returns the package definition
     /// for the specified merkle hash. All valid CF files specified by the FAR
     /// archive pointed to by the merkle hash are parsed and returned.
     /// The package name is not validated.
     ///
     /// Currently only CFv1 is supported, CFv2 support is tracked here (fxbug.dev/53347).
-    fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition>;
+    fn read_package_definition(
+        &mut self,
+        pkg_name: &str,
+        merkle: &str,
+    ) -> Result<PackageDefinition>;
     /// Reads the service package from the provided data.
-    fn read_service_package_definition(&self, data: String) -> Result<ServicePackageDefinition>;
+    fn read_service_package_definition(&mut self, data: String)
+        -> Result<ServicePackageDefinition>;
+    /// Gets the paths to files touched by read operations.
+    fn get_deps(&self) -> HashSet<String>;
 }
 
 pub struct PackageServerReader {
@@ -41,20 +50,24 @@ impl PackageServerReader {
         Self { pkg_getter }
     }
 
-    fn read_blob_raw(&self, merkle: &str) -> Result<Vec<u8>> {
+    fn read_blob_raw(&mut self, merkle: &str) -> Result<Vec<u8>> {
         Ok(self.pkg_getter.read_raw(&format!("blobs/{}", merkle)[..])?)
     }
 }
 
 impl PackageReader for PackageServerReader {
-    fn read_targets(&self) -> Result<TargetsJson> {
+    fn read_targets(&mut self) -> Result<TargetsJson> {
         let resp_b = self.pkg_getter.read_raw("targets.json")?;
         let resp = str::from_utf8(&resp_b)?;
 
         Ok(serde_json::from_str(&resp)?)
     }
 
-    fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition> {
+    fn read_package_definition(
+        &mut self,
+        pkg_name: &str,
+        merkle: &str,
+    ) -> Result<PackageDefinition> {
         // Retrieve the far archive from the package server.
         let resp_b = self.read_blob_raw(merkle)?;
         let mut cursor = Cursor::new(resp_b);
@@ -123,7 +136,10 @@ impl PackageReader for PackageServerReader {
 
     /// Reads the raw config-data package definition and converts it into a
     /// ServicePackageDefinition.
-    fn read_service_package_definition(&self, data: String) -> Result<ServicePackageDefinition> {
+    fn read_service_package_definition(
+        &mut self,
+        data: String,
+    ) -> Result<ServicePackageDefinition> {
         let json: Value = serde_json::from_str(&data)?;
         let mut service_def = ServicePackageDefinition { services: None, apps: None };
         if let Some(json_services) = json.get("services") {
@@ -151,6 +167,10 @@ impl PackageReader for PackageServerReader {
         }
         Ok(service_def)
     }
+
+    fn get_deps(&self) -> HashSet<String> {
+        self.pkg_getter.get_deps()
+    }
 }
 
 #[cfg(test)]
@@ -177,7 +197,7 @@ mod tests {
                 \"fuchsia.bar.Bar\": \"fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx\"
             }
         }";
-        let pkg_reader = PackageServerReader::new(Box::new(mock_getter));
+        let mut pkg_reader = PackageServerReader::new(Box::new(mock_getter));
         let result = pkg_reader.read_service_package_definition(service_def.to_string()).unwrap();
         assert_eq!(
             result.apps.unwrap(),
@@ -219,7 +239,7 @@ mod tests {
         let mock_getter = MockPackageGetter::new();
         mock_getter.append_bytes(target.into_inner());
 
-        let pkg_reader = PackageServerReader::new(Box::new(mock_getter));
+        let mut pkg_reader = PackageServerReader::new(Box::new(mock_getter));
         let result = pkg_reader.read_package_definition("foo", "bar").unwrap();
         assert_eq!(result.contents.len(), 3);
         assert_eq!(result.contents["a"], "b");

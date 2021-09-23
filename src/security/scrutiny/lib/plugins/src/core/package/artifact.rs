@@ -6,23 +6,27 @@ use {
     crate::core::package::getter::PackageGetter,
     std::fs,
     std::io::{Error, ErrorKind, Result},
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashSet,
+        path::{Path, PathBuf},
+    },
 };
 
 pub struct ArtifactGetter {
     artifact_path: PathBuf,
+    deps: HashSet<String>,
 }
 
 /// The ArtifactGetter retrieves package data and blobs directly from the
 /// build artifacts on disk.
 impl ArtifactGetter {
     pub fn new(artifact_path: &Path) -> Self {
-        Self { artifact_path: artifact_path.to_path_buf() }
+        Self { artifact_path: artifact_path.to_path_buf(), deps: HashSet::new() }
     }
 }
 
 impl PackageGetter for ArtifactGetter {
-    fn read_raw(&self, path: &str) -> Result<Vec<u8>> {
+    fn read_raw(&mut self, path: &str) -> Result<Vec<u8>> {
         let path = self.artifact_path.join(path);
         if path.is_relative() {
             return Err(Error::new(ErrorKind::PermissionDenied, "Relative paths disabled"));
@@ -37,19 +41,35 @@ impl PackageGetter for ArtifactGetter {
             ));
         }
 
-        let data = fs::read(self.artifact_path.join(path))?;
+        let path = self.artifact_path.join(path);
+        let path_str = path.to_str();
+        if path_str.is_none() {
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                "Path could not be converted to string",
+            ));
+        };
+        let path_str = path_str.unwrap();
+
+        let data = fs::read(path_str)?;
+        self.deps.insert(path_str.to_string());
+
         Ok(data)
+    }
+
+    fn get_deps(&self) -> HashSet<String> {
+        self.deps.clone()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::fs::File, std::io::prelude::*, tempfile::tempdir};
+    use {super::*, maplit::hashset, std::fs::File, std::io::prelude::*, tempfile::tempdir};
 
     #[test]
     fn test_basic() {
         let dir = tempdir().unwrap().into_path();
-        let getter = ArtifactGetter::new(&dir);
+        let mut getter = ArtifactGetter::new(&dir);
         let mut file = File::create(dir.join("foo")).unwrap();
         file.write_all(b"test_data").unwrap();
         file.sync_all().unwrap();
@@ -62,7 +82,7 @@ mod tests {
     #[test]
     fn test_relative_path_denied() {
         let dir = tempdir().unwrap();
-        let getter = ArtifactGetter::new(&dir.into_path());
+        let mut getter = ArtifactGetter::new(&dir.into_path());
         let result = getter.read_raw("..");
         match result {
             Ok(_) => {
@@ -73,5 +93,29 @@ mod tests {
                 assert_eq!(error.kind(), ErrorKind::PermissionDenied);
             }
         };
+    }
+
+    #[test]
+    fn test_deps() {
+        let dir = tempdir().unwrap().into_path();
+        let mut getter = ArtifactGetter::new(&dir);
+
+        let foo_path = dir.join("foo");
+        let mut file = File::create(&foo_path).unwrap();
+        file.write_all(b"test_data").unwrap();
+        file.sync_all().unwrap();
+        let foo_path_str = foo_path.to_str().unwrap();
+
+        let bar_path = dir.join("bar");
+        let mut file = File::create(&bar_path).unwrap();
+        file.write_all(b"test_data").unwrap();
+        file.sync_all().unwrap();
+        let bar_path_str = bar_path.to_str().unwrap();
+
+        assert_eq!(getter.read_raw("foo").is_ok(), true);
+        assert_eq!(getter.read_raw("bar").is_ok(), true);
+        assert_eq!(getter.read_raw("foo").is_ok(), true);
+        let deps = getter.get_deps();
+        assert_eq!(deps, hashset! {foo_path_str.to_string(), bar_path_str.to_string()});
     }
 }

@@ -7,7 +7,7 @@ use {
     scrutiny::prelude::*,
     scrutiny_utils::zbi::ZbiSection,
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     uuid::Uuid,
 };
 
@@ -463,6 +463,32 @@ impl DataCollection for Sysmgr {
     }
     fn collection_description() -> String {
         "Contains all the service and app mappings found in the sysmgr config".to_string()
+    }
+}
+
+/// Defines the set of files touched by core plugin data collection. This set
+/// can be important when integrating with tooling that demands a complete set
+/// of dependencies during tool execution.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct CoreDataDeps {
+    pub deps: HashSet<String>,
+}
+
+impl CoreDataDeps {
+    pub fn new(deps: HashSet<String>) -> Self {
+        Self { deps }
+    }
+}
+
+impl DataCollection for CoreDataDeps {
+    fn uuid() -> Uuid {
+        Uuid::parse_str("c6894ef7-ea97-429b-b850-125f77d098ac").unwrap()
+    }
+    fn collection_name() -> String {
+        "Core Data Dependencies".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains a set of paths core data collection read from".to_string()
     }
 }
 

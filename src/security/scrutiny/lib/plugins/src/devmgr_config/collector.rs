@@ -7,6 +7,7 @@ use {
         DevmgrConfigCollection, DevmgrConfigContents, DevmgrConfigError, DevmgrConfigParseError,
     },
     anyhow::{Context, Result},
+    maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
         bootfs::BootfsReader,
@@ -113,12 +114,14 @@ impl DataCollector for DevmgrConfigCollector {
             .set(match result {
                 Ok(devmgr_config) => DevmgrConfigCollection {
                     devmgr_config: Some(devmgr_config),
-                    deps: vec![zbi_path.clone()],
+                    deps: hashset! {zbi_path.clone()},
                     errors: vec![],
                 },
-                Err(err) => {
-                    DevmgrConfigCollection { devmgr_config: None, deps: vec![], errors: vec![err] }
-                }
+                Err(err) => DevmgrConfigCollection {
+                    devmgr_config: None,
+                    deps: hashset! {},
+                    errors: vec![err],
+                },
             })
             .context(format!(
                 "Failed to collect data from devmgr config bootfs:{} in ZBI at {}",

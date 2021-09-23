@@ -5,11 +5,16 @@
 use {
     crate::core::{
         collection::{
-            Capability, Component, ComponentSource, Components, Manifest, ManifestData, Manifests,
-            Package, Packages, ProtocolCapability, Route, Routes, Sysmgr, Zbi,
+            Capability, Component, ComponentSource, Components, CoreDataDeps, Manifest,
+            ManifestData, Manifests, Package, Packages, ProtocolCapability, Route, Routes, Sysmgr,
+            Zbi,
         },
-        package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
-        util::types::*,
+        package::{
+            artifact::ArtifactGetter,
+            getter::PackageGetter,
+            reader::{PackageReader, PackageServerReader},
+        },
+        util::types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
     },
     anyhow::{anyhow, Result},
     cm_fidl_validator,
@@ -21,7 +26,10 @@ use {
     regex::Regex,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_config::ModelConfig,
-    scrutiny_utils::{bootfs::*, zbi::*},
+    scrutiny_utils::{
+        bootfs::BootfsReader,
+        zbi::{ZbiReader, ZbiType},
+    },
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
@@ -72,7 +80,7 @@ impl PackageDataCollector {
     /// them sorted by package url.
     fn get_packages(
         &self,
-        package_reader: &Box<dyn PackageReader>,
+        package_reader: &mut Box<dyn PackageReader>,
     ) -> Result<Vec<PackageDefinition>> {
         // Retrieve the JSON packages definition from the package server.
         let targets = package_reader.read_targets()?;
@@ -128,7 +136,7 @@ impl PackageDataCollector {
     fn extract_config_data(
         &self,
         config_data_package_url: String,
-        package_reader: &Box<dyn PackageReader>,
+        package_reader: &mut Box<dyn PackageReader>,
         served: &Vec<PackageDefinition>,
     ) -> Result<SysManagerConfig> {
         let mut sys_config =
@@ -163,7 +171,7 @@ impl PackageDataCollector {
     /// Extracts the ZBI from the update package and parses it into the ZBI
     /// model.
     fn extract_zbi_from_update_package(
-        getter: &Box<dyn PackageGetter>,
+        getter: &mut Box<dyn PackageGetter>,
         package: &PackageDefinition,
     ) -> Result<Zbi> {
         info!("Extracting the ZBI from {}", package.url);
@@ -510,7 +518,7 @@ impl PackageDataCollector {
     /// by this collector.
     fn extract(
         update_package_url: String,
-        artifact_getter: &Box<dyn PackageGetter>,
+        mut artifact_getter: &mut Box<dyn PackageGetter>,
         fuchsia_packages: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
     ) -> Result<PackageDataResponse> {
@@ -535,8 +543,10 @@ impl PackageDataCollector {
 
             // If the package is the update package attempt to extract the ZBI.
             if pkg.url == update_package_url {
-                let zbi_result =
-                    PackageDataCollector::extract_zbi_from_update_package(&artifact_getter, &pkg);
+                let zbi_result = PackageDataCollector::extract_zbi_from_update_package(
+                    &mut artifact_getter,
+                    &pkg,
+                );
                 if let Err(err) = zbi_result {
                     warn!("{}", err);
                 } else {
@@ -586,14 +596,15 @@ impl PackageDataCollector {
     pub fn collect_with_reader(
         &self,
         config: ModelConfig,
-        package_reader: Box<dyn PackageReader>,
-        artifact_reader: Box<dyn PackageGetter>,
+        mut package_reader: Box<dyn PackageReader>,
+        mut artifact_reader: Box<dyn PackageGetter>,
         model: Arc<DataModel>,
     ) -> Result<()> {
-        let served_packages = self.get_packages(&package_reader)?;
+        let package_reader = &mut package_reader;
+        let served_packages = self.get_packages(package_reader)?;
         let sysmgr_config = self.extract_config_data(
             config.config_data_package_url(),
-            &package_reader,
+            package_reader,
             &served_packages,
         )?;
 
@@ -606,7 +617,7 @@ impl PackageDataCollector {
 
         let response = PackageDataCollector::extract(
             config.update_package_url(),
-            &artifact_reader,
+            &mut artifact_reader,
             served_packages,
             sysmgr_config.services.clone(),
         )?;
@@ -627,6 +638,15 @@ impl PackageDataCollector {
         } else {
             model.remove::<Zbi>()?;
         }
+
+        let mut deps = HashSet::new();
+        for dep in package_reader.get_deps().into_iter() {
+            deps.insert(dep);
+        }
+        for dep in artifact_reader.get_deps().into_iter() {
+            deps.insert(dep);
+        }
+        model.set(CoreDataDeps::new(deps))?;
 
         Ok(())
     }
@@ -651,18 +671,31 @@ impl DataCollector for PackageDataCollector {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::*,
+        super::PackageDataCollector,
         crate::core::{
-            collection::testing::fake_component_src_pkg,
-            package::test_utils::{
-                create_model, create_svc_pkg_def, create_svc_pkg_def_with_array,
-                create_test_cm_map, create_test_cmx_map, create_test_package_with_cms,
-                create_test_package_with_contents, create_test_package_with_meta,
-                create_test_sandbox, MockPackageGetter, MockPackageReader,
+            collection::{
+                testing::fake_component_src_pkg, Capability, Component, ComponentSource,
+                Components, CoreDataDeps, ManifestData, Manifests, Packages, ProtocolCapability,
+                Route, Routes,
             },
-            util::jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
+            package::{
+                getter::PackageGetter,
+                reader::PackageReader,
+                test_utils::{
+                    create_model, create_svc_pkg_def, create_svc_pkg_def_with_array,
+                    create_test_cm_map, create_test_cmx_map, create_test_package_with_cms,
+                    create_test_package_with_contents, create_test_package_with_meta,
+                    create_test_sandbox, MockPackageGetter, MockPackageReader,
+                },
+            },
+            util::{
+                jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
+                types::PackageDefinition,
+            },
         },
+        maplit::{hashmap, hashset},
         scrutiny_testing::fake::fake_model_config,
+        std::{collections::HashMap, sync::Arc},
     };
 
     fn count_sources(components: HashMap<String, Component>) -> (usize, usize, usize) {
@@ -688,7 +721,7 @@ pub mod tests {
     #[test]
     fn test_extract_config_data_ignores_services_defined_on_non_config_data_package() {
         // Create a single package that is NOT the config data package
-        let mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
+        let mut mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
 
         let mut contents = HashMap::new();
         contents.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
@@ -701,7 +734,7 @@ pub mod tests {
         let collector = PackageDataCollector::default();
         let config = fake_model_config();
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &mock_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut mock_reader, &served)
             .unwrap();
         assert_eq!(0, result.services.len());
         assert_eq!(0, result.apps.len())
@@ -711,7 +744,7 @@ pub mod tests {
     fn test_extract_config_data_ignores_services_defined_by_non_config_meta_contents() {
         // Create a single package that IS the config data package but
         // does not contain valid data/sysmgr/*.config meta content.
-        let mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
+        let mut mock_reader: Box<dyn PackageReader> = Box::new(MockPackageReader::new());
 
         let mut contents = HashMap::new();
         contents.insert(String::from("not/valid/config"), String::from("test_merkle"));
@@ -722,7 +755,7 @@ pub mod tests {
         let collector = PackageDataCollector::default();
         let config = fake_model_config();
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &mock_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut mock_reader, &served)
             .unwrap();
 
         assert_eq!(0, result.services.len());
@@ -755,9 +788,9 @@ pub mod tests {
         let served = vec![pkg];
 
         let collector = PackageDataCollector::default();
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(1, result.services.len());
         assert!(result.services.contains_key("fuchsia.test.foo.bar"));
@@ -795,9 +828,9 @@ pub mod tests {
         let served = vec![pkg];
 
         let collector = PackageDataCollector::default();
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(2, result.services.len());
         assert_eq!(0, result.apps.len());
@@ -833,9 +866,9 @@ pub mod tests {
         let served = vec![pkg];
 
         let collector = PackageDataCollector::default();
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(2, result.services.len());
         assert_eq!(
@@ -853,10 +886,10 @@ pub mod tests {
         let served = vec![pkg];
 
         let services = HashMap::new();
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -885,10 +918,10 @@ pub mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -916,10 +949,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -941,10 +974,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -973,10 +1006,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -1010,10 +1043,10 @@ pub mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -1114,10 +1147,10 @@ pub mod tests {
         let served = vec![pkg];
         let services = HashMap::new();
 
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &package_getter,
+            &mut package_getter,
             served,
             services,
         )
@@ -1172,6 +1205,75 @@ pub mod tests {
         assert_eq!(packages[0].url, "fuchsia-pkg://fuchsia.com/bar");
         assert_eq!(packages[1].url, "fuchsia-pkg://fuchsia.com/foo");
     }
+
+    #[test]
+    fn test_deps() {
+        let mock_reader = Box::new(MockPackageReader::new());
+        let (_, model) = create_model();
+
+        let merkle_one_two_three = "123";
+        let merkle_four_five_six = "456";
+        let mut targets = HashMap::new();
+        targets.insert(
+            String::from("123"),
+            FarPackageDefinition { custom: Custom { merkle: String::from("123") } },
+        );
+        targets.insert(
+            String::from("456"),
+            FarPackageDefinition { custom: Custom { merkle: String::from("456") } },
+        );
+
+        mock_reader.append_target(TargetsJson {
+            signed: Signed {
+                targets: hashmap! {
+                    merkle_one_two_three.to_string() => FarPackageDefinition { custom: Custom {
+                        merkle: merkle_one_two_three.to_string(),
+                    } },
+                    merkle_four_five_six.to_string() => FarPackageDefinition { custom: Custom {
+                        merkle: merkle_four_five_six.to_string(),
+                    } },
+                },
+            },
+        });
+        mock_reader.append_pkg_def(PackageDefinition {
+            url: "fuchsia-pkg://fuchsia.com/one-two-three".to_string(),
+            meta: hashmap! {},
+            contents: hashmap! {},
+            merkle: merkle_one_two_three.to_string(),
+            cms: hashmap! {},
+        });
+        mock_reader.append_pkg_def(PackageDefinition {
+            url: "fuchsia-pkg://fuchsia.com/four-five-six".to_string(),
+            meta: hashmap! {},
+            contents: hashmap! {},
+            merkle: merkle_four_five_six.to_string(),
+            cms: hashmap! {},
+        });
+
+        let collector = PackageDataCollector::default();
+        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        collector
+            .collect_with_reader(
+                fake_model_config(),
+                package_reader,
+                package_getter,
+                Arc::clone(&model),
+            )
+            .unwrap();
+        let deps: Arc<CoreDataDeps> = model.get().unwrap();
+        assert_eq!(
+            deps,
+            Arc::new(CoreDataDeps {
+                deps: hashset! {
+                    // These follow conventions defined in `MockPackageReader` dep management.
+                    "targets.json".to_string(), merkle_one_two_three.to_string(),
+                    merkle_four_five_six.to_string(),
+                },
+            })
+        );
+    }
+
     #[test]
     fn test_extract_config_data_with_only_duplicate_apps() {
         let mock_reader = Box::new(MockPackageReader::new());
@@ -1194,9 +1296,9 @@ pub mod tests {
         let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
         let served = vec![pkg];
 
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(1, result.apps.len());
         assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/foo#meta/foo-app.cmx"));
@@ -1225,9 +1327,9 @@ pub mod tests {
         let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
         let served = vec![pkg];
 
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(2, result.apps.len());
         assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));
@@ -1263,9 +1365,9 @@ pub mod tests {
         let pkg = create_test_package_with_meta(config.config_data_package_url(), meta);
         let served = vec![pkg];
 
-        let package_reader: Box<dyn PackageReader> = mock_reader;
+        let mut package_reader: Box<dyn PackageReader> = mock_reader;
         let result = collector
-            .extract_config_data(config.config_data_package_url(), &package_reader, &served)
+            .extract_config_data(config.config_data_package_url(), &mut package_reader, &served)
             .unwrap();
         assert_eq!(2, result.apps.len());
         assert!(result.apps.contains("fuchsia-pkg://fuchsia.com/bar#meta/bar-app.cmx"));

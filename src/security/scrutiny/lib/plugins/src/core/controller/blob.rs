@@ -33,7 +33,7 @@ pub struct BlobController {}
 impl DataController for BlobController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
         let repository_path = model.config().repository_path();
-        let blob_getter = ArtifactGetter::new(&repository_path);
+        let mut blob_getter = ArtifactGetter::new(&repository_path);
 
         let req: BlobRequest = serde_json::from_value(query)?;
         let data = blob_getter.read_raw(&format!("blobs/{}", req.merkle))?;

@@ -57,7 +57,7 @@ mod tests {
         super::ExtractStaticPkgsController,
         crate::static_pkgs::collection::{StaticPkgsCollection, StaticPkgsError},
         anyhow::{Context, Result},
-        maplit::hashmap,
+        maplit::{hashmap, hashset},
         scrutiny::model::controller::DataController,
         scrutiny::prelude::DataCollection,
         scrutiny_testing::fake::*,
@@ -88,7 +88,7 @@ mod tests {
         let model = fake_data_model();
         model
             .set(StaticPkgsCollection {
-                deps: vec![],
+                deps: hashset! {},
                 static_pkgs: None,
                 errors: vec![StaticPkgsError::StaticPkgsPathInvalid {
                     static_pkgs_path: "".to_string(),
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(
             result,
             json!(StaticPkgsCollection {
-                deps: vec![],
+                deps: hashset! {},
                 static_pkgs: None,
                 errors: vec![StaticPkgsError::StaticPkgsPathInvalid {
                     static_pkgs_path: "".to_string()
@@ -114,7 +114,7 @@ mod tests {
     fn test_some_results() -> Result<()> {
         let model = fake_data_model();
         model.set(StaticPkgsCollection{
-            deps: vec![],
+            deps: hashset!{},
             static_pkgs: Some(hashmap!{
                 "alpha/0".to_string() =>
                     "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string(),
@@ -128,7 +128,7 @@ mod tests {
         assert_eq!(
             result,
             json!(StaticPkgsCollection {
-                deps: vec![],
+                deps: hashset! {},
                 static_pkgs: Some(hashmap! {
                     "alpha/0".to_string() =>
                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string(),

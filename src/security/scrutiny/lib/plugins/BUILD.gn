@@ -34,6 +34,7 @@ if (is_host) {
       "//third_party/rust_crates:futures-executor",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
@@ -47,7 +48,6 @@ if (is_host) {
 
     test_deps = [
       "//src/security/scrutiny/lib/testing",
-      "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:tempfile",
     ]
 

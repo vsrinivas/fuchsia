@@ -16,18 +16,19 @@ use {
     scrutiny_testing::fake::fake_model_config,
     std::io::{Error, ErrorKind},
     std::{
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         sync::{Arc, RwLock},
     },
 };
 
 pub struct MockPackageGetter {
     bytes: RwLock<Vec<Vec<u8>>>,
+    deps: HashSet<String>,
 }
 
 impl MockPackageGetter {
     pub fn new() -> Self {
-        Self { bytes: RwLock::new(Vec::new()) }
+        Self { bytes: RwLock::new(Vec::new()), deps: HashSet::new() }
     }
 
     pub fn append_bytes(&self, byte_vec: Vec<u8>) {
@@ -36,7 +37,7 @@ impl MockPackageGetter {
 }
 
 impl PackageGetter for MockPackageGetter {
-    fn read_raw(&self, _path: &str) -> std::io::Result<Vec<u8>> {
+    fn read_raw(&mut self, path: &str) -> std::io::Result<Vec<u8>> {
         let mut borrow = self.bytes.write().unwrap();
         {
             if borrow.len() == 0 {
@@ -45,8 +46,13 @@ impl PackageGetter for MockPackageGetter {
                     "No more byte vectors left to return. Maybe append more?",
                 ));
             }
+            self.deps.insert(path.to_string());
             Ok(borrow.remove(0))
         }
+    }
+
+    fn get_deps(&self) -> HashSet<String> {
+        self.deps.clone()
     }
 }
 
@@ -54,6 +60,7 @@ pub struct MockPackageReader {
     targets: RwLock<Vec<TargetsJson>>,
     package_defs: RwLock<Vec<PackageDefinition>>,
     service_package_defs: RwLock<Vec<ServicePackageDefinition>>,
+    deps: HashSet<String>,
 }
 
 impl MockPackageReader {
@@ -62,6 +69,7 @@ impl MockPackageReader {
             targets: RwLock::new(Vec::new()),
             package_defs: RwLock::new(Vec::new()),
             service_package_defs: RwLock::new(Vec::new()),
+            deps: HashSet::new(),
         }
     }
 
@@ -80,27 +88,36 @@ impl MockPackageReader {
 }
 
 impl PackageReader for MockPackageReader {
-    fn read_targets(&self) -> Result<TargetsJson> {
+    fn read_targets(&mut self) -> Result<TargetsJson> {
         let mut borrow = self.targets.write().unwrap();
         {
             if borrow.len() == 0 {
                 return Err(anyhow!("No more targets left to return. Maybe append more?"));
             }
+            self.deps.insert("targets.json".to_string());
             Ok(borrow.remove(0))
         }
     }
 
-    fn read_package_definition(&self, _pkg_name: &str, _merkle: &str) -> Result<PackageDefinition> {
+    fn read_package_definition(
+        &mut self,
+        _pkg_name: &str,
+        _merkle: &str,
+    ) -> Result<PackageDefinition> {
         let mut borrow = self.package_defs.write().unwrap();
         {
             if borrow.len() == 0 {
                 return Err(anyhow!("No more package_defs left to return. Maybe append more?"));
             }
+            self.deps.insert(borrow[0].merkle.clone());
             Ok(borrow.remove(0))
         }
     }
 
-    fn read_service_package_definition(&self, _data: String) -> Result<ServicePackageDefinition> {
+    fn read_service_package_definition(
+        &mut self,
+        _data: String,
+    ) -> Result<ServicePackageDefinition> {
         let mut borrow = self.service_package_defs.write().unwrap();
         {
             if borrow.len() == 0 {
@@ -110,6 +127,10 @@ impl PackageReader for MockPackageReader {
             }
             Ok(borrow.remove(0))
         }
+    }
+
+    fn get_deps(&self) -> HashSet<String> {
+        self.deps.clone()
     }
 }
 
