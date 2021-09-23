@@ -23,7 +23,7 @@ using Identifier = std::array<uint64_t, 2>;
 // code coverage) for the fuzzer engine.
 class Module final {
  public:
-  // The array presented by |__sanititizer_cov_pcs_init| is actually a table of PCs and flags.
+  // The array presented by |__sanitizer_cov_pcs_init| is actually a table of PCs and flags.
   struct PC {
     uintptr_t pc;
     uintptr_t flags;

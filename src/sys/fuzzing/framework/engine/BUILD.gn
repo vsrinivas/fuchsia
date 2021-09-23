@@ -10,6 +10,8 @@ source_set("engine") {
     "corpus.h",
     "dictionary.cc",
     "dictionary.h",
+    "module-proxy.cc",
+    "module-proxy.h",
   ]
   public_deps = [
     "//src/lib/fxl",
@@ -25,9 +27,12 @@ source_set("unittests") {
   sources = [
     "corpus-unittest.cc",
     "dictionary-unittest.cc",
+    "module-proxy-unittest.cc",
   ]
   deps = [
     ":engine",
+    "../target",
+    "../testing",
     "//third_party/googletest:gtest",
   ]
 }
