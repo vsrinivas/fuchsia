@@ -9,6 +9,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/lib/analysis/generators.h"
+
 using ASF = fuchsia::media::AudioSampleFormat;
 
 namespace media::audio {
@@ -553,4 +555,27 @@ TEST(AnalysisHelpers, MultiplyByTukeyWindow) {
                           FloatEq(want[8]), FloatEq(want[9]), FloatEq(want[10]), FloatEq(want[11]),
                           FloatEq(want[12])));
 }
+
+TEST(AnalysisHelpers, SlopeChecker) {
+  constexpr uint32_t kTestFreq = 440;
+  constexpr uint32_t kSamplesPerSecond = 48000;
+  auto format = Format::Create<ASF::FLOAT>(1, kSamplesPerSecond).take_value();
+
+  // Check a good signal, then inject a glitch and check that's detected.
+  auto buf = GenerateCosineAudio(format, kTestFreq, 1);
+  SlopeChecker checker(kSamplesPerSecond, kTestFreq);
+  for (auto s : buf.samples()) {
+    EXPECT_TRUE(checker.Check(s, true));
+  }
+
+  buf.samples()[220] += 0.1f;
+
+  checker.Reset();
+
+  EXPECT_TRUE(checker.Check(buf.samples()[219]));
+  EXPECT_FALSE(checker.Check(buf.samples()[220]));
+  EXPECT_FALSE(checker.Check(buf.samples()[221]));
+  EXPECT_TRUE(checker.Check(buf.samples()[222]));
+}
+
 }  // namespace media::audio

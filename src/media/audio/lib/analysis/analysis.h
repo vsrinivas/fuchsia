@@ -5,8 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_
 #define SRC_MEDIA_AUDIO_LIB_ANALYSIS_ANALYSIS_H_
 
+#include <lib/trace/event.h>
 #include <zircon/types.h>
 
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -134,6 +136,41 @@ std::optional<int64_t> FindImpulseLeadingEdge(
 // The total width of the up and down ramps is described by the alpha parameter, which must be <= 1.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> slice, double alpha);
+
+// SlopeChecker is a utility class to verify a stream of samples containing a known, full-scale,
+// sine wave signal at a particular frequency. It checks if the slope exceeds the expected max
+// slope for that frequency. If the check fails it emits a TRACE_ALERT("audio", "discontinuity")
+// event, and returns false from Check.
+class SlopeChecker {
+ public:
+  SlopeChecker(uint32_t samples_per_second, uint32_t expected_frequency) {
+    double samples_per_period =
+        static_cast<double>(samples_per_second) / static_cast<double>(expected_frequency);
+    // Max slope will be difference between first and second sample of sine wave.
+    max_expected_slope_ = std::sin(M_PI * 2.0 / samples_per_period);
+  }
+
+  bool Check(float sample, bool print = false) {
+    bool ret = true;
+    auto diff = std::abs(sample - *prev_sample_);
+    if (prev_sample_ && diff > max_expected_slope_ + std::numeric_limits<float>::epsilon()) {
+      TRACE_ALERT("audio", "discontinuity");
+      if (print) {
+        FX_LOGS(INFO) << "slope discontinuity detected. diff=" << diff
+                      << " max_expected=" << max_expected_slope_;
+      }
+      ret = false;
+    }
+    prev_sample_ = sample;
+    return ret;
+  }
+
+  void Reset() { prev_sample_ = std::nullopt; }
+
+ private:
+  std::optional<float> prev_sample_;
+  double max_expected_slope_;
+};
 
 }  // namespace media::audio
 
