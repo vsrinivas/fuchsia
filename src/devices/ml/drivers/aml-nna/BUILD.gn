@@ -36,8 +36,8 @@ driver_module("aml-nna-driver") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver:driver",
     "//src/devices/lib/mmio",
-    "//zircon/public/lib/hwreg",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -75,9 +75,9 @@ test("aml-nna-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/hwreg",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

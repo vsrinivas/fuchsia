@@ -49,14 +49,14 @@ template("define_common_lib") {
       "//src/devices/lib/acpi",
       "//src/lib/ddk",
       "//src/lib/ddktl",
-      "//zircon/public/lib/hwreg",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/hwreg",
       "//zircon/system/ulib/uart",
     ]
     if (invoker.testonly) {
       testonly = true
-      public_deps += [ "//zircon/public/lib/hwreg-mock" ]
+      public_deps += [ "//zircon/system/ulib/hwreg:hwreg-mock" ]
       public_configs = [ ":testing.config" ]
     }
   }
@@ -102,9 +102,9 @@ test("uart16550-test-bin") {
   deps = [
     ":uart16550_lib_for_testing",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/hwreg-mock",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/hwreg:hwreg-mock",
   ]
 }
 

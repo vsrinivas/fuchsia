@@ -35,7 +35,7 @@ common_deps = [
   "//src/devices/pci/lib/device-protocol-pci",
   "//src/devices/pci/lib/pci",
   "//src/lib/ddktl",
-  "//zircon/public/lib/hwreg",
+  "//zircon/system/ulib/hwreg",
   "//zircon/system/ulib/inspect",
   "//zircon/third_party/ulib/safemath",
 ]

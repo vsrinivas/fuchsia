@@ -23,7 +23,7 @@ zx_library("edid") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
   ]
-  public_deps = [ "//zircon/public/lib/hwreg" ]
+  public_deps = [ "//zircon/system/ulib/hwreg" ]
 }
 
 test("edid-test") {

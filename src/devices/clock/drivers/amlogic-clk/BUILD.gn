@@ -50,11 +50,11 @@ driver_module("amlogic-clk-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
 }
 
@@ -86,12 +86,12 @@ test("amlogic-clk-test-bin") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }

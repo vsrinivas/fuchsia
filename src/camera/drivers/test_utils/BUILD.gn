@@ -83,9 +83,9 @@ executable("fake_buffer_collection_unittest_bin") {
     "//src/devices/testing/fake-bti",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
 }
 

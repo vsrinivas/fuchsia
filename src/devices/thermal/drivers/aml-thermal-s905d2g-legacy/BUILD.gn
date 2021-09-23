@@ -46,13 +46,13 @@ driver_module("aml-thermal-s905d2g-legacy-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/hwreg",
   ]
 }
 
@@ -93,7 +93,6 @@ test("aml-thermal-s905d2g-legacy-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -101,6 +100,7 @@ test("aml-thermal-s905d2g-legacy-test-bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/hwreg",
   ]
 }
 

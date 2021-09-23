@@ -14,8 +14,8 @@ zx_library("hwreg-i2c") {
     "//src/devices/i2c/lib/device-protocol-i2c",
 
     # <hwreg/i2c.h> has #include <hwreg/bitfields.h>
-    "//zircon/public/lib/hwreg",
+    "//zircon/system/ulib/hwreg",
   ]
 
-  deps = [ "//zircon/public/lib/hwreg" ]
+  deps = [ "//zircon/system/ulib/hwreg" ]
 }

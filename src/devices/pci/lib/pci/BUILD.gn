@@ -21,10 +21,10 @@ zx_library("pci") {
   deps = [
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
 
   public_deps = [

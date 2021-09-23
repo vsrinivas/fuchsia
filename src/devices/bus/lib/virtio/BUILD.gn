@@ -56,7 +56,6 @@ zx_library("virtio") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -64,6 +63,7 @@ zx_library("virtio") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/virtio",
   ]
 

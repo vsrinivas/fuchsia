@@ -44,8 +44,8 @@ source_set("lib") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
   ]
   deps = [
     "//src/devices/lib/driver",

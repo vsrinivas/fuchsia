@@ -44,13 +44,13 @@ source_set("common_srcs") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mipi-dsi",
   ]
 }
