@@ -90,13 +90,21 @@ def _get_meta(element, sdk_dir):
         return json.load(meta)
 
 
+def _get_type(element):
+    '''Returns the SDK element type.'''
+    # For versioned SDK elements, the type is inside the data field.
+    if 'schema_id' in element:
+        return element['data']['type']
+    return element['type']
+
+
 def _get_files(element_meta):
     '''Extracts the files associated with the given element.
     Returns a 2-tuple containing:
      - the set of arch-independent files;
      - the sets of arch-dependent files, indexed by architecture.
     '''
-    type = element_meta['type']
+    type = _get_type(element_meta)
     common_files = set()
     arch_files = {}
     if type == 'cc_prebuilt_library':
@@ -136,11 +144,11 @@ def _get_files(element_meta):
         common_files.update(element_meta['docs'])
     elif type in ('config', 'license', 'component_manifest'):
         common_files.update(element_meta['data'])
-    elif type == 'device_profile':
+    elif type == 'product_bundle':
         # This type is pure metadata.
         pass
     elif type == 'bind_library':
-      common_files.update(element_meta['sources'])
+        common_files.update(element_meta['sources'])
     else:
         raise Exception('Unknown element type: ' + type)
     return (common_files, arch_files)
@@ -207,7 +215,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     meta_two = _get_meta(element, source_dir_two)
     # TODO(fxbug.dev/5362): verify that the common parts of the metadata files are in
     # fact identical.
-    type = meta_one['type']
+    type = _get_type(meta_one)
     meta = {}
     if type in ('cc_prebuilt_library', 'loadable_module'):
         meta = meta_one
@@ -223,7 +231,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
             meta['target_files'].update(meta_two['target_files'])
     elif type in ('cc_source_library', 'dart_library', 'fidl_library',
                   'documentation', 'device_profile', 'config', 'license',
-                  'component_manifest', 'bind_library'):
+                  'component_manifest', 'bind_library', 'product_bundle'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one

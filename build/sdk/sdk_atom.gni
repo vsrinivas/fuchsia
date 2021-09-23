@@ -103,6 +103,9 @@ import("config.gni")
 #     If the metadata file conforms to //build/sdk/meta/foo.json, the
 #     present attribute should have a value of "foo".
 #
+#   type (optional)
+#     Type of the atom. Defaults to schema.
+#
 # File scopes
 #
 # Each scope describes a file to be added to the SDK element. The supported
@@ -265,6 +268,12 @@ template("sdk_atom") {
                              "metadata",
                            ])
 
+    type = meta.schema
+
+    # TODO(fxbug.dev/85082): Read the type from the schema file.
+    if (defined(meta.type)) {
+      type = meta.type
+    }
     manifest = "$target_gen_dir/$target_name.sdk"
     depfile = "$manifest.d"
 
@@ -296,7 +305,7 @@ template("sdk_atom") {
              "--meta",
              meta.dest,
              "--type",
-             meta.schema,
+             type,
              "--deps",
            ] + rebase_path(dep_manifests, root_build_dir) + file_args
 

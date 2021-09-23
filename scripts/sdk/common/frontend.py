@@ -227,9 +227,25 @@ class Frontend(object):
             self._source_dir = ''
         return True
 
+    def get_atom_type(self, atom):
+        '''Returns the SDK atom type.'''
+        # For versioned SDK atoms, the type is inside the data field.
+        if 'schema_id' in atom:
+            return atom['data']['type']
+        return atom['type']
+
+    def get_atom_name(self, atom):
+        '''Returns the SDK atom name.'''
+        # For versioned SDK atoms, the name is inside the data field.
+        if 'schema_id' in atom:
+            return atom['data']['name']
+        return atom['name']
+
     def _handle_atom(self, atom):
         """Default atom handler."""
-        print('Ignored %s (%s)' % (atom['name'], atom['type']))
+        print(
+            'Ignored %s (%s)' %
+            (self.get_atom_name(atom), self.get_atom_type(atom)))
 
     @contextlib.contextmanager
     def _create_archive_dir(self):
@@ -248,6 +264,7 @@ class Frontend(object):
                 shutil.rmtree(temp_dir, ignore_errors=True)
         else:
             raise Exception('Error: archive or directory must be set')
+
 
 def load_metadata(filename):
     """Loads metadata from a file.

@@ -166,6 +166,11 @@ sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
+sdk://product_bundle/terminal.arm64
+sdk://product_bundle/terminal.qemu-arm64
+sdk://product_bundle/terminal.qemu-x64
+sdk://product_bundle/terminal.x64
+sdk://product_bundle/workstation.qemu-x64
 sdk://tools/arm64/bindc
 sdk://tools/arm64/blobfs-compression
 sdk://tools/arm64/blobfs_do_not_depend

@@ -1,61 +1,57 @@
 {
-  "arch": {
-    "host": "x86_64-linux-gnu",
-    "target": [
-      "arm64",
-      "x64"
-    ]
-  },
-  "id": "8890373976687374912",
-  "parts": [
-    {
-      "meta": "docs/test_docs.json",
-      "type": "documentation"
+    "arch": {
+        "host": "x86_64-linux-gnu",
+        "target": [
+            "arm64",
+            "x64"
+        ]
     },
-    {
-      "meta": "pkg/svc/meta.json",
-      "type": "cc_prebuilt_library"
-    },
-    {
-      "meta": "pkg/sync/meta.json",
-      "type": "cc_prebuilt_library"
-    },
-    {
-      "meta": "pkg/media_cpp/meta.json",
-      "type": "cc_source_library"
-    },
-    {
-      "meta": "fidl/fuchsia.process/meta.json",
-      "type": "fidl_library"
-    },
-    {
-      "meta": "tools/fidlc-meta.json",
-      "type": "host_tool"
-    },
-    {
-      "meta": "tools/gen_snapshot-meta.json",
-      "type": "host_tool"
-    },
-    {
-      "meta": "pkg/vulkan_layers/meta.json",
-      "type": "loadable_module"
-    },
-    {
-      "meta": "dart/fuchsia/meta.json",
-      "type": "dart_library"
-    },
-    {
-      "meta": "device/generic-arm64.json",
-      "type": "device_profile"
-    },
-    {
-      "meta": "pkg/sysroot/meta.json",
-      "type": "sysroot"
-    },
-    {
-      "meta": "data/config/modular_config/meta.json",
-      "type": "data"
-    }
-  ],
-  "schema_version": "1"
+    "id": "8890373976687374912",
+    "parts": [
+        {
+            "meta": "docs/test_docs.json",
+            "type": "documentation"
+        },
+        {
+            "meta": "pkg/svc/meta.json",
+            "type": "cc_prebuilt_library"
+        },
+        {
+            "meta": "pkg/sync/meta.json",
+            "type": "cc_prebuilt_library"
+        },
+        {
+            "meta": "pkg/media_cpp/meta.json",
+            "type": "cc_source_library"
+        },
+        {
+            "meta": "fidl/fuchsia.process/meta.json",
+            "type": "fidl_library"
+        },
+        {
+            "meta": "tools/fidlc-meta.json",
+            "type": "host_tool"
+        },
+        {
+            "meta": "tools/gen_snapshot-meta.json",
+            "type": "host_tool"
+        },
+        {
+            "meta": "pkg/vulkan_layers/meta.json",
+            "type": "loadable_module"
+        },
+        {
+            "meta": "dart/fuchsia/meta.json",
+            "type": "dart_library"
+        },
+        {
+            "meta": "pkg/sysroot/meta.json",
+            "type": "sysroot"
+        },
+        {
+            "meta": "data/config/modular_config/meta.json",
+            "type": "data"
+        }
+    ],
+    "schema_version": "1"
 }

@@ -210,11 +210,11 @@ class GNBuilder(Frontend):
                 if atom['type'] in ['documentation', 'host_tool']:
                     self.copy_file(atom['meta'])
 
-            # There are dart components and device_profile in the Core SDK which
-            # are not part of the GN SDK. Remove them from the manifest.
+            # There are dart components in the Core SDK which are not part
+            # of the GN SDK. Remove them from the manifest.
             metadata['parts'] = [
                 atom for atom in metadata['parts']
-                if not atom['type'] in ['dart_library', 'device_profile']
+                if not atom['type'] == 'dart_library'
             ]
 
             for entry in entries:
@@ -223,7 +223,7 @@ class GNBuilder(Frontend):
                     metadata['parts'].append(
                         {
                             'meta': entry,
-                            'type': new_meta['type']
+                            'type': self.get_atom_type(new_meta)
                         })
             # sort parts list so it is in a stable order
             def meta_type_key(part):
@@ -458,6 +458,11 @@ class GNBuilder(Frontend):
         self.write_atom_metadata(
             self.dest('data', 'config', atom['name'], 'meta.json'), atom)
         self.copy_files(atom['data'])
+
+    def install_product_bundle_atom(self, atom):
+        self.write_atom_metadata(
+            self.dest('product_bundle', '%s.json' % self.get_atom_name(atom)),
+            atom)
 
     def install_sysroot_atom(self, atom):
         for arch in self.target_arches:
