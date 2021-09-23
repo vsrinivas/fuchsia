@@ -12,7 +12,7 @@ rustc_test("bt_host_integration_tests") {
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
     "//src/connectivity/bluetooth/fidl:host-rustc",
-    "//src/connectivity/bluetooth/lib/device-watcher",
+    "//src/connectivity/bluetooth/lib/bt-device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/bt-test-harness",
     "//src/connectivity/bluetooth/testing/hci-emulator-client",

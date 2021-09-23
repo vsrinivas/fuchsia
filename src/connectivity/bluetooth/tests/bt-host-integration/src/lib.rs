@@ -8,11 +8,11 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    bt_device_watcher::{DeviceWatcher, WatchFilter},
     bt_test_harness::{
         emulator::{self, add_bredr_peer, add_le_peer, default_bredr_peer, default_le_peer},
         host_driver::{expectation as host_expectation, HostDriverHarness},
     },
-    device_watcher::{DeviceWatcher, WatchFilter},
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass, MAJOR_DEVICE_CLASS_TOY},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_sys::{self as fsys, TechnologyType},

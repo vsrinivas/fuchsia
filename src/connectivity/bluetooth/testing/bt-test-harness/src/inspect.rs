@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    device_watcher::DeviceWatcher,
+    bt_device_watcher::DeviceWatcher,
     diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
     fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy},
     fuchsia_async::DurationExt,

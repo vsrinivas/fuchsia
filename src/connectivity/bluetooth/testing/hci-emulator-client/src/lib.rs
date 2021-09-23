@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
+    bt_device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
     fdio,
     fidl::endpoints::Proxy,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},

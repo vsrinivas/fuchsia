@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/device_watcher_lib_test"
+        "binary": "bin/bt_device_watcher_lib_test"
     },
     "sandbox": {
         "dev": [

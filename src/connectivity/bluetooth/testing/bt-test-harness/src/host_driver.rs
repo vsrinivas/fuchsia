@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    device_watcher::DeviceWatcher,
+    bt_device_watcher::DeviceWatcher,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,

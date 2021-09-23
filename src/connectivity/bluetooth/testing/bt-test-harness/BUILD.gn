@@ -26,7 +26,7 @@ rustc_library("bt-test-harness") {
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:host-rustc",
-    "//src/connectivity/bluetooth/lib/device-watcher",
+    "//src/connectivity/bluetooth/lib/bt-device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/hci-emulator-client",
     "//src/connectivity/bluetooth/testing/realmbuilder-mock-helpers",
