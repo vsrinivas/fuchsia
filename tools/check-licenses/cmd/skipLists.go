@@ -51,7 +51,6 @@ var additionalSkipDirs = []string{
 	"third_party/rust_crates/vendor",
 	"tools/debug/elflib/testdata",
 	"tools/debug/symbolize/testdata",
-	"tools/fidl/difl/tests",
 	"tools/fidl/fidlc/testdata",
 	"tools/fidl/fidldoc/src/templates/markdown/testdata",
 	"tools/fidl/gidl/mixer/testdata",
