@@ -6,8 +6,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("coresight") {
-  kernel = true
-
   sources = [ "rom_table.cc" ]
   deps = []
   public_deps = [

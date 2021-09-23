@@ -6,7 +6,6 @@ import("//build/unification/zx_library.gni")
 import("//build/zircon/zircon_cpu.gni")
 
 zx_library("jitterentropy") {
-  kernel = true
   sources = [ "jitterentropy-base.c" ]
   include_dirs = [ "arch/$zircon_cpu" ]
   deps = [ "//zircon/kernel/lib/arch" ]

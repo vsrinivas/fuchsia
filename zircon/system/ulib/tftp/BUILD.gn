@@ -8,8 +8,6 @@ zx_library("tftp") {
   sdk = "static"
   sdk_headers = [ "tftp/tftp.h" ]
 
-  kernel = true
-
   sources = [ "tftp.c" ]
   if (is_efi_toolchain) {
     defines = [ "TFTP_EFILIB" ]

@@ -29,8 +29,6 @@ zx_library("zircon-internal") {
     "lib/zircon-internal/xorshiftrand.h",
   ]
 
-  kernel = true
-
   sources = []
 }
 

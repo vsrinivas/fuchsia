@@ -8,8 +8,6 @@ zx_library("smbios") {
   sdk = "source"
   sdk_headers = [ "lib/smbios/smbios.h" ]
 
-  kernel = true
-
   sources = [ "smbios.cc" ]
   deps = [ "//zircon/system/ulib/fbl" ]
 }

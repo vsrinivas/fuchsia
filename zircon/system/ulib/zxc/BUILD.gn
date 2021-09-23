@@ -23,8 +23,6 @@ sdk_source_set("zx") {
 }
 
 zx_library("zxc") {
-  kernel = true
-
   sdk = "source"
 
   sdk_publishable = true

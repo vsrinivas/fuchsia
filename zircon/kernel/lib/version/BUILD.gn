@@ -74,7 +74,6 @@ if (current_toolchain == default_toolchain) {
   }
 } else {
   zx_library("version") {
-    kernel = true
     sources = [ "version.cc" ]
     defines = [ "ARCH=\"$current_cpu\"" ]
     public_deps = [ ":version-string.h($default_toolchain)" ]

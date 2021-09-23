@@ -10,8 +10,6 @@ import("//build/testing/zbi_test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("trivial-allocator") {
-  kernel = true
-
   sdk = "source"
   sdk_headers = [
     "lib/trivial-allocator/basic-leaky-allocator.h",

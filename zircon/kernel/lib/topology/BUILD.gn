@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("topology") {
-  kernel = true
   sources = [ "system-topology.cc" ]
   deps = [
     ":test",

@@ -20,7 +20,6 @@ zx_library("counters") {
     "//zircon/system/ulib/*",
     "//zircon/system/ulib/kcounter/*",
   ]
-  kernel = true
 
   sources = []
   if (is_kernel) {

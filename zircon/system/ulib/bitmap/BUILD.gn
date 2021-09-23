@@ -13,8 +13,6 @@ zx_library("bitmap") {
     "bitmap/storage.h",
   ]
 
-  kernel = true
-
   sources = [ "raw-bitmap.cc" ]
   public_deps = [ "//zircon/system/ulib/fbl:headers" ]
   if (!is_kernel && !is_host) {

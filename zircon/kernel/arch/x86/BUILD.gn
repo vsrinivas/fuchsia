@@ -113,7 +113,6 @@ config("kernel") {
 # migrated to the Fuchsia build.
 # NOTE: Bad indentation is intentional, to make code reviews easier.
 zx_library("x86") {
-  kernel = true
   sources = [
     "amd.cc",
     "arch.cc",

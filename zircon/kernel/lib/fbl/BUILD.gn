@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("fbl") {
-  kernel = true
   sources = [ "arena.cc" ]
   deps = [
     ":tests",

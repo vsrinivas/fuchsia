@@ -19,5 +19,4 @@ zx_library("lib") {
 
   sources = [ "ram-crashlog.cc" ]
   deps = [ "//zircon/third_party/ulib/cksum" ]
-  kernel = true
 }

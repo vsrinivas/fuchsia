@@ -16,7 +16,6 @@ zx_library("cmdline") {
     "//zircon/kernel/*",
     "//zircon/system/ulib",
   ]
-  kernel = true
 
   sources = [ "cmdline.cc" ]
   deps = [

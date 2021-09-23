@@ -8,8 +8,6 @@ import("//build/toolchain/toolchain_environment.gni")
 import("//build/unification/zx_library.gni")
 
 zx_library("libc") {
-  kernel = true
-
   sources = [
     "abort.cc",
     "atomic.cc",

@@ -16,11 +16,10 @@ import("//build/toolchain/toolchain_environment.gni")
 # IMPORTANT NOTE: Due to historical reasons, its behaviour is very different,
 # depending on the value of the `is_kernel` global variable.
 #
-# * If `is_kernel` is true, which means when building part of the kernel:
-#   The template will assert if the `kernel` argument is not set to true.
-#   It will create a source_set() if building part of the kernel, or
-#   a static_library() for any other Zircon artefact. The values of `sdk`,
-#   `sdk_publishable` and `sdk_headers` will be ignored entirely.
+# * When building with a Zircon-specific toolchain, it will create a source_set()
+#   if the global `is_kernel` is true (meaning building part of the kernel), or
+#   a static_library() target otherwise. Teh values of `sdk`, `sdk_publishable`
+#   and `sdk_headers` will be ignored entirely.
 #
 #   This will also create a :headers sub-target, a group used to give access
 #   to the library's include directory from any dependent. Note that this
@@ -29,11 +28,10 @@ import("//build/toolchain/toolchain_environment.gni")
 #   This behaviour is needed to replicate the Zircon build's behaviour when
 #   compiling Zircon artefacts.
 #
-# * If `is`_kernel` is false, which means that the library is built either as a
-#   Fuchsia user binary or a host binary, then the `kernel` parameter is
-#   ignored, and `sdk` must be set to determine the shape of the library,
-#   as well as `sdk_headers to list the library's public headers, relative to
-#   its `include` sub-directory.
+# * When not using a Zircon-specific toolchain, which means the library is built
+#   either as a Fuchsia user binary or a host binary, `sdk` must be set to determine
+#   the shape of the library, as well as `sdk_headers to list the library's public
+#   headers, relative to its `include` sub-directory.
 #
 #   If `sdk_publishable` is true, the library will be part of the Fuchsia SDK.
 #
@@ -51,16 +49,11 @@ import("//build/toolchain/toolchain_environment.gni")
 #
 # Parameters
 #
-#   kernel
-#     Optional: True if this library can be used in the kernel.
-#     Type: bool
-#     Default: false
-#
 #   sdk
 #     Optional: A value that indicates whether to build this library as a
 #     source set, static library or shared library with the Fuchsia build.
-#     This is required, except if the global `is_kernel` is true. Note that
-#     this name is confusing for historical reasons, because using
+#     This is required, except when building with Zircon-specific toolchains.
+#     Note that this name is confusing for historical reasons, because using
 #     this parameter does not make this library exported to the Fuchsia SDK
 #     (see `sdk_publishable` below for this).
 #     Type: "static" or "shared" or "source"
@@ -94,7 +87,6 @@ import("//build/toolchain/toolchain_environment.gni")
 #
 template("zx_library") {
   template_params = [
-    "kernel",
     "sdk",
     "sdk_headers",
     "sdk_publishable",
@@ -111,11 +103,6 @@ template("zx_library") {
 
   if (zircon_toolchain != false) {
     _library_name = target_name
-
-    assert(
-        !is_kernel || (defined(invoker.kernel) && invoker.kernel),
-        "This zx_library() cannot be built with a Zircon-specific toolchain! " +
-            "Consider adding `kernel = true` to its declaration.")
 
     if (toolchain_environment == "kernel") {
       # In the kernel proper, zx_library() is always a source_set().
@@ -168,10 +155,6 @@ template("zx_library") {
       include_dirs = [ "include" ]
     }
   } else {
-    # The following parameters are just ignored, as in the GN build the shape of
-    # a library is driven by the value of the "sdk" parameter.
-    not_needed(invoker, [ "kernel" ])
-
     assert(
         defined(invoker.sdk),
         "The `sdk` argument is needed to build a zx_library() with a Fuchsia or host toolchain ($current_toolchain)")

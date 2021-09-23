@@ -8,7 +8,6 @@ import("//build/zircon/migrated_targets.gni")
 import("params.gni")
 
 zx_library("persistent-debuglog") {
-  kernel = true
   sources = [ "persistent-debuglog.cc" ]
   deps = [
     "//zircon/kernel/lib/console",

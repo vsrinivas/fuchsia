@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("zxc") {
-  kernel = true
   sources = []
   deps = [ ":tests" ]
   public_deps = [ "//zircon/system/ulib/zxc" ]

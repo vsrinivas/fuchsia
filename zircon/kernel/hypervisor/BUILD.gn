@@ -8,7 +8,6 @@ import("//build/unification/zx_library.gni")
 import("//build/zircon/zircon_cpu.gni")
 
 zx_library("hypervisor") {
-  kernel = true
   sources = [
     "cpu.cc",
     "guest_physical_address_space.cc",

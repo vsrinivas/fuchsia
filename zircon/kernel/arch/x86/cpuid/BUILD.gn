@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("cpuid") {
-  kernel = true
   sources = [ "cpuid.cc" ]
 
   public_deps = [

@@ -5,8 +5,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("zbitl") {
-  kernel = true
-
   # TODO: revist the following two specifications after the zircon-to-fuchsia
   # build migration. They seem currently required in order to export the host
   # compilation of this library to the fuchsia build.

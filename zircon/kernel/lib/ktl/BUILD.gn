@@ -7,8 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("ktl") {
-  kernel = true
-
   sources = [
     "dummy-new.cc",
     "popcount.cc",

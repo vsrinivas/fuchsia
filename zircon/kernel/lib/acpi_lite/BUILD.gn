@@ -19,8 +19,6 @@ zx_library("acpi_lite") {
     "lib/acpi_lite/structures.h",
   ]
 
-  kernel = true
-
   sources = [
     "acpi_lite.cc",
     "apic.cc",

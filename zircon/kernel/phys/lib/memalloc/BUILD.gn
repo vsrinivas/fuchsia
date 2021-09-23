@@ -17,8 +17,6 @@ zx_library("memalloc") {
     "lib/memalloc/range.h",
   ]
 
-  kernel = true
-
   sources = [
     "algorithm.cc",
     "allocator.cc",

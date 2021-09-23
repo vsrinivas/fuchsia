@@ -37,8 +37,6 @@ if (current_toolchain == default_toolchain) {
 }
 
 zx_library("boot-options") {
-  kernel = true
-
   sources = [
     "boot-options.cc",
     "word-view.cc",

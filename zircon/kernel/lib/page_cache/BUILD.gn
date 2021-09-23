@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("page_cache") {
-  kernel = true
   sources = [ "page_cache.cc" ]
   deps = [
     "tests",

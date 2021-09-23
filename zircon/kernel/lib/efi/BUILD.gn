@@ -12,7 +12,7 @@ zx_library("efi") {
     "//zircon/kernel/*",
     "//zircon/system/ulib/zbitl/*",
   ]
-  kernel = true
+
   sources = []
 
   sdk = "source"

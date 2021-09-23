@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("heap") {
-  kernel = true
   sources = [
     "cxx_allocator.cc",
     "heap_wrapper.cc",

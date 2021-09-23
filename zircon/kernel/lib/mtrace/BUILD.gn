@@ -9,7 +9,6 @@ import("//build/zircon/migrated_targets.gni")
 assert(is_kernel)
 
 zx_library("mtrace") {
-  kernel = true
   sources = [
     "mtrace-ipt.cc",
     "mtrace-pmu.cc",

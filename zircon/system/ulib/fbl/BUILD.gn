@@ -53,8 +53,6 @@ zx_library("fbl") {
     "fbl/vector.h",
   ]
 
-  kernel = true
-
   sources = [ "alloc_checker.cc" ]
   if (!is_kernel) {
     sources += [

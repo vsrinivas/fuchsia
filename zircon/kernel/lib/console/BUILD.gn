@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("console") {
-  kernel = true
   sources = [ "console.cc" ]
   deps = [
     "//zircon/kernel/lib/boot-options:headers",

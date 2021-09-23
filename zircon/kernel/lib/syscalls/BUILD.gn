@@ -11,7 +11,6 @@ zx_library("syscalls") {
   visibility = [ "//zircon/kernel/*" ]
 
   # This can be used for headers only by the vDSO and test code.
-  kernel = true
 
   sources = []
 

@@ -8,7 +8,6 @@ import("//build/zircon/c_utils.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("userabi") {
-  kernel = true
   sources = []
   public_deps = [
     # <lib/userabi/userboot.h> has #include <lib/instrumentation/vmo.h>.

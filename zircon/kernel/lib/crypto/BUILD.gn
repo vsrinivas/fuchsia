@@ -27,13 +27,11 @@ source_set("crypto-entropy-test") {
 }
 
 zx_library("crypto-entropy") {
-  kernel = true
   public_deps = [ ":crypto-entropy-src" ]
   deps = [ ":crypto-entropy-test" ]
 }
 
 zx_library("crypto") {
-  kernel = true
   sources = [
     "global_prng.cc",
     "global_prng_unittest.cc",

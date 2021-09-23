@@ -19,8 +19,6 @@ zx_library("static-pie") {
   sdk = "source"
   sdk_headers = [ "lib/static-pie/static-pie.h" ]
 
-  kernel = true
-
   sources = [
     "relocation.cc",
     "static_pie.cc",

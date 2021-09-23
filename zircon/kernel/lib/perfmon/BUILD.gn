@@ -11,7 +11,6 @@ config("config") {
 }
 
 zx_library("perfmon") {
-  kernel = true
   sources = [ "perfmon.cc" ]
   deps = [ "//zircon/kernel/vm" ]
 }

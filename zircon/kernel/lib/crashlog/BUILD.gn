@@ -8,7 +8,6 @@ import("//build/zircon/migrated_targets.gni")
 import("params.gni")
 
 zx_library("crashlog") {
-  kernel = true
   sources = [
     "crashlog.cc",
     "panic_buffer.cc",

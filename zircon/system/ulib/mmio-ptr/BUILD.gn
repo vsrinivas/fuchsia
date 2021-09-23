@@ -5,7 +5,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("mmio-ptr") {
-  kernel = true
   sources = []
 
   sdk = "source"
@@ -14,7 +13,6 @@ zx_library("mmio-ptr") {
 }
 
 zx_library("mmio-ptr-fake") {
-  kernel = true
   sources = []
   deps = [ ":mmio-ptr" ]
   testonly = true

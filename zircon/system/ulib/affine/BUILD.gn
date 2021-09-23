@@ -13,8 +13,6 @@ zx_library("affine") {
     "lib/affine/utils.h",
   ]
 
-  kernel = true
-
   sources = [
     "ratio.cc",
     "transform.cc",

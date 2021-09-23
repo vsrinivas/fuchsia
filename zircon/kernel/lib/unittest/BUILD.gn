@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("unittest") {
-  kernel = true
   sources = [ "unittest.cc" ]
   deps = [ "//zircon/system/ulib/pretty" ]
   public_deps = [

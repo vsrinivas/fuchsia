@@ -7,7 +7,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("intel") {
-  kernel = true
   sources = [
     "context_table_state.cc",
     "device_context.cc",

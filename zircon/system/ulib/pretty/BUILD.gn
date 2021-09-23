@@ -12,8 +12,6 @@ zx_library("pretty") {
     "pretty/sizes.h",
   ]
 
-  kernel = true
-
   sources = [
     "hexdump.cc",
     "sizes.cc",

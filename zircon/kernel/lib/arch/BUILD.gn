@@ -9,8 +9,6 @@ import("//build/zircon/zircon_cpu.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 zx_library("arch") {
-  kernel = true
-
   sdk = "source"
   sdk_headers = [ "lib/arch/asm.h" ]
 

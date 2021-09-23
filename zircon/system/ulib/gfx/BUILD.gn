@@ -5,7 +5,6 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("gfx") {
-  kernel = true
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
 
