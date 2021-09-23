@@ -12,7 +12,7 @@ use crate::not_implemented;
 use crate::signals::signal_handling::*;
 use crate::signals::*;
 use crate::syscalls::*;
-use crate::task::{Task, ThreadGroup};
+use crate::task::*;
 use crate::types::*;
 
 pub fn sys_rt_sigaction(
@@ -359,7 +359,9 @@ pub fn sys_waitid(
         P_PID => {
             // wait_on_pid returns None if the task was not waited on. In that case, no siginfo is
             // returned.
-            if let Some(zombie_task) = wait_on_pid(ctx.task, id, (options & WNOHANG) == 0)? {
+            if let Some(zombie_task) =
+                wait_on_pid(ctx.task, TaskSelector::Pid(id), (options & WNOHANG) == 0)?
+            {
                 let status = exit_code_to_status(zombie_task.exit_code);
 
                 let mut siginfo = siginfo_t::default();
@@ -386,11 +388,16 @@ pub fn sys_wait4(
     options: u32,
     user_rusage: UserRef<rusage>,
 ) -> Result<SyscallResult, Errno> {
-    if pid < -1 || pid == 0 {
-        return error!(EINVAL);
-    }
+    let selector = if pid == -1 {
+        TaskSelector::Any
+    } else if pid > 0 {
+        TaskSelector::Pid(pid)
+    } else {
+        not_implemented!("unimplemented wait4 pid selector {}", pid);
+        return error!(ENOSYS);
+    };
 
-    if let Some(zombie_task) = wait_on_pid(ctx.task, pid, (options & WNOHANG) == 0)? {
+    if let Some(zombie_task) = wait_on_pid(ctx.task, selector, (options & WNOHANG) == 0)? {
         let status = exit_code_to_status(zombie_task.exit_code);
 
         if !user_rusage.is_null() {

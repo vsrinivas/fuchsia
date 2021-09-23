@@ -151,21 +151,19 @@ impl Waiter {
         WaitKey { key }
     }
 
-    pub fn queue_events(&self, key: &WaitKey, event_mask: u32) -> Result<(), Errno> {
+    pub fn queue_events(&self, key: &WaitKey, event_mask: u32) {
         let mut packet_data = [0u8; 32];
         packet_data[..4].copy_from_slice(&event_mask.to_ne_bytes()[..4]);
 
-        self.queue_user_packet_data(key, zx::sys::ZX_OK, packet_data)?;
-        Ok(())
+        self.queue_user_packet_data(key, zx::sys::ZX_OK, packet_data);
     }
 
     /// Wake up the waiter.
     ///
     /// This function is called before the waiter goes to sleep, the waiter
     /// will wake up immediately upon attempting to go to sleep.
-    pub fn wake(&self) -> Result<(), Errno> {
-        self.queue_user_packet(zx::sys::ZX_OK)?;
-        Ok(())
+    pub fn wake(&self) {
+        self.queue_user_packet(zx::sys::ZX_OK);
     }
 
     /// Interrupt the waiter.
@@ -174,30 +172,21 @@ impl Waiter {
     /// async signal. The wait operation will return EINTR, and unwind until
     /// the thread can process the async signal.
     #[allow(dead_code)]
-    pub fn interrupt(&self) -> Result<(), Errno> {
-        self.queue_user_packet(zx::sys::ZX_ERR_CANCELED)?;
-        Ok(())
+    pub fn interrupt(&self) {
+        self.queue_user_packet(zx::sys::ZX_ERR_CANCELED);
     }
 
     /// Queue a packet to the underlying Zircon port, which will cause the
     /// waiter to wake up.
-    fn queue_user_packet(&self, status: i32) -> Result<(), Errno> {
+    fn queue_user_packet(&self, status: i32) {
         let key = WaitKey::empty();
-        self.queue_user_packet_data(&key, status, [0u8; 32])?;
-        Ok(())
+        self.queue_user_packet_data(&key, status, [0u8; 32]);
     }
 
-    fn queue_user_packet_data(
-        &self,
-        key: &WaitKey,
-        status: i32,
-        packet_data: [u8; 32],
-    ) -> Result<(), Errno> {
+    fn queue_user_packet_data(&self, key: &WaitKey, status: i32, packet_data: [u8; 32]) {
         let user_packet = zx::UserPacket::from_u8_array(packet_data);
         let packet = zx::Packet::from_user_packet(key.key, status, user_packet);
-        //self.port.queue(&packet).map_err(impossible_error)?;
-        self.port.queue(&packet).map_err(|_| EFAULT)?;
-        Ok(())
+        self.port.queue(&packet).map_err(impossible_error).unwrap();
     }
 }
 
@@ -238,14 +227,18 @@ impl ObserverList {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the "wait" function on the waiter.
-    pub fn wait_async(&mut self, waiter: &Arc<Waiter>, events: u32, handler: EventHandler) {
+    pub fn wait_async_mask(&mut self, waiter: &Arc<Waiter>, events: u32, handler: EventHandler) {
         let key = waiter.wake_on_events(handler);
         self.observers.push(Observer {
             waiter: Arc::clone(waiter),
-            events: events,
+            events,
             persistent: false,
             key,
         });
+    }
+
+    pub fn wait_async(&mut self, waiter: &Arc<Waiter>) {
+        self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }
 
     /// Notify any observers that the given events have occurred.
@@ -256,18 +249,26 @@ impl ObserverList {
     ///
     /// The waiters will wake up on their own threads to handle these events.
     /// They are not called synchronously by this function.
-    pub fn notify(&mut self, events: u32, mut limit: usize) {
+    pub fn notify_mask_count(&mut self, events: u32, mut limit: usize) {
         self.observers = std::mem::take(&mut self.observers)
             .into_iter()
             .filter(|observer| {
                 if limit > 0 && (observer.events & events) != 0 {
-                    observer.waiter.queue_events(&observer.key, events).unwrap();
+                    observer.waiter.queue_events(&observer.key, events);
                     limit -= 1;
                     return observer.persistent;
                 }
                 return true;
             })
             .collect();
+    }
+
+    pub fn notify_count(&mut self, limit: usize) {
+        self.notify_mask_count(u32::MAX, limit)
+    }
+
+    pub fn notify_all(&mut self) {
+        self.notify_count(usize::MAX)
     }
 }
 
@@ -393,21 +394,21 @@ mod tests {
         let waiter1 = Waiter::new();
         let waiter2 = Waiter::new();
 
-        list.wait_async(&waiter0, 1, WaitCallback::none());
-        list.wait_async(&waiter1, 1, WaitCallback::none());
-        list.wait_async(&waiter2, 1, WaitCallback::none());
+        list.wait_async(&waiter0);
+        list.wait_async(&waiter1);
+        list.wait_async(&waiter2);
 
-        list.notify(1, 2);
+        list.notify_count(2);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
 
-        list.notify(1, usize::MAX);
+        list.notify_all();
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
 
-        list.notify(1, 3);
+        list.notify_count(3);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
@@ -421,16 +422,16 @@ mod tests {
         let waiter1 = Waiter::new();
         let waiter2 = Waiter::new();
 
-        list.wait_async(&waiter0, 0x13, WaitCallback::none());
-        list.wait_async(&waiter1, 0x11, WaitCallback::none());
-        list.wait_async(&waiter2, 0x12, WaitCallback::none());
+        list.wait_async_mask(&waiter0, 0x13, WaitCallback::none());
+        list.wait_async_mask(&waiter1, 0x11, WaitCallback::none());
+        list.wait_async_mask(&waiter2, 0x12, WaitCallback::none());
 
-        list.notify(0x2, 2);
+        list.notify_mask_count(0x2, 2);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
 
-        list.notify(0x1, usize::MAX);
+        list.notify_mask_count(0x1, usize::MAX);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());

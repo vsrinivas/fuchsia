@@ -11,10 +11,6 @@ use crate::task::Waiter;
 use crate::types::*;
 
 pub struct Scheduler {
-    /// The waiters that suspended tasks are waiting on, organized by pid_t of the task that is
-    /// waited on (i.e., the task that is meant to exit).
-    pub exit_waiters: HashMap<pid_t, Vec<Arc<Waiter>>>,
-
     /// The waiters that suspended tasks are waiting on, organized by pid_t of the suspended task.
     pub suspended_tasks: HashMap<pid_t, Arc<Waiter>>,
 
@@ -34,11 +30,7 @@ pub struct Scheduler {
 
 impl Scheduler {
     pub fn new() -> Scheduler {
-        Scheduler {
-            exit_waiters: HashMap::new(),
-            pending_signals: HashMap::new(),
-            suspended_tasks: HashMap::new(),
-        }
+        Scheduler { pending_signals: HashMap::new(), suspended_tasks: HashMap::new() }
     }
 
     /// Adds a task to the set of tasks currently suspended via `rt_sigsuspend`.
@@ -88,19 +80,5 @@ impl Scheduler {
     /// could potentially return Option<&HashMap> if the `&mut` becomes a problem.
     pub fn get_pending_signals(&mut self, pid: pid_t) -> &mut HashMap<Signal, u64> {
         self.pending_signals.entry(pid).or_default()
-    }
-
-    /// Adds a waiter that will be notified when the specified `pid` exits.
-    ///
-    /// The `waiter` is most likely the `task.waiter` of the waiting task.
-    pub fn add_exit_waiter(&mut self, pid: pid_t, waiter: Arc<Waiter>) {
-        let waiters = self.exit_waiters.entry(pid).or_default();
-        waiters.push(waiter);
-    }
-
-    /// Removes and returns the condition variables for all the tasks waiting on process `pid` to
-    /// exit.
-    pub fn remove_exit_waiters(&mut self, pid: pid_t) -> Vec<Arc<Waiter>> {
-        self.exit_waiters.remove(&pid).unwrap_or_default()
     }
 }

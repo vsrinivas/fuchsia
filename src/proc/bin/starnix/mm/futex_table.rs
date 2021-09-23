@@ -46,7 +46,7 @@ impl FutexTable {
                 return Ok(());
             }
 
-            observers.wait_async(&task.waiter, mask, WaitCallback::none());
+            observers.wait_async_mask(&task.waiter, mask, WaitCallback::none());
         }
         task.waiter.wait_until(deadline)
     }
@@ -55,7 +55,7 @@ impl FutexTable {
     ///
     /// See FUTEX_WAKE.
     pub fn wake(&self, addr: UserAddress, count: usize, mask: u32) {
-        self.get_observers(addr).lock().notify(mask, count);
+        self.get_observers(addr).lock().notify_mask_count(mask, count);
     }
 
     /// Returns the ObserverList for a given address.

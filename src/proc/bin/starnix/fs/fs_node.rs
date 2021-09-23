@@ -413,7 +413,7 @@ impl FsNode {
     }
 
     pub fn notify(&self, events: FdEvents) {
-        self.observers.lock().notify(events.mask(), usize::MAX)
+        self.observers.lock().notify_mask_count(events.mask(), usize::MAX)
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {

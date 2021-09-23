@@ -36,13 +36,6 @@ impl ops::Drop for TaskOwner {
     }
 }
 
-pub struct ZombieTask {
-    pub id: pid_t,
-    pub parent: pid_t,
-    pub exit_code: Option<i32>,
-    // TODO: Do we need exit_signal?
-}
-
 pub struct Task {
     pub id: pid_t,
 
@@ -103,8 +96,25 @@ pub struct Task {
     /// The exit code that this task exited with.
     pub exit_code: Mutex<Option<i32>>,
 
-    /// Child tasks that have exited, but not yet been `waited` on.
-    pub zombie_tasks: RwLock<Vec<ZombieTask>>,
+    /// Child tasks that have exited, but not yet been waited for.
+    pub zombie_children: Mutex<Vec<ZombieTask>>,
+}
+
+pub struct ZombieTask {
+    pub id: pid_t,
+    pub parent: pid_t,
+    pub exit_code: Option<i32>,
+    // TODO: Do we need exit_signal?
+}
+
+/// A selector that can match a task. Works as a representation of the pid argument to syscalls
+/// like wait and kill.
+#[derive(Clone, Copy)]
+pub enum TaskSelector {
+    /// Matches any process at all.
+    Any,
+    /// Matches only the process with the specified pid
+    Pid(pid_t),
 }
 
 impl Task {
@@ -150,7 +160,7 @@ impl Task {
                 waiter: Waiter::new(),
                 exit_signal,
                 exit_code: Mutex::new(None),
-                zombie_tasks: RwLock::new(vec![]),
+                zombie_children: Mutex::new(vec![]),
             }),
         }
     }
@@ -715,18 +725,14 @@ impl Task {
     }
 
     /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
-    ///
-    /// If pid == -1, an arbitrary zombie task is returned.
-    pub fn get_zombie_task(&self, pid: pid_t) -> Option<ZombieTask> {
-        let mut zombie_tasks = self.zombie_tasks.write();
-        if pid == -1 {
-            zombie_tasks.pop()
-        } else {
-            if let Some(position) = zombie_tasks.iter().position(|zombie| zombie.id == pid) {
-                Some(zombie_tasks.remove(position))
-            } else {
-                None
-            }
+    pub fn get_zombie_child(&self, selector: TaskSelector) -> Option<ZombieTask> {
+        let mut zombie_children = self.zombie_children.lock();
+        match selector {
+            TaskSelector::Any => zombie_children.pop(),
+            TaskSelector::Pid(pid) => zombie_children
+                .iter()
+                .position(|zombie| zombie.id == pid)
+                .map(|pos| zombie_children.remove(pos)),
         }
     }
 

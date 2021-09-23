@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::task::{Task, ZombieTask};
+use crate::task::*;
 use crate::types::*;
 
 /// Waits on the task with `pid` to exit.
@@ -15,30 +15,26 @@ use crate::types::*;
 /// - `should_hang`: Whether or not `task` should hang if the waited on task has not yet exited.
 pub fn wait_on_pid(
     task: &Task,
-    pid: pid_t,
+    selector: TaskSelector,
     should_hang: bool,
 ) -> Result<Option<ZombieTask>, Errno> {
-    let zombie_task = match task.get_zombie_task(pid) {
-        Some(zombie_task) => zombie_task,
-        None => {
-            if !should_hang {
-                return Ok(None);
-            }
-            task.thread_group.kernel.scheduler.write().add_exit_waiter(pid, task.waiter.clone());
-            task.waiter.wait()?;
-            // It would be an error for more than one task to remove the zombie task,
-            // so `expect` that it is present.
-            task.get_zombie_task(pid)
-                .expect("Waited for task to exit, but it is not present in zombie tasks.")
+    let waiter = Waiter::new();
+    loop {
+        let mut wait_queue = task.thread_group.child_exit_observers.lock();
+        if let Some(zombie) = task.get_zombie_child(selector) {
+            return Ok(Some(zombie));
         }
-    };
-    Ok(Some(zombie_task))
+        if !should_hang {
+            return Ok(None);
+        }
+        wait_queue.wait_async(&waiter);
+        std::mem::drop(wait_queue);
+        waiter.wait()?;
+    }
 }
 
 /// Converts the given exit code to a status code suitable for returning from wait syscalls.
 pub fn exit_code_to_status(exit_code: Option<i32>) -> i32 {
-    match exit_code {
-        Some(exit_code) => (exit_code & 0xff) << 8,
-        _ => 0,
-    }
+    let exit_code = exit_code.expect("a process should not be exiting without an exit code");
+    (exit_code & 0xff) << 8
 }

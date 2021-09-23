@@ -194,7 +194,7 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
 /// Wakes the task from call to `sigsuspend`.
 fn wake(pid: pid_t, scheduler: &mut Scheduler) -> Result<(), Errno> {
     if let Some(waiter_condvar) = scheduler.remove_suspended_task(pid) {
-        waiter_condvar.wake()?;
+        waiter_condvar.wake();
     }
     Ok(())
 }
