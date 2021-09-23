@@ -225,34 +225,37 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   bool IsQemu() { return qemu_quirk_; }
 
   // Schedules a promise for execution on the executor
-  uint32_t ScheduleTask(TRBPromise promise) {
-    uint32_t target_interrupter = InterrupterMapping();
-    ScheduleTask(target_interrupter, std::move(promise));
-    return target_interrupter;
+  void ScheduleTask(TRBPromise promise) {
+    interrupters_[0].ring().ScheduleTask(std::move(promise));
   }
 
   // Schedules the promise for execution and synchronously waits for it to complete
   zx_status_t RunSynchronously(fpromise::promise<TRB*, zx_status_t> promise) {
-    return RunSynchronously(InterrupterMapping(), std::move(promise));
+    sync_completion_t completion;
+    zx_status_t completion_code;
+    auto continuation = promise.then([&](fpromise::result<TRB*, zx_status_t>& result) {
+      if (result.is_ok()) {
+        completion_code = ZX_OK;
+        sync_completion_signal(&completion);
+      } else {
+        completion_code = result.error();
+        sync_completion_signal(&completion);
+      }
+      return result;
+    });
+    ScheduleTask(continuation.box());
+    RunUntilIdle();
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    return completion_code;
   }
 
   // Creates a promise that resolves after a timeout
-  TRBPromise Timeout(zx::time deadline) { return Timeout(InterrupterMapping(), deadline); }
+  TRBPromise Timeout(zx::time deadline) { return interrupters_[0].Timeout(deadline); }
 
-  // Provides a barrier for promises. After this method is invoked, all pending promises for all
-  // interrupters will be flushed.
-  void RunUntilIdle() {
-    for (auto& it : interrupters_) {
-      if (it.active()) {
-        it.ring().RunUntilIdle();
-      }
-    }
-  }
-  // Provides a barrier for promises. After this method is invoked, all pending promises for the
-  // target interrupter will be flushed.
-  void RunUntilIdle(uint32_t target_interrupter) {
-    interrupter(target_interrupter).ring().RunUntilIdle();
-  }
+  // Provides a barrier for promises.
+  // After this method is invoked,
+  // all pending promises will be flushed.
+  void RunUntilIdle() { interrupters_[0].ring().RunUntilIdle(); }
 
   // Initialization thread method. This is invoked from a separate detached thread
   // when xHCI binds.
@@ -298,7 +301,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void ControlRequestAllocationPhase(UsbRequestState* state);
 
   // Performs the status phase of a control request
-  void ControlRequestStatusPhase(UsbRequestState* state);
+  static void ControlRequestStatusPhase(UsbRequestState* state);
 
   // Performs the data transfer phase of a control request
   void ControlRequestDataPhase(UsbRequestState* state);
@@ -327,42 +330,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void UsbHciNormalRequestQueue(Request request);
   TRBPromise UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address);
   TRBPromise UsbHciHubDeviceAddedAsync(uint32_t device_id, uint32_t port, usb_speed_t speed);
-
-  // InterrupterMapping: finds an interrupter. Currently finds the interrupter with the least
-  // pressure.
-  uint32_t InterrupterMapping();
-  // interrupter: returns any interrupter.
-  Interrupter& interrupter() { return interrupters_[InterrupterMapping()]; }
-  // interrupter(uint32_t i): returns the interrupter with the corresponding index
-  Interrupter& interrupter(uint32_t i) { return interrupters_[i]; }
-  // ScheduleTask: Helper function for ScheduleTask with a target interrupter.
-  void ScheduleTask(uint32_t target_interrupter, TRBPromise promise) {
-    interrupters_[target_interrupter].ring().ScheduleTask(std::move(promise));
-  }
-  // RunSynchronously: Helper function for RunSynchronously with a target interrupter.
-  zx_status_t RunSynchronously(uint32_t target_interrupter,
-                               fpromise::promise<TRB*, zx_status_t> promise) {
-    sync_completion_t completion;
-    zx_status_t completion_code;
-    auto continuation = promise.then([&](fpromise::result<TRB*, zx_status_t>& result) {
-      if (result.is_ok()) {
-        completion_code = ZX_OK;
-        sync_completion_signal(&completion);
-      } else {
-        completion_code = result.error();
-        sync_completion_signal(&completion);
-      }
-      return result;
-    });
-    ScheduleTask(target_interrupter, continuation.box());
-    RunUntilIdle(target_interrupter);
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
-    return completion_code;
-  }
-  // Timeout: Helper function for Timeout with a target interrupter.
-  TRBPromise Timeout(uint32_t target_interrupter, zx::time deadline) {
-    return interrupters_[target_interrupter].Timeout(deadline);
-  }
 
   // Global scheduler lock. This should be held when adding or removing
   // interrupters, and; eventually dynamically assigning transfer rings
@@ -426,6 +393,9 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Offset to the doorbells. See xHCI section 5.3.7
   DoorbellOffset doorbell_offset_;
+
+  // The number of enabled interrupters
+  uint32_t active_interrupters_ __TA_GUARDED(scheduler_lock_);
 
   // The value in the CAPLENGTH register (see xHCI section 5.3.1)
   uint8_t cap_length_;

@@ -97,16 +97,9 @@ void EventRing::ScheduleTask(fpromise::promise<TRB*, zx_status_t> promise) {
 
 void EventRing::RunUntilIdle() { executor_.run_until_idle(); }
 
-zx_status_t Interrupter::Init(uint32_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
-                              const RuntimeRegisterOffset& offset, uint32_t erst_max,
-                              DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
-                              uint64_t* dcbaa) {
+zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
+                               ddk::MmioView mmio_view, UsbXhci* hci) {
   hci_ = hci;
-  return ZX_OK;
-}
-
-zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
-                               ddk::MmioView interrupter_regs) {
   return ZX_OK;
 }
 
@@ -320,11 +313,8 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
   state->pending_operations.push_back(std::move(context));
 }
 
-uint32_t UsbXhci::InterrupterMapping() { return 0; }
-
 int UsbXhci::InitThread() {
   interrupters_ = fbl::MakeArray<Interrupter>(1);
-  interrupters_[0].Init(0, 0, nullptr, {}, 0, {}, this, {}, nullptr);
   mmio_buffer_t invalid_mmio = {
       // Add a dummy vaddr to pass the check in the MmioBuffer constructor.
       .vaddr = FakeMmioPtr(this),
@@ -333,8 +323,8 @@ int UsbXhci::InitThread() {
       .vmo = ZX_HANDLE_INVALID,
   };
   invalid_mmio.size = 4;
-  interrupters_[0].Start(RuntimeRegisterOffset::Get().FromValue(0),
-                         ddk::MmioView(invalid_mmio, 0, 1));
+  interrupters_[0].Start(0, RuntimeRegisterOffset::Get().FromValue(0),
+                         ddk::MmioView(invalid_mmio, 0, 1), this);
   device_state_ = fbl::MakeArray<DeviceState>(32);
   return 0;
 }
@@ -412,8 +402,8 @@ TEST_F(EnumerationTests, EnableSlotCommandSetsDeviceInformationOnSuccess) {
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  auto target_interrupter = controller().ScheduleTask(std::move(enumeration_task));
-  controller().RunUntilIdle(target_interrupter);
+  controller().ScheduleTask(std::move(enumeration_task));
+  controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(device_information->Op, FakeTRB::Op::SetDeviceInformation);
   ASSERT_EQ(device_information->hub_info->hub_depth, hub_info->hub_depth);
@@ -422,10 +412,10 @@ TEST_F(EnumerationTests, EnableSlotCommandSetsDeviceInformationOnSuccess) {
   ASSERT_EQ(device_information->hub_info->multi_tt, hub_info->multi_tt);
   ASSERT_EQ(device_information->port, kPort);
   ASSERT_EQ(device_information->slot, 1);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   auto address_device_op = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(address_device_op->Op, FakeTRB::Op::AddressDevice);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   auto disable_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(disable_trb->Op, FakeTRB::Op::DisableSlot);
   ASSERT_EQ(disable_trb->slot, 1);
@@ -462,8 +452,8 @@ TEST_F(EnumerationTests, AddressDeviceCommandPassesThroughFailureCode) {
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  auto target_interrupter = controller().ScheduleTask(std::move(enumeration_task));
-  controller().RunUntilIdle(target_interrupter);
+  controller().ScheduleTask(std::move(enumeration_task));
+  controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(device_information->Op, FakeTRB::Op::SetDeviceInformation);
   ASSERT_EQ(device_information->hub_info->hub_depth, hub_info->hub_depth);
@@ -472,7 +462,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandPassesThroughFailureCode) {
   ASSERT_EQ(device_information->hub_info->multi_tt, hub_info->multi_tt);
   ASSERT_EQ(device_information->port, kPort);
   ASSERT_EQ(device_information->slot, 1);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // AddressDevice
   auto address_device = state().pending_operations.pop_front();
@@ -485,7 +475,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandPassesThroughFailureCode) {
   ASSERT_EQ(address_device_op->hub_info->hub_speed, hub_info->hub_speed);
   ASSERT_EQ(address_device_op->hub_info->multi_tt, hub_info->multi_tt);
   address_device->completer->complete_error(ZX_ERR_IO_OVERRUN);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   auto disable_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(disable_trb->Op, FakeTRB::Op::DisableSlot);
   ASSERT_EQ(disable_trb->slot, 1);
@@ -523,8 +513,8 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  auto target_interrupter = controller().ScheduleTask(std::move(enumeration_task));
-  controller().RunUntilIdle(target_interrupter);
+  controller().ScheduleTask(std::move(enumeration_task));
+  controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(device_information->Op, FakeTRB::Op::SetDeviceInformation);
   ASSERT_EQ(device_information->hub_info->hub_depth, hub_info->hub_depth);
@@ -533,7 +523,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
   ASSERT_EQ(device_information->hub_info->multi_tt, hub_info->multi_tt);
   ASSERT_EQ(device_information->port, kPort);
   ASSERT_EQ(device_information->slot, 1);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // AddressDevice
   auto address_device = state().pending_operations.pop_front();
@@ -548,7 +538,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
   reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Stopped);
   address_device->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   auto disable_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(disable_trb->Op, FakeTRB::Op::DisableSlot);
   ASSERT_EQ(disable_trb->slot, 1);
@@ -587,8 +577,8 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  auto target_interrupter = controller().ScheduleTask(std::move(enumeration_task));
-  controller().RunUntilIdle(target_interrupter);
+  controller().ScheduleTask(std::move(enumeration_task));
+  controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(device_information->Op, FakeTRB::Op::SetDeviceInformation);
   ASSERT_EQ(device_information->hub_info->hub_depth, hub_info->hub_depth);
@@ -611,12 +601,12 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
   address_device->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   // Timeout
   auto timeout = state().pending_operations.pop_front();
   ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
   timeout->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   // GetMaxPacketSize
   auto get_max_packet_size = state().pending_operations.pop_front();
   auto get_max_packet_size_request = std::move(get_max_packet_size->request);
@@ -635,7 +625,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   descriptor->b_descriptor_type = USB_DT_DEVICE;
   descriptor->b_max_packet_size0 = 42;
   get_max_packet_size_request->Complete(ZX_OK, 8);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // Online Device
   auto online_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -643,7 +633,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   ASSERT_EQ(online_trb->slot, 1);
   ASSERT_EQ(online_trb->port, kPort);
   ASSERT_EQ(online_trb->speed, USB_SPEED_HIGH);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   ASSERT_EQ(completion_code, ZX_OK);
   ASSERT_TRUE(state().pending_operations.is_empty());
 }
@@ -680,8 +670,8 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  auto target_interrupter = controller().ScheduleTask(std::move(enumeration_task));
-  controller().RunUntilIdle(target_interrupter);
+  controller().ScheduleTask(std::move(enumeration_task));
+  controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(device_information->Op, FakeTRB::Op::SetDeviceInformation);
   ASSERT_EQ(device_information->hub_info->hub_depth, hub_info->hub_depth);
@@ -704,7 +694,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::UsbTransactionError);
   address_device->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // DisableSlot
   auto disable_op = state().pending_operations.pop_front();
@@ -714,7 +704,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(disable_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::UsbTransactionError);
   disable_op->completer->complete_ok(disable_trb.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // EnableSlot
   enable_slot_task = state().pending_operations.pop_front();
@@ -724,7 +714,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
       ->set_CompletionCode(CommandCompletionEvent::Success);
   reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(2);
   enable_slot_task->completer->complete_ok(enum_slot_trb.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // Set device information
   device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -735,7 +725,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(device_information->hub_info->multi_tt, hub_info->multi_tt);
   ASSERT_EQ(device_information->port, kPort);
   ASSERT_EQ(device_information->slot, 2);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // AddressDevice with BSR = 1
   address_device = state().pending_operations.pop_front();
@@ -751,7 +741,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
   address_device->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // GetMaxPacketSize
   auto get_max_packet_size = state().pending_operations.pop_front();
@@ -771,7 +761,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   descriptor->b_descriptor_type = USB_DT_DEVICE;
   descriptor->b_max_packet_size0 = 42;
   get_max_packet_size_request->Complete(ZX_OK, 8);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // SetMaxPacketSize
   auto set_max_packet_size = state().pending_operations.pop_front();
@@ -782,7 +772,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
   set_max_packet_size->completer->complete_ok(set_max_packet_size_trb.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // AddressDevice with BSR = 0
   address_device = state().pending_operations.pop_front();
@@ -793,13 +783,13 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
   address_device->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // Timeout
   auto timeout = state().pending_operations.pop_front();
   ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
   timeout->completer->complete_ok(address_device_op.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // GetMaxPacketSize
   get_max_packet_size = state().pending_operations.pop_front();
@@ -818,7 +808,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   descriptor->b_descriptor_type = USB_DT_DEVICE;
   descriptor->b_max_packet_size0 = 32;
   get_max_packet_size_request->Complete(ZX_OK, 8);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // SetMaxPacketSize (full-speed device requires setting this again)
   set_max_packet_size = state().pending_operations.pop_front();
@@ -829,7 +819,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
   set_max_packet_size->completer->complete_ok(set_max_packet_size_trb.get());
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
 
   // Online Device
   auto online_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -837,7 +827,7 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(online_trb->slot, 2);
   ASSERT_EQ(online_trb->port, 5);
   ASSERT_EQ(online_trb->speed, USB_SPEED_FULL);
-  controller().RunUntilIdle(target_interrupter);
+  controller().RunUntilIdle();
   ASSERT_EQ(completion_code, ZX_OK);
   ASSERT_TRUE(state().pending_operations.is_empty());
 }

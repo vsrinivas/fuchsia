@@ -26,19 +26,10 @@ class Interrupter {
     }
   }
 
-  zx_status_t Init(uint32_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
-                   const RuntimeRegisterOffset& offset, uint32_t erst_max,
-                   DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
-                   uint64_t* dcbaa);
-
-  zx_status_t Start(const RuntimeRegisterOffset& offset, ddk::MmioView interrupter_regs);
+  zx_status_t Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
+                    ddk::MmioView interrupter_regs, UsbXhci* hci);
 
   void Stop() {
-    if (!active_) {
-      // Already inactive;
-      return;
-    }
-    active_ = false;
     if (async_executor_.has_value()) {
       async_executor_.value().schedule_task(fpromise::make_ok_promise().then(
           [=](fpromise::result<void, void>& result) { async_loop_->Quit(); }));
@@ -46,7 +37,6 @@ class Interrupter {
   }
 
   EventRing& ring() { return event_ring_; }
-  bool active() { return active_; }
 
   // Returns a pointer to the IRQ
   // owned by this interrupter
@@ -55,7 +45,6 @@ class Interrupter {
   TRBPromise Timeout(zx::time deadline);
 
  private:
-  std::atomic_bool active_ = false;
   uint32_t interrupter_;
   zx_status_t IrqThread();
   zx::interrupt irq_;

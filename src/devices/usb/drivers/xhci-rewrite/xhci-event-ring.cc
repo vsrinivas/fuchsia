@@ -80,13 +80,8 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   hci_ = hci;
   hcc_params_1_ = hcc_params_1;
   dcbaa_ = dcbaa;
-  auto status =
-      segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(), mmio_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  l.release();
-  return AddSegmentIfNone();
+  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(),
+                        mmio_);
 }
 
 void EventRing::RemovePressure() {
@@ -199,7 +194,8 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     // Link could be active from connect status change above.
     // To prevent enumerating a device twice, we ensure that the link wasn't previously active
     // before enumerating.
-    if ((sc.PLS() == PORTSC::U0) && sc.CCS() && !(hci_->GetPortState()[port_id - 1].link_active)) {
+    if ((sc.PLS() == PORTSC::U0) && sc.CCS() &&
+        !(hci_->GetPortState()[port_id - 1].link_active)) {
       if (!hci_->GetPortState()[port_id - 1].is_connected) {
         // Spontaneous initialization of USB 3.0 port without going through
         // CSC event. We know this is USB 3.0 since this cannot possibly happen
@@ -599,7 +595,7 @@ zx_status_t EventRing::HandleIRQ() {
       }
     }
     if (last_phys != erdp_phys_) {
-      executor_.run_until_idle();
+      hci_->RunUntilIdle();
       erdp_reg_ =
           erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
       last_phys = erdp_phys_;
