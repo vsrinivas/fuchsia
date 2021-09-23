@@ -361,12 +361,19 @@ if (is_kernel) {
   }
 
   config("persistent_ram_config") {
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//zircon/kernel/lib/crashlog/*",
+      "//zircon/kernel/lib/jtrace/*",
+    ]
     defines = [ "PERSISTENT_RAM_ALLOCATION_GRANULARITY=$persistent_ram_allocation_granularity" ]
   }
 
   config("jtrace_config") {
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//zircon/kernel/lib/jtrace/*",
+    ]
 
     if (jtrace_enabled == false) {
       defines = [ "JTRACE_TARGET_BUFFER_SIZE=0" ]

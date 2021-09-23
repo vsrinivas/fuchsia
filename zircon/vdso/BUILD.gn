@@ -60,6 +60,7 @@ config("public.config") {
   visibility = [
     ":public",
     "//src/zircon/lib/zircon/*",
+    "//zircon/kernel/lib/syscalls/*",
     "//zircon/kernel/lib/userabi/vdso/*",
   ]
   include_dirs = [ "$root_gen_dir/include" ]
@@ -79,7 +80,10 @@ group("private") {
 
 private_gen_dir = "$target_gen_dir/include/lib/syscalls"
 config("private.config") {
-  visibility = [ ":private" ]
+  visibility = [
+    ":private",
+    "//zircon/kernel/lib/syscalls/*",
+  ]
   include_dirs = [ "$target_gen_dir/include" ]
 }
 
