@@ -117,6 +117,10 @@ class IsolatedDevmgr {
   std::unique_ptr<ExceptionLoopState> exception_loop_state_;
 };
 
+// NOTE: Please do not use these APIs, use the ones at:
+//  //src/devices/lib/device-watcher/cpp
+// TODO(fxbug.dev/85271): Remove these.
+
 // Wait for |file| to appear in |dir|, and open it when it does.
 zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out);
 

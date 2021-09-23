@@ -1,0 +1,46 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+static_library("cpp") {
+  output_name = "device-watcher"
+
+  sources = [
+    "device-watcher.cc",
+    "device-watcher.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fbl",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/fdio-caller",
+  ]
+}
+
+test("test") {
+  output_name = "device-watcher-cpp-test"
+  sources = [ "test.cc" ]
+  deps = [
+    ":cpp",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("device-watcher-cpp-test") {
+  deps = [ ":test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":device-watcher-cpp-test" ]
+}
