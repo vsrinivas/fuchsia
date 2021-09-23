@@ -75,10 +75,6 @@ abstract class SettingsState implements TaskService {
   double get systemUpdateProgress;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
-    // TODO(https://fxbug.dev/71711): Remove this ignore below when transition
-    // to `dart analyze` is complete. `dart analyze` will complain without an
-    // explicit type cast.
-    // ignore: unnecessary_cast
     return SettingsStateImpl(
       shortcutsService: shortcutsService,
       timezoneService: TimezoneService(),

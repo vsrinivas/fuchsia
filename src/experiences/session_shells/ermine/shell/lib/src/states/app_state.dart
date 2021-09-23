@@ -67,10 +67,6 @@ abstract class AppState {
   void checkingForUpdatesAlert();
 
   factory AppState.fromEnv() {
-    // TODO(https://fxbug.dev/71711): Remove this ignore below when transition
-    // to `dart analyze` is complete. `dart analyze` will complain without an
-    // explicit type cast.
-    // ignore: unnecessary_cast
     return AppStateImpl(
       launchService: LaunchService(),
       startupService: StartupService(),
