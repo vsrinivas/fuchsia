@@ -102,8 +102,8 @@ To safely add a method to a protocol, mark the new method with
 [`[Transitional]`][transitional]. Once all implementations of the new method are
 in place, you can remove the [`[Transitional]`][transitional] attribute.
 
-Examples: removing [an event][example-protocol-event-remove],
-[a method][example-protocol-method-remove].
+Examples: adding [an event][example-protocol-event-add],
+[a method][example-protocol-method-add].
 
 ### Removing a method from a protocol {#protocol-method-remove}
 
@@ -123,8 +123,8 @@ Note: When using the Rust bindings, you need to manually add catch-all cases
 [`[Transitional]`][transitional] attribute. Read more about [how
 `[Transitional]` impacts the Rust bindings][transitional-rust].
 
-Examples: adding [an event][example-protocol-event-add],
-[a method][example-protocol-method-add].
+Examples: removing [an event][example-protocol-event-remove],
+[a method][example-protocol-method-remove].
 
 ### Renaming a method {#protocol-method-rename}
 
