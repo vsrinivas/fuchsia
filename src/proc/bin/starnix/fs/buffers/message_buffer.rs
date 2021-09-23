@@ -184,15 +184,14 @@ impl MessageBuffer {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<usize, Errno> {
-        let mut remaining = self.available();
-        let actual = std::cmp::min(remaining, user_buffers.remaining());
-        while let Some(buffer) = user_buffers.next(remaining) {
-            let mut bytes = vec![0u8; buffer.length];
-            task.mm.read_memory(buffer.address, &mut bytes[..])?;
-            self.write_message(Message::packet(bytes));
-            remaining -= buffer.length;
+        let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
+        let mut bytes = vec![0u8; actual];
+        let mut offset = 0;
+        while let Some(buffer) = user_buffers.next(actual - offset) {
+            task.mm.read_memory(buffer.address, &mut bytes[offset..(offset + buffer.length)])?;
+            offset += buffer.length;
         }
-
+        self.write_message(Message::packet(bytes));
         Ok(actual)
     }
 
@@ -210,7 +209,7 @@ impl MessageBuffer {
         self.len() == 0
     }
 
-    fn available(&self) -> usize {
+    fn available_capacity(&self) -> usize {
         self.capacity - self.length
     }
 }
