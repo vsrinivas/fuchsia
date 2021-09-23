@@ -68,35 +68,35 @@ mod tests {
             UserBuffer { address: UserAddress::from_ptr(0x3820), length: 42 },
         ];
         let data = &buffers[..];
-        let mut it = UserBufferIterator::new(data);
-        assert_eq!(49, it.remaining());
-        assert_eq!(None, it.next(0));
+        let mut user_buffers = UserBufferIterator::new(data);
+        assert_eq!(49, user_buffers.remaining());
+        assert_eq!(None, user_buffers.next(0));
         assert_eq!(
             Some(UserBuffer { address: UserAddress::from_ptr(0x20), length: 1 }),
-            it.next(1)
+            user_buffers.next(1)
         );
-        assert_eq!(48, it.remaining());
+        assert_eq!(48, user_buffers.remaining());
         assert_eq!(
             Some(UserBuffer { address: UserAddress::from_ptr(0x21), length: 2 }),
-            it.next(2)
+            user_buffers.next(2)
         );
-        assert_eq!(46, it.remaining());
+        assert_eq!(46, user_buffers.remaining());
         assert_eq!(
             Some(UserBuffer { address: UserAddress::from_ptr(0x23), length: 4 }),
-            it.next(31)
+            user_buffers.next(31)
         );
-        assert_eq!(42, it.remaining());
+        assert_eq!(42, user_buffers.remaining());
         assert_eq!(
             Some(UserBuffer { address: UserAddress::from_ptr(0x3820), length: 9 }),
-            it.next(9)
+            user_buffers.next(9)
         );
-        assert_eq!(33, it.remaining());
+        assert_eq!(33, user_buffers.remaining());
         assert_eq!(
             Some(UserBuffer { address: UserAddress::from_ptr(0x3829), length: 33 }),
-            it.next(40)
+            user_buffers.next(40)
         );
-        assert_eq!(0, it.remaining());
-        assert_eq!(None, it.next(40));
-        assert_eq!(0, it.remaining());
+        assert_eq!(0, user_buffers.remaining());
+        assert_eq!(None, user_buffers.next(40));
+        assert_eq!(0, user_buffers.remaining());
     }
 }

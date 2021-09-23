@@ -31,7 +31,6 @@ pub fn new_socket(kernel: &Kernel, open_flags: OpenFlags) -> FileHandle {
 }
 
 // TODO: Sockets should have a maximum capacity.
-#[derive(Default)]
 pub struct Socket {
     /// The `FsNode` that contains the socket that is connected to this socket, if such a node
     /// has set via `Socket::connect`.
@@ -46,6 +45,17 @@ pub struct Socket {
     // TODO: Set this correctly when the socket is bound to an address/infer this from connection
     // state.
     is_bound: bool,
+}
+
+impl Default for Socket {
+    fn default() -> Self {
+        Socket {
+            connected_node: Weak::default(),
+            // TODO: Set the capacity to a more accurate value.
+            incoming_messages: MessageBuffer::new(usize::MAX),
+            is_bound: false,
+        }
+    }
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`. This is used to share sockets
@@ -159,12 +169,12 @@ impl Socket {
     /// - `user_buffers`: The `UserBufferIterator` to read the data from.
     ///
     /// Returns the number of bytes that were written to the socket.
-    pub fn write_buffer(
+    pub fn write(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<usize, Errno> {
-        self.incoming_messages.write_buffer(task, user_buffers)
+        self.incoming_messages.write(task, user_buffers)
     }
 
     /// Reads the the contents of this socket into `UserBufferIterator`.
@@ -175,19 +185,19 @@ impl Socket {
     ///
     /// Returns the number of bytes that were read into the buffer, and a control message if one was
     /// read from the socket.
-    pub fn read_into_buffer(
+    pub fn read(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<Control>), Errno> {
-        let bytes_read = self.incoming_messages.read_packets_into_buffer(task, user_buffers)?;
+        let bytes_read = self.incoming_messages.read(task, user_buffers)?;
         Ok((bytes_read, self.incoming_messages.read_if_control()))
     }
 
     /// Writes a `Message::Control` containing the provided bytes to the socket.
     pub fn write_control(&mut self, bytes: Vec<u8>) {
         if bytes.len() > 0 {
-            self.incoming_messages.write(Message::control(bytes));
+            self.incoming_messages.write_message(Message::control(bytes));
         }
     }
 }

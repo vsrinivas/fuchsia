@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::VecDeque;
+
 use super::message_types::*;
+use crate::error;
 use crate::task::Task;
 use crate::types::*;
 
-use std::collections::VecDeque;
-
-#[derive(Default)]
 /// A `MessageBuffer` stores a FIFO sequence of messages.
 pub struct MessageBuffer {
     /// The messages stored in the message buffer.
@@ -18,11 +18,30 @@ pub struct MessageBuffer {
 
     /// The total number of bytes currently in the message buffer.
     length: usize,
+
+    /// The maximum number of bytes that can be stored inside this pipe.
+    capacity: usize,
 }
 
 impl MessageBuffer {
+    pub fn new(capacity: usize) -> MessageBuffer {
+        MessageBuffer { messages: VecDeque::default(), length: 0, capacity }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
+    pub fn set_capacity(&mut self, requested_capacity: usize) -> Result<(), Errno> {
+        if requested_capacity < self.length {
+            return error!(EBUSY);
+        }
+        self.capacity = requested_capacity;
+        Ok(())
+    }
+
     /// Reads the next message in the buffer, if such a message exists.
-    pub fn read(&mut self) -> Option<Message> {
+    fn read_message(&mut self) -> Option<Message> {
         self.messages.pop_front().map(|message| {
             self.length -= message.len();
             message
@@ -52,10 +71,10 @@ impl MessageBuffer {
     ///
     /// Returns a vector of read messages, where the sum of the message lengths is guaranteed to be
     /// less than `max_bytes`. The returned `usize` indicates the exact number of bytes read.
-    pub fn read_packets(&mut self, max_bytes: usize) -> (Vec<Message>, usize) {
+    fn read_packets(&mut self, max_bytes: usize) -> (Vec<Message>, usize) {
         let mut number_of_bytes_read = 0;
         let mut messages = vec![];
-        while let Some(message) = self.read() {
+        while let Some(message) = self.read_message() {
             match message {
                 Message::Control(control) => {
                     // Control messages are not returned when reading packets, but they do stop the
@@ -96,7 +115,7 @@ impl MessageBuffer {
     ///
     /// Returns the number of bytes that were read into the buffer, and a control message if one was
     /// read from the socket.
-    pub fn read_packets_into_buffer(
+    pub fn read(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
@@ -104,7 +123,7 @@ impl MessageBuffer {
         let mut total_bytes_read = 0;
 
         while !self.is_empty() {
-            if let Some(mut user_buffer) = user_buffers.next(usize::MAX) {
+            if let Some(mut user_buffer) = user_buffers.next(self.length) {
                 // Try to read enough bytes to fill the current user buffer.
                 let (messages, bytes_read) = self.read_packets(user_buffer.length);
 
@@ -142,13 +161,13 @@ impl MessageBuffer {
     }
 
     /// Writes a message to the back of the message buffer.
-    pub fn write(&mut self, message: Message) {
+    pub fn write_message(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_back(message);
     }
 
     /// Writes a message to the front of the message buffer.
-    pub fn write_front(&mut self, message: Message) {
+    fn write_front(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_front(message);
     }
@@ -160,21 +179,21 @@ impl MessageBuffer {
     /// - `user_buffers`: The `UserBufferIterator` to read the data from.
     ///
     /// Returns the number of bytes that were written to the socket.
-    pub fn write_buffer(
+    pub fn write(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<usize, Errno> {
-        let mut bytes_written = 0;
-        while let Some(buffer) = user_buffers.next(usize::MAX) {
+        let mut remaining = self.available();
+        let actual = std::cmp::min(remaining, user_buffers.remaining());
+        while let Some(buffer) = user_buffers.next(remaining) {
             let mut bytes = vec![0u8; buffer.length];
             task.mm.read_memory(buffer.address, &mut bytes[..])?;
-
-            bytes_written += bytes.len();
-            self.write(Message::packet(bytes));
+            self.write_message(Message::packet(bytes));
+            remaining -= buffer.length;
         }
 
-        Ok(bytes_written)
+        Ok(actual)
     }
 
     /// Returns the total length of all the `Packet` messages in the message buffer.
@@ -190,6 +209,10 @@ impl MessageBuffer {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    fn available(&self) -> usize {
+        self.capacity - self.length
+    }
 }
 
 #[cfg(test)]
@@ -199,55 +222,55 @@ mod tests {
     /// Tests that a write followed by a read returns the written message.
     #[test]
     fn test_read_write() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
         let message = Message::packet(bytes);
-        message_buffer.write(message.clone());
+        message_buffer.write_message(message.clone());
         assert_eq!(message_buffer.len(), 3);
-        assert_eq!(message_buffer.read(), Some(message));
+        assert_eq!(message_buffer.read_message(), Some(message));
         assert!(message_buffer.is_empty());
     }
 
     /// Tests that control messages do not contribute to the message buffer length.
     #[test]
     fn test_control_len() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
         let message = Message::control(bytes.clone());
-        message_buffer.write(message.clone());
+        message_buffer.write_message(message.clone());
         assert_eq!(message_buffer.len(), 0);
         let message = Message::packet(bytes.clone());
-        message_buffer.write(message.clone());
+        message_buffer.write_message(message.clone());
         assert_eq!(message_buffer.len(), bytes.len());
     }
 
     /// Tests that multiple writes followed by multiple reads return the data in the correct order.
     #[test]
     fn test_read_write_multiple() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![3, 4, 5];
 
         for message in
             vec![Message::packet(first_bytes.clone()), Message::packet(second_bytes.clone())]
         {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         assert_eq!(message_buffer.len(), first_bytes.len() + second_bytes.len());
-        assert_eq!(message_buffer.read(), Some(Message::packet(first_bytes)));
+        assert_eq!(message_buffer.read_message(), Some(Message::packet(first_bytes)));
         assert_eq!(message_buffer.len(), second_bytes.len());
-        assert_eq!(message_buffer.read(), Some(Message::packet(second_bytes)));
-        assert_eq!(message_buffer.read(), None);
+        assert_eq!(message_buffer.read_message(), Some(Message::packet(second_bytes)));
+        assert_eq!(message_buffer.read_message(), None);
     }
 
     /// Tests that reading 0 bytes returns an empty vector.
     #[test]
     fn test_read_packets_zero() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
         let message = Message::packet(bytes.clone());
-        message_buffer.write(message.clone());
+        message_buffer.write_message(message.clone());
 
         assert_eq!(message_buffer.len(), bytes.len());
         assert_eq!(message_buffer.read_packets(0), (vec![], 0));
@@ -258,14 +281,14 @@ mod tests {
     /// the correct bytes.
     #[test]
     fn test_read_packets_message_boundary() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2];
         let second_bytes: Vec<u8> = vec![3, 4];
 
         for message in
             vec![Message::packet(first_bytes.clone()), Message::packet(second_bytes.clone())]
         {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         let expected_first_message = Message::packet(first_bytes);
@@ -279,14 +302,14 @@ mod tests {
     /// the expected number of bytes.
     #[test]
     fn test_read_packets_message_break() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![4];
 
         for message in
             vec![Message::packet(first_bytes.clone()), Message::packet(second_bytes.clone())]
         {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         let expected_first_messages = vec![Message::packet(vec![1, 2])];
@@ -303,7 +326,7 @@ mod tests {
     /// pending messages.
     #[test]
     fn test_read_packets_all() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![4, 5];
         let third_bytes: Vec<u8> = vec![9, 3];
@@ -313,7 +336,7 @@ mod tests {
             Message::packet(second_bytes.clone()),
             Message::packet(third_bytes.clone()),
         ] {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         let expected_messages = vec![
@@ -329,7 +352,7 @@ mod tests {
     /// have been returned.
     #[test]
     fn test_read_packets_control_fits() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let control_bytes: Vec<u8> = vec![7, 7, 7];
         let second_bytes: Vec<u8> = vec![4, 5];
@@ -339,7 +362,7 @@ mod tests {
             Message::control(control_bytes.clone()),
             Message::packet(second_bytes.clone()),
         ] {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         assert_eq!(message_buffer.read_packets(20), (vec![Message::packet(first_bytes)], 3));
@@ -351,7 +374,7 @@ mod tests {
     /// bytes, and the control message is not returned.
     #[test]
     fn test_read_packets_control_does_not_fit() {
-        let mut message_buffer = MessageBuffer::default();
+        let mut message_buffer = MessageBuffer::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let control_bytes: Vec<u8> = vec![7, 7, 7];
         let second_bytes: Vec<u8> = vec![4, 5];
@@ -361,7 +384,7 @@ mod tests {
             Message::control(control_bytes.clone()),
             Message::packet(second_bytes.clone()),
         ] {
-            message_buffer.write(message);
+            message_buffer.write_message(message);
         }
 
         assert_eq!(message_buffer.read_packets(5), (vec![Message::packet(first_bytes)], 3));

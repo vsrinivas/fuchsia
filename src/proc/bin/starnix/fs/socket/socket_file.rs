@@ -73,7 +73,7 @@ impl SocketFile {
                 let socket = self.get_socket_for_writing(task)?;
                 let mut socket = socket.lock();
 
-                let bytes_written = match socket.write_buffer(task, &mut user_buffers) {
+                let bytes_written = match socket.write(task, &mut user_buffers) {
                     Err(e) if e == EPIPE && actual > 0 => {
                         // If the error is EPIPE (that is, the write failed because the socket was
                         // disconnected), then return the amount of bytes that were written before
@@ -121,7 +121,7 @@ impl SocketFile {
             || {
                 let mut socket = self.socket.lock();
                 let mut user_buffers = UserBufferIterator::new(data);
-                let (bytes_read, control) = socket.read_into_buffer(task, &mut user_buffers)?;
+                let (bytes_read, control) = socket.read(task, &mut user_buffers)?;
 
                 if bytes_read == 0 && socket.is_connected() {
                     // If no bytes were read, but the socket is connected, return an error indicating that

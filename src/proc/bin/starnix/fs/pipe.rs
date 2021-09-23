@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use parking_lot::Mutex;
-use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::sync::Arc;
 
 use crate::errno;
 use crate::error;
 use crate::fd_impl_nonseekable;
+use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
 use crate::signals::{signal_handling::send_checked_signal, *};
@@ -25,17 +25,7 @@ fn round_up(value: usize, increment: usize) -> usize {
 }
 
 pub struct Pipe {
-    /// The maximum number of bytes that can be stored inside this pipe.
-    size: usize,
-
-    /// The number of bytes actually stored in inside the pipe currently.
-    used: usize,
-
-    /// The bytes stored inside the pipe.
-    ///
-    /// Write are added at the end of the queue. Read consume from the front of
-    /// the queue.
-    buffers: VecDeque<Vec<u8>>,
+    messages: MessageBuffer,
 
     /// The number of open readers.
     reader_count: usize,
@@ -53,12 +43,10 @@ pub struct Pipe {
 impl Default for Pipe {
     fn default() -> Self {
         // The default size of a pipe is 16 pages.
-        let default_pipe_size = (*PAGE_SIZE * 16) as usize;
+        let default_pipe_capacity = (*PAGE_SIZE * 16) as usize;
 
         Pipe {
-            size: default_pipe_size,
-            used: 0,
-            buffers: VecDeque::new(),
+            messages: MessageBuffer::new(default_pipe_capacity),
             reader_count: 0,
             had_reader: false,
             writer_count: 0,
@@ -114,48 +102,27 @@ impl Pipe {
         self.had_writer = true;
     }
 
-    fn get_size(&self) -> usize {
-        self.size
+    fn capacity(&self) -> usize {
+        self.messages.capacity()
     }
 
-    fn set_size(&mut self, mut requested_size: usize) -> Result<(), Errno> {
-        if requested_size > PIPE_MAX_SIZE {
+    fn set_capacity(&mut self, mut requested_capacity: usize) -> Result<(), Errno> {
+        if requested_capacity > PIPE_MAX_SIZE {
             return error!(EINVAL);
         }
-        if requested_size < self.used {
-            return error!(EBUSY);
-        }
         let page_size = *PAGE_SIZE as usize;
-        if requested_size < page_size {
-            requested_size = page_size;
+        if requested_capacity < page_size {
+            requested_capacity = page_size;
         }
-        self.size = round_up(requested_size, page_size);
-        Ok(())
+        requested_capacity = round_up(requested_capacity, page_size);
+        self.messages.set_capacity(requested_capacity)
     }
 
-    fn get_available(&self) -> usize {
-        self.size - self.used
-    }
-
-    fn pop_front(&mut self) -> Option<Vec<u8>> {
-        if let Some(front) = self.buffers.pop_front() {
-            self.used -= front.len();
-            return Some(front);
-        }
-        None
-    }
-
-    fn push_front(&mut self, buffer: Vec<u8>) {
-        self.used += buffer.len();
-        self.buffers.push_front(buffer);
-    }
-
-    fn push_back(&mut self, buffer: Vec<u8>) {
-        self.used += buffer.len();
-        self.buffers.push_back(buffer);
-    }
-
-    pub fn read(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
+    pub fn read(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<usize, Errno> {
         // If there isn't any data to read from the pipe, then the behavior
         // depends on whether there are any open writers. If there is an
         // open writer, then we return EAGAIN, to signal that the callers
@@ -163,80 +130,18 @@ impl Pipe {
         // Otherwise, we'll fall through the rest of this function and
         // return that we have read zero bytes, which will let the caller
         // know that they're done reading the pipe.
-        if self.used == 0 && (self.writer_count > 0 || !self.had_writer) {
+        if self.messages.len() == 0 && (self.writer_count > 0 || !self.had_writer) {
             return error!(EAGAIN);
         }
 
-        let mut dst = UserBuffer::default();
-        let mut dst_offset = 0;
-
-        let mut src = vec![];
-        let mut src_offset = 0;
-
-        // We hold the lock on the pipe, which means we can compute exactly
-        // how much we can read: either all there is to read or all that will
-        // fit in the user's buffer.
-        let actual = std::cmp::min(self.used, it.remaining());
-        let mut remaining = actual;
-        while remaining > 0 {
-            // If dst_offset has reached dst.length, we're done with this
-            // user buffer and we need to move to the next one. Such a buffer
-            // should always exist because we the iterator promised us enough
-            // space to reach |remaining|.
-            if dst_offset == dst.length {
-                dst = it.next(remaining).ok_or(errno!(EFAULT))?;
-                dst_offset = 0;
-            }
-
-            // If src_offset has reached src.len(), we're done with this
-            // run of data in the pipe and we need to move on to the next
-            // one. Such a chunk should always exist because the pipe promised
-            // us enough data to reach |remaining|.
-            if src_offset == src.len() {
-                src = self.pop_front().ok_or(errno!(EFAULT))?;
-                src_offset = 0;
-            }
-
-            // The amount we can read in this iteration is either whatever
-            // remains in this user buffer or whatever remains in this run of
-            // data in the pipe.
-            let chunk_size = std::cmp::min(dst.length - dst_offset, src.len() - src_offset);
-            let src_end = src_offset + chunk_size;
-
-            // Actually write this chunk out to user memory.
-            let result = task.mm.write_memory(dst.address + dst_offset, &src[src_offset..src_end]);
-
-            remaining -= chunk_size;
-
-            // We're done if we fail to write to user memory or if we have
-            // read everything we planned to read.
-            if result.is_err() || remaining == 0 {
-                // It's possible that we did not complete reading the last Vec
-                // we popped off the front of the pipe. In order to not lose
-                // that data, we need to remove the part we have already read
-                // and put the rest back on the front of the pipe.
-                //
-                // This algorithm can have some pathological behavior if there
-                // is a large run at the start of the pipe and the user issues
-                // tiny reads because each one will end up copying most of the
-                // large run. We can optimize that case by keeping an offset
-                // into the first run rather than copying the data each time.
-                if src_end != src.len() {
-                    let leftover = src[src_end..].to_vec();
-                    self.push_front(leftover);
-                }
-                result?;
-                break;
-            }
-
-            dst_offset += chunk_size;
-            src_offset += chunk_size;
-        }
-
-        Ok(actual)
+        self.messages.read(task, user_buffers)
     }
 
-    pub fn write(&mut self, task: &Task, it: &mut UserBufferIterator<'_>) -> Result<usize, Errno> {
+    pub fn write(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<usize, Errno> {
         if !self.had_reader {
             return error!(EAGAIN);
         }
@@ -246,17 +151,7 @@ impl Pipe {
             return error!(EPIPE);
         }
 
-        let mut remaining = self.get_available();
-        let actual = std::cmp::min(remaining, it.remaining());
-
-        while let Some(buffer) = it.next(remaining) {
-            let mut bytes = vec![0u8; buffer.length];
-            task.mm.read_memory(buffer.address, &mut bytes[..])?;
-            self.push_back(bytes);
-            remaining -= buffer.length;
-        }
-
-        Ok(actual)
+        self.messages.write(task, user_buffers)
     }
 
     fn fcntl(
@@ -267,10 +162,10 @@ impl Pipe {
         arg: u64,
     ) -> Result<SyscallResult, Errno> {
         match cmd {
-            F_GETPIPE_SZ => Ok(self.get_size().into()),
+            F_GETPIPE_SZ => Ok(self.capacity().into()),
             F_SETPIPE_SZ => {
-                self.set_size(arg as usize)?;
-                Ok(self.get_size().into())
+                self.set_capacity(arg as usize)?;
+                Ok(self.capacity().into())
             }
             _ => error!(EINVAL),
         }
@@ -287,7 +182,7 @@ impl Pipe {
         match request {
             FIONREAD => {
                 let addr = UserRef::<i32>::new(in_addr);
-                let value: i32 = self.used.try_into().map_err(|_| errno!(EINVAL))?;
+                let value: i32 = self.messages.len().try_into().map_err(|_| errno!(EINVAL))?;
                 task.mm.write_object(addr, &value)?;
                 Ok(SUCCESS)
             }
@@ -353,8 +248,8 @@ impl FileOps for PipeFileObject {
     }
 
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        let mut it = UserBufferIterator::new(data);
-        let actual = self.pipe.lock().read(task, &mut it)?;
+        let mut user_buffers = UserBufferIterator::new(data);
+        let actual = self.pipe.lock().read(task, &mut user_buffers)?;
         if actual > 0 {
             file.node().notify(FdEvents::POLLOUT);
         }
@@ -364,11 +259,11 @@ impl FileOps for PipeFileObject {
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let requested = UserBuffer::get_total_length(data);
         let mut actual = 0;
-        let mut it = UserBufferIterator::new(data);
+        let mut user_buffers = UserBufferIterator::new(data);
         file.blocking_op(
             task,
             || {
-                actual += match self.pipe.lock().write(task, &mut it) {
+                actual += match self.pipe.lock().write(task, &mut user_buffers) {
                     Ok(chunk) => {
                         if chunk > 0 {
                             file.node().notify(FdEvents::POLLIN);
