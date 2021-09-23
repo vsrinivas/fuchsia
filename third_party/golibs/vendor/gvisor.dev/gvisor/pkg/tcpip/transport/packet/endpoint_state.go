@@ -15,7 +15,6 @@
 package packet
 
 import (
-	"fmt"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -58,8 +57,9 @@ func (ep *endpoint) afterLoad() {
 	ep.stack = stack.StackFromEnv
 	ep.ops.InitHandler(ep, ep.stack, tcpip.GetStackSendBufferLimits, tcpip.GetStackReceiveBufferLimits)
 
-	if err := ep.stack.RegisterPacketEndpoint(ep.boundNIC, ep.boundNetProto, ep); err != nil {
-		panic(fmt.Sprintf("RegisterPacketEndpoint(%d, %d, _): %s", ep.boundNIC, ep.boundNetProto, err))
+	// TODO(gvisor.dev/173): Once bind is supported, choose the right NIC.
+	if err := ep.stack.RegisterPacketEndpoint(0, ep.netProto, ep); err != nil {
+		panic(err)
 	}
 
 	ep.rcvMu.Lock()

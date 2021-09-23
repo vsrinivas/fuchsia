@@ -1773,7 +1773,7 @@ TEST_P(HangupTest, DuringConnect) {
             // connected-and-shutdown and unconnected-and-shutdown.
             EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
 #else
-            EXPECT_EQ(pfd.revents, POLLHUP | POLLERR | POLLIN);
+            EXPECT_EQ(pfd.revents, POLLIN);
 #endif
           }
 
@@ -1782,7 +1782,7 @@ TEST_P(HangupTest, DuringConnect) {
           EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
 #else
           // TODO(https://fxbug.dev/61594): Fuchsia doesn't allow never-connected socket reuse.
-          EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+          EXPECT_EQ(errno, EALREADY) << strerror(errno);
 #endif
           // connect result was consumed by the connect call.
           ASSERT_NO_FATAL_FAILURE(ExpectLastError(connecting_client, 0));
