@@ -67,6 +67,9 @@ func ensureNamespace(arg interface{}) string {
 // and leave #ifdef __Fuchsia__ blocks.
 var namespaceStack = []namespace{}
 
+// During template processing this holds the current namespace.
+var currentNamespace namespace
+
 func ifdefFuchsia() string {
 	namespaceStack = append(namespaceStack, currentNamespace)
 

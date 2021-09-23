@@ -10,7 +10,7 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
-    fidl_test_union__decoder_encoders = {
+    fidl_test_union_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
                 "::fidl_test_union::wire::StructWithNullableXUnion",

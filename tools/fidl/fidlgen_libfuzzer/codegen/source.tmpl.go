@@ -21,7 +21,7 @@ const tmplSource = `
 #include <zircon/types.h>
 
 using namespace ::fuzzing;
-using namespace {{ range .Library }}::{{ . }}{{ end }};
+using namespace {{ .Namespace }};
 
 {{- $protocols := Protocols .Decls }}
 

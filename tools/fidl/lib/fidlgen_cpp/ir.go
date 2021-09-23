@@ -205,12 +205,10 @@ type Member interface {
 }
 
 type Root struct {
-	HandleTypes     []string
-	RawLibrary      fidlgen.LibraryIdentifier
-	Library         fidlgen.LibraryIdentifier
-	LibraryReversed fidlgen.LibraryIdentifier
-	Decls           []Kinded
-	Dependencies    []fidlgen.LibraryIdentifier
+	HandleTypes  []string
+	Library      fidlgen.LibraryIdentifier
+	Decls        []Kinded
+	Dependencies []fidlgen.LibraryIdentifier
 	HeaderOptions
 }
 
@@ -229,7 +227,7 @@ func (r Root) NaturalDomainObjectsHeader() string {
 	if r.NaturalDomainObjectsIncludeStem == "" {
 		fidlgen.TemplateFatalf("Natural domain objects include stem was missing")
 	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.RawLibrary), r.NaturalDomainObjectsIncludeStem)
+	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.Library), r.NaturalDomainObjectsIncludeStem)
 }
 
 // HlcppBindingsHeader computes the path to #include the high-level C++ bindings
@@ -238,7 +236,7 @@ func (r Root) HlcppBindingsHeader() string {
 	if r.HlcppBindingsIncludeStem == "" {
 		fidlgen.TemplateFatalf("High-level C++ bindings include stem was missing")
 	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryLegacyPath(r.RawLibrary), r.HlcppBindingsIncludeStem)
+	return fmt.Sprintf("%s/%s.h", formatLibraryLegacyPath(r.Library), r.HlcppBindingsIncludeStem)
 }
 
 // WireBindingsHeader computes the path to #include the wire bindings header.
@@ -246,7 +244,7 @@ func (r Root) WireBindingsHeader() string {
 	if r.WireBindingsIncludeStem == "" {
 		fidlgen.TemplateFatalf("Wire bindings include stem was missing")
 	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryUnifiedPath(r.RawLibrary), r.WireBindingsIncludeStem)
+	return fmt.Sprintf("%s/%s.h", formatLibraryUnifiedPath(r.Library), r.WireBindingsIncludeStem)
 }
 
 // HeaderOptions are independent from the FIDL library IR, but used in the generated
@@ -279,6 +277,20 @@ type HeaderOptions struct {
 // only has one component.
 func (r Root) SingleComponentLibraryName() bool {
 	return len(r.Library) == 1
+}
+
+// Namespace returns the C++ namespace for generated protocol types this FIDL
+// library.
+func (r Root) Namespace() namespace {
+	switch currentVariant {
+	case noVariant:
+		fidlgen.TemplateFatalf("Called Root.Namespace() when currentVariant isn't set.\n")
+	case naturalVariant:
+		return naturalNamespace(r.Library)
+	case unifiedVariant, wireVariant:
+		return unifiedNamespace(r.Library)
+	}
+	panic("not reached")
 }
 
 // Result holds information about error results on methods.
@@ -561,16 +573,11 @@ func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
 func compile(r fidlgen.Root, h HeaderOptions) Root {
 	root := Root{
 		HeaderOptions: h,
+		Library:       fidlgen.ParseLibraryName(r.Name),
 	}
-	library := make(fidlgen.LibraryIdentifier, 0)
-	rawLibrary := make(fidlgen.LibraryIdentifier, 0)
-	for _, identifier := range fidlgen.ParseLibraryName(r.Name) {
-		safeName := changeIfReserved(string(identifier), nsComponentContext)
-		library = append(library, fidlgen.Identifier(safeName))
-		rawLibrary = append(rawLibrary, identifier)
-	}
+
 	c := compiler{
-		symbolPrefix:           formatLibraryPrefix(rawLibrary),
+		symbolPrefix:           formatLibraryPrefix(root.Library),
 		decls:                  r.DeclsWithDependencies(),
 		library:                fidlgen.ParseLibraryName(r.Name),
 		handleTypes:            make(map[fidlgen.HandleSubtype]struct{}),
@@ -579,17 +586,6 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 		requestResponsePayload: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
 		anonymousChildren:      make(map[namingContextKey][]ScopedLayout),
 	}
-
-	root.RawLibrary = rawLibrary
-	root.Library = library
-	libraryReversed := make(fidlgen.LibraryIdentifier, len(library))
-	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
-		libraryReversed[i] = library[j]
-	}
-	for i, identifier := range library {
-		libraryReversed[len(libraryReversed)-i-1] = identifier
-	}
-	root.LibraryReversed = libraryReversed
 
 	addAnonymousLayouts := func(layout fidlgen.Layout) {
 		if !layout.IsAnonymous() {

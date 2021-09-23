@@ -2,4 +2,4 @@
 
 #include <fidl/test/union/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::fidl_test_union__decoder_encoders.size() == 10);
+static_assert(::fuzzing::fidl_test_union_decoder_encoders.size() == 10);

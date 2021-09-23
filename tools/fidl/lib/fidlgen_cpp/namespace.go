@@ -15,9 +15,6 @@ type namespaced interface {
 	Namespace() namespace
 }
 
-// During template processing this holds the current namespace.
-var currentNamespace namespace
-
 //
 // Predefined namespaces
 //
