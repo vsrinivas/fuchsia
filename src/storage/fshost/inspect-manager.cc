@@ -12,6 +12,26 @@
 namespace fio = fuchsia_io;
 
 namespace devmgr {
+namespace {
+
+constexpr const char* MinfsUpgradeStateString(const InspectManager::MinfsUpgradeState& state) {
+  switch (state) {
+    case InspectManager::MinfsUpgradeState::kUnknown:
+      return "unknown";
+    case InspectManager::MinfsUpgradeState::kSkipped:
+      return "skipped";
+    case InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade:
+      return "detected_failed_upgrade";
+    case InspectManager::MinfsUpgradeState::kReadOldPartition:
+      return "1_read_old";
+    case InspectManager::MinfsUpgradeState::kWriteNewPartition:
+      return "2_write_new";
+    case InspectManager::MinfsUpgradeState::kFinished:
+      return "3_finished";
+  }
+}
+
+}  // namespace
 
 zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::string& path,
                      uint32_t mode, fidl::ClientEnd<fio::Node>* result) {
@@ -32,7 +52,9 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::str
   return ZX_OK;
 }
 
-InspectManager::InspectManager() = default;
+InspectManager::InspectManager() {
+  minfs_upgrade_progress_ = inspector_.GetRoot().CreateChild("minfs_upgrade");
+}
 InspectManager::~InspectManager() = default;
 
 fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatcher) {
@@ -65,6 +87,10 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
         return fit::make_result_promise(fit::ok(std::move(insp)));
       },
       &inspector_);
+}
+
+void InspectManager::LogMinfsUpgradeProgress(MinfsUpgradeState state) {
+  minfs_upgrade_progress_.CreateBool(MinfsUpgradeStateString(state), true, &inspector_);
 }
 
 void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
