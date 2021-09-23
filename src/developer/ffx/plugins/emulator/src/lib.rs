@@ -14,6 +14,7 @@ pub mod portpicker;
 pub mod vdl_files;
 
 mod cipd;
+mod device;
 mod graphic_utils;
 mod images;
 mod target;

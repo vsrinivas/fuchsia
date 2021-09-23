@@ -598,10 +598,8 @@ pub struct VDLArgs {
     pub upscript: String,
     pub start_package_server: bool,
     pub packages_to_serve: String,
-    pub image_size: String,
     pub device_proto: String,
     pub gpu: String,
-    pub pointing_device: String,
     pub gcs_bucket: String,
     pub gcs_image_archive: String,
     pub sdk_version: String,
@@ -655,14 +653,8 @@ impl From<&StartCommand> for VDLArgs {
                 .as_ref()
                 .unwrap_or(&String::from(""))
                 .to_string(),
-            image_size: cmd.image_size.as_ref().unwrap_or(&String::from("2G")).to_string(),
             device_proto: cmd.device_proto.as_ref().unwrap_or(&String::from("")).to_string(),
             gpu: gpu,
-            pointing_device: cmd
-                .pointing_device
-                .as_ref()
-                .unwrap_or(&String::from("touch"))
-                .to_string(),
             enable_grpcwebproxy: enable_grpcwebproxy,
             grpcwebproxy_port: grpcwebproxy_port,
             gcs_bucket: cmd.gcs_bucket.as_ref().unwrap_or(&String::from("fuchsia")).to_string(),
@@ -701,7 +693,6 @@ mod tests {
             upscript: Some("/path/to/upscript".to_string()),
             packages_to_serve: Some("pkg1.far,pkg2.far".to_string()),
             host_gpu: true,
-            pointing_device: Some("mouse".to_string()),
             aemu_version: Some("git_revision:da1cc2ee512714a176f08b8b5fec035994ca305d".to_string()),
             sdk_version: Some("0.20201130.3.1".to_string()),
             image_name: Some("qemu-x64".to_string()),
@@ -715,7 +706,6 @@ mod tests {
         assert_eq!(vdl_args.tuntap, true);
         assert_eq!(vdl_args.upscript, "/path/to/upscript");
         assert_eq!(vdl_args.packages_to_serve, "pkg1.far,pkg2.far");
-        assert_eq!(vdl_args.image_size, "2G");
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
         assert_eq!(vdl_args.start_package_server, false);

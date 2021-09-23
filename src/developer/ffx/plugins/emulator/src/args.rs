@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    argh::FromArgs,
-    ffx_core::ffx_command,
-    serde::{Deserialize, Serialize},
-};
+use {argh::FromArgs, ffx_core::ffx_command};
 
 /// entry point for ffx
 #[ffx_command()]
@@ -39,7 +35,7 @@ pub enum VDLCommand {
     Remote(RemoteCommand),
 }
 
-#[derive(FromArgs, Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(FromArgs, Default, Debug, PartialEq)]
 #[argh(subcommand, name = "start")]
 /// Starting Fuchsia Emulator
 pub struct StartCommand {
@@ -75,20 +71,32 @@ pub struct StartCommand {
     pub pointing_device: Option<String>,
 
     /// emulator window width. Default to 1280.
-    #[argh(option, default = "default_window_width()", short = 'w')]
-    pub window_width: usize,
+    #[argh(option, short = 'w')]
+    pub window_width: Option<usize>,
 
     /// emulator window height. Default to 800.
-    #[argh(option, default = "default_window_height()", short = 'h')]
-    pub window_height: usize,
+    #[argh(option, short = 'h')]
+    pub window_height: Option<usize>,
+
+    /// emulator ram in megabytes. Default is 8192.
+    #[argh(option)]
+    pub ram_mb: Option<usize>,
+
+    /// emulator audio interface enabled. Default is true.
+    #[argh(option)]
+    pub audio: Option<bool>,
 
     /// extends storage size to <size> bytes. Default is "2G".
     #[argh(option, short = 's')]
     pub image_size: Option<String>,
 
-    /// path to fuchsia virtual device configuration, if not specified a generic one will be generated.
+    /// path to fuchsia virtual device configuration as a protobuf, if not specified a generic one will be generated.
     #[argh(option, short = 'F')]
     pub device_proto: Option<String>,
+
+    /// path to fuchsia virtual device configuration as a JSON manifest
+    #[argh(option)]
+    pub device_spec: Option<String>,
 
     /// path to aemu location.
     /// When running in fuchsia repo, defaults to looking in prebuilt/third_party/aemu/PLATFORM.
@@ -270,14 +278,6 @@ pub struct StartCommand {
     /// to the screen for debugging. The temporary staging directory is also retained.
     #[argh(switch)]
     pub dry_run: bool,
-}
-
-fn default_window_height() -> usize {
-    800
-}
-
-fn default_window_width() -> usize {
-    1280
 }
 
 fn default_port() -> u16 {

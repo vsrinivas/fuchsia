@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::device::DeviceSpec;
 use crate::portpicker::{pick_unused_port, Port};
 use crate::target;
 use crate::types::{
@@ -154,20 +155,18 @@ impl VDLFiles {
         }
     }
 
-    fn generate_fvd(&self, window_width: &usize, window_height: &usize) -> Result<PathBuf> {
-        // Note the value for ram should match the defaults used in `fx emu` (//tools/devshell/emu)
-        // and in `fx qemu` (//zircon/scripts/run-zircon).
+    fn generate_fvd(&self, device: &DeviceSpec) -> Result<PathBuf> {
         let data = format!(
             "device_spec {{
   horizontal_resolution: {}
   vertical_resolution: {}
   vm_heap: 192
-  ram: 8192
+  ram: {}
   cache: 32
   screen_density: 240
 }}
 ",
-            window_width, window_height
+            &device.window_width, &device.window_height, &device.ram_mb
         );
         let fvd_proto = self.staging_dir.path().join("virtual_device.textproto");
         File::create(&fvd_proto)?.write_all(data.as_bytes())?;
@@ -339,6 +338,9 @@ impl VDLFiles {
             You can optionally specify --amber-files and --fvm-image locations. \n
         ")
         }
+        if command.device_spec.is_some() && command.device_proto.is_some() {
+            ffx_bail!("--device-spec and --device-proto are mutually exclusive options.")
+        }
         Ok(())
     }
 
@@ -384,9 +386,11 @@ impl VDLFiles {
             self.ssh_files.check()?;
         }
 
+        let device_spec = DeviceSpec::from_manifest(&start_command)?;
+
         let fvd = match &start_command.device_proto {
             Some(proto) => PathBuf::from(proto),
-            None => self.generate_fvd(&start_command.window_width, &start_command.window_height)?,
+            None => self.generate_fvd(&device_spec)?,
         };
 
         let aemu = self.resolve_aemu_path(start_command)?;
@@ -456,12 +460,12 @@ impl VDLFiles {
             .arg(&package_server_log)
             .arg("--proto_file_path")
             .arg(&fvd)
-            .arg("--audio=true")
+            .arg(format!("--audio={}", &device_spec.audio))
             .arg(format!("--event_action={}", &invoker))
             .arg(format!("--debugger={}", &start_command.debugger))
             .arg(format!("--monitor={}", &start_command.monitor))
             .arg(format!("--emu_only={}", &start_command.emu_only))
-            .arg(format!("--resize_fvm={}", vdl_args.image_size))
+            .arg(format!("--resize_fvm={}", device_spec.image_size))
             .arg(format!("--gpu={}", vdl_args.gpu))
             .arg(format!("--headless_mode={}", vdl_args.headless))
             .arg(format!("--tuntap={}", vdl_args.tuntap))
@@ -470,7 +474,7 @@ impl VDLFiles {
             .arg(format!("--serve_packages={}", vdl_args.packages_to_serve))
             .arg(format!("--package_server_port={}", vdl_args.package_server_port))
             .arg(format!("--unpack_repo_root={}", vdl_args.amber_unpack_root))
-            .arg(format!("--pointing_device={}", vdl_args.pointing_device))
+            .arg(format!("--pointing_device={}", device_spec.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
             .arg(format!("--gcs_bucket={}", gcs_bucket))
@@ -486,11 +490,11 @@ impl VDLFiles {
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
+        if start_command.dry_run {
+            cmd.arg("--dry-run");
+        }
         if self.verbose || start_command.dry_run {
             println!("[fvdl] Running device_launcher cmd: {:?}", cmd);
-        }
-        if start_command.dry_run {
-            return Ok(0);
         }
 
         let shared_process = SharedChild::spawn(&mut cmd)?;
@@ -539,6 +543,7 @@ impl VDLFiles {
             // AEMUCrash = 2
             // UserActionRequired = 3
             // SSHConnection = 4
+            // DryRunMode = 5
             //
             // We only bail! if device_launcher failed with a launcher related error.
             let exit_code = status.code().unwrap_or_default();
