@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 
@@ -54,6 +55,10 @@ class ScreenReaderContext {
     kFormControl,
   };
 
+  // Defines the signature for a callback invoked when a node update is
+  // received.
+  using OnNodeUpdateCallback = fit::function<void()>;
+
   // |a11y_focus_manager| will be owned by this class.
   // |tts_manager| is not kept, and must be valid only during this constructor, where
   // |tts_engine_ptr_| is instantiated.
@@ -82,6 +87,13 @@ class ScreenReaderContext {
 
   void set_locale_id(const std::string& locale_id) { locale_id_ = locale_id; }
   const std::string& locale_id() const { return locale_id_; }
+
+  // Set/run on_node_update_callback_.
+  void set_on_node_update_callback(OnNodeUpdateCallback callback) {
+    on_node_update_callback_ = std::move(callback);
+  }
+  void run_and_clear_on_node_update_callback();
+  bool has_on_node_update_callback() { return static_cast<bool>(on_node_update_callback_); }
 
   // Returns true if the node currently focused by the screen reader is a text field.
   virtual bool IsTextFieldFocused() const;
@@ -122,6 +134,13 @@ class ScreenReaderContext {
 
   // Unicode BCP-47 Locale Identifier.
   std::string locale_id_;
+
+  // Invoked once, on the first tree update received after the callback is set.
+  // The callback is cleared after it's invoked.
+  // Example use case: The ChangeRangeValueAction sets a callback to read the
+  // updated slider value when the tree update setting the new value is
+  // received.
+  OnNodeUpdateCallback on_node_update_callback_ = {};
 };
 
 class ScreenReaderContextFactory {

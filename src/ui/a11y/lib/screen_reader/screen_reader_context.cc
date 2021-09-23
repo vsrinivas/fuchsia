@@ -99,4 +99,12 @@ bool ScreenReaderContext::IsVirtualKeyboardFocused() const {
   return false;
 }
 
+void ScreenReaderContext::run_and_clear_on_node_update_callback() {
+  if (on_node_update_callback_) {
+    on_node_update_callback_();
+  }
+
+  on_node_update_callback_ = {};
+}
+
 }  // namespace a11y

@@ -195,6 +195,14 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
   return nodes_to_exclude;
 }
 
+bool NodeIsSlider(const fuchsia::accessibility::semantics::Node& node) {
+  bool has_role_slider =
+      node.has_role() && node.role() == fuchsia::accessibility::semantics::Role::SLIDER;
+  bool has_range_value = node.has_states() && node.states().has_range_value();
+
+  return has_role_slider || has_range_value;
+}
+
 std::string GetSliderValue(const fuchsia::accessibility::semantics::Node& node) {
   if (!node.has_states()) {
     return std::string();

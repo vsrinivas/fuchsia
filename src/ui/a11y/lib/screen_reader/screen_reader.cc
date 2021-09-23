@@ -358,6 +358,8 @@ void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
   // Process internal semantic events.
   switch (event_info.event_type) {
     case SemanticsEventType::kSemanticTreeUpdated: {
+      context_->run_and_clear_on_node_update_callback();
+
       GestureContext gesture_context;
       if (event_info.view_ref_koid) {
         gesture_context.view_ref_koid = *event_info.view_ref_koid;

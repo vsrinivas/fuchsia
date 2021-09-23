@@ -98,7 +98,7 @@ TEST_F(ChangeRangeValueActionTest, NoTreeInFocus) {
   const auto& requested_actions =
       mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
   EXPECT_TRUE(requested_actions.empty());
-  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
+  EXPECT_FALSE(mock_screen_reader_context()->has_on_node_update_callback());
 }
 
 // Tests the scenario where the A11y focused node is not found.
@@ -122,7 +122,7 @@ TEST_F(ChangeRangeValueActionTest, FocusedNodeNotFound) {
   const auto& requested_actions =
       mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
   EXPECT_TRUE(requested_actions.empty());
-  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
+  EXPECT_FALSE(mock_screen_reader_context()->has_on_node_update_callback());
 }
 
 // Tests the scenario when the call to OnAccessibilityActionRequested() fails.
@@ -146,7 +146,7 @@ TEST_F(ChangeRangeValueActionTest, OnAccessibilityActionRequestedFailed) {
   EXPECT_EQ(requested_actions.size(), 1u);
   EXPECT_EQ(requested_actions[0].first, kRootNodeId);
   EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
-  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
+  EXPECT_FALSE(mock_screen_reader_context()->has_on_node_update_callback());
 }
 
 // Tests the scenario when the Range control is incremented.
@@ -170,6 +170,12 @@ TEST_F(ChangeRangeValueActionTest, RangeControlIncremented) {
   EXPECT_EQ(requested_actions.size(), 1u);
   EXPECT_EQ(requested_actions[0].first, kRootNodeId);
   EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_TRUE(mock_screen_reader_context()->has_on_node_update_callback());
+
+  // Run the callback and check that the new value is read.
+  mock_screen_reader_context()->run_and_clear_on_node_update_callback();
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   ASSERT_EQ(mock_speaker()->messages().size(), 1u);
   EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderDelta + kSliderIntialRangeValue));
@@ -196,6 +202,12 @@ TEST_F(ChangeRangeValueActionTest, RangeControlDecremented) {
   EXPECT_EQ(requested_actions.size(), 1u);
   EXPECT_EQ(requested_actions[0].first, kRootNodeId);
   EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::DECREMENT);
+  EXPECT_TRUE(mock_screen_reader_context()->has_on_node_update_callback());
+
+  // Run the callback and check that the new value is read.
+  mock_screen_reader_context()->run_and_clear_on_node_update_callback();
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   ASSERT_EQ(mock_speaker()->messages().size(), 1u);
   EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderIntialRangeValue - kSliderDelta));
@@ -219,15 +231,63 @@ TEST_F(ChangeRangeValueActionTest, RangeControlIncrementedUseValue) {
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
+  // Check that INCREMENT action was requested on the correct node.
   ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
   const auto& requested_actions =
       mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
   EXPECT_EQ(requested_actions.size(), 1u);
   EXPECT_EQ(requested_actions[0].first, kRootNodeId);
   EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_TRUE(mock_screen_reader_context()->has_on_node_update_callback());
+
+  // Run the callback and check that the new value is read.
+  mock_screen_reader_context()->run_and_clear_on_node_update_callback();
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   ASSERT_EQ(mock_speaker()->messages().size(), 1u);
   EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderIntialRangeValue + kSliderDelta));
+}
+
+// Tests the scenario when the focus changes before the action completes.
+// In practice, this scenario is very unlikely, but we should still exercise
+// this codepath in tests.
+TEST_F(ChangeRangeValueActionTest, FocusChangesBeforeActionCompletes) {
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
+                                                  ChangeRangeValueActionType::kIncrementAction);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  // Increment the slider value, but store the new value in the range field
+  // instead of the range_value field.
+  mock_semantics_source()->set_custom_action_callback([this]() {
+    SetSliderRangeValue(kSliderIntialRangeValue + kSliderDelta, /* use_range_value = */ false);
+  });
+
+  // Call ChangeRangeValueAction Run()
+  range_value_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  // Check that INCREMENT action was requested on the correct node.
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, kRootNodeId);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_TRUE(mock_screen_reader_context()->has_on_node_update_callback());
+
+  // Change the focus.
+  // Update focused node.
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 1u,
+                                          [](bool result) { EXPECT_TRUE(result); });
+
+  // Run the callback and check that the new value is read.
+  mock_screen_reader_context()->run_and_clear_on_node_update_callback();
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
 }
 
 }  // namespace
