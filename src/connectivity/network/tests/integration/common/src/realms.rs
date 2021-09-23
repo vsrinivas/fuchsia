@@ -51,6 +51,7 @@ impl NetstackVersion {
                 fposix_socket::ProviderMarker::PROTOCOL_NAME,
             ],
             NetstackVersion::Netstack3 => &[
+                fnet_interfaces::StateMarker::PROTOCOL_NAME,
                 fnet_stack::StackMarker::PROTOCOL_NAME,
                 fposix_socket::ProviderMarker::PROTOCOL_NAME,
             ],

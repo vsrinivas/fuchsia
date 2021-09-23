@@ -16,6 +16,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use itertools::Itertools as _;
 use net_declare::{
     fidl_ip, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip,
     std_ip_v4, std_ip_v6, std_socket_addr,
@@ -23,7 +24,7 @@ use net_declare::{
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _,
+    constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
 };
 use netstack_testing_common::{
     get_component_moniker, wait_for_interface_up_and_address, Result,
@@ -250,7 +251,6 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     Ok(())
 }
 
-// TODO(https://fxbug.dev/75553): switch to fuchsia.net.interfaces when supported in N3.
 #[variants_test]
 async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
@@ -267,6 +267,7 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
         stack.enable_interface(id).await.squash_result().context("failed to enable interface")?;
     let () = device.set_link_up(true).await.context("failed to bring device up")?;
     loop {
+        // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
         let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
         if info.properties.physical_status == net_stack::PhysicalStatus::Up {
             break;
@@ -303,13 +304,25 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
         .unwrap_err();
     assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
 
-    let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
-
-    assert!(
-        info.properties.addresses.contains(&interface_address),
-        "couldn't find {:#?} in {:#?}",
-        interface_address,
-        info.properties.addresses
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .context("connect to fuchsia.net.interfaces/State service")?;
+    let interface = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+        fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+    )
+    .await
+    .expect("failed to retrieve existing interface");
+    // We use contains here because netstack can generate link-local addresses
+    // that can't be predicted.
+    matches::assert_matches!(
+        interface,
+        fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
+            if p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
+                addr: interface_address,
+                valid_until: zx::sys::ZX_TIME_INFINITE,
+            })
     );
 
     let res = stack
@@ -317,16 +330,265 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
         .await
         .context("failed to call del interface address")?;
     assert_eq!(res, Ok(()));
-    let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
 
-    assert!(
-        !info.properties.addresses.contains(&interface_address),
-        "did not expect to find {:#?} in {:#?}",
-        interface_address,
-        info.properties.addresses
+    let interface = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+        fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+    )
+    .await
+    .expect("failed to retrieve existing interface");
+    // We use contains here because netstack can generate link-local addresses
+    // that can't be predicted.
+    matches::assert_matches!(
+        interface,
+        fidl_fuchsia_net_interfaces_ext::InterfaceState::Known(p)
+            if !p.addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
+                addr: interface_address,
+                valid_until: zx::sys::ZX_TIME_INFINITE,
+            })
     );
 
     Ok(())
+}
+
+#[variants_test]
+async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
+    // We're limiting this test to mostly IPv4 because Netstack3 doesn't support
+    // updates yet. We wanted the best test we could write just for the Existing
+    // case since IPv6 LL addresses are subject to DAD and hard to test with
+    // Existing events only.
+
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let (realm, stack) = sandbox
+        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
+        .expect("failed to create netstack");
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum Expectation {
+        Loopback(u64),
+        Ethernet {
+            id: u64,
+            addr: fidl_fuchsia_net::Subnet,
+            has_default_ipv4_route: bool,
+            has_default_ipv6_route: bool,
+        },
+    }
+
+    impl PartialEq<fidl_fuchsia_net_interfaces_ext::Properties> for Expectation {
+        fn eq(&self, other: &fidl_fuchsia_net_interfaces_ext::Properties) -> bool {
+            match self {
+                Expectation::Loopback(id) => {
+                    other
+                        == &fidl_fuchsia_net_interfaces_ext::Properties {
+                            id: *id,
+                            name: "lo".to_owned(),
+                            device_class: fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                                fidl_fuchsia_net_interfaces::Empty,
+                            ),
+                            online: true,
+                            addresses: vec![
+                                fidl_fuchsia_net_interfaces_ext::Address {
+                                    addr: fidl_subnet!("127.0.0.1/8"),
+                                    valid_until: zx::sys::ZX_TIME_INFINITE,
+                                },
+                                fidl_fuchsia_net_interfaces_ext::Address {
+                                    addr: fidl_subnet!("::1/128"),
+                                    valid_until: zx::sys::ZX_TIME_INFINITE,
+                                },
+                            ],
+                            has_default_ipv4_route: false,
+                            has_default_ipv6_route: false,
+                        }
+                }
+                Expectation::Ethernet {
+                    id,
+                    addr,
+                    has_default_ipv4_route,
+                    has_default_ipv6_route,
+                } => {
+                    let fidl_fuchsia_net_interfaces_ext::Properties {
+                        id: rhs_id,
+                        // TODO(https://fxbug.dev/84516): Not comparing name
+                        // because ns3 doesn't generate names yet.
+                        name: _,
+                        device_class,
+                        online,
+                        addresses,
+                        has_default_ipv4_route: rhs_ipv4_route,
+                        has_default_ipv6_route: rhs_ipv6_route,
+                    } = other;
+
+                    // We use contains here because netstack can generate
+                    // link-local addresses that can't be predicted.
+                    addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
+                        addr: *addr,
+                        valid_until: zx::sys::ZX_TIME_INFINITE,
+                    }) && *online
+                        && id == rhs_id
+                        && has_default_ipv4_route == rhs_ipv4_route
+                        && has_default_ipv6_route == rhs_ipv6_route
+                        && device_class
+                            == &fidl_fuchsia_net_interfaces::DeviceClass::Device(
+                                fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
+                            )
+                }
+            }
+        }
+    }
+
+    let mut eps = Vec::new();
+    let mut expectations = HashMap::new();
+    for (idx, (has_default_ipv4_route, has_default_ipv6_route)) in
+        IntoIterator::into_iter([true, false]).cartesian_product([true, false]).enumerate()
+    {
+        // TODO(https://fxbug.dev/75553): Use TestRealm::join_network_with
+        // https://fuchsia-docs.firebaseapp.com/rust/netemul/struct.TestRealm.html#method.join_network_with
+        // when `Changed` events are supported.
+        let ep = sandbox
+            .create_endpoint::<netemul::Ethernet, _>(format!("test-ep-{}", idx))
+            .await
+            .expect("failed to create endpoint");
+
+        let id = ep.add_to_stack(&realm).await.expect("failed to add device to stack");
+
+        // Netstack3 doesn't allow addresses to be added while link is down.
+        let () =
+            stack.enable_interface(id).await.squash_result().expect("failed to enable interface");
+        let () = ep.set_link_up(true).await.expect("failed to bring device up");
+        loop {
+            // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
+            let info = stack
+                .get_interface_info(id)
+                .await
+                .squash_result()
+                .expect("failed to get interface");
+            if info.properties.physical_status == net_stack::PhysicalStatus::Up {
+                break;
+            }
+        }
+        eps.push(ep);
+
+        let mut addr = fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: [192, 168, idx.try_into().unwrap(), 1],
+            }),
+            prefix_len: 24,
+        };
+        let expected =
+            Expectation::Ethernet { id, addr, has_default_ipv4_route, has_default_ipv6_route };
+        assert_eq!(expectations.insert(id, expected), None);
+
+        let () = stack
+            .add_interface_address(id, &mut addr)
+            .await
+            .squash_result()
+            .expect("failed to add interface address");
+
+        if has_default_ipv4_route {
+            stack
+                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: fidl_subnet!("0.0.0.0/0"),
+                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                })
+                .await
+                .squash_result()
+                .expect("add default ipv4 route entry");
+        }
+
+        if has_default_ipv6_route {
+            stack
+                .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+                    subnet: fidl_subnet!("::/0"),
+                    destination: fidl_fuchsia_net_stack::ForwardingDestination::DeviceId(id),
+                })
+                .await
+                .squash_result()
+                .expect("add default ipv6 route entry");
+        }
+    }
+
+    // Netstack2 reports the loopback interface as NIC 1.
+    if N::VERSION == NetstackVersion::Netstack2 {
+        assert_eq!(expectations.insert(1, Expectation::Loopback(1)), None);
+    }
+
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to fuchsia.net.interfaces/State protocol");
+    let mut interfaces = fidl_fuchsia_net_interfaces_ext::existing(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+        HashMap::new(),
+    )
+    .await
+    .expect("existing interfaces");
+
+    for (id, expected) in expectations.iter() {
+        assert_eq!(
+            expected,
+            interfaces
+                .remove(id)
+                .as_ref()
+                .unwrap_or_else(|| panic!("failed to get interface {}", id))
+        );
+    }
+
+    assert_eq!(interfaces, HashMap::new());
+}
+
+#[variants_test]
+async fn interfaces_watcher_after_state_closed<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create netstack");
+
+    // New scope so when we get back the WatcherProxy, the StateProxy is closed.
+    let watcher = {
+        let interfaces_state = realm
+            .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+            .expect("failed to connect fuchsia.net.interfaces/State");
+        let (watcher, server) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+                .expect("failed to create watcher proxy");
+        let () = interfaces_state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
+            .expect("failed to get watcher");
+        watcher
+    };
+
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);
+    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
+        .await
+        .expect("failed to collect interfaces");
+    // TODO(https://fxbug.dev/72378): N3 doesn't support loopback devices yet.
+    let expected = match N::VERSION {
+        NetstackVersion::Netstack2 => std::iter::once((
+            1,
+            fidl_fuchsia_net_interfaces_ext::Properties {
+                id: 1,
+                name: "lo".to_owned(),
+                device_class: fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                    fidl_fuchsia_net_interfaces::Empty,
+                ),
+                online: true,
+                addresses: vec![
+                    fidl_fuchsia_net_interfaces_ext::Address {
+                        addr: fidl_subnet!("127.0.0.1/8"),
+                        valid_until: zx::sys::ZX_TIME_INFINITE,
+                    },
+                    fidl_fuchsia_net_interfaces_ext::Address {
+                        addr: fidl_subnet!("::1/128"),
+                        valid_until: zx::sys::ZX_TIME_INFINITE,
+                    },
+                ],
+                has_default_ipv4_route: false,
+                has_default_ipv6_route: false,
+            },
+        ))
+        .collect(),
+        NetstackVersion::Netstack3 => HashMap::new(),
+    };
+    assert_eq!(interfaces, expected);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
