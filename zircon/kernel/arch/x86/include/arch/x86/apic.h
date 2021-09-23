@@ -46,6 +46,12 @@ enum apic_interrupt_dst_mode {
   DST_MODE_LOGICAL = 1,
 };
 
+// Global system interrupts in the range [start, end).
+struct GsiRange {
+  uint32_t start;
+  uint32_t end;
+};
+
 // Functionality provided by the local APIC
 void apic_vm_init();
 void apic_local_init();
@@ -129,6 +135,9 @@ void apic_io_configure_isa_irq(uint8_t isa_irq, enum apic_interrupt_delivery_mod
                                uint8_t vector);
 void apic_io_issue_eoi(uint32_t global_irq, uint8_t vec);
 uint32_t apic_io_isa_to_global(uint8_t isa_irq);
+// Returns the [min, max) range representing the (assumed) contiguous range of
+// global system interrupts provided to us by ACPI.
+GsiRange apic_io_get_gsi_range();
 
 // These functions must be invoked with interrupts disabled.  They save/restore the
 // current redirection table entries to/from memory.  They are intended for use

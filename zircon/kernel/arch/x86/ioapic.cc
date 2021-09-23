@@ -420,6 +420,24 @@ void apic_io_restore(void) {
   }
 }
 
+GsiRange apic_io_get_gsi_range() {
+  ZX_ASSERT(num_io_apics);
+  Guard<SpinLock, NoIrqSave> guard{io_apic_lock::Get()};
+  GsiRange range{.start = std::numeric_limits<uint32_t>::max(), .end = 0};
+
+  // If we could be certain the MADT tables were always in increasing order this
+  // could be a constant time operation, but since no such guarantee exists we
+  // need to walk the descriptors.
+  for (const io_apic& io_apic : io_apics) {
+    range.start = std::min(range.start, io_apic.desc.global_irq_base);
+    // max_redirection_entry is the offset of the last entry, not the number of entries.
+    range.end =
+        std::max(range.end, io_apic.desc.global_irq_base + io_apic.max_redirection_entry + 1u);
+  }
+
+  return range;
+}
+
 static void apic_io_debug_nolock(void) {
   for (uint32_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
