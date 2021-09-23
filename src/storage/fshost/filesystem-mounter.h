@@ -16,6 +16,7 @@
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
 
 namespace devmgr {
@@ -75,6 +76,8 @@ class FilesystemMounter {
   bool PkgfsMounted() const { return pkgfs_mounted_; }
   bool FactoryMounted() const { return factory_mounted_; }
   bool DurableMounted() const { return durable_mounted_; }
+
+  InspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without

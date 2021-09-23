@@ -68,6 +68,8 @@ class FsManager {
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return metrics_.get(); }
 
+  InspectManager& inspect_manager() { return inspect_; }
+
   // Flushes FsHostMetrics to cobalt.
   void FlushMetrics();
 
