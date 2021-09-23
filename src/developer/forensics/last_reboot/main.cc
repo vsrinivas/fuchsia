@@ -19,6 +19,10 @@ namespace last_reboot {
 namespace {
 
 constexpr char kGracefulRebootReasonFile[] = "graceful_reboot_reason.txt";
+
+constexpr char kGracefulRebootReasonWritePath[] = "/data/graceful_reboot_reason.txt";
+constexpr char kLegacyGracefulRebootReasonWritePath[] = "/cache/graceful_reboot_reason.txt";
+
 constexpr char kNotAFdr[] = "/data/not_a_fdr.txt";
 
 void SetNotAFdr() {
@@ -37,8 +41,13 @@ int main() {
   syslog::SetTags({"forensics", "reboot"});
 
   component::Component component;
+
+  // Read the graceful reboot reason from /cache if it was persisted there, otherwise read it from
+  // /data.
   PreviousBootFile reboot_reason_file =
-      PreviousBootFile::FromCache(component.IsFirstInstance(), kGracefulRebootReasonFile);
+      (files::IsFile(kLegacyGracefulRebootReasonWritePath))
+          ? PreviousBootFile::FromCache(component.IsFirstInstance(), kGracefulRebootReasonFile)
+          : PreviousBootFile::FromData(component.IsFirstInstance(), kGracefulRebootReasonFile);
 
   MainService main_service(MainService::Config{
       .dispatcher = component.Dispatcher(),
@@ -46,7 +55,9 @@ int main() {
       .root_node = component.InspectRoot(),
       .reboot_log = feedback::RebootLog::ParseRebootLog(
           "/boot/log/last-panic.txt", reboot_reason_file.PreviousBootPath(), kNotAFdr),
-      .graceful_reboot_reason_write_path = reboot_reason_file.CurrentBootPath(),
+
+      // Always store the graceful reboot reason in /data.
+      .graceful_reboot_reason_write_path = kGracefulRebootReasonWritePath,
   });
 
   // The "no-FDR" marker needs to be written after parsing the reboot log as its absence may
