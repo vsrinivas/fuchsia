@@ -89,6 +89,7 @@ template("product_metadata") {
   file = "$target_gen_dir/product_bundle.json"
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
+    visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
     contents = file_contents
     output_conversion = "json"
@@ -107,6 +108,7 @@ template("product_metadata") {
 
   validator_target = "${target_name}_json_validator"
   validate_json(validator_target) {
+    visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
     data = file
     deps = [ ":${generator_target}" ]
@@ -126,11 +128,15 @@ template("product_metadata") {
     forward_variables_from(invoker,
                            [
                              "testonly",
-                             "visbility",
+                             "visibility",
                            ])
     deps = [
       ":${generator_target}",
       ":${validator_target}",
     ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 }

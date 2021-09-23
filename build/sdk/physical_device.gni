@@ -55,6 +55,7 @@ template("physical_device_manifest") {
   file = "$target_gen_dir/physical_device.json"
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
+    visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
     contents = file_contents
     output_conversion = "json"
@@ -79,8 +80,8 @@ template("physical_device_manifest") {
                              "deps",
                              "public_deps",
                              "testonly",
-                             "visibility",
                            ])
+    visibility = [ ":*" ]
     data = file
     deps = [ ":${generator_target}" ]
     schema = schema_target
@@ -96,7 +97,7 @@ template("physical_device_manifest") {
     forward_variables_from(invoker,
                            [
                              "testonly",
-                             "visbility",
+                             "visibility",
                            ])
     deps = [
       ":${generator_target}",

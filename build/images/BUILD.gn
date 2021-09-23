@@ -1326,22 +1326,33 @@ compiled_action("uefi-disk") {
 }
 
 if (!bootfs_only) {
-  # Product and device metadata.
-  physical_device_manifest("physical_device_manifest") {
-    testonly = true
-    name = board_name
+  # 'add_qemu_to_build_archives' is used to infer whether this build is targeting
+  # a physical device or an emulator.
+  if (!add_qemu_to_build_archives) {
+    # Physical device manifest should only be generated for physical boards.
+    physical_device_manifest("physical_device_manifest") {
+      testonly = true
+      name = board_name
+    }
   }
 
-  # The list of device names must contain the name of the physical device.
+  # The list of device names must contain the name of the physical or virtual device.
   product_metadata("product_metadata") {
     testonly = true
     devices = [ board_name ]
-    emu_manifest = {
-      initial_ramdisk = "fuchsia.zbi"
-      kernel = rebase_path(qemu_kernel_file, root_out_dir)
-      disk_images = [ rebase_path(files.fvm_blob_sparse, root_out_dir) ]
+    deps = []
+
+    if (add_qemu_to_build_archives) {
+      # TODO(fxbug.dev/84738): Generate a virtual device manifest.
+      emu_manifest = {
+        initial_ramdisk = "fuchsia.zbi"
+        kernel = rebase_path(qemu_kernel_file, root_out_dir)
+        disk_images = [ rebase_path(files.fvm_blob_sparse, root_out_dir) ]
+      }
+    } else {
+      flash_manifest = flash_manifest_content
+      deps += [ ":physical_device_manifest" ]
     }
-    flash_manifest = flash_manifest_content
   }
 }
 
@@ -1392,7 +1403,6 @@ group("default-images") {
   # reaching fuchsia.zbi must be excluded from the build graph.
   if (!bootfs_only) {
     deps += [
-      ":physical_device_manifest",
       ":product_metadata",
       ":record_filesystem_sizes",
       ":root_component_index_metadata",
