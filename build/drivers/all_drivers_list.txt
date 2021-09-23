@@ -223,7 +223,6 @@
 //src/devices/usb/drivers/usb-virtual-bus:virtual-bus-tester-driver
 //src/devices/usb/drivers/usb-virtual-bus:virtual-bus-tester-function-driver
 //src/devices/usb/drivers/xhci-rewrite:xhci-driver
-//src/devices/usb/drivers/xhci:xhci-x86-driver
 //src/devices/usb/tests/usb-hci-test:driver_module
 //src/diagnostics/validator/logs/ddk/log-test-driver:log-test-driver-driver
 //src/graphics/display/drivers/aml-canvas:aml-canvas-driver

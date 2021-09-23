@@ -193,7 +193,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 Let's take a look at how a driver uses the DDKTL.
 
 We're going to use the USB XHCI driver for this set of code samples; you can find it
-[here: `//src/devices/usb/drivers/xhci/usb-xhci.cpp`](/src/devices/usb/drivers/xhci/usb-xhci.cc).
+[here: `//src/devices/usb/drivers/xhci/usb-xhci.cpp`](/src/devices/usb/drivers/xhci-rewrite/usb-xhci.cc).
 
 Recall that in [simple, C-based drivers](/docs/development/drivers/developer_guide/simple.md),
 the drivers had a driver declaration (usually at the bottom of the source file), like this:
