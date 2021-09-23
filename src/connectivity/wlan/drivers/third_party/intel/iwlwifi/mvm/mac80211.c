@@ -34,11 +34,14 @@
  *
  *****************************************************************************/
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <string.h>
 #include <zircon/status.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
@@ -50,6 +53,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-dispatch.h"
@@ -57,8 +62,6 @@
 #ifdef CPTCFG_NL80211_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/testmode.h"
 #endif
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 
 #if 0  // NEEDS_PORTING
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
@@ -571,7 +574,7 @@ out:
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, const wlan_tx_packet_t* pkt) {
+zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, struct ieee80211_mac_packet* pkt) {
   iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
   if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT) {
@@ -3029,172 +3032,109 @@ static int iwl_mvm_mac_sched_scan_stop(struct ieee80211_hw* hw, struct ieee80211
 
     return ret;
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_mac_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
-                               struct ieee80211_vif* vif, struct ieee80211_sta* sta,
-                               struct ieee80211_key_conf* key) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    struct iwl_mvm_sta* mvmsta;
-    struct iwl_mvm_key_pn* ptk_pn;
-    int keyidx = key->keyidx;
-    int ret;
-    uint8_t key_offset;
+zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvmsta,
+                                const struct iwl_mvm_sta_key_conf* key) {
+  zx_status_t ret = ZX_OK;
+  struct iwl_mvm* mvm = mvmvif->mvm;
+  struct iwl_mvm_key_pn* ptk_pn;
+  uint8_t key_offset = 0;
 
-    if (iwlwifi_mod_params.swcrypto) {
-        IWL_DEBUG_MAC80211(mvm, "leave - hwcrypto disabled\n");
-        return -EOPNOTSUPP;
-    }
+  if (iwlwifi_mod_params.swcrypto) {
+    IWL_DEBUG_MAC80211(mvm, "leave - hwcrypto disabled\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    switch (key->cipher) {
-    case WLAN_CIPHER_SUITE_TKIP:
-        if (!mvm->trans->cfg->gen2) {
-            key->flags |= IEEE80211_KEY_FLAG_GENERATE_MMIC;
-            key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
-        } else if (vif->type == NL80211_IFTYPE_STATION) {
-            key->flags |= IEEE80211_KEY_FLAG_PUT_MIC_SPACE;
-        } else {
-            IWL_DEBUG_MAC80211(mvm, "Use SW encryption for TKIP\n");
-            return -EOPNOTSUPP;
-        }
-        break;
-    case WLAN_CIPHER_SUITE_CCMP:
-    case WLAN_CIPHER_SUITE_GCMP:
-    case WLAN_CIPHER_SUITE_GCMP_256:
-        if (!iwl_mvm_has_new_tx_api(mvm)) { key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE; }
-        break;
-    case WLAN_CIPHER_SUITE_AES_CMAC:
-    case WLAN_CIPHER_SUITE_BIP_GMAC_128:
-    case WLAN_CIPHER_SUITE_BIP_GMAC_256:
-        WARN_ON_ONCE(!ieee80211_hw_check(hw, MFP_CAPABLE));
-        break;
-    case WLAN_CIPHER_SUITE_WEP40:
-    case WLAN_CIPHER_SUITE_WEP104:
-        if (vif->type == NL80211_IFTYPE_AP) {
-            struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
-            mvmvif->ap_wep_key = kmemdup(key, sizeof(*key) + key->keylen, GFP_KERNEL);
-            if (!mvmvif->ap_wep_key) { return -ENOMEM; }
-        }
-
-        if (vif->type != NL80211_IFTYPE_STATION) { return 0; }
-        break;
+  switch (key->cipher_type) {
+    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+      if (iwl_mvm_has_new_tx_api(mvm) || iwl_mvm_has_new_rx_api(mvm)) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      break;
     default:
-        /* currently FW supports only one optional cipher scheme */
-        if (hw->n_cipher_schemes && hw->cipher_schemes->cipher == key->cipher) {
-            key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
-        } else {
-            return -EOPNOTSUPP;
-        }
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  mtx_lock(&mvm->mutex);
+
+  // Porting note: the following is the equivalent of just the SET_KEY path, as Fuchsia does not
+  // have the equivalent to a DELETE_KEY call.
+
+  if ((mvmvif->mac_role == WLAN_INFO_MAC_ROLE_MESH || mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP) &&
+      !mvmsta) {
+    /*
+     * GTK on AP interface is a TX-only key, return 0;
+     * on IBSS they're per-station and because we're lazy
+     * we don't support them for RX, so do the same.
+     * CMAC/GMAC in AP/IBSS modes must be done in software.
+     */
+    if (key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 ||
+        key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 ||
+        key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
+      ret = ZX_ERR_NOT_SUPPORTED;
+    } else {
+      ret = ZX_OK;
+    }
+  }
+
+  if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && mvmsta &&
+      iwl_mvm_has_new_rx_api(mvm) && key->key_type == WLAN_KEY_TYPE_PAIRWISE &&
+      (key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128 ||
+
+       key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_GCMP_128 ||
+       key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_GCMP_256)) {
+    int tid, q;
+
+    ptk_pn = calloc(1, sizeof(*ptk_pn) + sizeof(ptk_pn->q->pn) * mvm->trans->num_rx_queues);
+    if (!ptk_pn) {
+      ret = ZX_ERR_NO_MEMORY;
+      goto out;
     }
 
-    mutex_lock(&mvm->mutex);
-
-    switch (cmd) {
-    case SET_KEY:
-        if ((vif->type == NL80211_IFTYPE_ADHOC || vif->type == NL80211_IFTYPE_AP) && !sta) {
-            /*
-             * GTK on AP interface is a TX-only key, return 0;
-             * on IBSS they're per-station and because we're lazy
-             * we don't support them for RX, so do the same.
-             * CMAC/GMAC in AP/IBSS modes must be done in software.
-             */
-            if (key->cipher == WLAN_CIPHER_SUITE_AES_CMAC ||
-                key->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_128 ||
-                key->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_256) {
-                ret = -EOPNOTSUPP;
-            } else {
-                ret = 0;
-            }
-
-            if (key->cipher != WLAN_CIPHER_SUITE_GCMP &&
-                key->cipher != WLAN_CIPHER_SUITE_GCMP_256 && !iwl_mvm_has_new_tx_api(mvm)) {
-                key->hw_key_idx = STA_KEY_IDX_INVALID;
-                break;
-            }
-        }
-
-        /* During FW restart, in order to restore the state as it was,
-         * don't try to reprogram keys we previously failed for.
-         */
-        if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) &&
-            key->hw_key_idx == STA_KEY_IDX_INVALID) {
-            IWL_DEBUG_MAC80211(mvm, "skip invalid idx key programming during restart\n");
-            ret = 0;
-            break;
-        }
-
-        if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && sta &&
-            iwl_mvm_has_new_rx_api(mvm) && key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
-            (key->cipher == WLAN_CIPHER_SUITE_CCMP || key->cipher == WLAN_CIPHER_SUITE_GCMP ||
-             key->cipher == WLAN_CIPHER_SUITE_GCMP_256)) {
-            struct ieee80211_key_seq seq;
-            int tid, q;
-
-            mvmsta = iwl_mvm_sta_from_mac80211(sta);
-            WARN_ON(rcu_access_pointer(mvmsta->ptk_pn[keyidx]));
-            ptk_pn = kzalloc(struct_size(ptk_pn, q, mvm->trans->num_rx_queues), GFP_KERNEL);
-            if (!ptk_pn) {
-                ret = -ENOMEM;
-                break;
-            }
-
-            for (tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
-                ieee80211_get_key_rx_seq(key, tid, &seq);
-                for (q = 0; q < mvm->trans->num_rx_queues; q++) {
-                    memcpy(ptk_pn->q[q].pn[tid], seq.ccmp.pn, IEEE80211_CCMP_PN_LEN);
-                }
-            }
-
-            rcu_assign_pointer(mvmsta->ptk_pn[keyidx], ptk_pn);
-        }
-
-        /* in HW restart reuse the index, otherwise request a new one */
-        if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-            key_offset = key->hw_key_idx;
-        } else {
-            key_offset = STA_KEY_IDX_INVALID;
-        }
-
-        IWL_DEBUG_MAC80211(mvm, "set hwcrypto key\n");
-        ret = iwl_mvm_set_sta_key(mvm, vif, sta, key, key_offset);
-        if (ret) {
-            IWL_WARN(mvm, "set key failed\n");
-            /*
-             * can't add key for RX, but we don't need it
-             * in the device for TX so still return 0
-             */
-            key->hw_key_idx = STA_KEY_IDX_INVALID;
-            ret = 0;
-        }
-
-        break;
-    case DISABLE_KEY:
-        if (key->hw_key_idx == STA_KEY_IDX_INVALID) {
-            ret = 0;
-            break;
-        }
-
-        if (sta && iwl_mvm_has_new_rx_api(mvm) && key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
-            (key->cipher == WLAN_CIPHER_SUITE_CCMP || key->cipher == WLAN_CIPHER_SUITE_GCMP ||
-             key->cipher == WLAN_CIPHER_SUITE_GCMP_256)) {
-            mvmsta = iwl_mvm_sta_from_mac80211(sta);
-            ptk_pn =
-                rcu_dereference_protected(mvmsta->ptk_pn[keyidx], lockdep_is_held(&mvm->mutex));
-            RCU_INIT_POINTER(mvmsta->ptk_pn[keyidx], NULL);
-            if (ptk_pn) { kfree_rcu(ptk_pn, rcu_head); }
-        }
-
-        IWL_DEBUG_MAC80211(mvm, "disable hwcrypto key\n");
-        ret = iwl_mvm_remove_sta_key(mvm, vif, sta, key);
-        break;
-    default:
-        ret = -EINVAL;
+    for (tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+      for (q = 0; q < mvm->trans->num_rx_queues; q++) {
+        memset(ptk_pn->q[q].pn[tid], 0, IEEE80211_CCMP_PN_LEN);
+      }
     }
 
-    mutex_unlock(&mvm->mutex);
-    return ret;
+    struct iwl_mvm_key_pn* old_ptk_pn = NULL;
+
+    mtx_lock(&mvmsta->ptk_pn_mutex);
+    old_ptk_pn = mvmsta->ptk_pn[key->keyidx];
+    mvmsta->ptk_pn[key->keyidx] = ptk_pn;
+    mtx_unlock(&mvmsta->ptk_pn_mutex);
+
+    if (old_ptk_pn) {
+      free(old_ptk_pn);
+    }
+  }
+
+  /* in HW restart reuse the index, otherwise request a new one */
+  if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
+    key_offset = 0;
+  } else {
+    key_offset = STA_KEY_IDX_INVALID;
+  }
+
+  IWL_DEBUG_MAC80211(mvm, "set hwcrypto key\n");
+  ret = iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, key, key_offset);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "set key failed: %s\n", zx_status_get_string(ret));
+    /*
+     * can't add key for RX, but we don't need it
+     * in the device for TX so still return 0
+     */
+    ret = ZX_OK;
+    goto out;
+  }
+
+out:
+  mtx_unlock(&mvm->mutex);
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_mac_update_tkip_key(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                         struct ieee80211_key_conf* keyconf,
                                         struct ieee80211_sta* sta, uint32_t iv32,

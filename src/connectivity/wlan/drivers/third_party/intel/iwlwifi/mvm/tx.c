@@ -156,8 +156,8 @@ out:
 /*
  * Sets most of the Tx cmd's fields
  */
-void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct iwl_tx_cmd* tx_cmd,
-                        uint8_t sta_id) {
+void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
+                        struct iwl_tx_cmd* tx_cmd, uint8_t sta_id) {
   uint32_t tx_flags = le32_to_cpu(tx_cmd->tx_flags);
   tx_flags |= TX_CMD_FLG_SEQ_CTL;
   tx_flags |= TX_CMD_FLG_BT_DIS;
@@ -255,7 +255,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct
 
   tx_cmd->tx_flags = cpu_to_le32(tx_flags);
   /* Total # bytes to be transmitted - PCIe code will adjust for A-MSDU */
-  tx_cmd->len = cpu_to_le16((uint16_t)pkt->packet_head.data_size);
+  tx_cmd->len = cpu_to_le16(pkt->header_size + pkt->headroom_used_size + pkt->body_size);
   tx_cmd->life_time = cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE);
   tx_cmd->sta_id = sta_id;
 
@@ -381,75 +381,40 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
-static inline void iwl_mvm_set_tx_cmd_pn(struct ieee80211_tx_info* info, uint8_t* crypto_hdr) {
-    struct ieee80211_key_conf* keyconf = info->control.hw_key;
-    uint64_t pn;
-
-    pn = atomic64_inc_return(&keyconf->tx_pn);
-    crypto_hdr[0] = pn;
-    crypto_hdr[2] = 0;
-    crypto_hdr[3] = 0x20 | (keyconf->keyidx << 6);
-    crypto_hdr[1] = pn >> 8;
-    crypto_hdr[4] = pn >> 16;
-    crypto_hdr[5] = pn >> 24;
-    crypto_hdr[6] = pn >> 32;
-    crypto_hdr[7] = pn >> 40;
+static void iwl_mvm_set_tx_cmd_pn(struct iwl_mvm_sta_key_conf* keyconf, uint8_t* ccmp_hdr) {
+  uint64_t pn = atomic64_inc_return(&keyconf->tx_pn);
+  ccmp_hdr[0] = pn;
+  ccmp_hdr[2] = 0;
+  ccmp_hdr[3] = 0x20 | (keyconf->keyidx << 6);
+  ccmp_hdr[1] = pn >> 8;
+  ccmp_hdr[4] = pn >> 16;
+  ccmp_hdr[5] = pn >> 24;
+  ccmp_hdr[6] = pn >> 32;
+  ccmp_hdr[7] = pn >> 40;
 }
 
 /*
  * Sets the fields in the Tx cmd that are crypto related
  */
-static void iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                                      struct iwl_tx_cmd* tx_cmd, struct sk_buff* skb_frag,
-                                      int hdrlen) {
-    struct ieee80211_key_conf* keyconf = info->control.hw_key;
-    uint8_t* crypto_hdr = skb_frag->data + hdrlen;
-    enum iwl_tx_cmd_sec_ctrl type = TX_CMD_SEC_CCM;
-    uint64_t pn;
-
-    switch (keyconf->cipher) {
-    case WLAN_CIPHER_SUITE_CCMP:
-        iwl_mvm_set_tx_cmd_ccmp(info, tx_cmd);
-        iwl_mvm_set_tx_cmd_pn(info, crypto_hdr);
-        break;
-
-    case WLAN_CIPHER_SUITE_TKIP:
-        tx_cmd->sec_ctl = TX_CMD_SEC_TKIP;
-        pn = atomic64_inc_return(&keyconf->tx_pn);
-        ieee80211_tkip_add_iv(crypto_hdr, keyconf, pn);
-        ieee80211_get_tkip_p2k(keyconf, skb_frag, tx_cmd->key);
-        break;
-
-    case WLAN_CIPHER_SUITE_WEP104:
-        tx_cmd->sec_ctl |= TX_CMD_SEC_KEY128;
-    /* fall through */
-    case WLAN_CIPHER_SUITE_WEP40:
-        tx_cmd->sec_ctl |= TX_CMD_SEC_WEP | ((keyconf->keyidx << TX_CMD_SEC_WEP_KEY_IDX_POS) &
-                                             TX_CMD_SEC_WEP_KEY_IDX_MSK);
-
-        memcpy(&tx_cmd->key[3], keyconf->key, keyconf->keylen);
-        break;
-    case WLAN_CIPHER_SUITE_GCMP:
-    case WLAN_CIPHER_SUITE_GCMP_256:
-        type = TX_CMD_SEC_GCMP;
-    /* Fall through */
-    case WLAN_CIPHER_SUITE_CCMP_256:
-        /* TODO: Taking the key from the table might introduce a race
-         * when PTK rekeying is done, having an old packets with a PN
-         * based on the old key but the message encrypted with a new
-         * one.
-         * Need to handle this.
-         */
-        tx_cmd->sec_ctl |= type | TX_CMD_SEC_KEY_FROM_TABLE;
-        tx_cmd->key[0] = keyconf->hw_key_idx;
-        iwl_mvm_set_tx_cmd_pn(info, crypto_hdr);
-        break;
+static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct iwl_mvm_sta_key_conf* key,
+                                             struct iwl_tx_cmd* tx_cmd,
+                                             struct ieee80211_mac_packet* pkt) {
+  switch (key->cipher_type) {
+    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+      // Insert the CCMP header into the headroom space.
+      if (sizeof(pkt->headroom) - pkt->headroom_used_size < 8) {
+        return ZX_ERR_NO_SPACE;
+      }
+      iwl_mvm_set_tx_cmd_ccmp(key, tx_cmd);
+      iwl_mvm_set_tx_cmd_pn(key, pkt->headroom + pkt->headroom_used_size);
+      tx_cmd->len += 8;
+      pkt->headroom_used_size += 8;
+      break;
     default:
         tx_cmd->sec_ctl |= TX_CMD_SEC_EXT;
-    }
+  }
+  return ZX_OK;
 }
-#endif  // NEEDS_PORTING
 
 /*
  * Allocates and sets the Tx cmd the driver data pointers in the skb
@@ -463,9 +428,10 @@ static void iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct ieee80211_tx_i
  * already contains the maximum payload size.
  *
  */
-static void iwl_mvm_set_tx_params(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, int hdrlen,
-                                  const struct iwl_mvm_sta* mvmsta,
-                                  struct iwl_device_cmd* dev_cmd) {
+static zx_status_t iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
+                                         const struct iwl_mvm_sta* mvmsta,
+                                         struct iwl_device_cmd* dev_cmd) {
+  zx_status_t ret = ZX_OK;
   uint8_t sta_id = mvmsta->sta_id;
   struct iwl_tx_cmd* tx_cmd;
 
@@ -544,19 +510,20 @@ static void iwl_mvm_set_tx_params(struct iwl_mvm* mvm, const wlan_tx_packet_t* p
 #endif  // NEEDS_PORTING
 
   tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
-
-#if 0   // NEEDS_PORTING
-    if (info->control.hw_key) { iwl_mvm_set_tx_cmd_crypto(mvm, info, tx_cmd, skb, hdrlen); }
-#endif  // NEEDS_PORTING
-
   iwl_mvm_set_tx_cmd(mvm, pkt, tx_cmd, sta_id);
+
+  if (mvmsta->key_conf) {
+    if ((ret = iwl_mvm_set_tx_cmd_crypto(mvm, mvmsta->key_conf, tx_cmd, pkt)) != ZX_OK) {
+      return ret;
+    }
+  }
 
   iwl_mvm_set_tx_cmd_rate(mvm, tx_cmd);
 
   /* Copy MAC header from pkt into command buffer */
-  memcpy(tx_cmd->hdr, pkt->packet_head.data_buffer, hdrlen);
+  memcpy(tx_cmd->hdr, pkt->common_header, pkt->header_size);
 
-  return;
+  return ZX_OK;
 }
 
 #if 0  // NEEDS_PORTING
@@ -983,16 +950,16 @@ static zx_status_t iwl_mvm_tx_pkt_queued(struct iwl_mvm* mvm, struct iwl_mvm_sta
   return ZX_OK;
 }
 
-zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
+zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
                             struct iwl_mvm_sta* mvmsta) {
+  zx_status_t ret = ZX_OK;
   uint8_t tid = IWL_MAX_TID_COUNT;  // TODO(51120): support QoS
   uint16_t txq_id = mvmsta->tid_data[tid].txq_id;
-  zx_status_t ret;
 
-  size_t hdrlen =
-      ieee80211_get_header_len((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
   struct iwl_device_cmd dev_cmd;
-  iwl_mvm_set_tx_params(mvm, pkt, hdrlen, mvmsta, &dev_cmd);
+  if ((ret = iwl_mvm_set_tx_params(mvm, pkt, mvmsta, &dev_cmd)) != ZX_OK) {
+    return ret;
+  }
 
   mtx_lock(&mvmsta->lock);
 
@@ -1103,7 +1070,7 @@ drop:
 #endif  // NEEDS_PORTING
 }
 
-zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
+zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct ieee80211_mac_packet* pkt,
                            struct iwl_mvm_sta* mvmsta) {
   if (!mvmsta) {
     IWL_ERR(mvm, "iwl_mvm_tx_skb(): mvmsta is NULL\n");

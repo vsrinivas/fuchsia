@@ -37,6 +37,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
+#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -45,6 +47,7 @@
 /* for IWL_MAX_TID_COUNT */
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 struct iwl_mvm;
 struct iwl_mvm_vif;
@@ -356,6 +359,19 @@ struct iwl_mvm_txq {
 };
 
 /**
+ * struct iwl_mvm_sta_key_conf - per station key configuration data
+ */
+struct iwl_mvm_sta_key_conf {
+  atomic64_t tx_pn;
+  uint64_t rx_seq;
+  fuchsia_wlan_ieee80211_CipherSuiteType cipher_type;
+  wlan_key_type_t key_type;
+  uint8_t keyidx;
+  size_t keylen;
+  uint8_t key[0];
+};
+
+/**
  * struct iwl_mvm_sta - representation of a station in the driver
  * @sta_id: the index of the station in the fw (will be replaced by id_n_color)
  * @tfd_queue_msk: the tfd queues used by the station
@@ -420,6 +436,8 @@ struct iwl_mvm_sta {
     struct iwl_lq_sta rs_drv;
   } lq_sta;
   struct iwl_mvm_vif* mvmvif;
+  struct iwl_mvm_sta_key_conf* key_conf;
+  mtx_t ptk_pn_mutex;
   struct iwl_mvm_key_pn __rcu* ptk_pn[4];
   struct iwl_mvm_rxq_dup_data* dup_data;
 
@@ -489,8 +507,9 @@ static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mv
 int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta);
 zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id);
-int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
-                        struct ieee80211_key_conf* keyconf, uint8_t key_offset);
+int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvm_vif,
+                        struct iwl_mvm_sta* mvm_sta, const struct iwl_mvm_sta_key_conf* key_conf,
+                        uint8_t key_offset);
 int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                            struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf);
 

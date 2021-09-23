@@ -42,6 +42,8 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <wlan/protocol/ieee80211.h>
+
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #endif  // NEEDS_PORTING
@@ -2030,16 +2032,14 @@ static void iwl_trans_pci_tx_lat_add_ts_write(struct sk_buff* skb) {
 #endif  // NEEDS_PORTING
 
 // TODO(fxbug.dev/61556): TSO/LSO support.
-static zx_status_t iwl_fill_data_tbs(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
-                                     struct iwl_txq* txq, int cmd_idx, uint8_t hdr_len,
-                                     uint32_t* num_tbs, struct iwl_cmd_meta* out_meta) {
-  uint16_t head_tb_len;
-
+static zx_status_t iwl_fill_data_tbs(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
+                                     struct iwl_txq* txq, int cmd_idx, uint32_t* num_tbs,
+                                     struct iwl_cmd_meta* out_meta) {
   /*
    * Set up TFD's third entry to point directly to remainder
    * of skb's head, if any
    */
-  head_tb_len = pkt->packet_head.data_size - hdr_len;
+  uint16_t head_tb_len = pkt->headroom_used_size + pkt->body_size;
 
   if (head_tb_len > 0) {
     // Allocate the dup_io_buf
@@ -2054,8 +2054,9 @@ static zx_status_t iwl_fill_data_tbs(struct iwl_trans* trans, const wlan_tx_pack
     }
 
     // copy packet in
-    void* virt_addr = iwl_iobuf_virtual(dup_io_buf);
-    memcpy(virt_addr, pkt->packet_head.data_buffer + hdr_len, head_tb_len);
+    char* const virt_addr = (char*)iwl_iobuf_virtual(dup_io_buf);
+    memcpy(virt_addr, pkt->headroom, pkt->headroom_used_size);
+    memcpy(virt_addr + pkt->headroom_used_size, pkt->body, pkt->body_size);
     iwl_iobuf_cache_flush(dup_io_buf, 0, head_tb_len);
     zx_paddr_t phys_addr = iwl_iobuf_physical(dup_io_buf);
     iwl_pcie_txq_build_tfd(trans, txq, phys_addr, head_tb_len, false, num_tbs);
@@ -2291,7 +2292,7 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
 // store the payload. Currently we only support one fragment (the pkt->packet_head) and always
 // copy the payload because the firmware will transmit the packet in asynchronous manner.
 //
-zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                               const struct iwl_device_cmd* dev_cmd, int txq_id) {
   zx_status_t ret = ZX_OK;
   ZX_DEBUG_ASSERT(trans);
@@ -2301,11 +2302,6 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_txq* txq = trans_pcie->txq[txq_id];
   int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
-
-  if (pkt->packet_tail_count) {
-    IWL_ERR(trans, "TX doesn't support tail packet yet\n");
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   if (!test_bit(txq_id, trans_pcie->queue_used)) {
     IWL_ERR(trans, "TX on unused queue %d\n", txq_id);
@@ -2383,10 +2379,8 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   // (tb1) the rest of 'iwl_device_cmd' and 802.11 header.
   //
 
-  const uint8_t hdr_len =
-      ieee80211_get_header_len((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
   const uint16_t tb1_len =
-      sizeof(struct iwl_cmd_header) + sizeof(struct iwl_tx_cmd) - tb0_size + hdr_len;
+      sizeof(struct iwl_cmd_header) + sizeof(struct iwl_tx_cmd) - tb0_size + pkt->header_size;
   // See original code: "do not align A-MSDU to dword as the subframe header aligns it"
   // TODO(51295): we don't align the length when we enable A-MSDU in the future.
   const uint16_t aligned_len = ROUND_UP(tb1_len, 4);
@@ -2403,7 +2397,7 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   /////////////////////////////////////////////////////////////////////////////////////////////////
   // (tb2) the 802.11 payload
   //
-  if ((ret = iwl_fill_data_tbs(trans, pkt, txq, cmd_idx, hdr_len, &num_tbs, out_meta)) != ZX_OK) {
+  if ((ret = iwl_fill_data_tbs(trans, pkt, txq, cmd_idx, &num_tbs, out_meta)) != ZX_OK) {
     goto unlock;
   }
 #else   // NEEDS_PORTING

@@ -16,6 +16,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
@@ -769,10 +770,10 @@ class TxqTest : public MvmTest, public MockTrans {
                               >
       mock_tx_;
 
-  static zx_status_t tx_wrapper(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+  static zx_status_t tx_wrapper(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                                 const struct iwl_device_cmd* dev_cmd, int txq_id) {
     auto test = GET_TEST(TxqTest, trans);
-    return test->mock_tx_.Call(pkt->packet_head.data_size,
+    return test->mock_tx_.Call(pkt->header_size + pkt->headroom_used_size + pkt->body_size,
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
@@ -827,11 +828,8 @@ TEST_F(TxqTest, TestAllocData) {
 }
 
 TEST_F(TxqTest, DataTxCmd) {
-  wlan_tx_packet_t pkt = {
-      .packet_head =
-          {
-              .data_size = 56,  // arbitrary value.
-          },
+  ieee80211_mac_packet pkt = {
+      .body_size = 56,  // arbitrary value.
   };
   iwl_tx_cmd tx_cmd = {
       .tx_flags = TX_CMD_FLG_TSF,  // arbitary value to ensure the function would keep it.
@@ -844,7 +842,7 @@ TEST_F(TxqTest, DataTxCmd) {
 
   EXPECT_EQ(IWL_MAX_TID_COUNT, tx_cmd.tid_tspec);
   EXPECT_EQ(cpu_to_le16(PM_FRAME_MGMT), tx_cmd.pm_frame_timeout);
-  EXPECT_EQ(cpu_to_le16(static_cast<uint16_t>(pkt.packet_head.data_size)), tx_cmd.len);
+  EXPECT_EQ(cpu_to_le16(static_cast<uint16_t>(pkt.body_size)), tx_cmd.len);
   EXPECT_EQ(cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE), tx_cmd.life_time);
   EXPECT_EQ(0, tx_cmd.sta_id);
 }
@@ -864,12 +862,12 @@ TEST_F(TxqTest, TxpktInvalidInput) {
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt(builder.build());
 
   // Null STA
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->pkt(), nullptr));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->mac_pkt(), nullptr));
 
   // invalid STA id.
   uint32_t sta_id = sta_.sta_id;
   sta_.sta_id = IWL_MVM_INVALID_STA;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->pkt(), &sta_));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->mac_pkt(), &sta_));
   sta_.sta_id = sta_id;
 
   // the check in iwl_mvm_tx_pkt_queued() -- after iwl_trans_tx().
@@ -879,7 +877,7 @@ TEST_F(TxqTest, TxpktInvalidInput) {
 
     uint32_t mac_id_n_color = sta_.mac_id_n_color;
     sta_.mac_id_n_color = NUM_MAC_INDEX_DRIVER;
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->pkt(), &sta_));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, iwl_mvm_tx_skb(mvm_, wlan_pkt->mac_pkt(), &sta_));
     sta_.mac_id_n_color = mac_id_n_color;  // Restore the changed value.
 
     unbindTx();
@@ -892,7 +890,7 @@ TEST_F(TxqTest, TxPkt) {
 
   bindTx(tx_wrapper);
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), 0);
-  EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, wlan_pkt->pkt(), &sta_));
+  EXPECT_EQ(ZX_OK, iwl_mvm_tx_skb(mvmvif_->mvm, wlan_pkt->mac_pkt(), &sta_));
   unbindTx();
 }
 

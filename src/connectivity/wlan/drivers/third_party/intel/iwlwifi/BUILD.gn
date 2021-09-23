@@ -56,7 +56,6 @@ source_set("core") {
   ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
-    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//zircon/system/public",
     "//zircon/system/ulib/async",

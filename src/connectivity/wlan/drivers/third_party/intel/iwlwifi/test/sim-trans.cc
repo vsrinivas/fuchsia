@@ -121,7 +121,7 @@ static zx_status_t iwl_sim_trans_send_cmd(struct iwl_trans* trans, struct iwl_ho
   return ret;
 }
 
-static zx_status_t iwl_sim_trans_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+static zx_status_t iwl_sim_trans_tx(struct iwl_trans* trans, ieee80211_mac_packet* pkt,
                                     const struct iwl_device_cmd* dev_cmd, int queue) {
   return ZX_ERR_NOT_SUPPORTED;
 }

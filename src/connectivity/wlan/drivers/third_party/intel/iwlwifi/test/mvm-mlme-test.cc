@@ -18,6 +18,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
@@ -572,10 +573,10 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
                               >
       mock_tx_;
 
-  static zx_status_t tx_wrapper(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+  static zx_status_t tx_wrapper(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                                 const struct iwl_device_cmd* dev_cmd, int txq_id) {
     auto test = GET_TEST(MacInterfaceTest, trans);
-    return test->mock_tx_.Call(pkt->packet_head.data_size,
+    return test->mock_tx_.Call(pkt->header_size + pkt->headroom_used_size + pkt->body_size,
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
@@ -742,7 +743,7 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -756,7 +757,7 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
-  ASSERT_EQ(ZX_OK, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->pkt()));
+  ASSERT_EQ(ZX_OK, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 

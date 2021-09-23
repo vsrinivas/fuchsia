@@ -9,7 +9,9 @@
 #include <wlan/common/channel.h>
 #include <wlan/protocol/ieee80211.h>
 
-size_t ieee80211_get_header_len(struct ieee80211_frame_header* fw) { return ieee80211_hdrlen(fw); }
+size_t ieee80211_get_header_len(const struct ieee80211_frame_header* fw) {
+  return ieee80211_hdrlen(fw);
+}
 
 struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee80211_ops* ops) {
   return nullptr;

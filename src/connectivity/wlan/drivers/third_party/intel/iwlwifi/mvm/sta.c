@@ -41,14 +41,12 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
-#if 0   // NEEDS_PORTING
-static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
+static zx_status_t iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
-static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
-                                struct ieee80211_key_conf* key, bool mcast, uint32_t tkip_iv32,
-                                uint16_t* tkip_p1k, uint32_t cmd_flags, uint8_t key_offset,
-                                bool mfp);
-#endif  // NEEDS_PORTING
+static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
+                                        const struct iwl_mvm_sta_key_conf* keyconf, bool mcast,
+                                        uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
+                                        uint8_t key_offset, bool mfp);
 
 /*
  * New version of ADD_STA_sta command added new fields at the end of the
@@ -221,7 +219,7 @@ zx_status_t iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_
   status = ADD_STA_SUCCESS;
   ret = iwl_mvm_send_cmd_pdu_status(mvm, ADD_STA, iwl_mvm_add_sta_cmd_size(mvm), &add_sta_cmd,
                                     &status);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
@@ -533,7 +531,7 @@ static int iwl_mvm_free_inactive_queue(struct iwl_mvm* mvm, int queue,
   }
 
   ret = iwl_mvm_disable_txq(mvm, old_sta, queue, tid, 0);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to free inactive queue %d (ret=%d)\n", queue, ret);
 
     return ret;
@@ -661,7 +659,7 @@ static int iwl_mvm_redirect_queue(struct iwl_mvm* mvm, int queue, int tid, int a
   txq->stopped = true;
 
   ret = iwl_trans_wait_tx_queues_empty(mvm->trans, BIT(queue));
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Error draining queue %d before reconfig\n", queue);
     ret = -EIO;
     goto out;
@@ -670,7 +668,7 @@ static int iwl_mvm_redirect_queue(struct iwl_mvm* mvm, int queue, int tid, int a
   /* Before redirecting the queue we need to de-activate it */
   iwl_trans_txq_disable(mvm->trans, queue, false);
   ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, 0, sizeof(cmd), &cmd);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed SCD disable TXQ %d (ret=%d)\n", queue, ret);
   }
 
@@ -2976,6 +2974,7 @@ int iwl_mvm_sta_tx_agg_flush(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 
   return 0;
 }
+#endif  // NEEDS_PORTING
 
 static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm) {
   int i, max = -1, max_offs = -1;
@@ -3005,6 +3004,7 @@ static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm) {
   return max_offs;
 }
 
+#if 0   // NEEDS_PORTING
 static struct iwl_mvm_sta* iwl_mvm_get_key_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                                struct ieee80211_sta* sta) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -3037,77 +3037,41 @@ static struct iwl_mvm_sta* iwl_mvm_get_key_sta(struct iwl_mvm* mvm, struct ieee8
 
   return NULL;
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
-                                struct ieee80211_key_conf* key, bool mcast, uint32_t tkip_iv32,
-                                uint16_t* tkip_p1k, uint32_t cmd_flags, uint8_t key_offset,
-                                bool mfp) {
+static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
+                                        const struct iwl_mvm_sta_key_conf* key, bool mcast,
+                                        uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
+                                        uint8_t key_offset, bool mfp) {
   union {
     struct iwl_mvm_add_sta_key_cmd_v1 cmd_v1;
     struct iwl_mvm_add_sta_key_cmd cmd;
   } u = {};
   __le16 key_flags;
-  int ret;
+  zx_status_t ret = ZX_OK;
   uint32_t status;
   uint16_t keyidx;
-  uint64_t pn = 0;
-  int i, size;
-  bool new_api = fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TKIP_MIC_KEYS);
+  int size;
+
+  // This feature path requires support for setting a TX packet number, which we do not have at the
+  // moment in Fuchsia.
+  ZX_DEBUG_ASSERT(!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TKIP_MIC_KEYS));
 
   if (sta_id == IWL_MVM_INVALID_STA) {
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   keyidx = (key->keyidx << STA_KEY_FLG_KEYID_POS) & STA_KEY_FLG_KEYID_MSK;
   key_flags = cpu_to_le16(keyidx);
   key_flags |= cpu_to_le16(STA_KEY_FLG_WEP_KEY_MAP);
 
-  switch (key->cipher) {
-    case WLAN_CIPHER_SUITE_TKIP:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_TKIP);
-      if (new_api) {
-        memcpy((void*)&u.cmd.tx_mic_key, &key->key[NL80211_TKIP_DATA_OFFSET_TX_MIC_KEY],
-               IWL_MIC_KEY_SIZE);
-
-        memcpy((void*)&u.cmd.rx_mic_key, &key->key[NL80211_TKIP_DATA_OFFSET_RX_MIC_KEY],
-               IWL_MIC_KEY_SIZE);
-        pn = atomic64_read(&key->tx_pn);
-
-      } else {
-        u.cmd_v1.tkip_rx_tsc_byte2 = tkip_iv32;
-        for (i = 0; i < 5; i++) {
-          u.cmd_v1.tkip_rx_ttak[i] = cpu_to_le16(tkip_p1k[i]);
-        }
-      }
-      memcpy(u.cmd.common.key, key->key, key->keylen);
-      break;
-    case WLAN_CIPHER_SUITE_CCMP:
+  switch (key->cipher_type) {
+    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
       key_flags |= cpu_to_le16(STA_KEY_FLG_CCM);
       memcpy(u.cmd.common.key, key->key, key->keylen);
-      if (new_api) {
-        pn = atomic64_read(&key->tx_pn);
-      }
-      break;
-    case WLAN_CIPHER_SUITE_WEP104:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_WEP_13BYTES);
-    /* fall through */
-    case WLAN_CIPHER_SUITE_WEP40:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_WEP);
-      memcpy(u.cmd.common.key + 3, key->key, key->keylen);
-      break;
-    case WLAN_CIPHER_SUITE_GCMP_256:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_KEY_32BYTES);
-    /* fall through */
-    case WLAN_CIPHER_SUITE_GCMP:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_GCMP);
-      memcpy(u.cmd.common.key, key->key, key->keylen);
-      if (new_api) {
-        pn = atomic64_read(&key->tx_pn);
-      }
       break;
     default:
-      key_flags |= cpu_to_le16(STA_KEY_FLG_EXT);
-      memcpy(u.cmd.common.key, key->key, key->keylen);
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   if (mcast) {
@@ -3121,12 +3085,7 @@ static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   u.cmd.common.key_flags = key_flags;
   u.cmd.common.sta_id = sta_id;
 
-  if (new_api) {
-    u.cmd.transmit_seq_cnt = cpu_to_le64(pn);
-    size = sizeof(u.cmd);
-  } else {
-    size = sizeof(u.cmd_v1);
-  }
+  size = sizeof(u.cmd_v1);
 
   status = ADD_STA_SUCCESS;
   if (cmd_flags & CMD_ASYNC) {
@@ -3140,7 +3099,7 @@ static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
       IWL_DEBUG_WEP(mvm, "MODIFY_STA: set dynamic key passed\n");
       break;
     default:
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       IWL_ERR(mvm, "MODIFY_STA: set dynamic key failed\n");
       break;
   }
@@ -3148,21 +3107,22 @@ static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   return ret;
 }
 
-static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf* keyconf,
+static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_key_conf* keyconf,
                                  uint8_t sta_id, bool remove_key) {
   struct iwl_mvm_mgmt_mcast_key_cmd igtk_cmd = {};
 
   /* verify the key details match the required command's expectations */
-  if (WARN_ON((keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE) ||
+  if (WARN_ON((keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) ||
               (keyconf->keyidx != 4 && keyconf->keyidx != 5) ||
-              (keyconf->cipher != WLAN_CIPHER_SUITE_AES_CMAC &&
-               keyconf->cipher != WLAN_CIPHER_SUITE_BIP_GMAC_128 &&
-               keyconf->cipher != WLAN_CIPHER_SUITE_BIP_GMAC_256))) {
-    return -EINVAL;
+              (keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 &&
+               keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 &&
+               keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256))) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) && keyconf->cipher != WLAN_CIPHER_SUITE_AES_CMAC)) {
-    return -EINVAL;
+  if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) &&
+              keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128)) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   igtk_cmd.key_id = cpu_to_le32(keyconf->keyidx);
@@ -3171,30 +3131,23 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf*
   if (remove_key) {
     igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_NOT_VALID);
   } else {
-    struct ieee80211_key_seq seq;
-    const uint8_t* pn;
-
-    switch (keyconf->cipher) {
-      case WLAN_CIPHER_SUITE_AES_CMAC:
+    switch (keyconf->cipher_type) {
+      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128:
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_CCM);
         break;
-      case WLAN_CIPHER_SUITE_BIP_GMAC_128:
-      case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128:
+      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256:
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_GCMP);
         break;
       default:
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     memcpy(igtk_cmd.igtk, keyconf->key, keyconf->keylen);
-    if (keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_256) {
+    if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
       igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_KEY_32BYTES);
     }
-    ieee80211_get_key_rx_seq(keyconf, 0, &seq);
-    pn = seq.aes_cmac.pn;
-    igtk_cmd.receive_seq_cnt =
-        cpu_to_le64(((uint64_t)pn[5] << 0) | ((uint64_t)pn[4] << 8) | ((uint64_t)pn[3] << 16) |
-                    ((uint64_t)pn[2] << 24) | ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
+    igtk_cmd.receive_seq_cnt = cpu_to_le64(keyconf->rx_seq);
   }
 
   IWL_DEBUG_INFO(mvm, "%s igtk for sta %u\n", remove_key ? "removing" : "installing",
@@ -3213,6 +3166,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf*
   return iwl_mvm_send_cmd_pdu(mvm, MGMT_MCAST_KEY, 0, sizeof(igtk_cmd), &igtk_cmd);
 }
 
+#if 0   // NEEDS_PORTING
 static inline uint8_t* iwl_mvm_get_mac_addr(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                             struct ieee80211_sta* sta) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -3229,63 +3183,50 @@ static inline uint8_t* iwl_mvm_get_mac_addr(struct iwl_mvm* mvm, struct ieee8021
 
   return NULL;
 }
+#endif  // NEEDS_PORTING
 
-static int __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                 struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf,
-                                 uint8_t key_offset, bool mcast) {
-  int ret;
-  const uint8_t* addr;
-  struct ieee80211_key_seq seq;
-  uint16_t p1k[5];
+static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                         struct iwl_mvm_sta* mvmsta,
+                                         const struct iwl_mvm_sta_key_conf* keyconf,
+                                         uint8_t key_offset, bool mcast) {
+  zx_status_t ret = ZX_OK;
   uint32_t sta_id;
+
+  // Not supported for Fuchsia paths currently.
   bool mfp = false;
 
-  if (sta) {
-    struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
-
-    sta_id = mvm_sta->sta_id;
-    mfp = sta->mfp;
-  } else if (vif->type == NL80211_IFTYPE_AP && !(keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE)) {
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
+  if (mvmsta) {
+    sta_id = mvmsta->sta_id;
+  } else if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP &&
+             keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE) {
     sta_id = mvmvif->mcast_sta.sta_id;
   } else {
     IWL_ERR(mvm, "Failed to find station id\n");
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  switch (keyconf->cipher) {
-    case WLAN_CIPHER_SUITE_TKIP:
-      addr = iwl_mvm_get_mac_addr(mvm, vif, sta);
-      /* get phase 1 key from mac80211 */
-      ieee80211_get_key_rx_seq(keyconf, 0, &seq);
-      ieee80211_get_tkip_rx_p1k(keyconf, addr, seq.tkip.iv32, p1k);
-      ret =
-          iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, seq.tkip.iv32, p1k, 0, key_offset, mfp);
-      break;
-    case WLAN_CIPHER_SUITE_CCMP:
-    case WLAN_CIPHER_SUITE_WEP40:
-    case WLAN_CIPHER_SUITE_WEP104:
-    case WLAN_CIPHER_SUITE_GCMP:
-    case WLAN_CIPHER_SUITE_GCMP_256:
+  switch (keyconf->cipher_type) {
+    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
       ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, 0, NULL, 0, key_offset, mfp);
       break;
     default:
-      ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, 0, NULL, 0, key_offset, mfp);
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   return ret;
 }
 
-static int __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
-                                    struct ieee80211_key_conf* keyconf, bool mcast) {
+static zx_status_t __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
+                                            const struct iwl_mvm_sta_key_conf* keyconf,
+                                            uint8_t key_offset, bool mcast) {
   union {
     struct iwl_mvm_add_sta_key_cmd_v1 cmd_v1;
     struct iwl_mvm_add_sta_key_cmd cmd;
   } u = {};
   bool new_api = fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TKIP_MIC_KEYS);
   __le16 key_flags;
-  int ret, size;
+  zx_status_t ret = ZX_OK;
+  int size;
   uint32_t status;
 
   /* This is a valid situation for GTK removal */
@@ -3306,7 +3247,7 @@ static int __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
    * of the command, so we can do this union trick.
    */
   u.cmd.common.key_flags = key_flags;
-  u.cmd.common.key_offset = keyconf->hw_key_idx;
+  u.cmd.common.key_offset = key_offset;
   u.cmd.common.sta_id = sta_id;
 
   size = new_api ? sizeof(u.cmd) : sizeof(u.cmd_v1);
@@ -3319,7 +3260,7 @@ static int __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
       IWL_DEBUG_WEP(mvm, "MODIFY_STA: remove sta key passed\n");
       break;
     default:
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       IWL_ERR(mvm, "MODIFY_STA: remove sta key failed\n");
       break;
   }
@@ -3327,50 +3268,26 @@ static int __iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, uint8_t sta_id,
   return ret;
 }
 
-int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
-                        struct ieee80211_key_conf* keyconf, uint8_t key_offset) {
-  bool mcast = !(keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE);
-  struct iwl_mvm_sta* mvm_sta;
+zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                struct iwl_mvm_sta* mvmsta,
+                                const struct iwl_mvm_sta_key_conf* keyconf, uint8_t key_offset) {
+  bool mcast = keyconf->key_type != WLAN_KEY_TYPE_PAIRWISE;
   uint8_t sta_id = IWL_MVM_INVALID_STA;
-  int ret;
+  zx_status_t ret = ZX_OK;
   static const uint8_t __maybe_unused zero_addr[ETH_ALEN] = {0};
 
   iwl_assert_lock_held(&mvm->mutex);
 
-  if (vif->type != NL80211_IFTYPE_AP || keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE) {
-    /* Get the station id from the mvm local station table */
-    mvm_sta = iwl_mvm_get_key_sta(mvm, vif, sta);
-    if (!mvm_sta) {
-      IWL_ERR(mvm, "Failed to find station\n");
-      return -EINVAL;
-    }
-    sta_id = mvm_sta->sta_id;
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_AP || keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) {
+    sta_id = mvmsta->sta_id;
 
-    /*
-     * It is possible that the 'sta' parameter is NULL, and thus
-     * there is a need to retrieve the sta from the local station
-     * table.
-     */
-    if (!sta) {
-      sta = rcu_dereference_protected(mvm->fw_id_to_mac_id[sta_id], lockdep_is_held(&mvm->mutex));
-      if (IS_ERR_OR_NULL(sta)) {
-        IWL_ERR(mvm, "Invalid station id\n");
-        return -EINVAL;
-      }
-    }
-
-    if (WARN_ON_ONCE(iwl_mvm_sta_from_mac80211(sta)->vif != vif)) {
-      return -EINVAL;
-    }
   } else {
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
     sta_id = mvmvif->mcast_sta.sta_id;
   }
 
-  if (keyconf->cipher == WLAN_CIPHER_SUITE_AES_CMAC ||
-      keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_128 ||
-      keyconf->cipher == WLAN_CIPHER_SUITE_BIP_GMAC_256) {
+  if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 ||
+      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 ||
+      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
     ret = iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, false);
     goto end;
   }
@@ -3389,13 +3306,12 @@ int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct i
   if (key_offset == STA_KEY_IDX_INVALID) {
     key_offset = iwl_mvm_set_fw_key_idx(mvm);
     if (key_offset == STA_KEY_IDX_INVALID) {
-      return -ENOSPC;
+      return ZX_ERR_NO_SPACE;
     }
-    keyconf->hw_key_idx = key_offset;
   }
 
-  ret = __iwl_mvm_set_sta_key(mvm, vif, sta, keyconf, key_offset, mcast);
-  if (ret) {
+  ret = __iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, keyconf, key_offset, mcast);
+  if (ret != ZX_OK) {
     goto end;
   }
 
@@ -3405,11 +3321,12 @@ int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct i
    * to the same key slot (offset).
    * If this fails, remove the original as well.
    */
-  if ((keyconf->cipher == WLAN_CIPHER_SUITE_WEP40 || keyconf->cipher == WLAN_CIPHER_SUITE_WEP104) &&
-      sta) {
-    ret = __iwl_mvm_set_sta_key(mvm, vif, sta, keyconf, key_offset, !mcast);
-    if (ret) {
-      __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, mcast);
+  if ((keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_40 ||
+       keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_104) &&
+      mvmsta) {
+    ret = __iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, keyconf, key_offset, !mcast);
+    if (ret != ZX_OK) {
+      __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, key_offset, mcast);
       goto end;
     }
   }
@@ -3417,11 +3334,12 @@ int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct i
   __set_bit(key_offset, mvm->fw_key_table);
 
 end:
-  IWL_DEBUG_WEP(mvm, "key: cipher=%x len=%d idx=%d sta=%pM ret=%d\n", keyconf->cipher,
-                keyconf->keylen, keyconf->keyidx, sta ? sta->addr : zero_addr, ret);
+  IWL_DEBUG_WEP(mvm, "key: cipher=%x len=%zu idx=%d mvmsta=%pM ret=%d\n", keyconf->cipher_type,
+                keyconf->keylen, keyconf->keyidx, mvmsta ? mvmsta->addr : zero_addr, ret);
   return ret;
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                            struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf) {
   bool mcast = !(keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE);

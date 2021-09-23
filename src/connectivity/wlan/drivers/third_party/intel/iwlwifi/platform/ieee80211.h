@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+#include <wlan/protocol/ieee80211.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -32,6 +33,7 @@ extern "C" {
 // The below constants are not defined in the 802.11-2016 Std.
 #define IEEE80211_MAX_CHAINS 4
 #define IEEE80211_MAX_RTS_THRESHOLD 2353
+#define IEEE80211_MAC_PACKET_HEADROOM_SIZE 8
 
 // Used as the default value in the data structure to indicate the queue is not set yet.
 #define IEEE80211_INVAL_HW_QUEUE 0xff
@@ -163,9 +165,29 @@ struct ieee80211_vif {
   uint8_t dummy;
 };
 
-struct ieee80211_frame_header;
+// Struct for transferring an IEEE 802.11 MAC-framed packet around the driver.
+struct ieee80211_mac_packet {
+  // The common portion of the MAC header.
+  const struct ieee80211_frame_header* common_header;
 
-size_t ieee80211_get_header_len(struct ieee80211_frame_header* fh);
+  // The size of the entire MAC header (starting at common_header), including variable fields.
+  size_t header_size;
+
+  // Statically allocated headroom space between the MAC header and frame body, for adding
+  // additional headers to the packet.
+  uint8_t headroom[IEEE80211_MAC_PACKET_HEADROOM_SIZE];
+
+  // Size of the headroom used.
+  size_t headroom_used_size;
+
+  // MAC frame body.
+  const uint8_t* body;
+
+  // MAC frame body size.
+  size_t body_size;
+};
+
+size_t ieee80211_get_header_len(const struct ieee80211_frame_header* fh);
 
 struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee80211_ops* ops);
 

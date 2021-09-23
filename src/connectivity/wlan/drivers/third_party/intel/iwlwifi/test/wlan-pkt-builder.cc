@@ -13,23 +13,37 @@
 namespace wlan::testing {
 
 WlanPktBuilder::WlanPkt::WlanPkt(const uint8_t* buf, size_t len)
-    : pkt_(new wlan_tx_packet_t()), buf_(new uint8_t[len]), len_(len) {
-  ASSERT_NOT_NULL(pkt_);
+    : mac_pkt_(std::make_unique<ieee80211_mac_packet>()),
+      wlan_pkt_(std::make_unique<wlan_tx_packet_t>()),
+      buf_(new uint8_t[len]),
+      len_(len) {
+  ASSERT_NOT_NULL(mac_pkt_);
+  ASSERT_NOT_NULL(wlan_pkt_);
   ASSERT_NOT_NULL(buf_);
-
   std::memcpy(&*buf_, buf, len);
-  pkt_->packet_head.data_buffer = &*buf_;
-  pkt_->packet_head.data_size = len;
 
-  pkt_->info.tx_flags = 0;
-  pkt_->info.channel_bandwidth = CHANNEL_BANDWIDTH_CBW20;
+  *mac_pkt_ = {};
+  mac_pkt_->common_header = reinterpret_cast<ieee80211_frame_header*>(&*buf_);
+  mac_pkt_->header_size = ieee80211_get_header_len(mac_pkt_->common_header);
+  mac_pkt_->body = &*buf_ + mac_pkt_->header_size;
+  mac_pkt_->body_size = len - mac_pkt_->header_size;
+
+  *wlan_pkt_ = {};
+  wlan_pkt_->packet_head.data_buffer = &*buf_;
+  wlan_pkt_->packet_head.data_size = len;
+  wlan_pkt_->info.tx_flags = 0;
+  wlan_pkt_->info.channel_bandwidth = CHANNEL_BANDWIDTH_CBW20;
 }
 
 WlanPktBuilder::WlanPkt::~WlanPkt() = default;
 
-wlan_tx_packet_t* WlanPktBuilder::WlanPkt::pkt() { return pkt_.get(); }
+ieee80211_mac_packet* WlanPktBuilder::WlanPkt::mac_pkt() { return mac_pkt_.get(); }
 
-const wlan_tx_packet_t* WlanPktBuilder::WlanPkt::pkt() const { return pkt_.get(); }
+const ieee80211_mac_packet* WlanPktBuilder::WlanPkt::mac_pkt() const { return mac_pkt_.get(); }
+
+wlan_tx_packet_t* WlanPktBuilder::WlanPkt::wlan_pkt() { return wlan_pkt_.get(); }
+
+const wlan_tx_packet_t* WlanPktBuilder::WlanPkt::wlan_pkt() const { return wlan_pkt_.get(); }
 
 size_t WlanPktBuilder::WlanPkt::len() const { return len_; }
 

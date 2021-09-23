@@ -43,6 +43,8 @@ source_set("mvm") {
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",

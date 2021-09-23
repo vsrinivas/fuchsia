@@ -14,6 +14,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+
 namespace wlan::testing {
 
 //
@@ -41,12 +43,15 @@ class WlanPktBuilder {
     WlanPkt& operator=(const WlanPkt&) = delete;  // copy assignment
     WlanPkt& operator=(WlanPkt&&) = delete;       // move assignment
 
-    wlan_tx_packet_t* pkt();
-    const wlan_tx_packet_t* pkt() const;
+    ieee80211_mac_packet* mac_pkt();
+    const ieee80211_mac_packet* mac_pkt() const;
+    wlan_tx_packet_t* wlan_pkt();
+    const wlan_tx_packet_t* wlan_pkt() const;
     size_t len() const;
 
    private:
-    std::unique_ptr<wlan_tx_packet_t> pkt_;
+    std::unique_ptr<ieee80211_mac_packet> mac_pkt_;
+    std::unique_ptr<wlan_tx_packet_t> wlan_pkt_;
     std::shared_ptr<uint8_t[]> buf_;
     size_t len_;
   };

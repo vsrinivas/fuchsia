@@ -48,6 +48,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
+#include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
@@ -55,6 +56,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <zircon/status.h>
+
+#include <algorithm>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
 
@@ -65,6 +68,13 @@ extern "C" {
 }  // extern "C"
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+
+namespace {
+
+// IEEE 802.11-2016 3.2 (c.f. "vendor organizationally unique identifier")
+constexpr uint8_t kIeeeOui[] = {0x00, 0x0F, 0xAC};
+
+}  // namespace
 
 ////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
 
@@ -162,6 +172,9 @@ static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
 
   for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
     free(mvm_sta->txq[i]);
+  }
+  if (mvm_sta->key_conf) {
+    free(mvm_sta->key_conf);
   }
   free(mvm_sta);
 }
@@ -275,8 +288,26 @@ void mac_stop(void* ctx) {
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
+  if (pkt->packet_tail_count) {
+    IWL_ERR(mvmvif, "TX doesn't support tail packet yet\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  ieee80211_mac_packet packet = {};
+  packet.common_header =
+      reinterpret_cast<const ieee80211_frame_header*>(pkt->packet_head.data_buffer);
+  packet.header_size = ieee80211_get_header_len(packet.common_header);
+  if (packet.header_size > pkt->packet_head.data_size) {
+    IWL_ERR(mvmvif, "TX packet header size %zu too large for data size %zu\n", packet.header_size,
+            pkt->packet_head.data_size);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  packet.body = pkt->packet_head.data_buffer + packet.header_size;
+  packet.body_size = pkt->packet_head.data_size - packet.header_size;
+
   mtx_lock(&mvmvif->mvm->mutex);
-  zx_status_t ret = iwl_mvm_mac_tx(mvmvif, pkt);
+  zx_status_t ret = iwl_mvm_mac_tx(mvmvif, &packet);
   mtx_unlock(&mvmvif->mvm->mutex);
 
   return ret;
@@ -414,8 +445,61 @@ zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_pack
 }
 
 zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = ZX_OK;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  iwl_mvm* mvm = mvmvif->mvm;
+
+  if (mvm->trans->cfg->gen2 || iwl_mvm_has_new_tx_api(mvm)) {
+    // The new firmwares (for starting with the 22000 series) have different packet generation
+    // requirements than mentioned below.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!std::equal(key_config->cipher_oui,
+                  key_config->cipher_oui + std::size(key_config->cipher_oui), kIeeeOui,
+                  kIeeeOui + std::size(kIeeeOui))) {
+    // IEEE 802.11-2016 9.4.2.25.2
+    // The standard ciphers all live in the IEEE space.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (static_cast<fuchsia_wlan_ieee80211::wire::CipherSuiteType>(key_config->cipher_type)) {
+    case fuchsia_wlan_ieee80211::wire::CipherSuiteType::kCcmp128:
+      // Note: the Linux iwlwifi driver requests IEEE80211_KEY_FLAG_PUT_IV_SPACE from the mac80211
+      // stack.  We will apply equivalent functionality manually to Incoming packets from Fuchsia.
+      break;
+    default:
+      // Additional porting required for other types.
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto key_conf = reinterpret_cast<iwl_mvm_sta_key_conf*>(
+      malloc(sizeof(iwl_mvm_sta_key_conf) + key_config->key_len));
+  memset(key_conf, 0, sizeof(*key_conf) + key_config->key_len);
+  key_conf->cipher_type = key_config->cipher_type;
+  key_conf->key_type = key_config->key_type;
+  key_conf->keyidx = key_config->key_idx;
+  key_conf->keylen = key_config->key_len;
+  key_conf->rx_seq = key_config->rsc;
+  memcpy(key_conf->key, key_config->key, key_conf->keylen);
+
+  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+  if ((status = iwl_mvm_mac_set_key(mvmvif, mvm_sta, key_conf)) != ZX_OK) {
+    free(key_conf);
+    IWL_ERR(mvmvif, "iwl_mvm_mac_set_key() failed: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (key_conf->key_type == WLAN_KEY_TYPE_PAIRWISE) {
+    // Save the pairwise key, for use in the TX path.  Group keys are receive-only and do not need
+    // to be saved.
+    free(mvm_sta->key_conf);
+    mvm_sta->key_conf = key_conf;
+  } else {
+    free(key_conf);
+  }
+
+  return ZX_OK;
 }
 
 // Set the association result to the firmware.

@@ -37,6 +37,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pcie-device.h"
@@ -1012,20 +1013,11 @@ TEST_F(TxTest, ReclaimCmdQueueInFlightFlag) {
 TEST_F(TxTest, TxDataCornerCaseUnusedQueue) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
 
-  wlan_tx_packet_t pkt = {};
+  ieee80211_mac_packet pkt = {};
   iwl_device_cmd dev_cmd = {};
   // unused queue
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             iwl_trans_pcie_tx(trans_, &pkt, &dev_cmd, /* txq_id */ IWL_MVM_DQA_MIN_DATA_QUEUE));
-}
-
-TEST_F(TxTest, TxDataCornerPacketTail) {
-  SetupTxQueue();
-  SetupTxPacket();
-
-  wlan_tx_packet_t pkt = *wlan_pkt_->pkt();
-  pkt.packet_tail_count = 1;  // whatever non-zero value.
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_trans_pcie_tx(trans_, &pkt, &dev_cmd_, txq_id_));
 }
 
 TEST_F(TxTest, TxNormal) {
@@ -1036,7 +1028,7 @@ TEST_F(TxTest, TxNormal) {
   ASSERT_EQ(0, txq_->read_ptr);
   ASSERT_EQ(0, txq_->write_ptr);
   // Tx a packet and see the write pointer advanced.
-  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
+  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->mac_pkt(), &dev_cmd_, txq_id_));
   ASSERT_EQ(0, txq_->read_ptr);
   ASSERT_EQ(1, txq_->write_ptr);
   ASSERT_EQ(TFD_QUEUE_SIZE_MAX - 1 - /* this packet */ 1, iwl_queue_space(trans_, txq_));
@@ -1058,7 +1050,7 @@ TEST_F(TxTest, TxSoManyPackets) {
 
   // Fill up all space.
   for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
-    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
+    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->mac_pkt(), &dev_cmd_, txq_id_));
   }
 
   op_mode_queue_not_full_.ExpectCall(txq_id_);

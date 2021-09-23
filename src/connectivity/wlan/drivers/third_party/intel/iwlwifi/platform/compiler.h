@@ -101,6 +101,7 @@ static inline uint16_t be16_to_cpup(const uint16_t* x) {
 
 #define __aligned(x) __attribute__((aligned(x)))
 #define __force
+#define __maybe_unused __attribute__((unused))
 #define __must_check __attribute__((warn_unused_result))
 #define __packed __PACKED
 #define __rcu                         // NEEDS_TYPES

@@ -52,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
@@ -687,7 +688,7 @@ bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int queue, bool configure_scd);
 void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id, bool shared_mode);
 void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq);
-zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                               const struct iwl_device_cmd* dev_cmd, int txq_id);
 void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans);
 zx_status_t iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);

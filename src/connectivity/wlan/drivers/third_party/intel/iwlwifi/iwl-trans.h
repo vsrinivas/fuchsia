@@ -36,7 +36,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
-#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <lib/async/dispatcher.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
@@ -53,6 +52,7 @@
 #endif
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 /**
@@ -536,7 +536,7 @@ struct iwl_trans_ops {
 
   zx_status_t (*send_cmd)(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
-  zx_status_t (*tx)(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+  zx_status_t (*tx)(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                     const struct iwl_device_cmd* dev_cmd, int queue);
   void (*reclaim)(struct iwl_trans* trans, int queue, int ssn);
 
@@ -892,7 +892,7 @@ static inline void iwl_trans_free_tx_cmd(struct iwl_trans* trans, struct iwl_dev
   free(dev_cmd);
 }
 
-static inline zx_status_t iwl_trans_tx(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+static inline zx_status_t iwl_trans_tx(struct iwl_trans* trans, struct ieee80211_mac_packet* pkt,
                                        struct iwl_device_cmd* dev_cmd, int queue) {
   if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) {
     IWL_ERR(trans, "%s() trans->status inidicates FW_ERROR\n", __func__);
