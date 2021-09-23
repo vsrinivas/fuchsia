@@ -17,9 +17,7 @@ use {
     ffx_log_utils::symbolizer::is_current_sdk_root_registered,
     fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
-    fidl_fuchsia_diagnostics::ComponentSelector,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
-    selectors::{match_moniker_against_component_selectors, parse_path_to_moniker},
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
@@ -64,48 +62,37 @@ fn format_ffx_event(msg: &str, timestamp: Option<Timestamp>) -> String {
 }
 
 struct LogFilterCriteria {
-    monikers: Vec<ComponentSelector>,
-    exclude_monikers: Vec<ComponentSelector>,
     min_severity: Severity,
     filters: Vec<String>,
     excludes: Vec<String>,
     tags: Vec<String>,
     exclude_tags: Vec<String>,
+    kernel: bool,
 }
 
 impl Default for LogFilterCriteria {
     fn default() -> Self {
         Self {
-            monikers: vec![],
-            exclude_monikers: vec![],
             min_severity: Severity::Info,
             filters: vec![],
             excludes: vec![],
             tags: vec![],
             exclude_tags: vec![],
+            kernel: false,
         }
     }
 }
 
 impl LogFilterCriteria {
     fn new(
-        monikers: Vec<ComponentSelector>,
-        exclude_monikers: Vec<ComponentSelector>,
         min_severity: Severity,
         filters: Vec<String>,
         excludes: Vec<String>,
         tags: Vec<String>,
         exclude_tags: Vec<String>,
+        kernel: bool,
     ) -> Self {
-        Self {
-            monikers,
-            exclude_monikers,
-            min_severity: min_severity,
-            filters,
-            excludes,
-            tags,
-            exclude_tags,
-        }
+        Self { min_severity: min_severity, filters, excludes, tags, exclude_tags, kernel }
     }
 
     fn matches_filter_string(filter_string: &str, message: &str, log: &LogsData) -> bool {
@@ -116,6 +103,10 @@ impl LogFilterCriteria {
 
     fn match_filters_to_log_data(&self, data: &LogsData, msg: &str) -> bool {
         if data.metadata.severity < self.min_severity {
+            return false;
+        }
+
+        if self.kernel && data.moniker != "klog" {
             return false;
         }
 
@@ -139,40 +130,6 @@ impl LogFilterCriteria {
             return false;
         }
 
-        let parsed_moniker = match parse_path_to_moniker(&data.moniker) {
-            Ok(m) => m,
-            Err(e) => {
-                log::warn!("got a broken moniker '{}' in a log entry: {}", &data.moniker, e);
-                return true;
-            }
-        };
-
-        let pos_match_results =
-            match_moniker_against_component_selectors(&parsed_moniker, &self.monikers);
-        match pos_match_results {
-            Err(ref e) => {
-                log::warn!("got a bad selector in log matcher: {}", e)
-            }
-            Ok(result) => {
-                if !self.monikers.is_empty() && result.is_empty() {
-                    return false;
-                }
-            }
-        }
-
-        let neg_match_results =
-            match_moniker_against_component_selectors(&parsed_moniker, &self.exclude_monikers);
-        match neg_match_results {
-            Err(ref e) => {
-                log::warn!("got a bad selector in log matcher: {}", e)
-            }
-            Ok(result) => {
-                if !(self.exclude_monikers.is_empty() || result.is_empty()) {
-                    return false;
-                }
-            }
-        }
-
         true
     }
 
@@ -191,19 +148,13 @@ impl LogFilterCriteria {
 
 impl From<&LogCommand> for LogFilterCriteria {
     fn from(cmd: &LogCommand) -> Self {
-        let mut monikers: Vec<ComponentSelector> = cmd.moniker.clone();
-        if cmd.kernel {
-            monikers.push(selectors::parse_component_selector("klog").unwrap());
-        }
-
         LogFilterCriteria::new(
-            monikers,
-            cmd.exclude_moniker.clone(),
             cmd.severity,
-            cmd.contains.clone(),
+            cmd.filter.clone(),
             cmd.exclude.clone(),
             cmd.tags.clone(),
             cmd.exclude_tags.clone(),
+            cmd.kernel,
         )
     }
 }
@@ -551,7 +502,6 @@ mod test {
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
         },
-        selectors::parse_component_selector,
         std::sync::Arc,
     };
 
@@ -644,15 +594,13 @@ mod test {
 
     fn empty_log_command() -> LogCommand {
         LogCommand {
-            contains: vec![],
+            filter: vec![],
             exclude: vec![],
             tags: vec![],
             exclude_tags: vec![],
             hide_tags: false,
             clock: TimeFormat::Monotonic,
             no_color: false,
-            moniker: vec![],
-            exclude_moniker: vec![],
             kernel: false,
             severity: Severity::Info,
             show_metadata: false,
@@ -878,7 +826,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_moniker_message_and_severity_matches() {
         let cmd = LogCommand {
-            contains: vec!["included".to_string()],
+            filter: vec!["included".to_string()],
             exclude: vec!["not this".to_string()],
             severity: Severity::Error,
             ..empty_dump_command()
@@ -950,7 +898,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_message_severity_symbolized_log() {
         let cmd = LogCommand {
-            contains: vec!["included".to_string()],
+            filter: vec!["included".to_string()],
             exclude: vec!["not this".to_string()],
             severity: Severity::Error,
             ..empty_dump_command()
@@ -1053,37 +1001,19 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_criteria_multiple_moniker_matches() {
-        let cmd = LogCommand {
-            moniker: vec![
-                parse_component_selector(&"included/*".to_string()).unwrap(),
-                parse_component_selector(&"als*/moniker".to_string()).unwrap(),
-            ],
-            ..empty_dump_command()
-        };
+    async fn test_criteria_klog_only() {
+        let cmd = LogCommand { kernel: true, ..empty_dump_command() };
         let criteria = LogFilterCriteria::from(&cmd);
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
-                moniker: "included/moniker".to_string(),
+                moniker: "klog".to_string(),
                 severity: diagnostics_data::Severity::Error,
                 size_bytes: 1,
             })
             .set_message("included message")
-            .build()
-            .into()
-        )));
-        assert!(criteria.matches(&make_log_entry(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "also/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
-            })
-            .set_message("different message")
             .build()
             .into()
         )));
@@ -1104,7 +1034,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_multiple_matches() {
         let cmd = LogCommand {
-            contains: vec!["included".to_string(), "also".to_string()],
+            filter: vec!["included".to_string(), "also".to_string()],
             ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
@@ -1154,55 +1084,6 @@ mod test {
                 size_bytes: 1,
             })
             .set_message("different message")
-            .build()
-            .into()
-        )));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_criteria_multiple_monikers_excluded() {
-        let cmd = LogCommand {
-            exclude_moniker: vec![
-                parse_component_selector(&"included/*".to_string()).unwrap(),
-                parse_component_selector(&"als*/moniker".to_string()).unwrap(),
-            ],
-            ..empty_dump_command()
-        };
-        let criteria = LogFilterCriteria::from(&cmd);
-
-        assert!(!criteria.matches(&make_log_entry(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "included/moniker.cmx:12345".to_string(),
-                severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
-            })
-            .set_message("included message")
-            .build()
-            .into()
-        )));
-        assert!(!criteria.matches(&make_log_entry(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "also/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
-            })
-            .set_message("different message")
-            .build()
-            .into()
-        )));
-        assert!(criteria.matches(&make_log_entry(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "other/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-                size_bytes: 1,
-            })
-            .set_message("included message")
             .build()
             .into()
         )));
@@ -1310,7 +1191,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_matches_component_url() {
         let cmd = LogCommand {
-            contains: vec!["fuchsia.com".to_string()],
+            filter: vec!["fuchsia.com".to_string()],
             exclude: vec!["not-this-component.cmx".to_string()],
             ..empty_dump_command()
         };

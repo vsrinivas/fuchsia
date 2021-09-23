@@ -13,7 +13,6 @@ ffx_plugin("ffx_log") {
   args_deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/data/rust",
-    "//src/lib/diagnostics/selectors",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:chrono-english",
   ]
