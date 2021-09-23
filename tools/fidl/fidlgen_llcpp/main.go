@@ -53,5 +53,5 @@ func main() {
 	})
 
 	generator := codegen.NewGenerator(*flags.ClangFormatPath)
-	generator.GenerateFiles(*flags.root, tree)
+	generator.Generate(*flags.root, tree)
 }

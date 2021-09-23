@@ -106,11 +106,6 @@ func main() {
 		WireBindingsIncludeStem:         *flags.wireBindingsIncludeStem,
 	})
 
-	generator := codegen.NewGenerator()
-	if err := generator.GenerateHeader(tree, headerPath, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running header generator: %s", err)
-	}
-	if err := generator.GenerateSource(tree, sourcePath, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running source generator: %s", err)
-	}
+	generator := codegen.NewGenerator(*flags.ClangFormatPath)
+	generator.Generate(tree, headerPath, sourcePath)
 }

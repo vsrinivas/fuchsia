@@ -7,11 +7,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -19,8 +15,7 @@ import (
 )
 
 type Generator struct {
-	tmpls           *template.Template
-	clangFormatPath string
+	*cpp.Generator
 }
 
 type TypedArgument struct {
@@ -36,17 +31,6 @@ type TypedArgument struct {
 // formatParam funcs are helpers that transform a type and name into a string
 // for rendering in a template.
 type formatParam func(string, cpp.Type) string
-
-type generatedFile struct {
-	path     string
-	template string
-}
-
-var generatedFiles = []generatedFile{
-	generatedFile{"cpp/wire.h", "File:Header"},
-	generatedFile{"cpp/wire.cc", "File:Source"},
-	generatedFile{"cpp/wire_test_base.h", "File:TestBase"},
-}
 
 // visitSliceMembers visits each member of nested slices passed in and calls
 // |fn| on each of them in depth first order.
@@ -231,91 +215,47 @@ var utilityFuncs = template.FuncMap{
 	},
 }
 
-func NewGenerator(clangFormatPath string) *Generator {
-	tmpls := template.New("LLCPPTemplates").
-		Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs, utilityFuncs))
-	templates := []string{
-		fileHeaderTmpl,
-		fileSourceTmpl,
-		fileTestBaseTmpl,
-		fragmentBitsTmpl,
-		fragmentConstTmpl,
-		fragmentEnumTmpl,
-		fragmentMethodClientImplAsyncTmpl,
-		fragmentMethodClientImplOnewayTmpl,
-		fragmentMethodClientImplSyncTmpl,
-		fragmentMethodClientImplTmpl,
-		fragmentMethodCompleterBaseTmpl,
-		fragmentMethodRequestTmpl,
-		fragmentMethodResponseContextTmpl,
-		fragmentMethodResponseTmpl,
-		fragmentMethodResultTmpl,
-		fragmentMethodUnownedResultTmpl,
-		fragmentProtocolCallerTmpl,
-		fragmentProtocolClientImplTmpl,
-		fragmentProtocolDetailsTmpl,
-		fragmentProtocolDispatcherTmpl,
-		fragmentProtocolEventHandlerTmpl,
-		fragmentProtocolEventSenderTmpl,
-		fragmentProtocolInterfaceTmpl,
-		fragmentProtocolSyncClientTmpl,
-		fragmentProtocolTmpl,
-		fragmentServiceTmpl,
-		fragmentStructTmpl,
-		fragmentTableTmpl,
-		fragmentUnionTmpl,
-	}
-	for _, t := range templates {
-		template.Must(tmpls.Parse(t))
-	}
-	return &Generator{
-		tmpls:           tmpls,
-		clangFormatPath: clangFormatPath,
+func NewGenerator(clangFormatPath string) Generator {
+	return Generator{
+		cpp.NewGenerator("LLCPPTemplates", clangFormatPath, utilityFuncs, []string{
+			fileHeaderTmpl,
+			fileSourceTmpl,
+			fileTestBaseTmpl,
+			fragmentBitsTmpl,
+			fragmentConstTmpl,
+			fragmentEnumTmpl,
+			fragmentMethodClientImplAsyncTmpl,
+			fragmentMethodClientImplOnewayTmpl,
+			fragmentMethodClientImplSyncTmpl,
+			fragmentMethodClientImplTmpl,
+			fragmentMethodCompleterBaseTmpl,
+			fragmentMethodRequestTmpl,
+			fragmentMethodResponseContextTmpl,
+			fragmentMethodResponseTmpl,
+			fragmentMethodResultTmpl,
+			fragmentMethodUnownedResultTmpl,
+			fragmentProtocolCallerTmpl,
+			fragmentProtocolClientImplTmpl,
+			fragmentProtocolDetailsTmpl,
+			fragmentProtocolDispatcherTmpl,
+			fragmentProtocolEventHandlerTmpl,
+			fragmentProtocolEventSenderTmpl,
+			fragmentProtocolInterfaceTmpl,
+			fragmentProtocolSyncClientTmpl,
+			fragmentProtocolTmpl,
+			fragmentServiceTmpl,
+			fragmentStructTmpl,
+			fragmentTableTmpl,
+			fragmentUnionTmpl,
+		}),
 	}
 }
 
-func (gen *Generator) generateFile(filename string, tmpl string, tree cpp.Root) error {
-	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-		return err
-	}
-
-	file, err := fidlgen.NewLazyWriter(filename)
-	if err != nil {
-		return fmt.Errorf("Error creating LazyWriter: %w", err)
-	}
-
-	bufferedContent := new(bytes.Buffer)
-	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, tree); err != nil {
-		return fmt.Errorf("Error generating content: %w", err)
-	}
-	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-	maybeFormatter := gen.clangFormatPath
-	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
-		maybeFormatter = ""
-	}
-	generatedPipe, err := cpp.NewClangFormatter(maybeFormatter).FormatPipe(file)
-	if err != nil {
-		return fmt.Errorf("Error in FormatPipe: %w", err)
-	}
-	_, err = bufferedContent.WriteTo(generatedPipe)
-	if err != nil {
-		return fmt.Errorf("Error writing to formatter: %w", err)
-	}
-
-	if err := generatedPipe.Close(); err != nil {
-		return fmt.Errorf("Error closing generatedPipe: %w", err)
-	}
-
-	return nil
-}
-
-func (gen *Generator) GenerateFiles(dir string, tree cpp.Root) {
-	base := dir + "/fidl/" + string(tree.Library.Encode())
-	for _, gf := range generatedFiles {
-		fn := base + "/" + gf.path
-		err := gen.generateFile(fn, gf.template, tree)
-		if err != nil {
-			log.Fatalf("Error generating %s: %w", fn, err)
-		}
-	}
+func (gen Generator) Generate(root string, tree cpp.Root) {
+	base := fmt.Sprintf("%s/fidl/%s/cpp", root, tree.Library.Encode())
+	gen.GenerateFiles(base, tree, []cpp.GeneratedFile{
+		{"wire.h", "File:Header"},
+		{"wire.cc", "File:Source"},
+		{"wire_test_base.h", "File:TestBase"},
+	})
 }

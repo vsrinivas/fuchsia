@@ -98,7 +98,7 @@ func endOfFile() string {
 }
 
 // CommonTemplateFuncs holds a template.FuncMap containing common funcs.
-var CommonTemplateFuncs = template.FuncMap{
+var commonTemplateFuncs = template.FuncMap{
 	"Eq":  func(a interface{}, b interface{}) bool { return a == b },
 	"NEq": func(a interface{}, b interface{}) bool { return a != b },
 
@@ -139,7 +139,7 @@ var CommonTemplateFuncs = template.FuncMap{
 	},
 }
 
-func MergeFuncMaps(all ...template.FuncMap) template.FuncMap {
+func mergeFuncMaps(all ...template.FuncMap) template.FuncMap {
 	merged := template.FuncMap{}
 	for _, funcs := range all {
 		for k, fn := range funcs {

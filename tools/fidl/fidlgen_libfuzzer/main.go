@@ -109,7 +109,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := codegen.NewFidlGenerator().GenerateFidl(ir, flags, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running generator: %v", err)
-	}
+	codegen.NewGenerator(*flags.ClangFormatPath).Generate(ir, flags)
 }

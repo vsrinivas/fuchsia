@@ -180,8 +180,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	generator := codegen.NewFidlGenerator(opts.mode)
-	if err := generator.GenerateFidl(ir, opts, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running generator: %v", err)
-	}
+	generator := codegen.NewGenerator(opts.mode, *flags.ClangFormatPath)
+	generator.GenerateFidl(ir, opts)
 }
