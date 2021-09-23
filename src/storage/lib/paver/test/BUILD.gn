@@ -55,7 +55,6 @@ test("test") {
     "//src/storage/lib/paver",
     "//src/storage/lib/utils:topological_path",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -72,6 +71,7 @@ test("test") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -25,8 +25,8 @@ source_set("chunked-compression") {
   deps = [
     "//src/lib/fxl",
     "//third_party/zstd",
-    "//zircon/public/lib/cksum",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   if (is_fuchsia) {
@@ -62,7 +62,7 @@ source_set("chunked-compression-testutils") {
     ":chunked-compression",
     "//zircon/system/ulib/fbl",
   ]
-  deps = [ "//zircon/public/lib/cksum" ]
+  deps = [ "//zircon/third_party/ulib/cksum" ]
 }
 
 test("chunked-compression-unittests") {
@@ -80,8 +80,8 @@ test("chunked-compression-unittests") {
   deps = [
     ":chunked-compression",
     ":chunked-compression-testutils",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/zxtest",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

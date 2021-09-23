@@ -43,12 +43,12 @@ source_set("paver-core") {
     "//src/lib/storage/fs_management",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/gpt",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",

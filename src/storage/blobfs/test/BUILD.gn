@@ -105,7 +105,6 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/block-client:fake-device",
@@ -113,6 +112,7 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

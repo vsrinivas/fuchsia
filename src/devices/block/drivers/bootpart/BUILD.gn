@@ -33,8 +33,8 @@ driver_module("bootpart-driver") {
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
+    "//zircon/third_party/ulib/cksum",
   ]
 }
 

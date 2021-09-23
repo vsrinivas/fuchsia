@@ -10,8 +10,8 @@ executable("waitfor") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/lib/fdio",
     "//src/storage/gpt",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/zx",
+    "//zircon/third_party/ulib/cksum",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

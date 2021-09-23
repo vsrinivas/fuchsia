@@ -104,7 +104,6 @@ static_library("blobfs") {
     "//src/storage/lib/disk_inspector",
     "//third_party/boringssl",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/cksum",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
@@ -112,6 +111,7 @@ static_library("blobfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/third_party/ulib/cksum",
   ]
   if (is_fuchsia) {
     sources += [
