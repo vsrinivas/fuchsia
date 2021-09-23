@@ -140,7 +140,7 @@ unsigned int Dir::RoomInInlineDir(InlineDentry *dentry_blk, int slots) {
 }
 
 zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
-  Page *page;
+  Page *page = nullptr;
   if (page = GrabCachePage(this, Ino(), 0); page == nullptr)
     return ZX_ERR_NO_MEMORY;
 
@@ -325,8 +325,6 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
       Vfs()->AddOrphanInode(vnode);
     }
   }
-
-  F2fsPutPage(page, 1);
 }
 
 bool Dir::IsEmptyInlineDir() {

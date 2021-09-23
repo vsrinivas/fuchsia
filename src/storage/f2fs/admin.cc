@@ -13,9 +13,12 @@ AdminService::AdminService(async_dispatcher_t* dispatcher, F2fs* f2fs)
       f2fs_(f2fs) {}
 
 void AdminService::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
-  f2fs_->PutSuper();
-  f2fs_->ResetBc();
-  completer.Reply();
+  f2fs_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
+    }
+    completer.Reply();
+  });
 }
 
 void AdminService::GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) {

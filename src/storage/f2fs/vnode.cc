@@ -482,7 +482,7 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
   for (index = pg_start; index < pg_end; index++) {
     DnodeOfData dn;
 
-    NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+    NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
     if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
         err != ZX_OK) {
       if (err == ZX_ERR_NOT_FOUND)

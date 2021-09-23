@@ -55,24 +55,24 @@ zx_status_t MkfsWorker::ParseOptions(int argc, char **argv) {
         break;
       case 'a':
         mkfs_options_.heap_based_allocation =
-            (static_cast<uint32_t>(strtoul(optarg, NULL, 0)) != 0);
+            (static_cast<uint32_t>(strtoul(optarg, nullptr, 0)) != 0);
         break;
       case 'o':
-        mkfs_options_.overprovision_ratio = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        mkfs_options_.overprovision_ratio = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         if (mkfs_options_.overprovision_ratio == 0) {
           fprintf(stderr, "ERROR: overprovision ratio should be larger than 0.\n");
           return ZX_ERR_INVALID_ARGS;
         }
         break;
       case 's':
-        mkfs_options_.segs_per_sec = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        mkfs_options_.segs_per_sec = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         if (mkfs_options_.segs_per_sec == 0) {
           fprintf(stderr, "ERROR: # of segments per section should be larger than 0.\n");
           return ZX_ERR_INVALID_ARGS;
         }
         break;
       case 'z':
-        mkfs_options_.secs_per_zone = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        mkfs_options_.secs_per_zone = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         if (mkfs_options_.secs_per_zone == 0) {
           fprintf(stderr, "ERROR: # of sections per zone should be larger than 0.\n");
           return ZX_ERR_INVALID_ARGS;

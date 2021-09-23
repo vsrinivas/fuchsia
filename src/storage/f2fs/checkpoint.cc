@@ -8,7 +8,7 @@ namespace f2fs {
 
 // We guarantee no failure on the returned page.
 Page *F2fs::GrabMetaPage(pgoff_t index) {
-  Page *page;
+  Page *page = nullptr;
 
   while (!(page = GrabCachePage(nullptr, MetaIno(sbi_.get()), index))) {
 #if 0  // porting needed
@@ -22,7 +22,7 @@ Page *F2fs::GrabMetaPage(pgoff_t index) {
 }
 
 Page *F2fs::GetMetaPage(pgoff_t index) {
-  Page *page;
+  Page *page = nullptr;
 repeat:
   page = GrabCachePage(nullptr, MetaIno(sbi_.get()), index);
   if (!page) {
@@ -340,7 +340,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
 }
 
 Page *F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
-  Page *cp_page_1, *cp_page_2;
+  Page *cp_page_1 = nullptr, *cp_page_2 = nullptr;
   uint64_t blk_size = sbi_->blocksize;
   Checkpoint *cp_block;
   uint64_t cur_version = 0, pre_version = 0;
@@ -392,7 +392,7 @@ invalid_cp1:
 zx_status_t F2fs::GetValidCheckpoint() {
   Checkpoint *cp_block;
   SuperBlock &fsb = RawSb();
-  Page *cp1, *cp2, *cur_page;
+  Page *cp1 = nullptr, *cp2 = nullptr, *cur_page = nullptr;
   uint64_t blk_size = sbi_->blocksize;
   uint64_t cp1_version = 0, cp2_version = 0;
   block_t cp_start_blk_no;
@@ -617,7 +617,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   Checkpoint *ckpt = GetCheckpoint(&sbi);
   nid_t last_nid = 0;
   block_t start_blk;
-  Page *cp_page;
+  Page *cp_page = nullptr;
   uint32_t data_sum_blocks, orphan_blocks;
   void *kaddr;
   uint32_t crc32 = 0;

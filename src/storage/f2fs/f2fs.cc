@@ -155,21 +155,16 @@ void Sync(SyncCallback closure) {
 
 void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    Sync([this, cb = std::move(cb)](zx_status_t) mutable {
-      async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-        auto on_unmount = std::move(on_unmount_);
-
+    Sync([this, status, cb = std::move(cb)](zx_status_t) mutable {
+      async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
         PutSuper();
-
         bc_.reset();
-
-        // Identify to the unmounting channel that teardown is complete.
-        cb(ZX_OK);
-
         // Identify to the unmounting thread that teardown is complete.
-        if (on_unmount) {
-          on_unmount();
+        if (on_unmount_) {
+          on_unmount_();
         }
+        // Identify to the unmounting channel that teardown is complete.
+        cb(status);
       });
     });
   });

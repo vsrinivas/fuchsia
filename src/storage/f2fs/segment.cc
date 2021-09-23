@@ -823,7 +823,7 @@ void SegMgr::ChangeCurseg(CursegType type, bool reuse) {
   CursegInfo *curseg = CURSEG_I(&sbi, type);
   uint32_t new_segno = curseg->next_segno;
   SummaryBlock *sum_node;
-  Page *sum_page;
+  Page *sum_page = nullptr;
 
   WriteSumPage(curseg->sum_blk, GetSumBlock(&sbi, curseg->segno));
   SetTestAndInuse(new_segno);
@@ -933,7 +933,7 @@ bio *SegMgr::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
   // 	/* allocate new bio */
   // 	bio = bio_alloc(gfp_flags, nr_vecs);
 
-  // 	if (bio == NULL && (current->flags & PF_MEMALLOC)) {
+  // 	if (bio == nullptr && (current->flags & PF_MEMALLOC)) {
   // 		while (!bio && (nr_vecs /= 2))
   // 			bio = bio_alloc(gfp_flags, nr_vecs);
   // 	}
@@ -948,7 +948,7 @@ bio *SegMgr::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
   // 			goto retry;
   // 		}
   // 	}
-  // 	if (bio == NULL) {
+  // 	if (bio == nullptr) {
   // 		cond_resched();
   // 		goto repeat;
   // 	}
@@ -977,7 +977,7 @@ void SegMgr::DoSubmitBio(PageType type, bool sync) {
   // 		p->is_sync = false;
   // 		submit_bio(rw, sbi->bio[btype]);
   // 	}
-  // 	sbi->bio[btype] = NULL;
+  // 	sbi->bio[btype] = nullptr;
   // }
 }
 
@@ -1007,7 +1007,7 @@ void SegMgr::SubmitWritePage(Page *page, block_t blk_addr, PageType type) {
   // 	if (sbi->bio[type] && sbi->last_block_in_bio[type] != blk_addr - 1)
   // 		do_submit_bio(sbi, type, false);
   // alloc_new:
-  // 	if (sbi->bio[type] == NULL)
+  // 	if (sbi->bio[type] == nullptr)
   // 		sbi->bio[type] = f2fs_bio_alloc(bdev,
   // 				blk_addr << (sbi->log_blocksize - 9),
   // 				bio_get_nr_vecs(bdev), GFP_NOFS | __GFP_HIGH);
@@ -1268,7 +1268,7 @@ int SegMgr::ReadCompactedSummaries() {
   Checkpoint *ckpt = GetCheckpoint(&sbi);
   CursegInfo *seg_i;
   uint8_t *kaddr;
-  Page *page;
+  Page *page = nullptr;
   block_t start;
   int i, j, offset;
 
@@ -1328,7 +1328,7 @@ int SegMgr::ReadNormalSummaries(int type) {
   Checkpoint *ckpt = GetCheckpoint(&sbi);
   SummaryBlock *sum;
   CursegInfo *curseg;
-  Page *new_page;
+  Page *new_page = nullptr;
   uint16_t blk_off;
   uint32_t segno = 0;
   block_t blk_addr = 0;
@@ -1403,7 +1403,7 @@ zx_status_t SegMgr::RestoreCursegSummaries() {
 
 void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
   SbInfo &sbi = fs_->GetSbInfo();
-  Page *page;
+  Page *page = nullptr;
   uint8_t *kaddr;
   Summary *summary;
   CursegInfo *seg_i;
@@ -1533,7 +1533,7 @@ Page *SegMgr::GetCurrentSitPage(uint32_t segno) {
 Page *SegMgr::GetNextSitPage(uint32_t start) {
   SbInfo &sbi = fs_->GetSbInfo();
   SitInfo *sit_i = GetSitInfo(&sbi);
-  Page *src_page, *dst_page;
+  Page *src_page = nullptr, *dst_page = nullptr;
   pgoff_t src_off, dst_off;
   void *src_addr, *dst_addr;
 
@@ -1796,7 +1796,7 @@ void SegMgr::BuildSitEntries() {
     SegEntry *se = &sit_i->sentries[start];
     SitBlock *sit_blk;
     SitEntry sit;
-    Page *page;
+    Page *page = nullptr;
     bool got_it = false;
     {
       fbl::AutoLock curseg_lock(&curseg->curseg_mutex);

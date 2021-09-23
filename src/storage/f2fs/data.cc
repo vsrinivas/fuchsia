@@ -165,8 +165,9 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, Page **out) {
   // F2fsPutPage(page, 0);
 #endif
 
-  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
+      err != ZX_OK)
     return err;
   F2fsPutDnode(&dn);
 
@@ -198,12 +199,13 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, Page **out) {
  */
 zx_status_t VnodeF2fs::GetLockDataPage(pgoff_t index, Page **out) {
   DnodeOfData dn;
-  Page *page;
+  Page *page = nullptr;
 
   page = nullptr;
 
-  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
-  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode); err != ZX_OK)
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
+  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
+      err != ZX_OK)
     return err;
   F2fsPutDnode(&dn);
 
@@ -239,10 +241,10 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, Page **out
 #if 0  // porting needed
   // address_space *mapping = inode->i_mapping;
 #endif
-  Page *page;
+  Page *page = nullptr;
   DnodeOfData dn;
 
-  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
   if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, 0); err != ZX_OK)
     return err;
 
@@ -384,7 +386,7 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 
 //   /* When reading holes, we need its node page */
 //   //TODO(unknown): inode should be replaced with vnodef2fs
-//   //SetNewDnode(&dn, inode, NULL, NULL, 0);
+//   //SetNewDnode(&dn, inode, nullptr, nullptr, 0);
 //   // TODO(unknown): shoud be replaced with NodeManager->GetDnodeOfData
 //   /*err = get_DnodeOfData(&dn, pgofs, kRdOnlyNode);
 //   if (err)
@@ -437,7 +439,7 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   block_t old_blk_addr, new_blk_addr;
   DnodeOfData dn;
 
-  NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
   if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, page->index, kRdOnlyNode);
       err != ZX_OK)
     return err;
@@ -599,7 +601,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
   fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
   std::lock_guard write_lock(io_lock_);
   do {
-    NodeManager::SetNewDnode(dn, this, NULL, NULL, 0);
+    NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
     if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, 0); err != ZX_OK) {
       F2fsPutPage(*pagep, 1);
       return err;

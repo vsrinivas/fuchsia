@@ -31,7 +31,7 @@ zx_status_t F2fs::RecoverDentry(Page *ipage, VnodeF2fs *vnode) {
   fbl::RefPtr<VnodeF2fs> dir_refptr;
   Dir *dir;
   DirEntry *de;
-  Page *page;
+  Page *page = nullptr;
   zx_status_t err = ZX_OK;
 
   if (!GetNodeManager().IsDentDnode(*ipage))
@@ -318,7 +318,7 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
   SbInfo &sbi = GetSbInfo();
   uint64_t cp_ver = LeToCpu(sbi.ckpt->checkpoint_ver);
   CursegInfo *curseg;
-  Page *page;
+  Page *page = nullptr;
   block_t blkaddr;
 
   /* get node pages in the current segment */
@@ -379,7 +379,7 @@ void F2fs::RecoverFsyncData() {
 
 #if 0  // porting needed
   // fsync_entry_slab = KmemCacheCreate("f2fs_FsyncInodeEntry",
-  // 		sizeof(FsyncInodeEntry), NULL);
+  // 		sizeof(FsyncInodeEntry), nullptr);
   // if (unlikely(!fsync_entry_slab))
   // 	return;
 #endif

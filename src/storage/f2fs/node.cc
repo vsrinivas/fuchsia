@@ -335,8 +335,8 @@ Page *NodeManager::GetCurrentNatPage(nid_t nid) {
 }
 
 Page *NodeManager::GetNextNatPage(nid_t nid) {
-  Page *src_page;
-  Page *dst_page;
+  Page *src_page = nullptr;
+  Page *dst_page = nullptr;
   pgoff_t src_off;
   pgoff_t dst_off;
   void *src_addr;
@@ -374,7 +374,7 @@ Page *NodeManager::GetNextNatPage(nid_t nid) {
  * Readahead NAT pages
  */
 void NodeManager::RaNatPages(nid_t nid) {
-  Page *page;
+  Page *page = nullptr;
   pgoff_t index;
   int i;
 
@@ -526,7 +526,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
   SummaryBlock *sum = curseg->sum_blk;
   nid_t start_nid = StartNid(nid);
   NatBlock *nat_blk;
-  Page *page = NULL;
+  Page *page = nullptr;
   RawNatEntry ne;
   int i;
 
@@ -639,8 +639,8 @@ zx::status<int> NodeManager::GetNodePath(long block, int (&offset)[4], uint32_t 
 
 // Caller should call f2fs_put_dnode(dn).
 zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) {
-  Page *npage[4];
-  Page *parent;
+  Page *npage[4] = {nullptr, nullptr, nullptr, nullptr};
+  Page *parent = nullptr;
   int offset[4];
   uint32_t noffset[4];
   nid_t nids[4];
@@ -860,7 +860,7 @@ zx_status_t NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, 
 
 zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&offset)[4],
                                               int depth) {
-  Page *pages[2];
+  Page *pages[2] = {nullptr, nullptr};
   nid_t nid[3];
   nid_t child_nid;
   zx_status_t err = 0;

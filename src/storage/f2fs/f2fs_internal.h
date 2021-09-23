@@ -97,7 +97,7 @@ struct InodeInfo {
 struct DnodeOfData {
   // inode *inode;		// vfs inode pointer
   VnodeF2fs *vnode = nullptr;
-  Page *inode_page = nullptr;      // its inode page, NULL is possible
+  Page *inode_page = nullptr;      // its inode page, nullptr is possible
   Page *node_page = nullptr;       // cached direct node page
   nid_t nid = 0;                   // node id of the direct node block
   uint32_t ofs_in_node = 0;        // data offset in the node page
@@ -372,19 +372,19 @@ static inline block_t StartCpAddr(SbInfo *sbi) {
   return LeToCpu(GetCheckpoint(sbi)->cp_pack_start_sum);
 }
 
-inline void F2fsPutPage(Page *page, int unlock) {
-  if (page != nullptr)
+inline void F2fsPutPage(Page *&page, int unlock) {
+  if (page != nullptr) {
     delete page;
+    page = nullptr;
+  }
 }
 
 static inline void F2fsPutDnode(DnodeOfData *dn) {
-  // TODO: IMPL
-  if (dn->node_page)
-    F2fsPutPage(dn->node_page, 1);
-  if (dn->inode_page && dn->node_page != dn->inode_page)
-    F2fsPutPage(dn->inode_page, 0);
-  dn->node_page = NULL;
-  dn->inode_page = NULL;
+  if (dn->inode_page == dn->node_page) {
+    dn->inode_page = nullptr;
+  }
+  F2fsPutPage(dn->node_page, 1);
+  F2fsPutPage(dn->inode_page, 0);
 }
 
 [[maybe_unused]] static inline struct kmem_cache *KmemCacheCreate(const char *name, size_t size,

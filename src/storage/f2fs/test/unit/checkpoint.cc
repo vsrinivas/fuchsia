@@ -43,7 +43,7 @@ constexpr uint32_t kMapPerSitEntry = kSitVBlockMapSize * 8;
 constexpr uint32_t kOrphanInodeBlockCnt = 10;
 
 void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
-  Page *cp_page[2];  // cp_page[0]: header, cp_page[1]: footer
+  Page *cp_page[2] = {nullptr, nullptr};  // cp_page[0]: header, cp_page[1]: footer
   SbInfo &sbi = fs->GetSbInfo();
   uint64_t blk_size = sbi.blocksize;
   Checkpoint *cp_block;

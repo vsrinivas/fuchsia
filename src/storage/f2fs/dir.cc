@@ -225,7 +225,7 @@ DirEntry *Dir::ParentDir(Page **p) {
 ino_t Dir::InodeByName(std::string_view name) {
   ino_t res = 0;
   DirEntry *de;
-  Page *page;
+  Page *page = nullptr;
 
   if (de = FindEntry(name, &page); de != nullptr) {
     res = LeToCpu(de->ino);
@@ -268,7 +268,6 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
   SetMTime(cur_time);
 
   MarkInodeDirty();
-  F2fsPutPage(page, 1);
 }
 
 void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
@@ -565,9 +564,6 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
     DecPageCount(&sbi, CountType::kDirtyDents);
     InodeDecDirtyDents(this);
     page_offset = page->index << kPageCacheShift;
-    F2fsPutPage(page, 1);
-  } else {
-    F2fsPutPage(page, 1);
   }
 }
 
