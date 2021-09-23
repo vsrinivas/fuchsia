@@ -305,7 +305,15 @@ TEST(SourceReaderTest, Map_4_1) {
 TEST(SourceReaderTest, Map_4_2) {
   using SR = mixer::SourceReader<float, 4, 2>;
   const float data[] = {-0.25, 0.75, 1.0, -0.5, 0.0};
-  const float expect[] = {0.375, 0.125, 0.5};
+
+  std::array<float, 3> expect;
+  if constexpr (kChannelMap4to2Workaround) {
+    // For now, the 4->2 mapper will just ignore channels 2 and 3.
+    // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+    expect = {-0.25, 0.75, 1.0};
+  } else {
+    expect = {0.375, 0.125, 0.5};
+  }
 
   EXPECT_EQ(SR::Read(data, 0), expect[0]);
   EXPECT_EQ(SR::Read(data, 1), expect[1]);

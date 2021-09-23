@@ -7,6 +7,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/mixer/mixer_utils.h"
+
 namespace media::audio::mixer {
 namespace {
 
@@ -421,13 +423,15 @@ TEST_F(PointSamplerRechannelTest, QuadToStereo) {
   auto accum = std::vector<float>{-0x1234, 0x4321, -0x13579, 0xC0FF, -0xAAAA, 0x555};
 
   // Express expected values as "int24" (not int32) to clearly show fractional and min/max values.
-  auto expect = std::vector<float>{
-      // clang-format off
-                0.5,      -0.5,
-        -0x800000,  0x7FFFFF,
-                0,         0,
-      // clang-format on
-  };
+  std::vector<float> expect;
+  if constexpr (kChannelMap4to2Workaround) {
+    // For now, 4->2 just ignores channels 2 & 3.
+    // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+    expect = {1, -1, -0x800000, 0x7FFFFF, 0x7FFFFF, 0};
+  } else {
+    expect = {0.5, -0.5, -0x800000, 0x7FFFFF, 0, 0};
+  }
+
   ShiftRightBy(expect, 23);  // right-shift these "int24" values into float range
 
   auto mixer =

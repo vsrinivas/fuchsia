@@ -11,7 +11,12 @@
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 
-namespace media::audio::mixer {
+namespace media::audio {
+
+constexpr bool kChannelMap4to2Workaround = true;
+// TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+
+namespace mixer {
 
 // mixer_utils.h is a collection of inline templated utility functions meant to
 // be used by mixer implementations and expanded/optimized at compile time in
@@ -230,8 +235,14 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // a "four corners" Quad config: FrontL|FrontR|BackL|BackR). Thus in each 4-chan source frame and
   // 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and source chans 1+3 to dest chan 1.
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
-    return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
-                   SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan + 2));
+    if constexpr (kChannelMap4to2Workaround) {
+      // As a temporary measure, ignore channels 2 and 3.
+      // TODO(fxbug.dev/85201): Remove this workaround, once the device properly maps channels.
+      return SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan);
+    } else {
+      return 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
+                     SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan + 2));
+    }
   }
 };
 
@@ -269,6 +280,7 @@ class DestMixer<ScaleType, DoAccumulate, typename std::enable_if_t<DoAccumulate 
   }
 };
 
-}  // namespace media::audio::mixer
+}  // namespace mixer
+}  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_MIXER_UTILS_H_
