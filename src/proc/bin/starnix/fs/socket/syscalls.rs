@@ -146,21 +146,20 @@ pub fn sys_recvmsg(
     ctx.task.mm.read_object(user_message_header.clone(), &mut message_header)?;
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
-    let result = file.read(&ctx.task, &iovec)?;
+    let socket_ops = file.downcast_file::<SocketFile>().unwrap();
+    let (bytes_read, control) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
 
-    // TODO: These control messages should be written and read in-band.
-    let mut socket = file.node().socket().map(|socket| socket.lock()).ok_or(errno!(ENOTSOCK))?;
-    if let Some(control_message) = socket.take_control_message() {
-        let max_bytes =
-            std::cmp::min(control_message.len(), message_header.msg_controllen as usize);
-        ctx.task.mm.write_memory(message_header.msg_control, &control_message[..max_bytes])?;
+    if let Some(control) = control {
+        let max_bytes = std::cmp::min(control.len(), message_header.msg_controllen as usize);
+        ctx.task.mm.write_memory(message_header.msg_control, &control.bytes()[..max_bytes])?;
         message_header.msg_controllen = max_bytes as u64;
     } else {
+        // If there is no control message, make sure to clear the length.
         message_header.msg_controllen = 0;
     }
     ctx.task.mm.write_object(user_message_header, &message_header)?;
 
-    Ok(result.into())
+    Ok(bytes_read.into())
 }
 
 pub fn sys_sendmsg(
@@ -178,18 +177,18 @@ pub fn sys_sendmsg(
 
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header, &mut message_header)?;
-
-    let mut bytes = vec![0u8; message_header.msg_controllen as usize];
-    ctx.task.mm.read_memory(message_header.msg_control, &mut bytes)?;
-
-    // TODO: Send the control message in-band with the rest of the data.
-    if let Some(socket) = file.node().socket() {
-        let connected_socket = socket.lock().connected_socket();
-        connected_socket.map(|s| s.lock().set_control_message(bytes));
-    }
+    let control = if message_header.msg_controllen > 0 {
+        let mut bytes = vec![0u8; message_header.msg_controllen as usize];
+        ctx.task.mm.read_memory(message_header.msg_control, &mut bytes)?;
+        Some(bytes)
+    } else {
+        None
+    };
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
-    Ok(file.write(ctx.task, &iovec)?.into())
+    let socket_ops = file.downcast_file::<SocketFile>().unwrap();
+    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, control)?;
+    Ok(bytes_sent.into())
 }
 
 pub fn sys_shutdown(
@@ -198,9 +197,6 @@ pub fn sys_shutdown(
     _how: i32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
 
     // TODO: Respect the `how` argument.
 

@@ -21,64 +21,12 @@ pub struct SocketFile {
 impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        let mut socket = self.socket.lock();
-        let mut it = UserBufferIterator::new(data);
-        let bytes_read =
-            SocketFile::read_to_user_buffer(socket.incoming_messages(), task, &mut it)?;
-
-        if bytes_read == 0 && socket.is_connected() {
-            // If no bytes were read, but the socket is connected, return an error indicating that
-            // the reader can wait.
-            return error!(EAGAIN);
-        }
-
-        if bytes_read > 0 {
-            // If bytes were read, notify the connected node that there are bytes to read.
-            socket.connected_node().map(|connected_node| {
-                connected_node.notify(FdEvents::POLLOUT);
-            });
-        }
-
-        Ok(bytes_read)
+    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        self.recvmsg(task, file, data).map(|(bytes_read, _control_message)| bytes_read)
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        let requested = UserBuffer::get_total_length(data);
-        let mut actual = 0;
-        let mut it = UserBufferIterator::new(data);
-        file.blocking_op(
-            task,
-            || {
-                let socket = self.get_socket_for_writing(task)?;
-
-                let bytes_written = match SocketFile::write_from_user_buffer(
-                    socket.lock().incoming_messages(),
-                    task,
-                    &mut it,
-                ) {
-                    Err(e) if e == EPIPE && actual > 0 => {
-                        // If the error is EPIPE (that is, the write failed because the socket was
-                        // disconnected), then return the amount of bytes that were written before
-                        // the disconnect.
-                        return Ok(actual);
-                    }
-                    result => result,
-                }?;
-
-                if bytes_written > 0 {
-                    socket.lock().notify_write();
-                }
-
-                actual += bytes_written;
-                if actual < requested {
-                    return error!(EAGAIN);
-                }
-
-                Ok(actual)
-            },
-            FdEvents::POLLOUT,
-        )
+        self.sendmsg(task, file, data, None)
     }
 }
 
@@ -100,71 +48,97 @@ impl SocketFile {
         }
     }
 
-    /// Reads from `message_buffer` into the user memory in `it`.
+    /// Writes the provided data into the socket in this file.
+    ///
+    /// The provided control message is
     ///
     /// # Parameters
-    /// - `message_buffer`: The message buffer to read from.
-    /// - `task`: The task that is performing the read, and to which the data will be written.
-    /// - `it`: The `UserBufferIterator` to write the data to.
-    ///
-    /// Returns the number of bytes that were read from the socket.
-    fn read_to_user_buffer(
-        message_buffer: &mut MessageBuffer,
+    /// - `task`: The task that the user buffers belong to.
+    /// - `file`: The file that will be used for the `blocking_op`.
+    /// - `data`: The user buffers to read data from.
+    /// - `control_bytes`: Control message bytes to write to the socket.
+    pub fn sendmsg(
+        &self,
         task: &Task,
-        it: &mut UserBufferIterator<'_>,
+        file: &FileObject,
+        data: &[UserBuffer],
+        mut control_bytes: Option<Vec<u8>>,
     ) -> Result<usize, Errno> {
-        let mut total_bytes_read = 0;
+        let requested = UserBuffer::get_total_length(data);
+        let mut actual = 0;
+        let mut user_buffers = UserBufferIterator::new(data);
+        file.blocking_op(
+            task,
+            || {
+                let socket = self.get_socket_for_writing(task)?;
+                let mut socket = socket.lock();
 
-        while !message_buffer.is_empty() {
-            if let Some(mut user_buffer) = it.next(usize::MAX) {
-                // Try to read enough bytes to fill the current user buffer.
-                let (messages, bytes_read) = message_buffer.read_bytes(user_buffer.length);
-
-                for message in messages {
-                    match message {
-                        Message::Packet(packet) => {
-                            task.mm.write_memory(user_buffer.address, packet.bytes())?;
-                            // Update the user address to write to.
-                            user_buffer.address += packet.len();
-                            total_bytes_read += packet.len();
-                        }
-                        // Immediately return when a control message is encountered.
-                        // TODO: The control message needs to be returned out to the reader.
-                        _ => return Ok(total_bytes_read),
+                let bytes_written = match socket.write_buffer(task, &mut user_buffers) {
+                    Err(e) if e == EPIPE && actual > 0 => {
+                        // If the error is EPIPE (that is, the write failed because the socket was
+                        // disconnected), then return the amount of bytes that were written before
+                        // the disconnect.
+                        return Ok(actual);
                     }
+                    result => result,
+                }?;
+
+                if bytes_written > 0 {
+                    socket.notify_write();
                 }
 
-                if bytes_read < user_buffer.length {
-                    // If the buffer was not filled, break out of the loop.
-                    break;
+                actual += bytes_written;
+                if actual < requested {
+                    return error!(EAGAIN);
                 }
-            }
-        }
 
-        Ok(total_bytes_read)
+                if let Some(control_bytes) = control_bytes.take() {
+                    socket.write_control(control_bytes);
+                }
+
+                Ok(actual)
+            },
+            FdEvents::POLLOUT | FdEvents::POLLHUP,
+        )
     }
 
-    /// Writes the provided `UserBufferIterator` into the write socket for this file.
+    /// Reads data from the socket in this file into `data`.
     ///
     /// # Parameters
-    /// - `task`: The task to read memory from.
-    /// - `it`: The `UserBufferIterator` to read the data from.
+    /// - `file`: The file that will be used to wait if necessary.
+    /// - `task`: The task that the user buffers belong to.
+    /// - `data`: The user buffers to write to.
     ///
-    /// Returns the number of bytes that were written to the socket.
-    fn write_from_user_buffer(
-        message_buffer: &mut MessageBuffer,
+    /// Returns the number of bytes read, as well as any control message that was encountered.
+    pub fn recvmsg(
+        &self,
         task: &Task,
-        it: &mut UserBufferIterator<'_>,
-    ) -> Result<usize, Errno> {
-        let mut bytes_written = 0;
-        while let Some(buffer) = it.next(usize::MAX) {
-            let mut bytes = vec![0u8; buffer.length];
-            task.mm.read_memory(buffer.address, &mut bytes[..])?;
+        file: &FileObject,
+        data: &[UserBuffer],
+    ) -> Result<(usize, Option<Control>), Errno> {
+        file.blocking_op(
+            task,
+            || {
+                let mut socket = self.socket.lock();
+                let mut user_buffers = UserBufferIterator::new(data);
+                let (bytes_read, control) = socket.read_into_buffer(task, &mut user_buffers)?;
 
-            bytes_written += bytes.len();
-            message_buffer.write(Message::packet(bytes));
-        }
+                if bytes_read == 0 && socket.is_connected() {
+                    // If no bytes were read, but the socket is connected, return an error indicating that
+                    // the reader can wait.
+                    return error!(EAGAIN);
+                }
 
-        Ok(bytes_written)
+                if bytes_read > 0 {
+                    // If bytes were read, notify the connected node that there are bytes to read.
+                    socket.connected_node().map(|connected_node| {
+                        connected_node.notify(FdEvents::POLLOUT);
+                    });
+                }
+
+                Ok((bytes_read, control))
+            },
+            FdEvents::POLLIN | FdEvents::POLLHUP,
+        )
     }
 }

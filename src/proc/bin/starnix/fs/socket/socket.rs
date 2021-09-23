@@ -8,7 +8,7 @@ use crate::error;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mode;
-use crate::task::Kernel;
+use crate::task::{Kernel, Task};
 use crate::types::locking::*;
 use crate::types::*;
 
@@ -36,10 +36,6 @@ pub struct Socket {
     /// The `FsNode` that contains the socket that is connected to this socket, if such a node
     /// has set via `Socket::connect`.
     connected_node: Weak<FsNode>,
-
-    /// The ancilarry data currently associated with the `write_pipe` of this socket.
-    /// TODO: This should be sent in-band to be able to implement the expected socket semantics.
-    control_message: Option<Vec<u8>>,
 
     /// The `MessageBuffer` that contains incoming messages for this socket.
     ///
@@ -127,20 +123,6 @@ impl Socket {
         second_node.notify(FdEvents::POLLHUP);
     }
 
-    /// Gets the ancillary data associated with this socket.
-    ///
-    /// If ancillary data is returned, the ancillary data is cleared out and subsequent calls will
-    /// return `None` until `set_ancillary_message` is called again.
-    pub fn take_control_message(&mut self) -> Option<Vec<u8>> {
-        self.control_message.take()
-    }
-
-    /// Sets the ancillary data associated with this socket.
-    pub fn set_control_message(&mut self, message: Vec<u8>) {
-        assert!(self.control_message.is_none());
-        self.control_message = Some(message);
-    }
-
     /// Returns the node that contains the socket that is connected to this socket, if such a node
     /// exists.
     pub fn connected_node(&self) -> Option<FsNodeHandle> {
@@ -150,11 +132,6 @@ impl Socket {
     /// Returns the socket that is connected to this socket, if such a socket exists.
     pub fn connected_socket(&self) -> Option<SocketHandle> {
         self.connected_node.upgrade().and_then(|node| node.socket().map(|s| s.clone()))
-    }
-
-    /// Returns the incoming message buffer for this socket.
-    pub fn incoming_messages(&mut self) -> &mut MessageBuffer {
-        &mut self.incoming_messages
     }
 
     /// Returns true if this socket has been bound to an address.
@@ -170,6 +147,47 @@ impl Socket {
     /// Notifies the observers of the connected node that data has been written to the connected
     /// socket.
     pub fn notify_write(&self) {
-        self.connected_node().map(|node| node.notify(FdEvents::POLLIN));
+        self.connected_node().map(|node| {
+            node.notify(FdEvents::POLLIN);
+        });
+    }
+
+    /// Writes the the contents of `UserBufferIterator` into this socket.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to read the data from.
+    ///
+    /// Returns the number of bytes that were written to the socket.
+    pub fn write_buffer(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<usize, Errno> {
+        self.incoming_messages.write_buffer(task, user_buffers)
+    }
+
+    /// Reads the the contents of this socket into `UserBufferIterator`.
+    ///
+    /// # Parameters
+    /// - `task`: The task to read memory from.
+    /// - `user_buffers`: The `UserBufferIterator` to write the data to.
+    ///
+    /// Returns the number of bytes that were read into the buffer, and a control message if one was
+    /// read from the socket.
+    pub fn read_into_buffer(
+        &mut self,
+        task: &Task,
+        user_buffers: &mut UserBufferIterator<'_>,
+    ) -> Result<(usize, Option<Control>), Errno> {
+        let bytes_read = self.incoming_messages.read_packets_into_buffer(task, user_buffers)?;
+        Ok((bytes_read, self.incoming_messages.read_if_control()))
+    }
+
+    /// Writes a `Message::Control` containing the provided bytes to the socket.
+    pub fn write_control(&mut self, bytes: Vec<u8>) {
+        if bytes.len() > 0 {
+            self.incoming_messages.write(Message::control(bytes));
+        }
     }
 }

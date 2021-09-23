@@ -26,7 +26,6 @@ impl From<Packet> for Message {
 
 impl Message {
     /// Returns a `Message::Control` with the given bytes.
-    #[cfg(test)]
     pub fn control(bytes: Vec<u8>) -> Message {
         Message::Control(Control { bytes })
     }
@@ -37,10 +36,13 @@ impl Message {
     }
 
     /// Returns the length of the message in bytes.
+    ///
+    /// Note that control messages are considered to be 0-length messages, but if the control
+    /// message is asked for its length it returns the number of bytes in the message.
     pub fn len(&self) -> usize {
         match self {
             Message::Packet(p) => p.len(),
-            Message::Control(c) => c.len(),
+            Message::Control(_c) => 0,
         }
     }
 }
@@ -51,10 +53,21 @@ pub struct Control {
     bytes: Vec<u8>,
 }
 
+impl From<Vec<u8>> for Control {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self { bytes }
+    }
+}
+
 impl Control {
     /// Returns the number of bytes in the control message.
     pub fn len(&self) -> usize {
         self.bytes.len()
+    }
+
+    /// Returns a reference to the control message bytes.
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
     }
 }
 
