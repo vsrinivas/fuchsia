@@ -486,6 +486,9 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "class/temperature/000",
       "class/temperature/001",
       "class/temperature/002",
+
+      // LCD Bias
+      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-62",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

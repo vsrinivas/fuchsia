@@ -203,6 +203,15 @@ static const i2c_channel_t sherlock_i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+
+    // LCD Bias
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0X3E,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 };
 
 zx_status_t Sherlock::I2cInit() {
