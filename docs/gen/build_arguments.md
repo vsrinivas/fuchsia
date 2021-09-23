@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/33675ecd0a50df5257904e1f855b112224cbafa3/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a0db18f6253e6a97ce75a5ba775bcec1a6de2502/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/33675ecd0a50df5257904e1f855b112224cbafa3/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a0db18f6253e6a97ce75a5ba775bcec1a6de2502/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3100,6 +3100,15 @@ From //products/bringup.gni:40
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
+
+### product_bundle_paths
+Path to the product bundles that will be copied to the SDK.
+If empty, will create an empty product bundle. Requires all
+product bundles under plasa to be present if non-empty.
+
+**Current value (from the default):** `[]`
+
+From //build/sdk/config.gni:16
 
 ### product_description
 A human readable product description.
