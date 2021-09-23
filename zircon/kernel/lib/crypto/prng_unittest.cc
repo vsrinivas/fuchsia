@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/crypto/entropy_pool.h>
 #include <lib/crypto/prng.h>
 #include <lib/unittest/unittest.h>
 #include <lib/zircon-internal/macros.h>
@@ -236,6 +237,30 @@ bool prng_randint() {
   END_TEST;
 }
 
+bool prng_from_entropy_pool_matches_prng_from_contents() {
+  BEGIN_TEST;
+  constexpr int kDrawSize = 13;
+  static const char kSeed[32] = {'a', 'b', 'c'};
+  static const int kSeedSize = sizeof(kSeed);
+
+  EntropyPool pool;
+  pool.Add(ktl::span<const uint8_t>(reinterpret_cast<const uint8_t*>(kSeed), sizeof(kSeed)));
+
+  Prng prng(kSeed, kSeedSize);
+  Prng prng_from_pool(std::move(pool));
+
+  uint8_t out1[kDrawSize] = {0};
+  uint8_t out2[kDrawSize] = {0};
+
+  // Drawing from both should be the same.
+  prng.Draw(out1, sizeof(out1));
+  prng_from_pool.Draw(out2, sizeof(out2));
+
+  EXPECT_TRUE(memcmp(out1, out2, kDrawSize) == 0);
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(prng_tests)
@@ -246,6 +271,7 @@ UNITTEST("Test Output", prng_output)
 UNITTEST("Test RandInt", prng_randint)
 UNITTEST("Block if not enough entropy", prng_blocks)
 UNITTEST("Dont block if entropy added in early boot", prng_doesnt_block_if_entropy_is_added_early)
+UNITTEST("Initialize through EntropyPool", prng_from_entropy_pool_matches_prng_from_contents)
 UNITTEST_END_TESTCASE(prng_tests, "prng", "Test pseudo-random number generator implementation.")
 
 }  // namespace crypto

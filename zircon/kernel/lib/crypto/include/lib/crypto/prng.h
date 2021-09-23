@@ -30,6 +30,14 @@ class Prng {
   // Tag object for constructing a non-thread-safe version.
   struct NonThreadSafeTag {};
 
+  // Construct a thread-safe instance of the PRNG with the input pool. The pool provides must
+  // provide at least 256 bits of entropy.
+  explicit Prng(EntropyPool pool)
+      : pool_(std::move(pool)),
+        nonce_(0),
+        is_thread_safe_(true),
+        accumulated_(pool_.contents().size()) {}
+
   // Construct a thread-safe instance of the PRNG with the byte array at
   // |data| as the initial seed.  |size| is the length of |data| in bytes.
   Prng(const void* data, size_t size);
