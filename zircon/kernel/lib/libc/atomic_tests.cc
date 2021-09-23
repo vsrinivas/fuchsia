@@ -6,7 +6,6 @@
 
 #include <lib/unittest/unittest.h>
 
-#include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 
 // Verify that 16b atomics are unconditionally supported, regardless of compiler intrinsic support.
@@ -68,14 +67,14 @@ bool CompareExchange16Test() {
   END_TEST;
 }
 
-// Most of atomic_ref's tests are in ulib, along the rest of FBL.
+// Most of atomic_ref's tests are in stdcompat, along the rest of thepolfill library.
 // We test __int128 specifically in the kernel unit tests, since __int128 is unconditionally
 // available in the kernel environment.
-bool AtomicRef128Test() {
+bool KtlAtomicRef128Test() {
   BEGIN_TEST;
 
   unsigned __int128 i = 0;
-  fbl::atomic_ref<unsigned __int128> int_ref(i);
+  ktl::atomic_ref<unsigned __int128> int_ref(i);
 
   int_ref.store(1);
   EXPECT_EQ(1u, int_ref.load());
@@ -86,10 +85,10 @@ bool AtomicRef128Test() {
   expected = 0;
   EXPECT_EQ(false, int_ref.compare_exchange_strong(expected, 3u));
   EXPECT_EQ(expected, 2u);
-  int_ref.store(kValue, fbl::memory_order_release);
-  EXPECT_EQ(int_ref.load(fbl::memory_order_acquire), kValue);
-  int_ref.store(kValue + 1, fbl::memory_order_release);
-  EXPECT_EQ(int_ref.load(fbl::memory_order_acquire), kValue + 1);
+  int_ref.store(kValue, ktl::memory_order_release);
+  EXPECT_EQ(int_ref.load(ktl::memory_order_acquire), kValue);
+  int_ref.store(kValue + 1, ktl::memory_order_release);
+  EXPECT_EQ(int_ref.load(ktl::memory_order_acquire), kValue + 1);
   // TODO(fxbug.dev/47117): gcc __int128 is not considered is_lock_free, even though it
   // generates lock-free code for load/store/compare_exchange.
 #ifdef __clang__
@@ -105,5 +104,5 @@ UNITTEST_START_TESTCASE(libc_atomic_tests)
 UNITTEST("load_16", Load16Test)
 UNITTEST("store_16", Store16Test)
 UNITTEST("compare_exchange_16", CompareExchange16Test)
-UNITTEST("atomic_ref_128", AtomicRef128Test)
-UNITTEST_END_TESTCASE(libc_atomic_tests, "libc_atomic", "libc/atomic tests")
+UNITTEST("ktl::atomic_ref_128", KtlAtomicRef128Test)
+UNITTEST_END_TESTCASE(libc_atomic_tests, "atomic", "atomic operations test")

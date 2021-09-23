@@ -12,7 +12,6 @@ zx_library("fbl") {
     "fbl/algorithm.h",
     "fbl/alloc_checker.h",
     "fbl/array.h",
-    "fbl/atomic_ref.h",
     "fbl/auto_lock.h",
     "fbl/bits.h",
     "fbl/conditional_select_nospec.h",
