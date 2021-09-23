@@ -28,7 +28,6 @@ abstract class OutputFormatter {
   final List<TestInfo> _infoEvents = [];
   final List<TestStarted> _testStartedEvents = [];
   final List<TestResult> _testResultEvents = [];
-  final List<TestResult> _testFailedEvents = [];
   final List<UnrunnableTestEvent> _unrunnableTestEvents = [];
   final OutputBuffer buffer;
   final Stylizer wrapWith;
@@ -129,12 +128,7 @@ abstract class OutputFormatter {
       _lastTestStartTime = _now;
       _handleTestStarted(event);
     } else if (event is TestResult) {
-      if (event.isSuccess) {
-        _numPassed += 1;
-      } else {
-        _numFailed += 1;
-        _testFailedEvents.add(event);
-      }
+      (event.isSuccess) ? _numPassed += 1 : _numFailed += 1;
       _handleTestResult(event);
     } else if (event is TestOutputEvent) {
       // This must always come before `TestInfo`, because it is a subclass
@@ -234,15 +228,6 @@ abstract class OutputFormatter {
         'Skipped ${_unrunnableTestEvents.length} unrunnable legacy tests. All device tests must be component-tests, but these are binaries.',
         ..._unrunnableTestEvents.map((e) => '  ${e.testName}')
       ]);
-    }
-    if (_testFailedEvents.isNotEmpty && isVerbose) {
-      String tests = _testFailedEvents.length != 1 ? 'tests' : 'test';
-      buffer.addLine(wrapWith('Failed $tests:', [red]));
-      for (var event in _testFailedEvents) {
-        var invocationCmd = event.testName.split(' ');
-        var name = invocationCmd[7];
-        buffer.addLine('  $name');
-      }
     }
   }
 
