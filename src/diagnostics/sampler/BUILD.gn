@@ -78,6 +78,7 @@ sampler_configuration("production_sampler") {
     "config/display.json",
     "config/file-usage-metrics.json",
     "config/ftl.json",
+    "config/fshost.json",
     "config/fvm.json",
     "config/netstack.json",
     "config/sysmem.json",
