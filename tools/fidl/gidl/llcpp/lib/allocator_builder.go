@@ -167,7 +167,11 @@ func (a *allocatorBuilder) visitTable(value gidlir.Record, decl *gidlmixer.Table
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		fieldRhs := a.visit(field.Value, fieldDecl)
-		a.write("%s%sset_%s(%s, %s);\n", t, op, fidlgen.ToSnakeCase(field.Key.Name), a.allocatorVar, fieldRhs)
+		if fieldDecl.IsInlinableInEnvelope() {
+			a.write("%s%sset_%s(%s);\n", t, op, fidlgen.ToSnakeCase(field.Key.Name), fieldRhs)
+		} else {
+			a.write("%s%sset_%s(%s, %s);\n", t, op, fidlgen.ToSnakeCase(field.Key.Name), a.allocatorVar, fieldRhs)
+		}
 	}
 
 	return fmt.Sprintf("std::move(%s)", t)
@@ -190,7 +194,11 @@ func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.Union
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		fieldRhs := a.visit(field.Value, fieldDecl)
-		a.write("%s%sset_%s(%s, %s);\n", union, op, fidlgen.ToSnakeCase(field.Key.Name), a.allocatorVar, fieldRhs)
+		if fieldDecl.IsInlinableInEnvelope() {
+			a.write("%s%sset_%s(%s);\n", union, op, fidlgen.ToSnakeCase(field.Key.Name), fieldRhs)
+		} else {
+			a.write("%s%sset_%s(%s, %s);\n", union, op, fidlgen.ToSnakeCase(field.Key.Name), a.allocatorVar, fieldRhs)
+		}
 	}
 
 	return fmt.Sprintf("std::move(%s)", union)

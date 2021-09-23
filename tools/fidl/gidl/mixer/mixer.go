@@ -21,6 +21,9 @@ type Declaration interface {
 	// for string and true for string?.
 	IsNullable() bool
 
+	// IsInlinableInEnvelope indicates if the inline size of the declaration <= 4.
+	IsInlinableInEnvelope() bool
+
 	// conforms verifies that the value conforms to this declaration.
 	conforms(value gidlir.Value, ctx context) error
 }
@@ -127,8 +130,21 @@ func (NeverNullable) IsNullable() bool {
 	return false
 }
 
+type NeverInlinable struct{}
+
+func (NeverInlinable) IsInlinableInEnvelope() bool {
+	return false
+}
+
+type AlwaysInlinable struct{}
+
+func (AlwaysInlinable) IsInlinableInEnvelope() bool {
+	return true
+}
+
 type BoolDecl struct {
 	NeverNullable
+	AlwaysInlinable
 }
 
 func (decl *BoolDecl) Subtype() fidlgen.PrimitiveSubtype {
@@ -149,6 +165,15 @@ type IntegerDecl struct {
 	subtype fidlgen.PrimitiveSubtype
 	lower   int64
 	upper   uint64
+}
+
+func (decl *IntegerDecl) IsInlinableInEnvelope() bool {
+	switch decl.subtype {
+	case fidlgen.Uint64, fidlgen.Int64:
+		return false
+	default:
+		return true
+	}
 }
 
 func (decl *IntegerDecl) Subtype() fidlgen.PrimitiveSubtype {
@@ -183,6 +208,10 @@ type FloatDecl struct {
 	subtype fidlgen.PrimitiveSubtype
 }
 
+func (decl *FloatDecl) IsInlinableInEnvelope() bool {
+	return decl.subtype == fidlgen.Float32
+}
+
 func (decl *FloatDecl) Subtype() fidlgen.PrimitiveSubtype {
 	return decl.subtype
 }
@@ -208,6 +237,7 @@ func (decl *FloatDecl) conforms(value gidlir.Value, _ context) error {
 }
 
 type StringDecl struct {
+	NeverInlinable
 	bound    *int
 	nullable bool
 }
@@ -239,6 +269,7 @@ func (decl *StringDecl) conforms(value gidlir.Value, _ context) error {
 }
 
 type HandleDecl struct {
+	AlwaysInlinable
 	subtype fidlgen.HandleSubtype
 	// TODO(fxbug.dev/41920): Add a field for handle rights.
 	nullable bool
@@ -284,6 +315,10 @@ type BitsDecl struct {
 	bitsDecl   fidlgen.Bits
 }
 
+func (decl *BitsDecl) IsInlinableInEnvelope() bool {
+	return decl.Underlying.IsInlinableInEnvelope()
+}
+
 func (decl *BitsDecl) Name() string {
 	return string(decl.bitsDecl.Name)
 }
@@ -319,6 +354,10 @@ type EnumDecl struct {
 	enumDecl   fidlgen.Enum
 }
 
+func (decl *EnumDecl) IsInlinableInEnvelope() bool {
+	return decl.Underlying.IsInlinableInEnvelope()
+}
+
 func (decl *EnumDecl) Name() string {
 	return string(decl.enumDecl.Name)
 }
@@ -349,6 +388,10 @@ type StructDecl struct {
 	structDecl fidlgen.Struct
 	nullable   bool
 	schema     Schema
+}
+
+func (decl *StructDecl) IsInlinableInEnvelope() bool {
+	return decl.structDecl.TypeShapeV2.InlineSize <= 4
 }
 
 func (decl *StructDecl) IsNullable() bool {
@@ -434,6 +477,7 @@ func (decl *StructDecl) conforms(value gidlir.Value, ctx context) error {
 // TableDecl describes a table declaration.
 type TableDecl struct {
 	NeverNullable
+	NeverInlinable
 	tableDecl fidlgen.Table
 	schema    Schema
 }
@@ -510,9 +554,10 @@ func (decl *TableDecl) conforms(value gidlir.Value, ctx context) error {
 
 // UnionDecl describes a union declaration.
 type UnionDecl struct {
+	NeverInlinable
 	unionDecl fidlgen.Union
-	nullable  bool
-	schema    Schema
+	nullable bool
+	schema   Schema
 }
 
 func (decl *UnionDecl) IsNullable() bool {
@@ -590,6 +635,10 @@ type ArrayDecl struct {
 	schema Schema
 }
 
+func (decl *ArrayDecl) IsInlinableInEnvelope() bool {
+	return decl.typ.TypeShapeV2.InlineSize <= 4
+}
+
 func (decl *ArrayDecl) Elem() Declaration {
 	elemType := *decl.typ.ElementType
 	elemDecl, ok := decl.schema.lookupDeclByType(elemType)
@@ -622,6 +671,7 @@ func (decl *ArrayDecl) conforms(value gidlir.Value, ctx context) error {
 }
 
 type VectorDecl struct {
+	NeverInlinable
 	// The vector has type `typ`, and it contains `typ.ElementType` elements.
 	typ    fidlgen.Type
 	schema Schema

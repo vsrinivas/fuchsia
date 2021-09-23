@@ -168,9 +168,13 @@ func (b *unownedBuilder) visitTable(value gidlir.Record, decl *gidlmixer.TableDe
 		fieldVar := b.visit(field.Value, fieldDecl)
 		storageVar := b.newVar()
 		b.write("auto %s = std::move(%s);\n", storageVar, fieldVar)
-		b.write(
-			"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", tableVar, field.Key.Name, typeName(fieldDecl), storageVar)
-
+		if fieldDecl.IsInlinableInEnvelope() {
+			b.write(
+				"%s.set_%s(%s);\n", tableVar, field.Key.Name, storageVar)
+		} else {
+			b.write(
+				"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", tableVar, field.Key.Name, typeName(fieldDecl), storageVar)
+		}
 	}
 
 	return fmt.Sprintf("std::move(%s)", tableVar)
@@ -193,8 +197,14 @@ func (b *unownedBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDe
 		fieldVar := b.visit(field.Value, fieldDecl)
 		storageVar := b.newVar()
 		b.write("auto %s = std::move(%s);\n", storageVar, fieldVar)
-		b.write(
-			"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", containerVar, field.Key.Name, typeName(fieldDecl), storageVar)
+		if fieldDecl.IsInlinableInEnvelope() {
+			b.write(
+				"%s.set_%s(%s);\n", containerVar, field.Key.Name, storageVar)
+
+		} else {
+			b.write(
+				"%s.set_%s(fidl::ObjectView<%s>::FromExternal(&%s));\n", containerVar, field.Key.Name, typeName(fieldDecl), storageVar)
+		}
 	}
 	return fmt.Sprintf("std::move(%s)", containerVar)
 }
