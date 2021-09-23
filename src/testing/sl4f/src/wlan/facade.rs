@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::wlan::types::{ClientStatusResponse, MacRole, QueryIfaceResponse};
+use crate::wlan::types;
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_wlan_device;
 use fidl_fuchsia_wlan_device_service::{
     DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker, DeviceServiceProxy,
 };
@@ -14,7 +13,7 @@ use fuchsia_zircon as zx;
 use ieee80211::Ssid;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use wlan_common::scan::ScanResult;
 
 // WlanFacade: proxies commands from sl4f test to proper fidl APIs
@@ -32,7 +31,7 @@ struct InnerWlanFacade {
 }
 
 #[derive(Debug)]
-pub struct WlanFacade {
+pub(crate) struct WlanFacade {
     wlan_svc: DeviceServiceProxy,
     monitor_svc: DeviceMonitorProxy,
     // TODO(fxbug.dev/84729)
@@ -88,27 +87,33 @@ impl WlanFacade {
         Ok(ssid_list)
     }
 
-    pub async fn scan_for_bss_info(
+    async fn passive_scan(
         &self,
-    ) -> Result<HashMap<Ssid, Vec<Box<fidl_internal::BssDescription>>>, Error> {
+    ) -> Result<impl IntoIterator<Item = Result<ScanResult, Error>>, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Scan: failed to get client iface sme proxy")?;
-
         // start the scan
-        let mut scan_result_list =
-            wlan_service_util::client::passive_scan(&sme_proxy).await.context("Scan failed")?;
+        Ok(wlan_service_util::client::passive_scan(&sme_proxy)
+            .await
+            .context("Scan failed")?
+            .into_iter()
+            .map(ScanResult::try_from))
+    }
 
-        // send the bss descriptions back to the test
-        let mut hashmap = HashMap::new();
-        for scan_result in scan_result_list.drain(..) {
-            let scan_result: ScanResult = scan_result.try_into()?;
-            let entry = hashmap.entry(scan_result.bss_description.ssid.clone()).or_insert(vec![]);
-            entry.push(Box::new(scan_result.bss_description.into()));
+    pub async fn scan_for_bss_info(
+        &self,
+    ) -> Result<HashMap<String, Vec<Box<types::BssDescriptionWrapper>>>, Error> {
+        let mut scan_results_by_ssid_string = HashMap::new();
+        for scan_result in self.passive_scan().await? {
+            let scan_result = scan_result.context("Failed to convert scan result")?;
+            let entry = scan_results_by_ssid_string
+                .entry(String::from(scan_result.bss_description.ssid.to_string_not_redactable()))
+                .or_insert(vec![]);
+            entry.push(Box::new(types::BssDescriptionWrapper(scan_result.bss_description.into())));
         }
-
-        Ok(hashmap)
+        Ok(scan_results_by_ssid_string)
     }
 
     // TODO(fxbug.dev/68531): Require a BSS description and remove the optional scan.
@@ -118,25 +123,30 @@ impl WlanFacade {
         target_pwd: Vec<u8>,
         target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
     ) -> Result<bool, Error> {
-        let target_bss_desc = target_bss_desc.unwrap_or(
-            self.scan_for_bss_info()
-                .await?
-                .remove(&target_ssid)
-                .and_then(|bss_descs| bss_descs.into_iter().next())
-                .context("No suitable BSS found")?,
-        );
+        let target_bss_desc = match target_bss_desc {
+            Some(bss_desc) => *bss_desc,
+            None => {
+                let mut matching_scan_result = None;
+                for scan_result in self.passive_scan().await? {
+                    let scan_result = scan_result.context("Failed to convert scan result")?;
+                    if scan_result.bss_description.ssid == target_ssid {
+                        matching_scan_result.replace(scan_result);
+                        break;
+                    }
+                }
+                matching_scan_result
+                    .ok_or_else(|| format_err!("No suitable BSS found"))?
+                    .bss_description
+                    .into()
+            }
+        };
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
 
-        wlan_service_util::client::connect(
-            &sme_proxy,
-            target_ssid,
-            target_pwd,
-            target_bss_desc.as_ref().clone(),
-        )
-        .await
+        wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd, target_bss_desc)
+            .await
     }
 
     /// Destroys a WLAN interface by input interface ID.
@@ -155,7 +165,7 @@ impl WlanFacade {
             .context("Disconnect: Failed to disconnect ifaces")
     }
 
-    pub async fn status(&self) -> Result<ClientStatusResponse, Error> {
+    pub async fn status(&self) -> Result<types::ClientStatusResponseWrapper, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
@@ -163,10 +173,13 @@ impl WlanFacade {
 
         let rsp = sme_proxy.status().await.context("failed to get status from sme_proxy")?;
 
-        Ok(ClientStatusResponse::from(rsp))
+        Ok(types::ClientStatusResponseWrapper(rsp))
     }
 
-    pub async fn query_iface(&self, iface_id: u16) -> Result<QueryIfaceResponse, Error> {
+    pub async fn query_iface(
+        &self,
+        iface_id: u16,
+    ) -> Result<types::QueryIfaceResponseWrapper, Error> {
         let (status, iface_info) = self
             .wlan_svc
             .query_iface(iface_id)
@@ -179,18 +192,7 @@ impl WlanFacade {
             Some(iface_info) => iface_info,
             None => return Err(format_err!("no iface information for ID: {}", iface_id)),
         };
-        let mac_role = match iface_info.role {
-            fidl_fuchsia_wlan_device::MacRole::Client => MacRole::Client,
-            fidl_fuchsia_wlan_device::MacRole::Ap => MacRole::Ap,
-            fidl_fuchsia_wlan_device::MacRole::Mesh => MacRole::Mesh,
-        };
 
-        Ok(QueryIfaceResponse {
-            role: mac_role,
-            id: iface_info.id,
-            phy_id: iface_info.phy_id,
-            phy_assigned_id: iface_info.phy_assigned_id,
-            sta_addr: iface_info.sta_addr,
-        })
+        Ok(types::QueryIfaceResponseWrapper((*iface_info).into()))
     }
 }

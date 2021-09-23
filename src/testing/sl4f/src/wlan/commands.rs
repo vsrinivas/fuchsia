@@ -5,75 +5,15 @@
 use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_syslog::macros::*;
 use ieee80211::Ssid;
-use serde::{Deserialize, Serialize};
 use serde_json::{to_value, Value};
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
 // Testing helper methods
-use crate::wlan::facade::WlanFacade;
+use crate::wlan::{facade::WlanFacade, types};
 
 use crate::common_utils::common::parse_u64_identifier;
-
-// We're using serde's "remote derive" feature to allow us to derive (De)Serialize for a third-
-// party type (i.e. fidl_internal::BssDescription). See here for more info:
-// https://serde.rs/remote-derive.html
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_common::ChannelBandwidth")]
-#[repr(u32)]
-pub enum ChannelBandwidthDef {
-    Cbw20 = 0,
-    Cbw40 = 1,
-    Cbw40Below = 2,
-    Cbw80 = 3,
-    Cbw160 = 4,
-    Cbw80P80 = 5,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_common::WlanChannel")]
-pub struct ChannelDef {
-    pub primary: u8,
-    #[serde(with = "ChannelBandwidthDef")]
-    pub cbw: fidl_common::ChannelBandwidth,
-    pub secondary80: u8,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_internal::BssType")]
-pub enum BssTypeDef {
-    Infrastructure = 1,
-    Personal = 2,
-    Independent = 3,
-    Mesh = 4,
-    Unknown = 255,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_internal::BssDescription")]
-struct BssDescriptionDef {
-    pub bssid: [u8; 6],
-    #[serde(with = "BssTypeDef")]
-    pub bss_type: fidl_internal::BssType,
-    pub beacon_period: u16,
-    pub timestamp: u64,
-    pub local_time: u64,
-    pub capability_info: u16,
-    pub ies: Vec<u8>,
-    #[serde(with = "ChannelDef")]
-    pub channel: fidl_common::WlanChannel,
-    pub rssi_dbm: i8,
-    pub snr_db: i8,
-}
-#[derive(serde::Serialize)]
-struct BssDescriptionWrapper<'a>(
-    #[serde(with = "BssDescriptionDef")] &'a fidl_internal::BssDescription,
-);
 
 #[async_trait(?Send)]
 impl Facade for WlanFacade {
@@ -83,27 +23,12 @@ impl Facade for WlanFacade {
                 fx_log_info!(tag: "WlanFacade", "performing wlan scan");
                 let results = self.scan().await?;
                 fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
-                // return the scan results
                 to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
             }
             "scan_for_bss_info" => {
                 fx_log_info!(tag: "WlanFacade", "performing wlan scan");
                 let results = self.scan_for_bss_info().await?;
                 fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
-                // convert all BssDescription, which can't be serialized, to BssDescriptionWrapper
-                let results: HashMap<String, Vec<BssDescriptionWrapper<'_>>> = results
-                    .iter()
-                    .map(|(ssid, bss_desc)| {
-                        (
-                            String::from(ssid.to_string_not_redactable()),
-                            bss_desc
-                                .iter()
-                                .map(|bss_desc| BssDescriptionWrapper(&**bss_desc))
-                                .collect(),
-                        )
-                    })
-                    .collect();
-                // return the scan results
                 to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
             }
             "connect" => {
@@ -133,7 +58,7 @@ impl Facade for WlanFacade {
 
                 let target_bss_desc = args
                     .get("target_bss_desc")
-                    .map(BssDescriptionDef::deserialize)
+                    .map(types::BssDescriptionDef::deserialize)
                     .transpose()?
                     .map(|target_bss_desc| Box::new(target_bss_desc));
 

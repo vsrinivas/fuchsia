@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_sme as fidl_sme,
     serde::{Deserialize, Serialize},
 };
@@ -68,97 +69,163 @@ pub struct ClientStateSummary {
     pub networks: Option<Vec<NetworkState>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Protection {
-    Unknown,
-    Open,
-    Wep,
-    Wpa1,
-    Wpa1Wpa2PersonalTkipOnly,
-    Wpa2PersonalTkipOnly,
-    Wpa1Wpa2Personal,
-    Wpa2Personal,
-    Wpa2Wpa3Personal,
-    Wpa3Personal,
-    Wpa2Enterprise,
-    Wpa3Enterprise,
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_sme::Protection")]
+pub(crate) enum ProtectionDef {
+    Unknown = 0,
+    Open = 1,
+    Wep = 2,
+    Wpa1 = 3,
+    Wpa1Wpa2PersonalTkipOnly = 4,
+    Wpa2PersonalTkipOnly = 5,
+    Wpa1Wpa2Personal = 6,
+    Wpa2Personal = 7,
+    Wpa2Wpa3Personal = 8,
+    Wpa3Personal = 9,
+    Wpa2Enterprise = 10,
+    Wpa3Enterprise = 11,
 }
 
-impl From<fidl_sme::Protection> for Protection {
-    fn from(protection: fidl_sme::Protection) -> Self {
-        match protection {
-            fidl_sme::Protection::Unknown => Protection::Unknown,
-            fidl_sme::Protection::Open => Protection::Open,
-            fidl_sme::Protection::Wep => Protection::Wep,
-            fidl_sme::Protection::Wpa1 => Protection::Wpa1,
-            fidl_sme::Protection::Wpa1Wpa2PersonalTkipOnly => Protection::Wpa1Wpa2PersonalTkipOnly,
-            fidl_sme::Protection::Wpa2PersonalTkipOnly => Protection::Wpa2PersonalTkipOnly,
-            fidl_sme::Protection::Wpa1Wpa2Personal => Protection::Wpa1Wpa2Personal,
-            fidl_sme::Protection::Wpa2Personal => Protection::Wpa2Personal,
-            fidl_sme::Protection::Wpa2Wpa3Personal => Protection::Wpa2Wpa3Personal,
-            fidl_sme::Protection::Wpa3Personal => Protection::Wpa3Personal,
-            fidl_sme::Protection::Wpa2Enterprise => Protection::Wpa2Enterprise,
-            fidl_sme::Protection::Wpa3Enterprise => Protection::Wpa3Enterprise,
-        }
-    }
+// The following definitions derive Serialize and Deserialize for remote types, i.e. types
+// defined in other crates. See https://serde.rs/remote-derive.html for more info.
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_common::ChannelBandwidth")]
+#[repr(u32)]
+pub(crate) enum ChannelBandwidthDef {
+    Cbw20 = 0,
+    Cbw40 = 1,
+    Cbw40Below = 2,
+    Cbw80 = 3,
+    Cbw160 = 4,
+    Cbw80P80 = 5,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ServingApInfo {
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_common::WlanChannel")]
+pub(crate) struct WlanChannelDef {
+    pub primary: u8,
+    #[serde(with = "ChannelBandwidthDef")]
+    pub cbw: fidl_common::ChannelBandwidth,
+    pub secondary80: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_internal::BssType")]
+pub(crate) enum BssTypeDef {
+    Infrastructure = 1,
+    Personal = 2,
+    Independent = 3,
+    Mesh = 4,
+    Unknown = 255,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "fidl_internal::BssDescription")]
+pub(crate) struct BssDescriptionDef {
+    pub bssid: [u8; 6],
+    #[serde(with = "BssTypeDef")]
+    pub bss_type: fidl_internal::BssType,
+    pub beacon_period: u16,
+    pub timestamp: u64,
+    pub local_time: u64,
+    pub capability_info: u16,
+    pub ies: Vec<u8>,
+    #[serde(with = "WlanChannelDef")]
+    pub channel: fidl_common::WlanChannel,
+    pub rssi_dbm: i8,
+    pub snr_db: i8,
+}
+
+#[derive(Serialize)]
+pub(crate) struct BssDescriptionWrapper(
+    #[serde(with = "BssDescriptionDef")] pub fidl_internal::BssDescription,
+);
+
+#[derive(Serialize)]
+#[serde(remote = "fidl_sme::ServingApInfo")]
+pub(crate) struct ServingApInfoDef {
     pub bssid: [u8; 6],
     pub ssid: Vec<u8>,
     pub rssi_dbm: i8,
     pub snr_db: i8,
-    pub channel: u8,
-    pub protection: Protection,
+    #[serde(with = "WlanChannelDef")]
+    pub channel: fidl_common::WlanChannel,
+    #[serde(with = "ProtectionDef")]
+    pub protection: fidl_sme::Protection,
 }
 
-impl From<fidl_sme::ServingApInfo> for ServingApInfo {
-    fn from(client_connection_info: fidl_sme::ServingApInfo) -> Self {
-        ServingApInfo {
-            bssid: client_connection_info.bssid,
-            ssid: client_connection_info.ssid,
-            rssi_dbm: client_connection_info.rssi_dbm,
-            snr_db: client_connection_info.snr_db,
-            channel: client_connection_info.channel.primary,
-            protection: Protection::from(client_connection_info.protection),
-        }
-    }
-}
+#[derive(Serialize)]
+#[serde(remote = "fidl_sme::Empty")]
+pub(crate) struct SmeEmptyDef;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum ClientStatusResponse {
-    Connected(ServingApInfo),
+#[derive(Serialize)]
+#[serde(remote = "fidl_sme::ClientStatusResponse")]
+pub(crate) enum ClientStatusResponseDef {
+    Connected(#[serde(with = "ServingApInfoDef")] fidl_sme::ServingApInfo),
     Connecting(Vec<u8>),
-    Idle,
+    #[serde(with = "SmeEmptyDef")]
+    Idle(fidl_sme::Empty),
 }
 
-impl From<fidl_sme::ClientStatusResponse> for ClientStatusResponse {
-    fn from(status: fidl_sme::ClientStatusResponse) -> Self {
-        match status {
-            fidl_sme::ClientStatusResponse::Connected(client_connection_info) => {
-                ClientStatusResponse::Connected(client_connection_info.into())
-            }
-            fidl_sme::ClientStatusResponse::Connecting(ssid) => {
-                ClientStatusResponse::Connecting(ssid)
-            }
-            fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty {}) => ClientStatusResponse::Idle,
-        }
-    }
-}
+#[derive(Serialize)]
+pub(crate) struct ClientStatusResponseWrapper(
+    #[serde(with = "ClientStatusResponseDef")] pub fidl_sme::ClientStatusResponse,
+);
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum MacRole {
+#[derive(Serialize)]
+#[serde(remote = "fidl_fuchsia_wlan_device::MacRole")]
+pub(crate) enum MacRoleDef {
     Client = 1,
     Ap = 2,
     Mesh = 3,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct QueryIfaceResponse {
-    pub role: MacRole,
+#[derive(Serialize)]
+#[serde(remote = "fidl_common::DriverFeature")]
+pub(crate) enum DriverFeatureDef {
+    ScanOffload = 0,
+    RateSelection = 1,
+    Synth = 2,
+    TxStatusReport = 3,
+    Dfs = 4,
+    ProbeRespOffload = 5,
+    SaeSmeAuth = 6,
+    SaeDriverAuth = 7,
+    Mfp = 8,
+    TempSoftmac = 2718281828,
+}
+#[derive(Serialize)]
+pub(crate) struct DriverFeatureWrapper(
+    #[serde(with = "DriverFeatureDef")] pub fidl_common::DriverFeature,
+);
+
+#[derive(Serialize)]
+pub(crate) struct QueryIfaceResponseDef {
+    #[serde(with = "MacRoleDef")]
+    pub role: fidl_fuchsia_wlan_device::MacRole,
     pub id: u16,
     pub phy_id: u16,
     pub phy_assigned_id: u16,
     pub sta_addr: [u8; 6],
+    pub driver_features: Vec<DriverFeatureWrapper>,
+}
+
+#[derive(Serialize)]
+pub(crate) struct QueryIfaceResponseWrapper(pub QueryIfaceResponseDef);
+
+impl From<fidl_fuchsia_wlan_device_service::QueryIfaceResponse> for QueryIfaceResponseDef {
+    fn from(resp: fidl_fuchsia_wlan_device_service::QueryIfaceResponse) -> QueryIfaceResponseDef {
+        QueryIfaceResponseDef {
+            role: resp.role,
+            id: resp.id,
+            phy_id: resp.phy_id,
+            phy_assigned_id: resp.phy_assigned_id,
+            sta_addr: resp.sta_addr,
+            driver_features: resp
+                .driver_features
+                .iter()
+                .map(|df| DriverFeatureWrapper(*df))
+                .collect(),
+        }
+    }
 }
