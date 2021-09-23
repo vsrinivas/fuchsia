@@ -5,6 +5,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/audio_core/mixer/mixer.h"
+
 namespace media::audio::mixer {
 
 PositionManager::PositionManager(int32_t num_source_chans, int32_t num_dest_chans,
@@ -54,6 +56,9 @@ void PositionManager::CheckPositions(int64_t dest_frames, int64_t* dest_offset_p
 
 void PositionManager::SetDestValues(float* dest_ptr, int64_t dest_frames,
                                     int64_t* dest_offset_ptr) {
+  if (kMixerPositionTraceEvents) {
+    TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "dest_offset", *dest_offset_ptr);
+  }
   CheckDestPositions(dest_frames, dest_offset_ptr);
 
   dest_ptr_ = dest_ptr;
@@ -76,6 +81,11 @@ void PositionManager::CheckDestPositions(int64_t dest_frames, int64_t* dest_offs
 
 void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t source_frames,
                                       Fixed* source_offset_ptr) {
+  if (kMixerPositionTraceEvents) {
+    TRACE_DURATION("audio", __func__, "source_frames", source_frames, "source_offset",
+                   source_offset_ptr->Integral().Floor(), "source_offset.frac",
+                   source_offset_ptr->Fraction().raw_value());
+  }
   source_void_ptr_ = const_cast<void*>(source_void_ptr);
   source_frames_ = source_frames;
   source_offset_ptr_ = source_offset_ptr;
@@ -106,6 +116,12 @@ void PositionManager::CheckSourcePositions(int64_t source_frames, int64_t frac_s
 
 void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t rate_modulo,
                                     uint64_t denominator, uint64_t* source_pos_mod) {
+  if (kMixerPositionTraceEvents) {
+    TRACE_DURATION("audio", __func__, "step_size",
+                   Fixed::FromRaw(frac_step_size).Integral().Floor(), "step_size.frac",
+                   Fixed::FromRaw(frac_step_size).Fraction().raw_value(), "rate_modulo",
+                   rate_modulo, "denominator", denominator);
+  }
   CheckRateValues(frac_step_size, rate_modulo, denominator, source_pos_mod);
 
   frac_step_size_ = frac_step_size;

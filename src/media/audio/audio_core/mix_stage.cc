@@ -345,13 +345,23 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
                           const ReadableStream::Buffer& source_buffer) {
   TRACE_DURATION("audio", "MixStage::ProcessMix");
-
   // We are only called by MixStream, which has guaranteed these.
   auto& info = mixer.source_info();
   auto& bookkeeping = mixer.bookkeeping();
   FX_DCHECK(cur_mix_job_.buf_frames > 0);
   FX_DCHECK(info.frames_produced < cur_mix_job_.buf_frames);
   FX_DCHECK(info.dest_frames_to_frac_source_frames.subject_delta());
+
+  if (kMixerPositionTraceEvents) {
+    TRACE_DURATION("audio", "MixStage::ProcessMix position", "start",
+                   source_buffer.start().Integral().Floor(), "start.frac",
+                   source_buffer.start().Fraction().raw_value(), "length",
+                   source_buffer.length().Integral().Floor(), "length.frac",
+                   source_buffer.length().Fraction().raw_value(), "next_source_frame",
+                   info.next_source_frame.Integral().Floor(), "next_source_frame.frac",
+                   info.next_source_frame.Fraction().raw_value(), "frames_produced",
+                   info.frames_produced, "buf_frames", cur_mix_job_.buf_frames);
+  }
 
   // At this point we know we need to consume some source data, but we don't yet know how much.
   // Here is how many destination frames we still need to produce, for this mix job.
@@ -437,6 +447,9 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
         Fixed(source_for_first_packet_frame - source_pos_edge_first_mix_frame);
     initial_dest_advance = dest_to_frac_source.Inverse().Scale(first_source_mix_point.raw_value(),
                                                                TimelineRate::RoundingMode::Ceiling);
+    if (kMixerPositionTraceEvents) {
+      TRACE_DURATION("audio", "initial_dest_advance", "initial_dest_advance", initial_dest_advance);
+    }
     auto previous_source_running_position = info.next_source_frame;
     FX_CHECK(initial_dest_advance > 0);
     info.AdvanceAllPositionsBy(initial_dest_advance, bookkeeping);

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_MIXER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/trace/event.h>
 
 #include <memory>
 
@@ -15,6 +16,9 @@
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
+
+// Enable to emit trace events containing the Mixer position state.
+constexpr bool kMixerPositionTraceEvents = false;
 
 // The Mixer class provides format-conversion, rechannelization, rate-connversion, and gain/mute
 // scaling. Each source in a multi-stream mix has its own Mixer instance. When Mixer::Mix() is
@@ -42,6 +46,9 @@ class Mixer {
     // discontinuity occurs. It sets next_dest_frame to the specified value and calculates
     // next_source_frame based on the dest_frames_to_frac_source_frames transform.
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", __func__, "target_dest_frame", target_dest_frame);
+      }
       next_dest_frame = target_dest_frame;
       next_source_frame =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
@@ -63,6 +70,11 @@ class Mixer {
     void AdvancePositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping,
                             bool advance_source_pos_modulo) {
       int64_t frac_source_frame_delta = bookkeeping.step_size.raw_value() * dest_frames;
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
+                       advance_source_pos_modulo, "frac_source_frame_delta",
+                       frac_source_frame_delta);
+      }
 
       if (bookkeeping.rate_modulo()) {
         // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
@@ -103,6 +115,12 @@ class Mixer {
       }
       next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
       next_dest_frame += dest_frames;
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
+                       next_source_frame.Integral().Floor(), "next_source_frame.frac",
+                       next_source_frame.Fraction().raw_value(), "next_dest_frame", next_dest_frame,
+                       "source_pos_modulo", bookkeeping.source_pos_modulo);
+      }
     }
 
    public:
@@ -214,6 +232,9 @@ class Mixer {
 
     void SetRateModuloAndDenominator(uint64_t rate_mod, uint64_t denom,
                                      SourceInfo* info = nullptr) {
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", __func__, "rate_mod", rate_mod, "denom", denom);
+      }
       FX_CHECK(denom > 0);
       FX_CHECK(rate_mod < denom);
       if (!rate_mod) {

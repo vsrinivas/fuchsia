@@ -97,7 +97,8 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
 }
 
 std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(Fixed frame, int64_t frame_count) {
-  TRACE_DURATION("audio", "PacketQueue::ReadLock");
+  TRACE_DURATION("audio", "PacketQueue::ReadLock", "frame", frame.Integral().Floor(), "frame.frac",
+                 frame.Fraction().raw_value(), "frame_count", frame_count);
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FX_DCHECK(!processing_in_progress_);
@@ -116,7 +117,7 @@ std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(Fixed frame, int64_t
 }
 
 void PacketQueue::ReadUnlock(bool fully_consumed) {
-  TRACE_DURATION("audio", "PacketQueue::ReadUnlock");
+  TRACE_DURATION("audio", "PacketQueue::ReadUnlock", "fully_consumed", fully_consumed);
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FX_DCHECK(processing_in_progress_);
@@ -176,10 +177,9 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ref_time_to_frac_presentation_
 
 void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                                   zx::duration underflow_duration) {
-  TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_THREAD,
-                "floor(frac_source_start)", frac_source_start.Floor(),
-                "floor(frac_source_mix_point)", frac_source_mix_point.Floor(), "duration_ns",
-                underflow_duration.to_nsecs());
+  TRACE_DURATION("audio", "PacketQueue::ReportUnderflow", "floor(frac_source_start)",
+                 frac_source_start.Floor(), "floor(frac_source_mix_point)",
+                 frac_source_mix_point.Floor(), "duration_ns", underflow_duration.to_nsecs());
   TRACE_ALERT("audio", "audiounderflow");
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
@@ -223,9 +223,8 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
 }
 
 void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) {
-  TRACE_INSTANT("audio", "PacketQueue::ReportPartialUnderflow", TRACE_SCOPE_THREAD,
-                "floor(frac_source_offset)", frac_source_offset.Floor(), "dest_mix_offset",
-                dest_mix_offset);
+  TRACE_DURATION("audio", "PacketQueue::ReportPartialUnderflow", "floor(frac_source_offset)",
+                 frac_source_offset.Floor(), "dest_mix_offset", dest_mix_offset);
 
   // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio

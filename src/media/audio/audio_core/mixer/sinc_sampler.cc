@@ -107,6 +107,11 @@ inline void
 SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFramesToChannelStrip(
     const void* source_void_ptr, int64_t next_source_idx_to_copy, const int64_t frames_needed,
     ChannelStrip* channel_strip, int64_t next_cache_idx_to_fill) {
+  if (kMixerPositionTraceEvents) {
+    TRACE_DURATION("audio", __func__, "next_source_idx_to_copy", next_source_idx_to_copy,
+                   "frames_needed", frames_needed, "next_cache_idx_to_fill",
+                   next_cache_idx_to_fill);
+  }
   using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
 
   const SourceSampleType* source_ptr = static_cast<const SourceSampleType*>(source_void_ptr);
@@ -199,6 +204,10 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
       auto cache_center_idx = Floor(frac_cache_offset);
       FX_CHECK(Ceiling(frac_cache_offset - frac_neg_width) >= 0)
           << Ceiling(frac_cache_offset - frac_neg_width) << " should be >= 0";
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", "SincSampler::Mix chunk", "next_source_idx_to_copy",
+                       next_source_idx_to_copy, "cache_center_idx", cache_center_idx);
+      }
 
       while (position_.FrameCanBeMixed() &&
              frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength) {

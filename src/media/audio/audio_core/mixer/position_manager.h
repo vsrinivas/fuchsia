@@ -5,6 +5,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_POSITION_MANAGER_H_
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
@@ -73,6 +74,12 @@ class PositionManager {
   // Write back the final offset values
   // Not necessarily required to be inlined, as this is only invoked once per Mix() call.
   void UpdateOffsets() {
+    if (kMixerPositionTraceEvents) {
+      TRACE_DURATION("audio", __func__, "source_offset",
+                     Fixed::FromRaw(frac_source_offset_).Integral().Floor(), "source_offset.frac",
+                     Fixed::FromRaw(frac_source_offset_).Fraction().raw_value(), "dest_offset",
+                     dest_offset_, "source_pos_modulo", source_pos_modulo_);
+    }
     *source_offset_ptr_ = Fixed::FromRaw(frac_source_offset_);
     *dest_offset_ptr_ = dest_offset_;
     if (rate_modulo_) {
