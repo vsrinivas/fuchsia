@@ -78,12 +78,13 @@ void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
     fidl::WireResponse<fio::DirectoryAdmin::QueryFilesystem>* response = result.Unwrap();
     fio::wire::FilesystemInfo* info = response->info.get();
     if (info != nullptr) {
-      stats.CreateUint("partition_size_bytes", info->total_bytes, inspector);
       stats.CreateUint("fvm_free_bytes", info->free_shared_pool_bytes, inspector);
-      stats.CreateUint("total_inodes", info->total_nodes, inspector);
+      stats.CreateUint("allocated_inodes", info->total_nodes, inspector);
       stats.CreateUint("used_inodes", info->used_nodes, inspector);
       // Total bytes is the size of the partition plus the size it could conceivably grow into.
+      // TODO(fxbug.dev/84626): Remove this misleading metric.
       stats.CreateUint("total_bytes", info->total_bytes + info->free_shared_pool_bytes, inspector);
+      stats.CreateUint("allocated_bytes", info->total_bytes, inspector);
       stats.CreateUint("used_bytes", info->used_bytes, inspector);
     } else {
       stats.CreateString("error", "Query failed", inspector);
