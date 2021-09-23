@@ -22,7 +22,12 @@
 
             // Volume size is non-zero, and amount used is non-negative.
             "bootstrap/fshost:root/data_stats/stats:total_bytes WHERE [a] a > 0",
+            "bootstrap/fshost:root/data_stats/stats:allocated_bytes WHERE [a] a > 0",
             "bootstrap/fshost:root/data_stats/stats:used_bytes WHERE [a] a >= 0",
+
+            // Inode allocation is non-zero and usage is non-negative.
+            "bootstrap/fshost:root/data_stats/stats:allocated_inodes WHERE [a] a > 0",
+            "bootstrap/fshost:root/data_stats/stats:used_inodes WHERE [a] a >= 0",
 
             // Lookup stats for blob opening are reported and non-negative.
             "bootstrap/fshost:root/lookup_stats:blobs_opened WHERE [a] a >= 0",
