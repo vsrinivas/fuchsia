@@ -702,6 +702,8 @@ pub enum zx_packet_type_t {
     ZX_PKT_TYPE_GUEST_BELL = 3,
     ZX_PKT_TYPE_GUEST_MEM = 4,
     ZX_PKT_TYPE_GUEST_IO = 5,
+    ZX_PKT_TYPE_GUEST_VCPU = 6,
+    ZX_PKT_TYPE_INTERRUPT = 7,
     ZX_PKT_TYPE_PAGE_REQUEST = 9,
     #[doc(hidden)]
     __Nonexhaustive,
