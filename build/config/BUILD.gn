@@ -524,7 +524,10 @@ group("no_frame_pointers_deps") {
 
 config("suppress_iterator_warnings") {
   defines = [ "_LIBCPP_DISABLE_DEPRECATION_WARNINGS" ]
-  visibility = [ "//third_party/flatbuffers/*" ]
+  visibility = [
+    "//third_party/flatbuffers/*",
+    "//third_party/grpc/*",
+  ]
 }
 
 config("default_warnings") {
