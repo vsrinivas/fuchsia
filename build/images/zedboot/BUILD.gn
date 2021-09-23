@@ -47,6 +47,7 @@ assemble_system("zedboot_assembly") {
     "kernel.enable-debugging-syscalls=true",
     "kernel.enable-serial-syscalls=true",
     "virtcon.colorscheme=special",
+    "virtcon.dpi=240,360,480",
   ]
 
   bootfs_labels = [
@@ -71,7 +72,7 @@ assemble_system("zedboot_assembly") {
 
   # For debugging.
   bootfs_labels += [
-    "//src/bringup/bin/virtcon:bootfs",
+    "//src/bringup/bin/virtcon2:bootfs",
     "//src/connectivity/network/bin/ping",
     "//src/devices/nand/bin/nand-util",
     "//src/devices/nand/drivers/broker:nand-broker",
