@@ -5,10 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/driver_manifest.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
@@ -40,21 +38,15 @@ fuchsia_driver_component("ddk-fallback-test-driver") {
   deps = [ ":ddk-fallback-test-driver-module" ]
 }
 
-isolated_devmgr_v2_component("devmgr") {
-  deps = [
-    ":ddk-fallback-test-driver",
-    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
-  ]
-}
-
 test("test") {
   output_name = "ddk-fallback-test"
   sources = [ "test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -64,17 +56,12 @@ test("test") {
   ]
 }
 
-fuchsia_component("ddk-fallback-test") {
-  testonly = true
-  manifest = "meta/ddk-fallback-test.cml"
-  deps = [ ":test" ]
-}
-
-fuchsia_test_package("ddk-fallback-test-v2-package") {
+fuchsia_unittest_package("ddk-fallback-test-v2-package") {
   package_name = "ddk-fallback-test-v2"
-  test_components = [ ":ddk-fallback-test" ]
   deps = [
-    ":devmgr",
-    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
+    ":ddk-fallback-test-driver",
+    ":test",
+    "//sdk/lib/driver_test_realm",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }
