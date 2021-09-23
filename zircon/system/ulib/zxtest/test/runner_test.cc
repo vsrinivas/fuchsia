@@ -144,6 +144,7 @@ void RunnerRegisterTest() {
   TestRef ref =
       runner.RegisterTest<Test, FakeTest>(kTestCaseName, kTestName, kFileName, kLineNumber);
 
+  ZX_ASSERT_MSG(!runner.IsRunning(), "Runner::IsRunning should be false by default.");
   ZX_ASSERT_MSG(ref.test_case_index == 0, "TestRef::test_case_index is wrong.\n");
   ZX_ASSERT_MSG(ref.test_index == 0, "TestRef::test_index is wrong.\n");
 

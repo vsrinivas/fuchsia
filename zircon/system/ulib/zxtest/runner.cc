@@ -96,6 +96,7 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 }
 
 int Runner::Run(const Runner::Options& options) {
+  is_running_ = true;
   RegisterParameterizedTests();
 
   options_ = &options;
@@ -141,7 +142,7 @@ int Runner::Run(const Runner::Options& options) {
     event_broadcaster_.OnIterationEnd(*this, i);
   }
   event_broadcaster_.OnProgramEnd(*this);
-
+  is_running_ = false;
   return test_driver_.HadAnyFailures() ? -1 : 0;
 }
 

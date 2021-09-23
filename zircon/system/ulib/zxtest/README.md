@@ -10,8 +10,16 @@ This document may reference fatal and non-fatal failures. A failure is the resul
 A fatal failure requires the test to abort or stop execution. On the other hand a non fatal failure allows the test execution to continue uninterrupted.
 A fatal failure is triggered by macros starting with ``ASSERT_*`` and non fatal failures are triggered by macros starting with ``EXPECT_*``.
 
+## Context Check
+
+The testing mechanisms rely on a global object for keeping track of test execution results. For this reason, it is enforced that the zxtest entry point (see below)
+is called before any ``ASSERT_*`` or ``EXPECT_*`` macros are used. Failing to do so will cause the program to abort.
+
+Care must be taken when creating test utilities that are dynamically linked, since this would have the utilities have a separate instance of zxtest statically linked to them, meaning that each dynamically linked
+library would have its own instance of the global object (zxtest::Runner), which would prevent any sort of state sharing or failure propagation to the test runtime. The same applies for a separate process, each process would have its own instance of zxtest, which would prevent propagating failures from one runtime to the other.
+
 ## Bugs and Feature Requests
-* Please report any bug under ZX Jira component, and assign it to any user in the OWNERS file.
+* Please report any bug under Zircon > Testing, and assign it to any user in the OWNERS file.
 * For feature requests, please describe the use case and the problems the missing feature is causing.
 
 

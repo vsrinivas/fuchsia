@@ -15,6 +15,8 @@
 #include <zxtest/c/zxtest.h>
 #undef ZXTEST_INCLUDE_INTERNAL_HEADERS
 
+#include "zircon/assert.h"
+
 #ifdef __Fuchsia__
 #include <zxtest/base/death-statement.h>
 #endif
@@ -140,6 +142,8 @@ void zxtest_runner_skip_current_test(const char* file, int line, const char* mes
   zxtest::Message mesg(message, {.filename = file, .line_number = line});
   zxtest::Runner::GetInstance()->SkipCurrent(mesg);
 }
+
+bool zxtest_runner_is_running(void) { return zxtest::Runner::GetInstance()->IsRunning(); }
 
 #ifdef __Fuchsia__
 bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult result,

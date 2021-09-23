@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #ifdef __Fuchsia__
 #include <zircon/status.h>
@@ -41,6 +42,9 @@ void zxtest_runner_notify_assertion(const char* desc, const char* expected,
                                     const char* expected_var, const char* actual,
                                     const char* actual_var, const char* file, int64_t line,
                                     bool is_fatal);
+
+// Returns true if zxtest is currently executing tests.
+bool zxtest_runner_is_running(void);
 
 // When an assertion happens out of the main test body, this allows keeping track of whether the
 // current flow should abort.
@@ -138,6 +142,11 @@ __END_CDECLS
 // TestCase and Test to be macro-expanded when taking the strings #TestCase
 // and #Test.
 #define TEST(TestCase, Test) _ZXTEST_REGISTER(TestCase, Test)
+
+#define _ZXTEST_CHECK_RUNNING()                                               \
+  do {                                                                        \
+    ZX_ASSERT_MSG(zxtest_runner_is_running(), "See Context check in README"); \
+  } while (0)
 
 // Helper function to print variables.
 #define _ZXTEST_SPRINT_PRINTER(var, buffer, size) \
@@ -238,6 +247,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)          \
   do {                                                                                       \
+    _ZXTEST_CHECK_RUNNING();                                                                 \
     const void* _actual = (const void*)(actual);                                             \
     const void* _expected = (const void*)(expected);                                         \
     if (!(op(_actual, _expected, size))) {                                                   \
@@ -252,6 +262,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)         \
   do {                                                                                       \
+    _ZXTEST_CHECK_RUNNING();                                                                 \
     const type _actual = (const type)(actual);                                               \
     const type _expected = (const type)(expected);                                           \
     if (!(op(_actual, _expected))) {                                                         \
@@ -270,6 +281,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                            \
   do {                                                                      \
+    _ZXTEST_CHECK_RUNNING();                                                \
     _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                      \
     zxtest_runner_fail_current_test(fatal, __FILE__, __LINE__, msg_buffer); \
   } while (0)
@@ -284,6 +296,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define ZXTEST_SKIP(desc, ...)                                       \
   do {                                                               \
+    _ZXTEST_CHECK_RUNNING();                                         \
     _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);               \
     zxtest_runner_skip_current_test(__FILE__, __LINE__, msg_buffer); \
     return;                                                          \
@@ -292,6 +305,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 #ifdef __Fuchsia__
 #define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)        \
   do {                                                                                \
+    _ZXTEST_CHECK_RUNNING();                                                          \
     const zx_status_t _actual = (const zx_status_t)(actual);                          \
     const zx_status_t _expected = (const zx_status_t)(expected);                      \
     if (!(op(_actual, _expected))) {                                                  \
@@ -306,6 +320,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 #define _ZXTEST_DEATH_STATUS_EXCEPTION kDeathResultRaiseException
 #define _ZXTEST_DEATH_STATEMENT(statement, expected_result, desc, ...)                  \
   do {                                                                                  \
+    _ZXTEST_CHECK_RUNNING();                                                            \
     _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);                                  \
     if (!zxtest_death_statement_execute(statement, expected_result, __FILE__, __LINE__, \
                                         msg_buffer)) {                                  \

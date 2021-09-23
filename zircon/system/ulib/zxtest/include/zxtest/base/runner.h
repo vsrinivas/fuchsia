@@ -277,6 +277,9 @@ class Runner {
   // Returns a pointer to the |LogSink| where the |reporter_| is running to.
   Reporter* mutable_reporter() { return &reporter_; }
 
+  // Returns true if the runner is currently executing tests.
+  bool IsRunning() const { return is_running_; }
+
   void EnableAsserts() { return test_driver_.EnableAsserts(); }
   void DisableAsserts() { return test_driver_.DisableAsserts(); }
 
@@ -326,7 +329,10 @@ class Runner {
 
   fbl::Vector<std::unique_ptr<zxtest::internal::ParameterizedTestCaseInfo>>
       parameterized_test_info_;
+
   bool should_register_parameterized_tests = true;
+
+  bool is_running_ = false;
 };
 
 // Entry point for C++

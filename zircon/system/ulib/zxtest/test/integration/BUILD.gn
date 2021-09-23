@@ -8,9 +8,18 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":zxtest-context($host_toolchain)",
     ":zxtest-integration($host_toolchain)",
     ":zxtest-integration-test-pkg",
   ]
+}
+
+if (is_host) {
+  test("zxtest-context") {
+    output_name = "zxtest-context-test"
+    sources = [ "context_test.cc" ]
+    deps = [ "//zircon/public/lib/zxtest" ]
+  }
 }
 
 test("zxtest-integration") {
