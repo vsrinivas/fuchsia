@@ -1642,3 +1642,16 @@
   reviewers: ['abarth@google.com', 'abdulla@google.com', 'ampearce@google.com', 'eieio@google.com', 'hansens@google.com', 'jamesr@google.com', 'jocelyndang@google.com', 'yifeit@google.com']
   submitted: '2021-08-04'
   reviewed: '2021-09-21'
+
+- name: 'RFC-0127'
+  title: 'Structured Configuration'
+  short_description: 'A new configuration system to solve a set of common component configuration problems.'
+  authors: ['jsankey@google.com']
+  file: '0127_structured_configuration.md'
+  area: ['Component Framework']
+  issue: ['52436']
+  gerrit_change_id: ['549661']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'abarth@google.com', 'adamperry@google.com', 'ampearce@google.com', 'crjohns@google.com', 'curtisgalloway@google.com', 'ddorwin@google.com', 'ejia@google.com', 'geb@google.com', 'shayba@google.com', 'surajmalhotra@google.com', 'wittrock@google.com']
+  submitted: '2021-07-08'
+  reviewed: '2021-09-22'

@@ -265,3 +265,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0125_shortlink_fuchsia_dev.md
 - title: "RFC-0126: Driver Runtime"
   path: /docs/contribute/governance/rfcs/0126_driver_runtime.md
+- title: "RFC-0127: Structured Configuration"
+  path: /docs/contribute/governance/rfcs/0127_structured_configuration.md
