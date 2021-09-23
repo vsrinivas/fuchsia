@@ -24,22 +24,37 @@ Future<void> main(List<String> args) async {
   final parser = ArgParser()
     ..addFlag('showOverlay', defaultsTo: false)
     ..addFlag('hitTestable', defaultsTo: true)
-    ..addFlag('focusable', defaultsTo: true);
+    ..addFlag('focusable', defaultsTo: true)
+    ..addFlag('useFlatland', defaultsTo: false);
   final arguments = parser.parse(args);
   for (final option in arguments.options) {
     print('parent-view: $option: ${arguments[option]}');
   }
 
-  final childViewToken = _launchApp(_kChildAppUrl);
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: TestApp(
-      FuchsiaViewConnection(childViewToken),
-      showOverlay: arguments['showOverlay'],
-      hitTestable: arguments['hitTestable'],
-      focusable: arguments['focusable'],
-    ),
-  ));
+  final useFlatland = arguments['useFlatland'];
+  if (useFlatland) {
+    final viewportCreationToken = _launchFlatlandApp(_kChildAppUrl);
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TestApp(
+        FuchsiaViewConnection.flatland(viewportCreationToken),
+        showOverlay: arguments['showOverlay'],
+        hitTestable: arguments['hitTestable'],
+        focusable: arguments['focusable'],
+      ),
+    ));
+  } else {
+    final childViewToken = _launchGfxApp(_kChildAppUrl);
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TestApp(
+        FuchsiaViewConnection(childViewToken),
+        showOverlay: arguments['showOverlay'],
+        hitTestable: arguments['hitTestable'],
+        focusable: arguments['focusable'],
+      ),
+    ));
+  }
 }
 
 class TestApp extends StatelessWidget {
@@ -102,7 +117,41 @@ class TestApp extends StatelessWidget {
   }
 }
 
-ViewHolderToken _launchApp(String componentUrl) {
+ViewportCreationToken _launchFlatlandApp(String componentUrl) {
+  final incoming = Incoming();
+  final componentController = ComponentControllerProxy();
+
+  final launcher = LauncherProxy();
+  Incoming.fromSvcPath()
+    ..connectToService(launcher)
+    ..close();
+  launcher.createComponent(
+    LaunchInfo(
+      url: componentUrl,
+      directoryRequest: incoming.request().passChannel(),
+    ),
+    componentController.ctrl.request(),
+  );
+  launcher.ctrl.close();
+
+  ViewProviderProxy viewProvider = ViewProviderProxy();
+  incoming
+    ..connectToService(viewProvider)
+    ..close();
+
+  final viewTokens = ChannelPair();
+  assert(viewTokens.status == ZX.OK);
+  final viewportCreationToken = ViewportCreationToken(value: viewTokens.first);
+  final viewCreationToken = ViewCreationToken(value: viewTokens.second);
+
+  final createViewArgs = CreateView2Args(viewCreationToken: viewCreationToken);
+  viewProvider.createView2(createViewArgs);
+  viewProvider.ctrl.close();
+
+  return viewportCreationToken;
+}
+
+ViewHolderToken _launchGfxApp(String componentUrl) {
   final incoming = Incoming();
   final componentController = ComponentControllerProxy();
 

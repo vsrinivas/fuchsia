@@ -20,8 +20,11 @@ import 'pointer_injector.dart';
 /// Fuchsia data types. (Eventually, [FuchsiaView] and [FuchsiaViewController]
 /// will be moved to Flutter framework, which cannot have Fuchsia data types.)
 class FuchsiaViewConnection extends FuchsiaViewController {
-  /// The scenic view tree token when the view is attached.
-  final ViewHolderToken viewHolderToken;
+  /// The Gfx view tree token when the view is attached.
+  final ViewHolderToken? viewHolderToken;
+
+  /// The Flatland token when the view is attached.
+  final ViewportCreationToken? viewportCreationToken;
 
   /// The handle to the view used for [requestFocus] calls.
   final ViewRef? viewRef;
@@ -54,15 +57,40 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     FuchsiaViewConnectionCallback? onViewDisconnected,
     FuchsiaViewConnectionStateCallback? onViewStateChanged,
     this.usePointerInjection = false,
-  })  : assert(viewHolderToken.value != null && viewHolderToken.value.isValid),
+  })  : assert(viewHolderToken!.value != null && viewHolderToken.value.isValid),
         assert(
             viewRef?.reference == null || viewRef!.reference.handle!.isValid),
         assert(!usePointerInjection || viewRef?.reference != null),
+        viewportCreationToken = null,
         _onViewConnected = onViewConnected,
         _onViewDisconnected = onViewDisconnected,
         _onViewStateChanged = onViewStateChanged,
         super(
-          viewId: viewHolderToken.value.handle!.handle,
+          viewId: viewHolderToken!.value.handle!.handle,
+          onViewConnected: _handleViewConnected,
+          onViewDisconnected: _handleViewDisconnected,
+          onViewStateChanged: _handleViewStateChanged,
+          onPointerEvent: _handlePointerEvent,
+        );
+
+  FuchsiaViewConnection.flatland(
+    this.viewportCreationToken, {
+    this.viewRef,
+    FuchsiaViewConnectionCallback? onViewConnected,
+    FuchsiaViewConnectionCallback? onViewDisconnected,
+    FuchsiaViewConnectionStateCallback? onViewStateChanged,
+    this.usePointerInjection = false,
+  })  : assert(viewportCreationToken!.value != null &&
+            viewportCreationToken.value.isValid),
+        assert(
+            viewRef?.reference == null || viewRef!.reference.handle!.isValid),
+        assert(!usePointerInjection || viewRef?.reference != null),
+        viewHolderToken = null,
+        _onViewConnected = onViewConnected,
+        _onViewDisconnected = onViewDisconnected,
+        _onViewStateChanged = onViewStateChanged,
+        super(
+          viewId: viewportCreationToken!.value.handle!.handle,
           onViewConnected: _handleViewConnected,
           onViewDisconnected: _handleViewDisconnected,
           onViewStateChanged: _handleViewStateChanged,
