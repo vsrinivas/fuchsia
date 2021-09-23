@@ -52,6 +52,7 @@ cxxbridge-cmd = "1.0.49"
 darling = "0.12.0"
 dashmap = "4.0.2"
 data-encoding = "2.1.2"
+deepsize = { version = "0.2.0", features = ["chrono", "slab", "smallvec"] }
 derivative = "2.1.1"
 derp = "0.0.13"
 difference = "2.0.0"

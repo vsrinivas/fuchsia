@@ -833,6 +833,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
 
 [[package]]
+name = "deepsize"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cdb987ec36f6bf7bfbea3f928b75590b736fc42af8e54d97592481351b2b96c"
+dependencies = [
+ "chrono",
+ "deepsize_derive",
+ "slab",
+ "smallvec 1.6.1",
+]
+
+[[package]]
+name = "deepsize_derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eefac8b754bebccb018f15a8ff0015a3f58fb298825f5bd0dcf3e7e2c017e992"
+dependencies = [
+ "proc-macro2 0.4.27",
+ "quote 0.6.11",
+ "syn 0.15.26",
+]
+
+[[package]]
 name = "deflate"
 version = "0.7.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1089,6 +1112,7 @@ dependencies = [
  "darling",
  "dashmap",
  "data-encoding",
+ "deepsize",
  "derivative",
  "derp",
  "difference",

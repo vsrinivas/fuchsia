@@ -162,6 +162,10 @@ group("data-encoding") {
   deps = [ ":data-encoding-v2_3_2" ]
 }
 
+group("deepsize") {
+  deps = [ ":deepsize-v0_2_0" ]
+}
+
 group("derivative") {
   deps = [ ":derivative-v2_1_1($host_toolchain)" ]
 }
@@ -3005,6 +3009,62 @@ rust_library("data-encoding-v2_3_2") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("deepsize-v0_2_0") {
+  crate_name = "deepsize"
+  crate_root = "//third_party/rust_crates/vendor/deepsize/src/lib.rs"
+  output_name = "deepsize-46b9419af1e54be1"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":deepsize_derive-v0_1_1($host_toolchain)" ]
+  deps += [ ":slab-v0_4_2" ]
+  deps += [ ":smallvec-v1_6_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=46b9419af1e54be1",
+    "-Cextra-filename=-46b9419af1e54be1",
+    "--cfg=feature=\"chrono\"",
+    "--cfg=feature=\"deepsize_derive\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"derive\"",
+    "--cfg=feature=\"slab\"",
+    "--cfg=feature=\"smallvec\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_proc_macro("deepsize_derive-v0_1_1") {
+  crate_name = "deepsize_derive"
+  crate_root = "//third_party/rust_crates/vendor/deepsize_derive/src/lib.rs"
+  output_name = "deepsize_derive-128c85a62edd3382"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v0_4_27" ]
+  deps += [ ":quote-v0_6_11" ]
+  deps += [ ":syn-v0_15_26" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=128c85a62edd3382",
+    "-Cextra-filename=-128c85a62edd3382",
   ]
 }
 
