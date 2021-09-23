@@ -97,7 +97,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//src/developer/shell/josh/*",
     "//src/developer/shell/mirror/*",
     "//src/devices/sysmem/tests/sysmem/fuzz/*",
-    "//src/devices/usb/drivers/xhci-rewrite/*",
+    "//src/devices/usb/drivers/xhci/*",
     "//src/diagnostics/archivist/tests/logs/cpp/*",
     "//src/fonts/font_info/*",
     "//src/graphics/drivers/msd-intel-gen/tests/unit_tests/*",

@@ -137,7 +137,7 @@ zx_library("fake_ddk") {
     "//src/devices/usb/drivers/usb-hub/*",
     "//src/devices/usb/drivers/usb-peripheral/*",
     "//src/devices/usb/drivers/usb-virtual-bus/*",
-    "//src/devices/usb/drivers/xhci-rewrite/*",
+    "//src/devices/usb/drivers/xhci/*",
     "//src/graphics/display/drivers/aml-canvas/*",
     "//src/graphics/display/drivers/aml-hdmi/*",
     "//src/graphics/display/drivers/display/tests/*",

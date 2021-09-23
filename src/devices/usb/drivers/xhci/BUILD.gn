@@ -1,0 +1,253 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/test.gni")
+
+driver_bind_rules("usb_xhci_bind") {
+  rules = "usb_xhci.bind"
+  header_output = "usb_xhci_bind.h"
+  bind_output = "xhci.bindbc"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci:serial",
+    "//src/devices/bind/fuchsia.pci:serial.usb",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_module("xhci-driver") {
+  output_name = "xhci"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "usb-xhci.cc",
+    "xhci-device-state.cc",
+    "xhci-enumeration.cc",
+    "xhci-event-ring.cc",
+    "xhci-interrupter.cc",
+    "xhci-transfer-ring.cc",
+  ]
+  deps = [
+    ":usb_xhci_bind",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.bus:fuchsia.hardware.usb.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.hub:fuchsia.hardware.usb.hub_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
+    "//sdk/lib/fit-promise",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/dma-buffer",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/lib/synchronous-executor",
+    "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/xdc-server-utils",
+  ]
+}
+
+fuchsia_driver_component("xhci") {
+  component_name = "xhci"
+  deps = [ ":xhci-driver" ]
+}
+
+source_set("test-libs") {
+  testonly = true
+  public_deps = [
+    ":usb_xhci_bind",
+    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.hci:fuchsia.hardware.usb.hci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/lib/fit-promise",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/bus/testing/fake-pdev",
+    "//src/devices/lib/dma-buffer",
+    "//src/devices/lib/mmio",
+    "//src/devices/lib/synchronous-executor",
+    "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/testing/fake-dma-buffer",
+    "//src/devices/testing/fake-mmio-reg",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+test("xhci-unittest-bin") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "xhci-unittest"
+  sources = [
+    "xhci-enumeration-test.cc",
+    "xhci-enumeration.cc",
+  ]
+  deps = [
+    ":test-libs",
+    "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+  ]
+}
+
+test("xhci-core-unittest-bin") {
+  if (is_fuchsia) {
+    configs += [
+      "//build/unification/config:zircon-migrated",
+      "//build/config:all_source",
+    ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "xhci-core-unittest"
+  sources = [
+    "usb-xhci-test.cc",
+    "usb-xhci.cc",
+    "xhci-device-state.cc",
+  ]
+  deps = [ ":test-libs" ]
+
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO: delete the below and fix compiler errors.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+test("xhci-event-ring-unittest-bin") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "xhci-event-ring-unittest"
+  sources = [
+    "xhci-event-ring-test.cc",
+    "xhci-event-ring.cc",
+    "xhci-interrupter.cc",
+  ]
+  deps = [
+    ":test-libs",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+test("xhci-transfer-ring-unittest-bin") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "xhci-transfer-ring-unittest"
+  sources = [
+    "xhci-transfer-ring-test.cc",
+    "xhci-transfer-ring.cc",
+  ]
+  deps = [ ":test-libs" ]
+
+  # TODO(fxbug.dev/54318): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+fuchsia_unittest_package("xhci-unittest") {
+  deps = [ ":xhci-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+fuchsia_unittest_package("xhci-core-unittest") {
+  deps = [ ":xhci-core-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+fuchsia_unittest_package("xhci-event-ring-unittest") {
+  deps = [ ":xhci-event-ring-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+fuchsia_unittest_package("xhci-transfer-ring-unittest") {
+  deps = [ ":xhci-transfer-ring-unittest-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":usb_xhci_bind_test",
+    ":xhci-core-unittest",
+    ":xhci-event-ring-unittest",
+    ":xhci-transfer-ring-unittest",
+    ":xhci-unittest",
+  ]
+}

@@ -30,7 +30,7 @@
 
 #include <fbl/alloc_checker.h>
 
-#include "src/devices/usb/drivers/xhci-rewrite/usb_xhci_bind.h"
+#include "src/devices/usb/drivers/xhci/usb_xhci_bind.h"
 
 namespace usb_xhci {
 

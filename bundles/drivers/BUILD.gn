@@ -64,7 +64,7 @@ group("pci") {
     "//src/devices/misc/drivers/virtio-rng:virtio_rng",
     "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
-    "//src/devices/usb/drivers/xhci-rewrite:xhci",
+    "//src/devices/usb/drivers/xhci:xhci",
     "//src/graphics/display/drivers/intel-i915:intel-i915",
     "//src/graphics/display/drivers/simple:simple.amd-kaveri",
     "//src/graphics/display/drivers/simple:simple.bochs",
