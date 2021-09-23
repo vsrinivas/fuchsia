@@ -20,7 +20,11 @@ use {
     thiserror::Error,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Errors returned by the PolicyChecker and the ScopedPolicyChecker.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, Error)]
 pub enum PolicyError {
     #[error("security policy was unavailable to check")]

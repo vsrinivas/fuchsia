@@ -28,7 +28,7 @@ rustc_library("moniker") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  # Some host tools use serde to serialize/deserialize cm_rust types. This
+  # Some host tools use serde to serialize/deserialize moniker types. This
   # dependency is guarded in code via #[cfg(feature = "serde")] and
   # #[cfg_attr(feature = "serde", ...)] to prevent serde dependencies in
   # non-host builds.

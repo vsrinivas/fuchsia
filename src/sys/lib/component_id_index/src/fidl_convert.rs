@@ -8,6 +8,10 @@ use moniker::{AbsoluteMonikerBase, MonikerError, PartialAbsoluteMoniker};
 use std::convert::TryFrom;
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Error, Clone, Debug, PartialEq)]
 pub enum FidlConversionError {
     #[error("Missing appmgr_restrict_isolated_persistent_storage")]

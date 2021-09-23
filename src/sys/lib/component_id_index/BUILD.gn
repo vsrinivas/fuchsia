@@ -19,6 +19,15 @@ rustc_library("component_id_index") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  # Some host tools use serde to serialize/deserialize component_id_index
+  # error types. This dependency is guarded in code via #[cfg(feature = "serde")] and
+  # #[cfg_attr(feature = "serde", ...)] to avoid deriving serde traits for error
+  # types for non-host builds.
+  features = []
+  if (is_host) {
+    features += [ "serde" ]
+  }
+
   test_deps = [
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde_json",

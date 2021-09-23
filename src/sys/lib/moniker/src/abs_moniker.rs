@@ -14,6 +14,9 @@ use {
     std::{fmt, hash::Hash},
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// AbsoluteMonikerBase is the common trait for both AbsoluteMoniker and PartialAbsoluteMoniker
 /// concrete types.
 ///
@@ -184,6 +187,7 @@ pub trait AbsoluteMonikerBase:
 /// information which is disclosed about the overall structure of the component instance tree.
 ///
 /// Display notation: "/", "/name1:1", "/name1:1/name2:2", ...
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct AbsoluteMoniker {
     path: Vec<ChildMoniker>,
@@ -245,6 +249,7 @@ impl fmt::Display for AbsoluteMoniker {
 /// of a component instance in terms of its path relative to the root of the
 /// component instance tree. Unlike AbsoluteMoniker, the constituent parts of
 /// a PartialAbsoluteMoniker do not need to include the instance ID of the child.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]
 pub struct PartialAbsoluteMoniker {
     path: Vec<PartialChildMoniker>,

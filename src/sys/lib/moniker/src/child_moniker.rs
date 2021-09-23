@@ -14,6 +14,9 @@ use {
     std::fmt,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
 ///
@@ -32,6 +35,7 @@ pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + Display {
     fn to_partial(&self) -> PartialChildMoniker;
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Eq, PartialEq, Debug, Clone, Hash, Default)]
 pub struct ChildMoniker {
     name: String,

@@ -280,7 +280,7 @@ where
                         return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
                             moniker: target.abs_moniker().to_partial(),
                             capability_name: use_decl.source_name.clone(),
-                            capability_type: DebugRegistration::TYPE,
+                            capability_type: DebugRegistration::TYPE.to_string(),
                         }
                         .into());
                     }
@@ -288,7 +288,7 @@ where
                         return Err(RoutingError::UseFromEnvironmentNotFound {
                             moniker: target.abs_moniker().to_partial(),
                             capability_name: use_decl.source_name.clone(),
-                            capability_type: DebugRegistration::TYPE,
+                            capability_type: DebugRegistration::TYPE.to_string(),
                         }
                         .into());
                     }
@@ -729,7 +729,7 @@ where
                 return Err(RoutingError::UseFromEnvironmentNotFound {
                     moniker: target.abs_moniker().to_partial(),
                     capability_name: runner.clone(),
-                    capability_type: "runner",
+                    capability_type: "runner".to_string(),
                 }
                 .into());
             }
@@ -902,7 +902,7 @@ impl ErrorNotFoundFromParent for DebugRegistration {
         RoutingError::EnvironmentFromParentNotFound {
             moniker,
             capability_name: capability_name,
-            capability_type: DebugRegistration::TYPE,
+            capability_type: DebugRegistration::TYPE.to_string(),
         }
     }
 }
@@ -917,7 +917,7 @@ impl ErrorNotFoundInChild for DebugRegistration {
             moniker,
             child_moniker,
             capability_name: capability_name,
-            capability_type: DebugRegistration::TYPE,
+            capability_type: DebugRegistration::TYPE.to_string(),
         }
     }
 }
@@ -1142,7 +1142,7 @@ impl ErrorNotFoundFromParent for RunnerRegistration {
         RoutingError::UseFromEnvironmentNotFound {
             moniker,
             capability_name,
-            capability_type: "runner",
+            capability_type: "runner".to_string(),
         }
     }
 }
@@ -1157,7 +1157,7 @@ impl ErrorNotFoundInChild for RunnerRegistration {
             moniker,
             child_moniker,
             capability_name,
-            capability_type: "runner",
+            capability_type: "runner".to_string(),
         }
     }
 }
@@ -1207,7 +1207,7 @@ impl ErrorNotFoundFromParent for ResolverRegistration {
         RoutingError::EnvironmentFromParentNotFound {
             moniker,
             capability_name,
-            capability_type: "resolver",
+            capability_type: "resolver".to_string(),
         }
     }
 }
@@ -1222,7 +1222,7 @@ impl ErrorNotFoundInChild for ResolverRegistration {
             moniker,
             child_moniker,
             capability_name,
-            capability_type: "resolver",
+            capability_type: "resolver".to_string(),
         }
     }
 }

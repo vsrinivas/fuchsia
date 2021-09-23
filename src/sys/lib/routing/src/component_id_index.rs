@@ -13,10 +13,17 @@ use {
     thiserror::Error,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 pub type ComponentInstanceId = String;
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, Error)]
 pub enum ComponentIdIndexError {
+    // The capability routing static analyzer does not report this error subtype as part of a
+    // routing verification result, so we don't need to serialize it.
+    #[cfg_attr(feature = "serde", serde(skip))]
     #[error("could not read index file {}", .path)]
     IndexUnreadable {
         #[source]

@@ -11,9 +11,13 @@ use {
     std::fmt,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// One of:
 /// - An absolute moniker
 /// - A marker representing component manager's realm
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Eq, Ord, PartialOrd, PartialEq, Debug, Clone, Hash)]
 pub enum ExtendedMoniker {
     ComponentInstance(AbsoluteMoniker),

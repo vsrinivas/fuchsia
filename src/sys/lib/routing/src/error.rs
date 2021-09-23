@@ -11,7 +11,11 @@ use {
     thiserror::Error,
 };
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Errors produced by `ComponentInstanceInterface`.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Error, Clone)]
 pub enum ComponentInstanceError {
     #[error("component instance {} not found", moniker)]
@@ -22,6 +26,9 @@ pub enum ComponentInstanceError {
     PolicyCheckerNotFound { moniker: PartialAbsoluteMoniker },
     #[error("component ID index not found for component instance {}", moniker)]
     ComponentIdIndexNotFound { moniker: PartialAbsoluteMoniker },
+    // The capability routing static analyzer never produces this error subtype, so we don't need
+    // to serialize it.
+    #[cfg_attr(feature = "serde", serde(skip))]
     #[error("Failed to resolve `{}`: {}", moniker, err)]
     ResolveFailed {
         moniker: PartialAbsoluteMoniker,
@@ -53,6 +60,7 @@ impl ComponentInstanceError {
 }
 
 /// Errors produced during routing.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Error, Clone)]
 pub enum RoutingError {
     #[error("Instance identified as source of capability is not running: `{}`", moniker)]
@@ -69,10 +77,7 @@ pub enum RoutingError {
         storage_moniker,
         source_type
     )]
-    StorageDirectorySourceInvalid {
-        source_type: &'static str,
-        storage_moniker: PartialAbsoluteMoniker,
-    },
+    StorageDirectorySourceInvalid { source_type: String, storage_moniker: PartialAbsoluteMoniker },
 
     #[error(
         "Source for directory storage from `{}` was a child `{}`, but this child was not found",
@@ -151,7 +156,7 @@ pub enum RoutingError {
     )]
     UseFromEnvironmentNotFound {
         moniker: PartialAbsoluteMoniker,
-        capability_type: &'static str,
+        capability_type: String,
         capability_name: CapabilityName,
     },
 
@@ -164,7 +169,7 @@ pub enum RoutingError {
     )]
     UseFromRootEnvironmentNotAllowed {
         moniker: PartialAbsoluteMoniker,
-        capability_type: &'static str,
+        capability_type: String,
         capability_name: CapabilityName,
     },
 
@@ -177,7 +182,7 @@ pub enum RoutingError {
     )]
     EnvironmentFromParentNotFound {
         moniker: PartialAbsoluteMoniker,
-        capability_type: &'static str,
+        capability_type: String,
         capability_name: CapabilityName,
     },
 
@@ -192,7 +197,7 @@ pub enum RoutingError {
     EnvironmentFromChildExposeNotFound {
         child_moniker: PartialChildMoniker,
         moniker: PartialAbsoluteMoniker,
-        capability_type: &'static str,
+        capability_type: String,
         capability_name: CapabilityName,
     },
 
@@ -208,7 +213,7 @@ pub enum RoutingError {
         child_moniker: PartialChildMoniker,
         moniker: PartialAbsoluteMoniker,
         capability_name: CapabilityName,
-        capability_type: &'static str,
+        capability_type: String,
     },
 
     #[error(
@@ -409,11 +414,11 @@ impl RoutingError {
     }
 
     pub fn storage_directory_source_invalid(
-        source_type: &'static str,
+        source_type: impl Into<String>,
         storage_moniker: &PartialAbsoluteMoniker,
     ) -> Self {
         Self::StorageDirectorySourceInvalid {
-            source_type,
+            source_type: source_type.into(),
             storage_moniker: storage_moniker.clone(),
         }
     }
@@ -599,6 +604,7 @@ impl RoutingError {
 }
 
 /// Errors produced during routing specific to events.
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Error, Debug, Clone)]
 pub enum EventsRoutingError {
     #[error("Filter is not a subset")]
@@ -614,6 +620,7 @@ pub enum EventsRoutingError {
     MissingModes,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Error, Clone)]
 pub enum RightsRoutingError {
     #[error("Requested rights greater than provided rights")]

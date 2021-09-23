@@ -71,6 +71,7 @@ pub struct Index {
     pub instances: Vec<InstanceIdEntry>,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum IndexError {
     #[error("invalid index")]
@@ -121,6 +122,7 @@ impl Default for Index {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ValidationError {
     #[error("Instance ID '{}' must be unique but exists in following index files:\n {}\n {}", .instance_id, .source1, .source2)]

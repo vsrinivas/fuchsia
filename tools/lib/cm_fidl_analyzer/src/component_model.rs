@@ -34,6 +34,7 @@ use {
         route_capability, route_storage_and_backing_directory, DebugRouteMapper, RegistrationDecl,
         RouteRequest, RouteSource,
     },
+    serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
         sync::{Arc, RwLock},
@@ -41,7 +42,8 @@ use {
     thiserror::Error,
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AnalyzerModelError {
     #[error("the source instance `{0}` is not executable")]
     SourceInstanceNotExecutable(String),

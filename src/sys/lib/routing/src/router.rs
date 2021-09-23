@@ -992,7 +992,7 @@ where
                             child_moniker: partial,
                             moniker: target.abs_moniker().to_partial(),
                             capability_name: registration.source_name().clone(),
-                            capability_type: R::TYPE,
+                            capability_type: R::TYPE.to_string(),
                         }
                     })?
                 };
