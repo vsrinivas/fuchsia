@@ -931,7 +931,6 @@ impl fmt::Display for Data<Logs> {
         }
 
         write!(f, " {}", self.msg().unwrap_or(""))?;
-        println!("{:?}", self.msg());
         if !kvps.is_empty() {
             for kvp in kvps {
                 write!(f, " {}", kvp)?;
