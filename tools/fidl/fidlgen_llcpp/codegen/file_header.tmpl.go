@@ -44,12 +44,8 @@ const fileHeaderTmpl = `
 {{ end -}}
 {{- EndifFuchsia -}}
 #include <zircon/fidl.h>
-{{ if .Headers -}}
-{{ "" }}
-{{ $root := . -}}
-{{ range .Headers -}}
-#include <{{ . }}/{{ $root.IncludeStem }}.h>
-{{ end -}}
+{{ range .Dependencies -}}
+#include <{{ . | GeneratedPath "cpp/wire.h" }}>
 {{ end -}}
 
 {{- range .Decls }}

@@ -16,51 +16,24 @@ import (
 
 type flagsDef struct {
 	cpp.CommonFlags
-	testBase *string
-}
-
-var _ cpp.CodegenOptions = (*flagsDef)(nil)
-
-func (f flagsDef) IncludeBase() string {
-	return *f.CommonFlags.IncludeBase
-}
-
-func (f flagsDef) IncludeStem() string {
-	return *f.CommonFlags.IncludeStem
-}
-
-func (f flagsDef) Header() string {
-	return *f.CommonFlags.Header
-}
-
-func (f flagsDef) UnifiedSourceLayout() bool {
-	return true
+	root    *string
+	library *string
 }
 
 var flags = flagsDef{
 	CommonFlags: cpp.CommonFlags{
 		Json: flag.String("json", "",
 			"relative path to the FIDL intermediate representation."),
-		Header: flag.String("header", "",
-			"the output path for the generated header."),
-		Source: flag.String("source", "",
-			"the output path for the generated C++ implementation."),
-		IncludeBase: flag.String("include-base", "",
-			"[optional] the directory relative to which includes will be computed. "+
-				"If omitted, assumes #include <fidl/library.name/cpp/wire.h>"),
-		IncludeStem: flag.String("include-stem", "cpp/wire",
-			"[optional] the suffix after library path when referencing includes. "+
-				"Includes will be of the form <my/library/{include-stem}.h>. "),
 		ClangFormatPath: flag.String("clang-format-path", "",
 			"path to the clang-format tool."),
 	},
-	testBase: flag.String("test-base", "",
-		"the output path for the generated test base header."),
+	root: flag.String("root", "",
+		"the path to output generated files into."),
 }
 
 // valid returns true if the parsed flags are valid.
 func (f flagsDef) valid() bool {
-	return *f.Json != "" && f.Header() != "" && *f.Source != "" && *f.testBase != ""
+	return *f.Json != "" && *f.root != ""
 }
 
 func main() {
@@ -75,24 +48,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	primaryHeader, err := cpp.CalcPrimaryHeader(flags, fidl.Name.Parts())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	tree := cpp.CompileLL(fidl, cpp.HeaderOptions{
-		PrimaryHeader: primaryHeader,
-		IncludeStem:   flags.IncludeStem(),
+		IncludeStem: "cpp/wire.h",
 	})
 
-	generator := codegen.NewGenerator()
-	if err := generator.GenerateHeader(tree, flags.Header(), *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running header generator: %s", err)
-	}
-	if err := generator.GenerateSource(tree, *flags.Source, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running source generator: %s", err)
-	}
-	if err := generator.GenerateTestBase(tree, *flags.testBase, *flags.ClangFormatPath); err != nil {
-		log.Fatalf("Error running test base generator: %s", err)
-	}
+	generator := codegen.NewGenerator(*flags.ClangFormatPath)
+	generator.GenerateFiles(*flags.root, tree)
 }

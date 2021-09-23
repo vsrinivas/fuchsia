@@ -11,7 +11,7 @@ const fileTestBaseTmpl = `
 
 #pragma once
 
-#include <{{ .PrimaryHeader }}>
+#include <{{ .Library | GeneratedPath "cpp/wire.h" }}>
 
 {{- range .Decls }}
   {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := .}}

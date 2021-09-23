@@ -7,7 +7,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,7 +19,8 @@ import (
 )
 
 type Generator struct {
-	tmpls *template.Template
+	tmpls           *template.Template
+	clangFormatPath string
 }
 
 type TypedArgument struct {
@@ -35,6 +36,17 @@ type TypedArgument struct {
 // formatParam funcs are helpers that transform a type and name into a string
 // for rendering in a template.
 type formatParam func(string, cpp.Type) string
+
+type generatedFile struct {
+	path     string
+	template string
+}
+
+var generatedFiles = []generatedFile{
+	generatedFile{"cpp/wire.h", "File:Header"},
+	generatedFile{"cpp/wire.cc", "File:Source"},
+	generatedFile{"cpp/wire_test_base.h", "File:TestBase"},
+}
 
 // visitSliceMembers visits each member of nested slices passed in and calls
 // |fn| on each of them in depth first order.
@@ -214,9 +226,12 @@ var utilityFuncs = template.FuncMap{
 	"List": func(items ...interface{}) []interface{} {
 		return items
 	},
+	"GeneratedPath": func(name string, library fidlgen.LibraryIdentifier) string {
+		return fmt.Sprintf("fidl/%s/%s", library.Encode(), name)
+	},
 }
 
-func NewGenerator() *Generator {
+func NewGenerator(clangFormatPath string) *Generator {
 	tmpls := template.New("LLCPPTemplates").
 		Funcs(cpp.MergeFuncMaps(cpp.CommonTemplateFuncs, utilityFuncs))
 	templates := []string{
@@ -254,11 +269,12 @@ func NewGenerator() *Generator {
 		template.Must(tmpls.Parse(t))
 	}
 	return &Generator{
-		tmpls: tmpls,
+		tmpls:           tmpls,
+		clangFormatPath: clangFormatPath,
 	}
 }
 
-func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.Writer) error) error {
+func (gen *Generator) generateFile(filename string, tmpl string, tree cpp.Root) error {
 	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
 		return err
 	}
@@ -269,11 +285,11 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 	}
 
 	bufferedContent := new(bytes.Buffer)
-	if err := contentGenerator(bufferedContent); err != nil {
+	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, tree); err != nil {
 		return fmt.Errorf("Error generating content: %w", err)
 	}
 	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-	maybeFormatter := clangFormatPath
+	maybeFormatter := gen.clangFormatPath
 	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
 		maybeFormatter = ""
 	}
@@ -293,38 +309,13 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 	return nil
 }
 
-func (gen *Generator) generateHeader(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "File:Header", tree)
-}
-
-func (gen *Generator) generateSource(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "File:Source", tree)
-}
-
-func (gen *Generator) generateTestBase(wr io.Writer, tree cpp.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "File:TestBase", tree)
-}
-
-// GenerateHeader generates the LLCPP bindings header, and writes it into
-// the target filename.
-func (gen *Generator) GenerateHeader(tree cpp.Root, filename, clangFormatPath string) error {
-	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
-		return gen.generateHeader(wr, tree)
-	})
-}
-
-// GenerateSource generates the LLCPP bindings source, and writes it into
-// the target filename.
-func (gen *Generator) GenerateSource(tree cpp.Root, filename, clangFormatPath string) error {
-	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
-		return gen.generateSource(wr, tree)
-	})
-}
-
-// GenerateTestBase generates the LLCPP bindings test base header, and
-// writes it into the target filename.
-func (gen *Generator) GenerateTestBase(tree cpp.Root, filename, clangFormatPath string) error {
-	return generateFile(filename, clangFormatPath, func(wr io.Writer) error {
-		return gen.generateTestBase(wr, tree)
-	})
+func (gen *Generator) GenerateFiles(dir string, tree cpp.Root) {
+	base := dir + "/fidl/" + string(tree.Library.Encode())
+	for _, gf := range generatedFiles {
+		fn := base + "/" + gf.path
+		err := gen.generateFile(fn, gf.template, tree)
+		if err != nil {
+			log.Fatalf("Error generating %s: %w", fn, err)
+		}
+	}
 }
