@@ -14,7 +14,7 @@
 
 #include <arch/ops.h>
 #include <hwreg/bitfields.h>
-#include <fbl/atomic_ref.h>
+#include <ktl/atomic.h>
 #include <ktl/type_traits.h>
 
 namespace intel_iommu {
@@ -470,12 +470,12 @@ struct PasidState {
   // DEF_SUBBIT(raw, 63, deferred_invld);
 
   uint64_t active_ref_count() {
-    fbl::atomic_ref<volatile uint64_t> state(raw);
+    ktl::atomic_ref<volatile uint64_t> state(raw);
     return (state.load() >> 32) & 0xffff;
   }
 
   uint64_t deferred_invld() {
-    fbl::atomic_ref<volatile uint64_t> state(raw);
+    ktl::atomic_ref<volatile uint64_t> state(raw);
     return state.load() >> 63;
   }
   void set_deferred_invld() {
@@ -484,7 +484,7 @@ struct PasidState {
     // as being updated atomically by hardware.  Reading that "atomically"
     // to be an atomic memory access, this atomic_or should be the right
     // thing.
-    fbl::atomic_ref<volatile uint64_t> state(raw);
+    ktl::atomic_ref<volatile uint64_t> state(raw);
     state.fetch_or(1ull << 63);
   }
 };

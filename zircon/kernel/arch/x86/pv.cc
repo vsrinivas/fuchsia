@@ -14,7 +14,6 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/registers.h>
-#include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -77,7 +76,7 @@ uint64_t pv_clock_get_tsc_freq() {
   uint32_t tsc_mul = 0;
   int8_t tsc_shift = 0;
   uint32_t pre_version = 0, post_version = 0;
-  fbl::atomic_ref<volatile uint32_t> version(system_time->version);
+  ktl::atomic_ref<volatile uint32_t> version(system_time->version);
   do {
     pre_version = version.load();
     if (pre_version % 2 != 0) {
@@ -172,6 +171,4 @@ bool PvEoi::Eoi() {
   return old_val != 0;
 }
 
-PvEoi::~PvEoi() {
-  ZX_DEBUG_ASSERT(!enabled_.load());
-}
+PvEoi::~PvEoi() { ZX_DEBUG_ASSERT(!enabled_.load()); }

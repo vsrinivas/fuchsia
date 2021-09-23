@@ -11,7 +11,6 @@
 
 #include <arch/hypervisor.h>
 #include <arch/x86/pv.h>
-#include <fbl/atomic_ref.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
@@ -108,8 +107,8 @@ void pv_clock_update_system_time(PvClockState* pv_clock,
 
   // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
   pv_clock_system_time* system_time = pv_clock->system_time;
-  fbl::atomic_ref<uint32_t> guest_version(system_time->version);
-  guest_version.store(pv_clock->version + 1, fbl::memory_order_relaxed);
+  ktl::atomic_ref<uint32_t> guest_version(system_time->version);
+  guest_version.store(pv_clock->version + 1, ktl::memory_order_relaxed);
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   system_time->tsc_mul = tsc_mul;
   system_time->tsc_shift = tsc_shift;
@@ -117,7 +116,7 @@ void pv_clock_update_system_time(PvClockState* pv_clock,
   system_time->tsc_timestamp = _rdtsc();
   system_time->flags = pv_clock->is_stable ? kKvmSystemTimeStable : 0;
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  guest_version.store(pv_clock->version + 2, fbl::memory_order_relaxed);
+  guest_version.store(pv_clock->version + 2, ktl::memory_order_relaxed);
   pv_clock->version += 2;
 }
 

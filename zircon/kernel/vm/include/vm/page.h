@@ -13,7 +13,6 @@
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 
-#include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 #include <ktl/type_traits.h>
 #include <vm/page_state.h>
@@ -51,11 +50,11 @@ struct vm_page {
       void set_object(void* obj) { object_priv = obj; }
       uint64_t get_page_offset() const { return page_offset_priv; }
       void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
-      fbl::atomic_ref<uint8_t> get_page_queue_ref() {
-        return fbl::atomic_ref<uint8_t>(page_queue_priv);
+      ktl::atomic_ref<uint8_t> get_page_queue_ref() {
+        return ktl::atomic_ref<uint8_t>(page_queue_priv);
       }
-      fbl::atomic_ref<const uint8_t> get_page_queue_ref() const {
-        return fbl::atomic_ref<const uint8_t>(page_queue_priv);
+      ktl::atomic_ref<const uint8_t> get_page_queue_ref() const {
+        return ktl::atomic_ref<const uint8_t>(page_queue_priv);
       }
 
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5

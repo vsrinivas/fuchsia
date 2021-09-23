@@ -154,7 +154,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t targ
       // Process the list from its notional oldest (tail) to notional newest (head)
       vm_page_t* page = list_peek_tail_type(&page_queues_[queue], vm_page_t, queue_node);
       PageQueue page_queue =
-          (PageQueue)page->object.get_page_queue_ref().load(fbl::memory_order_relaxed);
+          (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
       DEBUG_ASSERT(page_queue >= PageQueuePagerBackedBase);
       // If the queue stored in the page does not match then we want to move it to its correct queue
       // with the caveat that its queue could be invalid. The queue would be invalid if MarkAccessed
@@ -228,12 +228,12 @@ void PageQueues::MarkAccessed(vm_page_t* page) {
   // this and updating the queue it could change, however it would only change as a result of
   // MarkAccessedDeferredCount, which would only move it to another pager backed queue. No other
   // change is possible as we are holding lock_.
-  if (queue_ref.load(fbl::memory_order_relaxed) < PageQueuePagerBackedInactive) {
+  if (queue_ref.load(ktl::memory_order_relaxed) < PageQueuePagerBackedInactive) {
     return;
   }
 
   PageQueue queue = mru_gen_to_queue();
-  PageQueue old_queue = (PageQueue)queue_ref.exchange(queue, fbl::memory_order_relaxed);
+  PageQueue old_queue = (PageQueue)queue_ref.exchange(queue, ktl::memory_order_relaxed);
   // Double check again that this was previously pager backed
   DEBUG_ASSERT(old_queue != PageQueueNone && old_queue >= PageQueuePagerBackedInactive);
   if (old_queue != queue) {
@@ -254,8 +254,8 @@ void PageQueues::SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
-  DEBUG_ASSERT(page->object.get_page_queue_ref().load(fbl::memory_order_relaxed) == PageQueueNone);
-  page->object.get_page_queue_ref().store(queue, fbl::memory_order_relaxed);
+  DEBUG_ASSERT(page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueNone);
+  page->object.get_page_queue_ref().store(queue, ktl::memory_order_relaxed);
   list_add_head(&page_queues_[queue], &page->queue_node);
   page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
   UpdateActiveInactiveLocked(PageQueueNone, queue);
@@ -270,7 +270,7 @@ void PageQueues::MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintpt
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(list_in_list(&page->queue_node));
-  uint32_t old_queue = page->object.get_page_queue_ref().exchange(queue, fbl::memory_order_relaxed);
+  uint32_t old_queue = page->object.get_page_queue_ref().exchange(queue, ktl::memory_order_relaxed);
   DEBUG_ASSERT(old_queue != PageQueueNone);
   page->object.set_object(object);
   page->object.set_page_offset(page_offset);
@@ -335,7 +335,7 @@ void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object,
 void PageQueues::RemoveLocked(vm_page_t* page) {
   // Directly exchange the old gen.
   uint32_t old_queue =
-      page->object.get_page_queue_ref().exchange(PageQueueNone, fbl::memory_order_relaxed);
+      page->object.get_page_queue_ref().exchange(PageQueueNone, ktl::memory_order_relaxed);
   DEBUG_ASSERT(old_queue != PageQueueNone);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
   UpdateActiveInactiveLocked((PageQueue)old_queue, PageQueueNone);
@@ -460,7 +460,7 @@ PageQueues::Counts PageQueues::QueueCounts() const {
 }
 
 bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) const {
-  PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(fbl::memory_order_relaxed);
+  PageQueue q = (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
   if (q >= PageQueuePagerBackedBase && q <= PageQueuePagerBackedLast) {
     if (queue) {
       *queue = queue_age(q, mru_gen_to_queue());
@@ -471,20 +471,20 @@ bool PageQueues::DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue) co
 }
 
 bool PageQueues::DebugPageIsPagerBackedInactive(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(fbl::memory_order_relaxed) ==
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
          PageQueuePagerBackedInactive;
 }
 
 bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(fbl::memory_order_relaxed) == PageQueueUnswappable;
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueUnswappable;
 }
 
 bool PageQueues::DebugPageIsWired(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(fbl::memory_order_relaxed) == PageQueueWired;
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueWired;
 }
 
 bool PageQueues::DebugPageIsUnswappableZeroFork(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(fbl::memory_order_relaxed) ==
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
          PageQueueUnswappableZeroFork;
 }
 
@@ -527,7 +527,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest
 
     // Might need to fix up the queue for this page.
     PageQueue page_queue =
-        (PageQueue)page->object.get_page_queue_ref().load(fbl::memory_order_relaxed);
+        (PageQueue)page->object.get_page_queue_ref().load(ktl::memory_order_relaxed);
 
     // The page is no longer inactive, we need to move this page out of the inactive queue.
     // It's possible for MarkAccessed to race and change the queue again from under us, but the

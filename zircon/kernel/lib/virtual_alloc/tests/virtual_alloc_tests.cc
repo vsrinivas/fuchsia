@@ -9,7 +9,6 @@
 #include <lib/virtual_alloc.h>
 #include <lib/zircon-internal/macros.h>
 
-#include <fbl/atomic_ref.h>
 #include <vm/vm_address_region.h>
 
 namespace {
@@ -85,11 +84,11 @@ class TestVmar {
 bool TouchPages(vaddr_t vaddr, size_t num_pages, bool write = true) {
   for (vaddr_t page_base = vaddr; page_base < vaddr + (num_pages * PAGE_SIZE);
        page_base += PAGE_SIZE) {
-    fbl::atomic_ref<uint64_t> var(*reinterpret_cast<uint64_t*>(page_base));
+    ktl::atomic_ref<uint64_t> var(*reinterpret_cast<uint64_t*>(page_base));
     if (write) {
-      var.store(page_base, fbl::memory_order_relaxed);
+      var.store(page_base, ktl::memory_order_relaxed);
     }
-    if (var.load(fbl::memory_order_relaxed) != page_base) {
+    if (var.load(ktl::memory_order_relaxed) != page_base) {
       return false;
     }
   }

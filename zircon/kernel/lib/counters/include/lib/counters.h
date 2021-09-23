@@ -10,8 +10,8 @@
 #include <lib/special-sections/special-sections.h>
 
 #include <arch/ops.h>
-#include <fbl/atomic_ref.h>
 #include <kernel/percpu.h>
+#include <ktl/atomic.h>
 
 #include "counter-vmo-abi.h"
 
@@ -106,19 +106,19 @@ class Counter {
   explicit constexpr Counter(const counters::Descriptor* desc) : desc_(desc) {}
 
   int64_t Value() const {
-    fbl::atomic_ref<int64_t> slot(*Slot());
-    return slot.load(fbl::memory_order_relaxed);
+    ktl::atomic_ref<int64_t> slot(*Slot());
+    return slot.load(ktl::memory_order_relaxed);
   }
 
   void Add(int64_t delta) const {
-    fbl::atomic_ref<int64_t> slot(*Slot());
-    slot.store(slot.load(fbl::memory_order_relaxed) + delta, fbl::memory_order_relaxed);
+    ktl::atomic_ref<int64_t> slot(*Slot());
+    slot.store(slot.load(ktl::memory_order_relaxed) + delta, ktl::memory_order_relaxed);
   }
 
   // Set value of counter to |value|. No memory order is implied.
   void Set(uint64_t value) const {
-    fbl::atomic_ref<int64_t> slot(*Slot());
-    slot.store(value, fbl::memory_order_relaxed);
+    ktl::atomic_ref<int64_t> slot(*Slot());
+    slot.store(value, ktl::memory_order_relaxed);
   }
 
  protected:

@@ -44,7 +44,7 @@ zx_koid_t CurrentThreadKoid() {
 zx_status_t Event::Wait(zx::duration timeout) {
   zx::time deadline = zx::deadline_after(timeout);
 
-  while (signaled_.load(fbl::memory_order_relaxed) == 0) {
+  while (signaled_.load(std::memory_order_relaxed) == 0) {
     zx_status_t res = zx_futex_wait(&signaled_, 0, ZX_HANDLE_INVALID, deadline.get());
     if ((res != ZX_OK) && (res != ZX_ERR_BAD_STATE)) {
       return res;
@@ -55,13 +55,13 @@ zx_status_t Event::Wait(zx::duration timeout) {
 }
 
 void Event::Signal() {
-  if (signaled_.load(fbl::memory_order_relaxed) == 0) {
-    signaled_.store(1, fbl::memory_order_relaxed);
+  if (signaled_.load(std::memory_order_relaxed) == 0) {
+    signaled_.store(1, std::memory_order_relaxed);
     zx_futex_wake(&signaled_, UINT32_MAX);
   }
 }
 
-void Event::Reset() { signaled_.store(0, fbl::memory_order_relaxed); }
+void Event::Reset() { signaled_.store(0, std::memory_order_relaxed); }
 
 void Thread::Reset() {
   handle_.reset();

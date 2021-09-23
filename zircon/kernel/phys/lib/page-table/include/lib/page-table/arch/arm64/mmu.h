@@ -10,9 +10,9 @@
 #include <lib/arch/arm64/system.h>
 #include <lib/page-table/internal/bits.h>
 #include <lib/page-table/types.h>
+#include <lib/stdcompat/atomic.h>
 #include <zircon/types.h>
 
-#include <atomic>  // TODO(mcgrathr): <lib/stdcompat/atomic.h>
 #include <optional>
 #include <type_traits>
 
@@ -315,15 +315,11 @@ class PageTableNode {
   PageTableNode& operator=(const PageTableNode&) = default;
 
   // Return the PTE at the given index.
-  PageTableEntry at(size_t index) {
-    // TODO(mcgrathr): cpp20::memory_order_relaxed for cpp20::atomic_ref
-    return Entry(index).load(std::memory_order_relaxed);
-  }
+  PageTableEntry at(size_t index) { return Entry(index).load(std::memory_order_relaxed); }
 
   // Set the PTE at the given index to the given value.
   void set(size_t index, PageTableEntry entry) {
-    // TODO(mcgrathr): cpp20::memory_order_relaxed for cpp20::atomic_ref
-    return Entry(index).store(entry, std::memory_order_relaxed);
+    Entry(index).store(entry, std::memory_order_relaxed);
   }
 
   // Get a pointer to the first element of the node.
@@ -333,14 +329,9 @@ class PageTableNode {
   GranuleSize size() const { return size_; }
 
  private:
-  std::atomic<PageTableEntry>& Entry(size_t index) {
+  cpp20::atomic_ref<PageTableEntry> Entry(size_t index) {
     ZX_DEBUG_ASSERT(index < PageTableEntries(size_));
-    // TODO(mcgrathr): Replace this with cpp20::atomic_ref when it's ready.
-    // The existing fbl::atomic_ref can't handle non-integer types like the std
-    // type can.  Using fbl::atomic_ref<uint64_t> means losing the specific
-    // alignment setting on the PageTableEntry type, which is always 64 bits
-    // even when alignof(uint64_t) is only 32 bits as on x86-32.
-    return *reinterpret_cast<std::atomic<PageTableEntry>*>(&entries_[index]);
+    return cpp20::atomic_ref(entries_[index]);
   }
 
   PageTableEntry* entries_ = nullptr;

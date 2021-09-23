@@ -24,6 +24,7 @@ executable("mutex_pi_exerciser") {
   deps = [
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",

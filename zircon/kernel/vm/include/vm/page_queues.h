@@ -61,7 +61,7 @@ class PageQueues {
     // race.
     DEBUG_ASSERT(use_cached_queue_counts_.load(ktl::memory_order_relaxed));
     auto queue_ref = page->object.get_page_queue_ref();
-    uint8_t old_gen = queue_ref.load(fbl::memory_order_relaxed);
+    uint8_t old_gen = queue_ref.load(ktl::memory_order_relaxed);
     // Between loading the mru_gen and finally storing it in the queue_ref it's possible for our
     // calculated target_queue to become invalid. This is extremely unlikely as it would require
     // us to stall for long enough for the lru_gen to pass this point, but if it does happen then
@@ -75,7 +75,7 @@ class PageQueues {
         return;
       }
     } while (!queue_ref.compare_exchange_weak(old_gen, static_cast<uint8_t>(target_queue),
-                                              fbl::memory_order_relaxed));
+                                              ktl::memory_order_relaxed));
     page_queue_counts_[old_gen].fetch_sub(1, ktl::memory_order_relaxed);
     page_queue_counts_[target_queue].fetch_add(1, ktl::memory_order_relaxed);
   }

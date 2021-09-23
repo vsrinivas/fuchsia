@@ -5,9 +5,8 @@
 #ifndef FBL_FUTEX_H_
 #define FBL_FUTEX_H_
 
+#include <lib/stdcompat/atomic.h>
 #include <zircon/types.h>
-
-#include "fbl/atomic_ref.h"
 
 namespace fbl {
 
@@ -26,13 +25,13 @@ class futex_t {
   futex_t& operator=(const futex_t&) = delete;
   futex_t& operator=(futex_t&&) = delete;
 
-  zx_futex_t load(memory_order order = memory_order_seq_cst) {
-    atomic_ref<zx_futex_t> ref(value_);
+  zx_futex_t load(std::memory_order order = std::memory_order_seq_cst) {
+    cpp20::atomic_ref<zx_futex_t> ref(value_);
     return ref.load(order);
   }
 
-  void store(zx_futex_t value, memory_order order = memory_order_seq_cst) {
-    atomic_ref<zx_futex_t> ref(value_);
+  void store(zx_futex_t value, std::memory_order order = std::memory_order_seq_cst) {
+    cpp20::atomic_ref<zx_futex_t> ref(value_);
     ref.store(value, order);
   }
 
