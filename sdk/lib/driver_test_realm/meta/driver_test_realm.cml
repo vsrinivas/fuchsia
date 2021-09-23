@@ -1,0 +1,102 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "driver-manager-test",
+            url: "#meta/driver-manager-test.cm",
+        },
+        {
+            name: "driver-manager-support",
+            url: "#meta/driver-manager-support.cm",
+        },
+        {
+            name: "driver-index",
+            url: "#meta/driver-index.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#driver-index",
+                "#driver-manager-support",
+                "#driver-manager-test",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            protocol: [
+                "fuchsia.driver.development.DriverIndex",
+                "fuchsia.driver.framework.DriverIndex",
+            ],
+            from: "#driver-index",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "pkgfs-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "system-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-index" ],
+        },
+        {
+            directory: "boot",
+            from: "#driver-manager-support",
+            to: [
+                "#driver-index",
+                "#driver-manager-test",
+            ],
+            rights: [ "rx*" ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "#driver-manager-test",
+        },
+        {
+            protocol: [
+                "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+            from: "#driver-manager-test",
+        },
+        {
+            protocol: [ "fuchsia.driver.test.Realm" ],
+            from: "#driver-manager-support",
+        },
+    ],
+}

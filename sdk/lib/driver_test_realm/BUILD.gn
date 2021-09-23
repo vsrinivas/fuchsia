@@ -1,0 +1,87 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//tools/cmc/build/expect_includes.gni")
+
+group("driver_test_realm") {
+  testonly = true
+  deps = [
+    ":client_includes",
+    ":driver_test_realm_component",
+  ]
+}
+
+group("realm_builder_version") {
+  testonly = true
+  deps = [
+    ":driver_test_realm_component",
+    ":realm_builder_includes",
+    "//src/lib/fuchsia-component-test",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
+
+executable("bin") {
+  output_name = "driver_test_realm"
+  testonly = true
+  sources = [ "support.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_llcpp",
+    "//sdk/lib/svc",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/svc",
+  ]
+}
+
+fuchsia_component("driver_test_realm_component") {
+  component_name = "driver_test_realm"
+  testonly = true
+  manifest = "meta/driver_test_realm.cml"
+  deps = [
+    ":driver-manager-support",
+    ":driver-manager-test",
+    "//src/devices/bin/driver-index:component",
+  ]
+}
+
+fuchsia_component("driver-manager-test") {
+  testonly = true
+  manifest = "meta/driver_manager_test.cml"
+  deps = [
+    "//src/devices/bin/driver_host:driver_host",
+    "//src/devices/bin/driver_manager",
+  ]
+}
+
+fuchsia_component("driver-manager-support") {
+  testonly = true
+  manifest = "meta/support.cml"
+  deps = [ ":bin" ]
+}
+
+expect_includes("client_includes") {
+  includes = [ "meta/client.shard.cml" ]
+}
+
+expect_includes("realm_builder_includes") {
+  includes = [ "meta/realm_builder.shard.cml" ]
+}

@@ -1,0 +1,74 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/driver_test_realm",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.test.Realm",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
+        },
+        {
+            directory: "pkgfs-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages",
+        },
+        {
+            directory: "system-delayed",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.test.Realm",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
+            from: "self",
+        },
+        {
+            directory: "pkgfs-delayed",
+            from: "self",
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            from: "self",
+        },
+        {
+            directory: "system-delayed",
+            from: "self",
+        },
+        {
+            directory: "boot",
+            from: "self",
+        },
+    ],
+}

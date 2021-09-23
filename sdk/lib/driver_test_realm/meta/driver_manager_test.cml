@@ -1,0 +1,77 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/driver_manager",
+        args: [
+            "--use-driver-index",
+            "--sys-device-driver",
+            "fuchsia-boot:///#driver/test-parent-sys.so",
+        ],
+    },
+    capabilities: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+        },
+    ],
+    use: [
+        {
+            directory: "system-delayed",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "pkgfs-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.driver.development.DriverIndex",
+                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+            from: "self",
+        },
+    ],
+}

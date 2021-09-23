@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.driver.test;
+
+using zx;
+using fuchsia.io;
+
+/// A list of arguments that can be used to configure DriverTestRealm.
+type RealmArgs = resource table {
+    /// This is what DriverManager will see as its boot directory.
+    /// Default: DriverTestRealm's package directory
+    1: boot client_end:fuchsia.io.Directory;
+};
+
+/// This protocol is for the DriverTestRealm. It is an integration test
+/// framework for drivers.
+@discoverable
+protocol Realm {
+    /// Start the realm. Calling this will cause DriverTestRealm to start
+    /// servicing other protocols (like /dev/). `args` is used to configure
+    /// the DriverTestRealm.
+    /// Calling `Start` while the realm is already started will return ZX_ERR_ALREADY_BOUND.
+    Start(resource struct {
+        args RealmArgs;
+    }) -> (struct {}) error zx.status;
+};
