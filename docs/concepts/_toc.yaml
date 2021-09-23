@@ -93,6 +93,3 @@ toc:
 - title: "Time"
   section:
   - include: /docs/concepts/time/_toc.yaml
-- title: "USB"
-  section:
-  - include: /docs/concepts/usb/_toc.yaml
