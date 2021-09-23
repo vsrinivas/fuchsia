@@ -894,6 +894,10 @@ TEST(ImageFormat, IntelCcsFormats_V1_LLCPP) {
     uint64_t ccs_byte_offset;
     EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, kCcsPlane, &ccs_byte_offset));
     EXPECT_EQ(kMainPlaneSize, ccs_byte_offset);
+
+    uint32_t main_plane_row_stride;
+    EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, 0, &main_plane_row_stride));
+    EXPECT_EQ(128u * kWidthInTiles, main_plane_row_stride);
     uint32_t ccs_row_stride;
     EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, kCcsPlane, &ccs_row_stride));
     EXPECT_EQ(ccs_row_stride, 128u * kCcsWidthInTiles);

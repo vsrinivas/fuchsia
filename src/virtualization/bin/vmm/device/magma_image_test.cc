@@ -56,7 +56,7 @@ TEST_F(MagmaImageTesting, SpecifyIntelX) {
                                                          &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_X_TILED, image_info.drm_format_modifier);
-  EXPECT_EQ(0u, image_info.plane_strides[0]);
+  EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
@@ -80,7 +80,7 @@ TEST_F(MagmaImageTesting, SpecifyIntelY) {
                                                          &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
-  EXPECT_EQ(0u, image_info.plane_strides[0]);
+  EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
@@ -126,7 +126,7 @@ TEST_F(MagmaImageTesting, IntelMany) {
                                                          &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
-  EXPECT_EQ(0u, image_info.plane_strides[0]);
+  EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
@@ -150,7 +150,7 @@ TEST_F(MagmaImageTesting, IntelNone) {
                                                          &image_info, &buffer, &token));
 
   EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
-  EXPECT_EQ(0u, image_info.plane_strides[0]);
+  EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_FALSE(token);
@@ -175,7 +175,7 @@ TEST_F(MagmaImageTesting, IntelNonePresentable) {
 
   if (image_info.drm_format_modifier != I915_FORMAT_MOD_Y_TILED)
     EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_X_TILED);
-  EXPECT_EQ(0u, image_info.plane_strides[0]);
+  EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
   EXPECT_TRUE(token);

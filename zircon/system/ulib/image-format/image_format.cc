@@ -168,12 +168,17 @@ class IntelTiledFormats : public ImageFormatSet {
   bool ImageFormatPlaneRowBytes(const ImageFormat& image_format, uint32_t plane,
                                 uint32_t* row_bytes_out) const override {
     if (plane == 0) {
-      *row_bytes_out = 0;
+      uint32_t width_in_tiles, height_in_tiles;
+      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+      const auto& tiling_data =
+          GetTilingData(GetTilingTypeForPixelFormat(image_format.pixel_format()));
+      *row_bytes_out = width_in_tiles * tiling_data.bytes_per_row_per_tile;
       return true;
     } else if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
       uint32_t width_in_tiles, height_in_tiles;
       GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
-      *row_bytes_out = CcsWidthInTiles(width_in_tiles) * kCcsBytesPerRowPerTile;
+      *row_bytes_out =
+          CcsWidthInTiles(width_in_tiles) * GetTilingData(TilingType::kY).bytes_per_row_per_tile;
       return true;
     } else {
       return false;
@@ -181,13 +186,43 @@ class IntelTiledFormats : public ImageFormatSet {
   }
 
  private:
-  static constexpr uint32_t kIntelTileByteSize = 4096;
-  static constexpr uint32_t kIntelYTilePixelWidth = 32;
-  static constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
+  struct TilingData {
+    // Assuming a 4-byte-per-component format.
+    uint32_t tile_pixel_width;
+    uint32_t tile_pixel_height;
+    uint32_t bytes_per_row_per_tile;
+  };
+
+  // These are base Intel tilings, with no aux buffers.
+  enum class TilingType { kX, kY, kYf };
+
+  // See
+  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
   static constexpr uint32_t kIntelXTilePixelWidth = 128;
-  static constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
+  static constexpr uint32_t kIntelYTilePixelWidth = 32;
   static constexpr uint32_t kIntelYFTilePixelWidth = 32;  // For a 4 byte per component format
-  static constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
+  static constexpr TilingData kTilingData[] = {
+      {
+          // kX
+          .tile_pixel_width = kIntelXTilePixelWidth,
+          .tile_pixel_height = 4096 / (kIntelXTilePixelWidth * 4),
+          .bytes_per_row_per_tile = 512,
+      },
+      {
+          // kY
+          .tile_pixel_width = kIntelYTilePixelWidth,
+          .tile_pixel_height = 4096 / (kIntelYTilePixelWidth * 4),
+          .bytes_per_row_per_tile = 128,
+      },
+      {
+          // kYf
+          .tile_pixel_width = kIntelYFTilePixelWidth,
+          .tile_pixel_height = 4096 / (kIntelYFTilePixelWidth * 4),
+          .bytes_per_row_per_tile = 128,
+      },
+  };
+
+  static constexpr uint32_t kIntelTileByteSize = 4096;
   // For simplicity CCS plane is always 3, leaving room for Y, U, and V planes if the format is I420
   // or similar.
   static constexpr uint32_t kCcsPlane = 3;
@@ -197,41 +232,41 @@ class IntelTiledFormats : public ImageFormatSet {
   // tiles) and 16 pixels tall.
   static constexpr uint32_t kCcsTileWidthRatio = 2 * 16;
   static constexpr uint32_t kCcsTileHeightRatio = 16;
-  static constexpr uint32_t kCcsBytesPerRowPerTile = 128;
+
+  static TilingType GetTilingTypeForPixelFormat(PixelFormat pixel_format) {
+    switch (pixel_format.format_modifier_value() &
+            ~fuchsia_sysmem2::wire::kFormatModifierIntelCcsBit) {
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled:
+        return TilingType::kX;
+
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled:
+        return TilingType::kY;
+
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled:
+        return TilingType::kYf;
+      default:
+        ZX_DEBUG_ASSERT(false);
+        return TilingType::kX;
+    }
+  }
+
+  static const TilingData& GetTilingData(TilingType type) {
+    static_assert(static_cast<size_t>(TilingType::kYf) < std::size(kTilingData));
+    ZX_DEBUG_ASSERT(static_cast<uint32_t>(type) < std::size(kTilingData));
+    return kTilingData[static_cast<uint32_t>(type)];
+  }
 
   static void GetSizeInTiles(const ImageFormat& image_format, uint32_t* width_out,
                              uint32_t* height_out) {
-    // See
-    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
     uint32_t tile_width;
     uint32_t tile_height;
 
+    const auto& tiling_data =
+        GetTilingData(GetTilingTypeForPixelFormat(image_format.pixel_format()));
     // These calculations are only correct for 4-byte-per-pixel formats.
-    switch (image_format.pixel_format().format_modifier_value() &
-            ~fuchsia_sysmem2::wire::kFormatModifierIntelCcsBit) {
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled:
-        tile_width = kIntelXTilePixelWidth;
-        tile_height = kIntelXTileHeight;
+    tile_width = tiling_data.tile_pixel_width;
+    tile_height = tiling_data.tile_pixel_height;
 
-        break;
-
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled:
-        tile_width = kIntelYTilePixelWidth;
-        tile_height = kIntelYTileHeight;
-
-        break;
-
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled:
-        tile_width = kIntelYFTilePixelWidth;
-        tile_height = kIntelYFTileHeight;
-
-        break;
-      default:
-        ZX_DEBUG_ASSERT(false);
-        *width_out = 0;
-        *height_out = 0;
-        return;
-    }
     uint32_t width_in_tiles = fbl::round_up(image_format.coded_width(), tile_width) / tile_width;
     uint32_t height_in_tiles =
         fbl::round_up(image_format.coded_height(), tile_height) / tile_height;
