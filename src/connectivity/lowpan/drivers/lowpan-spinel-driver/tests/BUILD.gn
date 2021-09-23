@@ -4,5 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [ "test-components:lowpan-driver-provision-mock" ]
+  deps = [ "test-components:lowpan-driver-tests" ]
 }

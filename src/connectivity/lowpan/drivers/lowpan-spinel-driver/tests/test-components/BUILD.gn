@@ -28,7 +28,8 @@ rustc_test("lowpan-driver-provision-mock-bin") {
   sources = [ "mock-device/lowpan_driver_provision_mock.rs" ]
 }
 
-fuchsia_unittest_package("lowpan-driver-provision-mock") {
+fuchsia_component("lowpan-driver-provision-mock") {
+  testonly = true
   manifest = "meta/lowpan-driver-provision-mock.cmx"
   deps = [
     ":lowpan-driver-provision-mock-bin",
@@ -36,6 +37,11 @@ fuchsia_unittest_package("lowpan-driver-provision-mock") {
     "//src/connectivity/openthread/ot-stack:component",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
   ]
+}
+
+fuchsia_test_package("lowpan-driver-tests") {
+  package_name = "lowpan-driver-tests"
+  test_components = [ ":lowpan-driver-provision-mock" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
