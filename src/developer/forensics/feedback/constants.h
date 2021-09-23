@@ -19,7 +19,11 @@ constexpr zx::duration kDirectoryMigratorResponeTimeout = zx::min(1);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kPreviousGracefulRebootReasonFile[] = "/tmp/graceful_reboot_reason.txt";
-constexpr char kCurrentGracefulRebootReasonFile[] = "/cache/graceful_reboot_reason.txt";
+constexpr char kCurrentGracefulRebootReasonFile[] = "/data/graceful_reboot_reason.txt";
+
+// TODO(fxbug.dev/85184): Stop attempting to read from the /cache file once it no longer exists.
+constexpr char kLegacyGracefulRebootReasonFile[] = "/cache/graceful_reboot_reason.txt";
+
 constexpr char kNotAFdrFile[] = "/data/not_a_fdr.txt";
 
 // We file the crash report with a 90s delay to increase the likelihood that Inspect data (at

@@ -55,8 +55,13 @@ bool TestAndSetNotAFdr(const std::string& not_a_fdr_file) {
   return false;
 }
 
-void MovePreviousRebootReason(const std::string& from, const std::string& to) {
-  MoveFile(from, to);
+void MovePreviousRebootReason(const std::string& from, const std::string& legacy_from,
+                              const std::string& to) {
+  if (files::IsFile(from)) {
+    MoveFile(from, to);
+  } else {
+    MoveFile(legacy_from, to);
+  }
 }
 
 void CreatePreviousLogsFile(cobalt::Logger* cobalt, const std::string& dir,
