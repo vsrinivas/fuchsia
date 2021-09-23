@@ -8,6 +8,7 @@ source_set("common") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "binding.h",
     "input.cc",
     "input.h",
     "options.cc",
@@ -22,6 +23,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fit",
     "//src/lib/fxl",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]

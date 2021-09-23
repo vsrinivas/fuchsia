@@ -34,7 +34,7 @@ source_set("unittests") {
   ]
   deps = [
     ":engine",
-    "../target",
+    "../target:no_hooks",
     "../testing",
     "//third_party/googletest:gtest",
   ]

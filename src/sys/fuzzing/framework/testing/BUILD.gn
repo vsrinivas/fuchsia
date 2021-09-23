@@ -8,6 +8,13 @@ source_set("testing") {
   sources = [
     "module.cc",
     "module.h",
+    "process-proxy.cc",
+    "process-proxy.h",
   ]
-  public_deps = [ "../target" ]
+  public_deps = [ "../target:no_hooks" ]
+  deps = [
+    "../engine",
+    "//src/sys/fuzzing/common/testing",
+    "//zircon/system/ulib/sync",
+  ]
 }

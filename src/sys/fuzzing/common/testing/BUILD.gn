@@ -3,14 +3,18 @@
 # found in the LICENSE file.
 
 source_set("testing") {
-  visibility = [ "../*" ]
+  visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [
+    "dispatcher.cc",
+    "dispatcher.h",
     "signal-coordinator.cc",
     "signal-coordinator.h",
   ]
   public_deps = [
     "..:common",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
   ]
+  deps = [ "//zircon/system/ulib/async-loop:async-loop-default" ]
 }

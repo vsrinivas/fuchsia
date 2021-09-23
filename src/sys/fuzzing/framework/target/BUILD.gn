@@ -2,28 +2,50 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Linking this library into a target automatically connects to the engine.
+# See `target_no_hooks` for a library more suitable for testing.
 source_set("target") {
+  testonly = true
+  sources = [ "instrumented-process.cc" ]
+  public_deps = [ ":no_hooks" ]
+  deps = [ "//sdk/lib/sys/cpp" ]
+}
+
+# Version of the `target` library that does not install hooks, and can be used for testing.
+source_set("no_hooks") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
     "module.cc",
     "module.h",
+    "process.cc",
+    "process.h",
+    "weak-symbols.h",
   ]
   public_deps = [
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
   ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/backtrace-request",
+  ]
 }
 
 source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true
-  sources = [ "module-unittest.cc" ]
+  sources = [
+    "module-unittest.cc",
+    "process-unittest.cc",
+  ]
   deps = [
-    ":target",
+    ":no_hooks",
+    "../engine",
     "../testing",
-    "//third_party/googletest:gmock",
+    "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/sync",
   ]
 }
