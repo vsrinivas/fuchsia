@@ -4848,7 +4848,6 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   _response.a = std::move(a);
   _response.b = std::move(b);
   _response.c = std::move(c);
-
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
           WithResponse(
@@ -4862,7 +4861,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
-          WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
+          WithErr(std::move(error)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -4909,13 +4908,9 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse
       _response;
-
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxErrorAsPrimitiveResponse>::
-                  FromExternal(&_response)));
+          WithResponse(std::move(_response)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -4923,7 +4918,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-          WithErr(::fidl::ObjectView<uint32_t>::FromExternal(&error)));
+          WithErr(std::move(error)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -4943,10 +4938,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxErrorAsPrimitiveResponse>::
-                  FromExternal(&response)));
+          WithResponse(std::move(response)));
 }
 #endif  // __Fuchsia__
 
@@ -4966,13 +4958,8 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
-
-  return Reply(
-      ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxErrorAsEnumResponse>::
-                  FromExternal(&_response)));
+  return Reply(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                   WithResponse(std::move(_response)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -4980,8 +4967,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ReplyError(::fidl_test_protocols::wire::ErrorEnum error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithErr(
-          ::fidl::ObjectView<
-              ::fidl_test_protocols::wire::ErrorEnum>::FromExternal(&error)));
+          std::move(error)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -4997,13 +4983,9 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
     ReplySuccess(::fidl::BufferSpan _buffer) {
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse response;
-  return Reply(
-      std::move(_buffer),
-      ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxErrorAsEnumResponse>::
-                  FromExternal(&response)));
+  return Reply(std::move(_buffer),
+               ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
+                   WithResponse(std::move(response)));
 }
 #endif  // __Fuchsia__
 
@@ -5025,13 +5007,9 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ReplySuccess(::zx::handle&& h) {
   ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
   _response.h = std::move(h);
-
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxHandleInResultResponse>::
-                  FromExternal(&_response)));
+          WithResponse(std::move(_response)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -5039,7 +5017,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
     ReplyError(uint32_t error) {
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithErr(
-          ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
+          std::move(error)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -5060,10 +5038,7 @@ fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::dispatch_message(
   return Reply(
       std::move(_buffer),
       ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
-          WithResponse(
-              ::fidl::ObjectView<::fidl_test_protocols::wire::
-                                     WithErrorSyntaxHandleInResultResponse>::
-                  FromExternal(&response)));
+          WithResponse(std::move(response)));
 }
 #endif  // __Fuchsia__
 

@@ -96,7 +96,9 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		result := Result{
 			ResultDecl:      u.nameVariants,
 			ValueStructDecl: u.Members[0].Type.nameVariants,
+			Value:           u.Members[0].Type,
 			ErrorDecl:       u.Members[1].Type.nameVariants,
+			Error:           u.Members[1].Type,
 		}
 		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
 		c.resultForUnion[val.Name] = &result

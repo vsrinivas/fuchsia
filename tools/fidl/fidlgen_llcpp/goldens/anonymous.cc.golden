@@ -350,12 +350,9 @@ fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
     ReplySuccess(::fidl_test_anonymous::wire::BitsMember bits_member) {
   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse _response;
   _response.bits_member = std::move(bits_member);
-
   return Reply(
       ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(
-          ::fidl::ObjectView<
-              ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>::
-              FromExternal(&_response)));
+          std::move(_response)));
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -363,9 +360,7 @@ fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
     ReplyError(::fidl_test_anonymous::wire::SomeProtocolSomeMethodError error) {
   return Reply(
       ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(
-          ::fidl::ObjectView<
-              ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>::
-              FromExternal(&error)));
+          std::move(error)));
 }
 
 ::fidl::Result fidl::internal::
@@ -385,9 +380,7 @@ fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
   return Reply(
       std::move(_buffer),
       ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(
-          ::fidl::ObjectView<
-              ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>::
-              FromExternal(&response)));
+          std::move(response)));
 }
 #endif  // __Fuchsia__
 

@@ -298,9 +298,11 @@ type Result struct {
 	ValueMembers    []Parameter
 	ResultDecl      nameVariants
 	ErrorDecl       nameVariants
+	Error           Type
 	ValueDecl       name
 	ValueStructDecl nameVariants
 	ValueTupleDecl  name
+	Value           Type
 }
 
 func (r Result) ValueArity() int {

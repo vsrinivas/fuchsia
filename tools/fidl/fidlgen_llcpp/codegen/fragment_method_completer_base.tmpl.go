@@ -65,14 +65,22 @@ const fragmentMethodCompleterBaseTmpl = `
       _response.{{ .Name }} = std::move({{ .Name }});
     {{- end }}
 
+    {{- if .Result.Value.InlineInEnvelope }}
+    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
+    {{- else }}
     return Reply({{ .Result.ResultDecl }}::WithResponse(
         ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&_response)));
+    {{- end }}
   }
 
   ::fidl::Result
   {{ .WireCompleterBase.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
+    {{- if .Result.Error.InlineInEnvelope }}
+    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
+    {{- else }}
     return Reply({{ .Result.ResultDecl }}::WithErr(
         ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
+    {{- end }}
   }
 {{- end }}
 {{- if .ResponseArgs }}
@@ -91,8 +99,13 @@ const fragmentMethodCompleterBaseTmpl = `
       {{- range .Result.ValueMembers }}
         response.{{ .Name }} = std::move({{ .Name }});
       {{- end }}
+      {{- if .Result.Value.InlineInEnvelope }}
+      return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(
+            std::move(response)));
+      {{- else }}
       return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(
             ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)));
+      {{- end }}
     }
   {{- end }}
 {{- end }}

@@ -266,7 +266,6 @@ fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl_test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::fidl_test_error::wire::ExampleFooResponse _response;
   _response.y = std::move(y);
-
   return Reply(::fidl_test_error::wire::ExampleFooResult::WithResponse(
       ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>::
           FromExternal(&_response)));
@@ -274,8 +273,8 @@ fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
 
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::fidl_test_error::Example::Foo>::ReplyError(uint32_t error) {
-  return Reply(::fidl_test_error::wire::ExampleFooResult::WithErr(
-      ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
+  return Reply(
+      ::fidl_test_error::wire::ExampleFooResult::WithErr(std::move(error)));
 }
 
 ::fidl::Result
