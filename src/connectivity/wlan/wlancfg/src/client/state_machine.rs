@@ -122,6 +122,7 @@ pub async fn serve(
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
+    stats_sender: ConnectionStatsSender,
 ) {
     let next_network = match connect_request {
         Some((req, sender)) => Some(ConnectingOptions {
@@ -146,6 +147,7 @@ pub async fn serve(
         cobalt_api,
         telemetry_sender,
         iface_id,
+        stats_sender,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -176,7 +178,18 @@ struct CommonStateOptions {
     cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
     iface_id: u16,
+    /// Used to send periodic connection stats used to determine whether or not to roam.
+    stats_sender: mpsc::UnboundedSender<PeriodicConnectionStats>,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct PeriodicConnectionStats {
+    pub id: types::NetworkIdentifier,
+    pub rssi: i8,
+}
+
+pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
+pub type ConnectionStatsReceiver = mpsc::UnboundedReceiver<PeriodicConnectionStats>;
 
 fn handle_none_request() -> Result<State, ExitReason> {
     return Err(ExitReason(Err(format_err!("The stream of requests ended unexpectedly"))));
@@ -681,6 +694,7 @@ async fn connected_state(
                         fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                             options.latest_ap_state.snr_db = ind.snr_db;
+                            handle_connection_stats(&mut common_options.stats_sender, options.currently_fulfilled_request.target.network.clone().into(), ind.rssi_dbm);
                             false
                         }
                         fidl_sme::ConnectTransactionEvent::OnChannelSwitched { info } => {
@@ -797,6 +811,17 @@ async fn connected_state(
     }
 }
 
+fn handle_connection_stats(
+    stats_sender: &mut ConnectionStatsSender,
+    id: types::NetworkIdentifier,
+    rssi: i8,
+) {
+    let connection_stats = PeriodicConnectionStats { id, rssi };
+    stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
+        error!("Failed to send periodic connection stats from the connected state: {}", e);
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -843,6 +868,7 @@ mod tests {
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
+        stats_receiver: mpsc::UnboundedReceiver<PeriodicConnectionStats>,
     }
 
     fn test_setup() -> TestValues {
@@ -861,6 +887,7 @@ mod tests {
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
+        let (stats_sender, stats_receiver) = mpsc::unbounded();
 
         TestValues {
             common_options: CommonStateOptions {
@@ -872,6 +899,7 @@ mod tests {
                 cobalt_api,
                 telemetry_sender,
                 iface_id: 1,
+                stats_sender,
             },
             sme_req_stream,
             saved_networks_manager,
@@ -879,6 +907,7 @@ mod tests {
             update_receiver,
             cobalt_events,
             telemetry_receiver,
+            stats_receiver,
         }
     }
 
@@ -915,27 +944,15 @@ mod tests {
     #[fuchsia::test]
     fn connecting_state_successfully_connects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        // Do test set up manually to get stash server
-        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
-        let (update_sender, mut update_receiver) = mpsc::unbounded();
-        let (sme_proxy, sme_server) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
-        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let mut test_values = test_setup();
+        // Do SavedNetworksManager set up manually to get functionality and stash server
         let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
-        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
-        let telemetry_sender = TelemetrySender::new(telemetry_sender);
-        let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
-            inspect::Inspector::new().root().create_child("network_selector"),
-            telemetry_sender.clone(),
-        ));
+        test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
@@ -975,20 +992,10 @@ mod tests {
             connect_request: connect_request.clone(),
             attempt_counter: 0,
         };
-        let common_options = CommonStateOptions {
-            proxy: sme_proxy,
-            req_stream: client_req_stream.fuse(),
-            update_sender: update_sender,
-            saved_networks_manager: saved_networks_manager.clone(),
-            network_selector,
-            cobalt_api: cobalt_api,
-            telemetry_sender,
-            iface_id: 1,
-        };
-        let initial_state = connecting_state(common_options, connecting_options);
+        let initial_state = connecting_state(test_values.common_options, connecting_options);
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
-        let sme_fut = sme_req_stream.into_future();
+        let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
         // Run the state machine
@@ -1027,7 +1034,7 @@ mod tests {
             }],
         };
         assert_variant!(
-            update_receiver.try_next(),
+            test_values.update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
@@ -1053,7 +1060,7 @@ mod tests {
             }],
         };
         assert_variant!(
-            update_receiver.try_next(),
+            test_values.update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
@@ -1072,11 +1079,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Ensure no further updates were sent to listeners
-        assert_variant!(exec.run_until_stalled(&mut update_receiver.into_future()), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
+            Poll::Pending
+        );
 
         // Cobalt metrics logged
         validate_cobalt_events!(
-            cobalt_events,
+            test_values.cobalt_events,
             CONNECTION_ATTEMPT_METRIC_ID,
             types::ConnectReason::FidlConnectRequest
         );
@@ -1101,6 +1111,7 @@ mod tests {
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1154,6 +1165,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1303,6 +1315,7 @@ mod tests {
         let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1356,6 +1369,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1566,6 +1580,7 @@ mod tests {
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1612,6 +1627,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1762,6 +1778,7 @@ mod tests {
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1777,6 +1794,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
 
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
@@ -1906,6 +1924,7 @@ mod tests {
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -1922,6 +1941,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
 
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
@@ -2915,7 +2935,9 @@ mod tests {
 
     #[fuchsia::test]
     fn connected_state_gets_duplicate_connect_request() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
         let mut test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
@@ -2947,9 +2969,6 @@ mod tests {
         pin_mut!(fut);
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
-
-        // Run the state machine
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Send another duplicate request
         let mut client = Client::new(test_values.client_req_sender);
@@ -3177,6 +3196,7 @@ mod tests {
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
@@ -3218,6 +3238,7 @@ mod tests {
             cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
+            stats_sender,
         };
         let (connect_txn_proxy, connect_txn_stream) =
             create_proxy_and_stream::<fidl_sme::ConnectTransactionMarker>()
@@ -3611,7 +3632,7 @@ mod tests {
             fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
-        let test_values = test_setup();
+        let mut test_values = test_setup();
         let mut _telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = types::Ssid::try_from("test").unwrap();
@@ -3624,11 +3645,9 @@ mod tests {
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
-        // Run the state machine
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
+        let rssi = -40;
         let mut fidl_signal_report =
-            fidl_internal::SignalReportIndication { rssi_dbm: -40, snr_db: 30 };
+            fidl_internal::SignalReportIndication { rssi_dbm: rssi, snr_db: 30 };
         connect_txn_handle
             .send_on_signal_report(&mut fidl_signal_report)
             .expect("failed to send signal report");
@@ -3639,6 +3658,15 @@ mod tests {
 
         // Check that no disconnect request is sent to SME
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
+
+        // Verify that connection stats are sent out
+        let id = types::NetworkIdentifier {
+            ssid: network_ssid,
+            security_type: types::SecurityType::Wpa2,
+        };
+        let expected_connection_stats = PeriodicConnectionStats { id, rssi };
+        let stats = test_values.stats_receiver.try_next().expect("failed to get connection stats");
+        assert_eq!(stats, Some(expected_connection_stats));
     }
 
     #[fuchsia::test]
@@ -3928,6 +3956,7 @@ mod tests {
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
+            test_values.common_options.stats_sender,
         );
         pin_mut!(fut);
 
@@ -3989,6 +4018,7 @@ mod tests {
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
+            test_values.common_options.stats_sender,
         );
         pin_mut!(fut);
 
@@ -4021,11 +4051,12 @@ mod tests {
         pin_mut!(sme_fut);
 
         // Create a connect request so that the state machine does not immediately exit.
+        let ssid = "no_password".as_bytes().to_vec();
         let bss_description = random_fidl_bss_description!(Wpa2);
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
-                    ssid: types::Ssid::try_from("no_password").unwrap(),
+                    ssid: types::Ssid::try_from(ssid.clone()).unwrap(),
                     security_type: types::SecurityType::None,
                 },
                 credential: Credential::None,
@@ -4048,6 +4079,7 @@ mod tests {
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
+            test_values.common_options.stats_sender,
         );
         pin_mut!(fut);
 
@@ -4148,6 +4180,7 @@ mod tests {
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
+            test_values.common_options.stats_sender,
         );
         pin_mut!(fut);
 

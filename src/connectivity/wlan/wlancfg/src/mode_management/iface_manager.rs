@@ -6,7 +6,12 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, state_machine::AccessPointApi, types as ap_types},
         client::{
-            network_selection::NetworkSelector, state_machine as client_fsm, types as client_types,
+            network_selection::{score_connection_quality, NetworkSelector},
+            state_machine::{
+                self as client_fsm, ConnectionStatsReceiver, ConnectionStatsSender,
+                PeriodicConnectionStats,
+            },
+            types as client_types,
         },
         config_management::SavedNetworksManagerApi,
         mode_management::{
@@ -40,6 +45,10 @@ use {
 // Maximum allowed interval between scans when attempting to reconnect client interfaces.  This
 // value is taken from legacy state machine.
 const MAX_AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
+
+/// The threshold for whether or not to look for another network to roam to. The value that this
+/// is is compared against should be between 0 and 1.
+const THRESHOLD_BAD_CONNECTION: f32 = 0.0;
 
 /// Wraps around vital information associated with a WLAN client interface.  In all cases, a client
 /// interface will have an ID and a ClientSmeProxy to make requests of the interface.  If a client
@@ -76,6 +85,7 @@ async fn create_client_state_machine(
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
     cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
+    stats_sender: ConnectionStatsSender,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -106,6 +116,7 @@ async fn create_client_state_machine(
         network_selector,
         cobalt_api,
         telemetry_sender,
+        stats_sender,
     );
 
     let metadata =
@@ -131,6 +142,8 @@ pub(crate) struct IfaceManagerService {
     cobalt_api: CobaltSender,
     clients_enabled_time: Option<zx::Time>,
     telemetry_sender: TelemetrySender,
+    // A sender to be cloned for each connection to send periodic data about connection quality.
+    stats_sender: ConnectionStatsSender,
 }
 
 impl IfaceManagerService {
@@ -143,6 +156,7 @@ impl IfaceManagerService {
         network_selector: Arc<NetworkSelector>,
         cobalt_api: CobaltSender,
         telemetry_sender: TelemetrySender,
+        stats_sender: ConnectionStatsSender,
     ) -> Self {
         IfaceManagerService {
             phy_manager: phy_manager.clone(),
@@ -157,6 +171,7 @@ impl IfaceManagerService {
             cobalt_api,
             clients_enabled_time: None,
             telemetry_sender,
+            stats_sender,
         }
     }
 
@@ -431,6 +446,7 @@ impl IfaceManagerService {
                     Some((connect_req, sender)),
                     self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
+                    self.stats_sender.clone(),
                 )
                 .await?;
                 client_iface.client_state_machine = Some(new_client);
@@ -518,6 +534,7 @@ impl IfaceManagerService {
                     Some((connect_req.clone(), sender)),
                     self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
+                    self.stats_sender.clone(),
                 )
                 .await?;
 
@@ -562,6 +579,7 @@ impl IfaceManagerService {
                     None,
                     self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
+                    self.stats_sender.clone(),
                 )
                 .await?;
 
@@ -1043,11 +1061,42 @@ async fn restore_state_after_setting_country_code(
     }
 }
 
+fn handle_periodic_connection_stats(
+    connection_stats: PeriodicConnectionStats,
+    iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    network_selector: Arc<NetworkSelector>,
+    roaming_search_futures: &mut FuturesUnordered<
+        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
+    >,
+) {
+    // if there is a proactive network switch in consideration, ignore.
+    if !roaming_search_futures.is_empty() {
+        return;
+    }
+
+    // Decide whether the connection quality is bad enough to justify a network switch
+    // TODO(fxbug.dev/84551): determine whether a connection is considered bad enough to
+    // consider roaming. Currently this will never cause a scan.
+    let connection_quality = score_connection_quality(&connection_stats);
+    if connection_quality < THRESHOLD_BAD_CONNECTION {
+        // Kick off a scan to find a roaming candidate
+        let scan_fut = async move {
+            let ignore_list = vec![connection_stats.id];
+            network_selector
+                .clone()
+                .find_best_connection_candidate(iface_manager_client.clone(), &ignore_list)
+                .await
+        };
+        roaming_search_futures.push(scan_fut.boxed());
+    }
+}
+
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
     mut requests: mpsc::Receiver<IfaceManagerRequest>,
+    mut stats_receiver: ConnectionStatsReceiver,
 ) -> Result<Void, Error> {
     // Client and AP state machines need to be allowed to run in order for several operations to
     // complete.  In such cases, futures can be added to this list to progress them once the state
@@ -1061,6 +1110,10 @@ pub(crate) async fn serve_iface_manager_requests(
     let mut reconnect_monitor_interval: i64 = 1;
     let mut connectivity_monitor_timer =
         fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
+
+    // Scans will be initiated to look for candidate networks to roam to if the current connection
+    // is bad.
+    let mut roaming_search_futures = FuturesUnordered::new();
 
     loop {
         select! {
@@ -1099,6 +1152,18 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut connectivity_monitor_timer
                 ).await;
             },
+            connection_stats = stats_receiver.select_next_some() => {
+                handle_periodic_connection_stats(
+                    connection_stats,
+                    iface_manager_client.clone(),
+                    network_selector.clone(),
+                    &mut roaming_search_futures
+                );
+            }
+            _connection_candidate = roaming_search_futures.select_next_some() => {
+                // TODO(fxbug.dev/84548): decide whether the best network found is better than the
+                // current network, and if so trigger a connection
+            }
             req = requests.select_next_some() => {
                 match req {
                     IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder, reason }) => {
@@ -1310,6 +1375,8 @@ mod tests {
         pub cobalt_receiver: mpsc::Receiver<CobaltEvent>,
         pub telemetry_sender: TelemetrySender,
         pub telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
+        pub stats_sender: ConnectionStatsSender,
+        pub stats_receiver: ConnectionStatsReceiver,
     }
 
     fn rand_string() -> String {
@@ -1348,6 +1415,7 @@ mod tests {
             inspector.root().create_child("network_selection"),
             telemetry_sender.clone(),
         ));
+        let (stats_sender, stats_receiver) = mpsc::unbounded();
 
         TestValues {
             device_service_proxy,
@@ -1365,6 +1433,8 @@ mod tests {
             cobalt_receiver,
             telemetry_sender,
             telemetry_receiver,
+            stats_sender,
+            stats_receiver,
         }
     }
 
@@ -1597,6 +1667,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
+            test_values.stats_sender.clone(),
         );
 
         if configured {
@@ -1652,6 +1723,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
+            test_values.stats_sender.clone(),
         );
 
         iface_manager.aps.push(ap_container);
@@ -1728,6 +1800,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
         let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
             fidl_fuchsia_wlan_sme::PassiveScanRequest {},
@@ -2226,6 +2299,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Call connect on the IfaceManager
@@ -2361,6 +2435,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Call disconnect on the IfaceManager
@@ -2510,6 +2585,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
         iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
@@ -2643,6 +2719,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Call stop_client_connections.
@@ -2775,6 +2852,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         {
@@ -2884,6 +2962,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Call start_ap.
@@ -3009,6 +3088,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
         let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
         pin_mut!(fut);
@@ -3139,6 +3219,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         let fut = iface_manager.stop_all_aps();
@@ -3422,6 +3503,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         {
@@ -3526,6 +3608,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         {
@@ -3597,6 +3680,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         {
@@ -3737,11 +3821,13 @@ mod tests {
 
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
+            stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -3810,11 +3896,13 @@ mod tests {
 
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
+            stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -3943,11 +4031,13 @@ mod tests {
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
+            stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -3996,11 +4086,13 @@ mod tests {
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
+            stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4038,11 +4130,13 @@ mod tests {
 
         // Create mpsc channel to handle requests.
         let (mut sender, receiver) = mpsc::channel(1);
+        let (_stats_sender, stats_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
+            stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4179,6 +4273,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Create other components to run the service.
@@ -4198,6 +4293,7 @@ mod tests {
             iface_manager_client,
             network_selector,
             receiver,
+            test_values.stats_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4305,6 +4401,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Report a new interface.
@@ -4379,6 +4476,7 @@ mod tests {
                     test_values.network_selector.clone(),
                     test_values.cobalt_api,
                     test_values.telemetry_sender,
+                    test_values.stats_sender,
                 );
                 (iface_manager, None)
             }
@@ -4458,6 +4556,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Make start client connections request
@@ -4529,6 +4628,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Make stop client connections request
@@ -4754,6 +4854,7 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
             test_values.telemetry_sender,
+            test_values.stats_sender,
         );
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -5340,6 +5441,7 @@ mod tests {
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
+            test_values.stats_sender,
         );
 
         // If the test calls for it, create an AP interface to test that the IfaceManager preserves

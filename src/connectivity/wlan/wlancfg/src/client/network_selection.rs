@@ -6,6 +6,7 @@ use {
     crate::{
         client::{
             scan::{self, ScanReason::NetworkSelection as NetworkSelectionScan, ScanResultUpdate},
+            state_machine::PeriodicConnectionStats,
             types,
         },
         config_management::{
@@ -573,6 +574,15 @@ async fn augment_bss_with_active_scan(
         }
         Err(()) => selected_network,
     }
+}
+
+/// Give a numerical score to the connection quality in order to decide whether to look for a new
+/// network and to ultimately decide whether to switch to a new network or stay on the same one.
+/// score should be between 0 and 1, where 0 is an unusable connection and 1 is a great connection.
+pub fn score_connection_quality(_connection_stats: &PeriodicConnectionStats) -> f32 {
+    // TODO(fxbug.dev/84551) Actually implement the connection quality scoring and the threshold
+    // for a bad connection
+    return 1.0;
 }
 
 fn record_metrics_on_scan(
