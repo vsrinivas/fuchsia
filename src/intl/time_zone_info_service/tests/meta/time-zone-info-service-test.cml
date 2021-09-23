@@ -1,0 +1,10 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/tests/meta/common.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/time_zone_info_service_test",
+    },
+}

@@ -7,17 +7,38 @@ mod tests {
     use {
         anyhow::Result,
         fable_lib::fable,
+        fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_intl::{
             self as fintl, CivilTime, CivilToAbsoluteTimeOptions, DayOfWeek, Month,
             RepeatedTimeConversion, SkippedTimeConversion, TimeZoneId,
         },
         fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_protocol,
+        fuchsia_component_test::{
+            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+            error::Error as RealmBuilderError,
+            RealmInstance,
+        },
         fuchsia_zircon as zx,
     };
 
     static TZ_NYC: &str = "America/New_York";
     static NANOS_PER_SECOND: i64 = 1_000_000_000;
+    static TIMEZONE_URL: &str =
+        "fuchsia-pkg://fuchsia.com/time-zone-info-service-test#meta/time-zone-info-service.cmx";
+
+    async fn build_time_zone_realm() -> Result<RealmInstance, RealmBuilderError> {
+        let mut builder = RealmBuilder::new().await?;
+        builder
+            .add_component("timezone", ComponentSource::LegacyUrl(TIMEZONE_URL.to_string()))
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol(fintl::TimeZonesMarker::PROTOCOL_NAME),
+                source: RouteEndpoint::component("timezone"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?;
+
+        builder.build().create().await
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_civil_to_absolute_time() -> Result<()> {
@@ -43,13 +64,19 @@ mod tests {
             }
         };
 
-        let svc = connect_to_protocol::<fintl::TimeZonesMarker>()?;
-        let actual =
-            svc.civil_to_absolute_time(civil_time, options).await?.map(zx::Time::from_nanos);
+        let time_zone_realm = build_time_zone_realm().await?;
+
+        let timezone_svc =
+            time_zone_realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
+
+        let actual = timezone_svc
+            .civil_to_absolute_time(civil_time, options)
+            .await?
+            .map(zx::Time::from_nanos);
         let expected = Ok(zx::Time::from_nanos(1629073062 * NANOS_PER_SECOND + 123_456_789));
 
         assert_eq!(actual, expected);
-
+        time_zone_realm.destroy().await.unwrap();
         Ok(())
     }
 
@@ -58,8 +85,11 @@ mod tests {
         let absolute_time = 1629073062 * NANOS_PER_SECOND + 123_456_789;
         let mut tz_id = TimeZoneId { id: TZ_NYC.to_string() };
 
-        let svc = connect_to_protocol::<fintl::TimeZonesMarker>()?;
-        let actual = svc.absolute_to_civil_time(&mut tz_id, absolute_time).await?;
+        let time_zone_realm = build_time_zone_realm().await?;
+
+        let timezone_svc =
+            time_zone_realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
+        let actual = timezone_svc.absolute_to_civil_time(&mut tz_id, absolute_time).await?;
 
         let expected = Ok(fable! {
           CivilTime {
@@ -79,6 +109,7 @@ mod tests {
         });
 
         assert_eq!(actual, expected);
+        time_zone_realm.destroy().await.unwrap();
 
         Ok(())
     }
