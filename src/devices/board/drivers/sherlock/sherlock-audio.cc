@@ -452,11 +452,11 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.channels_to_use_bitmask[0] = 0x1;  // Woofer uses DAI right I2S channel.
     metadata.codecs.channels_to_use_bitmask[1] = 0x2;  // L tweeter uses DAI left I2S channel.
     metadata.codecs.channels_to_use_bitmask[2] = 0x1;  // R tweeter uses DAI right I2S channel.
-    // The woofer samples are expected in the second out of four channels.
-    // In a 4 bits bitmask, counting from the least significant bit this is index 2.
-    metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x4;  // Woofer uses index 2.
-    metadata.codecs.ring_buffer_channels_to_use_bitmask[1] = 0x1;  // L tweeter uses index 0.
-    metadata.codecs.ring_buffer_channels_to_use_bitmask[2] = 0x2;  // R tweeter uses index 1.
+    // The woofer samples are expected in the second position out of four channels.
+    // In a 4-bit bitmask, counting from least-significant bit, this is index 1: value 2^1 = 2.
+    metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x2;  // Woofer uses index 1.
+    metadata.codecs.ring_buffer_channels_to_use_bitmask[1] = 0x4;  // L tweeter uses index 2.
+    metadata.codecs.ring_buffer_channels_to_use_bitmask[2] = 0x8;  // R tweeter uses index 3.
   } else if (is_ernie) {
     metadata.dai.type = metadata::DaiType::Tdm1;
     metadata.codecs.number_of_codecs = 2;
