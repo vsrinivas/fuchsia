@@ -34,6 +34,10 @@ toc:
     path: /docs/contribute/open_projects/cpp/ubsan.md
   - title: "Low-level C++ typed channel migration"
     path: /docs/contribute/open_projects/cpp/typed_channels.md
+- title: "Dart projects"
+  section:
+  - title: "Null safety"
+    path: /docs/contribute/open_projects/dart/null_safety.md
 - title: "Testing"
   section:
   - title: "Migrate driver unit tests to mock-ddk"
