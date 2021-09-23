@@ -12,6 +12,7 @@
 #include <trace.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/resource.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
@@ -31,6 +32,26 @@ KCOUNTER(smc_resource_created, "resource.smc.created")
 KCOUNTER(system_resource_created, "resource.system.created")
 KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create")
 KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy")
+
+constexpr size_t kFlagLen = 6;
+// Utility function to format the flags into a user-readable string.
+void flags_to_string(uint32_t flags, char str[kFlagLen]) {
+  memset(str, 0, kFlagLen);
+  uint8_t pos = 0;
+  if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {
+    str[pos++] = 'x';
+  }
+  str[kFlagLen - 1] = '\0';
+}
+
+const char* kKindLabels[ZX_RSRC_KIND_COUNT] = {
+    "mmio", "irq", "ioport", "root", "smc", "system",
+};
+
+static const char* kind_to_string(uint8_t kind) {
+  ZX_ASSERT(kind < ZX_RSRC_KIND_COUNT);
+  return kKindLabels[kind];
+}
 
 // Storage for static members of ResourceDispatcher
 ResourceDispatcher::ResourceStorage ResourceDispatcher::static_storage_;
@@ -86,7 +107,8 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
       zx_status_t status =
           storage->rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
       if (status != ZX_OK) {
-        LTRACEF("%s couldn't pull the resource out of the ralloc %d\n", kLogTag, status);
+        LTRACEF("%s couldn't pull the resource [%#lx, %#lx) out of %s: %d\n", kLogTag, base,
+                base + size, kind_to_string(kind), status);
         return status;
       }
   }
@@ -98,21 +120,16 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   // then the region above will be released back to the pool anyway.
   if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {
     auto callback = [&](const ResourceDispatcher& rsrc) {
-      LTRACEF("%s walking resources, found [%u, %#lx, %zu]\n", kLogTag, rsrc.get_kind(),
-              rsrc.get_base(), rsrc.get_size());
       if (kind != rsrc.get_kind()) {
         return ZX_OK;
       }
 
       if (Intersects(base, size, rsrc.get_base(), rsrc.get_size())) {
-        LTRACEF("%s [%#lx, %zu] intersects with [%#lx, %zu] found in list!\n", kLogTag, base, size,
-                rsrc.get_base(), rsrc.get_size());
         return ZX_ERR_NOT_FOUND;
       }
 
       return ZX_OK;
     };
-    LTRACEF("%s scanning resource list for [%u, %#lx, %zu]\n", kLogTag, kind, base, size);
     zx_status_t status = ResourceDispatcher::ForEachResourceLocked(callback, storage);
     if (status != ZX_OK) {
       return status;
@@ -136,7 +153,8 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   *rights = default_rights();
   *handle = ktl::move(new_handle);
 
-  LTRACEF("%s [%u, %#lx, %zu] resource created.\n", kLogTag, kind, base, size);
+  LTRACEF("%s %s [%#lx, %#lx) resource created.\n", kLogTag, kind_to_string(kind), base,
+          base + size);
   return ZX_OK;
 }
 
@@ -277,29 +295,9 @@ zx_status_t ResourceDispatcher::InitializeAllocator(zx_rsrc_kind_t kind, uint64_
   // This will be used for verifying both shared and exclusive allocations of address
   // space.
   status = storage->rallocs[kind].AddRegion({.base = base, .size = size});
-  LTRACEF("%s added [%#lx, %zu] to kind %u in allocator %p: %d\n", kLogTag, base, size, kind,
-          &storage->rallocs[kind], status);
+  LTRACEF("%s added [%#lx, %zu) size = %#lx to %s allocator: %d\n", kLogTag, base, base + size,
+          size, kind_to_string(kind), status);
   return status;
-}
-
-constexpr size_t kFlagLen = 6;
-// Utility function to format the flags into a user-readable string.
-void flags_to_string(uint32_t flags, char str[kFlagLen]) {
-  memset(str, 0, kFlagLen);
-  uint8_t pos = 0;
-  if (flags & ZX_RSRC_FLAG_EXCLUSIVE) {
-    str[pos++] = 'x';
-  }
-  str[kFlagLen - 1] = '\0';
-}
-
-const char* kKindLabels[ZX_RSRC_KIND_COUNT] = {
-    "mmio", "irq", "ioport", "root", "smc", "system",
-};
-
-static const char* kind_to_string(uint8_t kind) {
-  ZX_ASSERT(kind < ZX_RSRC_KIND_COUNT);
-  return kKindLabels[kind];
 }
 
 void ResourceDispatcher::DumpResources() {
