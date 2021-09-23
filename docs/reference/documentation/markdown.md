@@ -859,6 +859,8 @@ You can alert readers that a link will lead to an external site by adding
 See the [official documentation](https://my_external_website){: .external} for details.
 ```
 
+Links to Fuchsia source code or to Fuchsia changes are not external links.
+
 ## Lists
 
 Using Markdown syntax, you can easily create a bulleted or a numbered list.
