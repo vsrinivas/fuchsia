@@ -59,6 +59,7 @@ public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
 config("public.config") {
   visibility = [
     ":public",
+    "//src/zircon/lib/zircon/*",
     "//zircon/kernel/lib/userabi/vdso/*",
   ]
   include_dirs = [ "$root_gen_dir/include" ]
