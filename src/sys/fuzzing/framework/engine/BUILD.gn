@@ -14,6 +14,8 @@ source_set("engine") {
     "module-pool.h",
     "module-proxy.cc",
     "module-proxy.h",
+    "mutagen.cc",
+    "mutagen.h",
     "process-proxy.cc",
     "process-proxy.h",
   ]
@@ -54,6 +56,7 @@ source_set("unittests") {
     "dictionary-unittest.cc",
     "module-pool-unittest.cc",
     "module-proxy-unittest.cc",
+    "mutagen-unittest.cc",
     "process-proxy-unittest.cc",
   ]
   deps = [
