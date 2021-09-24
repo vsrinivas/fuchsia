@@ -82,7 +82,7 @@ impl DataRepo {
                 return;
             }
         };
-        messages.sort_by_key(|m| m.metadata.timestamp);
+        messages.sort_by_key(|m| m.timestamp());
         for message in messages {
             container.ingest_message(message);
         }
@@ -575,12 +575,14 @@ impl MultiplexerBroker {
 mod tests {
     use {
         super::*,
-        crate::events::types::ComponentIdentifier,
-        diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity},
+        crate::{events::types::ComponentIdentifier, logs::stored_message::StoredMessage},
         diagnostics_hierarchy::trie::TrieIterableNode,
-        diagnostics_message::METADATA_SIZE,
+        diagnostics_log_encoding::{
+            encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
+        },
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
+        std::io::Cursor,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
@@ -853,9 +855,9 @@ mod tests {
                 "fuchsia-pkg://bar",
             ));
 
-        foo_container.ingest_message(make_message("foo", "a", 1));
-        bar_container.ingest_message(make_message("bar", "b", 2));
-        foo_container.ingest_message(make_message("foo", "c", 3));
+        foo_container.ingest_message(make_message("a", 1));
+        bar_container.ingest_message(make_message("b", 2));
+        foo_container.ingest_message(make_message("c", 3));
 
         let stream = repo.logs_cursor(StreamMode::Snapshot, None);
 
@@ -873,19 +875,20 @@ mod tests {
         assert_eq!(results, vec!["a".to_string(), "c".to_string()]);
     }
 
-    fn make_message(component: &str, msg: &str, timestamp_nanos: i64) -> MessageWithStats {
-        MessageWithStats::from(
-            LogsDataBuilder::new(BuilderArgs {
-                timestamp_nanos: diagnostics_data::Timestamp::from(timestamp_nanos),
-                component_url: Some(format!("fuchsia-pkg://{}", component)),
-                moniker: component.to_string(),
-                severity: Severity::Debug,
-                size_bytes: METADATA_SIZE + 1,
-            })
-            .set_pid(1)
-            .set_message(msg.to_string())
-            .set_tid(2)
-            .build(),
-        )
+    fn make_message(msg: &str, timestamp: i64) -> StoredMessage {
+        let record = Record {
+            timestamp,
+            severity: StreamSeverity::Debug,
+            arguments: vec![
+                Argument { name: "pid".to_string(), value: Value::UnsignedInt(1) },
+                Argument { name: "tid".to_string(), value: Value::UnsignedInt(2) },
+                Argument { name: "message".to_string(), value: Value::Text(msg.to_string()) },
+            ],
+        };
+        let mut buffer = Cursor::new(vec![0u8; 1024]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref()[..buffer.position() as usize];
+        StoredMessage::structured(encoded, Default::default()).unwrap()
     }
 }

@@ -1046,6 +1046,8 @@ impl FromStr for LogsField {
 pub enum LogError {
     #[serde(rename = "dropped_logs")]
     DroppedLogs { count: u64 },
+    #[serde(rename = "parse_record")]
+    FailedToParseRecord(String),
     #[serde(rename = "other")]
     Other(Error),
 }

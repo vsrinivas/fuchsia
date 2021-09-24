@@ -71,7 +71,7 @@ impl BudgetState {
             let oldest_message = container_with_oldest
                 .pop()
                 .expect("if we need to free space, we have messages to remove");
-            self.current -= oldest_message.metadata.size_bytes;
+            self.current -= oldest_message.size();
         }
 
         // now we need to remove any containers that are no longer needed. this will usually only
@@ -131,11 +131,17 @@ mod tests {
         message::{MessageWithStats, TEST_IDENTITY},
         multiplex::PinStream,
         stats::LogStreamStats,
+        stored_message::StoredMessage,
     };
     use diagnostics_data::Severity;
+    use diagnostics_log_encoding::{
+        encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
+    };
+    use diagnostics_message::MessageId;
     use fidl_fuchsia_diagnostics::StreamMode;
     use futures::{Stream, StreamExt};
     use std::{
+        io::Cursor,
         pin::Pin,
         task::{Context, Poll},
     };
@@ -151,7 +157,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn verify_container_is_terminated_on_removal() {
-        let manager = BudgetManager::new(100);
+        let manager = BudgetManager::new(128);
         let container_a = Arc::new(LogsArtifactsContainer::new(
             TEST_IDENTITY.clone(),
             &vec![],
@@ -169,17 +175,16 @@ mod tests {
         assert_eq!(manager.state.lock().containers.len(), 2);
 
         // Add a few test messages
-        let b_message = fake_message(1);
-        container_b.ingest_message(b_message.clone());
-        container_a.ingest_message(fake_message(2));
+        container_b.ingest_message(fake_message_bytes(1));
+        container_a.ingest_message(fake_message_bytes(2));
 
         let mut cursor = CursorWrapper(container_b.cursor(StreamMode::SnapshotThenSubscribe));
-        assert_eq!(cursor.next().await, Some(Arc::new(b_message)));
+        assert_eq!(cursor.next().await, Some(Arc::new(fake_message(1, 1))));
 
         container_b.mark_stopped();
 
         // This allocation exceeds capacity, so the B container is dropped and terminated.
-        container_a.ingest_message(fake_message(3));
+        container_a.ingest_message(fake_message_bytes(3));
         assert_eq!(manager.state.lock().containers.len(), 1);
 
         // The container was terminated too.
@@ -189,18 +194,36 @@ mod tests {
         assert_eq!(cursor.next().await, None);
     }
 
-    fn fake_message(timestamp: i64) -> MessageWithStats {
-        MessageWithStats::from(
+    fn fake_message_bytes(timestamp: i64) -> StoredMessage {
+        let record = Record {
+            timestamp,
+            severity: StreamSeverity::Debug,
+            arguments: vec![
+                Argument { name: "pid".to_string(), value: Value::UnsignedInt(123) },
+                Argument { name: "tid".to_string(), value: Value::UnsignedInt(456) },
+            ],
+        };
+        let mut buffer = Cursor::new(vec![0u8; 1024]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref()[..buffer.position() as usize];
+        StoredMessage::structured(encoded, Default::default()).unwrap()
+    }
+
+    fn fake_message(timestamp: i64, message_id: u64) -> MessageWithStats {
+        let mut message = MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
                 moniker: TEST_IDENTITY.to_string(),
                 severity: Severity::Debug,
-                size_bytes: 50,
+                size_bytes: 64,
             })
             .set_pid(123)
             .set_tid(456)
             .build(),
-        )
+        );
+        message.id = MessageId::new(message_id);
+        message
     }
 }

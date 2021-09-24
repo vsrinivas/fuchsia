@@ -3,7 +3,6 @@
 
 use crate::error::MessageError;
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostics_data::Timestamp;
 use diagnostics_log_encoding::{Severity as StreamSeverity, Value, ValueUnknown};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
@@ -82,6 +81,10 @@ impl std::fmt::Debug for Message {
 pub struct MessageId(u64);
 
 impl MessageId {
+    pub fn new(id: u64) -> MessageId {
+        Self(id)
+    }
+
     fn next() -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static NEXT_MESSAGE_ID: AtomicU64 = AtomicU64::new(0);
@@ -126,95 +129,31 @@ impl Message {
         )
     }
 
-    /// Parse the provided buffer as if it implements the [logger/syslog wire format].
-    ///
-    /// Note that this is distinct from the parsing we perform for the debuglog log, which also
-    /// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
-    ///
-    /// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
-    pub fn from_logger(source: MonikerWithUrl, bytes: &[u8]) -> Result<Self, MessageError> {
-        if bytes.len() < MIN_PACKET_SIZE {
-            return Err(MessageError::ShortRead { len: bytes.len() });
+    /// Transforms the given legacy log message (already parsed) into this `Message` containing the
+    /// given identity information.
+    pub fn from_logger(source: MonikerWithUrl, msg: LoggerMessage) -> Self {
+        let mut builder = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: msg.timestamp.into(),
+            component_url: Some(source.url),
+            moniker: source.moniker.clone(),
+            severity: msg.severity,
+            size_bytes: msg.size_bytes,
+        })
+        .set_pid(msg.pid)
+        .set_tid(msg.tid)
+        .set_dropped(msg.dropped_logs)
+        .set_message(msg.message);
+        if msg.include_moniker_tag {
+            builder = builder.add_tag(source.moniker);
         }
-
-        let terminator = bytes[bytes.len() - 1];
-        if terminator != 0 {
-            return Err(MessageError::NotNullTerminated { terminator });
+        for tag in &msg.tags {
+            builder = builder.add_tag(tag.as_ref());
         }
-
-        let pid = LittleEndian::read_u64(&bytes[..8]);
-        let tid = LittleEndian::read_u64(&bytes[8..16]);
-        let time = zx::Time::from_nanos(LittleEndian::read_i64(&bytes[16..24]));
-
-        let raw_severity = LittleEndian::read_i32(&bytes[24..28]);
-        let severity = LegacySeverity::try_from(raw_severity)?;
-
-        let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as u64;
-
-        // start reading tags after the header
-        let mut cursor = METADATA_SIZE;
-        let mut tag_len = bytes[cursor] as usize;
-        let mut tags = Vec::new();
-        while tag_len != 0 {
-            if tags.len() == MAX_TAGS {
-                return Err(MessageError::TooManyTags);
-            }
-
-            if tag_len > MAX_TAG_LEN - 1 {
-                return Err(MessageError::TagTooLong { index: tags.len(), len: tag_len });
-            }
-
-            if (cursor + tag_len + 1) > bytes.len() {
-                return Err(MessageError::OutOfBounds);
-            }
-
-            let tag_start = cursor + 1;
-            let tag_end = tag_start + tag_len;
-            let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
-
-            if tag == COMPONENT_NAME_PLACEHOLDER_TAG {
-                tags.push(source.moniker.clone());
-            } else {
-                tags.push(tag.to_owned());
-            }
-
-            cursor = tag_end;
-            tag_len = bytes[cursor] as usize;
+        let mut result = Message::from(builder.build());
+        if let Some(verbosity) = msg.verbosity {
+            result.set_legacy_verbosity(verbosity);
         }
-
-        let msg_start = cursor + 1;
-        let mut msg_end = cursor + 1;
-        while msg_end < bytes.len() {
-            if bytes[msg_end] == 0 {
-                let message = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
-                let message_len = message.len();
-
-                let (severity, verbosity) = severity.for_structured();
-                let raw_nanos = time.into_nanos();
-                let mut builder = LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: Timestamp::from(raw_nanos),
-                    component_url: Some(source.url.clone()),
-                    moniker: source.moniker,
-                    severity,
-                    size_bytes: cursor + message_len + 1,
-                })
-                .set_pid(pid)
-                .set_tid(tid)
-                .set_dropped(dropped_logs)
-                .set_message(message);
-                for tag in tags {
-                    builder = builder.add_tag(tag);
-                }
-                let mut new = Message::from(builder.build());
-                if let Some(verbosity) = verbosity {
-                    new.set_legacy_verbosity(verbosity);
-                }
-                return Ok(new);
-            }
-            msg_end += 1;
-        }
-
-        Err(MessageError::OutOfBounds)
+        result
     }
 
     /// Constructs a `Message` from the provided bytes, assuming the bytes
@@ -504,6 +443,109 @@ impl DerefMut for Message {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LoggerMessage {
+    pub timestamp: i64,
+    pub severity: Severity,
+    pub verbosity: Option<i8>,
+    pub pid: u64,
+    pub tid: u64,
+    pub size_bytes: usize,
+    pub dropped_logs: u64,
+    pub message: Box<str>,
+    pub tags: Vec<Box<str>>,
+    include_moniker_tag: bool,
+}
+
+/// Parse the provided buffer as if it implements the [logger/syslog wire format].
+///
+/// Note that this is distinct from the parsing we perform for the debuglog log, which also
+/// takes a `&[u8]` and is why we don't implement this as `TryFrom`.
+///
+/// [logger/syslog wire format]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/syslog/include/lib/syslog/wire_format.h
+impl TryFrom<&[u8]> for LoggerMessage {
+    type Error = MessageError;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() < MIN_PACKET_SIZE {
+            return Err(MessageError::ShortRead { len: bytes.len() });
+        }
+
+        let terminator = bytes[bytes.len() - 1];
+        if terminator != 0 {
+            return Err(MessageError::NotNullTerminated { terminator });
+        }
+
+        let pid = LittleEndian::read_u64(&bytes[..8]);
+        let tid = LittleEndian::read_u64(&bytes[8..16]);
+        let timestamp = LittleEndian::read_i64(&bytes[16..24]);
+
+        let raw_severity = LittleEndian::read_i32(&bytes[24..28]);
+        let severity = LegacySeverity::try_from(raw_severity)?;
+
+        let dropped_logs = LittleEndian::read_u32(&bytes[28..METADATA_SIZE]) as u64;
+
+        // start reading tags after the header
+        let mut cursor = METADATA_SIZE;
+        let mut tag_len = bytes[cursor] as usize;
+        let mut tags = Vec::new();
+        let mut include_moniker_tag = false;
+        while tag_len != 0 {
+            if tags.len() == MAX_TAGS {
+                return Err(MessageError::TooManyTags);
+            }
+
+            if tag_len > MAX_TAG_LEN - 1 {
+                return Err(MessageError::TagTooLong { index: tags.len(), len: tag_len });
+            }
+
+            if (cursor + tag_len + 1) > bytes.len() {
+                return Err(MessageError::OutOfBounds);
+            }
+
+            let tag_start = cursor + 1;
+            let tag_end = tag_start + tag_len;
+            let tag = str::from_utf8(&bytes[tag_start..tag_end])?;
+
+            if tag == COMPONENT_NAME_PLACEHOLDER_TAG {
+                include_moniker_tag = true;
+            } else {
+                tags.push(tag.into());
+            }
+
+            cursor = tag_end;
+            tag_len = bytes[cursor] as usize;
+        }
+
+        let msg_start = cursor + 1;
+        let mut msg_end = cursor + 1;
+        while msg_end < bytes.len() {
+            if bytes[msg_end] > 0 {
+                msg_end += 1;
+                continue;
+            }
+            let message = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
+            let message_len = message.len();
+            let (severity, verbosity) = severity.for_structured();
+            let result = LoggerMessage {
+                timestamp,
+                severity,
+                verbosity,
+                message: message.into_boxed_str(),
+                pid,
+                tid,
+                dropped_logs,
+                tags,
+                include_moniker_tag,
+                size_bytes: cursor + message_len + 1,
+            };
+            return Ok(result);
+        }
+
+        Err(MessageError::OutOfBounds)
+    }
+}
+
 lazy_static! {
     pub static ref EMPTY_IDENTITY: MonikerWithUrl = {
         MonikerWithUrl { moniker: "UNKNOWN".to_string(), url: "fuchsia-pkg://UNKNOWN".to_string() }
@@ -714,6 +756,30 @@ impl fx_log_packet_t {
     }
 }
 
+pub fn parse_basic_structured_info(bytes: &[u8]) -> Result<(i64, Severity), MessageError> {
+    let (record, _) = diagnostics_log_encoding::parse::parse_record(bytes)?;
+
+    let mut severity_untrusted = None;
+    for a in record.arguments {
+        let label = LogsField::from(a.name);
+        match (a.value, label) {
+            (Value::SignedInt(v), LogsField::Verbosity) => {
+                severity_untrusted = Some(v);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let raw_severity = if severity_untrusted.is_some() {
+        let transcoded_i32: i32 = severity_untrusted.unwrap().to_string().parse().unwrap();
+        LegacySeverity::try_from(transcoded_i32)?
+    } else {
+        LegacySeverity::try_from(record.severity).unwrap()
+    };
+    let (severity, _) = raw_severity.for_structured();
+    Ok((record.timestamp, severity))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -772,15 +838,9 @@ mod tests {
         let one_short = &packet.as_bytes()[..METADATA_SIZE];
         let two_short = &packet.as_bytes()[..METADATA_SIZE - 1];
 
-        assert_eq!(
-            Message::from_logger(get_test_identity(), one_short),
-            Err(MessageError::ShortRead { len: 32 })
-        );
+        assert_eq!(LoggerMessage::try_from(one_short), Err(MessageError::ShortRead { len: 32 }));
 
-        assert_eq!(
-            Message::from_logger(get_test_identity(), two_short),
-            Err(MessageError::ShortRead { len: 31 })
-        );
+        assert_eq!(LoggerMessage::try_from(two_short), Err(MessageError::ShortRead { len: 31 }));
     }
 
     #[test]
@@ -790,7 +850,7 @@ mod tests {
         packet.data[end] = 1;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end];
-        let parsed = Message::from_logger(get_test_identity(), buffer);
+        let parsed = LoggerMessage::try_from(buffer);
 
         assert_eq!(parsed, Err(MessageError::NotNullTerminated { terminator: 1 }));
     }
@@ -804,7 +864,7 @@ mod tests {
         packet.data[end] = 0;
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + end]; // omit null-terminated
-        let parsed = Message::from_logger(get_test_identity(), buffer);
+        let parsed = LoggerMessage::try_from(buffer);
 
         assert_eq!(parsed, Err(MessageError::OutOfBounds));
     }
@@ -828,7 +888,8 @@ mod tests {
         let data_size = b_start + b_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
-        let parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
@@ -871,7 +932,8 @@ mod tests {
         packet.fill_data(b_start..b_end, 'B' as _);
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + b_end + 1]; // null-terminate message
-        let parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
@@ -924,7 +986,7 @@ mod tests {
         packet.fill_data(b_start..b_end, 'B' as _);
 
         let buffer = &packet.as_bytes()[..MIN_PACKET_SIZE + b_end];
-        let parsed = Message::from_logger(get_test_identity(), buffer);
+        let parsed = LoggerMessage::try_from(buffer);
 
         assert_eq!(parsed, Err(MessageError::OutOfBounds));
     }
@@ -954,7 +1016,8 @@ mod tests {
         let data_size = c_start + c_count;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
-        let parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let expected = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
@@ -998,10 +1061,14 @@ mod tests {
         packet.fill_data(msg_start..msg_end, msg_ascii);
 
         let min_buffer = &packet.as_bytes()[..METADATA_SIZE + msg_end + 1]; // null-terminated
-        let full_buffer = &packet.as_bytes();
+        let full_buffer = packet.as_bytes();
 
-        let min_parsed = Message::from_logger(get_test_identity(), min_buffer).unwrap();
-        let full_parsed = Message::from_logger(get_test_identity(), full_buffer).unwrap();
+        let min_parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(min_buffer).unwrap());
+        let full_parsed = Message::from_logger(
+            get_test_identity(),
+            LoggerMessage::try_from(full_buffer).unwrap(),
+        );
 
         let tag_properties = (0..MAX_TAGS as _)
             .map(|tag_num| {
@@ -1047,13 +1114,14 @@ mod tests {
 
         let buffer_missing_terminator = &packet.as_bytes()[..METADATA_SIZE + msg_start];
         assert_eq!(
-            Message::from_logger(get_test_identity(), buffer_missing_terminator),
+            LoggerMessage::try_from(buffer_missing_terminator),
             Err(MessageError::OutOfBounds),
             "can't parse an empty message without a nul terminator"
         );
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
-        let parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let mut builder = LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: packet.metadata.time.into(),
             component_url: Some(TEST_IDENTITY.url.clone()),
@@ -1081,7 +1149,8 @@ mod tests {
         packet.data[3] = 0;
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + 4]; // 0 tag size + 2 byte message + null
-        let parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
 
         assert_eq!(
             parsed,
@@ -1110,7 +1179,8 @@ mod tests {
         packet.data[1] = 0; // null terminated
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
-        let mut parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let mut parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let mut expected_message = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: packet.metadata.time.into(),
@@ -1130,28 +1200,32 @@ mod tests {
 
         packet.metadata.severity = LogLevelFilter::Trace as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Trace;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Debug as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Debug;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Warn as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Warn;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = LogLevelFilter::Error as i32;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Error;
 
         assert_eq!(parsed, expected_message);
@@ -1166,7 +1240,8 @@ mod tests {
         packet.data[1] = 0; // null terminated
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
-        let mut parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        let mut parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         let mut expected_message = Message::from(
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(3).into(),
@@ -1189,7 +1264,8 @@ mod tests {
         // legacy verbosity where v=2
         packet.metadata.severity = LogLevelFilter::Info as i32 - 2;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(2);
 
@@ -1198,7 +1274,8 @@ mod tests {
         // legacy verbosity where v=1
         packet.metadata.severity = LogLevelFilter::Info as i32 - 1;
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(1);
 
@@ -1206,7 +1283,8 @@ mod tests {
 
         packet.metadata.severity = 0; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.clear_legacy_verbosity();
         expected_message.metadata.severity = Severity::Info;
 
@@ -1214,21 +1292,24 @@ mod tests {
 
         packet.metadata.severity = 1; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Warn;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = 2; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Error;
 
         assert_eq!(parsed, expected_message);
 
         packet.metadata.severity = 3; // legacy severity
         buffer = &packet.as_bytes()[..METADATA_SIZE + 2];
-        parsed = Message::from_logger(get_test_identity(), buffer).unwrap();
+        parsed =
+            Message::from_logger(get_test_identity(), LoggerMessage::try_from(buffer).unwrap());
         expected_message.metadata.severity = Severity::Fatal;
 
         assert_eq!(parsed, expected_message);
@@ -1351,6 +1432,24 @@ mod tests {
             Message::from_structured(get_test_identity(), &vec![]).unwrap_err(),
             MessageError::ParseError { .. }
         ));
+    }
+
+    #[test]
+    fn basic_structured_info() {
+        let expected_timestamp = 72;
+        let record = Record {
+            timestamp: expected_timestamp,
+            severity: StreamSeverity::Error,
+            arguments: vec![],
+        };
+        let mut buffer = Cursor::new(vec![0u8; MAX_DATAGRAM_LEN]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref().as_slice()[..buffer.position() as usize];
+
+        let (timestamp, severity) = parse_basic_structured_info(encoded).unwrap();
+        assert_eq!(timestamp, expected_timestamp);
+        assert_eq!(severity, Severity::Error);
     }
 
     macro_rules! severity_roundtrip_test {

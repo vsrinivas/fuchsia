@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_data::{LogsData, Severity};
+use crate::logs::stored_message::StoredMessage;
+use diagnostics_data::Severity;
 use fuchsia_inspect::{IntProperty, Node, NumericProperty, Property, UintProperty};
 use fuchsia_inspect_derive::Inspect;
 
-#[derive(Default, Inspect)]
+#[derive(Debug, Default, Inspect)]
 pub struct LogStreamStats {
     last_timestamp: IntProperty,
     total: LogCounter,
@@ -22,14 +23,14 @@ pub struct LogStreamStats {
 }
 
 impl LogStreamStats {
-    pub fn increment_dropped(&self, msg: &LogsData) {
+    pub fn increment_dropped(&self, msg: &StoredMessage) {
         self.dropped.count(msg);
     }
 
-    pub fn ingest_message(&self, msg: &LogsData) {
-        self.last_timestamp.set(msg.metadata.timestamp.into());
+    pub fn ingest_message(&self, msg: &StoredMessage) {
+        self.last_timestamp.set(msg.timestamp());
         self.total.count(msg);
-        match msg.metadata.severity {
+        match msg.severity() {
             Severity::Trace => self.trace.count(msg),
             Severity::Debug => self.debug.count(msg),
             Severity::Info => self.info.count(msg),
@@ -40,7 +41,7 @@ impl LogStreamStats {
     }
 }
 
-#[derive(Default, Inspect)]
+#[derive(Debug, Default, Inspect)]
 struct LogCounter {
     number: UintProperty,
     bytes: UintProperty,
@@ -49,8 +50,8 @@ struct LogCounter {
 }
 
 impl LogCounter {
-    fn count(&self, msg: &LogsData) {
+    fn count(&self, msg: &StoredMessage) {
         self.number.add(1);
-        self.bytes.add(msg.metadata.size_bytes as u64);
+        self.bytes.add(msg.size() as u64);
     }
 }

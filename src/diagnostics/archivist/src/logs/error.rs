@@ -42,6 +42,8 @@ pub enum StreamError {
     Closed,
     #[error(transparent)]
     Message(#[from] MessageError),
+    #[error("couldn't convert debuglog message")]
+    DebugLogMessage,
 }
 
 #[cfg(test)]

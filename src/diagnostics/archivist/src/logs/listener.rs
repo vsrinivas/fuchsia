@@ -201,13 +201,15 @@ mod tests {
     use super::*;
     use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
 
-    use diagnostics_message::{fx_log_packet_t, METADATA_SIZE};
+    use diagnostics_message::{fx_log_packet_t, LoggerMessage, METADATA_SIZE};
     use fidl::endpoints::ServerEnd;
     use fidl_fuchsia_logger::LogLevelFilter;
     use fidl_fuchsia_logger::LogListenerSafeRequest;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use libc::c_char;
+    use std::convert::TryFrom;
+
     #[fasync::run_singlethreaded(test)]
     async fn normal_behavior_test() {
         let message_vec =
@@ -271,10 +273,10 @@ mod tests {
         let mut message_vec = Vec::new();
         for _ in 0..num_messages {
             let byte_encoding = generate_byte_encoded_log(per_msg_size);
-            message_vec.push(Arc::new(
-                MessageWithStats::from_logger(&get_test_identity(), byte_encoding.as_bytes())
-                    .unwrap(),
-            ))
+            message_vec.push(Arc::new(MessageWithStats::from_logger(
+                &get_test_identity(),
+                LoggerMessage::try_from(byte_encoding.as_bytes()).unwrap(),
+            )))
         }
 
         message_vec

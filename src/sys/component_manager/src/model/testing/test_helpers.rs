@@ -21,7 +21,7 @@ use {
     anyhow::{Context, Error},
     cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
-    diagnostics_message::{Message, MonikerWithUrl},
+    diagnostics_message::{LoggerMessage, Message, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
@@ -35,6 +35,7 @@ use {
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
     moniker::{PartialAbsoluteMoniker, PartialChildMoniker},
     std::collections::HashSet,
+    std::convert::TryFrom,
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
@@ -484,9 +485,9 @@ pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
                     moniker: "test-pkg/test-component.cmx".to_string(),
                     url: "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm".to_string(),
                 },
-                &buffer[..read_len],
-            )
-            .expect("Couldn't decode message from buffer.");
+                LoggerMessage::try_from(&buffer[..read_len])
+                    .expect("Couldn't decode message from buffer."),
+            );
 
             (*msg).msg().map(String::from)
         }

@@ -463,8 +463,9 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 mod test {
     use super::*;
     use diagnostics_data::{assert_data_tree, Severity};
-    use diagnostics_message::{Message, MonikerWithUrl};
+    use diagnostics_message::{LoggerMessage, Message, MonikerWithUrl};
     use log::{debug, error, info, trace, warn};
+    use std::convert::TryFrom;
     use std::fs::File;
     use std::io::Read;
     use std::os::unix::io::AsRawFd;
@@ -492,8 +493,11 @@ mod test {
             url: "fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string(),
         };
 
-        let msg = Message::from_logger(src_id.clone(), &buffer[..read_len])
-            .expect("couldn't decode message from buffer");
+        let msg = Message::from_logger(
+            src_id.clone(),
+            LoggerMessage::try_from(&buffer[..read_len])
+                .expect("couldn't decode message from buffer"),
+        );
 
         // Check metadata and payload
         assert_eq!(msg.metadata.errors, None);
