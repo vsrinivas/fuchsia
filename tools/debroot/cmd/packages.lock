@@ -1,5 +1,5 @@
-hash: c890e8f7ead1b2309afc6a5ecc5e0c5c45481b03e75ae721244dd2f1f7a1dc1c
-updated: 2021-09-21T23:53:05.878293289-07:00
+hash: 0e346f82771628e2c8d415382dd97f62f434a56da6f463183c16e8037c1b6b44
+updated: 2021-09-22T14:18:47.715096281-07:00
 packages:
 - package: libc6
   version: 2.28-10
@@ -33,6 +33,38 @@ packages:
   version: 2.28-10
   filename: pool/main/g/glibc/libc6-dev_2.28-10_i386.deb
   hash: 3c1b486e10853b1980fc51a4b68dae2fd8c76d3740239016cc54dc7a81dc7aa5
+- package: libdebuginfod-dev
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod-dev_0.183-1~bpo10+1_amd64.deb
+  hash: 30ff8bffd6d2fbccb4fad083a915a1e37a9806f2f63adff012e9d4f9e36f6582
+- package: libdebuginfod-dev
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod-dev_0.183-1~bpo10+1_arm64.deb
+  hash: a17e0e8dfe2e303901a18d0e9507a5cb88593e01f21b0255ffb06c395b21aa63
+- package: libdebuginfod-dev
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod-dev_0.183-1~bpo10+1_armhf.deb
+  hash: ce84e73422e5901c16a6e7eb1b5f534b188f5ed1d20f3e714588dbabb3baf479
+- package: libdebuginfod-dev
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod-dev_0.183-1~bpo10+1_i386.deb
+  hash: 1fb2bfd58d7820fab653430cb05a6787bf1267b05e75602e50e61f340e6a896f
+- package: libdebuginfod1
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod1_0.183-1~bpo10+1_amd64.deb
+  hash: c22fcfe5d457119061f3a95b4b939719cfc15504291e8a4a31eca287c2b62aea
+- package: libdebuginfod1
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod1_0.183-1~bpo10+1_arm64.deb
+  hash: 63646393861c208c353e38caae83e52422b5a07cc8b87ac7797924186bf3827a
+- package: libdebuginfod1
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod1_0.183-1~bpo10+1_armhf.deb
+  hash: d986783e13e50e6abca10ebb70894d8363c831c514e18b21daa6a41cf6a6fe84
+- package: libdebuginfod1
+  version: 0.183-1~bpo10+1
+  filename: pool/main/e/elfutils/libdebuginfod1_0.183-1~bpo10+1_i386.deb
+  hash: 0f6ab712c61bd2d3bc4611200aebf8499b8be009f486ac671285a0e945c3557c
 - package: libgcc-8-dev
   version: 8.3.0-6
   filename: pool/main/g/gcc-8/libgcc-8-dev_8.3.0-6_amd64.deb
@@ -98,21 +130,21 @@ packages:
   filename: pool/main/m/mesa/libgl1-mesa-glx_18.3.6-2+deb10u1_i386.deb
   hash: aeb74ef6d64078e03dc6b7622363c3bf8b7914ba6ef7bc1d58b669139b88ee68
 - package: libglapi-mesa
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_amd64.deb
-  hash: 400fa15a8da369359328ad41ac893c4cb51686514ee6a9456dbbfd12e8836ec3
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/libglapi-mesa_20.3.5-1~bpo10+1_amd64.deb
+  hash: 099ef7e241572dd07b4e5645dfcd150d768a3a9eaee713a171817bc0627fced4
 - package: libglapi-mesa
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_arm64.deb
-  hash: 7407e0533ed4bd7e1254b1f0f992ef4859121cb4e14eba64ae59e7e8c2fd5f48
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/libglapi-mesa_20.3.5-1~bpo10+1_arm64.deb
+  hash: 3522229e647f9d7f1beabd70e834897d328a5b26a205eb1953eba0e127c0aaeb
 - package: libglapi-mesa
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_armhf.deb
-  hash: ca0daf91a6c0aa66918b25d03f41a8b3de0e7c57dcd692f275f52b7755a9e466
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/libglapi-mesa_20.3.5-1~bpo10+1_armhf.deb
+  hash: 3abe3f9ebbfa8e600f8f64533a53fb813857e89c847901c039dbaf7a31750e4e
 - package: libglapi-mesa
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/libglapi-mesa_18.3.6-2+deb10u1_i386.deb
-  hash: a418330a40a4f4275c86c732d52b2a8a5c142a5d58afc82540323cb5887626f3
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/libglapi-mesa_20.3.5-1~bpo10+1_i386.deb
+  hash: 044b86dbf2341724b7dbb9b4c3bb478e79f6bcc0ec56bae99b605dd18c186176
 - package: libpython3-dev
   version: 3.7.3-1
   filename: pool/main/p/python3-defaults/libpython3-dev_3.7.3-1_amd64.deb
@@ -578,37 +610,37 @@ packages:
   filename: pool/main/libx/libxrender/libxrender1_0.9.10-1_i386.deb
   hash: 0b71b3f530a1b039b64f74c0223b433bd73fe0164916b60b25f9f3f11a6b9bfb
 - package: linux-libc-dev
-  version: 4.19.194-2
-  filename: pool/main/l/linux/linux-libc-dev_4.19.194-2_amd64.deb
-  hash: 2f8a22bf9d440bb6881c8c104507cdd9e128d619ec05de53f480b901e2905460
+  version: 5.10.46-4~bpo10+1
+  filename: pool/main/l/linux/linux-libc-dev_5.10.46-4~bpo10+1_amd64.deb
+  hash: 8cb451c9795ba35af30f83669b64f9c759b273311ee10ccaee5aa01d675d977c
 - package: linux-libc-dev
-  version: 4.19.194-2
-  filename: pool/main/l/linux/linux-libc-dev_4.19.194-2_arm64.deb
-  hash: 8e6c5f15f931ee7c4cb5dae9857470982bef86c0a4884cb131d51b499638704b
+  version: 5.10.46-4~bpo10+1
+  filename: pool/main/l/linux/linux-libc-dev_5.10.46-4~bpo10+1_arm64.deb
+  hash: 14b6b38c1d83db9547d69fff8e30970297f7cf08f1d00eaa8d4be815976921d1
 - package: linux-libc-dev
-  version: 4.19.194-2
-  filename: pool/main/l/linux/linux-libc-dev_4.19.194-2_armhf.deb
-  hash: c6cef29c80a0794ec8846df6a0e66a011b790b0d8adc85e9d7ed21bbdf5355f2
+  version: 5.10.46-4~bpo10+1
+  filename: pool/main/l/linux/linux-libc-dev_5.10.46-4~bpo10+1_armhf.deb
+  hash: 6f0945fac6d3574579c1679c5258b27aa1e369011b1e749b01b1ffe1ae0830f4
 - package: linux-libc-dev
-  version: 4.19.194-2
-  filename: pool/main/l/linux/linux-libc-dev_4.19.194-2_i386.deb
-  hash: 77dbfcfe91eb7eee849f8484060d37bb20a1d31d7bd666f8f285513fd9289b55
+  version: 5.10.46-4~bpo10+1
+  filename: pool/main/l/linux/linux-libc-dev_5.10.46-4~bpo10+1_i386.deb
+  hash: d1f8bd890851f8ba42339c1e2dcb38c64207c0e1593862c0cb2ec02abcab2f0a
 - package: mesa-common-dev
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/mesa-common-dev_18.3.6-2+deb10u1_amd64.deb
-  hash: 7b195dd2a78cdd5ad9979212f3757916a61b41c1016d05b3c1a4382344635664
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/mesa-common-dev_20.3.5-1~bpo10+1_amd64.deb
+  hash: a7714b89b14c1cf8e4dae5d3ef6661a58be0ca72c5f22969d7f53d2f5d9097b8
 - package: mesa-common-dev
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/mesa-common-dev_18.3.6-2+deb10u1_arm64.deb
-  hash: 8904ad81e0441a61a7a87ac0828c920cd171a6ef4538b392f0ea0175950f1184
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/mesa-common-dev_20.3.5-1~bpo10+1_arm64.deb
+  hash: ca1fd22c622242fe1c3afe83555d65a305738704b841a5eb29ad0615abe9fa77
 - package: mesa-common-dev
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/mesa-common-dev_18.3.6-2+deb10u1_armhf.deb
-  hash: 09cc6e6407ca4646784b3e341b027e11ac2744001bf92c5058a73d84b5db89ea
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/mesa-common-dev_20.3.5-1~bpo10+1_armhf.deb
+  hash: f1ffdc4e89778fe2d5ac80594a29b11362620d610ecec2c290d9a3cc37e309c2
 - package: mesa-common-dev
-  version: 18.3.6-2+deb10u1
-  filename: pool/main/m/mesa/mesa-common-dev_18.3.6-2+deb10u1_i386.deb
-  hash: 04fcf2c9c4af732edb6afc3f7f78611403d6afe25e3039546c40c47366c89ea3
+  version: 20.3.5-1~bpo10+1
+  filename: pool/main/m/mesa/mesa-common-dev_20.3.5-1~bpo10+1_i386.deb
+  hash: e3a90434d381894987f0dc4138393903e3b07c0716205e76404fc6cda6e427d8
 - package: x11proto-core-dev
   version: 2018.4-4
   filename: pool/main/x/xorgproto/x11proto-core-dev_2018.4-4_all.deb

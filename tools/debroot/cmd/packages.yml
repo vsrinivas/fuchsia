@@ -1,6 +1,7 @@
 dists:
   - buster
   - buster-updates
+  - buster-backports
 architectures:
   - amd64
   - arm64
@@ -12,14 +13,16 @@ keyring: debian-archive-keyring.gpg
 packages:
   - package: libc6
   - package: libc6-dev
+  - package: libdebuginfod-dev
+  - package: libdebuginfod1
   - package: libgcc-8-dev
   - package: libgcc1
   - package: libgl1-mesa-dev
   - package: libgl1-mesa-glx
   - package: libglapi-mesa
+  - package: libpython3-dev
   - package: libpython3.7
   - package: libpython3.7-dev
-  - package: libpython3-dev
   - package: libstdc++-8-dev
   - package: libstdc++6
   - package: libx11-6
