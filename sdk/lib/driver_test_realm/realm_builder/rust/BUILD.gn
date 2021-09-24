@@ -2,42 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/bind/bind.gni")
-import("//build/components.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/test.gni")
+import("//build/rust/rustc_library.gni")
 
-group("tests") {
+rustc_library("rust") {
   testonly = true
-  deps = [ ":package" ]
-}
-
-rustc_test("driver_test_realm_test") {
-  testonly = true
-  source_root = "test.rs"
-  sources = [ "test.rs" ]
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/devices/lib/device-watcher/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
   ]
-}
-
-fuchsia_unittest_package("package") {
-  package_name = "driver_test_realm_test"
-  deps = [
-    ":driver_test_realm_test",
-    "//sdk/lib/driver_test_realm:realm_builder_version",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/misc/drivers/test-parent",
-  ]
+  name = "fuchsia_driver_test"
+  sources = [ "src/lib.rs" ]
 }
