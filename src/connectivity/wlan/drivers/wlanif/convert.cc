@@ -17,7 +17,8 @@
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/ieee80211_codes.h>
-#include <wlan/common/logging.h>
+
+#include "debug.h"
 
 namespace wlanif {
 
@@ -70,7 +71,7 @@ void ConvertWlanChan(wlan_channel_t* wlanif_channel, const wlan_common::WlanChan
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, cssid_t* out_ssid) {
   size_t ssid_len = in_ssid.size();
   if (ssid_len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
-    warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);
+    lwarn("truncating ssid from %zu to %d\n", ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);
     ssid_len = wlan_ieee80211::MAX_SSID_BYTE_LEN;
   }
   std::memcpy(out_ssid->data, in_ssid.data(), ssid_len);
@@ -80,8 +81,7 @@ void CopySSID(const ::std::vector<uint8_t>& in_ssid, cssid_t* out_ssid) {
 void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
                  size_t* out_country_len) {
   if (in_country.size() > WLAN_IE_BODY_MAX_LEN) {
-    warnf("wlanif: Country length truncated from %lu to %d\n", in_country.size(),
-          WLAN_IE_BODY_MAX_LEN);
+    lwarn("Country length truncated from %lu to %d\n", in_country.size(), WLAN_IE_BODY_MAX_LEN);
     *out_country_len = WLAN_IE_BODY_MAX_LEN;
   } else {
     *out_country_len = in_country.size();
@@ -91,7 +91,7 @@ void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
 
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
   if (in_rsne.size() > WLAN_IE_BODY_MAX_LEN) {
-    warnf("wlanif: RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_IE_BODY_MAX_LEN);
+    lwarn("RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_IE_BODY_MAX_LEN);
     *out_rsne_len = WLAN_IE_BODY_MAX_LEN;
   } else {
     *out_rsne_len = in_rsne.size();
@@ -102,7 +102,7 @@ void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* 
 void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
                           uint8_t* out_vendor_specific, size_t* vendor_specific_len) {
   if (in_vendor_specific.size() > WLAN_VIE_MAX_LEN) {
-    warnf("wlanif: Vendor Specific length truncated from %lu to %d\n", in_vendor_specific.size(),
+    lwarn("Vendor Specific length truncated from %lu to %d\n", in_vendor_specific.size(),
           WLAN_VIE_MAX_LEN);
     *vendor_specific_len = WLAN_VIE_MAX_LEN;
   } else {

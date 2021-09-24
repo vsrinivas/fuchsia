@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/wlanif/device.h"
+#include "device.h"
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
@@ -17,9 +17,9 @@
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/ieee80211_codes.h>
 
-#include "src/connectivity/wlan/drivers/wlanif/convert.h"
-#include "src/connectivity/wlan/drivers/wlanif/driver.h"
-#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/logging.h"
+#include "convert.h"
+#include "debug.h"
+#include "driver.h"
 
 namespace wlanif {
 
@@ -32,10 +32,10 @@ Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
     : parent_(device),
       wlanif_impl_(wlanif_impl_proto),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  debugfn();
+  ltrace_fn();
 }
 
-Device::~Device() { debugfn(); }
+Device::~Device() { ltrace_fn(); }
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t eth_device_ops = {
@@ -146,20 +146,20 @@ zx_status_t Device::AddEthDevice() {
   return device_add(parent_, &args, &ethdev_);
 }
 
-#define VERIFY_PROTO_OP(fn)                                           \
-  do {                                                                \
-    if (wlanif_impl_.ops->fn == nullptr) {                            \
-      errorf("wlanif: required protocol function %s missing\n", #fn); \
-      return ZX_ERR_INVALID_ARGS;                                     \
-    }                                                                 \
+#define VERIFY_PROTO_OP(fn)                                   \
+  do {                                                        \
+    if (wlanif_impl_.ops->fn == nullptr) {                    \
+      lerror("required protocol function %s missing\n", #fn); \
+      return ZX_ERR_INVALID_ARGS;                             \
+    }                                                         \
   } while (0)
 
 zx_status_t Device::Bind() {
-  debugfn();
+  ltrace_fn();
 
   // Assert minimum required functionality from the wlanif_impl driver
   if (wlanif_impl_.ops == nullptr) {
-    errorf("wlanif: no wlanif_impl protocol ops provided\n");
+    lerror("no wlanif_impl protocol ops provided\n");
     return ZX_ERR_INVALID_ARGS;
   }
   VERIFY_PROTO_OP(start);
@@ -185,7 +185,7 @@ zx_status_t Device::Bind() {
   zx_status_t status = wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &mlme_channel);
   ZX_DEBUG_ASSERT(mlme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
-    errorf("wlanif: call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
+    lerror("call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -194,7 +194,7 @@ zx_status_t Device::Bind() {
 
   status = loop_.StartThread("wlanif-loop");
   if (status != ZX_OK) {
-    errorf("wlanif: unable to start async loop: %s\n", zx_status_get_string(status));
+    lerror("unable to start async loop: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -202,11 +202,11 @@ zx_status_t Device::Bind() {
   status = AddEthDevice();
 
   if (status != ZX_OK) {
-    errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
+    lerror("could not add ethernet_impl device: %s\n", zx_status_get_string(status));
   } else {
     status = Connect(zx::channel(mlme_channel));
     if (status != ZX_OK) {
-      errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
+      lerror("unable to wait on SME channel: %s\n", zx_status_get_string(status));
       device_async_remove(ethdev_);
       return status;
     }
@@ -220,7 +220,7 @@ zx_status_t Device::Bind() {
 #undef VERIFY_PROTO_OP
 
 void Device::EthUnbind() {
-  debugfn();
+  ltrace_fn();
   auto dispatcher = loop_.dispatcher();
   {
     // Stop accepting new FIDL requests.
@@ -235,12 +235,12 @@ void Device::EthUnbind() {
 }
 
 void Device::EthRelease() {
-  debugfn();
+  ltrace_fn();
   delete this;
 }
 
 zx_status_t Device::Connect(zx::channel request) {
-  debugfn();
+  ltrace_fn();
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
@@ -280,7 +280,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     channel_list = std::move(req.channel_list.value());
   }
   if (channel_list.size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    warnf("wlanif: truncating channel list from %lu to %du\n", channel_list.size(),
+    lwarn("truncating channel list from %lu to %du\n", channel_list.size(),
           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
     impl_req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
   } else {
@@ -301,8 +301,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   }
   size_t num_ssids = ssid_list.size();
   if (num_ssids > WLAN_SCAN_MAX_SSIDS_PER_REQUEST) {
-    warnf("wlanif: truncating SSID list from %zu to %d\n", num_ssids,
-          WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
+    lwarn("truncating SSID list from %zu to %d\n", num_ssids, WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
     num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST;
   }
   for (size_t ndx = 0; ndx < num_ssids; ndx++) {
@@ -329,7 +328,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
 
   // op_rates
   if (req.op_rates.size() > WLAN_MAX_OP_RATES) {
-    warnf("wlanif: truncating operational rates set from %zu to %d members\n", req.op_rates.size(),
+    lwarn("truncating operational rates set from %zu to %d members\n", req.op_rates.size(),
           WLAN_MAX_OP_RATES);
     impl_req.num_op_rates = WLAN_MAX_OP_RATES;
   } else {
@@ -501,7 +500,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
   // keylist
   size_t num_keys = req.keylist.size();
   if (num_keys > WLAN_MAX_KEYLIST_SIZE) {
-    warnf("wlanif: truncating key list from %zu to %d members\n", num_keys, WLAN_MAX_KEYLIST_SIZE);
+    lwarn("truncating key list from %zu to %d members\n", num_keys, WLAN_MAX_KEYLIST_SIZE);
     impl_req.num_keys = WLAN_MAX_KEYLIST_SIZE;
   } else {
     impl_req.num_keys = num_keys;
@@ -519,7 +518,7 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
   // keylist
   size_t num_keys = req.keylist.size();
   if (num_keys > WLAN_MAX_KEYLIST_SIZE) {
-    warnf("wlanif: truncating key list from %zu to %d members\n", num_keys, WLAN_MAX_KEYLIST_SIZE);
+    lwarn("truncating key list from %zu to %d members\n", num_keys, WLAN_MAX_KEYLIST_SIZE);
     impl_req.num_keys = WLAN_MAX_KEYLIST_SIZE;
   } else {
     impl_req.num_keys = num_keys;
@@ -602,7 +601,7 @@ void Device::StatsQueryReq() {
 }
 
 void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {
-  errorf("Minstrel peer list not available: FullMAC driver not supported.\n");
+  lerror("Minstrel peer list not available: FullMAC driver not supported.\n");
   ZX_DEBUG_ASSERT(false);
 
   std::lock_guard<std::mutex> lock(lock_);
@@ -614,7 +613,7 @@ void Device::ListMinstrelPeers(ListMinstrelPeersCallback cb) {
 }
 
 void Device::GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req, GetMinstrelStatsCallback cb) {
-  errorf("Minstrel stats not available: FullMAC driver not supported.\n");
+  lerror("Minstrel stats not available: FullMAC driver not supported.\n");
   ZX_DEBUG_ASSERT(false);
 
   std::lock_guard<std::mutex> lock(lock_);
@@ -626,20 +625,20 @@ void Device::GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req, GetMinstrelSt
 }
 
 void Device::SendMpOpenAction(wlan_mlme::MeshPeeringOpenAction req) {
-  errorf("SendMpConfirmAction is not implemented\n");
+  lerror("SendMpConfirmAction is not implemented\n");
 }
 
 void Device::SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) {
-  errorf("SendMpConfirmAction is not implemented\n");
+  lerror("SendMpConfirmAction is not implemented\n");
 }
 
 void Device::MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) {
-  errorf("MeshPeeringEstablished is not implemented\n");
+  lerror("MeshPeeringEstablished is not implemented\n");
 }
 
 void Device::GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest req,
                                  GetMeshPathTableReqCallback cb) {
-  errorf("GetMeshPathTable is not implemented\n");
+  lerror("GetMeshPathTable is not implemented\n");
 }
 
 void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
@@ -1139,7 +1138,7 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
       //               So we give a warning and return OK here to continue the bridging.
       // TODO(fxbug.dev/29113): To implement the real promiscuous mode.
       if (value == 1) {  // Only warn when enabling.
-        warnf("wlanif: WLAN promiscuous not supported yet. see fxbug.dev/29113\n");
+        lwarn("WLAN promiscuous not supported yet. see fxbug.dev/29113\n");
       }
       status = ZX_OK;
       break;
