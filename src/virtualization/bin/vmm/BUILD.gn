@@ -27,11 +27,14 @@ group("vmm_tests") {
   }
 }
 
+source_set("bits") {
+  sources = [ "bits.h" ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "bits.h",
     "controller/virtio_balloon.cc",
     "controller/virtio_balloon.h",
     "controller/virtio_block.cc",
@@ -126,6 +129,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":bits",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/stdcompat",

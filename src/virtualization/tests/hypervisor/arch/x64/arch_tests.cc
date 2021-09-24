@@ -15,6 +15,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/tests/hypervisor/hypervisor_tests.h"
 
 namespace {
@@ -22,12 +23,6 @@ namespace {
 constexpr uint32_t kNmiVector = 2u;
 constexpr uint32_t kGpFaultVector = 13u;
 constexpr uint32_t kExceptionVector = 16u;
-
-// Generate an n-bit mask.
-constexpr uint64_t Mask(uint64_t n) { return n >= 64 ? ~0 : (1 << n) - 1; }
-static_assert(Mask(0) == 0);
-static_assert(Mask(4) == 0xf);
-static_assert(Mask(64) == 0xffff'ffff'ffff'ffff);
 
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
 DECLARE_TEST_FUNCTION(vcpu_interrupt)
@@ -249,7 +244,7 @@ TEST(Guest, VcpuIpi) {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_VCPU);
     EXPECT_EQ(packet.guest_vcpu.type, ZX_PKT_GUEST_VCPU_INTERRUPT);
     EXPECT_EQ(packet.guest_vcpu.interrupt.vector, INT_IPI_VECTOR);
-    EXPECT_EQ(packet.guest_vcpu.interrupt.mask & Mask(kNumCpus), expected_mask);
+    EXPECT_EQ(packet.guest_vcpu.interrupt.mask & bit_mask<uint64_t>(kNumCpus), expected_mask);
   }
 
   // Resume once and wait for the guest to send an IPI.

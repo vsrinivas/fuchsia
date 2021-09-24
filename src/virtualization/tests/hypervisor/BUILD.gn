@@ -35,6 +35,7 @@ executable("hypervisor_tests") {
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:test_settings",
+    "//src/virtualization/bin/vmm:bits",
     "//third_party/googletest:gtest",
     "//zircon/kernel/phys/lib/page-table",
     "//zircon/public/lib/zx",
