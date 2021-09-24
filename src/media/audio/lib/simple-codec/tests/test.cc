@@ -14,6 +14,7 @@ namespace {
 static const char* kTestId = "test id";
 static const char* kTestManufacturer = "test man";
 static const char* kTestProduct = "test prod";
+static const uint32_t kTestInstanceCount = 123;
 }  // namespace
 namespace audio {
 
@@ -37,7 +38,7 @@ struct TestCodec : public SimpleCodecServer {
 
   zx_status_t Shutdown() override { return ZX_OK; }
   zx::status<DriverIds> Initialize() override {
-    return zx::ok(DriverIds{.vendor_id = 0, .device_id = 0});
+    return zx::ok(DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
   }
   zx_status_t Reset() override { return ZX_ERR_NOT_SUPPORTED; }
   Info GetInfo() override {
@@ -185,6 +186,45 @@ TEST_F(SimpleCodecTest, Inspect) {
       CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
   ASSERT_NO_FATAL_FAILURES(
       CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "unique_id", inspect::StringPropertyValue("test id")));
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, InspectNoUniqueId) {
+  struct TestCodecNoUniqueId : public TestCodec {
+    zx::status<DriverIds> Initialize() override {
+      return zx::ok(
+          DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
+    }
+    Info GetInfo() override { return {}; }
+  };
+  auto codec = SimpleCodecServer::Create<TestCodecNoUniqueId>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  // Check inspect state.
+  ASSERT_NO_FATAL_FAILURES(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* simple_codec = hierarchy().GetByPath({"simple_codec"});
+  ASSERT_TRUE(simple_codec);
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "state", inspect::StringPropertyValue("created")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(simple_codec->node(), "unique_id",
+                    inspect::StringPropertyValue(std::to_string(kTestInstanceCount))));
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(ddk_.Ok());

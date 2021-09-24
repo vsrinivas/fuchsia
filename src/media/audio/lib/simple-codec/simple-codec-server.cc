@@ -38,10 +38,16 @@ zx_status_t SimpleCodecServer::CreateInternal() {
 
   driver_ids_ = res.value();
   Info info = GetInfo();
-  simple_codec_.CreateString("manufacturer", info.manufacturer.c_str(), &inspect_);
-  simple_codec_.CreateString("product", info.product_name.c_str(), &inspect_);
-  simple_codec_.CreateString("unique_id", info.unique_id.c_str(), &inspect_);
+  simple_codec_.CreateString("manufacturer", info.manufacturer, &inspect_);
+  simple_codec_.CreateString("product", info.product_name, &inspect_);
+  if (!info.unique_id.empty()) {
+    simple_codec_.CreateString("unique_id", info.unique_id, &inspect_);
+  }
   if (driver_ids_.instance_count != 0) {
+    if (info.unique_id.empty()) {
+      simple_codec_.CreateString("unique_id", std::to_string(driver_ids_.instance_count),
+                                 &inspect_);
+    }
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
         {BIND_PLATFORM_DEV_DID, 0, driver_ids_.device_id},
