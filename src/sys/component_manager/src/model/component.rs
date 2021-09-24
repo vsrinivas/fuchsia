@@ -1334,8 +1334,11 @@ impl ResolvedInstanceState {
         }
     }
 
-    /// Adds a new child of this instance for the given `ChildDecl`. Returns a future to wait on
-    /// the child's `Discover` action, or None if it already existed.
+    /// Adds a new child of this instance for the given `ChildDecl`. Returns a
+    /// future to wait on the child's `Discover` action, or `None` if a child
+    /// with the same name already existed. This function always succeeds - an
+    /// error returned by the `Future` means that the `Discover` action failed,
+    /// but the creation of the child still succeeded.
     #[must_use]
     async fn add_child(
         &mut self,
@@ -1344,26 +1347,29 @@ impl ResolvedInstanceState {
         collection: Option<&CollectionDecl>,
         child_args: fsys::CreateChildArgs,
     ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
-        self.add_child_internal(component, child, collection, child_args, true).await
+        let child = self.add_child_internal(component, child, collection, child_args).await?;
+
+        // We can dispatch a Discovered event for the component now that it's installed in the
+        // tree, which means any Discovered hooks will capture it.
+        let mut actions = child.lock_actions().await;
+        Some(actions.register_no_wait(&child, DiscoverAction::new()).boxed())
     }
 
+    /// Adds a new child of this instance for the given `ChildDecl`. Returns
+    /// `true` if the creation succeeded, and `false` if a child with the same
+    /// name already existed. Like `add_child`, but doesn't register a
+    /// `Discover` action, and therefore doesn't return a future to wait for.
     #[cfg(test)]
     #[must_use]
-    pub async fn add_child_for_test(
+    pub async fn add_child_no_discover(
         &mut self,
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-        register_discover: bool,
-    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
-        self.add_child_internal(
-            component,
-            child,
-            collection,
-            fsys::CreateChildArgs::EMPTY,
-            register_discover,
-        )
-        .await
+    ) -> bool {
+        self.add_child_internal(component, child, collection, fsys::CreateChildArgs::EMPTY)
+            .await
+            .is_some()
     }
 
     #[must_use]
@@ -1373,8 +1379,7 @@ impl ResolvedInstanceState {
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
         child_args: fsys::CreateChildArgs,
-        register_discover: bool,
-    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
+    ) -> Option<Arc<ComponentInstance>> {
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -1386,32 +1391,23 @@ impl ResolvedInstanceState {
         let child_moniker =
             ChildMoniker::new(child.name.clone(), collection.map(|c| c.name.clone()), instance_id);
         let partial_moniker = child_moniker.to_partial();
-        if self.get_live_child(&partial_moniker).is_none() {
-            let child = ComponentInstance::new(
-                self.environment_for_child(component, child, collection.clone()),
-                component.abs_moniker.child(child_moniker.clone()),
-                child.url.clone(),
-                child.startup,
-                child.on_terminate.unwrap_or(fsys::OnTerminate::None),
-                component.context.clone(),
-                WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
-                Arc::new(Hooks::new(Some(component.hooks.clone()))),
-                child_args.numbered_handles,
-            );
-            self.children.insert(child_moniker, child.clone());
-            self.live_children.insert(partial_moniker, (instance_id, child.clone()));
-            // We can dispatch a Discovered event for the component now that it's installed in the
-            // tree, which means any Discovered hooks will capture it.
-            let nf = if register_discover {
-                let mut actions = child.lock_actions().await;
-                actions.register_no_wait(&child, DiscoverAction::new()).boxed()
-            } else {
-                async { Ok(()) }.boxed()
-            };
-            Some(nf)
-        } else {
-            None
+        if self.get_live_child(&partial_moniker).is_some() {
+            return None;
         }
+        let child = ComponentInstance::new(
+            self.environment_for_child(component, child, collection.clone()),
+            component.abs_moniker.child(child_moniker.clone()),
+            child.url.clone(),
+            child.startup,
+            child.on_terminate.unwrap_or(fsys::OnTerminate::None),
+            component.context.clone(),
+            WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
+            Arc::new(Hooks::new(Some(component.hooks.clone()))),
+            child_args.numbered_handles,
+        );
+        self.children.insert(child_moniker, child.clone());
+        self.live_children.insert(partial_moniker, (instance_id, child.clone()));
+        Some(child)
     }
 
     async fn add_static_children(

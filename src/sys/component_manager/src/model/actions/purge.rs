@@ -433,17 +433,7 @@ pub mod tests {
                 environment: None,
                 on_terminate: None,
             };
-            resolved_state
-                .add_child_for_test(
-                    &component_root,
-                    &child,
-                    None,
-                    false, /* !register_discover */
-                )
-                .await
-                .unwrap()
-                .await
-                .unwrap();
+            assert!(resolved_state.add_child_no_discover(&component_root, &child, None,).await);
         }
         let mut event_stream = setup_purge_blocks_test_event_stream(
             &test,
