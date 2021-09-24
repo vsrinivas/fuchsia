@@ -3,8 +3,79 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
 
+# Realm component used to launch FIDL examples
 fuchsia_component("echo_realm") {
   manifest = "meta/echo_realm.cml"
   restricted_features = [ "services" ]
+}
+
+# Integration testing components for FIDL examples
+rustc_test("bin") {
+  name = "fidl_examples_integration"
+  edition = "2018"
+
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("fidl_examples_test") {
+  testonly = true
+  manifest = "meta/integration_tests.cml"
+  deps = [ ":bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":echo-launcher-rust-client-test",
+    ":echo-rust-client-sync-test",
+    ":echo-rust-client-test",
+    ":echo-service-rust-client-test",
+  ]
+}
+
+# Individual test packages for each example
+fuchsia_test_package("echo-rust-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/rust/client:echo-client",
+    "//examples/fidl/rust/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-rust-client-sync-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/rust/client_sync:echo-client",
+    "//examples/fidl/rust/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-launcher-rust-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/rust/request_pipelining/client:echo-client",
+    "//examples/fidl/rust/request_pipelining/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-service-rust-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/rust/services/client:echo-client",
+    "//examples/fidl/rust/services/server:echo-server",
+  ]
 }

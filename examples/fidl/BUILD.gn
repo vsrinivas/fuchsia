@@ -19,6 +19,7 @@ group("tests") {
   testonly = true
   deps = [
     "dart:tests",
+    "echo-realm:tests",
     "go:tests",
     "hlcpp:tests",
     "llcpp:tests",
