@@ -81,7 +81,7 @@ impl DataRepo {
                 return;
             }
         };
-        messages.sort_by_key(|m| m.metadata.timestamp);
+        messages.sort_by_key(|m| m.timestamp());
         for message in messages {
             container.ingest_message(message);
         }
@@ -577,8 +577,10 @@ impl MultiplexerBroker {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::events::types::ComponentIdentifier,
-        diagnostics_hierarchy::trie::TrieIterableNode, fidl_fuchsia_io::DirectoryMarker,
+        super::*,
+        crate::events::types::ComponentIdentifier,
+        diagnostics_hierarchy::trie::TrieIterableNode,
+        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
     };
 

@@ -1,9 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::{message::MessageWithStats, stats::LogStreamStats};
-use crate::container::ComponentIdentity;
+use super::stats::LogStreamStats;
 use crate::logs::error::StreamError;
+use crate::logs::stored_message::StoredMessage;
 use diagnostics_message::message::MAX_DATAGRAM_LEN;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -13,10 +13,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// An `Encoding` is able to parse a `Message` from raw bytes.
 pub trait Encoding {
     /// Attempt to parse a message from the given buffer
-    fn parse_message(
-        source: &ComponentIdentity,
-        buf: &[u8],
-    ) -> Result<MessageWithStats, StreamError>;
+    fn wrap_bytes(bytes: &[u8], stats: Arc<LogStreamStats>) -> Result<StoredMessage, StreamError>;
 }
 
 /// An encoding that can parse the legacy [logger/syslog wire format]
@@ -32,26 +29,19 @@ pub struct LegacyEncoding;
 pub struct StructuredEncoding;
 
 impl Encoding for LegacyEncoding {
-    fn parse_message(
-        source: &ComponentIdentity,
-        buf: &[u8],
-    ) -> Result<MessageWithStats, StreamError> {
-        MessageWithStats::from_logger(source, buf).map_err(|er| er.into())
+    fn wrap_bytes(buf: &[u8], stats: Arc<LogStreamStats>) -> Result<StoredMessage, StreamError> {
+        StoredMessage::legacy(buf, stats)
     }
 }
 
 impl Encoding for StructuredEncoding {
-    fn parse_message(
-        source: &ComponentIdentity,
-        buf: &[u8],
-    ) -> Result<MessageWithStats, StreamError> {
-        MessageWithStats::from_structured(source, buf).map_err(|er| er.into())
+    fn wrap_bytes(buf: &[u8], stats: Arc<LogStreamStats>) -> Result<StoredMessage, StreamError> {
+        StoredMessage::structured(buf, stats)
     }
 }
 
 #[must_use = "don't drop logs on the floor please!"]
 pub struct LogMessageSocket<E> {
-    source: Arc<ComponentIdentity>,
     stats: Arc<LogStreamStats>,
     socket: fasync::Socket,
     buffer: [u8; MAX_DATAGRAM_LEN],
@@ -60,15 +50,10 @@ pub struct LogMessageSocket<E> {
 
 impl LogMessageSocket<LegacyEncoding> {
     /// Creates a new `LogMessageSocket` from the given `socket` that reads the legacy format.
-    pub fn new(
-        socket: zx::Socket,
-        source: Arc<ComponentIdentity>,
-        stats: Arc<LogStreamStats>,
-    ) -> Result<Self, io::Error> {
+    pub fn new(socket: zx::Socket, stats: Arc<LogStreamStats>) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
-            source,
             stats,
             _encoder: PhantomData,
         })
@@ -80,13 +65,11 @@ impl LogMessageSocket<StructuredEncoding> {
     /// format.
     pub fn new_structured(
         socket: zx::Socket,
-        source: Arc<ComponentIdentity>,
         stats: Arc<LogStreamStats>,
     ) -> Result<Self, io::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(socket)?,
             buffer: [0; MAX_DATAGRAM_LEN],
-            source,
             stats,
             _encoder: PhantomData,
         })
@@ -97,7 +80,7 @@ impl<E> LogMessageSocket<E>
 where
     E: Encoding + Unpin,
 {
-    pub async fn next(&mut self) -> Result<MessageWithStats, StreamError> {
+    pub async fn next(&mut self) -> Result<StoredMessage, StreamError> {
         let len = self.socket.read(&mut self.buffer).await?;
 
         if len == 0 {
@@ -105,15 +88,14 @@ where
         }
 
         let msg_bytes = &self.buffer[..len];
-        let message = E::parse_message(&self.source, msg_bytes)?;
-        Ok(message.with_stats(&self.stats))
+        E::wrap_bytes(msg_bytes, self.stats.clone())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::message::TEST_IDENTITY;
+    use crate::logs::message::{MessageWithStats, TEST_IDENTITY};
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
@@ -130,8 +112,7 @@ mod tests {
         packet.fill_data(1..6, 'A' as _);
         packet.fill_data(7..12, 'B' as _);
 
-        let mut ls =
-            LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Default::default()).unwrap();
+        let mut ls = LogMessageSocket::new(sout, Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
         let expected_p = MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -148,13 +129,13 @@ mod tests {
             .build(),
         );
 
-        let result_message = ls.next().await.unwrap();
+        let result_message = ls.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
 
         // write one more time
         sin.write(packet.as_bytes()).unwrap();
 
-        let result_message = ls.next().await.unwrap();
+        let result_message = ls.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
     }
 
@@ -191,17 +172,15 @@ mod tests {
             .build(),
         );
 
-        let mut stream =
-            LogMessageSocket::new_structured(sout, TEST_IDENTITY.clone(), Default::default())
-                .unwrap();
+        let mut stream = LogMessageSocket::new_structured(sout, Default::default()).unwrap();
 
         sin.write(encoded).unwrap();
-        let result_message = stream.next().await.unwrap();
+        let result_message = stream.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
 
         // write again
         sin.write(encoded).unwrap();
-        let result_message = stream.next().await.unwrap();
+        let result_message = stream.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
     }
 }

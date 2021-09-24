@@ -13,6 +13,7 @@ pub mod multiplex;
 pub mod redact;
 pub mod socket;
 pub mod stats;
+pub mod stored_message;
 #[cfg(test)]
 pub mod testing;
 

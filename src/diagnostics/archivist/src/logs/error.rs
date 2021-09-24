@@ -40,11 +40,10 @@ pub enum StreamError {
     },
     #[error("socket was closed and no messages remain")]
     Closed,
-    #[error("{source:?}")]
-    Message {
-        #[from]
-        source: MessageError,
-    },
+    #[error(transparent)]
+    Message(#[from] MessageError),
+    #[error("couldn't convert debuglog message")]
+    DebugLogMessage,
 }
 
 #[cfg(test)]
@@ -53,7 +52,7 @@ impl PartialEq for StreamError {
         use StreamError::*;
         match (self, other) {
             (Io { source }, Io { source: s2 }) => source.kind() == s2.kind(),
-            (Message { source }, Message { source: s2 }) => source == s2,
+            (Message(source), Message(s2)) => source == s2,
             _ => false,
         }
     }

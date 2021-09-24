@@ -12,6 +12,7 @@ use crate::{
         multiplex::PinStream,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
+        stored_message::StoredMessage,
     },
 };
 use fidl::endpoints::RequestStream;
@@ -37,7 +38,7 @@ pub struct LogsArtifactsContainer {
     budget: BudgetHandle,
 
     /// Buffer for all log messages.
-    buffer: ArcList<MessageWithStats>,
+    buffer: ArcList<StoredMessage>,
 
     /// Mutable state for the container.
     state: Mutex<ContainerState>,
@@ -96,13 +97,19 @@ impl LogsArtifactsContainer {
     /// messages with the timestamp populated as the most recent timestamp from the stream.
     pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<MessageWithStats>> {
         let identity = self.identity.clone();
-        let earliest_timestamp =
-            self.buffer.peek_front().map(|f| *f.metadata.timestamp as i64).unwrap_or(0);
+        let earliest_timestamp = self.buffer.peek_front().map(|f| f.timestamp()).unwrap_or(0);
         Box::pin(self.buffer.cursor(mode).scan(earliest_timestamp, move |last_timestamp, item| {
             futures::future::ready(Some(match item {
                 LazyItem::Next(m) => {
-                    *last_timestamp = m.metadata.timestamp.into();
-                    m
+                    *last_timestamp = m.timestamp();
+                    match m.parse(&identity) {
+                        Ok(m) => Arc::new(m),
+                        Err(e) => Arc::new(MessageWithStats::failed_to_parse(
+                            identity.as_ref().into(),
+                            *last_timestamp,
+                            e,
+                        )),
+                    }
                 }
                 LazyItem::ItemsDropped(n) => Arc::new(MessageWithStats::for_dropped(
                     n,
@@ -146,7 +153,7 @@ impl LogsArtifactsContainer {
 
         macro_rules! handle_socket {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
-                match LogMessageSocket::$ctor($socket, self.identity.clone(), self.stats.clone()) {
+                match LogMessageSocket::$ctor($socket, self.stats.clone()) {
                     Ok(log_stream) => {
                         self.state.lock().num_active_sockets += 1;
                         let task = Task::spawn(self.clone().drain_messages(log_stream));
@@ -199,9 +206,12 @@ impl LogsArtifactsContainer {
     }
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
-    pub fn ingest_message(&self, message: MessageWithStats) {
-        self.budget.allocate(message.metadata.size_bytes);
+    pub fn ingest_message(&self, mut message: StoredMessage) {
+        self.budget.allocate(message.size());
         self.stats.ingest_message(&message);
+        if !message.has_stats() {
+            message.with_stats(self.stats.clone());
+        }
         self.buffer.push_back(message);
     }
 
@@ -239,7 +249,7 @@ impl LogsArtifactsContainer {
     }
 
     /// Remove the oldest message from this buffer, returning it.
-    pub fn pop(&self) -> Option<Arc<MessageWithStats>> {
+    pub fn pop(&self) -> Option<Arc<StoredMessage>> {
         self.buffer.pop_front()
     }
 
@@ -255,7 +265,7 @@ impl LogsArtifactsContainer {
 
     /// Returns the timestamp of the earliest log message in this container's buffer, if any.
     pub fn oldest_timestamp(&self) -> Option<i64> {
-        self.buffer.peek_front().map(|m| m.metadata.timestamp.into())
+        self.buffer.peek_front().map(|m| m.timestamp())
     }
 
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
@@ -265,7 +275,7 @@ impl LogsArtifactsContainer {
     }
 
     #[cfg(test)]
-    pub fn buffer(&self) -> &ArcList<MessageWithStats> {
+    pub fn buffer(&self) -> &ArcList<StoredMessage> {
         &self.buffer
     }
 }
