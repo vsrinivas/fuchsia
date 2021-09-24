@@ -42,7 +42,7 @@
 
 - name: 'Graphics'
   api_primary: 'jbauman@google.com'
-  api_secondary: ''
+  api_secondary: 'jaeheon@google.com'
 
 - name: 'HCI'
   api_primary: 'neelsa@google.com'
