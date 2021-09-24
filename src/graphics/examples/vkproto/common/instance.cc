@@ -125,6 +125,11 @@ bool Instance::Init() {
 
   if (validation_layers_enabled_) {
     layers_.emplace_back("VK_LAYER_KHRONOS_validation");
+
+    validation_enables_.push_back(vk::ValidationFeatureEnableEXT::eSynchronizationValidation);
+    validation_features_.setEnabledValidationFeatures(validation_enables_);
+    validation_features_.pNext = instance_info_.pNext;
+    instance_info_.pNext = &validation_features_;
   }
 
   if (!FindRequiredProperties(layers_, vkp::INSTANCE_LAYER_PROP))

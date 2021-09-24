@@ -38,6 +38,9 @@ class Instance {
 
   bool initialized_ = false;
   vk::InstanceCreateInfo instance_info_{};
+  std::vector<vk::ValidationFeatureEnableEXT> validation_enables_;
+  vk::ValidationFeaturesEXT validation_features_{};
+
   bool validation_layers_enabled_ = true;
   std::vector<const char *> extensions_;
   std::vector<const char *> layers_;
