@@ -959,6 +959,22 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
   return ZX_OK;
 }
 
+zx_status_t vmx_enter(VmxState* vmx_state) {
+  // Perform the low-level vmlaunch or vmresume, entering the guest,
+  // and returning when the guest exits.
+  zx_status_t status = vmx_enter_asm(vmx_state);
+
+  DEBUG_ASSERT(arch_ints_disabled());
+
+  // Reload the task segment in order to restore its limit. VMX always
+  // restores it with a limit of 0x67, which excludes the IO bitmap.
+  seg_sel_t selector = TSS_SELECTOR(arch_curr_cpu_num());
+  x86_clear_tss_busy(selector);
+  x86_ltr(selector);
+
+  return status;
+}
+
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
@@ -1027,22 +1043,6 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;
-}
-
-zx_status_t vmx_enter(VmxState* vmx_state) {
-  // Perform the low-level vmlaunch or vmresume, entering the guest,
-  // and returning when the guest exits.
-  zx_status_t status = vmx_enter_asm(vmx_state);
-
-  DEBUG_ASSERT(arch_ints_disabled());
-
-  // Reload the task segment in order to restore its limit. VMX always
-  // restores it with a limit of 0x67, which excludes the IO bitmap.
-  seg_sel_t selector = TSS_SELECTOR(arch_curr_cpu_num());
-  x86_clear_tss_busy(selector);
-  x86_ltr(selector);
-
-  return status;
 }
 
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {

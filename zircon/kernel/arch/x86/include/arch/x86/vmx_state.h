@@ -134,7 +134,7 @@ zx_status_t vmx_enter_asm(VmxState* vmx_state);
 // detail of vmx_enter_asm().
 void vmx_guest_exit();
 
-} // extern C
+}  // extern C
 
 #endif  // __ASSEMBLER__
 
