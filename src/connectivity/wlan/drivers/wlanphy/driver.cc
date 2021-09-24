@@ -12,6 +12,7 @@
 
 #include <mutex>
 
+#include "debug.h"
 #include "device.h"
 #include "src/connectivity/wlan/drivers/wlanphy/wlanphy-bind.h"
 
@@ -26,32 +27,33 @@ zx_status_t wlanphy_init(void** out_ctx) {
     loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     status = loop->StartThread("wlanphy-loop");
     if (status != ZX_OK) {
-      zxlogf(ERROR, "wlanphy: could not create event loop: %s", zx_status_get_string(status));
+      lerror("could not create event loop: %s", zx_status_get_string(status));
       delete loop;
       loop = nullptr;
     } else {
-      zxlogf(INFO, "wlanphy: event loop started");
+      linfo("event loop started");
     }
   });
   return status;
 }
 
 zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
-  zxlogf(INFO, "%s", __func__);
+  wlan::drivers::Log::SetFilter(kFiltSetting);
+  ltrace_fn();
 
   wlanphy_impl_protocol_t wlanphy_impl_proto;
   zx_status_t status;
   status = device_get_protocol(device, ZX_PROTOCOL_WLANPHY_IMPL,
                                static_cast<void*>(&wlanphy_impl_proto));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "wlanphy: bind: no wlanphy_impl protocol (%s)", zx_status_get_string(status));
+    lerror("no wlanphy_impl protocol (%s)", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
 
   auto wlanphy_dev = std::make_unique<wlanphy::Device>(device, wlanphy_impl_proto);
   status = wlanphy_dev->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "wlanphy: could not bind: %s", zx_status_get_string(status));
+    lerror("could not bind: %s", zx_status_get_string(status));
   } else {
     // devhost is now responsible for the memory used by wlandev. It will be
     // cleaned up in the Device::Release() method.

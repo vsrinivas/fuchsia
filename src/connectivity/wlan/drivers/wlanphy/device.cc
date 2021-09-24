@@ -18,10 +18,10 @@
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
-#include <wlan/common/logging.h>
 #include <wlan/common/phy.h>
 
 #include "ddktl/fidl.h"
+#include "debug.h"
 #include "driver.h"
 
 namespace wlanphy {
@@ -43,7 +43,7 @@ class DeviceConnector : public fidl::WireServer<fuchsia_wlan_device::Connector> 
 
 Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
     : parent_(device), wlanphy_impl_(wlanphy_impl_proto), dispatcher_(wlanphy_async_t()) {
-  debugfn();
+  ltrace_fn();
   // Assert minimum required functionality from the wlanphy_impl driver
   ZX_ASSERT(wlanphy_impl_.ops != nullptr && wlanphy_impl_.ops->query != nullptr &&
             wlanphy_impl_.ops->create_iface != nullptr &&
@@ -51,7 +51,7 @@ Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
             wlanphy_impl_.ops->set_country != nullptr && wlanphy_impl_.ops->get_country != nullptr);
 }
 
-Device::~Device() { debugfn(); }
+Device::~Device() { ltrace_fn(); }
 
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlanphy_device_ops = {
@@ -64,12 +64,12 @@ static zx_protocol_device_t wlanphy_device_ops = {
 #undef DEV
 
 zx_status_t Device::Connect(zx::channel request) {
-  debugfn();
+  ltrace_fn();
   return dispatcher_.AddBinding(std::move(request), this);
 }
 
 zx_status_t Device::Bind() {
-  debugfn();
+  ltrace_fn();
 
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
@@ -80,7 +80,7 @@ zx_status_t Device::Bind() {
   zx_status_t status = device_add(parent_, &args, &zxdev_);
 
   if (status != ZX_OK) {
-    errorf("wlanphy: could not add device: %s\n", zx_status_get_string(status));
+    lerror("could not add device: %s\n", zx_status_get_string(status));
   }
 
   return status;
@@ -96,12 +96,12 @@ zx_status_t Device::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void Device::Release() {
-  debugfn();
+  ltrace_fn();
   delete this;
 }
 
 void Device::Unbind() {
-  debugfn();
+  ltrace_fn();
 
   // Stop accepting new FIDL requests. Once the dispatcher is shut down,
   // remove the device.
@@ -128,7 +128,7 @@ static void ConvertPhyInfo(wlan_device::PhyInfo* fidl_info, const wlanphy_impl_i
 }
 
 void Device::Query(QueryCallback callback) {
-  debugfn();
+  ltrace_fn();
   wlan_device::QueryResponse resp;
   wlanphy_impl_info_t phy_impl_info;
   resp.status = wlanphy_impl_.ops->query(wlanphy_impl_.ctx, &phy_impl_info);
@@ -139,7 +139,7 @@ void Device::Query(QueryCallback callback) {
 const std::array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
-  debugfn();
+  ltrace_fn();
   wlan_device::CreateIfaceResponse resp;
 
   wlan_info_mac_role_t role = 0;
@@ -176,48 +176,48 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
 }
 
 void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
-  debugfn();
+  ltrace_fn();
   wlan_device::DestroyIfaceResponse resp;
   resp.status = wlanphy_impl_.ops->destroy_iface(wlanphy_impl_.ctx, req.id);
   callback(std::move(resp));
 }
 
 void Device::SetCountry(wlan_device::CountryCode req, SetCountryCallback callback) {
-  debugfn();
-  debugf("wlanphy: SetCountry to %s\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
+  ltrace_fn();
+  ldebug_device("SetCountry to %s\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
 
   wlanphy_country_t country;
   memcpy(country.alpha2, req.alpha2.data(), WLANPHY_ALPHA2_LEN);
   auto status = wlanphy_impl_.ops->set_country(wlanphy_impl_.ctx, &country);
 
   if (status != ZX_OK) {
-    debugf("wlanphy: SetCountry to %s failed with error %s\n",
-           wlan::common::Alpha2ToStr(req.alpha2).c_str(), zx_status_get_string(status));
+    ldebug_device("SetCountry to %s failed with error %s\n",
+                  wlan::common::Alpha2ToStr(req.alpha2).c_str(), zx_status_get_string(status));
   }
   callback(status);
 }
 
 void Device::GetCountry(GetCountryCallback callback) {
-  debugfn();
+  ltrace_fn();
 
   wlanphy_country_t country;
   auto status = wlanphy_impl_.ops->get_country(wlanphy_impl_.ctx, &country);
   if (status != ZX_OK) {
-    debugf("wlanphy: GetCountry failed with error %s\n", zx_status_get_string(status));
+    ldebug_device("GetCountry failed with error %s\n", zx_status_get_string(status));
     callback(fpromise::error(status));
   } else {
     wlan_device::CountryCode resp;
     memcpy(resp.alpha2.data(), country.alpha2, WLANPHY_ALPHA2_LEN);
-    debugf("wlanphy: GetCountry returning %s\n", wlan::common::Alpha2ToStr(resp.alpha2).c_str());
+    ldebug_device("GetCountry returning %s\n", wlan::common::Alpha2ToStr(resp.alpha2).c_str());
     callback(fpromise::ok(std::move(resp)));
   }
 }
 
 void Device::ClearCountry(ClearCountryCallback callback) {
-  debugfn();
+  ltrace_fn();
   auto status = wlanphy_impl_.ops->clear_country(wlanphy_impl_.ctx);
   if (status != ZX_OK) {
-    debugf("wlanphy: ClearCountry failed with error %s\n", zx_status_get_string(status));
+    ldebug_device("ClearCountry failed with error %s\n", zx_status_get_string(status));
   }
   callback(status);
 }
