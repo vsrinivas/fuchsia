@@ -79,32 +79,61 @@ ownership, refer to the [LLCPP Memory Management][memory-management].
 
 ## Run the example
 
-First, build the code:
+In order for the client and server to communicate using the `Echo` protocol,
+component framework must route the `fuchsia.examples.Echo` capability from the
+server to the client. For this tutorial, a [realm][glossary.realm] component is
+provided to declare the appropriate capabilities and routes.
 
+Note: You can explore the full source for the realm component at
+[`//examples/fidl/echo-realm`](/examples/fidl/echo-realm)
+
+1. Configure your build to include the provided package that includes the
+   echo realm, server, and client:
+
+    ```posix-terminal
+    fx set core.qemu-x64 --with //examples/fidl/llcpp:echo-llcpp-client-async
+    ```
+
+1. Build the Fuchsia image:
+
+   ```posix-terminal
+   fx build
+   ```
+
+1. Run the `echo_realm` component. This creates the client and server component
+   instances and routes the capabilities:
+
+    ```posix-terminal
+    ffx component run fuchsia-pkg://fuchsia.com/echo-llcpp-client-async#meta/echo_realm.cm
+    ```
+
+1. Start the `echo_client` instance:
+
+    ```posix-terminal
+    ffx component bind /core/ffx-laboratory:echo_realm/echo_client
+    ```
+
+The server component starts when the client attempts to connect to the `Echo`
+protocol. You should see the following output using `fx log`:
+
+```none {:.devsite-disable-click-to-copy}
+[echo_server] INFO: Running echo server
+[echo_server] INFO: echo_server_llcpp: Incoming connection for fuchsia.examples.Echo
+...
+[echo_client] INFO: Got response after 5 seconds
+[echo_client] INFO: Got response after 5 seconds
+[echo_client] INFO: Got response after 5 seconds
 ```
-fx set core.x64 --with //examples/fidl/llcpp/async_completer/client --with //examples/fidl/llcpp/async_completer/server --with //examples/fidl/test:echo-launcher
 
-fx build
+By using the async completer, the client receives all 3 responses after 5 seconds,
+rather than individually at 5 second intervals.
+
+Terminate the realm component to stop execution and clean up the component
+instances:
+
+```posix-terminal
+ffx component stop /core/ffx-laboratory:echo_realm
 ```
-
-Then run the example:
-
-```
-fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-llcpp-client-async#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-llcpp-server-async#meta/echo-server.cmx fuchsia.examples.Echo
-```
-
-You should see the following print output in the QEMU console (or using `fx log`):
-
-```
-[193539.863] 884542:884544> Running echo server
-[193539.871] 884542:884544> echo_server_llcpp: Incoming connection for fuchsia.examples.Echo
-[193544.899] 884632:884636> Got response after 5 seconds
-[193544.899] 884632:884636> Got response after 5 seconds
-[193544.899] 884632:884636> Got response after 5 seconds
-```
-
-By using the async completer, the client receives all 3 responses after 5 seconds, rather than in
-5/10/15 seconds.
 
 <!-- xrefs -->
 [src]: /examples/fidl/llcpp/async_completer

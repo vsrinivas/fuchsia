@@ -2,22 +2,76 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("all") {
   testonly = true
   deps = [
-    "async_completer/client",
-    "async_completer/server",
-    "client",
-    "client_shared",
-    "client_sync",
-    "request_pipelining/client",
-    "request_pipelining/server",
-    "server",
-    "services/client",
+    ":echo-launcher-llcpp-client",
+    ":echo-llcpp-client",
+    ":echo-llcpp-client-async",
+    ":echo-llcpp-client-shared",
+    ":echo-llcpp-client-sync",
+    ":echo-service-llcpp-client",
+    "server:echo-llcpp-server",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [ "unittests" ]
+}
+
+# //docs/development/languages/fidl/tutorials/llcpp/basics/client.md
+fuchsia_package("echo-llcpp-client") {
+  deps = [
+    "client:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/llcpp/basics/sync-client.md
+fuchsia_package("echo-llcpp-client-sync") {
+  deps = [
+    "client_sync:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/guides/llcpp-threading.md
+fuchsia_package("echo-llcpp-client-shared") {
+  deps = [
+    "client_shared:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
+fuchsia_package("echo-llcpp-client-async") {
+  deps = [
+    "async_completer/client:echo-client",
+    "async_completer/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/llcpp/topics/request-pipelining.md
+fuchsia_package("echo-launcher-llcpp-client") {
+  deps = [
+    "request_pipelining/client:echo-client",
+    "request_pipelining/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/llcpp/topics/services.md
+fuchsia_package("echo-service-llcpp-client") {
+  deps = [
+    "services/client:echo-client",
+    "services/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
+  ]
 }

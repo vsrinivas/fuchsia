@@ -36,9 +36,15 @@ fuchsia_component("fidl_examples_test") {
 group("tests") {
   testonly = true
   deps = [
+    ":echo-launcher-llcpp-client-test",
     ":echo-launcher-rust-client-test",
+    ":echo-llcpp-client-async-test",
+    ":echo-llcpp-client-shared-test",
+    ":echo-llcpp-client-sync-test",
+    ":echo-llcpp-client-test",
     ":echo-rust-client-sync-test",
     ":echo-rust-client-test",
+    ":echo-service-llcpp-client-test",
     ":echo-service-rust-client-test",
   ]
 }
@@ -77,5 +83,59 @@ fuchsia_test_package("echo-service-rust-client-test") {
     "//examples/fidl/echo-realm:echo_realm",
     "//examples/fidl/rust/services/client:echo-client",
     "//examples/fidl/rust/services/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-llcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/client:echo-client",
+    "//examples/fidl/llcpp/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-llcpp-client-sync-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/client_sync:echo-client",
+    "//examples/fidl/llcpp/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-llcpp-client-shared-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/client_shared:echo-client",
+    "//examples/fidl/llcpp/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-llcpp-client-async-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/async_completer/client:echo-client",
+    "//examples/fidl/llcpp/async_completer/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-launcher-llcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/request_pipelining/client:echo-client",
+    "//examples/fidl/llcpp/request_pipelining/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-service-llcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/llcpp/services/client:echo-client",
+    "//examples/fidl/llcpp/services/server:echo-server",
   ]
 }

@@ -72,49 +72,6 @@ TEST(IntegrationTest, HlcppPipelining) {
       0);
 }
 
-TEST(IntegrationTest, LlcppAsync) {
-  ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client#meta/echo-client.cmx",
-                             "fuchsia-pkg://fuchsia.com/echo-llcpp-server#meta/echo-server.cmx",
-                             {"fuchsia.examples.Echo"}),
-            0);
-}
-
-TEST(IntegrationTest, LlcppAsyncMultiThreaded) {
-  ASSERT_EQ(
-      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client-shared#meta/echo-client.cmx",
-                       "fuchsia-pkg://fuchsia.com/echo-llcpp-server#meta/echo-server.cmx",
-                       {"fuchsia.examples.Echo"}),
-      0);
-}
-
-TEST(IntegrationTest, LlcppSync) {
-  ASSERT_EQ(
-      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client-sync#meta/echo-client.cmx",
-                       "fuchsia-pkg://fuchsia.com/echo-llcpp-server#meta/echo-server.cmx",
-                       {"fuchsia.examples.Echo"}),
-      0);
-}
-
-TEST(IntegrationTest, LlcppService) {
-  TestSingleComponent("fuchsia-pkg://fuchsia.com/echo-llcpp-service-client#meta/echo-client.cmx");
-}
-
-TEST(IntegrationTest, LlcppPipelining) {
-  ASSERT_EQ(
-      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-llcpp-client#meta/echo-client.cmx",
-                       "fuchsia-pkg://fuchsia.com/echo-launcher-llcpp-server#meta/echo-server.cmx",
-                       {"fuchsia.examples.EchoLauncher"}),
-      0);
-}
-
-TEST(IntegrationTest, LlcppAsyncCompleter) {
-  ASSERT_EQ(
-      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client-async#meta/echo-client.cmx",
-                       "fuchsia-pkg://fuchsia.com/echo-llcpp-server-async#meta/echo-server.cmx",
-                       {"fuchsia.examples.Echo"}),
-      0);
-}
-
 TEST(IntegrationTest, GoSync) {
   ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-go-client#meta/echo-client.cmx",
                              "fuchsia-pkg://fuchsia.com/echo-go-server#meta/echo-server.cmx",

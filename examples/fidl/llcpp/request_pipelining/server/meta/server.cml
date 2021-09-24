@@ -1,0 +1,38 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/fidl_echo_launcher_llcpp_server",
+    },
+
+    // Capabilities provided by this component.
+    capabilities: [
+        { protocol: "fuchsia.examples.Echo" },
+        { protocol: "fuchsia.examples.EchoLauncher" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.Echo",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.examples.EchoLauncher",
+            from: "self",
+        },
+    ],
+}
+
+// [END example_snippet]

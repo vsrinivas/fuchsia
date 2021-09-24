@@ -19,11 +19,7 @@ executable("bin") {
 }
 
 fuchsia_component("echo-client") {
-  manifest = "client.cmx"
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("client_shared") {
-  package_name = "echo-llcpp-client-shared"
-  deps = [ ":echo-client" ]
 }

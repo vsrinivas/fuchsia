@@ -5,21 +5,25 @@
 import("//build/components.gni")
 
 executable("bin") {
-  output_name = "fidl_echo_llcpp_service_client"
+  output_name = "fidl_echo_llcpp_service_server"
   sources = [ "main.cc" ]
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/svc",
   ]
 }
 
-fuchsia_component("echo-client") {
-  component_name = "echo_client"
-  manifest = "meta/client.cml"
+fuchsia_component("echo-server") {
+  component_name = "echo_server"
+  manifest = "meta/server.cml"
   deps = [ ":bin" ]
   restricted_features = [ "services" ]
 }

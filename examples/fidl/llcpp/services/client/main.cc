@@ -14,20 +14,6 @@
 using fuchsia_examples::Echo;
 using fuchsia_examples::EchoService;
 
-fidl::InterfaceHandle<fuchsia::io::Directory> StartEchoServer(
-    sys::ComponentContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
-  fidl::InterfaceHandle<fuchsia::io::Directory> svc;
-  fuchsia::sys::LaunchInfo info{
-      .url = "fuchsia-pkg://fuchsia.com/echo-hlcpp-service-server#meta/echo-server.cmx",
-      .directory_request = svc.NewRequest().TakeChannel(),
-  };
-
-  auto launcher = context->svc()->Connect<fuchsia::sys::Launcher>();
-  launcher->CreateComponent(std::move(info), std::move(controller));
-  return svc;
-}
-
 zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
   zx::status<EchoService::ServiceClient> open_result =
       llcpp::sys::OpenServiceAt<EchoService>(std::move(svc));
@@ -62,6 +48,7 @@ zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
               << std::endl;
     return zx::error(ZX_ERR_INTERNAL);
   }
+  std::cout << "Received response: " << result_string << std::endl;
   return zx::ok();
 }
 
@@ -69,15 +56,14 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  // Start the echo service.
-  //
-  // In a real system, the service would be offered to the client instead of
-  // being started by the client.
-  fuchsia::sys::ComponentControllerPtr controller;
-  auto svc = StartEchoServer(context.get(), controller.NewRequest());
+  // |service::OpenServiceRoot| returns a channel connected to the /svc directory.
+  // The remote end of the channel implements the |fuchsia.io/Directory| protocol
+  // and contains the capabilities provided to this component.
+  auto svc = service::OpenServiceRoot();
+  ZX_ASSERT(svc.is_ok());
 
   // Convert the typed handle to LLCPP types.
-  auto llsvc = fidl::ClientEnd<fuchsia_io::Directory>(svc.TakeChannel());
+  auto llsvc = fidl::ClientEnd<fuchsia_io::Directory>(svc->TakeChannel());
 
   zx::status<> result = llcpp_example(llsvc);
   if (result.is_error()) {
