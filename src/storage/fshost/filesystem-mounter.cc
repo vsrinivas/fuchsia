@@ -222,4 +222,10 @@ void FilesystemMounter::TryMountPkgfs() {
   }
 }
 
+void FilesystemMounter::ReportMinfsCorruption() {
+  fshost_.mutable_metrics()->LogMinfsCorruption();
+  fshost_.FlushMetrics();
+  fshost_.FileReport(FsManager::ReportReason::kMinfsCorrupted);
+}
+
 }  // namespace devmgr

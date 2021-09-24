@@ -182,7 +182,7 @@ std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_
 MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
                                         uint64_t required_inodes, uint64_t data_size_limit,
                                         const std::vector<std::filesystem::path>& excluded_paths,
-                                        InspectManager& inspect) {
+                                        FsManager& manager) {
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
@@ -196,7 +196,8 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
   // check happens before checking if minfs is mis-sized and will run at every boot. We don't want a
   // transient error to cause a device to get wiped.
   if (!previously_failed_while_writing.is_error() && *previously_failed_while_writing) {
-    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade);
+    manager.inspect_manager().LogMinfsUpgradeProgress(
+        InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade);
     FX_LOGS(INFO) << "Minfs was previously resized and failed while writing data";
     // Shred zxcrypt then reboot. Although we lose data it's safer to start from scratch than to
     // have partially written data and potentially put components in unknown and untested states.
@@ -232,7 +233,7 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
   if (is_within_partition_size_limit && has_correct_inode_count) {
     FX_LOGS(INFO) << "minfs already has " << required_inodes << " inodes and is only using "
                   << block_device_size << " bytes of its " << partition_size_limit << " byte limit";
-    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
+    manager.inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
     // Minfs is already sized correctly. Continue as normal.
     return MaybeResizeMinfsResult::kMinfsMountable;
   }
@@ -246,7 +247,8 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
   }
 
   // Copy all of minfs into ram.
-  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kReadOldPartition);
+  manager.inspect_manager().LogMinfsUpgradeProgress(
+      InspectManager::MinfsUpgradeState::kReadOldPartition);
   zx::status<Copier> copier = minfs->ReadFilesystem(excluded_paths);
   if (copier.is_error()) {
     FX_LOGS(ERROR) << "Failed to read the contents of minfs into memory: "
@@ -266,7 +268,8 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
         << "minfs will likely require " << required_space_estimate
         << " bytes to hold all of the data after resizing which is greater than the limit of "
         << data_size_limit << " bytes";
-    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
+    manager.FileReport(FsManager::ReportReason::kMinfsNotUpgradeable);
+    manager.inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
     // Minfs hasn't been modified. Continue as normal and try again at next reboot.
     return MaybeResizeMinfsResult::kMinfsMountable;
   }
@@ -283,7 +286,8 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
   }
 
   // No turning back point.
-  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kWriteNewPartition);
+  manager.inspect_manager().LogMinfsUpgradeProgress(
+      InspectManager::MinfsUpgradeState::kWriteNewPartition);
 
   // Recreate minfs. During mkfs, minfs deallocates all fvm slices from the partition before
   // re-allocating which will correctly resize the partition.
@@ -309,7 +313,7 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
     return MaybeResizeMinfsResult::kRebootRequired;
   }
 
-  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
+  manager.inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
   FX_LOGS(INFO) << "Minfs was successfully resized";
   return MaybeResizeMinfsResult::kMinfsMountable;
 }

@@ -114,6 +114,19 @@ class FsManager {
   // directory of the given filesystem previously installed via |InstallFs()| at |point|.
   zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
+  // Disables reporting.  Future calls to |FileReport| will be NOPs.
+  void DisableCrashReporting() { file_crash_report_ = false; }
+
+  // Note that additional reasons should be added sparingly, and only in cases where the data is
+  // useful and it would be difficult to debug the issue otherwise.
+  enum ReportReason {
+    kMinfsCorrupted,
+    kMinfsNotUpgradeable,
+  };
+
+  // Files a synthetic crash report.  This is done in the background on a new thread, so never
+  // blocks. Note that there is no indication if the reporting fails.
+  void FileReport(ReportReason reason);
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
@@ -168,6 +181,8 @@ class FsManager {
   // Each filesystem gets a subdirectory to host their own inspect tree.
   // Archivist will parse all the inspect trees found in this directory tree.
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
+
+  bool file_crash_report_ = true;
 
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
