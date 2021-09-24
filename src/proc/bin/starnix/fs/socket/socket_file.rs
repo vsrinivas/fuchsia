@@ -123,7 +123,7 @@ impl SocketFile {
                 let mut user_buffers = UserBufferIterator::new(data);
                 let (bytes_read, control) = socket.read(task, &mut user_buffers)?;
 
-                if bytes_read == 0 && socket.is_connected() {
+                if bytes_read == 0 && socket.is_connected() && user_buffers.remaining() > 0 {
                     // If no bytes were read, but the socket is connected, return an error indicating that
                     // the reader can wait.
                     return error!(EAGAIN);

@@ -147,8 +147,7 @@ gvisor_tests = [
   # "pty_test",
   "pwrite64_test",
   "read_test",
-
-  # "readv_socket_test",
+  "readv_socket_test",
   "readv_test",
   "rename_test",
 

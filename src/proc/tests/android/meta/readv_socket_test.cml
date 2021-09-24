@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/readv_socket_test",
+    },
+}
