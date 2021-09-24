@@ -77,12 +77,12 @@ fixed point numbers, specified by a struct
 
 ```c
   typedef struct zx_cpu_performance_scale {
-    uint32_t integer_part;
+    uint32_t integral_part;
     uint32_t fractional_part;  // Increments of 2**-32
   } zx_cpu_performance_scale_t;
 ```
 
-`integer_part` and `fractional_part` describe the integer and fractional parts,
+`integral_part` and `fractional_part` describe the integer and fractional parts,
 respectively, with `fractional_part` specifying increments of 2<sup>-32</sup>.
 Conversion between real and fixed point representations should be done according
 to the following functions:
@@ -98,7 +98,7 @@ zx_status_t ToFixedPoint(double real, zx_cpu_performance_scale_t* scale) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  scale->integer_part = static_cast<uint32_t>(integer);
+  scale->integral_part = static_cast<uint32_t>(integer);
 
   // Rounding down the fractional part is suggested but should not matter
   // much in practice. A difference of 1 in the output is a difference of only
@@ -109,26 +109,22 @@ zx_status_t ToFixedPoint(double real, zx_cpu_performance_scale_t* scale) {
 }
 
 double FromFixedPoint(zx_cpu_performance_scale_t scale) {
-  return static_cast<double>(scale.integer_part)
+  return static_cast<double>(scale.integral_part)
     + std::ldexp(scale.fractional_part, -32);
 }
 ```
 
-### Syscall 1: `zx_system_get_set_performance_info`
+### Syscall 1: `zx_system_set_performance_info`
 
 The first syscall allows a userspace agent to set performance scales used by the
-kernel scheduler. It simultaneously retrieves the previously-used scales, so the
-caller can revert a change if needed (see [Intended
-usage](#intended-usage-get-set)):
+kernel scheduler:
 
 ```c
-zx_status_t zx_system_get_set_performance_info(
+zx_status_t zx_system_set_performance_info(
     zx_handle_t resource,
     uint32_t topic,
     const void* new_info,
-    void* prev_info,
-    size_t info_count,
-    size_t* output_count
+    size_t info_count
 );
 ```
 
@@ -176,8 +172,8 @@ Its arguments are:
   represents a value larger than 1.0, then the kernel will internally clamp it
   to `{.integral_part = 1, .fractional_part = 0}`.
 
-  If the call to `zx_system_get_set_performance_info` fails, then the kernel
-  takes no action, and `new_info` has no effect.
+  If the call to `zx_system_set_performance_info` fails, then the kernel takes
+  no action, and `new_info` has no effect.
 
   If the call succeeds, then the kernel scheduler will utilize modified
   performance scales corresponding to `new_info` beginning with the next
@@ -188,23 +184,8 @@ Its arguments are:
   Changes made by this call will persist until reboot or until they
   are overridden by further use of this API.
 
-- `prev_info`: A valid `zx_cpu_performance_info_t[]` with the same number of
-  elements as `new_info`.
-
-  If the call fails, `prev_info` is unmodified.
-
-  If the call succeeds, then for each element of `prev_info`,
-  `logical_cpu_number` matches the element in the same position of `new_info`,
-  and `performance_scale` describes the kernel's performance scale prior to this
-  call for the indicated CPU. Note that the value of `performance_scale` may
-  differ from the last value provided to this call due to the override behavior
-  described for `new_info`.
-
-- `info_count`: The number of elements in both `prev_info` and `new_info`. Must
-  be positive and no greater than the number of CPUs in the system.
-
-- `output_count`: The number of elements written to `prev_info`. If the call
-  fails, this is set to `0`. If the call succeeds, it is set to `info_count`.
+- `info_count`: The number of elements in `new_info`. Must be positive and no
+  greater than the number of CPUs in the system.
 
 #### Error conditions
 
@@ -219,7 +200,7 @@ Its arguments are:
 `ZX_ERR_INVALID_ARGS`
 
 - `topic` is not `ZX_CPU_PERF_SCALE`.
-- `new_info` or `prev_info` is an invalid pointer.
+- `new_info`  is an invalid pointer.
 - `new_info` is not sorted by strictly increasing `logical_cpu_number`.
 
 `ZX_ERR_OUT_OF_RANGE`
@@ -228,24 +209,32 @@ Its arguments are:
 - A `logical_cpu_number` was invalid.
 - An input `performance_scale` was `{.integral_part = 0, .fractional_part = 0}`.
 
-#### Intended usage {#intended-usage-get-set}
+#### Intended usage {#intended-usage-set}
 
-`zx_system_get_set_performance_info` should be used to notify the kernel of
-changes in CPU performance whenever CPU frequency is changed. The combined
-get/set operation ensures that the caller has the information necessary to
-revert a change in the event that any subsequent actions involved in the
-frequency change fail.
+`zx_system_set_performance_info` should be used to notify the kernel of
+changes in CPU performance whenever CPU frequency is changed. The API supports
+specification of performance scales for only a subset of CPUs because different
+CPUs may be controlled by different entities.
 
 If a CPU's frequency is to be decreased, it is recommended that
-`zx_system_get_set_performance_info` be called before the frequency change has
+`zx_system_set_performance_info` be called before the frequency change has
 occurred. Doing so gives the kernel scheduler the opportunity to reduce load on
 that CPU before its capacity is decreased. (The scheduler is expected to respond
 quickly enough that no further coordination is needed; this expectation will be
 confirmed once support is implemented.)
 
 Conversely, if a CPU's frequency is to be increased, it is recommended that
-`zx_system_get_set_performance_info` be called after the frequency change has
+`zx_system_set_performance_info` be called after the frequency change has
 occurred, notifying the scheduler of new capacity only once it is available.
+
+In either case, should an update to CPU frequency fail, the caller must update
+the kernel scheduler based on the resulting CPU state. The caller should attempt
+to determine the post-failure CPU frequency and use that to inform a separate
+call to `zx_system_set_performance_info`. If the frequency cannot be determined
+(e.g. if an associated driver has failed outright), the caller should make a
+pessimistic (low) guess as to the resulting CPU speed. This recommendation may
+evolve as it is given further consideration; see for example
+[fxbug.dev/84685](https://fxbug.dev/84685).
 
 The new API will ultimately be utilized by a to-be-developed "CPU Manager"
 component that will be responsible for userspace administration of CPUs. Rather
@@ -258,7 +247,7 @@ CPU Manager will also take over responsibility for thermal throttling of CPU
 
 ### Syscall 2: `zx_system_get_performance_info`
 
-The second syscall is a get-only operation for all CPUs:
+The second syscall retrieves performance information for all CPUs:
 
 ```c
 zx_status_t zx_system_get_performance_info(
@@ -290,8 +279,8 @@ Its arguments are:
 
      - `ZX_CPU_PERF_SCALE`: `performance_scale` stores the kernel's current
         performance scale for the indicated CPU. The value provided reflects the
-        most recent call to `zx_system_get_set_performance_info` even if the
-        next reschedule operation has not yet taken place.
+        most recent call to `zx_system_set_performance_info` even if the next
+        reschedule operation has not yet taken place.
 
      - `ZX_CPU_DEFAULT_PERF_SCALE`: `performance_scale` stores the default
         performance scale used by the kernel on boot for the indicated CPU.
@@ -342,9 +331,8 @@ in use by the kernel.
 
 - The kernel scheduler must be modified to support dynamic performance scales,
   updating them to use the most recent values provided by
-  `zx_system_get_set_performance_info`, and additionally exposing its
-  currently-used and default performance scales to
-  `zx_system_get_performance_info`.
+  `zx_system_set_performance_info`, and additionally exposing its currently-used
+  and default performance scales to `zx_system_get_performance_info`.
 
 ### Component manager
 
@@ -357,8 +345,8 @@ follows a pre-existing pattern for resources that gate syscalls.
 The new syscalls themselves will take a negligible amount of time to execute, as
 they simply touch a small amount of data proportional to the number of CPUs.
 
-Use of `zx_cpu_get_set_performance_info` will cause the scheduler to distribute
-work differently, shifting work towards cores whose performance scales increase
+Use of `zx_cpu_set_performance_info` will cause the scheduler to distribute work
+differently, shifting work towards cores whose performance scales increase
 relative to the sum of all performance scales, and away from those whose
 performance scales similarly decrease. The rescheduling process itself will not
 place a significant amount of load on the scheduler.
@@ -370,12 +358,12 @@ and is addressed in [Testing](#testing).
 ## Security considerations
 
 Both new syscalls are gated by the new resource handle
-`ZX_RSRC_SYSTEM_CPU_BASE`. For `zx_system_get_set_performance_info`, this
-protection addresses the clear concern of malicious interference with the
-scheduler. For `zx_system_get_performance_info`, there is the subtler concern of
-data leakage; an untrusted entity should not be trusted to know the kernel's
-performance scales, which will typically provide information about the system's
-supported P-states.
+`ZX_RSRC_SYSTEM_CPU_BASE`. For `zx_system_set_performance_info`, this protection
+addresses the clear concern of malicious interference with the scheduler. For
+`zx_system_get_performance_info`, there is the subtler concern of data leakage;
+an untrusted entity should not be trusted to know the kernel's performance
+scales, which will typically provide information about the system's supported
+P-states.
 
 ## Privacy considerations
 
@@ -404,13 +392,22 @@ very few clients of this interface are expected, keeping the cost of future
 changes to the proposed interface relatively small. Requirements placed on a
 more general interface would be largely guesswork at this point.
 
-### Alternative calls
+### Alternative call structure
 
-Initial drafts of this proposal included only a single syscall with a set-only
-operation. This satisfied the basic functional need for supporting CPU frequency
-changes, but [error recovery concerns](#intended-usage-get-set) led to the
-combined get/set operation, and diagnostic concerns led to the introduction of a
-get-only operation.
+As an alternative to the set-only operation of `zx_system_set_performance_info`,
+a combined get/set operation was considered that returns the prior performance
+scales for CPUs whose scales were modified. This was intended as a means of
+ensuring that the caller is capable of reverting performance scale changes
+should lower-level execution of the associated frequency change fail.
+
+However, further consideration revealed that a simple reversion of changes would
+not be sufficient. This resulted in a more complex set of [failure-handling
+recommendations](#intended-usage-set) and led back to the simpler set-only
+operation.
+
+Finally, `zx_system_get_performance_info` is needed to support hermetic testing,
+in which case direct reversion of changes *is* appropriate, and supports
+diagnostic use cases.
 
 ### Alternative CPU indexing
 
@@ -467,7 +464,7 @@ not currently support but is expected to in the future using a different API. As
 such, a value representing 0.0 was determined to be an error.
 
 Very small values warranted special attention as well. For example, an input of
-`{.integer_part = 0, .fractional_part = 1}` would represent 2<sup>-32</sup>,
+`{.integral_part = 0, .fractional_part = 1}` would represent 2<sup>-32</sup>,
 which could reasonably be treated as 0.0, effectively rendering the
 corresponding core offline. While this would be possible to address by enforcing
 a minimum allowed value, any such threshold would currently be arbitrary and
