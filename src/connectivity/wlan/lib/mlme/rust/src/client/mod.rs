@@ -143,7 +143,6 @@ impl ClientMlme {
                     Some(mac::MgmtBody::Beacon { bcn_hdr, elements }) => {
                         self.scanner.bind(&mut self.ctx).handle_beacon_or_probe_response(
                             bssid,
-                            bcn_hdr.timestamp,
                             bcn_hdr.beacon_interval,
                             bcn_hdr.capabilities,
                             elements,
@@ -153,7 +152,6 @@ impl ClientMlme {
                     Some(mac::MgmtBody::ProbeResp { probe_resp_hdr, elements }) => {
                         self.scanner.bind(&mut self.ctx).handle_beacon_or_probe_response(
                             bssid,
-                            probe_resp_hdr.timestamp,
                             probe_resp_hdr.beacon_interval,
                             probe_resp_hdr.capabilities,
                             elements,

@@ -76,8 +76,6 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
   bss_desc.bss_type = wlan_internal::BssType::INFRASTRUCTURE;
   bss_desc.beacon_period = kBeaconPeriodTu;
-  bss_desc.timestamp = 0;
-  bss_desc.local_time = 0;
 
   CapabilityInfo capability_info{};
   capability_info.set_ess(true);

@@ -12,7 +12,6 @@ use {
 /// Given information from beacon or probe response, convert to BssDescription.
 pub fn construct_bss_description(
     bssid: Bssid,
-    timestamp: u64,
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
     ies: &[u8],
@@ -52,8 +51,6 @@ pub fn construct_bss_description(
         bssid: bssid.0,
         bss_type,
         beacon_period: beacon_interval.into(),
-        timestamp,
-        local_time: 0,
         capability_info: capability_info.raw(),
         ies: ies.to_vec(),
         channel,
@@ -81,7 +78,6 @@ mod tests {
     };
 
     const BSSID: Bssid = Bssid([0x33; 6]);
-    const TIMESTAMP: u64 = 364983910445;
     const BEACON_INTERVAL: u16 = 100;
     // Capability information: ESS, privacy, spectrum mgmt, radio msmt
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(0x1111);
@@ -174,7 +170,6 @@ mod tests {
         let ies = beacon_frame_ies();
         let bss_description = construct_bss_description(
             BSSID,
-            TIMESTAMP,
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             &ies[..],
@@ -188,8 +183,6 @@ mod tests {
                 bssid: BSSID.0,
                 bss_type: fidl_internal::BssType::Infrastructure,
                 beacon_period: BEACON_INTERVAL,
-                timestamp: TIMESTAMP,
-                local_time: 0,
                 capability_info: CAPABILITY_INFO.0,
                 ies,
                 rssi_dbm: RX_INFO.rssi_dbm,

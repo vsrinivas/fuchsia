@@ -93,9 +93,6 @@ type BssDescription = struct {
 
     bss_type BssType;
     beacon_period uint16; // in TU
-    timestamp uint64;
-    local_time uint64;
-
     capability_info CapabilityInfo;
 
     /// All info elements present in the beacon or probe response frame.

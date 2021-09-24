@@ -153,7 +153,8 @@ type Bss = table {
     /// Operating frequency for this network (in MHz).
     3: frequency uint32;
 
-    /// Realtime timestamp for this scan result entry.
+    /// Time of the scan result relative to when the system was powered on.
+    /// See https://fuchsia.dev/fuchsia-src/concepts/time/language_support?hl=en#monotonic_time
     4: timestamp_nanos zx.time;
 };
 

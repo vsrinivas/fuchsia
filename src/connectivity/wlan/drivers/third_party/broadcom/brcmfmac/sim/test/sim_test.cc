@@ -222,7 +222,7 @@ void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
   std::vector<uint8_t> ies(copy.bss.ies_list, copy.bss.ies_list + copy.bss.ies_count);
   scan_results_ies_.push_back(ies);
   copy.bss.ies_list = scan_results_ies_.at(scan_results_ies_.size() - 1).data();
-  results->second.result_list.push_back(copy.bss);
+  results->second.result_list.push_back(copy);
 }
 
 void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
@@ -338,7 +338,7 @@ std::optional<wlan_scan_result_t> SimInterface::ScanResultCode(uint64_t txn_id) 
   return results->second.result_code;
 }
 
-const std::list<bss_description_t>* SimInterface::ScanResultBssList(uint64_t txn_id) {
+const std::list<wlanif_scan_result_t>* SimInterface::ScanResultList(uint64_t txn_id) {
   auto results = scan_results_.find(txn_id);
 
   // Verify that we started a scan on this interface

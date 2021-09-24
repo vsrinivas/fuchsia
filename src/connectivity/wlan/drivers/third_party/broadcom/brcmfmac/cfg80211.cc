@@ -24,6 +24,7 @@
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/metadata.h>
+#include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/errors.h>
@@ -2537,12 +2538,11 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   wlanif_scan_result_t result = {};
 
   result.txn_id = ndev->scan_txn_id;
+  result.timestamp_nanos = zx::clock::get_monotonic().get();
   memcpy(result.bss.bssid, bssid, ETH_ALEN);
   // TODO(fxbug.dev/80230): The probably shouldn't be hardcoded.
   result.bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
   result.bss.beacon_period = 0;
-  result.bss.timestamp = 0;
-  result.bss.local_time = 0;
   result.bss.capability_info = capability;
   result.bss.channel.primary = (uint8_t)channel;
   // TODO(fxbug.dev/80231): This probably shouldn't be hardcoded.

@@ -1989,6 +1989,7 @@ mod tests {
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
                 compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
                     Wpa3Enterprise,
                     bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
@@ -2002,7 +2003,11 @@ mod tests {
                     },
                 ),
             },
-            fidl_sme::ScanResult { compatible: true, bss_description: new_bss_desc.clone() },
+            fidl_sme::ScanResult {
+                compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss_description: new_bss_desc.clone(),
+            },
         ];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2138,8 +2143,16 @@ mod tests {
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         let mock_scan_results = vec![
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc1.clone() },
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc2.clone() },
+            fidl_sme::ScanResult {
+                compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss_description: bss_desc1.clone(),
+            },
+            fidl_sme::ScanResult {
+                compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss_description: bss_desc2.clone(),
+            },
         ];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2158,6 +2171,7 @@ mod tests {
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_desc1_active.clone(),
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
@@ -2216,6 +2230,7 @@ mod tests {
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_desc2_active.clone(),
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
@@ -2448,9 +2463,14 @@ mod tests {
             },
         );
         let mock_scan_results = vec![
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc_1.clone() },
             fidl_sme::ScanResult {
                 compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss_description: bss_desc_1.clone(),
+            },
+            fidl_sme::ScanResult {
+                compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
                     Wpa1,
                     bssid: [0, 0, 0, 0, 0, 0],

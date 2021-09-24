@@ -6,6 +6,7 @@
 use {
     crate::client::types,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_zircon as zx,
     ieee80211::{Bssid, Ssid},
     rand::Rng as _,
     std::convert::TryFrom,
@@ -38,6 +39,7 @@ pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
     let mut rng = rand::thread_rng();
     fidl_sme::ScanResult {
         compatible: rng.gen::<bool>(),
+        timestamp_nanos: rng.gen(),
         bss_description: random_fidl_bss_description!(),
     }
 }
@@ -47,14 +49,14 @@ pub fn generate_random_bss() -> types::Bss {
     let bssid: Bssid = Bssid(rng.gen());
     let rssi = rng.gen_range(-100, 20);
     let channel = generate_random_channel();
-    let timestamp_nanos = 0;
+    let timestamp = zx::Time::from_nanos(rng.gen());
     let snr_db = rng.gen_range(-20, 50);
 
     types::Bss {
         bssid,
         rssi,
         channel,
-        timestamp_nanos,
+        timestamp,
         snr_db,
         observed_in_passive_scan: rng.gen::<bool>(),
         compatible: rng.gen::<bool>(),
@@ -62,7 +64,6 @@ pub fn generate_random_bss() -> types::Bss {
             bssid: bssid.0,
             rssi_dbm: rssi,
             channel: channel,
-            timestamp: timestamp_nanos as u64,
             snr_db: snr_db,
         ),
     }

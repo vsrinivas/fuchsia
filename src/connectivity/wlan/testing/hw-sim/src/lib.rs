@@ -124,12 +124,11 @@ pub fn send_beacon(
                 *bssid,
                 mac::SequenceControl(0).with_seq_num(123),
             ),
-            mac::BeaconHdr: &mac::BeaconHdr {
-                timestamp: 0,
+            mac::BeaconHdr: &mac::BeaconHdr::new(
                 // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
-                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
-                capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
-            },
+                TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
+                mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
+            ),
         },
         ies: {
             ssid: ssid,
@@ -177,12 +176,11 @@ pub fn send_probe_resp(
                 *bssid,
                 mac::SequenceControl(0).with_seq_num(123),
             ),
-            mac::ProbeRespHdr: &mac::ProbeRespHdr {
-                timestamp: 0,
+            mac::ProbeRespHdr: &mac::ProbeRespHdr::new(
                 // Unrealistically long beacon period so that auth/assoc don't timeout on slow bots.
-                beacon_interval: TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
-                capabilities: mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
-            },
+                TimeUnit::DEFAULT_BEACON_INTERVAL * 20u16,
+                mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true),
+            ),
         },
         ies: {
             ssid: ssid,

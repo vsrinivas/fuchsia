@@ -108,11 +108,13 @@ impl ClientConfig {
     /// Converts a given BssDescription into a ScanResult.
     pub fn create_scan_result(
         &self,
+        timestamp: zx::Time,
         bss_description: BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
     ) -> ScanResult {
         ScanResult {
             compatible: self.is_bss_compatible(&bss_description, device_info),
+            timestamp,
             bss_description,
         }
     }
@@ -619,6 +621,8 @@ impl super::Station for ClientSme {
                                     .into_iter()
                                     .map(|bss_description| {
                                         self.cfg.create_scan_result(
+                                            // TODO(fxbug.dev/83882): ScanEnd drops the timestamp from MLME
+                                            zx::Time::from_nanos(0),
                                             bss_description,
                                             &self.context.device_info,
                                         )
@@ -810,9 +814,13 @@ mod tests {
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const DUMMY_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
 
-    fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_internal::BssDescription) {
+    fn report_fake_scan_result(
+        sme: &mut ClientSme,
+        timestamp_nanos: i64,
+        bss: fidl_internal::BssDescription,
+    ) {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+            result: fidl_mlme::ScanResult { txn_id: 1, timestamp_nanos, bss },
         });
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
@@ -880,9 +888,10 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
+        let timestamp = zx::Time::get_monotonic();
+        let scan_result = cfg.create_scan_result(timestamp, bss_description.clone(), &device_info);
 
-        assert_eq!(scan_result, ScanResult { compatible: true, bss_description });
+        assert_eq!(scan_result, ScanResult { compatible: true, timestamp, bss_description });
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
@@ -901,9 +910,10 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
+        let timestamp = zx::Time::get_monotonic();
+        let scan_result = cfg.create_scan_result(timestamp, bss_description.clone(), &device_info);
 
-        assert_eq!(scan_result, ScanResult { compatible: true, bss_description });
+        assert_eq!(scan_result, ScanResult { compatible: true, timestamp, bss_description });
 
         let bss_description = fake_bss_description!(Wep,
             ssid: Ssid::empty(),
@@ -919,8 +929,9 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
-        assert_eq!(scan_result, ScanResult { compatible: false, bss_description },);
+        let timestamp = zx::Time::get_monotonic();
+        let scan_result = cfg.create_scan_result(timestamp, bss_description.clone(), &device_info);
+        assert_eq!(scan_result, ScanResult { compatible: false, timestamp, bss_description },);
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         let bss_description = fake_bss_description!(Wep,
@@ -937,10 +948,11 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let scan_result = cfg.create_scan_result(bss_description.clone(), &device_info);
+        let timestamp = zx::Time::get_monotonic();
+        let scan_result = cfg.create_scan_result(timestamp, bss_description.clone(), &device_info);
         assert_eq!(
             scan_result,
-            wlan_common::scan::ScanResult { compatible: true, bss_description },
+            wlan_common::scan::ScanResult { compatible: true, timestamp, bss_description },
         );
     }
 
@@ -1395,7 +1407,7 @@ mod tests {
             bss_description.clone(),
             credential,
         ));
-        report_fake_scan_result(&mut sme, bss_description);
+        report_fake_scan_result(&mut sme, zx::Time::get_monotonic().into_nanos(), bss_description);
 
         assert_variant!(
             connect_txn_stream.try_next(),
@@ -1439,6 +1451,7 @@ mod tests {
         // that connection attempt will be canceled even in the middle of joining the network
         report_fake_scan_result(
             &mut sme,
+            zx::Time::get_monotonic().into_nanos(),
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
         );
 
@@ -1506,7 +1519,7 @@ mod tests {
         ));
 
         let bssid = Bssid(bss_description.bssid);
-        report_fake_scan_result(&mut sme, bss_description);
+        report_fake_scan_result(&mut sme, zx::Time::get_monotonic().into_nanos(), bss_description);
 
         sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
         let auth_failure = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
@@ -1556,12 +1569,20 @@ mod tests {
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss,
+            },
         });
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss,
+            },
         });
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
@@ -1590,6 +1611,7 @@ mod tests {
 
         report_fake_scan_result(
             &mut sme,
+            zx::Time::get_monotonic().into_nanos(),
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
         );
 
@@ -1630,12 +1652,20 @@ mod tests {
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss,
+            },
         });
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
         sme.on_mlme_event(MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                bss,
+            },
         });
 
         sme.on_mlme_event(MlmeEvent::OnScanEnd {

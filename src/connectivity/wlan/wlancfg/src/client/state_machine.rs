@@ -1184,6 +1184,7 @@ mod tests {
         let bss_description = random_fidl_bss_description!(Wep, ssid: next_network_ssid.clone());
         let scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
@@ -1389,6 +1390,7 @@ mod tests {
             random_fidl_bss_description!(Wpa2Wpa3, ssid: next_network_ssid.clone());
         let scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
@@ -1705,6 +1707,7 @@ mod tests {
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let mut scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         assert_variant!(
@@ -2894,6 +2897,7 @@ mod tests {
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
         let mut scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         assert_variant!(
@@ -3323,8 +3327,11 @@ mod tests {
             ssids: vec![network_ssid.to_vec()],
             channels: vec![],
         });
-        let mut scan_results =
-            vec![fidl_sme::ScanResult { compatible: true, bss_description: new_bss_desc.clone() }];
+        let mut scan_results = vec![fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: new_bss_desc.clone(),
+        }];
 
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3582,8 +3589,9 @@ mod tests {
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::ScanResult {
-            bss_description: new_bss_description.clone(),
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: new_bss_description.clone(),
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),

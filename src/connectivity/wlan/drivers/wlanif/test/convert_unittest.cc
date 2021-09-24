@@ -49,8 +49,6 @@ TEST(ConvertTest, ToFidlBssDescription) {
   bss_description_t banjo_desc{.bssid = {1, 2, 3, 4, 5, 6},
                                .bss_type = BSS_TYPE_INFRASTRUCTURE,
                                .beacon_period = 2,
-                               .timestamp = 54321,
-                               .local_time = 777,
                                .capability_info = 1337,
                                .ies_list = ies,
                                .ies_count = sizeof(ies),
@@ -72,8 +70,6 @@ TEST(ConvertTest, ToFidlBssDescription) {
   EXPECT_EQ(fidl_desc.bssid, expected_bssid);
   EXPECT_EQ(fidl_desc.bss_type, fuchsia::wlan::internal::BssType::INFRASTRUCTURE);
   EXPECT_EQ(fidl_desc.beacon_period, 2u);
-  EXPECT_EQ(fidl_desc.timestamp, 54321u);
-  EXPECT_EQ(fidl_desc.local_time, 777u);
   EXPECT_EQ(fidl_desc.capability_info, 1337);
   auto expected_ies = std::vector<uint8_t>(ies, ies + sizeof(ies));
   EXPECT_EQ(fidl_desc.ies, expected_ies);
@@ -492,8 +488,6 @@ TEST(ConvertTest, ToWlanifBssDescription) {
       .bssid = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6},
       .bss_type = fuchsia::wlan::internal::BssType::INFRASTRUCTURE,
       .beacon_period = 2,
-      .timestamp = 54321,
-      .local_time = 777,
       .capability_info = 1337,
       .ies = std::vector<uint8_t>(ies, ies + sizeof(ies)),
 
@@ -509,8 +503,6 @@ TEST(ConvertTest, ToWlanifBssDescription) {
   EXPECT_EQ(memcmp(banjo_desc.bssid, expected_bssid, sizeof(banjo_desc.bssid)), 0);
   EXPECT_EQ(banjo_desc.bss_type, BSS_TYPE_INFRASTRUCTURE);
   EXPECT_EQ(banjo_desc.beacon_period, 2u);
-  EXPECT_EQ(banjo_desc.timestamp, 54321u);
-  EXPECT_EQ(banjo_desc.local_time, 777u);
   EXPECT_EQ(banjo_desc.capability_info, 1337);
   ASSERT_EQ(banjo_desc.ies_count, sizeof(ies));
   EXPECT_EQ(memcmp(banjo_desc.ies_list, ies, sizeof(ies)), 0);

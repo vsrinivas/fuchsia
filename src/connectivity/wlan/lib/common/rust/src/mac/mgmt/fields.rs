@@ -132,10 +132,22 @@ impl AuthAlgorithmNumber {
 #[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct BeaconHdr {
-    pub timestamp: u64,
+    // IEEE Std 802.11-2016, 9.4.1.10, 11.1.3.1, and 11.22
+    // Intentionally private until TSF timer functionality implemented.
+    timestamp: u64, // TSF timer value in increments of microseconds
     pub beacon_interval: TimeUnit,
     // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: CapabilityInfo,
+}
+
+impl BeaconHdr {
+    pub fn new(beacon_interval: TimeUnit, capabilities: CapabilityInfo) -> Self {
+        Self {
+            timestamp: 0, // always 0 since TSF Timer not implemented
+            beacon_interval,
+            capabilities,
+        }
+    }
 }
 
 // IEEE Std 802.11-2016, 9.3.3.12
@@ -184,10 +196,22 @@ pub struct DisassocHdr {
 #[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct ProbeRespHdr {
-    pub timestamp: u64,
+    // IEEE Std 802.11-2016, 9.4.1.10, 11.1.3.1, and 11.22
+    // Intentionally private until TSF timer functionality implemented.
+    timestamp: u64, // TSF timer value in increments of microseconds
     pub beacon_interval: TimeUnit,
     // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: CapabilityInfo,
+}
+
+impl ProbeRespHdr {
+    pub fn new(beacon_interval: TimeUnit, capabilities: CapabilityInfo) -> Self {
+        Self {
+            timestamp: 0, // always 0 since TSF Timer not implemented
+            beacon_interval,
+            capabilities,
+        }
+    }
 }
 
 // IEEE Std 802.11-2016, 9.3.3.14

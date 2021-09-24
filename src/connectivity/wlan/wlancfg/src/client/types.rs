@@ -6,6 +6,7 @@ use {
     crate::config_management,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_zircon as zx,
     wlan_metrics_registry::{
         PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
     },
@@ -94,7 +95,7 @@ pub struct Bss {
     /// Channel for this network.
     pub channel: WlanChan,
     /// Realtime timestamp for this scan result entry.
-    pub timestamp_nanos: i64,
+    pub timestamp: zx::Time,
     /// Seen in a passive scan.
     pub observed_in_passive_scan: bool,
     /// Compatible with this device's network stack.

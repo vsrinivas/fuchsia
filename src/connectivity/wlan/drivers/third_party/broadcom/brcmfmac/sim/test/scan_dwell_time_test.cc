@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <lib/zx/clock.h>
 
 #include <functional>
 
@@ -57,6 +58,7 @@ TEST_F(ScanTest, PassiveDwellTime) {
   ap.EnableBeacon(kBeaconInterval);
 
   for (size_t scan_attempt = 0; scan_attempt < kTotalScanCount; scan_attempt++) {
+    zx_time_t start_timestamp = zx::clock::get_monotonic().get();
     env_->ScheduleNotification(
         std::bind(&SimInterface::StartScan, &client_ifc_, scan_attempt, false), kScanStartTime);
     env_->Run(kScanMaxTime);
@@ -67,15 +69,17 @@ TEST_F(ScanTest, PassiveDwellTime) {
 
     // Check list of bsses seen
     EXPECT_EQ(*scan_result_code, WLAN_SCAN_RESULT_SUCCESS);
-    auto bss_list = client_ifc_.ScanResultBssList(scan_attempt);
-    EXPECT_GT(bss_list->size(), 0U);
-    for (const bss_description_t& bss : *bss_list) {
+    auto scan_result_list = client_ifc_.ScanResultList(scan_attempt);
+    EXPECT_GT(scan_result_list->size(), 0U);
+    for (const wlanif_scan_result_t& scan_result : *scan_result_list) {
+      auto& bss = scan_result.bss;
       EXPECT_EQ(kDefaultBssid, common::MacAddr(bss.bssid));
       auto ssid = brcmf_find_ssid_in_ies(bss.ies_list, bss.ies_count);
       EXPECT_EQ(kDefaultSsid.len, ssid.size());
       EXPECT_EQ(memcmp(kDefaultSsid.data, ssid.data(), ssid.size()), 0);
       EXPECT_EQ(kDefaultChannel.primary, bss.channel.primary);
       EXPECT_EQ(kDefaultChannel.cbw, bss.channel.cbw);
+      EXPECT_GT(scan_result.timestamp_nanos, start_timestamp);
     }
   }
 }

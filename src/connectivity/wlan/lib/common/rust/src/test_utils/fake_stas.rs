@@ -74,8 +74,6 @@ pub struct BssDescriptionCreator {
     pub bssid: [u8; 6],
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
-    pub timestamp: u64,
-    pub local_time: u64,
     pub channel: fidl_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
@@ -176,8 +174,6 @@ impl BssDescriptionCreator {
             bssid: self.bssid,
             bss_type: self.bss_type,
             beacon_period: self.beacon_period,
-            timestamp: self.timestamp,
-            local_time: self.local_time,
             capability_info,
             ies: ies_updater.finalize(),
             channel: self.channel,
@@ -273,8 +269,6 @@ pub fn build_fake_bss_description_creator__(
         bssid: [7, 1, 2, 77, 53, 8],
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: 100,
-        timestamp: 0,
-        local_time: 0,
         channel: fidl_common::WlanChannel {
             primary: 3,
             secondary80: 0,
@@ -340,9 +334,6 @@ pub fn build_random_bss_description_creator__(
         bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
         bss_type,
         beacon_period: rng.gen::<u16>(),
-        // TODO(fxbug.dev/82585): wlancfg uses an i64 for timestamp_nanos.
-        timestamp: rng.gen_range(0, i64::MAX) as u64,
-        local_time: rng.gen::<u64>(),
         // TODO(fxbug.dev/81978): Purely random valid channel values is not implemented.
         channel: fidl_common::WlanChannel {
             primary: rng.gen_range(1, 255),

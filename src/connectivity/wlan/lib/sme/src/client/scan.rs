@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
-    fuchsia_zircon as zx,
     ieee80211::{Bssid, Ssid, WILDCARD_BSSID},
     log::warn,
     std::{
@@ -20,36 +19,15 @@ use {
         sync::Arc,
     },
     wlan_common::{
-        bss::{BssDescription, Protection},
+        bss::BssDescription,
         channel::{Cbw, Channel},
-        ie::{self, wsc, IesMerger},
+        ie::IesMerger,
     },
 };
 
 const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
 const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
 const ACTIVE_SCAN_CHANNEL_MS: u32 = 75;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ScanResult {
-    pub bssid: Bssid,
-    pub ssid: Ssid,
-    pub rssi_dbm: i8,
-    pub snr_db: i8,
-    pub compatible: bool,
-    pub bss_description: fidl_internal::BssDescription,
-
-    // fidl_sme fields converted to non-trivial wlan_sme types
-    pub channel: Channel,
-    pub protection: Protection,
-
-    // Additional fields reported to wlanstack from wlan_sme
-    pub signal_report_time: zx::Time,
-    pub ht_cap: Option<fidl_internal::HtCapabilities>,
-    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
-    pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
-    pub wmm_param: Option<ie::WmmParam>,
-}
 
 // A "user"-initiated scan request for the purpose of discovering available networks
 #[derive(Debug, PartialEq)]
@@ -349,9 +327,9 @@ const SUPPORTED_CHANNELS: &[u8] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::test_utils;
     use fuchsia_inspect::Inspector;
+    use fuchsia_zircon as zx;
     use ieee80211::MacAddr;
     use itertools;
     use std::convert::TryFrom;
@@ -375,6 +353,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
@@ -387,6 +366,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: txn_id + 100, // mismatching transaction id
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
@@ -400,6 +380,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [3; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("qux").unwrap())
@@ -444,6 +425,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
@@ -457,6 +439,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("baz").unwrap())
@@ -503,7 +486,14 @@ mod tests {
         let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
         bss.ies.extend_from_slice(ie_marker1);
         sched
-            .on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect)
+            .on_mlme_scan_result(
+                fidl_mlme::ScanResult {
+                    txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                    bss,
+                },
+                &sme_inspect,
+            )
             .expect("expect scan result received");
 
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("ssid").unwrap());
@@ -511,7 +501,14 @@ mod tests {
         let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         bss.ies.extend_from_slice(ie_marker2);
         sched
-            .on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect)
+            .on_mlme_scan_result(
+                fidl_mlme::ScanResult {
+                    txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                    bss,
+                },
+                &sme_inspect,
+            )
             .expect("expect scan result received");
         let (scan_end, mlme_req) = assert_variant!(
             sched.on_mlme_scan_end(
@@ -611,6 +608,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
@@ -629,6 +627,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
@@ -697,6 +696,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
@@ -727,6 +727,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bar").unwrap())
@@ -766,6 +767,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: txn_id + 1,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())
@@ -785,6 +787,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: 0,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap())

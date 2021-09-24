@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <lib/zx/clock.h>
 
 #include <functional>
 #include <memory>
@@ -43,6 +44,9 @@ struct ApInfo {
 
 class PassiveScanTestInterface : public SimInterface {
  public:
+  // TODO(fxbug.dev/https://fxbug.dev/83861): Align the way active_scan_test and passive_scan_test
+  // verify scan results.
+
   // Add a functor that can be run on each scan result by the VerifyScanResult method.
   // This allows scan results to be inspected (e.g. with EXPECT_EQ) as they come in, rather than
   // storing scan results for analysis after the sim env run has completed.
@@ -144,6 +148,7 @@ constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 TEST_F(PassiveScanTest, BasicFunctionality) {
+  const int64_t test_start_timestamp_nanos = zx::clock::get_monotonic().get();
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(100);
   constexpr uint64_t kScanId = 0x1248;
@@ -160,31 +165,36 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
       kScanStartTime);
 
   // The lambda arg will be run on each result, inside PassiveScanTestInterface::VerifyScanResults.
-  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
-    // Verify BSSID.
-    ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
-    const common::MacAddr result_bssid(result.bss.bssid);
-    EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
+  client_ifc_.AddVerifierFunction(
+      [&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+        // Verify timestamp is after test start
+        ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
 
-    // Verify SSID.
-    auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
-    EXPECT_THAT(ssid, SizeIs(kDefaultSsid.len));
-    ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.data));
-    EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.data, kDefaultSsid.len), 0);
+        // Verify BSSID.
+        ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
+        const common::MacAddr result_bssid(result.bss.bssid);
+        EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
 
-    // Verify channel
-    EXPECT_EQ(result.bss.channel.primary, kDefaultChannel.primary);
-    EXPECT_EQ(result.bss.channel.cbw, kDefaultChannel.cbw);
-    EXPECT_EQ(result.bss.channel.secondary80, kDefaultChannel.secondary80);
+        // Verify SSID.
+        auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
+        EXPECT_THAT(ssid, SizeIs(kDefaultSsid.len));
+        ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.data));
+        EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.data, kDefaultSsid.len), 0);
 
-    // Verify has RSSI value
-    ASSERT_LT(result.bss.rssi_dbm, 0);
-  });
+        // Verify channel
+        EXPECT_EQ(result.bss.channel.primary, kDefaultChannel.primary);
+        EXPECT_EQ(result.bss.channel.cbw, kDefaultChannel.cbw);
+        EXPECT_EQ(result.bss.channel.secondary80, kDefaultChannel.secondary80);
+
+        // Verify has RSSI value
+        ASSERT_LT(result.bss.rssi_dbm, 0);
+      });
 
   env_->Run(kDefaultTestDuration);
 }
 
 TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
+  const int64_t test_start_timestamp_nanos = zx::clock::get_monotonic().get();
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(100);
   constexpr uint64_t kScanId = 0x1248;
@@ -207,25 +217,29 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
       std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
       kScanStartTime);
 
-  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
-    // Verify BSSID.
-    ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
-    const common::MacAddr result_bssid(result.bss.bssid);
-    EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
+  client_ifc_.AddVerifierFunction(
+      [&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+        // Verify timestamp is after test start
+        ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
 
-    // Verify that SSID is empty, since there was no SSID IE.
-    auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
-    EXPECT_EQ(ssid.size(), 0u);
-    ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.data));
+        // Verify BSSID.
+        ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
+        const common::MacAddr result_bssid(result.bss.bssid);
+        EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
 
-    // Verify channel
-    EXPECT_EQ(result.bss.channel.primary, kDefaultChannel.primary);
-    EXPECT_EQ(result.bss.channel.cbw, kDefaultChannel.cbw);
-    EXPECT_EQ(result.bss.channel.secondary80, kDefaultChannel.secondary80);
+        // Verify that SSID is empty, since there was no SSID IE.
+        auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
+        EXPECT_EQ(ssid.size(), 0u);
+        ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.data));
 
-    // Verify has RSSI value
-    ASSERT_LT(result.bss.rssi_dbm, 0);
-  });
+        // Verify channel
+        EXPECT_EQ(result.bss.channel.primary, kDefaultChannel.primary);
+        EXPECT_EQ(result.bss.channel.cbw, kDefaultChannel.cbw);
+        EXPECT_EQ(result.bss.channel.secondary80, kDefaultChannel.secondary80);
+
+        // Verify has RSSI value
+        ASSERT_LT(result.bss.rssi_dbm, 0);
+      });
 
   env_->Run(kDefaultTestDuration);
 }
@@ -254,8 +268,7 @@ TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
@@ -281,8 +294,7 @@ TEST_F(PassiveScanTest, ScanWhileAssocInProgress) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
@@ -310,8 +322,7 @@ TEST_F(PassiveScanTest, ScanAbortedInFirmware) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(),
             WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);
