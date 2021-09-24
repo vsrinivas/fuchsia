@@ -687,6 +687,10 @@ protocol Controller {
 
     // Takes an imported buffer collection and sets the constraints
     // on it so that it can be imported with a specific config.
+    // Dimensions, pixel format, and image type are ignored when
+    // setting constraints if set to zero.
+    // TODO(fxbug.dev/85320): Update this API to better support
+    // optional fields.
     SetBufferCollectionConstraints(struct {
         collection_id uint64;
         config ImageConfig;

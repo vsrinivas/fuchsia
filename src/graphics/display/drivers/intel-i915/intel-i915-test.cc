@@ -60,6 +60,26 @@ TEST(IntelI915Display, SysmemRequirements) {
   EXPECT_TRUE(collection.set_constraints_called());
 }
 
+TEST(IntelI915Display, SysmemNoneFormat) {
+  i915::Controller display(nullptr);
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockNoCpuBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  image.pixel_format = ZX_PIXEL_FORMAT_NONE;
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_OK(
+      display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_TRUE(collection.set_constraints_called());
+}
+
 TEST(IntelI915Display, SysmemInvalidFormat) {
   i915::Controller display(nullptr);
   zx::channel server_channel, client_channel;

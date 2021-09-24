@@ -71,6 +71,11 @@ static uint32_t image_types[4] = {
     IMAGE_TYPE_YF_TILED,
 };
 
+static fuchsia_sysmem::wire::PixelFormatType pixel_format_types[2] = {
+    fuchsia_sysmem::wire::PixelFormatType::kBgra32,
+    fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8,
+};
+
 static void gpu_release(void* ctx) { static_cast<i915::Controller*>(ctx)->GpuRelease(); }
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
@@ -1729,6 +1734,30 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted_count = 1;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem::wire::HeapType::kSystemRam;
   unsigned image_constraints_count = 0;
+
+  fuchsia_sysmem::wire::PixelFormatType pixel_format;
+  switch (config->pixel_format) {
+    case ZX_PIXEL_FORMAT_NONE:
+      pixel_format = fuchsia_sysmem::wire::PixelFormatType::kInvalid;
+      break;
+    case ZX_PIXEL_FORMAT_ARGB_8888:
+    case ZX_PIXEL_FORMAT_RGB_x888:
+      pixel_format = fuchsia_sysmem::wire::PixelFormatType::kBgra32;
+      break;
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+    case ZX_PIXEL_FORMAT_BGR_888x:
+      pixel_format = fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
+      break;
+    default:
+      zxlogf(ERROR, "Config has unsupported pixel format %d", config->pixel_format);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Loop over all combinations of supported image types and pixel formats, adding
+  // an image format constraints for each unless the config is asking for a specific
+  // format or type.
+  static_assert(countof(image_types) * countof(pixel_format_types) <=
+                countof(constraints.image_format_constraints));
   for (unsigned i = 0; i < countof(image_types); ++i) {
     // Skip if image type was specified and different from current type. This
     // makes it possible for a different participant to select preferred
@@ -1736,50 +1765,48 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     if (config->type && config->type != image_types[i]) {
       continue;
     }
-    fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
-        constraints.image_format_constraints[image_constraints_count++];
-    switch (config->pixel_format) {
-      case ZX_PIXEL_FORMAT_ARGB_8888:
-      case ZX_PIXEL_FORMAT_RGB_x888:
-        image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kBgra32;
-        break;
-      case ZX_PIXEL_FORMAT_ABGR_8888:
-      case ZX_PIXEL_FORMAT_BGR_888x:
-        image_constraints.pixel_format.type = fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8;
-        break;
-      default:
-        zxlogf(ERROR, "Config has unsupported pixel format %d", config->pixel_format);
-        return ZX_ERR_INVALID_ARGS;
+    for (unsigned j = 0; j < countof(pixel_format_types); ++j) {
+      // Skip if pixel format was specified and different from current format.
+      // This makes it possible for a different participant to select preferred
+      // format.
+      if (pixel_format != fuchsia_sysmem::wire::PixelFormatType::kInvalid &&
+          pixel_format != pixel_format_types[j]) {
+        continue;
+      }
+      fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
+          constraints.image_format_constraints[image_constraints_count++];
+
+      image_constraints.pixel_format.type = pixel_format_types[j];
+      image_constraints.pixel_format.has_format_modifier = true;
+      switch (image_types[i]) {
+        case IMAGE_TYPE_SIMPLE:
+          image_constraints.pixel_format.format_modifier.value =
+              fuchsia_sysmem::wire::kFormatModifierLinear;
+          image_constraints.bytes_per_row_divisor = 64;
+          image_constraints.start_offset_divisor = 64;
+          break;
+        case IMAGE_TYPE_X_TILED:
+          image_constraints.pixel_format.format_modifier.value =
+              fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled;
+          image_constraints.start_offset_divisor = 4096;
+          image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+          break;
+        case IMAGE_TYPE_Y_LEGACY_TILED:
+          image_constraints.pixel_format.format_modifier.value =
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
+          image_constraints.start_offset_divisor = 4096;
+          image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+          break;
+        case IMAGE_TYPE_YF_TILED:
+          image_constraints.pixel_format.format_modifier.value =
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
+          image_constraints.start_offset_divisor = 4096;
+          image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+          break;
+      }
+      image_constraints.color_spaces_count = 1;
+      image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
     }
-    image_constraints.pixel_format.has_format_modifier = true;
-    switch (image_types[i]) {
-      case IMAGE_TYPE_SIMPLE:
-        image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem::wire::kFormatModifierLinear;
-        image_constraints.bytes_per_row_divisor = 64;
-        image_constraints.start_offset_divisor = 64;
-        break;
-      case IMAGE_TYPE_X_TILED:
-        image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled;
-        image_constraints.start_offset_divisor = 4096;
-        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-        break;
-      case IMAGE_TYPE_Y_LEGACY_TILED:
-        image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
-        image_constraints.start_offset_divisor = 4096;
-        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-        break;
-      case IMAGE_TYPE_YF_TILED:
-        image_constraints.pixel_format.format_modifier.value =
-            fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
-        image_constraints.start_offset_divisor = 4096;
-        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-        break;
-    }
-    image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
   }
   if (image_constraints_count == 0) {
     zxlogf(ERROR, "Config has unsupported type %d", config->type);

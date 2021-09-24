@@ -20,9 +20,6 @@ namespace flatland {
 
 namespace {
 
-// TODO(fxbug.dev/71344): We shouldn't need to provide the display controller with a pixel format.
-const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
-
 // Debugging color used to highlight images that have gone through the GPU rendering path.
 const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
 
@@ -184,10 +181,10 @@ bool DisplayCompositor::ImportBufferCollection(
   }
   display_tokens_[collection_id] = std::move(display_token_sync_ptr);
 
-  // The image config needs to match the one passed to SetLayerPrimaryConfig for
-  // the layer the image will be attached to.
+  // Set image config fields to zero to indicate that a specific size, format, or type is
+  // not required.
   fuchsia::hardware::display::ImageConfig image_config;
-  image_config.pixel_format = kDefaultImageFormat;
+  image_config.pixel_format = ZX_PIXEL_FORMAT_NONE;
   image_config.type = 0;
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
