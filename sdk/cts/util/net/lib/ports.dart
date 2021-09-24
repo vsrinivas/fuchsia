@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:io';
 
@@ -18,7 +15,7 @@ import 'dart:io';
 /// This is necessary for ensuring that our port binding isn't flaky for
 /// applications that don't print out the bound port.
 Future<T> getUnusedPort<T>(FutureOr<T> Function(int port) tryPort) async {
-  T value;
+  late T value;
   await Future.doWhile(() async {
     value = await tryPort(await getUnsafeUnusedPort());
     return value == null;
@@ -37,7 +34,7 @@ var _maySupportIPv6 = true;
 /// any time after this call has returned. If at all possible, callers should
 /// use [getUnusedPort] instead.
 Future<int> getUnsafeUnusedPort() async {
-  int port;
+  late int port;
   if (_maySupportIPv6) {
     try {
       final socket = await RawServerSocket.bind(InternetAddress.loopbackIPv6, 0,

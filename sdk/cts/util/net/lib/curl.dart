@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:io';
 
@@ -14,7 +11,7 @@ import 'package:logging/logging.dart';
 ///
 /// Will stop trying after the given `timeout`.
 Future<int> retryWaitForCurlHTTPCode(List<String> args, int expectedHTTPCode,
-    {Duration timeout = const Duration(seconds: 30), Logger logger}) async {
+    {Duration timeout = const Duration(seconds: 30), Logger? logger}) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     var curlResponse = await Process.run(
