@@ -766,7 +766,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     "//src/connectivity/network/dns:component",
 
     # Isolated, low-deps netstack
-    "//src/connectivity/network/netstack:component-debug",
+    "//src/connectivity/network/netstack:component",
 
     # Embedded archivist, which we need for inspect
     "//src/diagnostics/archivist:archivist-for-embedding",

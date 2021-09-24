@@ -16,7 +16,7 @@
         },
         {
             name: "netstack",
-            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/netstack-debug.cm",
+            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/netstack.cm",
         },
         {
             name: "dns_resolver",
