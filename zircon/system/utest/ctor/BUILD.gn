@@ -12,7 +12,7 @@ test("ctor") {
   deps = [
     ":dso-ctor",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/unittest",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
@@ -21,7 +21,6 @@ shared_library("dso-ctor") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [ ":*" ]
   sources = [ "dso-ctor/dso-ctor.cc" ]
-  deps = [ "//zircon/system/ulib/unittest" ]
 }
 
 fuchsia_unittest_package("ctor-test-pkg") {

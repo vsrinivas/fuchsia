@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
 #include <sched.h>
 #include <threads.h>
+
+#include <zxtest/zxtest.h>
 
 #include "dso-ctor/dso-ctor.h"
 
@@ -23,49 +24,33 @@ static struct Global {
   }
 } global;
 
-bool check_ctor() {
-  BEGIN_TEST;
-  EXPECT_TRUE(global_ctor_ran, "global constuctor didn't run!");
-  END_TEST;
-}
+TEST(Ctors, check_ctor) { EXPECT_TRUE(global_ctor_ran, "global constuctor didn't run!"); }
+
+TEST(Ctors, check_dso_ctor) { check_dso_ctor(); }
 
 int my_static = 23;
 
-bool check_initializer() {
-  BEGIN_TEST;
-  EXPECT_EQ(my_static, 23, "static initializer didn't run!");
-  END_TEST;
-}
+TEST(Ctors, check_initializer) { EXPECT_EQ(my_static, 23, "static initializer didn't run!"); }
 
 bool tlocal_ctor_ran, tlocal_dtor_ran;
 thread_local ThreadLocal<&tlocal_ctor_ran, &tlocal_dtor_ran> tlocal;
 
 int do_thread_local_dtor_test(void*) {
-  BEGIN_HELPER;
-  EXPECT_TRUE(decltype(tlocal)::check_before_reference());
+  decltype(tlocal)::check_before_reference();
   tlocal.flag = true;
-  EXPECT_TRUE(decltype(tlocal)::check_after_reference());
-  EXPECT_TRUE(check_dso_tlocal_in_thread());
-  END_HELPER;
+  decltype(tlocal)::check_after_reference();
+  check_dso_tlocal_in_thread();
+  return 1;
 }
 
-bool check_thread_local_ctor_dtor() {
-  BEGIN_TEST;
+TEST(Ctors, check_thread_local_ctor_dtor) {
   thrd_t th;
   ASSERT_EQ(thrd_create(&th, &do_thread_local_dtor_test, nullptr), thrd_success);
   int retval = -1;
   EXPECT_EQ(thrd_join(th, &retval), thrd_success);
   EXPECT_TRUE(static_cast<bool>(retval));
-  EXPECT_TRUE(decltype(tlocal)::check_after_join());
-  EXPECT_TRUE(check_dso_tlocal_after_join());
-  END_TEST;
+  decltype(tlocal)::check_after_join();
+  check_dso_tlocal_after_join();
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(ctors)
-RUN_TEST(check_ctor)
-RUN_TEST(check_initializer)
-RUN_TEST(check_dso_ctor)
-RUN_TEST(check_thread_local_ctor_dtor)
-END_TEST_CASE(ctors)
