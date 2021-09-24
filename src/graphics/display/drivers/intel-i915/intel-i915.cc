@@ -876,7 +876,22 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
     return ZX_ERR_INVALID_ARGS;
   }
   if (image->type != type) {
-    zxlogf(ERROR, "Incompatible image type");
+    zxlogf(ERROR, "Incompatible image type from image %d and sysmem %d", image->type, type);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fidl::Arena allocator;
+  auto format_result = ImageFormatConvertZxToSysmem_v1(allocator, image->pixel_format);
+  if (!format_result.is_ok()) {
+    zxlogf(ERROR, "Pixel format %d can't be converted to sysmem", image->pixel_format);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (format_result.value().type !=
+      collection_info.settings.image_format_constraints.pixel_format.type) {
+    zxlogf(ERROR, "Sysmem pixel format from image %d doesn't match format from collection %d",
+           format_result.value().type,
+           collection_info.settings.image_format_constraints.pixel_format.type);
     return ZX_ERR_INVALID_ARGS;
   }
 

@@ -243,9 +243,10 @@ TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
       ZX_PIXEL_FORMAT_RGB_565,   ZX_PIXEL_FORMAT_RGB_332,  ZX_PIXEL_FORMAT_RGB_2220,
       ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_MONO_8,
       ZX_PIXEL_FORMAT_GRAY_8,    ZX_PIXEL_FORMAT_NV12,     ZX_PIXEL_FORMAT_RGB_888,
+      ZX_PIXEL_FORMAT_ABGR_8888, ZX_PIXEL_FORMAT_BGR_888x,
   };
   for (zx_pixel_format_t format : pixel_formats) {
-    fprintf(stderr, "Format %x\n", format);
+    printf("Format %x\n", format);
     auto sysmem_format_result = ImageFormatConvertZxToSysmem_v1(allocator, format);
     EXPECT_TRUE(sysmem_format_result.is_ok());
     auto sysmem_format = sysmem_format_result.take_value();
@@ -253,6 +254,8 @@ TEST(ImageFormat, ZxPixelFormat_V1_LLCPP) {
     EXPECT_TRUE(ImageFormatConvertSysmemToZx(sysmem_format, &back_format));
     if (format == ZX_PIXEL_FORMAT_RGB_x888) {
       EXPECT_EQ(ZX_PIXEL_FORMAT_ARGB_8888, back_format);
+    } else if (format == ZX_PIXEL_FORMAT_BGR_888x) {
+      EXPECT_EQ(ZX_PIXEL_FORMAT_ABGR_8888, back_format);
     } else {
       EXPECT_EQ(back_format, format);
     }
@@ -294,15 +297,18 @@ TEST(ImageFormat, ZxPixelFormat_V1_C) {
       ZX_PIXEL_FORMAT_RGB_565,   ZX_PIXEL_FORMAT_RGB_332,  ZX_PIXEL_FORMAT_RGB_2220,
       ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_MONO_8,
       ZX_PIXEL_FORMAT_GRAY_8,    ZX_PIXEL_FORMAT_NV12,     ZX_PIXEL_FORMAT_RGB_888,
+      ZX_PIXEL_FORMAT_ABGR_8888, ZX_PIXEL_FORMAT_BGR_888x,
   };
   for (zx_pixel_format_t format : pixel_formats) {
-    fprintf(stderr, "Format %x\n", format);
+    printf("Format %x\n", format);
     fuchsia_sysmem_PixelFormat sysmem_format;
     EXPECT_TRUE(ImageFormatConvertZxToSysmem(format, &sysmem_format));
     zx_pixel_format_t back_format;
     EXPECT_TRUE(ImageFormatConvertSysmemToZx(&sysmem_format, &back_format));
     if (format == ZX_PIXEL_FORMAT_RGB_x888) {
       EXPECT_EQ(ZX_PIXEL_FORMAT_ARGB_8888, back_format);
+    } else if (format == ZX_PIXEL_FORMAT_BGR_888x) {
+      EXPECT_EQ(ZX_PIXEL_FORMAT_ABGR_8888, back_format);
     } else {
       EXPECT_EQ(back_format, format);
     }

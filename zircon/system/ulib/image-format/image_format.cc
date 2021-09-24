@@ -1180,6 +1180,10 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem2::wire::PixelFormat& pixe
     return false;
   }
   switch (pixel_format.type()) {
+    case PixelFormatType::kR8G8B8A8:
+      *zx_pixel_format_out = ZX_PIXEL_FORMAT_ABGR_8888;
+      return true;
+
     case PixelFormatType::kBgra32:
       *zx_pixel_format_out = ZX_PIXEL_FORMAT_ARGB_8888;
       return true;
@@ -1275,6 +1279,15 @@ fpromise::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysme
 
     case ZX_PIXEL_FORMAT_RGB_888:
       out_type = PixelFormatType::kBgr24;
+      break;
+
+    case ZX_PIXEL_FORMAT_ABGR_8888:
+      out_type = PixelFormatType::kR8G8B8A8;
+      break;
+
+    case ZX_PIXEL_FORMAT_BGR_888x:
+      // Switch to using alpha.
+      out_type = PixelFormatType::kR8G8B8A8;
       break;
 
     default:
