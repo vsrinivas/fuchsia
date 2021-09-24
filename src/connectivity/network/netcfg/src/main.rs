@@ -172,12 +172,6 @@ struct Opt {
     #[argh(switch)]
     allow_virtual_devices: bool,
 
-    /// path to devfs
-    // TODO(https://fxbug.dev/70187): remove once netcfg is no longer used in netemul-v1 integration
-    // tests, where the devfs path is /vdev.
-    #[argh(option, default = "DEV_PATH.to_string()")]
-    devfs_path: String,
-
     /// minimum severity for logs
     #[argh(option, default = "LogLevel::Info")]
     min_severity: LogLevel,
@@ -354,7 +348,6 @@ struct NetCfg<'a> {
     dhcp_server: Option<fnet_dhcp::Server_Proxy>,
     dhcpv6_client_provider: Option<fnet_dhcpv6::ClientProviderProxy>,
 
-    device_dir_path: &'a str,
     allow_virtual_devices: bool,
 
     persisted_interface_config: interface::FileBackedConfig<'a>,
@@ -464,7 +457,6 @@ fn start_dhcpv6_client(
 impl<'a> NetCfg<'a> {
     /// Returns a new `NetCfg`.
     async fn new(
-        device_dir_path: &'a str,
         allow_virtual_devices: bool,
         default_config_rules: Vec<matchers::InterfaceSpec>,
         filter_enabled_interface_types: HashSet<InterfaceType>,
@@ -504,7 +496,6 @@ impl<'a> NetCfg<'a> {
             interface_state,
             dhcp_server,
             dhcpv6_client_provider,
-            device_dir_path,
             allow_virtual_devices,
             persisted_interface_config,
             filter_enabled_interface_types,
@@ -615,8 +606,7 @@ impl<'a> NetCfg<'a> {
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
     async fn run(mut self) -> Result<(), anyhow::Error> {
-        let ethdev_dir_path = format!("{}/{}", self.device_dir_path, devices::EthernetDevice::PATH);
-        let ethdev_dir_path = &ethdev_dir_path;
+        let ethdev_dir_path = &format!("{}/{}", DEV_PATH, devices::EthernetDevice::PATH);
         let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
                 .context("error opening ethdev directory")?,
@@ -625,8 +615,7 @@ impl<'a> NetCfg<'a> {
         .with_context(|| format!("creating watcher for ethdevs {}", ethdev_dir_path))?
         .fuse();
 
-        let netdev_dir_path = format!("{}/{}", self.device_dir_path, devices::NetworkDevice::PATH);
-        let netdev_dir_path = &netdev_dir_path;
+        let netdev_dir_path = &format!("{}/{}", DEV_PATH, devices::NetworkDevice::PATH);
         let mut netdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(netdev_dir_path, OPEN_RIGHT_READABLE)
                 .context("error opening netdev directory")?,
@@ -1432,7 +1421,7 @@ async fn main() {
     // We use a closure so we can grab the error and log it before returning from main.
     let f = || async {
         let opt: Opt = argh::from_env();
-        let Opt { allow_virtual_devices, devfs_path, min_severity, config_data } = &opt;
+        let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
 
         let () = fuchsia_syslog::init().context("cannot init logger")?;
         fsyslog::set_severity((*min_severity).into());
@@ -1460,7 +1449,6 @@ async fn main() {
         };
 
         let mut netcfg = NetCfg::new(
-            devfs_path,
             *allow_virtual_devices,
             default_config_rules,
             filter_enabled_interface_types,
@@ -1563,7 +1551,6 @@ mod tests {
                 interface_state,
                 dhcp_server: Some(dhcp_server),
                 dhcpv6_client_provider: Some(dhcpv6_client_provider),
-                device_dir_path: "/vdev",
                 persisted_interface_config,
                 allow_virtual_devices: false,
                 filter_enabled_interface_types: Default::default(),

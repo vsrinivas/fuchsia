@@ -78,13 +78,6 @@ fuchsia_component("component-legacy") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-netemul") {
-  component_name = "netcfg-netemul"
-  testonly = true
-  manifest = "meta/netcfg-netemul.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("component") {
   component_name = "netcfg"
   manifest = "meta/netcfg.cml"
