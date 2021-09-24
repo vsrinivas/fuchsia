@@ -273,11 +273,15 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
   }
 
   fbl::RefPtr<VmAddressRegionOrMapping> res;
-  zx_status_t status =
-      CreateSubVmarInternal(mapping_offset, mapping_size, align_pow2, vmar_flags, ktl::move(vmo),
-                            vmo_offset, arch_mmu_flags, name, &res);
+  zx_status_t status = CreateSubVmarInternal(mapping_offset, mapping_size, align_pow2, vmar_flags,
+                                             vmo, vmo_offset, arch_mmu_flags, name, &res);
   if (status != ZX_OK) {
     return status;
+  }
+  // TODO(fxb/85056): For the moment we forward the latency sensitivity permanently onto any VMO
+  // that gets mapped.
+  if (aspace_->IsLatencySensitive()) {
+    vmo->MarkAsLatencySensitive();
   }
   // TODO(teisenbe): optimize this
   *out = res->as_vm_mapping();
@@ -624,6 +628,12 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, size_t offset, size_t len,
   len = ROUNDUP(len, PAGE_SIZE);
   if (len == 0 || !IS_PAGE_ALIGNED(offset)) {
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (op == RangeOpType::AlwaysNeed) {
+    // TODO(fxb/85056): For the moment marking any part of the address space as always need causes
+    // the entire aspace to be considered latency sensitive.
+    aspace_->MarkAsLatencySensitive();
   }
 
   zx_status_t status;

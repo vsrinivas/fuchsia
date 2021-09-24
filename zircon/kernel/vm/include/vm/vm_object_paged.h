@@ -246,6 +246,11 @@ class VmObjectPaged final : public VmObject {
   // consideration when reclaiming pages under memory pressure (if applicable).
   zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) override;
 
+  void MarkAsLatencySensitive() override {
+    Guard<Mutex> guard{&lock_};
+    cow_pages_locked()->MarkAsLatencySensitiveLocked();
+  }
+
   // Sets the always_need hint on |page| if it belongs to the root VMO in this hierarchy, and is
   // pager-backed. Called from VmMapping while holding the VMO lock when faulting a page, hence
   // needs to be public.

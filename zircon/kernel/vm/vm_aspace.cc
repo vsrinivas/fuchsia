@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <lib/ktrace.h>
@@ -28,6 +29,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <ktl/algorithm.h>
+#include <object/process_dispatcher.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
@@ -51,6 +53,10 @@ static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
 static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
 
 namespace {
+
+KCOUNTER(vm_aspace_marked_latency_sensitive, "vm.aspace.latency_sensitive.marked")
+KCOUNTER(vm_aspace_latency_sensitive_destroyed, "vm.aspace.latency_sensitive.destroyed")
+
 // the singleton kernel address space
 lazy_init::LazyInit<VmAspace, lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
     g_kernel_aspace;
@@ -223,6 +229,11 @@ VmAspace::~VmAspace() {
   // the aspace is in the global list.
   zx_status_t status = arch_aspace_.Destroy();
   DEBUG_ASSERT(status == ZX_OK);
+
+  // Update any counters.
+  if (IsLatencySensitive()) {
+    vm_aspace_latency_sensitive_destroyed.Add(1);
+  }
 }
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
@@ -712,19 +723,59 @@ bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
          Intersects(vdso_code_mapping_->base(), vdso_code_mapping_->size(), base, size);
 }
 
+bool VmAspace::IsLatencySensitive() const {
+  return is_latency_sensitive_.load(ktl::memory_order_relaxed);
+}
+
+void VmAspace::MarkAsLatencySensitive() {
+  Guard<Mutex> guard{&lock_};
+  if (root_vmar_ == nullptr || aspace_destroyed_) {
+    // Aspace hasn't been initialized or has already been destroyed.
+    return;
+  }
+
+  // TODO(fxb/85056): Need a better mechanism than checking for the process name here.
+  char name[ZX_MAX_NAME_LEN];
+  auto up = ProcessDispatcher::GetCurrent();
+  up->get_name(name);
+  if (strncmp(name, "audio_core.cmx", ZX_MAX_NAME_LEN) != 0 || up->aspace().get() != this) {
+    return;
+  }
+
+  bool was_sensitive = is_latency_sensitive_.exchange(true);
+  // If this aspace was previously not latency sensitive, then we need to go and tag any VMOs that
+  // already have mappings. Although expensive, this only ever needs to be done once for an aspace.
+  if (!was_sensitive) {
+    vm_aspace_marked_latency_sensitive.Add(1);
+    class Enumerator : public VmEnumerator {
+     public:
+      bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) override
+          TA_REQ(map->lock()) {
+        map->MarkObjectAsLatencySensitiveLocked();
+        return true;
+      }
+    };
+    Enumerator enumerator;
+    root_vmar_->EnumerateChildrenLocked(&enumerator);
+  }
+}
+
 void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
   VM_KTRACE_DURATION(2, "VmAspace::HarvestAllUserAccessedBits");
   Guard<Mutex> guard{&aspace_list_lock};
 
   for (auto& a : aspaces) {
     if (a.is_user()) {
+      // TODO(fxb/85056): Formalize this.
+      // Forbid PT reclamation on latency sensitive aspaces.
+      NonTerminalAction apply_action = a.IsLatencySensitive() ? NonTerminalAction::Retain : action;
       // The arch_aspace is only destroyed in the VmAspace destructor *after* the aspace is removed
       // from the aspaces list. As we presently hold the aspace_list_lock we know that this
       // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
       // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
       // page tables, there just will not be anything there.
       zx_status_t __UNUSED result =
-          a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, action);
+          a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, apply_action);
       DEBUG_ASSERT(result == ZX_OK);
     }
   }

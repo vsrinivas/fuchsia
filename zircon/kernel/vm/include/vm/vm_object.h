@@ -376,6 +376,12 @@ class VmObject : public VmHierarchyBase,
     return ZX_OK;
   }
 
+  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // formalized.
+  virtual void MarkAsLatencySensitive() {
+    // This does nothing by default.
+  }
+
   // The associated VmObjectDispatcher will set an observer to notify user mode.
   void SetChildObserver(VmObjectChildObserver* child_observer);
 

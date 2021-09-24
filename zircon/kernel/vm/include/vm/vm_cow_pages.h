@@ -242,6 +242,8 @@ class VmCowPages final
   void ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len, Guard<Mutex>* guard)
       TA_REQ(lock_);
 
+  void MarkAsLatencySensitiveLocked() TA_REQ(lock_);
+
   // Helper function to hint always_need on a |page| (if applicable).
   void HintAlwaysNeedLocked(vm_page_t* page) const TA_REQ(lock_);
 
@@ -698,6 +700,15 @@ class VmCowPages final
   // optional reference back to a VmObjectPaged so that we can perform mapping updates. This is a
   // raw pointer to avoid circular references, the VmObjectPaged destructor needs to update it.
   VmObjectPaged* paged_ref_ TA_GUARDED(lock_) = nullptr;
+
+  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // formalized.
+  // Marks whether or not this VMO is considered a latency sensitive object. For a VMO being latency
+  // sensitive means pages that get committed should not be decommitted (or made expensive to
+  // access) by any background kernel process, such as the zero page deduper.
+  // Note: This does not presently protect against user pager eviction, as there is already a
+  // separate mechanism for that. Once fxb/85056 is resolved this might change.
+  bool is_latency_sensitive_ TA_GUARDED(lock_) = false;
 
   using Cursor =
       VmoCursor<VmCowPages, DiscardableVmosLock, DiscardableList, DiscardableList::iterator>;
