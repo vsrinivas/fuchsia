@@ -166,26 +166,26 @@ void CreateFiles(F2fs *fs, int file_cnt, uint64_t version) {
 
 void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_segno) {
   SbInfo &sbi = fs->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+  SitInfo &sit_i = fs->GetSegmentManager().GetSitInfo();
 
-  if (!fs->Segmgr().HasCursegSpace(type)) {
-    fs->Segmgr().AllocateSegmentByDefault(type, false);
+  if (!fs->GetSegmentManager().HasCursegSpace(type)) {
+    fs->GetSegmentManager().AllocateSegmentByDefault(type, false);
   }
 
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, type);
+  CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(type);
   if (exp_segno != kNullSegNo)
     ASSERT_EQ(curseg->segno, exp_segno);
 
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-  *new_blkaddr = NextFreeBlkAddr(&sbi, curseg);
+  *new_blkaddr = fs->GetSegmentManager().NextFreeBlkAddr(type);
   uint32_t old_cursegno = curseg->segno;
 
-  fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
-  fs->Segmgr().RefreshNextBlkoff(curseg);
+  fbl::AutoLock sentry_lock(&sit_i.sentry_lock);
+  fs->GetSegmentManager().RefreshNextBlkoff(curseg);
   sbi.block_count[curseg->alloc_type]++;
 
-  fs->Segmgr().RefreshSitEntry(kNullSegNo, *new_blkaddr);
-  fs->Segmgr().LocateDirtySegment(old_cursegno);
+  fs->GetSegmentManager().RefreshSitEntry(kNullSegNo, *new_blkaddr);
+  fs->GetSegmentManager().LocateDirtySegment(old_cursegno);
 }
 
 bool IsRootInode(CursegType curseg_type, uint32_t offset) {
@@ -538,7 +538,6 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
 
 void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                       bool after_mkfs) {
-  SbInfo &sbi = fs->GetSbInfo();
   Page *cp_page = nullptr;
 
   // 1. Get last checkpoint
@@ -550,7 +549,7 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
     // 2. Clear current segment summaries
     for (int i = static_cast<int>(CursegType::kCursegHotData);
          i <= static_cast<int>(CursegType::kCursegColdData); i++) {
-      CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, static_cast<CursegType>(i));
+      CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(static_cast<CursegType>(i));
       for (auto &entrie : curseg->sum_blk->entries) {
         entrie.nid = 0;
         entrie.version = 0;
@@ -560,12 +559,12 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
 
     // 3. Recover compacted data summaries
     ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
-    ASSERT_EQ(fs->Segmgr().ReadCompactedSummaries(), 0);
+    ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 4. Check recovered active summary info
     for (int i = static_cast<int>(CursegType::kCursegHotData);
          i <= static_cast<int>(CursegType::kCursegColdData); i++) {
-      CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, static_cast<CursegType>(i));
+      CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(static_cast<CursegType>(i));
 
       if (cp->checkpoint_ver > 3)  // cp_ver 2 and 3 have random segno
         ASSERT_EQ(curseg->segno, (cp->checkpoint_ver - 3) * 3 + i + 1);
@@ -608,20 +607,19 @@ void CheckpointTestCompactedSummaries(F2fs *fs, uint32_t expect_cp_position, uin
           IsRootInode(static_cast<CursegType>(i), j))  // root inode dentry
         continue;
 
-      fs->Segmgr().SetSummary(&sum, 3, j, static_cast<uint8_t>(cp->checkpoint_ver));
-      fs->Segmgr().AddSumEntry(static_cast<CursegType>(i), &sum, j);
+      fs->GetSegmentManager().SetSummary(&sum, 3, j, static_cast<uint8_t>(cp->checkpoint_ver));
+      fs->GetSegmentManager().AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
       DoWriteSit(fs, &new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
     }
   }
-  ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);
+  ASSERT_LT(fs->GetSegmentManager().NpagesForSummaryFlush(), 3);
 
   F2fsPutPage(cp_page, 1);
 }
 
 void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                                    bool after_mkfs) {
-  SbInfo &sbi = fs->GetSbInfo();
   Page *cp_page = nullptr;
 
   // 1. Get last checkpoint
@@ -633,7 +631,7 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
     // 2. Clear current segment summaries
     for (int i = static_cast<int>(CursegType::kCursegHotData);
          i <= static_cast<int>(CursegType::kCursegColdNode); i++) {
-      CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, static_cast<CursegType>(i));
+      CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(static_cast<CursegType>(i));
       for (auto &entrie : curseg->sum_blk->entries) {
         entrie.nid = 0;
         entrie.version = 0;
@@ -645,13 +643,13 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
     ASSERT_NE(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
     for (int type = static_cast<int>(CursegType::kCursegHotData);
          type <= static_cast<int>(CursegType::kCursegColdNode); type++) {
-      ASSERT_EQ(fs->Segmgr().ReadNormalSummaries(type), ZX_OK);
+      ASSERT_EQ(fs->GetSegmentManager().ReadNormalSummaries(type), ZX_OK);
     }
 
     // 4. Check recovered active summary info
     for (int i = static_cast<int>(CursegType::kCursegHotData);
          i <= static_cast<int>(CursegType::kCursegColdNode); i++) {
-      CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, static_cast<CursegType>(i));
+      CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(static_cast<CursegType>(i));
 
       if (cp->checkpoint_ver > 3)  // cp_ver 2 and 3 have random segno
         ASSERT_EQ(curseg->segno, (cp->checkpoint_ver - 3) * 6 + i + 1);
@@ -663,7 +661,7 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
 
         nid_t nid = curseg->sum_blk->entries[j].nid;
         ASSERT_EQ(nid, cp->checkpoint_ver - 1);
-        if (!IsNodeSeg(static_cast<CursegType>(i))) {
+        if (!fs->GetSegmentManager().IsNodeSeg(static_cast<CursegType>(i))) {
           ASSERT_EQ(static_cast<uint64_t>(curseg->sum_blk->entries[j].version),
                     cp->checkpoint_ver - 1);
           uint16_t ofs_in_node = curseg->sum_blk->entries[j].ofs_in_node;
@@ -685,21 +683,20 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
       if (cp->checkpoint_ver == 1 && IsRootInode(static_cast<CursegType>(i), j))
         continue;
 
-      fs->Segmgr().SetSummary(&sum, static_cast<nid_t>(cp->checkpoint_ver), j,
-                              static_cast<uint8_t>(cp->checkpoint_ver));
-      fs->Segmgr().AddSumEntry(static_cast<CursegType>(i), &sum, j);
+      fs->GetSegmentManager().SetSummary(&sum, static_cast<nid_t>(cp->checkpoint_ver), j,
+                                         static_cast<uint8_t>(cp->checkpoint_ver));
+      fs->GetSegmentManager().AddSumEntry(static_cast<CursegType>(i), &sum, j);
 
       DoWriteSit(fs, &new_blkaddr, static_cast<CursegType>(i), kNullSegNo);
     }
   }
-  ASSERT_GT(fs->Segmgr().NpagesForSummaryFlush(), 2);
+  ASSERT_GT(fs->GetSegmentManager().NpagesForSummaryFlush(), 2);
 
   F2fsPutPage(cp_page, 1);
 }
 
 void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                               bool after_mkfs, std::vector<uint32_t> &segnos) {
-  SbInfo &sbi = fs->GetSbInfo();
   Page *cp_page = nullptr;
 
   // 1. Get last checkpoint
@@ -710,17 +707,18 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   if (!after_mkfs) {
     // 2. Recover compacted data summaries
     ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
-    ASSERT_EQ(fs->Segmgr().ReadCompactedSummaries(), 0);
+    ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 3. Check recovered journal
-    CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegColdData);
+    CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
 
 #ifdef F2FS_BU_DEBUG
     std::cout << "Check Journal, CP ver =" << cp->checkpoint_ver
               << ", SitsInCursum=" << SitsInCursum(curseg->sum_blk)
-              << ", dirty_sentries=" << GetSitInfo(&sbi)->dirty_sentries << std::endl;
+              << ", dirty_sentries=" << fs->GetSegmentManager().GetSitInfo().dirty_sentries
+              << std::endl
 #endif
-    SummaryBlock *sum = curseg->sum_blk;
+                     SummaryBlock *sum = curseg->sum_blk;
     for (int i = 0; i < SitsInCursum(sum); i++) {
       uint32_t segno = LeToCpu(SegnoInJournal(sum, i));
       ASSERT_EQ(segno, segnos[i]);
@@ -729,13 +727,13 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
   // 4. Fill compact data summary
   if (!after_mkfs) {
-    CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegColdData);
+    CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
 
     // Clear SIT journal
     if (SitsInCursum(curseg->sum_blk) >= static_cast<int>(kSitJournalEntries)) {
-      SitInfo *sit_i = GetSitInfo(&sbi);
-      uint64_t *bitmap = sit_i->dirty_sentries_bitmap;
-      block_t nsegs = TotalSegs(&sbi);
+      SitInfo &sit_i = fs->GetSegmentManager().GetSitInfo();
+      uint8_t *bitmap = sit_i.dirty_sentries_bitmap.get();
+      block_t nsegs = fs->GetSegmentManager().TotalSegs();
       uint32_t segno = -1;
 
       // Add dummy dirty sentries
@@ -745,18 +743,19 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
       }
 
       // Move journal sentries to dirty sentries
-      ASSERT_TRUE(fs->Segmgr().FlushSitsInJournal());
+      ASSERT_TRUE(fs->GetSegmentManager().FlushSitsInJournal());
 
       // Clear dirty sentries
       while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
         ClearBit(segno, bitmap);
-        sit_i->dirty_sentries--;
+        sit_i.dirty_sentries--;
       }
 
 #ifdef F2FS_BU_DEBUG
       std::cout << "Clear Journal CP ver =" << cp->checkpoint_ver
                 << ", SitsInCursum=" << SitsInCursum(curseg->sum_blk)
-                << ", dirty_sentries=" << GetSitInfo(&sbi)->dirty_sentries << std::endl;
+                << ", dirty_sentries=" << fs->GetSegmentManager().GetSitInfo().dirty_sentries
+                << std::endl;
 #endif
     }
   }
@@ -767,12 +766,12 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   for (uint32_t i = 0; i < kSitJournalEntries * kMapPerSitEntry; i++) {
     block_t new_blkaddr;
     DoWriteSit(fs, &new_blkaddr, CursegType::kCursegColdData, kNullSegNo);
-    CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegColdData);
+    CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
     if (curseg->next_blkoff == 1) {
       segnos.push_back(curseg->segno);
     }
   }
-  ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);
+  ASSERT_LT(fs->GetSegmentManager().NpagesForSummaryFlush(), 3);
 
   F2fsPutPage(cp_page, 1);
 }
@@ -782,7 +781,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   SbInfo &sbi = fs->GetSbInfo();
   NodeManager &node_manager = fs->GetNodeManager();
   Page *cp_page = nullptr;
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegHotData);
+  CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
 
   // 1. Get last checkpoint
   GetLastCheckpoint(fs, expect_cp_position, after_mkfs, &cp_page);
@@ -792,7 +791,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   if (!after_mkfs) {
     // 2. Recover compacted data summaries
     ASSERT_EQ(cp->ckpt_flags & kCpCompactSumFlag, kCpCompactSumFlag);
-    ASSERT_EQ(fs->Segmgr().ReadCompactedSummaries(), 0);
+    ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 3. Check recovered journal
 #ifdef F2FS_BU_DEBUG
@@ -838,7 +837,7 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     nids.push_back(i);
   }
 
-  ASSERT_LT(fs->Segmgr().NpagesForSummaryFlush(), 3);
+  ASSERT_LT(fs->GetSegmentManager().NpagesForSummaryFlush(), 3);
 
   // Flush NAT cache
   MapTester::RemoveAllNatEntries(node_manager);

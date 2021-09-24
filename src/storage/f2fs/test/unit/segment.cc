@@ -49,7 +49,7 @@ TEST(SegmentMgr, BlkChaining) {
     Page *read_page = GrabCachePage(nullptr, 0, 0);
     ASSERT_TRUE(read_page);
 
-    fs->Segmgr().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
+    fs->GetSegmentManager().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
     blk_chain.push_back(alloc_addr);
     ASSERT_NE(alloc_addr, kNullAddr);
     ASSERT_EQ(fs->GetBc().Readblk(blk_chain[i], read_page->data), ZX_OK);
@@ -92,37 +92,38 @@ TEST(SegmentMgr, DirtyToFree) {
   ASSERT_NE(ni.blk_addr, kNullAddr);
   ASSERT_NE(ni.blk_addr, kNewAddr);
   block_t alloc_addr = ni.blk_addr;
-  ASSERT_FALSE(fs->Segmgr().PrefreeSegments());
-  uint32_t nfree_segs = fs->Segmgr().FreeSegments();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
+  ASSERT_FALSE(fs->GetSegmentManager().PrefreeSegments());
+  uint32_t nfree_segs = fs->GetSegmentManager().FreeSegments();
+  FreeSegmapInfo *free_i = &fs->GetSegmentManager().GetFreeSegmentInfo();
+  DirtySeglistInfo *dirty_i = &fs->GetSegmentManager().GetDirtySegmentInfo();
 
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; i++) {
     block_t old_addr = alloc_addr;
-    fs->Segmgr().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
-    if (fs->Segmgr().GetValidBlocks(GetSegNo(&sbi, old_addr), 0) == 0) {
-      prefree_array.push_back(GetSegNo(&sbi, old_addr));
-      ASSERT_EQ(fs->Segmgr().PrefreeSegments(), ++nprefree);
+    fs->GetSegmentManager().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
+    if (fs->GetSegmentManager().GetValidBlocks(fs->GetSegmentManager().GetSegNo(old_addr), 0) ==
+        0) {
+      prefree_array.push_back(fs->GetSegmentManager().GetSegNo(old_addr));
+      ASSERT_EQ(fs->GetSegmentManager().PrefreeSegments(), ++nprefree);
     }
   }
 
   // check the bitmaps and the number of free/prefree segments
-  ASSERT_EQ(fs->Segmgr().FreeSegments(), nfree_segs - nprefree);
+  ASSERT_EQ(fs->GetSegmentManager().FreeSegments(), nfree_segs - nprefree);
   for (auto &pre : prefree_array) {
-    ASSERT_TRUE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
-    ASSERT_TRUE(TestBit(pre, free_i->free_segmap));
+    ASSERT_TRUE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)].get()));
+    ASSERT_TRUE(TestBit(pre, free_i->free_segmap.get()));
   }
   // triggers checkpoint to make prefree segments transit to free ones
-  fs->Segmgr().BalanceFs();
+  fs->GetSegmentManager().BalanceFs();
 
   // check the bitmaps and the number of free/prefree segments
   for (auto &pre : prefree_array) {
-    ASSERT_FALSE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]));
-    ASSERT_FALSE(TestBit(pre, free_i->free_segmap));
+    ASSERT_FALSE(TestBit(pre, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)].get()));
+    ASSERT_FALSE(TestBit(pre, free_i->free_segmap.get()));
   }
-  ASSERT_EQ(fs->Segmgr().FreeSegments(), nfree_segs);
-  ASSERT_FALSE(fs->Segmgr().PrefreeSegments());
+  ASSERT_EQ(fs->GetSegmentManager().FreeSegments(), nfree_segs);
+  ASSERT_FALSE(fs->GetSegmentManager().PrefreeSegments());
 
   F2fsPutPage(root_node_page, 0);
   ASSERT_EQ(root->Close(), ZX_OK);

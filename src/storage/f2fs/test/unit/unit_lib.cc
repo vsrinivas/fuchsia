@@ -42,7 +42,7 @@ void FileTester::SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache
 
   // destroy f2fs internal modules
   fs->GetNodeManager().DestroyNodeManager();
-  fs->Segmgr().DestroySegmentManager();
+  fs->GetSegmentManager().DestroySegmentManager();
 
   delete GetCheckpoint(&sbi);
   fs->ResetBc(bc);
@@ -269,18 +269,20 @@ void MapTester::CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids) {
 void MapTester::CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
   SbInfo &sbi = fs->GetSbInfo();
   for (auto blkaddr : blkaddrs) {
-    SegEntry *se = fs->Segmgr().GetSegEntry(GetSegNo(&sbi, blkaddr));
-    uint32_t offset = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
-    ASSERT_EQ(TestValidBitmap(offset, se->ckpt_valid_map), 0);
+    SegmentManager &manager = fs->GetSegmentManager();
+    SegmentEntry *se = manager.GetSegmentEntry(manager.GetSegNo(blkaddr));
+    uint32_t offset = manager.GetSegOffFromSeg0(blkaddr) & (sbi.blocks_per_seg - 1);
+    ASSERT_EQ(TestValidBitmap(offset, se->ckpt_valid_map.get()), 0);
   }
 }
 
 void MapTester::CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs) {
   SbInfo &sbi = fs->GetSbInfo();
   for (auto blkaddr : blkaddrs) {
-    SegEntry *se = fs->Segmgr().GetSegEntry(GetSegNo(&sbi, blkaddr));
-    uint32_t offset = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
-    ASSERT_NE(TestValidBitmap(offset, se->ckpt_valid_map), 0);
+    SegmentManager &manager = fs->GetSegmentManager();
+    SegmentEntry *se = manager.GetSegmentEntry(manager.GetSegNo(blkaddr));
+    uint32_t offset = manager.GetSegOffFromSeg0(blkaddr) & (sbi.blocks_per_seg - 1);
+    ASSERT_NE(TestValidBitmap(offset, se->ckpt_valid_map.get()), 0);
   }
 }
 

@@ -105,56 +105,6 @@ struct DnodeOfData {
   block_t data_blkaddr = 0;        // block address of the node block
 };
 
-// For SIT manager
-//
-// By default, there are 6 active log areas across the whole main area.
-// When considering hot and cold data separation to reduce cleaning overhead,
-// we split 3 for data logs and 3 for node logs as hot, warm, and cold types,
-// respectively.
-// In the current design, you should not change the numbers intentionally.
-// Instead, as a mount option such as active_logs=x, you can use 2, 4, and 6
-// logs individually according to the underlying devices. (default: 6)
-// Just in case, on-disk layout covers maximum 16 logs that consist of 8 for
-// data and 8 for node logs.
-constexpr int kNrCursegDataType = 3;
-constexpr int kNrCursegNodeType = 3;
-constexpr int kNrCursegType = kNrCursegDataType + kNrCursegNodeType;
-
-enum class CursegType {
-  kCursegHotData = 0,  // directory entry blocks
-  kCursegWarmData,     // data blocks
-  kCursegColdData,     // multimedia or GCed data blocks
-  kCursegHotNode,      // direct node blocks of directory files
-  kCursegWarmNode,     // direct node blocks of normal files
-  kCursegColdNode,     // indirect node blocks
-  kNoCheckType
-};
-
-struct SmInfo {
-  struct SitInfo *SitInfo = nullptr;              // whole segment information
-  struct FreeSegmapInfo *free_info = nullptr;     // free segment information
-  struct DirtySeglistInfo *dirty_info = nullptr;  // dirty segment information
-  struct CursegInfo *curseg_array = nullptr;      // active segment information
-
-  block_t seg0_blkaddr = 0;  // block address of 0'th segment
-  block_t main_blkaddr = 0;  // start block address of main area
-  block_t ssa_blkaddr = 0;   // start block address of SSA area
-
-  block_t segment_count = 0;      // total # of segments
-  block_t main_segments = 0;      // # of segments in main area
-  block_t reserved_segments = 0;  // # of reserved segments
-  block_t ovp_segments = 0;       // # of overprovision segments
-};
-
-// For directory operation
-constexpr size_t kNodeDir1Block = kAddrsPerInode + 1;
-constexpr size_t kNodeDir2Block = kAddrsPerInode + 2;
-constexpr size_t kNodeInd1Block = kAddrsPerInode + 3;
-constexpr size_t kNodeInd2Block = kAddrsPerInode + 4;
-constexpr size_t kNodeDIndBlock = kAddrsPerInode + 5;
-
-// For superblock
-
 // CountType for monitoring
 //
 // f2fs monitors the number of several block types such as on-writeback,
@@ -198,8 +148,6 @@ struct SbInfo {
 
   fbl::RefPtr<VnodeF2fs> node_vnode;
 
-  // for segment-related operations
-  SmInfo *sm_info = nullptr;                                            // segment manager
   struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
   sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
   // rw_semaphore bio_sem;		// IO semaphore
@@ -270,21 +218,6 @@ static inline const SuperBlock *RawSuper(SbInfo *sbi) {
 
 static inline Checkpoint *GetCheckpoint(SbInfo *sbi) {
   return static_cast<Checkpoint *>(sbi->ckpt);
-}
-
-// TODO: remove it after megring SmInfo to SegMrg
-static inline SmInfo *GetSmInfo(SbInfo *sbi) { return sbi->sm_info; }
-
-static inline SitInfo *GetSitInfo(SbInfo *sbi) {
-  return static_cast<SitInfo *>((GetSmInfo(sbi)->SitInfo));
-}
-
-static inline FreeSegmapInfo *GetFreeInfo(SbInfo *sbi) {
-  return static_cast<FreeSegmapInfo *>(GetSmInfo(sbi)->free_info);
-}
-
-static inline DirtySeglistInfo *GetDirtyInfo(SbInfo *sbi) {
-  return static_cast<DirtySeglistInfo *>(GetSmInfo(sbi)->dirty_info);
 }
 
 static inline void SetSbDirt(SbInfo *sbi) { sbi->s_dirty = 1; }

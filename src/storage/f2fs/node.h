@@ -28,6 +28,13 @@ constexpr uint32_t kNmWoutThreshold = 64 * kNatEntryPerBlock;
 // vector size for gang look-up from nat cache that consists of radix tree
 constexpr uint32_t kNatvecSize = 64;
 
+// For directory operation
+constexpr size_t kNodeDir1Block = kAddrsPerInode + 1;
+constexpr size_t kNodeDir2Block = kAddrsPerInode + 2;
+constexpr size_t kNodeInd1Block = kAddrsPerInode + 3;
+constexpr size_t kNodeInd2Block = kAddrsPerInode + 4;
+constexpr size_t kNodeDIndBlock = kAddrsPerInode + 5;
+
 // For node information
 struct NodeInfo {
   nid_t nid = 0;         // node id

@@ -34,13 +34,13 @@ CursegType operator+(CursegType a, uint32_t &&b) {
 
 static inline bool IsSumNodeSeg(SummaryFooter &footer) { return footer.entry_type == kSumTypeNode; }
 
-static inline uint64_t BlkoffFromMain(SbInfo *sbi, uint64_t block_address) {
-  ZX_ASSERT(block_address >= GetSmInfo(sbi)->main_blkaddr);
-  return block_address - GetSmInfo(sbi)->main_blkaddr;
+static inline uint64_t BlkoffFromMain(SegmentManager &manager, uint64_t block_address) {
+  ZX_ASSERT(block_address >= manager.GetMainAreaStartBlock());
+  return block_address - manager.GetMainAreaStartBlock();
 }
 
-static inline uint32_t OffsetInSeg(SbInfo *sbi, uint64_t block_address) {
-  return (uint32_t)(BlkoffFromMain(sbi, block_address) % (1 << sbi->log_blocks_per_seg));
+static inline uint32_t OffsetInSeg(SbInfo &sbi, SegmentManager &manager, uint64_t block_address) {
+  return (uint32_t)(BlkoffFromMain(manager, block_address) % (1 << sbi.log_blocks_per_seg));
 }
 
 static inline uint32_t AddrsPerInode(Inode *i) {
@@ -144,9 +144,11 @@ bool FsckWorker::IsValidSsaNodeBlk(uint32_t nid, uint32_t block_address) {
       FX_LOGS(ERROR) << "nid                       [0x" << std::hex << nid << "]";
       FX_LOGS(ERROR) << "target block_address           [0x" << std::hex << block_address << "]";
       FX_LOGS(ERROR) << "summary block_address          [0x" << std::hex
-                     << GetSumBlock(&sbi_, GetSegNo(block_address)) << "]";
-      FX_LOGS(ERROR) << "seg no / offset           [0x" << std::hex << GetSegNo(block_address)
-                     << "/0x" << std::hex << OffsetInSeg(&sbi_, block_address) << "]";
+                     << segment_manager_->GetSumBlock(segment_manager_->GetSegNo(block_address))
+                     << "]";
+      FX_LOGS(ERROR) << "seg no / offset           [0x" << std::hex
+                     << segment_manager_->GetSegNo(block_address) << "/0x" << std::hex
+                     << OffsetInSeg(sbi_, *segment_manager_, block_address) << "]";
       FX_LOGS(ERROR) << "summary_entry.nid         [0x" << std::hex << LeToCpu(sum_entry.nid)
                      << "]";
       FX_LOGS(ERROR) << "--> node block's nid      [0x" << std::hex << nid << "]";
@@ -193,7 +195,6 @@ zx_status_t FsckWorker::ChkNodeBlk(Inode *inode, uint32_t nid, FileType ftype, N
   NodeInfo ni;
   Node *node_blk = nullptr;
   zx_status_t ret = ZX_OK;
-  SbInfo *sbi = &sbi_;
 
   IsValidNid(nid);
 
@@ -220,19 +221,21 @@ zx_status_t FsckWorker::ChkNodeBlk(Inode *inode, uint32_t nid, FileType ftype, N
   IsValidBlkAddr(ni.blk_addr);
   IsValidSsaNodeBlk(nid, ni.blk_addr);
 
-  if (TestValidBitmap(BlkoffFromMain(sbi, ni.blk_addr), fsck->sit_area_bitmap) == 0x0) {
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni.blk_addr), fsck->sit_area_bitmap) ==
+      0x0) {
     FX_LOGS(INFO) << "SIT bitmap is 0x0. block_address[0x" << std::hex << ni.blk_addr << "]";
     ZX_ASSERT(0);
   }
 
-  if (TestValidBitmap(BlkoffFromMain(sbi, ni.blk_addr), fsck->main_area_bitmap) == 0x0) {
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni.blk_addr), fsck->main_area_bitmap) ==
+      0x0) {
     fsck->chk.valid_blk_cnt++;
     fsck->chk.valid_node_cnt++;
   }
 
-  Block *blk = new Block;
+  Block *blk = new Block();
   ZX_ASSERT(blk != nullptr);
-  node_blk = reinterpret_cast<Node *>(blk->data);
+  node_blk = reinterpret_cast<Node *>(blk->GetData().data());
   ret = ReadBlock(node_blk, ni.blk_addr);
   ZX_ASSERT(ret == ZX_OK);
   ZX_ASSERT_MSG(nid == LeToCpu(node_blk->footer.nid), "nid[0x%x] blk_addr[0x%x] footer.nid[0x%x]\n",
@@ -244,12 +247,13 @@ zx_status_t FsckWorker::ChkNodeBlk(Inode *inode, uint32_t nid, FileType ftype, N
     // it's not inode
     ZX_ASSERT(node_blk->footer.nid != node_blk->footer.ino);
 
-    if (TestValidBitmap(BlkoffFromMain(sbi, ni.blk_addr), fsck->main_area_bitmap) != 0) {
+    if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni.blk_addr), fsck->main_area_bitmap) !=
+        0) {
       FX_LOGS(INFO) << "Duplicated node block. ino[0x" << std::hex << nid << "][0x" << std::hex
                     << ni.blk_addr;
       ZX_ASSERT(0);
     }
-    SetValidBitmap(BlkoffFromMain(sbi, ni.blk_addr), fsck->main_area_bitmap);
+    SetValidBitmap(BlkoffFromMain(*segment_manager_, ni.blk_addr), fsck->main_area_bitmap);
 
     switch (ntype) {
       case NodeType::kTypeDirectNode:
@@ -284,7 +288,8 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
   ZX_ASSERT(node_blk->footer.nid == node_blk->footer.ino);
   ZX_ASSERT(LeToCpu(node_blk->footer.nid) == nid);
 
-  if (TestValidBitmap(BlkoffFromMain(&sbi_, ni->blk_addr), fsck->main_area_bitmap) == 0x0)
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni->blk_addr), fsck->main_area_bitmap) ==
+      0x0)
     fsck->chk.valid_inode_cnt++;
 
   // Orphan node. i_links should be 0
@@ -296,16 +301,18 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
 
   if (ftype == FileType::kFtDir) {
     // not included '.' & '..'
-    if (TestValidBitmap(BlkoffFromMain(&sbi_, ni->blk_addr), fsck->main_area_bitmap) != 0) {
+    if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni->blk_addr), fsck->main_area_bitmap) !=
+        0) {
       FX_LOGS(INFO) << "Duplicated inode blk. ino[0x" << std::hex << nid << "][0x" << std::hex
                     << ni->blk_addr;
       ZX_ASSERT(0);
     }
-    SetValidBitmap(BlkoffFromMain(&sbi_, ni->blk_addr), fsck->main_area_bitmap);
+    SetValidBitmap(BlkoffFromMain(*segment_manager_, ni->blk_addr), fsck->main_area_bitmap);
 
   } else {
-    if (TestValidBitmap(BlkoffFromMain(&sbi_, ni->blk_addr), fsck->main_area_bitmap) == 0x0) {
-      SetValidBitmap(BlkoffFromMain(&sbi_, ni->blk_addr), fsck->main_area_bitmap);
+    if (TestValidBitmap(BlkoffFromMain(*segment_manager_, ni->blk_addr), fsck->main_area_bitmap) ==
+        0x0) {
+      SetValidBitmap(BlkoffFromMain(*segment_manager_, ni->blk_addr), fsck->main_area_bitmap);
       if (i_links > 1) {
         // First time. Create new hard link node
         AddIntoHardLinkList(nid, i_links);
@@ -546,9 +553,9 @@ void FsckWorker::ChkDentryBlk(uint32_t block_address, uint32_t *child_cnt, uint3
   int ret = 0;
   DentryBlock *de_blk;
 
-  Block *blk = new Block;
+  Block *blk = new Block();
   ZX_ASSERT(blk != nullptr);
-  de_blk = reinterpret_cast<DentryBlock *>(blk->data);
+  de_blk = reinterpret_cast<DentryBlock *>(blk->GetData().data());
 
   ret = ReadBlock(de_blk, block_address);
   ZX_ASSERT(ret == ZX_OK);
@@ -574,15 +581,17 @@ zx_status_t FsckWorker::ChkDataBlk(Inode *inode, uint32_t block_address, uint32_
 
   IsValidSsaDataBlk(block_address, parent_nid, idx_in_node, ver);
 
-  if (TestValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->sit_area_bitmap) == 0x0) {
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, block_address), fsck->sit_area_bitmap) ==
+      0x0) {
     ZX_ASSERT_MSG(0, "SIT bitmap is 0x0. block_address[0x%x]\n", block_address);
   }
 
-  if (TestValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->main_area_bitmap) != 0) {
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, block_address), fsck->main_area_bitmap) !=
+      0) {
     ZX_ASSERT_MSG(0, "Duplicated data block. pnid[0x%x] idx[0x%x] block_address[0x%x]\n",
                   parent_nid, idx_in_node, block_address);
   }
-  SetValidBitmap(BlkoffFromMain(&sbi_, block_address), fsck->main_area_bitmap);
+  SetValidBitmap(BlkoffFromMain(*segment_manager_, block_address), fsck->main_area_bitmap);
 
   fsck->chk.valid_blk_cnt++;
 
@@ -662,9 +671,8 @@ int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *blk_cnt)
 
 zx_status_t FsckWorker::Init() {
   FsckInfo *fsck = &fsck_;
-  SmInfo *sm_i = GetSmInfo(&sbi_);
 
-  fsck->nr_main_blks = sm_i->main_segments << sbi_.log_blocks_per_seg;
+  fsck->nr_main_blks = segment_manager_->GetMainSegmentsCount() << sbi_.log_blocks_per_seg;
   fsck->main_area_bitmap_sz = (fsck->nr_main_blks + 7) / 8;
   fsck->main_area_bitmap = new uint8_t[fsck->main_area_bitmap_sz];
   ZX_ASSERT(fsck->main_area_bitmap != nullptr);
@@ -1018,7 +1026,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   size_t crc_offset;
 
   // Read the 1st cp block in this CP pack
-  cp_page_1 = reinterpret_cast<Block *>(new Block);
+  cp_page_1 = reinterpret_cast<Block *>(new Block());
   if (ReadBlock(cp_page_1, cp_addr) != ZX_OK)
     return nullptr;
 
@@ -1038,7 +1046,7 @@ void *FsckWorker::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   pre_version = LeToCpu(cp_block->checkpoint_ver);
 
   // Read the 2nd cp block in this CP pack
-  cp_page_2 = reinterpret_cast<Block *>(new Block);
+  cp_page_2 = reinterpret_cast<Block *>(new Block());
   cp_addr += LeToCpu(cp_block->cp_pack_total_block_count) - 1;
   if (ReadBlock(cp_page_2, cp_addr) != ZX_OK) {
     delete reinterpret_cast<Block *>(cp_page_1);
@@ -1080,7 +1088,7 @@ zx_status_t FsckWorker::GetValidCheckpoint() {
   uint64_t blk_size = sbi_.blocksize;
   uint64_t cp1_version = 0, cp2_version = 0;
   block_t cp_start_blk_no;
-  Block *blk = new Block;
+  Block *blk = new Block();
 
   if (sbi_.ckpt = reinterpret_cast<Checkpoint *>(blk); sbi_.ckpt == nullptr)
     return ZX_ERR_NO_MEMORY;
@@ -1170,53 +1178,56 @@ zx_status_t FsckWorker::BuildNodeManager() {
 zx_status_t FsckWorker::BuildSitInfo() {
   const SuperBlock *raw_sb = RawSuper(&sbi_);
   Checkpoint *ckpt = GetCheckpoint(&sbi_);
-  SitInfo *sit_i;
+  std::unique_ptr<SitInfo> sit_i;
   unsigned int sit_segs, start;
-  uint8_t *src_bitmap, *dst_bitmap;
+  uint8_t *src_bitmap;
   unsigned int bitmap_size;
 
-  if (sit_i = new SitInfo; sit_i == nullptr)
+  if (sit_i = std::make_unique<SitInfo>(); sit_i == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  GetSmInfo(&sbi_)->SitInfo = sit_i;
+  sit_i->sentries = new SegmentEntry[segment_manager_->TotalSegs()]();
 
-  sit_i->sentries = new SegEntry[TotalSegs(&sbi_)]();
-
-  for (start = 0; start < TotalSegs(&sbi_); start++) {
-    sit_i->sentries[start].cur_valid_map = new uint8_t[kSitVBlockMapSize]();
-    sit_i->sentries[start].ckpt_valid_map = new uint8_t[kSitVBlockMapSize]();
+  for (start = 0; start < segment_manager_->TotalSegs(); ++start) {
+    sit_i->sentries[start].cur_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
+    sit_i->sentries[start].ckpt_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
     if (sit_i->sentries[start].cur_valid_map == nullptr ||
-        sit_i->sentries[start].ckpt_valid_map == nullptr)
+        sit_i->sentries[start].ckpt_valid_map == nullptr) {
       return ZX_ERR_NO_MEMORY;
+    }
   }
 
   sit_segs = LeToCpu(raw_sb->segment_count_sit) >> 1;
   bitmap_size = BitmapSize(&sbi_, MetaBitmap::kSitBitmap);
   if (src_bitmap = static_cast<uint8_t *>(BitmapPrt(&sbi_, MetaBitmap::kSitBitmap));
-      src_bitmap == nullptr)
+      src_bitmap == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  if (dst_bitmap = new uint8_t[bitmap_size]; dst_bitmap == nullptr)
+  if (sit_i->sit_bitmap = std::make_unique<uint8_t[]>(bitmap_size); sit_i->sit_bitmap == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  memcpy(dst_bitmap, src_bitmap, bitmap_size);
+  memcpy(sit_i->sit_bitmap.get(), src_bitmap, bitmap_size);
 
   sit_i->sit_base_addr = LeToCpu(raw_sb->sit_blkaddr);
   sit_i->sit_blocks = sit_segs << sbi_.log_blocks_per_seg;
   sit_i->written_valid_blocks = LeToCpu(static_cast<uint32_t>(ckpt->valid_block_count));
-  sit_i->sit_bitmap = dst_bitmap;
   sit_i->bitmap_size = bitmap_size;
   sit_i->dirty_sentries = 0;
   sit_i->sents_per_block = kSitEntryPerBlock;
   sit_i->elapsed_time = LeToCpu(ckpt->elapsed_time);
+
+  segment_manager_->SetSitInfo(std::move(sit_i));
   return ZX_OK;
 }
 
 void FsckWorker::ResetCurseg(CursegType type, int modified) {
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi_, type);
+  CursegInfo *curseg = segment_manager_->CURSEG_I(type);
 
   curseg->segno = curseg->next_segno;
-  curseg->zone = GetZoneNoFromSegNo(&sbi_, curseg->segno);
+  curseg->zone = segment_manager_->GetZoneNoFromSegNo(curseg->segno);
   curseg->next_blkoff = 0;
   curseg->next_segno = kNullSegNo;
 }
@@ -1225,18 +1236,18 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
   Checkpoint *ckpt = GetCheckpoint(&sbi_);
   CursegInfo *curseg;
   block_t start;
-  Block *blk = new Block;
+  Block *blk = new Block();
   uint32_t j, offset;
 
   start = StartSumBlock();
 
-  ReadBlock(blk->data, start++);
+  ReadBlock(blk->GetData().data(), start++);
 
-  curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegHotData);
-  memcpy(&curseg->sum_blk->n_nats, blk->data, kSumJournalSize);
+  curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
+  memcpy(&curseg->sum_blk->n_nats, blk->GetData().data(), kSumJournalSize);
 
-  curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegColdData);
-  memcpy(&curseg->sum_blk->n_sits, blk->data + kSumJournalSize, kSumJournalSize);
+  curseg = segment_manager_->CURSEG_I(CursegType::kCursegColdData);
+  memcpy(&curseg->sum_blk->n_sits, blk->GetData().data() + kSumJournalSize, kSumJournalSize);
 
   offset = 2 * kSumJournalSize;
   for (int32_t i = static_cast<int32_t>(CursegType::kCursegHotData);
@@ -1244,7 +1255,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
     unsigned short blk_off;
     unsigned int segno;
 
-    curseg = SegMgr::CURSEG_I(&sbi_, static_cast<CursegType>(i));
+    curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
     segno = LeToCpu(ckpt->cur_data_segno[i]);
     blk_off = LeToCpu(ckpt->cur_data_blkoff[i]);
     curseg->next_segno = segno;
@@ -1257,13 +1268,13 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
 
     for (j = 0; j < blk_off; j++) {
       Summary *s;
-      s = (Summary *)(blk->data + offset);
+      s = (Summary *)(blk->GetData().data() + offset);
       curseg->sum_blk->entries[j] = *s;
       offset += kSummarySize;
       if (offset + kSummarySize <= kPageCacheSize - kSumFooterSize)
         continue;
-      memset(blk->data, 0, kPageSize);
-      ReadBlock(blk->data, start++);
+      memset(blk->GetData().data(), 0, kPageSize);
+      ReadBlock(blk->GetData().data(), start++);
       offset = 0;
     }
   }
@@ -1277,18 +1288,18 @@ zx_status_t FsckWorker::RestoreNodeSummary(unsigned int segno, SummaryBlock *sum
   Summary *sum_entry;
   block_t addr;
   uint32_t i;
-  Block *blk = new Block;
+  Block *blk = new Block();
 
   if (blk == nullptr)
     return ZX_ERR_NO_MEMORY;
 
   // scan the node segment
-  addr = StartBlock(&sbi_, segno);
+  addr = segment_manager_->StartBlock(segno);
   sum_entry = &sum_blk->entries[0];
   for (i = 0; i < sbi_.blocks_per_seg; i++, sum_entry++) {
-    if (ReadBlock(blk->data, addr))
+    if (ReadBlock(blk->GetData().data(), addr))
       break;
-    node_blk = reinterpret_cast<Node *>(blk->data);
+    node_blk = reinterpret_cast<Node *>(blk->GetData().data());
     sum_entry->nid = node_blk->footer.nid;
     addr++;
   }
@@ -1304,7 +1315,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
   unsigned int segno = 0;
   block_t block_address = 0;
 
-  if (IsDataSeg(type)) {
+  if (segment_manager_->IsDataSeg(type)) {
     segno = LeToCpu(ckpt->cur_data_segno[static_cast<int>(type)]);
     blk_off = LeToCpu(ckpt->cur_data_blkoff[type - CursegType::kCursegHotData]);
 
@@ -1319,13 +1330,13 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     if (IsSetCkptFlags(ckpt, kCpUmountFlag))
       block_address = SumBlkAddr(kNrCursegNodeType, type - CursegType::kCursegHotNode);
     else
-      block_address = GetSumBlock(&sbi_, segno);
+      block_address = segment_manager_->GetSumBlock(segno);
   }
 
-  sum_blk = reinterpret_cast<SummaryBlock *>(new Block);
+  sum_blk = reinterpret_cast<SummaryBlock *>(new Block());
   ReadBlock(sum_blk, block_address);
 
-  if (IsNodeSeg(type)) {
+  if (segment_manager_->IsNodeSeg(type)) {
     if (IsSetCkptFlags(ckpt, kCpUmountFlag)) {
 #if 0  // do not change original value
       Summary *sum_entry = &sum_blk->entries[0];
@@ -1342,7 +1353,7 @@ zx_status_t FsckWorker::ReadNormalSummaries(CursegType type) {
     }
   }
 
-  curseg = SegMgr::CURSEG_I(&sbi_, type);
+  curseg = segment_manager_->CURSEG_I(type);
   memcpy(curseg->sum_blk, sum_blk, kPageCacheSize);
   curseg->next_segno = segno;
   ResetCurseg(type, 0);
@@ -1370,40 +1381,31 @@ zx_status_t FsckWorker::RestoreCursegSummaries() {
 }
 
 zx_status_t FsckWorker::BuildCurseg() {
-  CursegInfo *array;
-  int i;
-
-  if (array = new CursegInfo[kNrCursegType](); array == nullptr)
-    return ZX_ERR_NO_MEMORY;
-
-  GetSmInfo(&sbi_)->curseg_array = array;
-
-  for (i = 0; i < kNrCursegType; i++) {
-    array[i].sum_blk = reinterpret_cast<SummaryBlock *>(new Block);
-    if (!array[i].sum_blk)
-      return ZX_ERR_NO_MEMORY;
-    array[i].segno = kNullSegNo;
-    array[i].next_blkoff = 0;
+  for (int i = 0; i < kNrCursegType; i++) {
+    CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
+    curseg->raw_blk = new FsBlock();
+    curseg->segno = kNullSegNo;
+    curseg->next_blkoff = 0;
   }
   return RestoreCursegSummaries();
 }
 
 inline void FsckWorker::ChkSegRange(unsigned int segno) {
-  unsigned int end_segno = GetSmInfo(&sbi_)->segment_count - 1;
+  unsigned int end_segno = segment_manager_->GetSegmentsCount() - 1;
   ZX_ASSERT(segno <= end_segno);
 }
 
 SitBlock *FsckWorker::GetCurrentSitPage(unsigned int segno) {
-  SitInfo *sit_i = GetSitInfo(&sbi_);
-  unsigned int offset = SitBlockOffset(sit_i, segno);
-  block_t block_address = sit_i->sit_base_addr + offset;
-  SitBlock *sit_blk = reinterpret_cast<SitBlock *>(new Block);
+  SitInfo &sit_i = segment_manager_->GetSitInfo();
+  unsigned int offset = segment_manager_->SitBlockOffset(segno);
+  block_t block_address = sit_i.sit_base_addr + offset;
+  SitBlock *sit_blk = reinterpret_cast<SitBlock *>(new Block());
 
   ChkSegRange(segno);
 
   // calculate sit block address
-  if (TestValidBitmap(offset, sit_i->sit_bitmap))
-    block_address += sit_i->sit_blocks;
+  if (TestValidBitmap(offset, sit_i.sit_bitmap.get()))
+    block_address += sit_i.sit_blocks;
 
   ReadBlock(sit_blk, block_address);
 
@@ -1411,8 +1413,7 @@ SitBlock *FsckWorker::GetCurrentSitPage(unsigned int segno) {
 }
 
 void FsckWorker::CheckBlockCount(uint32_t segno, SitEntry *raw_sit) {
-  SmInfo *sm_info = GetSmInfo(&sbi_);
-  uint32_t end_segno = sm_info->segment_count - 1;
+  uint32_t end_segno = segment_manager_->GetSegmentsCount() - 1;
   int valid_blocks = 0;
 
   // check segment usage
@@ -1428,18 +1429,18 @@ void FsckWorker::CheckBlockCount(uint32_t segno, SitEntry *raw_sit) {
   ZX_ASSERT(GetSitVblocks(raw_sit) == valid_blocks);
 }
 
-void FsckWorker::SegInfoFromRawSit(SegEntry *se, SitEntry *raw_sit) {
+void FsckWorker::SegInfoFromRawSit(SegmentEntry *se, SitEntry *raw_sit) {
   se->valid_blocks = GetSitVblocks(raw_sit);
   se->ckpt_valid_blocks = GetSitVblocks(raw_sit);
-  memcpy(se->cur_valid_map, raw_sit->valid_map, kSitVBlockMapSize);
-  memcpy(se->ckpt_valid_map, raw_sit->valid_map, kSitVBlockMapSize);
+  memcpy(se->cur_valid_map.get(), raw_sit->valid_map, kSitVBlockMapSize);
+  memcpy(se->ckpt_valid_map.get(), raw_sit->valid_map, kSitVBlockMapSize);
   se->type = GetSitType(raw_sit);
   se->mtime = LeToCpu(raw_sit->mtime);
 }
 
-SegEntry *FsckWorker::GetSegEntry(unsigned int segno) {
-  SitInfo *sit_i = GetSitInfo(&sbi_);
-  return &sit_i->sentries[segno];
+SegmentEntry *FsckWorker::GetSegmentEntry(unsigned int segno) {
+  SitInfo &sit_i = segment_manager_->GetSitInfo();
+  return &sit_i.sentries[segno];
 }
 
 SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
@@ -1448,10 +1449,10 @@ SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
   int ret;
   uint64_t ssa_blk;
 
-  ssa_blk = GetSumBlock(&sbi_, segno);
+  ssa_blk = segment_manager_->GetSumBlock(segno);
   for (int type = 0; type < kNrCursegNodeType; type++) {
     if (segno == ckpt->cur_node_segno[type]) {
-      curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegHotNode + type);
+      curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotNode + type);
       memcpy(sum_blk, curseg->sum_blk, kBlockSize);
       return SegType::kSegTypeCurNode;  // current node seg was not stored
     }
@@ -1459,7 +1460,7 @@ SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
 
   for (int type = 0; type < kNrCursegDataType; type++) {
     if (segno == ckpt->cur_data_segno[type]) {
-      curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegHotData + type);
+      curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData + type);
       memcpy(sum_blk, curseg->sum_blk, kBlockSize);
       ZX_ASSERT(!IsSumNodeSeg(sum_blk->footer));
 #ifdef F2FS_BU_DEBUG
@@ -1480,17 +1481,17 @@ SegType FsckWorker::GetSumBlockInfo(uint32_t segno, SummaryBlock *sum_blk) {
 }
 
 uint32_t FsckWorker::GetSegNo(uint32_t block_address) {
-  return (uint32_t)(BlkoffFromMain(&sbi_, block_address) >> sbi_.log_blocks_per_seg);
+  return (uint32_t)(BlkoffFromMain(*segment_manager_, block_address) >> sbi_.log_blocks_per_seg);
 }
 
 SegType FsckWorker::GetSumEntry(uint32_t block_address, Summary *sum_entry) {
   uint32_t segno, offset;
-  Block *blk = new Block;
+  Block *blk = new Block();
 
   segno = GetSegNo(block_address);
-  offset = OffsetInSeg(&sbi_, block_address);
+  offset = OffsetInSeg(sbi_, *segment_manager_, block_address);
 
-  SummaryBlock *sum_blk = reinterpret_cast<SummaryBlock *>(blk->data);
+  SummaryBlock *sum_blk = reinterpret_cast<SummaryBlock *>(blk->GetData().data());
   SegType type = GetSumBlockInfo(segno, sum_blk);
   memcpy(sum_entry, &(sum_blk->entries[offset]), sizeof(Summary));
   delete blk;
@@ -1513,7 +1514,7 @@ zx_status_t FsckWorker::GetNatEntry(nid_t nid, RawNatEntry *raw_nat) {
   if (auto i_or = LookupNatInJournal(nid, raw_nat); i_or.is_ok())
     return ZX_OK;
 
-  Block *blk = new Block;
+  Block *blk = new Block();
   NatBlock *nat_block = reinterpret_cast<NatBlock *>(blk);
 
   block_off = nid / kNatEntryPerBlock;
@@ -1544,13 +1545,13 @@ zx_status_t FsckWorker::GetNodeInfo(nid_t nid, NodeInfo *ni) {
 }
 
 void FsckWorker::BuildSitEntries() {
-  SitInfo *sit_i = GetSitInfo(&sbi_);
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegColdData);
+  SitInfo &sit_i = segment_manager_->GetSitInfo();
+  CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
   unsigned int segno;
 
-  for (segno = 0; segno < TotalSegs(&sbi_); segno++) {
-    SegEntry *se = &sit_i->sentries[segno];
+  for (segno = 0; segno < segment_manager_->TotalSegs(); segno++) {
+    SegmentEntry &se = sit_i.sentries[segno];
     SitBlock *sit_blk;
     SitEntry sit;
     bool found = false;
@@ -1564,31 +1565,30 @@ void FsckWorker::BuildSitEntries() {
     }
     if (found == false) {
       sit_blk = GetCurrentSitPage(segno);
-      sit = sit_blk->entries[SitEntryOffset(sit_i, segno)];
+      sit = sit_blk->entries[segment_manager_->SitEntryOffset(segno)];
       delete reinterpret_cast<Block *>(sit_blk);
     }
     CheckBlockCount(segno, &sit);
-    SegInfoFromRawSit(se, &sit);
+    SegInfoFromRawSit(&se, &sit);
   }
 }
 
 zx_status_t FsckWorker::BuildSegmentManager() {
   const SuperBlock *raw_super = RawSuper(&sbi_);
   Checkpoint *ckpt = GetCheckpoint(&sbi_);
-  SmInfo *sm_info;
 
-  if (sm_info = new SmInfo(); sm_info == nullptr)
+  if (segment_manager_ = std::make_unique<SegmentManager>(&sbi_); segment_manager_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   // init sm info
-  sbi_.sm_info = sm_info;
-  sm_info->seg0_blkaddr = LeToCpu(raw_super->segment0_blkaddr);
-  sm_info->main_blkaddr = LeToCpu(raw_super->main_blkaddr);
-  sm_info->segment_count = LeToCpu(raw_super->segment_count);
-  sm_info->reserved_segments = LeToCpu(ckpt->rsvd_segment_count);
-  sm_info->ovp_segments = LeToCpu(ckpt->overprov_segment_count);
-  sm_info->main_segments = LeToCpu(raw_super->segment_count_main);
-  sm_info->ssa_blkaddr = LeToCpu(raw_super->ssa_blkaddr);
+  segment_manager_->SetSegment0StartBlock(LeToCpu(raw_super->segment0_blkaddr));
+  segment_manager_->SetMainAreaStartBlock(LeToCpu(raw_super->main_blkaddr));
+  segment_manager_->SetSegmentsCount(LeToCpu(raw_super->segment_count));
+  segment_manager_->SetReservedSegmentsCount(LeToCpu(ckpt->rsvd_segment_count));
+  segment_manager_->SetOPSegmentsCount(LeToCpu(ckpt->overprov_segment_count));
+  segment_manager_->SetMainSegmentsCount(LeToCpu(raw_super->segment_count_main));
+  segment_manager_->SetSSAreaStartBlock(LeToCpu(raw_super->ssa_blkaddr));
 
   if (zx_status_t ret = BuildSitInfo(); ret != ZX_OK)
     return ret;
@@ -1600,21 +1600,20 @@ zx_status_t FsckWorker::BuildSegmentManager() {
 
 void FsckWorker::BuildSitAreaBitmap() {
   FsckInfo *fsck = &fsck_;
-  SmInfo *sm_i = GetSmInfo(&sbi_);
   uint32_t sum_vblocks = 0;
   uint32_t free_segs = 0;
   uint32_t vblocks = 0;
 
-  fsck->sit_area_bitmap_sz = sm_i->main_segments * kSitVBlockMapSize;
+  fsck->sit_area_bitmap_sz = segment_manager_->GetMainSegmentsCount() * kSitVBlockMapSize;
   fsck->sit_area_bitmap = new uint8_t[fsck->sit_area_bitmap_sz];
   ZX_ASSERT(fsck->sit_area_bitmap_sz == fsck->main_area_bitmap_sz);
   memset(fsck->sit_area_bitmap, 0, fsck->sit_area_bitmap_sz);
   uint8_t *ptr = fsck->sit_area_bitmap;
 
-  for (uint32_t segno = 0; segno < sm_i->main_segments; segno++) {
-    SegEntry *se = GetSegEntry(segno);
+  for (uint32_t segno = 0; segno < segment_manager_->GetMainSegmentsCount(); segno++) {
+    SegmentEntry *se = GetSegmentEntry(segno);
 
-    memcpy(ptr, se->cur_valid_map, kSitVBlockMapSize);
+    memcpy(ptr, se->cur_valid_map.get(), kSitVBlockMapSize);
     ptr += kSitVBlockMapSize;
     vblocks = 0;
     for (uint64_t j = 0; j < kSitVBlockMapSize; j++) {
@@ -1646,7 +1645,7 @@ void FsckWorker::BuildSitAreaBitmap() {
 }
 
 zx::status<int> FsckWorker::LookupNatInJournal(uint32_t nid, RawNatEntry *raw_nat) {
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi_, CursegType::kCursegHotData);
+  CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   int i = 0;
 
@@ -1675,7 +1674,7 @@ void FsckWorker::BuildNatAreaBitmap() {
   pgoff_t seg_off;
   int ret;
 
-  Block *blk = new Block;
+  Block *blk = new Block();
   nat_block = reinterpret_cast<NatBlock *>(blk);
 
   // Alloc & build nat entry bitmap
@@ -1784,28 +1783,22 @@ zx_status_t FsckWorker::DoMount() {
 }
 
 void FsckWorker::DoUmount() {
-  SitInfo *sit_i = GetSitInfo(&sbi_);
-  SmInfo *sm_i = GetSmInfo(&sbi_);
+  SitInfo &sit_i = segment_manager_->GetSitInfo();
 
-  // free node manager
   node_manager_.reset();
-
-  // free sit_info
-  for (uint32_t i = 0; i < TotalSegs(&sbi_); i++) {
-    delete[] sit_i->sentries[i].cur_valid_map;
-    delete[] sit_i->sentries[i].ckpt_valid_map;
+  for (uint32_t i = 0; i < segment_manager_->TotalSegs(); ++i) {
+    sit_i.sentries[i].cur_valid_map.reset();
+    sit_i.sentries[i].ckpt_valid_map.reset();
   }
-  delete[] sit_i->sentries;
+  delete[] sit_i.sentries;
+  sit_i.sit_bitmap.reset();
 
-  delete[] sit_i->sit_bitmap;
-  delete sm_i->SitInfo;
+  for (uint32_t i = 0; i < kNrCursegType; ++i) {
+    CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
+    delete curseg->raw_blk;
+  }
 
-  // free sm_info
-  for (uint32_t i = 0; i < kNrCursegType; i++)
-    delete reinterpret_cast<Block *>(sm_i->curseg_array[i].sum_blk);
-
-  delete[] sm_i->curseg_array;
-  delete sbi_.sm_info;
+  segment_manager_.reset();
 
   delete reinterpret_cast<Block *>(sbi_.ckpt);
   delete sbi_.raw_super;

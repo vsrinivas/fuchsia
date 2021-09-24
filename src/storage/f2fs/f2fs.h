@@ -121,7 +121,7 @@ class F2fs : public fs::ManagedVfs {
   Bcache &GetBc() { return *bc_; }
   SuperBlock &RawSb() { return *raw_sb_; }
   SbInfo &GetSbInfo() { return *sbi_; }
-  SegMgr &Segmgr() { return *seg_mgr_; }
+  SegmentManager &GetSegmentManager() { return *segment_manager_; }
   NodeManager &GetNodeManager() { return *node_manager_; }
 
   // super.cc
@@ -211,7 +211,7 @@ class F2fs : public fs::ManagedVfs {
 
   std::unique_ptr<SuperBlock> raw_sb_;
   std::unique_ptr<SbInfo> sbi_;
-  std::unique_ptr<SegMgr> seg_mgr_;
+  std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<NodeManager> node_manager_;
 
   VnodeCache vnode_cache_{};

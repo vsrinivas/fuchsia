@@ -6,54 +6,47 @@
 
 namespace f2fs {
 
-uint32_t SegMgr::GetGcCost(uint32_t segno, VictimSelPolicy *p) {
+uint32_t SegmentManager::GetGcCost(uint32_t segno, VictimSelPolicy *p) {
   if (p->alloc_mode == AllocMode::kSSR)
-    return SegMgr::GetSegEntry(segno)->ckpt_valid_blocks;
+    return SegmentManager::GetSegmentEntry(segno)->ckpt_valid_blocks;
 
   ZX_ASSERT(0);
 #if 0  // porting needed
   /* alloc_mode == kLFS */
   if (p->gc_mode == kGcGreedy)
-    return get_valid_blocks(sbi, segno, sbi->segs_per_sec);
+    return get_valid_blocks(sbi_, segno, sbi_->segs_per_sec);
   else
-    return get_cb_cost(sbi, segno);
+    return get_cb_cost(sbi_, segno);
 #endif
 }
 
-void SegMgr::SelectPolicy(GcType gc_type, CursegType type, VictimSelPolicy *p) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-
+void SegmentManager::SelectPolicy(GcType gc_type, CursegType type, VictimSelPolicy *p) {
   if (p->alloc_mode == AllocMode::kSSR) {
     p->gc_mode = GcMode::kGcGreedy;
-    p->dirty_segmap = dirty_i->dirty_segmap[static_cast<int>(type)];
+    p->dirty_segmap = dirty_info_->dirty_segmap[static_cast<int>(type)].get();
     p->ofs_unit = 1;
   } else {
     ZX_ASSERT(0);
 #if 0  // porting needed
   p->gc_mode = select_gc_type(gc_type);
-  p->dirty_segmap = dirty_i->dirty_segmap[DIRTY];
-  p->ofs_unit = sbi->segs_per_sec;
+  p->dirty_segmap = dirty_i->dirty_segmap[DIRTY].get();
+  p->ofs_unit = sbi_->segs_per_sec;
 #endif
   }
 
-  p->offset = sbi.last_victim[static_cast<int>(p->gc_mode)];
+  p->offset = sbi_->last_victim[static_cast<int>(p->gc_mode)];
 }
 
-uint32_t SegMgr::GetMaxCost(VictimSelPolicy *p) {
-  SbInfo &sbi = fs_->GetSbInfo();
-
+uint32_t SegmentManager::GetMaxCost(VictimSelPolicy *p) {
   if (p->gc_mode == GcMode::kGcGreedy)
-    return (1 << sbi.log_blocks_per_seg) * p->ofs_unit;
+    return (1 << sbi_->log_blocks_per_seg) * p->ofs_unit;
   else if (p->gc_mode == GcMode::kGcCb)
     return kUint32Max;
   return 0;
 }
 
-bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode,
-                                uint32_t *out) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
+bool SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode,
+                                        uint32_t *out) {
   VictimSelPolicy p;
 
   p.alloc_mode = alloc_mode;
@@ -62,11 +55,11 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
   p.min_segno = kNullSegNo;
   p.min_cost = GetMaxCost(&p);
 
-  fbl::AutoLock lock(&dirty_i->seglist_lock);
+  fbl::AutoLock lock(&dirty_info_->seglist_lock);
 
 #if 0  // porting needed
 	if (p.alloc_mode == AllocMode::kLFS && gc_type == GcType::kFgGC) {
-		p.min_segno = check_bg_victims(sbi);
+		p.min_segno = check_bg_victims(sbi_;
 		if (p.min_segno != kNullSegNo)
 			goto got_it;
 	}
@@ -75,10 +68,10 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
   uint32_t nsearched = 0;
 
   while (1) {
-    uint32_t segno = FindNextBit(p.dirty_segmap, TotalSegs(&sbi), p.offset);
-    if (segno >= TotalSegs(&sbi)) {
-      if (sbi.last_victim[static_cast<int>(p.gc_mode)]) {
-        sbi.last_victim[static_cast<int>(p.gc_mode)] = 0;
+    uint32_t segno = FindNextBit(p.dirty_segmap, TotalSegs(), p.offset);
+    if (segno >= TotalSegs()) {
+      if (sbi_->last_victim[static_cast<int>(p.gc_mode)]) {
+        sbi_->last_victim[static_cast<int>(p.gc_mode)] = 0;
         p.offset = 0;
         continue;
       }
@@ -86,12 +79,12 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
     }
     p.offset = ((segno / p.ofs_unit) * p.ofs_unit) + p.ofs_unit;
 
-    if (TestBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]))
+    if (TestBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].get()))
       continue;
     if (gc_type == GcType::kBgGc &&
-        TestBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]))
+        TestBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)].get()))
       continue;
-    if (IsCurSec(&sbi, GetSecNo(&sbi, segno)))
+    if (IsCurSec(GetSecNo(segno)))
       continue;
 
     uint32_t cost = GetGcCost(segno, &p);
@@ -105,7 +98,7 @@ bool SegMgr::GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc
       continue;
 
     if (nsearched++ >= kMaxSearchLimit) {
-      sbi.last_victim[static_cast<int>(p.gc_mode)] = segno;
+      sbi_->last_victim[static_cast<int>(p.gc_mode)] = segno;
       break;
     }
   }
@@ -116,7 +109,7 @@ got_it:
     *out = static_cast<uint32_t>((p.min_segno / p.ofs_unit) * p.ofs_unit);
     if (p.alloc_mode == AllocMode::kLFS) {
       for (uint32_t i = 0; i < p.ofs_unit; i++)
-        SetBit(*out + i, dirty_i->victim_segmap[static_cast<int>(gc_type)]);
+        SetBit(*out + i, dirty_info_->victim_segmap[static_cast<int>(gc_type)].get());
     }
   }
 

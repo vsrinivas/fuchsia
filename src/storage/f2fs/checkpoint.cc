@@ -49,7 +49,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
 
   WaitOnPageWriteback(page);
 
-  err = this->Segmgr().WriteMetaPage(page, wbc);
+  err = this->GetSegmentManager().WriteMetaPage(page, wbc);
   if (err) {
 #if 0  // porting needed
     // wbc->pages_skipped++;
@@ -562,7 +562,7 @@ void F2fs::SyncDirtyDirInodes() {
        * wribacking dentry pages in the freeing inode.
        */
       // TODO(unknown): bio[type] is empty
-      // Segmgr().SubmitBio(DATA, true);
+      // GetSegmentManager().SubmitBio(DATA, true);
     }
   }
 #endif
@@ -633,24 +633,24 @@ void F2fs::DoCheckpoint(bool is_umount) {
    * modify checkpoint
    * version number is already updated
    */
-  ckpt->elapsed_time = CpuToLe(static_cast<uint64_t>(Segmgr().GetMtime()));
+  ckpt->elapsed_time = CpuToLe(static_cast<uint64_t>(GetSegmentManager().GetMtime()));
   ckpt->valid_block_count = CpuToLe(ValidUserBlocks());
-  ckpt->free_segment_count = CpuToLe(Segmgr().FreeSegments());
+  ckpt->free_segment_count = CpuToLe(GetSegmentManager().FreeSegments());
   for (i = 0; i < 3; i++) {
     ckpt->cur_node_segno[i] =
-        CpuToLe(Segmgr().CursegSegno(i + static_cast<int>(CursegType::kCursegHotNode)));
+        CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotNode)));
     ckpt->cur_node_blkoff[i] =
-        CpuToLe(Segmgr().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotNode)));
+        CpuToLe(GetSegmentManager().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotNode)));
     ckpt->alloc_type[i + static_cast<int>(CursegType::kCursegHotNode)] =
-        Segmgr().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotNode));
+        GetSegmentManager().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotNode));
   }
   for (i = 0; i < 3; i++) {
     ckpt->cur_data_segno[i] =
-        CpuToLe(Segmgr().CursegSegno(i + static_cast<int>(CursegType::kCursegHotData)));
+        CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotData)));
     ckpt->cur_data_blkoff[i] =
-        CpuToLe(Segmgr().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotData)));
+        CpuToLe(GetSegmentManager().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotData)));
     ckpt->alloc_type[i + static_cast<int>(CursegType::kCursegHotData)] =
-        Segmgr().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotData));
+        GetSegmentManager().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotData));
 
 #ifdef F2FS_BU_DEBUG
     FX_LOGS(DEBUG) << std::endl << "F2fs::DoCheckpoint ";
@@ -667,7 +667,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   ckpt->next_free_nid = CpuToLe(last_nid);
 
   /* 2 cp  + n data seg summary + orphan inode blocks */
-  data_sum_blocks = Segmgr().NpagesForSummaryFlush();
+  data_sum_blocks = GetSegmentManager().NpagesForSummaryFlush();
   if (data_sum_blocks < 3) {
     ckpt->ckpt_flags |= kCpCompactSumFlag;
   } else {
@@ -692,7 +692,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   }
 
   /* update SIT/NAT bitmap */
-  Segmgr().GetSitBitmap(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
+  GetSegmentManager().GetSitBitmap(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
   GetNodeManager().GetNatBitmap(BitmapPrt(&sbi, MetaBitmap::kNatBitmap));
 
   crc32 = F2fsCrc32(ckpt, LeToCpu(ckpt->checksum_offset));
@@ -717,10 +717,10 @@ void F2fs::DoCheckpoint(bool is_umount) {
     start_blk += orphan_blocks;
   }
 
-  Segmgr().WriteDataSummaries(start_blk);
+  GetSegmentManager().WriteDataSummaries(start_blk);
   start_blk += data_sum_blocks;
   if (is_umount) {
-    Segmgr().WriteNodeSummaries(start_blk);
+    GetSegmentManager().WriteNodeSummaries(start_blk);
     start_blk += kNrCursegNodeType;
   }
 
@@ -756,7 +756,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 #endif
   SyncMetaPages(PageType::kMetaFlush, LONG_MAX);
 
-  Segmgr().ClearPrefreeSegments();
+  GetSegmentManager().ClearPrefreeSegments();
   ResetSbDirt(&sbi);
 }
 
@@ -770,9 +770,9 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   BlockOperations();
 
 #if 0  // porting needed (bio[type] is empty)
-  // Segmgr().SubmitBio(PageType::kData, true);
-  // Segmgr().SubmitBio(PageType::kNode, true);
-  // Segmgr().SubmitBio(PageType::kMeta, true);
+  // GetSegmentManager().SubmitBio(PageType::kData, true);
+  // GetSegmentManager().SubmitBio(PageType::kNode, true);
+  // GetSegmentManager().SubmitBio(PageType::kMeta, true);
 #endif
 
   // update checkpoint pack index
@@ -783,9 +783,9 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
 
   // write cached NAT/SIT entries to NAT/SIT area
   GetNodeManager().FlushNatEntries();
-  Segmgr().FlushSitEntries();
+  GetSegmentManager().FlushSitEntries();
 
-  Segmgr().ResetVictimSegmap();
+  GetSegmentManager().ResetVictimSegmap();
 
   // unlock all the fs_lock[] in do_checkpoint()
   DoCheckpoint(is_umount);

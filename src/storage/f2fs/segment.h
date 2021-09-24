@@ -7,292 +7,186 @@
 
 namespace f2fs {
 
-/* constant macro */
+// constant macro
 constexpr uint32_t kNullSegNo = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t kUint32Max = std::numeric_limits<uint32_t>::max();
 constexpr uint32_t kMaxSearchLimit = 20;
 
-/* during checkpoint, BioPrivate is used to synchronize the last bio */
+// during checkpoint, BioPrivate is used to synchronize the last bio
 struct BioPrivate {
   bool is_sync = false;
   void *wait = nullptr;
 };
 
-/*
- * indicate a block allocation direction: RIGHT and LEFT.
- * RIGHT means allocating new sections towards the end of volume.
- * LEFT means the opposite direction.
- */
+// Indicate a block allocation direction:
+// kAllocRight means allocating new sections towards the end of volume.
+// kAllocLeft means the opposite direction.
 enum class AllocDirection {
   kAllocRight = 0,
   kAllocLeft,
 };
 
-/*
- * In the VictimSelPolicy->alloc_mode, there are two block allocation modes.
- * LFS writes data sequentially with cleaning operations.
- * SSR (Slack Space Recycle) reuses obsolete space without cleaning operations.
- */
+// In the VictimSelPolicy->alloc_mode, there are two block allocation modes.
+// LFS writes data sequentially with cleaning operations.
+// SSR (Slack Space Recycle) reuses obsolete space without cleaning operations.
 enum class AllocMode { kLFS = 0, kSSR };
 
-/*
- * In the VictimSelPolicy->gc_mode, there are two gc, aka cleaning, modes.
- * GC_CB is based on cost-benefit algorithm.
- * GC_GREEDY is based on greedy algorithm.
- */
+// In the VictimSelPolicy->gc_mode, there are two gc, aka cleaning, modes.
+// GC_CB is based on cost-benefit algorithm.
+// GC_GREEDY is based on greedy algorithm.
 enum class GcMode { kGcCb = 0, kGcGreedy };
 
-/*
- * BG_GC means the background cleaning job.
- * FG_GC means the on-demand cleaning job.
- */
+// BG_GC means the background cleaning job.
+// FG_GC means the on-demand cleaning job.
 enum class GcType { kBgGc = 0, kFgGc };
 
 // for a function parameter to select a victim segment
 struct VictimSelPolicy {
   AllocMode alloc_mode = AllocMode::kLFS;  // LFS or SSR
   GcMode gc_mode = GcMode::kGcCb;          // cost effective or greedy
-  uint64_t *dirty_segmap = nullptr;        // dirty segment bitmap
+  uint8_t *dirty_segmap = nullptr;         // dirty segment bitmap
   uint32_t offset = 0;                     // last scanned bitmap offset
   uint32_t ofs_unit = 0;                   // bitmap search unit
   uint32_t min_cost = 0;                   // minimum cost
   uint32_t min_segno = 0;                  // segment # having min. cost
 };
 
-struct SegEntry {
-  uint16_t valid_blocks = 0;        /* # of valid blocks */
-  uint8_t *cur_valid_map = nullptr; /* validity bitmap of blocks */
-  /*
-   * # of valid blocks and the validity bitmap stored in the the last
-   * checkpoint pack. This information is used by the SSR mode.
-   */
-  uint16_t ckpt_valid_blocks = 0;
-  uint8_t *ckpt_valid_map = nullptr;
-  uint8_t type = 0;   /* segment type like CURSEG_XXX_TYPE */
-  uint64_t mtime = 0; /* modification time of the segment */
+// SSR mode uses these field to determine which blocks are allocatable.
+struct SegmentEntry {
+  std::unique_ptr<uint8_t[]> cur_valid_map;   // validity bitmap of blocks
+  std::unique_ptr<uint8_t[]> ckpt_valid_map;  // validity bitmap in the last CP
+  uint64_t mtime = 0;                         // modification time of the segment
+  uint16_t valid_blocks = 0;                  // # of valid blocks
+  uint16_t ckpt_valid_blocks = 0;             // # of valid blocks in the last CP
+  uint8_t type = 0;                           // segment type like CURSEG_XXX_TYPE
 };
 
-struct SecEntry {
-  uint32_t valid_blocks = 0; /* # of valid blocks in a section */
-};
-
-struct SegmentAllocation {
-  void (*allocate_segment)(SbInfo *, int, bool) = nullptr;
+struct SectionEntry {
+  uint32_t valid_blocks = 0;  // # of valid blocks in a section
 };
 
 struct SitInfo {
-  const SegmentAllocation *s_ops = nullptr;
-
-  block_t sit_base_addr = 0;        /* start block address of SIT area */
-  block_t sit_blocks = 0;           /* # of blocks used by SIT area */
-  block_t written_valid_blocks = 0; /* # of valid blocks in main area */
-  uint8_t *sit_bitmap = nullptr;    /* SIT bitmap pointer */
-  uint32_t bitmap_size = 0;         /* SIT bitmap size */
-
-  uint64_t *dirty_sentries_bitmap = nullptr; /* bitmap for dirty sentries */
-  uint32_t dirty_sentries = 0;               /* # of dirty sentries */
-  uint32_t sents_per_block = 0;              /* # of SIT entries per block */
-  fbl::Mutex sentry_lock;                    /* to protect SIT cache */
-  SegEntry *sentries = nullptr;              /* SIT segment-level cache */
-  SecEntry *sec_entries = nullptr;           /* SIT section-level cache */
-
-  /* for cost-benefit algorithm in cleaning procedure */
-  uint64_t elapsed_time = 0; /* elapsed time after mount */
-  uint64_t mounted_time = 0; /* mount time */
-  uint64_t min_mtime = 0;    /* min. modification time */
-  uint64_t max_mtime = 0;    /* max. modification time */
+  std::unique_ptr<uint8_t[]> sit_bitmap;             // SIT bitmap pointer
+  std::unique_ptr<uint8_t[]> dirty_sentries_bitmap;  // bitmap for dirty sentries
+  SegmentEntry *sentries = nullptr;                  // SIT segment-level cache
+  SectionEntry *sec_entries = nullptr;               // SIT section-level cache
+  block_t sit_base_addr = 0;                         // start block address of SIT area
+  block_t sit_blocks = 0;                            // # of blocks used by SIT area
+  block_t written_valid_blocks = 0;                  // # of valid blocks in main area
+  uint32_t bitmap_size = 0;                          // SIT bitmap size
+  uint32_t dirty_sentries = 0;                       // # of dirty sentries
+  uint32_t sents_per_block = 0;                      // # of SIT entries per block
+  // for cost-benefit algorithm in cleaning procedure
+  uint64_t elapsed_time = 0;  // elapsed time after mount
+  uint64_t mounted_time = 0;  // mount time
+  uint64_t min_mtime = 0;     // min. modification time
+  uint64_t max_mtime = 0;     // max. modification time
+  fbl::Mutex sentry_lock;     // to protect SIT cache
 };
 
 struct FreeSegmapInfo {
-  uint32_t start_segno = 0;        /* start segment number logically */
-  uint32_t free_segments = 0;      /* # of free segments */
-  uint32_t free_sections = 0;      /* # of free sections */
-  fs::SharedMutex segmap_lock;     /* free segmap lock */
-  uint64_t *free_segmap = nullptr; /* free segment bitmap */
-  uint64_t *free_secmap = nullptr; /* free section bitmap */
+  std::unique_ptr<uint8_t[]> free_segmap;  // free segment bitmap
+  std::unique_ptr<uint8_t[]> free_secmap;  // free section bitmap
+  uint32_t start_segno = 0;                // start segment number logically
+  uint32_t free_segments = 0;              // # of free segments
+  uint32_t free_sections = 0;              // # of free sections
+  fs::SharedMutex segmap_lock;             // free segmap lock
 };
 
-/* Notice: The order of dirty type is same with CURSEG_XXX in f2fs.h */
+// Notice: The order of dirty type is same with CURSEG_XXX in f2fs.h
 enum class DirtyType {
-  kDirtyHotData = 0, /* dirty segments assigned as hot data logs */
-  kDirtyWarmData,    /* dirty segments assigned as warm data logs */
-  kDirtyColdData,    /* dirty segments assigned as cold data logs */
-  kDirtyHotNode,     /* dirty segments assigned as hot node logs */
-  kDirtyWarmNode,    /* dirty segments assigned as warm node logs */
-  kDirtyColdNode,    /* dirty segments assigned as cold node logs */
-  kDirty,            /* to count # of dirty segments */
-  kPre,              /* to count # of entirely obsolete segments */
+  kDirtyHotData = 0,  // dirty segments assigned as hot data logs
+  kDirtyWarmData,     // dirty segments assigned as warm data logs
+  kDirtyColdData,     // dirty segments assigned as cold data logs
+  kDirtyHotNode,      // dirty segments assigned as hot node logs
+  kDirtyWarmNode,     // dirty segments assigned as warm node logs
+  kDirtyColdNode,     // dirty segments assigned as cold node logs
+  kDirty,             // to count # of dirty segments
+  kPre,               // to count # of entirely obsolete segments
   kNrDirtytype
 };
 
-/* victim selection function for cleaning and SSR */
-struct VictimSelection {
-  int (*get_victim)(SbInfo *, uint32_t *, int, int, char) = nullptr;
-};
-
 struct DirtySeglistInfo {
-  const VictimSelection *v_ops = nullptr; /* victim selction operation */
-  uint64_t *dirty_segmap[static_cast<int>(DirtyType::kNrDirtytype)] = {};
-  fbl::Mutex seglist_lock;                                      /* lock for segment bitmaps */
-  int nr_dirty[static_cast<int>(DirtyType::kNrDirtytype)] = {}; /* # of dirty segments */
-  uint64_t *victim_segmap[2] = {};                              /* BG_GC, FG_GC */
+  std::unique_ptr<uint8_t[]> dirty_segmap[static_cast<int>(DirtyType::kNrDirtytype)];
+  fbl::Mutex seglist_lock;                                       // lock for segment bitmaps
+  int nr_dirty[static_cast<int>(DirtyType::kNrDirtytype)] = {};  // # of dirty segments
+  std::unique_ptr<uint8_t[]> victim_segmap[2];                   // kBgGc, kFgGc
 };
 
-/* for active log information */
+// for active log information
 struct CursegInfo {
-  fbl::Mutex curseg_mutex;         /* lock for consistency */
-  SummaryBlock *sum_blk = nullptr; /* cached summary block */
-  uint8_t alloc_type = 0;          /* current allocation type */
-  uint32_t segno = 0;              /* current segment number */
-  uint16_t next_blkoff = 0;        /* next block offset to write */
-  uint32_t zone = 0;               /* current zone number */
-  uint32_t next_segno = 0;         /* preallocated segment */
+  union {
+    SummaryBlock *sum_blk = nullptr;  // cached summary block
+    FsBlock *raw_blk;
+  };
+  uint32_t segno = 0;        // current segment number
+  uint32_t zone = 0;         // current zone number
+  uint32_t next_segno = 0;   // preallocated segment
+  fbl::Mutex curseg_mutex;   // lock for consistency
+  uint16_t next_blkoff = 0;  // next block offset to write
+  uint8_t alloc_type = 0;    // current allocation type
 };
 
-/* V: Logical segment # in volume, R: Relative segment # in main area */
-inline uint32_t GetL2RSegNo(FreeSegmapInfo *free_i, uint32_t segno) {
-  return (segno - free_i->start_segno);
-}
-inline uint32_t GetR2LSegNo(FreeSegmapInfo *free_i, uint32_t segno) {
-  return (segno + free_i->start_segno);
-}
+// For SIT manager
+//
+// By default, there are 6 active log areas across the whole main area.
+// When considering hot and cold data separation to reduce cleaning overhead,
+// we split 3 for data logs and 3 for node logs as hot, warm, and cold types,
+// respectively.
+// In the current design, you should not change the numbers intentionally.
+// Instead, as a mount option such as active_logs=x, you can use 2, 4, and 6
+// logs individually according to the underlying devices. (default: 6)
+// Just in case, on-disk layout covers maximum 16 logs that consist of 8 for
+// data and 8 for node logs.
+constexpr int kNrCursegDataType = 3;
+constexpr int kNrCursegNodeType = 3;
+constexpr int kNrCursegType = kNrCursegDataType + kNrCursegNodeType;
 
-inline uint32_t IsDataSeg(CursegType t) {
-  return ((t == CursegType::kCursegHotData) || (t == CursegType::kCursegColdData) ||
-          (t == CursegType::kCursegWarmData));
-}
+enum class CursegType {
+  kCursegHotData = 0,  // directory entry blocks
+  kCursegWarmData,     // data blocks
+  kCursegColdData,     // multimedia or GCed data blocks
+  kCursegHotNode,      // direct node blocks of directory files
+  kCursegWarmNode,     // direct node blocks of normal files
+  kCursegColdNode,     // indirect node blocks
+  kNoCheckType
+};
 
-inline uint32_t IsNodeSeg(CursegType t) {
-  return ((t == CursegType::kCursegHotNode) || (t == CursegType::kCursegColdNode) ||
-          (t == CursegType::kCursegWarmNode));
-}
+int LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int alloc);
 
-inline block_t StartBlock(SbInfo *sbi, uint32_t segno) {
-  return (GetSmInfo(sbi)->seg0_blkaddr +
-          (GetR2LSegNo(GetFreeInfo(sbi), segno) << (sbi)->log_blocks_per_seg));
-}
-inline block_t NextFreeBlkAddr(SbInfo *sbi, CursegInfo *curseg) {
-  return (StartBlock(sbi, curseg->segno) + curseg->next_blkoff);
-}
-
-inline block_t MainBaseBlock(SbInfo *sbi) { return GetSmInfo(sbi)->main_blkaddr; }
-
-inline block_t GetSegOffFromSeg0(SbInfo *sbi, block_t blk_addr) {
-  return blk_addr - GetSmInfo(sbi)->seg0_blkaddr;
-}
-inline uint32_t GetSegNoFromSeg0(SbInfo *sbi, block_t blk_addr) {
-  return GetSegOffFromSeg0(sbi, blk_addr) >> sbi->log_blocks_per_seg;
-}
-
-inline uint32_t GetSegNo(SbInfo *sbi, block_t blk_addr) {
-  return ((blk_addr == kNullAddr) || (blk_addr == kNewAddr))
-             ? kNullSegNo
-             : GetL2RSegNo(GetFreeInfo(sbi), GetSegNoFromSeg0(sbi, blk_addr));
-}
-
-inline uint32_t GetSecNo(SbInfo *sbi, uint32_t segno) { return segno / sbi->segs_per_sec; }
-
-inline uint32_t GetZoneNoFromSegNo(SbInfo *sbi, uint32_t segno) {
-  return (segno / sbi->segs_per_sec) / sbi->secs_per_zone;
-}
-
-inline block_t GetSumBlock(SbInfo *sbi, uint32_t segno) {
-  return (sbi->sm_info->ssa_blkaddr) + segno;
-}
-
-inline uint32_t SitEntryOffset(SitInfo *sit_i, uint32_t segno) {
-  return segno % sit_i->sents_per_block;
-}
-inline uint32_t SitBlockOffset(SitInfo *sit_i, uint32_t segno) { return segno / kSitEntryPerBlock; }
-inline uint32_t StartSegNo(SitInfo *sit_i, uint32_t segno) {
-  return SitBlockOffset(sit_i, segno) * kSitEntryPerBlock;
-}
-inline uint32_t BitmapSize(uint32_t nr) {
-  return static_cast<uint32_t>(BitsToLongs(nr) * sizeof(uint64_t));
-}
-inline block_t TotalSegs(SbInfo *sbi) { return GetSmInfo(sbi)->main_segments; }
-
-class SegMgr {
+class SegmentManager {
  public:
   // Not copyable or moveable
-  SegMgr(const SegMgr &) = delete;
-  SegMgr &operator=(const SegMgr &) = delete;
-  SegMgr(SegMgr &&) = delete;
-  SegMgr &operator=(SegMgr &&) = delete;
+  SegmentManager(const SegmentManager &) = delete;
+  SegmentManager &operator=(const SegmentManager &) = delete;
+  SegmentManager(SegmentManager &&) = delete;
+  SegmentManager &operator=(SegmentManager &&) = delete;
+  SegmentManager() = delete;
+  SegmentManager(F2fs *fs);
+  SegmentManager(SbInfo *info) { sbi_ = info; }
 
-  // TODO: Implement constructor
-  SegMgr(F2fs *fs);
-
-  // TODO: Implement destructor
-  ~SegMgr() = default;
-
-  // Static functions
-  static CursegInfo *CURSEG_I(SbInfo *sbi, CursegType type);
-  static int LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int alloc);
-
-  // Public functions
   zx_status_t BuildSegmentManager();
   void DestroySegmentManager();
   void RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
 
- private:
-  // GetVictimByDefault() is called for two purposes:
-  // 1) One is to select a victim segment for garbage collection, and
-  // 2) the other is to find a dirty segment used for SSR.
-  // For GC, it tries to find a victim segment that might require less cost
-  // to secure free segments among all types of dirty segments.
-  // The gc cost can be calucalted in two ways according to GcType.
-  // In case of GcType::kFgGc, it is typically triggered in the middle of user IO path,
-  // and thus it selects a victim with a less valid block count (i.e., GcMode::kGcGreedy)
-  // as it hopes the migration completes more quickly.
-  // In case of GcType::kBgGc, it is triggered at a idle time,
-  // so it uses a cost-benefit method (i.e., GcMode:: kGcCb) rather than kGcGreedy for the victim
-  // selection. kGcCb tries to find a cold segment as a victim as it hopes to mitigate a block
-  // thrashing problem.
-  // Meanwhile, SSR is to reuse invalid blocks for new block allocation, and thus
-  // it uses kGcGreedy to select a dirty segment with more invalid blocks
-  // among the same type of dirty segments as that of the current segment.
-  // |out| contains the segment number of the seleceted victim, and
-  // it returns true when it finds a victim segment.
-  bool GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode, uint32_t *out);
-
-  // This function calculates the maximum cost for a victim in each GcType
-  // Any segment with a less cost value becomes a victim candidate.
-  uint32_t GetMaxCost(VictimSelPolicy *p);
-
-  // This method determines GcMode for GetVictimByDefault
-  void SelectPolicy(GcType gc_type, CursegType type, VictimSelPolicy *p);
-
-  // This method calculates the gc cost for each dirty segment
-  uint32_t GetGcCost(uint32_t segno, VictimSelPolicy *p);
-
- private:
-  F2fs *fs_;
-
- public:
-  // Inline functions
-  SegEntry *GetSegEntry(uint32_t segno);
-  SecEntry *GetSecEntry(uint32_t segno);
+  SegmentEntry *GetSegmentEntry(uint32_t segno);
+  SectionEntry *GetSectionEntry(uint32_t segno);
   uint32_t GetValidBlocks(uint32_t segno, int section);
-  void SegInfoFromRawSit(SegEntry *se, SitEntry *rs);
-  void SegInfoToRawSit(SegEntry *se, SitEntry *rs);
-  uint32_t FindNextInuse(FreeSegmapInfo *free_i, uint32_t max, uint32_t segno);
+  void SegInfoFromRawSit(SegmentEntry *se, SitEntry *rs);
+  void SegInfoToRawSit(SegmentEntry *se, SitEntry *rs);
+  uint32_t FindNextInuse(uint32_t max, uint32_t segno);
   void SetFree(uint32_t segno);
   void SetInuse(uint32_t segno);
   void SetTestAndFree(uint32_t segno);
   void SetTestAndInuse(uint32_t segno);
   void GetSitBitmap(void *dst_addr);
-#if 0  // porting needed
-  block_t WrittenBlockCount();
-#endif
   uint32_t FreeSegments();
-  int ReservedSegments();
   uint32_t FreeSections();
   uint32_t PrefreeSegments();
-  uint32_t DirtySegments();
-  int OverprovisionSegments();
-  int OverprovisionSections();
-  int ReservedSections();
+  block_t DirtySegments();
+  block_t OverprovisionSegments();
+  block_t OverprovisionSections();
+  block_t ReservedSections();
   bool NeedSSR();
   int GetSsrSegment(CursegType type);
   bool HasNotEnoughFreeSecs();
@@ -302,19 +196,15 @@ class SegMgr {
   uint8_t CursegAllocType(int type);
   uint16_t CursegBlkoff(int type);
   void CheckSegRange(uint32_t segno);
-#if 0  // porting needed
-  void VerifyBlockAddr(block_t blk_addr);
-#endif
   void CheckBlockCount(int segno, SitEntry *raw_sit);
   pgoff_t CurrentSitAddr(uint32_t start);
   pgoff_t NextSitAddr(pgoff_t block_addr);
-  void SetToNextSit(SitInfo *sit_i, uint32_t start);
+  void SetToNextSit(uint32_t start);
   uint64_t GetMtime();
   void SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version);
   block_t StartSumBlock();
   block_t SumBlkAddr(int base, int type);
 
-  // Functions
   int NeedToFlush();
   void BalanceFs();
   void LocateDirtySegment(uint32_t segno, enum DirtyType dirty_type);
@@ -340,14 +230,9 @@ class SegMgr {
   void ChangeCurseg(CursegType type, bool reuse);
   void AllocateSegmentByDefault(CursegType type, bool force);
   void AllocateNewSegments();
-
 #if 0  // porting needed
-  //	const struct SegmentAllocation default_salloc_ops = {
-  //		.allocate_segment = AllocateSegmentByDefault,
-  //	};
-#endif
-
-#if 0  // porting needed
+  block_t WrittenBlockCount();
+  void VerifyBlockAddr(block_t blk_addr);
   void EndIoWrite(bio *bio, int err);
   bio *BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
                            gfp_t gfp_flags);
@@ -382,9 +267,6 @@ class SegMgr {
   bool FlushSitsInJournal();
   void FlushSitEntries();
 
-  //////////////////////////////////////////// BUILD
-  ///////////////////////////////////////////////////////////
-
   zx_status_t BuildSitInfo();
   zx_status_t BuildFreeSegmap();
   zx_status_t BuildCurseg();
@@ -403,30 +285,139 @@ class SegMgr {
   void DestroyCurseg();
   void DestroyFreeSegmap();
   void DestroySitInfo();
+
+  block_t GetSegment0StartBlock() const { return seg0_blkaddr_; }
+  block_t GetMainAreaStartBlock() const { return main_blkaddr_; }
+  block_t GetSSAreaStartBlock() const { return ssa_blkaddr_; }
+  block_t GetSegmentsCount() const { return segment_count_; }
+  block_t GetMainSegmentsCount() const { return main_segments_; }
+  block_t GetReservedSegmentsCount() const { return reserved_segments_; }
+  block_t GetOPSegmentsCount() const { return ovp_segments_; }
+  SitInfo &GetSitInfo() const { return *sit_info_; }
+  FreeSegmapInfo &GetFreeSegmentInfo() const { return *free_info_; }
+  DirtySeglistInfo &GetDirtySegmentInfo() const { return *dirty_info_; }
+
+  void SetSegment0StartBlock(const block_t addr) { seg0_blkaddr_ = addr; }
+  void SetMainAreaStartBlock(const block_t addr) { main_blkaddr_ = addr; }
+  void SetSSAreaStartBlock(const block_t addr) { ssa_blkaddr_ = addr; }
+  void SetSegmentsCount(const block_t count) { segment_count_ = count; }
+  void SetMainSegmentsCount(const block_t count) { main_segments_ = count; }
+  void SetReservedSegmentsCount(const block_t count) { reserved_segments_ = count; }
+  void SetOPSegmentsCount(const block_t count) { ovp_segments_ = count; }
+  void SetSitInfo(std::unique_ptr<SitInfo> &&info) { sit_info_ = std::move(info); }
+  void SetFreeSegmentInfo(std::unique_ptr<FreeSegmapInfo> &&info) { free_info_ = std::move(info); }
+  void SetDirtySegmentInfo(std::unique_ptr<DirtySeglistInfo> &&info) {
+    dirty_info_ = std::move(info);
+  }
+
+  CursegInfo *CURSEG_I(CursegType type) { return &curseg_array_[static_cast<int>(type)]; }
+  bool IsCurSeg(uint32_t segno) {
+    return ((segno == CURSEG_I(CursegType::kCursegHotData)->segno) ||
+            (segno == CURSEG_I(CursegType::kCursegWarmData)->segno) ||
+            (segno == CURSEG_I(CursegType::kCursegColdData)->segno) ||
+            (segno == CURSEG_I(CursegType::kCursegHotNode)->segno) ||
+            (segno == CURSEG_I(CursegType::kCursegWarmNode)->segno) ||
+            (segno == CURSEG_I(CursegType::kCursegColdNode)->segno));
+  }
+
+  bool IsCurSec(uint32_t secno) {
+    return ((secno == CURSEG_I(CursegType::kCursegHotData)->segno / sbi_->segs_per_sec) ||
+            (secno == CURSEG_I(CursegType::kCursegWarmData)->segno / sbi_->segs_per_sec) ||
+            (secno == CURSEG_I(CursegType::kCursegColdData)->segno / sbi_->segs_per_sec) ||
+            (secno == CURSEG_I(CursegType::kCursegHotNode)->segno / sbi_->segs_per_sec) ||
+            (secno == CURSEG_I(CursegType::kCursegWarmNode)->segno / sbi_->segs_per_sec) ||
+            (secno == CURSEG_I(CursegType::kCursegColdNode)->segno / sbi_->segs_per_sec));
+  }
+
+  // L: Logical segment nunmber in volume, R: Relative segment number in main area
+  uint32_t GetL2RSegNo(uint32_t segno) { return (segno - free_info_->start_segno); }
+  uint32_t GetR2LSegNo(uint32_t segno) { return (segno + free_info_->start_segno); }
+  bool IsDataSeg(CursegType t) {
+    return ((t == CursegType::kCursegHotData) || (t == CursegType::kCursegColdData) ||
+            (t == CursegType::kCursegWarmData));
+  }
+  bool IsNodeSeg(CursegType t) {
+    return ((t == CursegType::kCursegHotNode) || (t == CursegType::kCursegColdNode) ||
+            (t == CursegType::kCursegWarmNode));
+  }
+  block_t StartBlock(uint32_t segno) {
+    return (seg0_blkaddr_ + (GetR2LSegNo(segno) << sbi_->log_blocks_per_seg));
+  }
+  block_t NextFreeBlkAddr(CursegType type) {
+    CursegInfo *curseg = CURSEG_I(type);
+    return (StartBlock(curseg->segno) + curseg->next_blkoff);
+  }
+  block_t GetSegOffFromSeg0(block_t blk_addr) { return blk_addr - GetSegment0StartBlock(); }
+  uint32_t GetSegNoFromSeg0(block_t blk_addr) {
+    return GetSegOffFromSeg0(blk_addr) >> sbi_->log_blocks_per_seg;
+  }
+  uint32_t GetSegNo(block_t blk_addr) {
+    return ((blk_addr == kNullAddr) || (blk_addr == kNewAddr))
+               ? kNullSegNo
+               : GetL2RSegNo(GetSegNoFromSeg0(blk_addr));
+  }
+  uint32_t GetSecNo(uint32_t segno) { return segno / sbi_->segs_per_sec; }
+  uint32_t GetZoneNoFromSegNo(uint32_t segno) {
+    return segno / sbi_->segs_per_sec / sbi_->secs_per_zone;
+  }
+  block_t GetSumBlock(uint32_t segno) { return ssa_blkaddr_ + segno; }
+  uint32_t SitEntryOffset(uint32_t segno) { return segno % sit_info_->sents_per_block; }
+  block_t SitBlockOffset(uint32_t segno) { return segno / kSitEntryPerBlock; }
+  block_t StartSegNo(uint32_t segno) { return SitBlockOffset(segno) * kSitEntryPerBlock; }
+  uint32_t BitmapSize(uint32_t nr) {
+    return static_cast<uint32_t>(BitsToLongs(nr) * sizeof(uint64_t));
+  }
+
+  block_t TotalSegs() { return main_segments_; }
+
+  // GetVictimByDefault() is called for two purposes:
+  // 1) One is to select a victim segment for garbage collection, and
+  // 2) the other is to find a dirty segment used for SSR.
+  // For GC, it tries to find a victim segment that might require less cost
+  // to secure free segments among all types of dirty segments.
+  // The gc cost can be calucalted in two ways according to GcType.
+  // In case of GcType::kFgGc, it is typically triggered in the middle of user IO path,
+  // and thus it selects a victim with a less valid block count (i.e., GcMode::kGcGreedy)
+  // as it hopes the migration completes more quickly.
+  // In case of GcType::kBgGc, it is triggered at a idle time,
+  // so it uses a cost-benefit method (i.e., GcMode:: kGcCb) rather than kGcGreedy for the victim
+  // selection. kGcCb tries to find a cold segment as a victim as it hopes to mitigate a block
+  // thrashing problem.
+  // Meanwhile, SSR is to reuse invalid blocks for new block allocation, and thus
+  // it uses kGcGreedy to select a dirty segment with more invalid blocks
+  // among the same type of dirty segments as that of the current segment.
+  // |out| contains the segment number of the seleceted victim, and
+  // it returns true when it finds a victim segment.
+  bool GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode, uint32_t *out);
+
+  // This function calculates the maximum cost for a victim in each GcType
+  // Any segment with a less cost value becomes a victim candidate.
+  uint32_t GetMaxCost(VictimSelPolicy *p);
+
+  // This method determines GcMode for GetVictimByDefault
+  void SelectPolicy(GcType gc_type, CursegType type, VictimSelPolicy *p);
+
+  // This method calculates the gc cost for each dirty segment
+  uint32_t GetGcCost(uint32_t segno, VictimSelPolicy *p);
+
+ private:
+  F2fs *fs_ = nullptr;
+  SbInfo *sbi_ = nullptr;
+
+  std::unique_ptr<SitInfo> sit_info_;             // whole segment information
+  std::unique_ptr<FreeSegmapInfo> free_info_;     // free segment information
+  std::unique_ptr<DirtySeglistInfo> dirty_info_;  // dirty segment information
+  CursegInfo curseg_array_[kNrCursegType];        // active segment information
+
+  block_t seg0_blkaddr_ = 0;  // block address of 0'th segment
+  block_t main_blkaddr_ = 0;  // start block address of main area
+  block_t ssa_blkaddr_ = 0;   // start block address of SSA area
+
+  block_t segment_count_ = 0;      // total # of segments
+  block_t main_segments_ = 0;      // # of segments in main area
+  block_t reserved_segments_ = 0;  // # of reserved segments
+  block_t ovp_segments_ = 0;       // # of overprovision segments
 };
-
-inline CursegInfo *SegMgr::CURSEG_I(SbInfo *sbi, CursegType type) {
-  return (CursegInfo *)(GetSmInfo(sbi)->curseg_array + static_cast<int>(type));
-}
-
-inline bool IsCurSeg(SbInfo *sbi, uint32_t segno) {
-  return ((segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegHotData)->segno) ||
-          (segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegWarmData)->segno) ||
-          (segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegColdData)->segno) ||
-          (segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegHotNode)->segno) ||
-          (segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegWarmNode)->segno) ||
-          (segno == SegMgr::CURSEG_I(sbi, CursegType::kCursegColdNode)->segno));
-}
-
-inline bool IsCurSec(SbInfo *sbi, uint32_t secno) {
-  return (
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegHotData)->segno / (sbi)->segs_per_sec) ||
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegWarmData)->segno / (sbi)->segs_per_sec) ||
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegColdData)->segno / (sbi)->segs_per_sec) ||
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegHotNode)->segno / (sbi)->segs_per_sec) ||
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegWarmNode)->segno / (sbi)->segs_per_sec) ||
-      (secno == SegMgr::CURSEG_I(sbi, CursegType::kCursegColdNode)->segno / (sbi)->segs_per_sec));
-}
 
 }  // namespace f2fs
 

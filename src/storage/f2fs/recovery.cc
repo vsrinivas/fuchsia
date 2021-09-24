@@ -89,9 +89,9 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
   zx_status_t err = ZX_OK;
 
   // retrieve the curseg information of kCursegWarmNode
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegWarmNode);
+  CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegWarmNode);
   // get blkaddr from which it starts finding fsyncd dnode block
-  block_t blkaddr = StartBlock(&sbi, curseg->segno) + curseg->next_blkoff;
+  block_t blkaddr = segment_manager_->StartBlock(curseg->segno) + curseg->next_blkoff;
 
   // create a page for a read buffer
   Page *page = GrabCachePage(nullptr, NodeIno(sbi_.get()), 0);
@@ -191,10 +191,10 @@ void F2fs::DestroyFsyncDnodes(list_node_t *head) {
 
 void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   SbInfo &sbi = GetSbInfo();
-  SegEntry *sentry;
-  uint32_t segno = GetSegNo(&sbi, blkaddr);
-  uint16_t blkoff =
-      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1));
+  SegmentEntry *sentry;
+  uint32_t segno = segment_manager_->GetSegNo(blkaddr);
+  uint16_t blkoff = static_cast<uint16_t>(segment_manager_->GetSegOffFromSeg0(blkaddr) &
+                                          (sbi.blocks_per_seg - 1));
   Summary sum;
   nid_t ino;
   void *kaddr;
@@ -205,21 +205,21 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
   int i;
   __UNUSED zx_status_t err = 0;
 
-  sentry = Segmgr().GetSegEntry(segno);
-  if (!TestValidBitmap(blkoff, sentry->cur_valid_map))
+  sentry = GetSegmentManager().GetSegmentEntry(segno);
+  if (!TestValidBitmap(blkoff, sentry->cur_valid_map.get()))
     return;
 
   /* Get the previous summary */
   for (i = static_cast<int>(CursegType::kCursegWarmData);
        i <= static_cast<int>(CursegType::kCursegColdData); i++) {
-    CursegInfo *curseg = Segmgr().CURSEG_I(&sbi, static_cast<CursegType>(i));
+    CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(i));
     if (curseg->segno == segno) {
       sum = curseg->sum_blk->entries[blkoff];
       break;
     }
   }
   if (i > static_cast<int>(CursegType::kCursegColdData)) {
-    Page *sum_page = Segmgr().GetSumPage(segno);
+    Page *sum_page = GetSegmentManager().GetSumPage(segno);
     SummaryBlock *sum_node;
     kaddr = PageAddress(sum_page);
     sum_node = static_cast<SummaryBlock *>(kaddr);
@@ -288,17 +288,17 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
       /* Check the previous node page having this index */
       CheckIndexInPrevNodes(dest);
 
-      Segmgr().SetSummary(&sum, dn.nid, dn.ofs_in_node, ni.version);
+      GetSegmentManager().SetSummary(&sum, dn.nid, dn.ofs_in_node, ni.version);
 
       /* write dummy data page */
-      Segmgr().RecoverDataPage(nullptr, &sum, src, dest);
+      GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
       vnode->UpdateExtentCache(dest, &dn);
     }
     dn.ofs_in_node++;
   }
 
   /* write node page in place */
-  Segmgr().SetSummary(&sum, dn.nid, 0, 0);
+  GetSegmentManager().SetSummary(&sum, dn.nid, 0, 0);
   if (IsInode(dn.node_page))
     GetNodeManager().SyncInodePage(dn);
 
@@ -317,13 +317,10 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
 void F2fs::RecoverData(list_node_t *head, CursegType type) {
   SbInfo &sbi = GetSbInfo();
   uint64_t cp_ver = LeToCpu(sbi.ckpt->checkpoint_ver);
-  CursegInfo *curseg;
   Page *page = nullptr;
   block_t blkaddr;
 
-  /* get node pages in the current segment */
-  curseg = SegMgr::CURSEG_I(&sbi, type);
-  blkaddr = NextFreeBlkAddr(&sbi, curseg);
+  blkaddr = segment_manager_->NextFreeBlkAddr(type);
 
   /* read node page */
   page = GrabCachePage(nullptr, NodeIno(sbi_.get()), 0);
@@ -370,7 +367,7 @@ out:
 #endif
   F2fsPutPage(page, 1);
 
-  Segmgr().AllocateNewSegments();
+  GetSegmentManager().AllocateNewSegments();
 }
 
 void F2fs::RecoverFsyncData() {

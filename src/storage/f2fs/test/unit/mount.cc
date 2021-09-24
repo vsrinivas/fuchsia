@@ -87,7 +87,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
 
   // data block test
   Page *page = GrabCachePage(vn, vn->Ino(), 0);
-  CursegType type = fs->Segmgr().GetSegmentType(page, PageType::kData);
+  CursegType type = fs->GetSegmentManager().GetSegmentType(page, PageType::kData);
   out.push_back(type);
   F2fsPutPage(page, 1);
 
@@ -95,7 +95,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
   page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), vn->Ino());
   NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), inode_ofs, true);
   NodeManager::SetColdNode(*vn, *page);
-  type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
+  type = fs->GetSegmentManager().GetSegmentType(page, PageType::kNode);
   out.push_back(type);
   F2fsPutPage(page, 1);
 
@@ -104,7 +104,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
   NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), indirect_node_ofs,
                               true);
   NodeManager::SetColdNode(*vn, *page);
-  type = fs->Segmgr().GetSegmentType(page, PageType::kNode);
+  type = fs->GetSegmentManager().GetSegmentType(page, PageType::kNode);
   out.push_back(type);
   F2fsPutPage(page, 1);
   vnode->Close();

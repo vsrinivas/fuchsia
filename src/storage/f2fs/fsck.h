@@ -164,12 +164,12 @@ class FsckWorker {
   void ResetCurseg(CursegType type, int modified);
   zx_status_t RestoreCursegSummaries();
   SitBlock *GetCurrentSitPage(unsigned int segno);
-  void SegInfoFromRawSit(SegEntry *se, SitEntry *raw_sit);
+  void SegInfoFromRawSit(SegmentEntry *se, SitEntry *raw_sit);
   void CheckBlockCount(uint32_t segno, SitEntry *raw_sit);
   zx::status<int> LookupNatInJournal(uint32_t nid, RawNatEntry *raw_nat);
   zx_status_t GetNatEntry(nid_t nid, RawNatEntry *raw_nat);
   inline void ChkSegRange(unsigned int segno);
-  SegEntry *GetSegEntry(unsigned int segno);
+  SegmentEntry *GetSegmentEntry(unsigned int segno);
   uint32_t GetSegNo(uint32_t block_address);
   zx_status_t GetNodeInfo(nid_t nid, NodeInfo *ni);
   void AddIntoHardLinkList(uint32_t nid, uint32_t link_cnt);
@@ -184,9 +184,13 @@ class FsckWorker {
     return true;
   }
   inline bool IsValidBlkAddr(uint32_t addr) {
-    if (addr >= RawSuper(&sbi_)->block_count || addr < GetSmInfo(&sbi_)->main_blkaddr) {
-      ZX_ASSERT_MSG(addr < RawSuper(&sbi_)->block_count, "block addr [0x%x]\n", addr);
-      ZX_ASSERT_MSG(addr >= GetSmInfo(&sbi_)->main_blkaddr, "block addr [0x%x]\n", addr);
+    if (addr >= RawSuper(&sbi_)->block_count || addr < segment_manager_->GetMainAreaStartBlock()) {
+      ZX_ASSERT_MSG(addr < RawSuper(&sbi_)->block_count,
+                    "block[0x%x] should be less than [0x%lx]\n", addr,
+                    RawSuper(&sbi_)->block_count);
+      ZX_ASSERT_MSG(addr >= segment_manager_->GetMainAreaStartBlock(),
+                    "block[0x%x] should be larger than [0x%x]\n", addr,
+                    segment_manager_->GetMainAreaStartBlock());
     }
     return true;
   }
@@ -216,6 +220,7 @@ class FsckWorker {
   FsckInfo fsck_;
   SbInfo sbi_;
   std::unique_ptr<NodeManager> node_manager_;
+  std::unique_ptr<SegmentManager> segment_manager_;
   Bcache *bc_;
   std::vector<char> tree_mark_;
 };

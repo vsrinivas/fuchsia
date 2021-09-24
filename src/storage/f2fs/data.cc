@@ -458,10 +458,10 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   // it had better in-place writes for updated data.
   // TODO: Impl IsCodeData
   if (old_blk_addr != kNewAddr && /*! NodeManager::IsColdData(*page) &&*/
-      Vfs()->Segmgr().NeedInplaceUpdate(this)) {
-    Vfs()->Segmgr().RewriteDataPage(page, old_blk_addr);
+      Vfs()->GetSegmentManager().NeedInplaceUpdate(this)) {
+    Vfs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
   } else {
-    Vfs()->Segmgr().WriteDataPage(this, page, &dn, old_blk_addr, &new_blk_addr);
+    Vfs()->GetSegmentManager().WriteDataPage(this, page, &dn, old_blk_addr, &new_blk_addr);
     UpdateExtentCache(new_blk_addr, &dn);
     fi_.data_version = LeToCpu(GetCheckpoint(&sbi)->checkpoint_ver);
   }
@@ -547,7 +547,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
   // unlock_page(page);
 
   // if (!wbc->for_reclaim && !IsDir())
-  //   fs->Segmgr().BalanceFs();
+  //   fs->GetSegmentManager().BalanceFs();
 #endif
   return ZX_OK;
 }
@@ -574,7 +574,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 //   ret = 0;
 //   // if (!IsDir())
 //   //   mutex_unlock(&sbi->writepages);
-//   // Vfs()->Segmgr().SubmitBio(DATA, (wbc->sync_mode == WB_SYNC_ALL));
+//   // Vfs()->GetSegmentManager().SubmitBio(DATA, (wbc->sync_mode == WB_SYNC_ALL));
 
 //   Vfs()->RemoveDirtyDirInode(this);
 
@@ -588,7 +588,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
   pgoff_t index = (static_cast<uint64_t>(pos)) >> kPageCacheShift;
   DnodeOfData dn;
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
 
 #if 0  // porting needed
   // page = GrabCachePage_write_begin(/*mapping,*/ index, flags);

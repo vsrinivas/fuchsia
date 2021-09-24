@@ -23,7 +23,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   //   DnodeOfData dn;
 //   //   int err;
 
-//   //   Vfs()->Segmgr().BalanceFs();
+//   //   Vfs()->GetSegmentManager().BalanceFs();
 
 //   //   sb_start_pagefault(nullptr);
 
@@ -227,7 +227,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   else
 //     ret = ExpandInodeData(offset, len, mode);
 
-//   Vfs()->Segmgr().BalanceFs();
+//   Vfs()->GetSegmentManager().BalanceFs();
 //   return ret;
 // }
 

@@ -522,7 +522,7 @@ int NodeManager::TryToFreeNats(int nr_shrink) {
 
 // This function returns always success
 void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
-  CursegInfo *curseg = SegMgr::CURSEG_I(sbi_, CursegType::kCursegHotData);
+  CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   nid_t start_nid = StartNid(nid);
   NatBlock *nat_blk;
@@ -547,7 +547,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
   {
     // Check current segment summary
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-    i = SegMgr::LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 0);
+    i = LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 0);
     if (i >= 0) {
       ne = NatInJournal(sum, i);
       NodeInfoFromRawNat(out, ne);
@@ -754,7 +754,7 @@ void NodeManager::TruncateNode(DnodeOfData &dn) {
   ZX_ASSERT(ni.blk_addr != kNullAddr);
 
   if (ni.blk_addr != kNullAddr)
-    fs_->Segmgr().InvalidateBlocks(ni.blk_addr);
+    fs_->GetSegmentManager().InvalidateBlocks(ni.blk_addr);
 
   // Deallocate node address
   DecValidNodeCount(dn.vnode, 1);
@@ -1360,7 +1360,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
     SetPageWriteback(&page);
 
     // insert node offset
-    fs_->Segmgr().WriteNodePage(&page, nid, ni.blk_addr, &new_addr);
+    fs_->GetSegmentManager().WriteNodePage(&page, nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
     DecPageCount(sbi_, CountType::kDirtyNodes);
   }
@@ -1513,7 +1513,7 @@ int NodeManager::ScanNatPage(Page &nat_page, nid_t start_nid) {
 
 void NodeManager::BuildFreeNids() {
   FreeNid *fnid, *next_fnid;
-  CursegInfo *curseg = SegMgr::CURSEG_I(sbi_, CursegType::kCursegHotData);
+  CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   nid_t nid = 0;
   bool is_cycled = false;
@@ -1626,7 +1626,7 @@ void NodeManager::AllocNidFailed(nid_t nid) {
 }
 
 void NodeManager::RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr) {
-  fs_->Segmgr().RewriteNodePage(&page, &sum, ni.blk_addr, new_blkaddr);
+  fs_->GetSegmentManager().RewriteNodePage(&page, &sum, ni.blk_addr, new_blkaddr);
   SetNodeAddr(ni, new_blkaddr);
   ClearNodePageDirty(&page);
 }
@@ -1681,7 +1681,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
 
   // scan the node segment
   last_offset = sbi.blocks_per_seg;
-  addr = StartBlock(&sbi, segno);
+  addr = fs.GetSegmentManager().StartBlock(segno);
   sum_entry = &sum.entries[0];
 
 #if 0  // porting needed
@@ -1721,7 +1721,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
 }
 
 bool NodeManager::FlushNatsInJournal() {
-  CursegInfo *curseg = fs_->Segmgr().CURSEG_I(sbi_, CursegType::kCursegHotData);
+  CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   int i;
 
@@ -1763,7 +1763,7 @@ bool NodeManager::FlushNatsInJournal() {
 
 // This function is called during the checkpointing process.
 void NodeManager::FlushNatEntries() {
-  CursegInfo *curseg = fs_->Segmgr().CURSEG_I(sbi_, CursegType::kCursegHotData);
+  CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   Page *page = nullptr;
   NatBlock *nat_blk = nullptr;
@@ -1796,7 +1796,7 @@ void NodeManager::FlushNatEntries() {
 
       if (!flushed) {
         // if there is room for nat enries in curseg->sumpage
-        offset = fs_->Segmgr().LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 1);
+        offset = LookupJournalInCursum(sum, JournalType::kNatJournal, nid, 1);
       }
 
       if (offset >= 0) {  // flush to journal

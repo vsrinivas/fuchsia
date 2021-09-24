@@ -20,119 +20,107 @@ static int UpdateSitsInCursum(SummaryBlock *rs, int i) {
   return n_sits;
 }
 
-SegEntry *SegMgr::GetSegEntry(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  return &sit_i->sentries[segno];
+SegmentEntry *SegmentManager::GetSegmentEntry(uint32_t segno) {
+  return &sit_info_->sentries[segno];
 }
 
-inline SecEntry *SegMgr::GetSecEntry(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  return &sit_i->sec_entries[GetSecNo(&sbi, segno)];
+SectionEntry *SegmentManager::GetSectionEntry(uint32_t segno) {
+  return &sit_info_->sec_entries[GetSecNo(segno)];
 }
 
-uint32_t SegMgr::GetValidBlocks(uint32_t segno, int section) {
+uint32_t SegmentManager::GetValidBlocks(uint32_t segno, int section) {
   // In order to get # of valid blocks in a section instantly from many
   // segments, f2fs manages two counting structures separately.
   if (section > 1) {
-    return GetSecEntry(segno)->valid_blocks;
+    return GetSectionEntry(segno)->valid_blocks;
   }
-  return GetSegEntry(segno)->valid_blocks;
+  return GetSegmentEntry(segno)->valid_blocks;
 }
 
-inline void SegMgr::SegInfoFromRawSit(SegEntry *se, SitEntry *rs) {
+void SegmentManager::SegInfoFromRawSit(SegmentEntry *se, SitEntry *rs) {
   se->valid_blocks = GetSitVblocks(rs);
   se->ckpt_valid_blocks = GetSitVblocks(rs);
-  memcpy(se->cur_valid_map, rs->valid_map, kSitVBlockMapSize);
-  memcpy(se->ckpt_valid_map, rs->valid_map, kSitVBlockMapSize);
+  memcpy(se->cur_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
+  memcpy(se->ckpt_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
   se->type = GetSitType(rs);
   se->mtime = LeToCpu(uint64_t{rs->mtime});
 }
 
-inline void SegMgr::SegInfoToRawSit(SegEntry *se, SitEntry *rs) {
+void SegmentManager::SegInfoToRawSit(SegmentEntry *se, SitEntry *rs) {
   uint16_t raw_vblocks = static_cast<uint16_t>(se->type << kSitVblocksShift) | se->valid_blocks;
   rs->vblocks = CpuToLe(raw_vblocks);
-  memcpy(rs->valid_map, se->cur_valid_map, kSitVBlockMapSize);
-  memcpy(se->ckpt_valid_map, rs->valid_map, kSitVBlockMapSize);
+  memcpy(rs->valid_map, se->cur_valid_map.get(), kSitVBlockMapSize);
+  memcpy(se->ckpt_valid_map.get(), rs->valid_map, kSitVBlockMapSize);
   se->ckpt_valid_blocks = se->valid_blocks;
   rs->mtime = CpuToLe(static_cast<uint64_t>(se->mtime));
 }
 
-inline uint32_t SegMgr::FindNextInuse(FreeSegmapInfo *free_i, uint32_t max, uint32_t segno) {
+uint32_t SegmentManager::FindNextInuse(uint32_t max, uint32_t segno) {
   uint32_t ret;
-  fs::SharedLock segmap_lock(free_i->segmap_lock);
-  ret = FindNextBit(free_i->free_segmap, max, segno);
+  fs::SharedLock segmap_lock(free_info_->segmap_lock);
+  ret = FindNextBit(free_info_->free_segmap.get(), max, segno);
   return ret;
 }
 
-inline void SegMgr::SetFree(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t secno = segno / sbi.segs_per_sec;
-  uint32_t start_segno = secno * sbi.segs_per_sec;
+void SegmentManager::SetFree(uint32_t segno) {
+  uint32_t secno = segno / sbi_->segs_per_sec;
+  uint32_t start_segno = secno * sbi_->segs_per_sec;
   uint32_t next;
 
-  std::lock_guard segmap_lock(free_i->segmap_lock);
-  ClearBit(segno, free_i->free_segmap);
-  free_i->free_segments++;
+  std::lock_guard segmap_lock(free_info_->segmap_lock);
+  ClearBit(segno, free_info_->free_segmap.get());
+  ++free_info_->free_segments;
 
-  next = FindNextBit(free_i->free_segmap, TotalSegs(&sbi), start_segno);
-  if (next >= start_segno + sbi.segs_per_sec) {
-    ClearBit(secno, free_i->free_secmap);
-    free_i->free_sections++;
+  next = FindNextBit(free_info_->free_segmap.get(), TotalSegs(), start_segno);
+  if (next >= start_segno + sbi_->segs_per_sec) {
+    ClearBit(secno, free_info_->free_secmap.get());
+    ++free_info_->free_sections;
   }
 }
 
-inline void SegMgr::SetInuse(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t secno = segno / sbi.segs_per_sec;
-  SetBit(segno, free_i->free_segmap);
-  free_i->free_segments--;
-  if (!TestAndSetBit(secno, free_i->free_secmap))
-    free_i->free_sections--;
+void SegmentManager::SetInuse(uint32_t segno) {
+  uint32_t secno = segno / sbi_->segs_per_sec;
+  SetBit(segno, free_info_->free_segmap.get());
+  --free_info_->free_segments;
+  if (!TestAndSetBit(secno, free_info_->free_secmap.get())) {
+    --free_info_->free_sections;
+  }
 }
 
-inline void SegMgr::SetTestAndFree(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t secno = segno / sbi.segs_per_sec;
-  uint32_t start_segno = secno * sbi.segs_per_sec;
+void SegmentManager::SetTestAndFree(uint32_t segno) {
+  uint32_t secno = segno / sbi_->segs_per_sec;
+  uint32_t start_segno = secno * sbi_->segs_per_sec;
   uint32_t next;
 
-  std::lock_guard segmap_lock(free_i->segmap_lock);
-  if (TestAndClearBit(segno, free_i->free_segmap)) {
-    free_i->free_segments++;
+  std::lock_guard segmap_lock(free_info_->segmap_lock);
+  if (TestAndClearBit(segno, free_info_->free_segmap.get())) {
+    ++free_info_->free_segments;
 
-    next = FindNextBit(free_i->free_segmap, TotalSegs(&sbi), start_segno);
-    if (next >= start_segno + sbi.segs_per_sec) {
-      if (TestAndClearBit(secno, free_i->free_secmap))
-        free_i->free_sections++;
+    next = FindNextBit(free_info_->free_segmap.get(), TotalSegs(), start_segno);
+    if (next >= start_segno + sbi_->segs_per_sec) {
+      if (TestAndClearBit(secno, free_info_->free_secmap.get()))
+        ++free_info_->free_sections;
     }
   }
 }
 
-inline void SegMgr::SetTestAndInuse(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t secno = segno / sbi.segs_per_sec;
-  std::lock_guard segmap_lock(free_i->segmap_lock);
-  if (!TestAndSetBit(segno, free_i->free_segmap)) {
-    free_i->free_segments--;
-    if (!TestAndSetBit(secno, free_i->free_secmap))
-      free_i->free_sections--;
+void SegmentManager::SetTestAndInuse(uint32_t segno) {
+  uint32_t secno = segno / sbi_->segs_per_sec;
+  std::lock_guard segmap_lock(free_info_->segmap_lock);
+  if (!TestAndSetBit(segno, free_info_->free_segmap.get())) {
+    --free_info_->free_segments;
+    if (!TestAndSetBit(secno, free_info_->free_secmap.get())) {
+      --free_info_->free_sections;
+    }
   }
 }
 
-void SegMgr::GetSitBitmap(void *dst_addr) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  memcpy(dst_addr, sit_i->sit_bitmap, sit_i->bitmap_size);
+void SegmentManager::GetSitBitmap(void *dst_addr) {
+  memcpy(dst_addr, sit_info_->sit_bitmap.get(), sit_info_->bitmap_size);
 }
 
 #if 0  // porting needed
-inline block_t SegMgr::WrittenBlockCount() {
+block_t SegmentManager::WrittenBlockCount() {
   SbInfo &sbi = fs_->GetSbInfo();
   SitInfo *sit_i = GetSitInfo(&sbi);
   block_t vblocks;
@@ -145,64 +133,39 @@ inline block_t SegMgr::WrittenBlockCount() {
 }
 #endif
 
-uint32_t SegMgr::FreeSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t free_segs;
-
-  fs::SharedLock segmap_lock(free_i->segmap_lock);
-  free_segs = free_i->free_segments;
-
+block_t SegmentManager::FreeSegments() {
+  fs::SharedLock segmap_lock(free_info_->segmap_lock);
+  block_t free_segs = free_info_->free_segments;
   return free_segs;
 }
 
-inline int SegMgr::ReservedSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return GetSmInfo(&sbi)->reserved_segments;
-}
-
-inline uint32_t SegMgr::FreeSections() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
-  uint32_t free_secs;
-
-  fs::SharedLock segmap_lock(free_i->segmap_lock);
-  free_secs = free_i->free_sections;
-
+block_t SegmentManager::FreeSections() {
+  fs::SharedLock segmap_lock(free_info_->segmap_lock);
+  block_t free_secs = free_info_->free_sections;
   return free_secs;
 }
 
-uint32_t SegMgr::PrefreeSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kPre)];
+block_t SegmentManager::PrefreeSegments() {
+  return dirty_info_->nr_dirty[static_cast<int>(DirtyType::kPre)];
 }
 
-inline uint32_t SegMgr::DirtySegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyHotData)] +
-         GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyWarmData)] +
-         GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyColdData)] +
-         GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyHotNode)] +
-         GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyWarmNode)] +
-         GetDirtyInfo(&sbi)->nr_dirty[static_cast<int>(DirtyType::kDirtyColdNode)];
+block_t SegmentManager::DirtySegments() {
+  return dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyHotData)] +
+         dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyWarmData)] +
+         dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyColdData)] +
+         dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyHotNode)] +
+         dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyWarmNode)] +
+         dirty_info_->nr_dirty[static_cast<int>(DirtyType::kDirtyColdNode)];
 }
 
-inline int SegMgr::OverprovisionSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return GetSmInfo(&sbi)->ovp_segments;
+block_t SegmentManager::OverprovisionSections() {
+  return GetOPSegmentsCount() / sbi_->segs_per_sec;
 }
 
-inline int SegMgr::OverprovisionSections() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return (static_cast<uint32_t>(OverprovisionSegments())) / sbi.segs_per_sec;
+block_t SegmentManager::ReservedSections() {
+  return GetReservedSegmentsCount() / sbi_->segs_per_sec;
 }
-
-inline int SegMgr::ReservedSections() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return (static_cast<uint32_t>(ReservedSegments())) / sbi.segs_per_sec;
-}
-
-inline bool SegMgr::NeedSSR() {
+bool SegmentManager::NeedSSR() {
 #ifdef F2FS_FORCE_SSR
   return true;
 #else
@@ -211,20 +174,18 @@ inline bool SegMgr::NeedSSR() {
 #endif
 }
 
-inline int SegMgr::GetSsrSegment(CursegType type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+int SegmentManager::GetSsrSegment(CursegType type) {
+  CursegInfo *curseg = CURSEG_I(type);
   return GetVictimByDefault(GcType::kBgGc, type, AllocMode::kSSR, &(curseg->next_segno));
 }
 
-inline bool SegMgr::HasNotEnoughFreeSecs() {
+bool SegmentManager::HasNotEnoughFreeSecs() {
   return FreeSections() <= static_cast<uint32_t>(ReservedSections());
 }
 
-inline uint32_t SegMgr::Utilization() {
-  SbInfo &sbi = fs_->GetSbInfo();
+uint32_t SegmentManager::Utilization() {
   return static_cast<uint32_t>(static_cast<int64_t>(fs_->ValidUserBlocks()) * 100 /
-                               static_cast<int64_t>(sbi.user_block_count));
+                               static_cast<int64_t>(sbi_->user_block_count));
 }
 
 // Sometimes f2fs may be better to drop out-of-place update policy.
@@ -233,7 +194,7 @@ inline uint32_t SegMgr::Utilization() {
 // Currently set 0 in percentage, which means that f2fs always uses ipu.
 // It needs to be changed when gc is available.
 constexpr uint32_t kMinIpuUtil = 0;
-bool SegMgr::NeedInplaceUpdate(VnodeF2fs *vnode) {
+bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (vnode->IsDir())
     return false;
   if (NeedSSR() && Utilization() > kMinIpuUtil)
@@ -241,34 +202,27 @@ bool SegMgr::NeedInplaceUpdate(VnodeF2fs *vnode) {
   return false;
 }
 
-uint32_t SegMgr::CursegSegno(int type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, static_cast<CursegType>(type));
+uint32_t SegmentManager::CursegSegno(int type) {
+  CursegInfo *curseg = CURSEG_I(static_cast<CursegType>(type));
   return curseg->segno;
 }
 
-uint8_t SegMgr::CursegAllocType(int type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, static_cast<CursegType>(type));
+uint8_t SegmentManager::CursegAllocType(int type) {
+  CursegInfo *curseg = CURSEG_I(static_cast<CursegType>(type));
   return curseg->alloc_type;
 }
 
-uint16_t SegMgr::CursegBlkoff(int type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, static_cast<CursegType>(type));
+uint16_t SegmentManager::CursegBlkoff(int type) {
+  CursegInfo *curseg = CURSEG_I(static_cast<CursegType>(type));
   return curseg->next_blkoff;
 }
 
-inline void SegMgr::CheckSegRange(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  [[maybe_unused]] uint32_t end_segno = GetSmInfo(&sbi)->segment_count - 1;
-  ZX_ASSERT(!(segno > end_segno));
-}
+void SegmentManager::CheckSegRange(uint32_t segno) { ZX_ASSERT(segno < segment_count_); }
 
 #if 0  // porting needed
 // This function is used for only debugging.
 // NOTE: In future, we have to remove this function.
-inline void SegMgr::VerifyBlockAddr(block_t blk_addr) {
+void SegmentManager::VerifyBlockAddr(block_t blk_addr) {
   SbInfo &sbi = fs_->GetSbInfo();
   SmInfo *sm_info = GetSmInfo(&sbi);
   block_t total_blks = sm_info->segment_count << sbi.log_blocks_per_seg;
@@ -280,104 +234,90 @@ inline void SegMgr::VerifyBlockAddr(block_t blk_addr) {
 #endif
 
 // Summary block is always treated as invalid block
-inline void SegMgr::CheckBlockCount(int segno, SitEntry *raw_sit) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SmInfo *sm_info = GetSmInfo(&sbi);
-  uint32_t end_segno = sm_info->segment_count - 1;
+void SegmentManager::CheckBlockCount(int segno, SitEntry *raw_sit) {
+  uint32_t end_segno = segment_count_ - 1;
   int valid_blocks = 0;
   uint32_t i;
 
   // check segment usage
-  ZX_ASSERT(!(GetSitVblocks(raw_sit) > sbi.blocks_per_seg));
+  ZX_ASSERT(!(GetSitVblocks(raw_sit) > sbi_->blocks_per_seg));
 
   // check boundary of a given segment number
   ZX_ASSERT(!(segno > (int)end_segno));
 
   // check bitmap with valid block count
-  for (i = 0; i < sbi.blocks_per_seg; i++) {
+  for (i = 0; i < sbi_->blocks_per_seg; ++i) {
     if (TestValidBitmap(i, raw_sit->valid_map))
-      valid_blocks++;
+      ++valid_blocks;
   }
   ZX_ASSERT(GetSitVblocks(raw_sit) == valid_blocks);
 }
 
-inline pgoff_t SegMgr::CurrentSitAddr(uint32_t start) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  uint32_t offset = SitBlockOffset(sit_i, start);
-  block_t blk_addr = sit_i->sit_base_addr + offset;
+pgoff_t SegmentManager::CurrentSitAddr(uint32_t start) {
+  uint32_t offset = SitBlockOffset(start);
+  block_t blk_addr = sit_info_->sit_base_addr + offset;
 
   CheckSegRange(start);
 
-  /* calculate sit block address */
-  if (TestValidBitmap(offset, sit_i->sit_bitmap))
-    blk_addr += sit_i->sit_blocks;
+  // calculate sit block address
+  if (TestValidBitmap(offset, sit_info_->sit_bitmap.get()))
+    blk_addr += sit_info_->sit_blocks;
 
   return blk_addr;
 }
 
-inline pgoff_t SegMgr::NextSitAddr(pgoff_t block_addr) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  block_addr -= sit_i->sit_base_addr;
-  if (block_addr < sit_i->sit_blocks)
-    block_addr += sit_i->sit_blocks;
+pgoff_t SegmentManager::NextSitAddr(pgoff_t block_addr) {
+  block_addr -= sit_info_->sit_base_addr;
+  if (block_addr < sit_info_->sit_blocks)
+    block_addr += sit_info_->sit_blocks;
   else
-    block_addr -= sit_i->sit_blocks;
+    block_addr -= sit_info_->sit_blocks;
 
-  return block_addr + sit_i->sit_base_addr;
+  return block_addr + sit_info_->sit_base_addr;
 }
 
-inline void SegMgr::SetToNextSit(SitInfo *sit_i, uint32_t start) {
-  uint32_t block_off = SitBlockOffset(sit_i, start);
+void SegmentManager::SetToNextSit(uint32_t start) {
+  uint32_t block_off = SitBlockOffset(start);
 
-  if (TestValidBitmap(block_off, sit_i->sit_bitmap)) {
-    ClearValidBitmap(block_off, sit_i->sit_bitmap);
+  if (TestValidBitmap(block_off, sit_info_->sit_bitmap.get())) {
+    ClearValidBitmap(block_off, sit_info_->sit_bitmap.get());
   } else {
-    SetValidBitmap(block_off, sit_i->sit_bitmap);
+    SetValidBitmap(block_off, sit_info_->sit_bitmap.get());
   }
 }
 
-uint64_t SegMgr::GetMtime() {
+uint64_t SegmentManager::GetMtime() {
   auto cur_time = time(nullptr);
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-
-  return sit_i->elapsed_time + cur_time - sit_i->mounted_time;
-  return 0;
+  return sit_info_->elapsed_time + cur_time - sit_info_->mounted_time;
 }
 
-void SegMgr::SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version) {
+void SegmentManager::SetSummary(Summary *sum, nid_t nid, uint32_t ofs_in_node, uint8_t version) {
   sum->nid = CpuToLe(nid);
   sum->ofs_in_node = CpuToLe(static_cast<uint16_t>(ofs_in_node));
   sum->version = version;
 }
 
-inline block_t SegMgr::StartSumBlock() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return StartCpAddr(&sbi) + LeToCpu(GetCheckpoint(&sbi)->cp_pack_start_sum);
+block_t SegmentManager::StartSumBlock() {
+  return StartCpAddr(sbi_) + LeToCpu(GetCheckpoint(sbi_)->cp_pack_start_sum);
 }
 
-inline block_t SegMgr::SumBlkAddr(int base, int type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return StartCpAddr(&sbi) + LeToCpu(GetCheckpoint(&sbi)->cp_pack_total_block_count) - (base + 1) +
+block_t SegmentManager::SumBlkAddr(int base, int type) {
+  return StartCpAddr(sbi_) + LeToCpu(GetCheckpoint(sbi_)->cp_pack_total_block_count) - (base + 1) +
          type;
 }
 
-SegMgr::SegMgr(F2fs *fs) : fs_(fs){};
+SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { sbi_ = &fs->GetSbInfo(); };
 
-int SegMgr::NeedToFlush() {
-  SbInfo &sbi = fs_->GetSbInfo();
-
-  uint32_t pages_per_sec = (1 << sbi.log_blocks_per_seg) * sbi.segs_per_sec;
+int SegmentManager::NeedToFlush() {
+  uint32_t pages_per_sec = (1 << sbi_->log_blocks_per_seg) * sbi_->segs_per_sec;
   int node_secs =
-      ((GetPages(&sbi, CountType::kDirtyNodes) + pages_per_sec - 1) >> sbi.log_blocks_per_seg) /
-      sbi.segs_per_sec;
+      ((GetPages(sbi_, CountType::kDirtyNodes) + pages_per_sec - 1) >> sbi_->log_blocks_per_seg) /
+      sbi_->segs_per_sec;
   int dent_secs =
-      ((GetPages(&sbi, CountType::kDirtyDents) + pages_per_sec - 1) >> sbi.log_blocks_per_seg) /
-      sbi.segs_per_sec;
+      ((GetPages(sbi_, CountType::kDirtyDents) + pages_per_sec - 1) >> sbi_->log_blocks_per_seg) /
+      sbi_->segs_per_sec;
 
-  if (sbi.por_doing)
+  if (sbi_->por_doing)
     return 0;
 
   if (FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections()))
@@ -387,8 +327,7 @@ int SegMgr::NeedToFlush() {
 
 // This function balances dirty node and dentry pages.
 // In addition, it controls garbage collection.
-void SegMgr::BalanceFs() {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::BalanceFs() {
   WritebackControl wbc = {
 #if 0  // porting needed
       // .nr_to_write = LONG_MAX,
@@ -397,7 +336,7 @@ void SegMgr::BalanceFs() {
 #endif
   };
 
-  if (sbi.por_doing)
+  if (sbi_->por_doing)
     return;
 
   // We should do checkpoint when there are so many dirty node pages
@@ -418,61 +357,56 @@ void SegMgr::BalanceFs() {
   }
 }
 
-void SegMgr::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-
+void SegmentManager::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {
   // need not be added
-  if (IsCurSeg(&sbi, segno))
+  if (IsCurSeg(segno)) {
     return;
+  }
 
-  if (!TestAndSetBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
-    dirty_i->nr_dirty[static_cast<int>(dirty_type)]++;
+  if (!TestAndSetBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get()))
+    ++dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
 
   if (dirty_type == DirtyType::kDirty) {
-    SegEntry *sentry = GetSegEntry(segno);
+    SegmentEntry *sentry = GetSegmentEntry(segno);
     dirty_type = static_cast<DirtyType>(sentry->type);
-    if (!TestAndSetBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
-      dirty_i->nr_dirty[static_cast<int>(dirty_type)]++;
+    if (!TestAndSetBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get()))
+      ++dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
   }
 }
 
-void SegMgr::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-
-  if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
-    dirty_i->nr_dirty[static_cast<int>(dirty_type)]--;
+void SegmentManager::RemoveDirtySegment(uint32_t segno, DirtyType dirty_type) {
+  if (TestAndClearBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get())) {
+    --dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
+  }
 
   if (dirty_type == DirtyType::kDirty) {
-    SegEntry *sentry = GetSegEntry(segno);
+    SegmentEntry *sentry = GetSegmentEntry(segno);
     dirty_type = static_cast<DirtyType>(sentry->type);
-    if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(dirty_type)]))
-      dirty_i->nr_dirty[static_cast<int>(dirty_type)]--;
-    ClearBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]);
-    ClearBit(segno, dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]);
+    if (TestAndClearBit(segno, dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].get())) {
+      --dirty_info_->nr_dirty[static_cast<int>(dirty_type)];
+    }
+    ClearBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].get());
+    ClearBit(segno, dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)].get());
   }
 }
 
 // Should not occur error such as ZX_ERR_NO_MEMORY.
 // Adding dirty entry into seglist is not critical operation.
 // If a given segment is one of current working segments, it won't be added.
-void SegMgr::LocateDirtySegment(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
+void SegmentManager::LocateDirtySegment(uint32_t segno) {
   uint32_t valid_blocks;
 
-  if (segno == kNullSegNo || IsCurSeg(&sbi, segno))
+  if (segno == kNullSegNo || IsCurSeg(segno))
     return;
 
-  fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
+  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
 
   valid_blocks = GetValidBlocks(segno, 0);
 
   if (valid_blocks == 0) {
     LocateDirtySegment(segno, DirtyType::kPre);
     RemoveDirtySegment(segno, DirtyType::kDirty);
-  } else if (valid_blocks < sbi.blocks_per_seg) {
+  } else if (valid_blocks < sbi_->blocks_per_seg) {
     LocateDirtySegment(segno, DirtyType::kDirty);
   } else {
     // Recovery routine with SSR needs this
@@ -481,16 +415,14 @@ void SegMgr::LocateDirtySegment(uint32_t segno) {
 }
 
 // Should call clear_prefree_segments after checkpoint is done.
-void SegMgr::SetPrefreeAsFreeSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
+void SegmentManager::SetPrefreeAsFreeSegments() {
   uint32_t segno, offset = 0;
-  uint32_t total_segs = TotalSegs(&sbi);
+  uint32_t total_segs = TotalSegs();
 
-  fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
+  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
   while (true) {
-    segno =
-        FindNextBit(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs, offset);
+    segno = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
+                        total_segs, offset);
     if (segno >= total_segs)
       break;
     SetTestAndFree(segno);
@@ -498,98 +430,92 @@ void SegMgr::SetPrefreeAsFreeSegments() {
   }
 }
 
-void SegMgr::ClearPrefreeSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
+void SegmentManager::ClearPrefreeSegments() {
   uint32_t segno, offset = 0;
-  uint32_t total_segs = TotalSegs(&sbi);
+  uint32_t total_segs = TotalSegs();
 
-  fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
+  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
   while (true) {
-    segno =
-        FindNextBit(dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)], total_segs, offset);
+    segno = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
+                        total_segs, offset);
     if (segno >= total_segs)
       break;
 
     offset = segno + 1;
-    if (TestAndClearBit(segno, dirty_i->dirty_segmap[static_cast<int>(DirtyType::kPre)]))
-      dirty_i->nr_dirty[static_cast<int>(DirtyType::kPre)]--;
+    if (TestAndClearBit(segno,
+                        dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get())) {
+      --dirty_info_->nr_dirty[static_cast<int>(DirtyType::kPre)];
+    }
 
-    if (TestOpt(&sbi, kMountDiscard))
-      fs_->GetBc().Trim(StartBlock(&sbi, segno), (1 << sbi.log_blocks_per_seg));
+    if (TestOpt(sbi_, kMountDiscard))
+      fs_->GetBc().Trim(StartBlock(segno), (1 << sbi_->log_blocks_per_seg));
   }
 }
 
-void SegMgr::MarkSitEntryDirty(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  if (!TestAndSetBit(segno, sit_i->dirty_sentries_bitmap))
-    sit_i->dirty_sentries++;
+void SegmentManager::MarkSitEntryDirty(uint32_t segno) {
+  if (!TestAndSetBit(segno, sit_info_->dirty_sentries_bitmap.get()))
+    ++sit_info_->dirty_sentries;
 }
 
-void SegMgr::SetSitEntryType(CursegType type, uint32_t segno, int modified) {
-  SegEntry *se = GetSegEntry(segno);
+void SegmentManager::SetSitEntryType(CursegType type, uint32_t segno, int modified) {
+  SegmentEntry *se = GetSegmentEntry(segno);
   se->type = static_cast<uint8_t>(type);
   if (modified)
     MarkSitEntryDirty(segno);
 }
 
-void SegMgr::UpdateSitEntry(block_t blkaddr, int del) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SegEntry *se;
+void SegmentManager::UpdateSitEntry(block_t blkaddr, int del) {
+  SegmentEntry *se;
   uint32_t segno, offset;
   uint64_t new_vblocks;
 
-  segno = GetSegNo(&sbi, blkaddr);
+  segno = GetSegNo(blkaddr);
 
-  se = GetSegEntry(segno);
+  se = GetSegmentEntry(segno);
   new_vblocks = se->valid_blocks + del;
-  offset = GetSegOffFromSeg0(&sbi, blkaddr) & (sbi.blocks_per_seg - 1);
+  offset = GetSegOffFromSeg0(blkaddr) & (sbi_->blocks_per_seg - 1);
 
-  ZX_ASSERT(!((new_vblocks >> (sizeof(uint16_t) << 3) || (new_vblocks > sbi.blocks_per_seg))));
+  ZX_ASSERT(!((new_vblocks >> (sizeof(uint16_t) << 3) || (new_vblocks > sbi_->blocks_per_seg))));
 
   se->valid_blocks = static_cast<uint16_t>(new_vblocks);
   se->mtime = GetMtime();
-  GetSitInfo(&sbi)->max_mtime = se->mtime;
+  sit_info_->max_mtime = se->mtime;
 
   // Update valid block bitmap
   if (del > 0) {
-    if (SetValidBitmap(offset, se->cur_valid_map))
+    if (SetValidBitmap(offset, se->cur_valid_map.get()))
       ZX_ASSERT(0);
   } else {
-    if (!ClearValidBitmap(offset, se->cur_valid_map))
+    if (!ClearValidBitmap(offset, se->cur_valid_map.get()))
       ZX_ASSERT(0);
   }
-  if (!TestValidBitmap(offset, se->ckpt_valid_map))
+  if (!TestValidBitmap(offset, se->ckpt_valid_map.get()))
     se->ckpt_valid_blocks += del;
 
   MarkSitEntryDirty(segno);
 
   // update total number of valid blocks to be written in ckpt area
-  GetSitInfo(&sbi)->written_valid_blocks += del;
+  sit_info_->written_valid_blocks += del;
 
-  if (sbi.segs_per_sec > 1)
-    GetSecEntry(segno)->valid_blocks += del;
+  if (sbi_->segs_per_sec > 1)
+    GetSectionEntry(segno)->valid_blocks += del;
 }
 
-void SegMgr::RefreshSitEntry(block_t old_blkaddr, block_t new_blkaddr) {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::RefreshSitEntry(block_t old_blkaddr, block_t new_blkaddr) {
   UpdateSitEntry(new_blkaddr, 1);
-  if (GetSegNo(&sbi, old_blkaddr) != kNullSegNo)
+  if (GetSegNo(old_blkaddr) != kNullSegNo)
     UpdateSitEntry(old_blkaddr, -1);
 }
 
-void SegMgr::InvalidateBlocks(block_t addr) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  uint32_t segno = GetSegNo(&sbi, addr);
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::InvalidateBlocks(block_t addr) {
+  uint32_t segno = GetSegNo(addr);
 
   ZX_ASSERT(addr != kNullAddr);
   if (addr == kNewAddr)
     return;
 
   // add it into sit main buffer
-  fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 
   UpdateSitEntry(addr, -1);
 
@@ -598,23 +524,22 @@ void SegMgr::InvalidateBlocks(block_t addr) {
 }
 
 // This function should be resided under the curseg_mutex lock
-void SegMgr::AddSumEntry(CursegType type, Summary *sum, uint16_t offset) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+void SegmentManager::AddSumEntry(CursegType type, Summary *sum, uint16_t offset) {
+  CursegInfo *curseg = CURSEG_I(type);
   char *addr = reinterpret_cast<char *>(curseg->sum_blk);
   (addr) += offset * sizeof(Summary);
   memcpy(addr, sum, sizeof(Summary));
 }
 
 // Calculate the number of current summary pages for writing
-int SegMgr::NpagesForSummaryFlush() {
+int SegmentManager::NpagesForSummaryFlush() {
   SbInfo &sbi = fs_->GetSbInfo();
   int total_size_bytes = 0;
   int valid_sum_count = 0;
   int i, sum_space;
 
   for (i = static_cast<int>(CursegType::kCursegHotData);
-       i <= static_cast<int>(CursegType::kCursegColdData); i++) {
+       i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     if (sbi.ckpt->alloc_type[i] == static_cast<uint8_t>(AllocMode::kSSR)) {
       valid_sum_count += sbi.blocks_per_seg;
     } else {
@@ -634,12 +559,9 @@ int SegMgr::NpagesForSummaryFlush() {
 }
 
 // Caller should put this summary page
-Page *SegMgr::GetSumPage(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  return fs_->GetMetaPage(GetSumBlock(&sbi, segno));
-}
+Page *SegmentManager::GetSumPage(uint32_t segno) { return fs_->GetMetaPage(GetSumBlock(segno)); }
 
-void SegMgr::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
+void SegmentManager::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
   Page *page = fs_->GrabMetaPage(blk_addr);
   void *kaddr = PageAddress(page);
   memcpy(kaddr, sum_blk, kPageCacheSize);
@@ -652,27 +574,26 @@ void SegMgr::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
 
 // Find a new segment from the free segments bitmap to right order
 // This function should be returned with success, otherwise BUG
-void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
+void SegmentManager::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
   uint32_t total_secs = sbi.total_sections;
   uint32_t segno, secno, zoneno;
   uint32_t total_zones = sbi.total_sections / sbi.secs_per_zone;
   uint32_t hint = *newseg / sbi.segs_per_sec;
-  uint32_t old_zoneno = GetZoneNoFromSegNo(&sbi, *newseg);
+  uint32_t old_zoneno = GetZoneNoFromSegNo(*newseg);
   uint32_t left_start = hint;
   bool init = true;
   int go_left = 0;
   int i;
   bool got_it = false;
 
-  std::lock_guard segmap_lock(free_i->segmap_lock);
+  std::lock_guard segmap_lock(free_info_->segmap_lock);
 
   auto find_other_zone = [&]() -> bool {
-    secno = FindNextZeroBit(free_i->free_secmap, total_secs, hint);
+    secno = FindNextZeroBit(free_info_->free_secmap.get(), total_secs, hint);
     if (secno >= total_secs) {
       if (dir == static_cast<int>(AllocDirection::kAllocRight)) {
-        secno = FindNextZeroBit(free_i->free_secmap, total_secs, 0);
+        secno = FindNextZeroBit(free_info_->free_secmap.get(), total_secs, 0);
         ZX_ASSERT(!(secno >= total_secs));
       } else {
         go_left = 1;
@@ -685,20 +606,20 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   };
 
   if (!new_sec && ((*newseg + 1) % sbi.segs_per_sec)) {
-    segno = FindNextZeroBit(free_i->free_segmap, TotalSegs(&sbi), *newseg + 1);
-    if (segno < TotalSegs(&sbi)) {
+    segno = FindNextZeroBit(free_info_->free_segmap.get(), TotalSegs(), *newseg + 1);
+    if (segno < TotalSegs()) {
       got_it = true;
     }
   }
 
   while (!got_it) {
     if (!find_other_zone()) {
-      while (TestBit(left_start, free_i->free_secmap)) {
+      while (TestBit(left_start, free_info_->free_secmap.get())) {
         if (left_start > 0) {
-          left_start--;
+          --left_start;
           continue;
         }
-        left_start = FindNextZeroBit(free_i->free_secmap, total_secs, 0);
+        left_start = FindNextZeroBit(free_info_->free_secmap.get(), total_secs, 0);
         ZX_ASSERT(!(left_start >= total_secs));
         break;
       }
@@ -727,8 +648,8 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
         break;
       }
     }
-    for (i = 0; i < kNrCursegType; i++) {
-      if (CURSEG_I(&sbi, static_cast<CursegType>(i))->zone == zoneno) {
+    for (i = 0; i < kNrCursegType; ++i) {
+      if (CURSEG_I(static_cast<CursegType>(i))->zone == zoneno) {
         break;
       }
     }
@@ -748,18 +669,17 @@ void SegMgr::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
     break;
   }
   // set it as dirty segment in free segmap
-  ZX_ASSERT(!TestBit(segno, free_i->free_segmap));
+  ZX_ASSERT(!TestBit(segno, free_info_->free_segmap.get()));
   SetInuse(segno);
   *newseg = segno;
 }
 
-void SegMgr::ResetCurseg(CursegType type, int modified) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+void SegmentManager::ResetCurseg(CursegType type, int modified) {
+  CursegInfo *curseg = CURSEG_I(type);
   SummaryFooter *sum_footer;
 
   curseg->segno = curseg->next_segno;
-  curseg->zone = GetZoneNoFromSegNo(&sbi, curseg->segno);
+  curseg->zone = GetZoneNoFromSegNo(curseg->segno);
   curseg->next_blkoff = 0;
   curseg->next_segno = kNullSegNo;
 
@@ -774,13 +694,13 @@ void SegMgr::ResetCurseg(CursegType type, int modified) {
 
 // Allocate a current working segment.
 // This function always allocates a free segment in LFS manner.
-void SegMgr::NewCurseg(CursegType type, bool new_sec) {
+void SegmentManager::NewCurseg(CursegType type, bool new_sec) {
   SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+  CursegInfo *curseg = CURSEG_I(type);
   uint32_t segno = curseg->segno;
   int dir = static_cast<int>(AllocDirection::kAllocLeft);
 
-  WriteSumPage(curseg->sum_blk, GetSumBlock(&sbi, curseg->segno));
+  WriteSumPage(curseg->sum_blk, GetSumBlock(curseg->segno));
   if (type == CursegType::kCursegWarmData || type == CursegType::kCursegColdData)
     dir = static_cast<int>(AllocDirection::kAllocRight);
 
@@ -793,12 +713,13 @@ void SegMgr::NewCurseg(CursegType type, bool new_sec) {
   curseg->alloc_type = static_cast<uint8_t>(AllocMode::kLFS);
 }
 
-void SegMgr::NextFreeBlkoff(CursegInfo *seg, block_t start) {
+void SegmentManager::NextFreeBlkoff(CursegInfo *seg, block_t start) {
   SbInfo &sbi = fs_->GetSbInfo();
-  SegEntry *se = GetSegEntry(seg->segno);
+  SegmentEntry *se = GetSegmentEntry(seg->segno);
   block_t ofs;
-  for (ofs = start; ofs < sbi.blocks_per_seg; ofs++) {
-    if (!TestValidBitmap(ofs, se->ckpt_valid_map) && !TestValidBitmap(ofs, se->cur_valid_map))
+  for (ofs = start; ofs < sbi.blocks_per_seg; ++ofs) {
+    if (!TestValidBitmap(ofs, se->ckpt_valid_map.get()) &&
+        !TestValidBitmap(ofs, se->cur_valid_map.get()))
       break;
   }
   seg->next_blkoff = static_cast<uint16_t>(ofs);
@@ -807,29 +728,27 @@ void SegMgr::NextFreeBlkoff(CursegInfo *seg, block_t start) {
 // If a segment is written by LFS manner, next block offset is just obtained
 // by increasing the current block offset. However, if a segment is written by
 // SSR manner, next block offset obtained by calling __next_free_blkoff
-void SegMgr::RefreshNextBlkoff(CursegInfo *seg) {
+void SegmentManager::RefreshNextBlkoff(CursegInfo *seg) {
   if (seg->alloc_type == static_cast<uint8_t>(AllocMode::kSSR)) {
     NextFreeBlkoff(seg, seg->next_blkoff + 1);
   } else {
-    seg->next_blkoff++;
+    ++seg->next_blkoff;
   }
 }
 
 // This function always allocates a used segment (from dirty seglist) by SSR
 // manner, so it should recover the existing segment information of valid blocks
-void SegMgr::ChangeCurseg(CursegType type, bool reuse) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+void SegmentManager::ChangeCurseg(CursegType type, bool reuse) {
+  CursegInfo *curseg = CURSEG_I(type);
   uint32_t new_segno = curseg->next_segno;
   SummaryBlock *sum_node;
   Page *sum_page = nullptr;
 
-  WriteSumPage(curseg->sum_blk, GetSumBlock(&sbi, curseg->segno));
+  WriteSumPage(curseg->sum_blk, GetSumBlock(curseg->segno));
   SetTestAndInuse(new_segno);
 
   {
-    fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
+    fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
     RemoveDirtySegment(new_segno, DirtyType::kPre);
     RemoveDirtySegment(new_segno, DirtyType::kDirty);
   }
@@ -848,9 +767,9 @@ void SegMgr::ChangeCurseg(CursegType type, bool reuse) {
 
 // flush out current segment and replace it with new segment
 // This function should be returned with success, otherwise BUG
-void SegMgr::AllocateSegmentByDefault(CursegType type, bool force) {
+void SegmentManager::AllocateSegmentByDefault(CursegType type, bool force) {
   SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+  CursegInfo *curseg = CURSEG_I(type);
   // uint32_t ofs_unit;
 
   if (force) {
@@ -868,10 +787,10 @@ void SegMgr::AllocateSegmentByDefault(CursegType type, bool force) {
       NewCurseg(type, false);
     }
   }
-  sbi.segment_count[curseg->alloc_type]++;
+  ++sbi.segment_count[curseg->alloc_type];
 
 #ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "SegMgr::AllocateSegmentByDefault, type=" << static_cast<int>(type)
+  FX_LOGS(DEBUG) << "SegmentManager::AllocateSegmentByDefault, type=" << static_cast<int>(type)
                  << ", curseg->segno =" << curseg->segno << ", FreeSections()=" << FreeSections()
                  << ", PrefreeSegments()=" << PrefreeSegments()
                  << ", DirtySegments()=" << DirtySegments() << ", TotalSegs=" << TotalSegs(&sbi)
@@ -879,15 +798,14 @@ void SegMgr::AllocateSegmentByDefault(CursegType type, bool force) {
 #endif
 }
 
-void SegMgr::AllocateNewSegments() {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::AllocateNewSegments() {
   CursegInfo *curseg;
   uint32_t old_curseg;
   int i;
 
   for (i = static_cast<int>(CursegType::kCursegHotData);
-       i <= static_cast<int>(CursegType::kCursegColdData); i++) {
-    curseg = CURSEG_I(&sbi, static_cast<CursegType>(i));
+       i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
+    curseg = CURSEG_I(static_cast<CursegType>(i));
     old_curseg = curseg->segno;
     AllocateSegmentByDefault(static_cast<CursegType>(i), true);
     LocateDirtySegment(old_curseg);
@@ -899,7 +817,7 @@ const segment_allocation default_salloc_ops = {
         .allocate_segment = AllocateSegmentByDefault,
 };
 
-void SegMgr::EndIoWrite(bio *bio, int err) {
+void SegmentManager::EndIoWrite(bio *bio, int err) {
   // const int uptodate = TestBit(BIO_UPTODATE, &bio->bi_flags);
   // bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
   // BioPrivate *p = bio->bi_private;
@@ -926,7 +844,7 @@ void SegMgr::EndIoWrite(bio *bio, int err) {
   // bio_put(bio);
 }
 
-bio *SegMgr::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
+bio *SegmentManager::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
                                  gfp_t gfp_flags) {
   // 	bio *bio;
   // repeat:
@@ -956,7 +874,7 @@ bio *SegMgr::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
   return nullptr;
 }
 
-void SegMgr::DoSubmitBio(PageType type, bool sync) {
+void SegmentManager::DoSubmitBio(PageType type, bool sync) {
   // int rw = sync ? kWriteSync : kWrite;
   // PageType btype = type > META ? META : type;
 
@@ -981,14 +899,14 @@ void SegMgr::DoSubmitBio(PageType type, bool sync) {
   // }
 }
 
-void SegMgr::SubmitBio(PageType type, bool sync) {
+void SegmentManager::SubmitBio(PageType type, bool sync) {
   // down_write(&sbi->bio_sem);
   // DoSubmitBio(type, sync);
   // up_write(&sbi->bio_sem);
 }
 #endif
 
-void SegMgr::SubmitWritePage(Page *page, block_t blk_addr, PageType type) {
+void SegmentManager::SubmitWritePage(Page *page, block_t blk_addr, PageType type) {
   zx_status_t ret = fs_->GetBc().Writeblk(blk_addr, page->data);
   if (ret) {
     FX_LOGS(ERROR) << "SubmitWritePage error " << ret;
@@ -1024,16 +942,16 @@ void SegMgr::SubmitWritePage(Page *page, block_t blk_addr, PageType type) {
 #endif
 }
 
-bool SegMgr::HasCursegSpace(CursegType type) {
+bool SegmentManager::HasCursegSpace(CursegType type) {
   SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *curseg = CURSEG_I(&sbi, type);
+  CursegInfo *curseg = CURSEG_I(type);
   if (curseg->next_blkoff < sbi.blocks_per_seg) {
     return true;
   }
   return false;
 }
 
-CursegType SegMgr::GetSegmentType2(Page *page, PageType p_type) {
+CursegType SegmentManager::GetSegmentType2(Page *page, PageType p_type) {
   if (p_type == PageType::kData) {
     return CursegType::kCursegHotData;
   } else {
@@ -1041,7 +959,7 @@ CursegType SegMgr::GetSegmentType2(Page *page, PageType p_type) {
   }
 }
 
-CursegType SegMgr::GetSegmentType4(Page *page, PageType p_type) {
+CursegType SegmentManager::GetSegmentType4(Page *page, PageType p_type) {
   if (p_type == PageType::kData) {
     VnodeF2fs *vnode = static_cast<f2fs::VnodeF2fs *>(page->host);
 
@@ -1061,7 +979,7 @@ CursegType SegMgr::GetSegmentType4(Page *page, PageType p_type) {
   return static_cast<CursegType>(0);
 }
 
-CursegType SegMgr::GetSegmentType6(Page *page, PageType p_type) {
+CursegType SegmentManager::GetSegmentType6(Page *page, PageType p_type) {
   if (p_type == PageType::kData) {
     VnodeF2fs *vnode = static_cast<f2fs::VnodeF2fs *>(page->host);
 
@@ -1083,7 +1001,7 @@ CursegType SegMgr::GetSegmentType6(Page *page, PageType p_type) {
   return static_cast<CursegType>(0);
 }
 
-CursegType SegMgr::GetSegmentType(Page *page, PageType p_type) {
+CursegType SegmentManager::GetSegmentType(Page *page, PageType p_type) {
   SbInfo &sbi = fs_->GetSbInfo();
   switch (sbi.active_logs) {
     case 2:
@@ -1097,19 +1015,17 @@ CursegType SegMgr::GetSegmentType(Page *page, PageType p_type) {
   }
 }
 
-void SegMgr::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr, Summary *sum,
-                         PageType p_type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr,
+                                 Summary *sum, PageType p_type) {
   CursegInfo *curseg;
   CursegType type;
 
   type = GetSegmentType(page, p_type);
-  curseg = CURSEG_I(&sbi, type);
+  curseg = CURSEG_I(type);
 
   {
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-    *new_blkaddr = NextFreeBlkAddr(&sbi, curseg);
+    *new_blkaddr = NextFreeBlkAddr(type);
 
     // AddSumEntry should be resided under the curseg_mutex
     // because this function updates a summary entry in the
@@ -1117,9 +1033,9 @@ void SegMgr::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr, 
     AddSumEntry(type, sum, curseg->next_blkoff);
 
     {
-      fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+      fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
       RefreshNextBlkoff(curseg);
-      sbi.block_count[curseg->alloc_type]++;
+      ++sbi_->block_count[curseg->alloc_type];
 
       // SIT information should be updated before segment allocation,
       // since SSR needs latest valid block information.
@@ -1129,19 +1045,19 @@ void SegMgr::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr, 
         AllocateSegmentByDefault(type, false);
       }
 
-      LocateDirtySegment(GetSegNo(&sbi, old_blkaddr));
-      LocateDirtySegment(GetSegNo(&sbi, *new_blkaddr));
+      LocateDirtySegment(GetSegNo(old_blkaddr));
+      LocateDirtySegment(GetSegNo(*new_blkaddr));
     }
 
     if (p_type == PageType::kNode)
-      fs_->GetNodeManager().FillNodeFooterBlkaddr(page, NextFreeBlkAddr(&sbi, curseg));
+      fs_->GetNodeManager().FillNodeFooterBlkaddr(page, NextFreeBlkAddr(type));
   }
 
   // writeout dirty page into bdev
   SubmitWritePage(page, *new_blkaddr, p_type);
 }
 
-zx_status_t SegMgr::WriteMetaPage(Page *page, WritebackControl *wbc) {
+zx_status_t SegmentManager::WriteMetaPage(Page *page, WritebackControl *wbc) {
 #if 0  // porting needed
   // if (wbc && wbc->for_reclaim)
   // 	return kAopWritepageActivate;
@@ -1151,14 +1067,15 @@ zx_status_t SegMgr::WriteMetaPage(Page *page, WritebackControl *wbc) {
   return ZX_OK;
 }
 
-void SegMgr::WriteNodePage(Page *page, uint32_t nid, block_t old_blkaddr, block_t *new_blkaddr) {
+void SegmentManager::WriteNodePage(Page *page, uint32_t nid, block_t old_blkaddr,
+                                   block_t *new_blkaddr) {
   Summary sum;
   SetSummary(&sum, nid, 0, 0);
   DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kNode);
 }
 
-void SegMgr::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn, block_t old_blkaddr,
-                           block_t *new_blkaddr) {
+void SegmentManager::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn,
+                                   block_t old_blkaddr, block_t *new_blkaddr) {
   Summary sum;
   NodeInfo ni;
 
@@ -1169,33 +1086,32 @@ void SegMgr::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn, block_
   DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kData);
 }
 
-void SegMgr::RewriteDataPage(Page *page, block_t old_blk_addr) {
+void SegmentManager::RewriteDataPage(Page *page, block_t old_blk_addr) {
   SubmitWritePage(page, old_blk_addr, PageType::kData);
 }
 
-void SegMgr::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr,
+                                     block_t new_blkaddr) {
   CursegInfo *curseg;
   uint32_t segno, old_cursegno;
-  SegEntry *se;
+  SegmentEntry *se;
   CursegType type;
 
-  segno = GetSegNo(&sbi, new_blkaddr);
-  se = GetSegEntry(segno);
+  segno = GetSegNo(new_blkaddr);
+  se = GetSegmentEntry(segno);
   type = static_cast<CursegType>(se->type);
 
-  if (se->valid_blocks == 0 && !IsCurSeg(&sbi, segno)) {
+  if (se->valid_blocks == 0 && !IsCurSeg(segno)) {
     if (old_blkaddr == kNullAddr) {
       type = CursegType::kCursegColdData;
     } else {
       type = CursegType::kCursegWarmData;
     }
   }
-  curseg = CURSEG_I(&sbi, type);
+  curseg = CURSEG_I(type);
 
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-  fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 
   old_cursegno = curseg->segno;
 
@@ -1206,31 +1122,30 @@ void SegMgr::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, bloc
   }
 
   curseg->next_blkoff =
-      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1));
+      static_cast<uint16_t>(GetSegOffFromSeg0(new_blkaddr) & (sbi_->blocks_per_seg - 1));
   AddSumEntry(type, sum, curseg->next_blkoff);
 
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);
-  LocateDirtySegment(GetSegNo(&sbi, old_blkaddr));
-  LocateDirtySegment(GetSegNo(&sbi, new_blkaddr));
+  LocateDirtySegment(GetSegNo(old_blkaddr));
+  LocateDirtySegment(GetSegNo(new_blkaddr));
 }
 
-void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr,
+                                     block_t new_blkaddr) {
   CursegType type = CursegType::kCursegWarmNode;
   CursegInfo *curseg;
   uint32_t segno, old_cursegno;
   block_t next_blkaddr = NodeManager::NextBlkaddrOfNode(*page);
-  uint32_t next_segno = GetSegNo(&sbi, next_blkaddr);
+  uint32_t next_segno = GetSegNo(next_blkaddr);
 
-  curseg = CURSEG_I(&sbi, type);
+  curseg = CURSEG_I(type);
 
   fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-  fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 
-  segno = GetSegNo(&sbi, new_blkaddr);
+  segno = GetSegNo(new_blkaddr);
   old_cursegno = curseg->segno;
 
   /* change the current segment */
@@ -1239,7 +1154,7 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
     ChangeCurseg(type, true);
   }
   curseg->next_blkoff =
-      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, new_blkaddr) & (sbi.blocks_per_seg - 1));
+      static_cast<uint16_t>(GetSegOffFromSeg0(new_blkaddr) & (sbi_->blocks_per_seg - 1));
   AddSumEntry(type, sum, curseg->next_blkoff);
 
   /* change the current log to the next block addr in advance */
@@ -1248,7 +1163,7 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
     ChangeCurseg(type, true);
   }
   curseg->next_blkoff =
-      static_cast<uint16_t>(GetSegOffFromSeg0(&sbi, next_blkaddr) & (sbi.blocks_per_seg - 1));
+      static_cast<uint16_t>(GetSegOffFromSeg0(next_blkaddr) & (sbi_->blocks_per_seg - 1));
 
   /* rewrite node page */
   SetPageWriteback(page);
@@ -1259,13 +1174,12 @@ void SegMgr::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, bloc
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);
-  LocateDirtySegment(GetSegNo(&sbi, old_blkaddr));
-  LocateDirtySegment(GetSegNo(&sbi, new_blkaddr));
+  LocateDirtySegment(GetSegNo(old_blkaddr));
+  LocateDirtySegment(GetSegNo(new_blkaddr));
 }
 
-int SegMgr::ReadCompactedSummaries() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
+int SegmentManager::ReadCompactedSummaries() {
+  Checkpoint *ckpt = GetCheckpoint(sbi_);
   CursegInfo *seg_i;
   uint8_t *kaddr;
   Page *page = nullptr;
@@ -1278,21 +1192,21 @@ int SegMgr::ReadCompactedSummaries() {
   kaddr = static_cast<uint8_t *>(PageAddress(page));
 
   // Step 1: restore nat cache
-  seg_i = CURSEG_I(&sbi, CursegType::kCursegHotData);
+  seg_i = CURSEG_I(CursegType::kCursegHotData);
   memcpy(&seg_i->sum_blk->n_nats, kaddr, kSumJournalSize);
 
   // Step 2: restore sit cache
-  seg_i = CURSEG_I(&sbi, CursegType::kCursegColdData);
+  seg_i = CURSEG_I(CursegType::kCursegColdData);
   memcpy(&seg_i->sum_blk->n_sits, kaddr + kSumJournalSize, kSumJournalSize);
   offset = 2 * kSumJournalSize;
 
   // Step 3: restore summary entries
   for (i = static_cast<int>(CursegType::kCursegHotData);
-       i <= static_cast<int>(CursegType::kCursegColdData); i++) {
+       i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     uint16_t blk_off;
     uint32_t segno;
 
-    seg_i = CURSEG_I(&sbi, static_cast<CursegType>(i));
+    seg_i = CURSEG_I(static_cast<CursegType>(i));
     segno = LeToCpu(ckpt->cur_data_segno[i]);
     blk_off = LeToCpu(ckpt->cur_data_blkoff[i]);
     seg_i->next_segno = segno;
@@ -1301,9 +1215,9 @@ int SegMgr::ReadCompactedSummaries() {
     seg_i->next_blkoff = blk_off;
 
     if (seg_i->alloc_type == static_cast<uint8_t>(AllocMode::kSSR))
-      blk_off = static_cast<uint16_t>(sbi.blocks_per_seg);
+      blk_off = static_cast<uint16_t>(sbi_->blocks_per_seg);
 
-    for (j = 0; j < blk_off; j++) {
+    for (j = 0; j < blk_off; ++j) {
       Summary *s;
       s = reinterpret_cast<Summary *>(kaddr + offset);
       seg_i->sum_blk->entries[j] = *s;
@@ -1323,9 +1237,8 @@ int SegMgr::ReadCompactedSummaries() {
   return 0;
 }
 
-int SegMgr::ReadNormalSummaries(int type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
+int SegmentManager::ReadNormalSummaries(int type) {
+  Checkpoint *ckpt = GetCheckpoint(sbi_);
   SummaryBlock *sum;
   CursegInfo *curseg;
   Page *new_page = nullptr;
@@ -1347,7 +1260,7 @@ int SegMgr::ReadNormalSummaries(int type) {
     if (ckpt->ckpt_flags & kCpUmountFlag) {
       blk_addr = SumBlkAddr(kNrCursegNodeType, type - static_cast<int>(CursegType::kCursegHotNode));
     } else
-      blk_addr = GetSumBlock(&sbi, segno);
+      blk_addr = GetSumBlock(segno);
   }
 
   new_page = fs_->GetMetaPage(blk_addr);
@@ -1357,7 +1270,7 @@ int SegMgr::ReadNormalSummaries(int type) {
     if (ckpt->ckpt_flags & kCpUmountFlag) {
       Summary *ns = &sum->entries[0];
       uint32_t i;
-      for (i = 0; i < sbi.blocks_per_seg; i++, ns++) {
+      for (i = 0; i < sbi_->blocks_per_seg; ++i, ++ns) {
         ns->version = 0;
         ns->ofs_in_node = 0;
       }
@@ -1370,7 +1283,7 @@ int SegMgr::ReadNormalSummaries(int type) {
   }
 
   // set uncompleted segment to curseg
-  curseg = CURSEG_I(&sbi, static_cast<CursegType>(type));
+  curseg = CURSEG_I(static_cast<CursegType>(type));
   {
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
     memcpy(curseg->sum_blk, sum, kPageCacheSize);
@@ -1383,26 +1296,24 @@ int SegMgr::ReadNormalSummaries(int type) {
   return 0;
 }
 
-zx_status_t SegMgr::RestoreCursegSummaries() {
-  SbInfo &sbi = fs_->GetSbInfo();
+zx_status_t SegmentManager::RestoreCursegSummaries() {
   int type = static_cast<int>(CursegType::kCursegHotData);
 
-  if (sbi.ckpt->ckpt_flags & kCpCompactSumFlag) {
+  if (sbi_->ckpt->ckpt_flags & kCpCompactSumFlag) {
     // restore for compacted data summary
     if (ReadCompactedSummaries())
       return ZX_ERR_INVALID_ARGS;
     type = static_cast<int>(CursegType::kCursegHotNode);
   }
 
-  for (; type <= static_cast<int>(CursegType::kCursegColdNode); type++) {
+  for (; type <= static_cast<int>(CursegType::kCursegColdNode); ++type) {
     if (ReadNormalSummaries(type))
       return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
 
-void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::WriteCompactedSummaries(block_t blkaddr) {
   Page *page = nullptr;
   uint8_t *kaddr;
   Summary *summary;
@@ -1414,12 +1325,12 @@ void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
   kaddr = static_cast<uint8_t *>(PageAddress(page));
 
   // Step 1: write nat cache
-  seg_i = CURSEG_I(&sbi, CursegType::kCursegHotData);
+  seg_i = CURSEG_I(CursegType::kCursegHotData);
   memcpy(kaddr, &seg_i->sum_blk->n_nats, kSumJournalSize);
   written_size += kSumJournalSize;
 
   // Step 2: write sit cache
-  seg_i = CURSEG_I(&sbi, CursegType::kCursegColdData);
+  seg_i = CURSEG_I(CursegType::kCursegColdData);
   memcpy(kaddr + written_size, &seg_i->sum_blk->n_sits, kSumJournalSize);
   written_size += kSumJournalSize;
 
@@ -1428,16 +1339,16 @@ void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
 
   // Step 3: write summary entries
   for (i = static_cast<int>(CursegType::kCursegHotData);
-       i <= static_cast<int>(CursegType::kCursegColdData); i++) {
+       i <= static_cast<int>(CursegType::kCursegColdData); ++i) {
     uint16_t blkoff;
-    seg_i = CURSEG_I(&sbi, static_cast<CursegType>(i));
-    if (sbi.ckpt->alloc_type[i] == static_cast<uint8_t>(AllocMode::kSSR)) {
-      blkoff = static_cast<uint16_t>(sbi.blocks_per_seg);
+    seg_i = CURSEG_I(static_cast<CursegType>(i));
+    if (sbi_->ckpt->alloc_type[i] == static_cast<uint8_t>(AllocMode::kSSR)) {
+      blkoff = static_cast<uint16_t>(sbi_->blocks_per_seg);
     } else {
       blkoff = CursegBlkoff(i);
     }
 
-    for (j = 0; j < blkoff; j++) {
+    for (j = 0; j < blkoff; ++j) {
       if (!page) {
         page = fs_->GrabMetaPage(blkaddr++);
         kaddr = static_cast<uint8_t *>(PageAddress(page));
@@ -1462,8 +1373,7 @@ void SegMgr::WriteCompactedSummaries(block_t blkaddr) {
     F2fsPutPage(page, 1);
 }
 
-void SegMgr::WriteNormalSummaries(block_t blkaddr, CursegType type) {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::WriteNormalSummaries(block_t blkaddr, CursegType type) {
   int i, end;
 
   if (IsDataSeg(type)) {
@@ -1472,40 +1382,38 @@ void SegMgr::WriteNormalSummaries(block_t blkaddr, CursegType type) {
     end = static_cast<int>(type) + kNrCursegNodeType;
   }
 
-  for (i = static_cast<int>(type); i < end; i++) {
-    CursegInfo *sum = CURSEG_I(&sbi, static_cast<CursegType>(i));
+  for (i = static_cast<int>(type); i < end; ++i) {
+    CursegInfo *sum = CURSEG_I(static_cast<CursegType>(i));
     fbl::AutoLock curseg_lock(&sum->curseg_mutex);
     WriteSumPage(sum->sum_blk, blkaddr + (i - static_cast<int>(type)));
   }
 }
 
-void SegMgr::WriteDataSummaries(block_t start_blk) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  if (sbi.ckpt->ckpt_flags & kCpCompactSumFlag) {
+void SegmentManager::WriteDataSummaries(block_t start_blk) {
+  if (sbi_->ckpt->ckpt_flags & kCpCompactSumFlag) {
     WriteCompactedSummaries(start_blk);
   } else {
     WriteNormalSummaries(start_blk, CursegType::kCursegHotData);
   }
 }
 
-void SegMgr::WriteNodeSummaries(block_t start_blk) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  if (sbi.ckpt->ckpt_flags & kCpUmountFlag)
+void SegmentManager::WriteNodeSummaries(block_t start_blk) {
+  if (sbi_->ckpt->ckpt_flags & kCpUmountFlag)
     WriteNormalSummaries(start_blk, CursegType::kCursegHotNode);
 }
 
-int SegMgr::LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int alloc) {
+int LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t val, int alloc) {
   int i;
 
   if (type == JournalType::kNatJournal) {
-    for (i = 0; i < NatsInCursum(sum); i++) {
+    for (i = 0; i < NatsInCursum(sum); ++i) {
       if (LeToCpu(NidInJournal(sum, i)) == val)
         return i;
     }
     if (alloc && NatsInCursum(sum) < static_cast<int>(kNatJournalEntries))
       return UpdateNatsInCursum(sum, 1);
   } else if (type == JournalType::kSitJournal) {
-    for (i = 0; i < SitsInCursum(sum); i++) {
+    for (i = 0; i < SitsInCursum(sum); ++i) {
       if (LeToCpu(SegnoInJournal(sum, i)) == val)
         return i;
     }
@@ -1515,24 +1423,20 @@ int SegMgr::LookupJournalInCursum(SummaryBlock *sum, JournalType type, uint32_t 
   return -1;
 }
 
-Page *SegMgr::GetCurrentSitPage(uint32_t segno) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  uint32_t offset = SitBlockOffset(sit_i, segno);
-  block_t blk_addr = sit_i->sit_base_addr + offset;
+Page *SegmentManager::GetCurrentSitPage(uint32_t segno) {
+  uint32_t offset = SitBlockOffset(segno);
+  block_t blk_addr = sit_info_->sit_base_addr + offset;
 
   CheckSegRange(segno);
 
   // calculate sit block address
-  if (TestValidBitmap(offset, sit_i->sit_bitmap))
-    blk_addr += sit_i->sit_blocks;
+  if (TestValidBitmap(offset, sit_info_->sit_bitmap.get()))
+    blk_addr += sit_info_->sit_blocks;
 
   return fs_->GetMetaPage(blk_addr);
 }
 
-Page *SegMgr::GetNextSitPage(uint32_t start) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+Page *SegmentManager::GetNextSitPage(uint32_t start) {
   Page *src_page = nullptr, *dst_page = nullptr;
   pgoff_t src_off, dst_off;
   void *src_addr, *dst_addr;
@@ -1554,23 +1458,21 @@ Page *SegMgr::GetNextSitPage(uint32_t start) {
 #endif
   F2fsPutPage(src_page, 1);
 
-  SetToNextSit(sit_i, start);
+  SetToNextSit(start);
 
   return dst_page;
 }
 
-bool SegMgr::FlushSitsInJournal() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  CursegInfo *curseg = CURSEG_I(&sbi, CursegType::kCursegColdData);
+bool SegmentManager::FlushSitsInJournal() {
+  CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
   int i;
 
   // If the journal area in the current summary is full of sit entries,
   // all the sit entries will be flushed. Otherwise the sit entries
   // are not able to replace with newly hot sit entries.
-  if ((SitsInCursum(sum) + sit_i->dirty_sentries) > static_cast<int>(kSitJournalEntries)) {
-    for (i = SitsInCursum(sum) - 1; i >= 0; i--) {
+  if ((SitsInCursum(sum) + sit_info_->dirty_sentries) > static_cast<int>(kSitJournalEntries)) {
+    for (i = SitsInCursum(sum) - 1; i >= 0; --i) {
       uint32_t segno;
       segno = LeToCpu(SegnoInJournal(sum, i));
       MarkSitEntryDirty(segno);
@@ -1583,13 +1485,11 @@ bool SegMgr::FlushSitsInJournal() {
 
 // CP calls this function, which flushes SIT entries including SitJournal,
 // and moves prefree segs to free segs.
-void SegMgr::FlushSitEntries() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  uint64_t *bitmap = sit_i->dirty_sentries_bitmap;
-  CursegInfo *curseg = CURSEG_I(&sbi, CursegType::kCursegColdData);
+void SegmentManager::FlushSitEntries() {
+  uint8_t *bitmap = sit_info_->dirty_sentries_bitmap.get();
+  CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
-  block_t nsegs = TotalSegs(&sbi);
+  block_t nsegs = TotalSegs();
   Page *page = nullptr;
   SitBlock *raw_sit = nullptr;
   uint32_t start = 0, end = 0;
@@ -1598,17 +1498,17 @@ void SegMgr::FlushSitEntries() {
 
   {
     fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-    fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+    fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 
     // "flushed" indicates whether sit entries in journal are flushed
     // to the SIT area or not.
     flushed = FlushSitsInJournal();
 
     while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
-      SegEntry *se = GetSegEntry(segno);
+      SegmentEntry *se = GetSegmentEntry(segno);
       int sit_offset, offset = -1;
 
-      sit_offset = SitEntryOffset(sit_i, segno);
+      sit_offset = SitEntryOffset(segno);
 
       if (!flushed) {
         offset = LookupJournalInCursum(sum, JournalType::kSitJournal, segno, 1);
@@ -1626,7 +1526,7 @@ void SegMgr::FlushSitEntries() {
             page = nullptr;
           }
 
-          start = StartSegNo(sit_i, segno);
+          start = StartSegNo(segno);
           end = start + kSitEntryPerBlock - 1;
 
           // read sit block that will be updated
@@ -1638,7 +1538,7 @@ void SegMgr::FlushSitEntries() {
         SegInfoToRawSit(se, &raw_sit->entries[sit_offset]);
       }
       ClearBit(segno, bitmap);
-      sit_i->dirty_sentries--;
+      --sit_info_->dirty_sentries;
     }
   }
   // writeout last modified SIT block
@@ -1651,63 +1551,54 @@ void SegMgr::FlushSitEntries() {
   SetPrefreeAsFreeSegments();
 }
 
-/*
- * Build
- */
-zx_status_t SegMgr::BuildSitInfo() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  const SuperBlock *raw_super = RawSuper(&sbi);
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
-  SitInfo *sit_i;
+zx_status_t SegmentManager::BuildSitInfo() {
+  const SuperBlock *raw_super = RawSuper(sbi_);
+  Checkpoint *ckpt = GetCheckpoint(sbi_);
   uint32_t sit_segs, start;
-  uint8_t *src_bitmap, *dst_bitmap;
+  uint8_t *src_bitmap;
   uint32_t bitmap_size;
 
-  /* allocate memory for SIT information */
-  sit_i = static_cast<SitInfo *>(malloc(sizeof(SitInfo)));
-  memset(sit_i, 0, sizeof(SitInfo));
-  if (!sit_i)
+  // allocate memory for SIT information
+  if (sit_info_ = std::make_unique<SitInfo>(); !sit_info_) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  GetSmInfo(&sbi)->SitInfo = sit_i;
+  SitInfo *sit_i = sit_info_.get();
 
-  sit_i->sentries = static_cast<SegEntry *>(calloc(TotalSegs(&sbi), sizeof(SegEntry)));
-  if (!sit_i->sentries)
+  if (sit_i->sentries = new SegmentEntry[TotalSegs()]; !sit_i->sentries) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  bitmap_size = BitmapSize(TotalSegs(&sbi));
-  sit_i->dirty_sentries_bitmap = static_cast<uint64_t *>(malloc(bitmap_size));
-  memset(sit_i->dirty_sentries_bitmap, 0, bitmap_size);
-  if (!sit_i->dirty_sentries_bitmap)
+  bitmap_size = BitmapSize(TotalSegs());
+  sit_i->dirty_sentries_bitmap = std::make_unique<uint8_t[]>(bitmap_size);
+  if (!sit_i->dirty_sentries_bitmap) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  for (start = 0; start < TotalSegs(&sbi); start++) {
-    sit_i->sentries[start].cur_valid_map = static_cast<uint8_t *>(malloc(kSitVBlockMapSize));
-    memset(sit_i->sentries[start].cur_valid_map, 0, kSitVBlockMapSize);
-    sit_i->sentries[start].ckpt_valid_map = static_cast<uint8_t *>(malloc(kSitVBlockMapSize));
-    memset(sit_i->sentries[start].ckpt_valid_map, 0, kSitVBlockMapSize);
+  for (start = 0; start < TotalSegs(); ++start) {
+    sit_i->sentries[start].cur_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
+    sit_i->sentries[start].ckpt_valid_map = std::make_unique<uint8_t[]>(kSitVBlockMapSize);
     if (!sit_i->sentries[start].cur_valid_map || !sit_i->sentries[start].ckpt_valid_map)
       return ZX_ERR_NO_MEMORY;
   }
 
-  if (sbi.segs_per_sec > 1) {
-    sit_i->sec_entries = static_cast<SecEntry *>(calloc(sbi.total_sections, sizeof(SecEntry)));
-    if (!sit_i->sec_entries)
+  if (sbi_->segs_per_sec > 1) {
+    if (sit_i->sec_entries = new SectionEntry[sbi_->total_sections]; !sit_i->sec_entries) {
       return ZX_ERR_NO_MEMORY;
+    }
   }
 
-  /* get information related with SIT */
+  // get information related with SIT
   sit_segs = LeToCpu(raw_super->segment_count_sit) >> 1;
 
-  /* setup SIT bitmap from ckeckpoint pack */
-  bitmap_size = BitmapSize(&sbi, MetaBitmap::kSitBitmap);
-  src_bitmap = static_cast<uint8_t *>(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
+  // setup SIT bitmap from ckeckpoint pack
+  bitmap_size = f2fs::BitmapSize(sbi_, MetaBitmap::kSitBitmap);
+  src_bitmap = static_cast<uint8_t *>(BitmapPrt(sbi_, MetaBitmap::kSitBitmap));
 
-  dst_bitmap = new uint8_t[bitmap_size];
-  memset(dst_bitmap, 0, bitmap_size);
-  if (!dst_bitmap)
+  if (sit_i->sit_bitmap = std::make_unique<uint8_t[]>(bitmap_size); !sit_i->sit_bitmap) {
     return ZX_ERR_NO_MEMORY;
-  memcpy(dst_bitmap, src_bitmap, bitmap_size);
+  }
+  memcpy(sit_i->sit_bitmap.get(), src_bitmap, bitmap_size);
 
 #if 0  // porting needed
   /* init SIT information */
@@ -1716,91 +1607,72 @@ zx_status_t SegMgr::BuildSitInfo() {
   auto cur_time = time(nullptr);
 
   sit_i->sit_base_addr = LeToCpu(raw_super->sit_blkaddr);
-  sit_i->sit_blocks = sit_segs << sbi.log_blocks_per_seg;
+  sit_i->sit_blocks = sit_segs << sbi_->log_blocks_per_seg;
   sit_i->written_valid_blocks = LeToCpu(static_cast<block_t>(ckpt->valid_block_count));
-  sit_i->sit_bitmap = dst_bitmap;
   sit_i->bitmap_size = bitmap_size;
   sit_i->dirty_sentries = 0;
   sit_i->sents_per_block = kSitEntryPerBlock;
-  sit_i->elapsed_time = LeToCpu(sbi.ckpt->elapsed_time);
+  sit_i->elapsed_time = LeToCpu(sbi_->ckpt->elapsed_time);
   sit_i->mounted_time = cur_time;
   return ZX_OK;
 }
 
-zx_status_t SegMgr::BuildFreeSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SmInfo *sm_info = GetSmInfo(&sbi);
-  FreeSegmapInfo *free_i;
+zx_status_t SegmentManager::BuildFreeSegmap() {
   uint32_t bitmap_size, sec_bitmap_size;
 
   // allocate memory for free segmap information
-  free_i = static_cast<FreeSegmapInfo *>(malloc(sizeof(FreeSegmapInfo)));
-  memset(free_i, 0, sizeof(FreeSegmapInfo));
-
-  if (!free_i)
+  if (free_info_ = std::make_unique<FreeSegmapInfo>(); !free_info_) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  GetSmInfo(&sbi)->free_info = free_i;
-
-  bitmap_size = BitmapSize(TotalSegs(&sbi));
-  free_i->free_segmap = static_cast<uint64_t *>(malloc(bitmap_size));
-  if (!free_i->free_segmap)
+  bitmap_size = BitmapSize(TotalSegs());
+  if (free_info_->free_segmap = std::make_unique<uint8_t[]>(bitmap_size);
+      !free_info_->free_segmap) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  sec_bitmap_size = BitmapSize(sbi.total_sections);
-  free_i->free_secmap = static_cast<uint64_t *>(malloc(sec_bitmap_size));
-  if (!free_i->free_secmap)
+  sec_bitmap_size = BitmapSize(sbi_->total_sections);
+  if (free_info_->free_secmap = std::make_unique<uint8_t[]>(sec_bitmap_size);
+      !free_info_->free_secmap) {
     return ZX_ERR_NO_MEMORY;
+  }
 
   // set all segments as dirty temporarily
-  memset(free_i->free_segmap, 0xff, bitmap_size);
-  memset(free_i->free_secmap, 0xff, sec_bitmap_size);
+  memset(free_info_->free_segmap.get(), 0xff, bitmap_size);
+  memset(free_info_->free_secmap.get(), 0xff, sec_bitmap_size);
 
   // init free segmap information
-  free_i->start_segno = GetSegNoFromSeg0(&sbi, sm_info->main_blkaddr);
-  free_i->free_segments = 0;
-  free_i->free_sections = 0;
+  free_info_->start_segno = GetSegNoFromSeg0(main_blkaddr_);
+  free_info_->free_segments = 0;
+  free_info_->free_sections = 0;
 
   return ZX_OK;
 }
 
-zx_status_t SegMgr::BuildCurseg() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *array = nullptr;
-  int i;
-  array = static_cast<CursegInfo *>(calloc(kNrCursegType, sizeof(*array)));
-
-  if (!array)
-    return ZX_ERR_NO_MEMORY;
-
-  GetSmInfo(&sbi)->curseg_array = array;
-
-  for (i = 0; i < kNrCursegType; i++) {
-    array[i].sum_blk = static_cast<SummaryBlock *>(malloc(kPageCacheSize));
-    memset(array[i].sum_blk, 0, kPageCacheSize);
-    if (!array[i].sum_blk)
+zx_status_t SegmentManager::BuildCurseg() {
+  for (int i = 0; i < kNrCursegType; ++i) {
+    if (curseg_array_[i].raw_blk = new FsBlock(); !curseg_array_[i].sum_blk) {
       return ZX_ERR_NO_MEMORY;
-    array[i].segno = kNullSegNo;
-    array[i].next_blkoff = 0;
+    }
+    curseg_array_[i].segno = kNullSegNo;
+    curseg_array_[i].next_blkoff = 0;
   }
   return RestoreCursegSummaries();
 }
 
-void SegMgr::BuildSitEntries() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
-  CursegInfo *curseg = CURSEG_I(&sbi, CursegType::kCursegColdData);
+void SegmentManager::BuildSitEntries() {
+  CursegInfo *curseg = CURSEG_I(CursegType::kCursegColdData);
   SummaryBlock *sum = curseg->sum_blk;
 
-  for (uint32_t start = 0; start < TotalSegs(&sbi); start++) {
-    SegEntry *se = &sit_i->sentries[start];
+  for (uint32_t start = 0; start < TotalSegs(); ++start) {
+    SegmentEntry *se = &sit_info_->sentries[start];
     SitBlock *sit_blk;
     SitEntry sit;
     Page *page = nullptr;
     bool got_it = false;
     {
       fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-      for (int i = 0; i < SitsInCursum(sum); i++) {
+      for (int i = 0; i < SitsInCursum(sum); ++i) {
         if (LeToCpu(SegnoInJournal(sum, i)) == start) {
           sit = *SitInJournal(sum, i);
           got_it = true;
@@ -1811,105 +1683,91 @@ void SegMgr::BuildSitEntries() {
     if (!got_it) {
       page = GetCurrentSitPage(start);
       sit_blk = static_cast<SitBlock *>(PageAddress(page));
-      sit = sit_blk->entries[SitEntryOffset(sit_i, start)];
+      sit = sit_blk->entries[SitEntryOffset(start)];
       F2fsPutPage(page, 1);
     }
     CheckBlockCount(start, &sit);
     SegInfoFromRawSit(se, &sit);
-    if (sbi.segs_per_sec > 1) {
-      SecEntry *e = GetSecEntry(start);
+    if (sbi_->segs_per_sec > 1) {
+      SectionEntry *e = GetSectionEntry(start);
       e->valid_blocks += se->valid_blocks;
     }
   }
 }
 
-void SegMgr::InitFreeSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
+void SegmentManager::InitFreeSegmap() {
   uint32_t start;
   int type;
 
-  for (start = 0; start < TotalSegs(&sbi); start++) {
-    SegEntry *sentry = GetSegEntry(start);
+  for (start = 0; start < TotalSegs(); ++start) {
+    SegmentEntry *sentry = GetSegmentEntry(start);
     if (!sentry->valid_blocks)
       SetFree(start);
   }
 
   // set use the current segments
   for (type = static_cast<int>(CursegType::kCursegHotData);
-       type <= static_cast<int>(CursegType::kCursegColdNode); type++) {
-    CursegInfo *curseg_t = CURSEG_I(&sbi, static_cast<CursegType>(type));
+       type <= static_cast<int>(CursegType::kCursegColdNode); ++type) {
+    CursegInfo *curseg_t = CURSEG_I(static_cast<CursegType>(type));
     SetTestAndInuse(curseg_t->segno);
   }
 }
 
-void SegMgr::InitDirtySegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-  FreeSegmapInfo *free_i = GetFreeInfo(&sbi);
+void SegmentManager::InitDirtySegmap() {
   uint32_t segno = 0, offset = 0;
   uint16_t valid_blocks;
   int full_block_cnt = 0, dirty_block_cnt = 0;
 
-  while (segno < TotalSegs(&sbi)) {
+  while (segno < TotalSegs()) {
     /* find dirty segment based on free segmap */
-    segno = FindNextInuse(free_i, TotalSegs(&sbi), offset);
-    if (segno >= TotalSegs(&sbi))
+    segno = FindNextInuse(TotalSegs(), offset);
+    if (segno >= TotalSegs())
       break;
     offset = segno + 1;
     valid_blocks = static_cast<uint16_t>(GetValidBlocks(segno, 0));
-    if (valid_blocks >= sbi.blocks_per_seg || !valid_blocks) {
-      full_block_cnt++;
+    if (valid_blocks >= sbi_->blocks_per_seg || !valid_blocks) {
+      ++full_block_cnt;
       continue;
     }
-    fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
+    fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
     LocateDirtySegment(segno, DirtyType::kDirty);
-    dirty_block_cnt++;
+    ++dirty_block_cnt;
   }
 
 #ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "SegMgr::InitDirtySegmap, full_block_cnt=" << full_block_cnt
+  FX_LOGS(DEBUG) << "SegmentManager::InitDirtySegmap, full_block_cnt=" << full_block_cnt
                  << ", dirty_block_cnt=" << dirty_block_cnt;
 #endif
 }
 
-zx_status_t SegMgr::InitVictimSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-  uint32_t bitmap_size = BitmapSize(TotalSegs(&sbi));
+zx_status_t SegmentManager::InitVictimSegmap() {
+  uint32_t bitmap_size = BitmapSize(TotalSegs());
 
-  dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)] =
-      static_cast<uint64_t *>(malloc(bitmap_size));
-  memset(dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)], 0, bitmap_size);
-  dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)] =
-      static_cast<uint64_t *>(malloc(bitmap_size));
-  memset(dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)], 0, bitmap_size);
-
-  if (!dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)] ||
-      !dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)])
+  dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)] =
+      std::make_unique<uint8_t[]>(bitmap_size);
+  dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)] =
+      std::make_unique<uint8_t[]>(bitmap_size);
+  if (!dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)] ||
+      !dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)])
     return ZX_ERR_NO_MEMORY;
   return ZX_OK;
 }
 
-zx_status_t SegMgr::BuildDirtySegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i;
+zx_status_t SegmentManager::BuildDirtySegmap() {
   uint32_t bitmap_size, i;
 
-  dirty_i = static_cast<DirtySeglistInfo *>(malloc(sizeof(DirtySeglistInfo)));
-  memset(dirty_i, 0, sizeof(DirtySeglistInfo));
-  if (!dirty_i)
+  if (dirty_info_ = std::make_unique<DirtySeglistInfo>(); !dirty_info_) {
     return ZX_ERR_NO_MEMORY;
+  }
 
-  GetSmInfo(&sbi)->dirty_info = dirty_i;
+  bitmap_size = BitmapSize(TotalSegs());
 
-  bitmap_size = BitmapSize(TotalSegs(&sbi));
-
-  for (i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); i++) {
-    dirty_i->dirty_segmap[i] = static_cast<uint64_t *>(malloc(bitmap_size));
-    memset(dirty_i->dirty_segmap[i], 0, bitmap_size);
-    dirty_i->nr_dirty[i] = 0;
-    if (!dirty_i->dirty_segmap[i])
+  for (i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); ++i) {
+    if (dirty_info_->dirty_segmap[i] = std::make_unique<uint8_t[]>(bitmap_size);
+        !dirty_info_->dirty_segmap[i]) {
       return ZX_ERR_NO_MEMORY;
+    }
+    dirty_info_->nr_dirty[i] = 0;
   }
 
   InitDirtySegmap();
@@ -1917,51 +1775,41 @@ zx_status_t SegMgr::BuildDirtySegmap() {
 }
 
 // Update min, max modified time for cost-benefit GC algorithm
-void SegMgr::InitMinMaxMtime() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::InitMinMaxMtime() {
   uint32_t segno;
 
-  fbl::AutoLock sentry_lock(&sit_i->sentry_lock);
+  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
 
-  sit_i->min_mtime = LLONG_MAX;
+  sit_info_->min_mtime = LLONG_MAX;
 
-  for (segno = 0; segno < TotalSegs(&sbi); segno += sbi.segs_per_sec) {
+  for (segno = 0; segno < TotalSegs(); segno += sbi_->segs_per_sec) {
     uint32_t i;
     uint64_t mtime = 0;
 
-    for (i = 0; i < sbi.segs_per_sec; i++)
-      mtime += GetSegEntry(segno + i)->mtime;
+    for (i = 0; i < sbi_->segs_per_sec; ++i)
+      mtime += GetSegmentEntry(segno + i)->mtime;
 
-    mtime = DivU64(mtime, sbi.segs_per_sec);
+    mtime = DivU64(mtime, sbi_->segs_per_sec);
 
-    if (sit_i->min_mtime > mtime)
-      sit_i->min_mtime = mtime;
+    if (sit_info_->min_mtime > mtime) {
+      sit_info_->min_mtime = mtime;
+    }
   }
-  sit_i->max_mtime = GetMtime();
+  sit_info_->max_mtime = GetMtime();
 }
 
-zx_status_t SegMgr::BuildSegmentManager() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  const SuperBlock *raw_super = RawSuper(&sbi);
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
-  SmInfo *sm_info = nullptr;
+zx_status_t SegmentManager::BuildSegmentManager() {
+  const SuperBlock *raw_super = RawSuper(sbi_);
+  Checkpoint *ckpt = GetCheckpoint(sbi_);
   zx_status_t err = 0;
 
-  sm_info = new SmInfo;
-  if (!sm_info)
-    return ZX_ERR_NO_MEMORY;
-
-  // init sm info
-  sbi.sm_info = sm_info;
-
-  sm_info->seg0_blkaddr = LeToCpu(raw_super->segment0_blkaddr);
-  sm_info->main_blkaddr = LeToCpu(raw_super->main_blkaddr);
-  sm_info->segment_count = LeToCpu(raw_super->segment_count);
-  sm_info->reserved_segments = LeToCpu(ckpt->rsvd_segment_count);
-  sm_info->ovp_segments = LeToCpu(ckpt->overprov_segment_count);
-  sm_info->main_segments = LeToCpu(raw_super->segment_count_main);
-  sm_info->ssa_blkaddr = LeToCpu(raw_super->ssa_blkaddr);
+  seg0_blkaddr_ = LeToCpu(raw_super->segment0_blkaddr);
+  main_blkaddr_ = LeToCpu(raw_super->main_blkaddr);
+  segment_count_ = LeToCpu(raw_super->segment_count);
+  reserved_segments_ = LeToCpu(ckpt->rsvd_segment_count);
+  ovp_segments_ = LeToCpu(ckpt->overprov_segment_count);
+  main_segments_ = LeToCpu(raw_super->segment_count_main);
+  ssa_blkaddr_ = LeToCpu(raw_super->ssa_blkaddr);
 
   err = BuildSitInfo();
   if (err)
@@ -1983,115 +1831,76 @@ zx_status_t SegMgr::BuildSegmentManager() {
   if (err)
     return err;
 
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "SegMgr::BuildSegmentManager(), TotalSegs(&sbi)=" << TotalSegs(&sbi);
-  FX_LOGS(DEBUG) << "SegMgr::BuildSegmentManager(), ReservedSections()=" << ReservedSections();
-  FX_LOGS(DEBUG) << "SegMgr::BuildSegmentManager(), OverprovisionSections()="
-                 << OverprovisionSections();
-#endif
-
   InitMinMaxMtime();
   return ZX_OK;
 }
 
-void SegMgr::DiscardDirtySegmap(DirtyType dirty_type) {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-
-  fbl::AutoLock seglist_lock(&dirty_i->seglist_lock);
-  free(dirty_i->dirty_segmap[static_cast<int>(dirty_type)]);
-  dirty_i->nr_dirty[static_cast<int>(dirty_type)] = 0;
+void SegmentManager::DiscardDirtySegmap(DirtyType dirty_type) {
+  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
+  dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].reset();
+  dirty_info_->nr_dirty[static_cast<int>(dirty_type)] = 0;
 }
 
-void SegMgr::ResetVictimSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  uint32_t bitmap_size = BitmapSize(TotalSegs(&sbi));
-  memset(GetDirtyInfo(&sbi)->victim_segmap[static_cast<int>(GcType::kFgGc)], 0, bitmap_size);
+void SegmentManager::ResetVictimSegmap() {
+  uint32_t bitmap_size = BitmapSize(TotalSegs());
+  memset(dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].get(), 0, bitmap_size);
 }
 
-void SegMgr::DestroyVictimSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-
-  free(dirty_i->victim_segmap[static_cast<int>(GcType::kFgGc)]);
-  free(dirty_i->victim_segmap[static_cast<int>(GcType::kBgGc)]);
+void SegmentManager::DestroyVictimSegmap() {
+  dirty_info_->victim_segmap[static_cast<int>(GcType::kFgGc)].reset();
+  dirty_info_->victim_segmap[static_cast<int>(GcType::kBgGc)].reset();
 }
 
-void SegMgr::DestroyDirtySegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  DirtySeglistInfo *dirty_i = GetDirtyInfo(&sbi);
-  int i;
-
-  if (!dirty_i)
+void SegmentManager::DestroyDirtySegmap() {
+  if (!dirty_info_)
     return;
 
   /* discard pre-free/dirty segments list */
-  for (i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); i++)
+  for (int i = 0; i < static_cast<int>(DirtyType::kNrDirtytype); ++i) {
     DiscardDirtySegmap(static_cast<DirtyType>(i));
+  }
 
   DestroyVictimSegmap();
-  GetSmInfo(&sbi)->dirty_info = nullptr;
-  free(dirty_i);
+  dirty_info_.reset();
 }
 
 // TODO: destroy_curseg
-void SegMgr::DestroyCurseg() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  CursegInfo *array = GetSmInfo(&sbi)->curseg_array;
-  int i;
-
-  if (!array)
-    return;
-  GetSmInfo(&sbi)->curseg_array = nullptr;
-  for (i = 0; i < kNrCursegType; i++)
-    free(array[i].sum_blk);
-  free(array);
+void SegmentManager::DestroyCurseg() {
+  for (int i = 0; i < kNrCursegType; ++i)
+    delete curseg_array_[i].raw_blk;
 }
 
-void SegMgr::DestroyFreeSegmap() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  FreeSegmapInfo *free_i = GetSmInfo(&sbi)->free_info;
-  if (!free_i)
+void SegmentManager::DestroyFreeSegmap() {
+  if (!free_info_)
     return;
-  GetSmInfo(&sbi)->free_info = nullptr;
-  free(free_i->free_segmap);
-  free(free_i->free_secmap);
-  free(free_i);
+  free_info_->free_segmap.reset();
+  free_info_->free_secmap.reset();
+  free_info_.reset();
 }
 
-void SegMgr::DestroySitInfo() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SitInfo *sit_i = GetSitInfo(&sbi);
+void SegmentManager::DestroySitInfo() {
   uint32_t start;
 
-  if (!sit_i)
+  if (!sit_info_)
     return;
 
-  if (sit_i->sentries) {
-    for (start = 0; start < TotalSegs(&sbi); start++) {
-      free(sit_i->sentries[start].cur_valid_map);
-      free(sit_i->sentries[start].ckpt_valid_map);
+  if (sit_info_->sentries) {
+    for (start = 0; start < TotalSegs(); ++start) {
+      sit_info_->sentries[start].cur_valid_map.reset();
+      sit_info_->sentries[start].ckpt_valid_map.reset();
     }
   }
-  free(sit_i->sentries);
-  free(sit_i->sec_entries);
-  free(sit_i->dirty_sentries_bitmap);
-
-  GetSmInfo(&sbi)->SitInfo = nullptr;
-  delete[] sit_i->sit_bitmap;
-  free(sit_i);
+  delete[] sit_info_->sentries;
+  delete[] sit_info_->sec_entries;
+  sit_info_->dirty_sentries_bitmap.reset();
+  sit_info_->sit_bitmap.reset();
 }
 
-void SegMgr::DestroySegmentManager() {
-  SbInfo &sbi = fs_->GetSbInfo();
-  SmInfo *sm_info = GetSmInfo(&sbi);
-
+void SegmentManager::DestroySegmentManager() {
   DestroyDirtySegmap();
   DestroyCurseg();
   DestroyFreeSegmap();
   DestroySitInfo();
-  sbi.sm_info = nullptr;
-  delete sm_info;
 }
 
 }  // namespace f2fs

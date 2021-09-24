@@ -44,8 +44,20 @@ constexpr int kMaxActiveLogs = 16;
 constexpr int kMaxActiveNodeLogs = 8;
 constexpr int kMaxActiveDataLogs = 8;
 
-struct FsBlock {
-  uint8_t data[kBlockSize];
+class FsBlock {
+ public:
+  FsBlock() { memset(data_, 0, kBlockSize); }
+  FsBlock(uint8_t (&block)[kBlockSize]) { memcpy(data_, block, kBlockSize); }
+  FsBlock(const FsBlock &block) = delete;
+  FsBlock &operator=(const FsBlock &block) = delete;
+  FsBlock &operator=(const uint8_t (&block)[kBlockSize]) {
+    memcpy(data_, block, kBlockSize);
+    return *this;
+  }
+  cpp20::span<uint8_t> GetData() { return cpp20::span<uint8_t>(data_); }
+
+ private:
+  uint8_t data_[kBlockSize];
 };
 
 struct GlobalParameters {

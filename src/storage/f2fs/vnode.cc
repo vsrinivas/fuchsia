@@ -369,7 +369,7 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
     MarkInodeDirty();
   }
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
   return ret;
 }
 
@@ -387,7 +387,7 @@ int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
       continue;
 
     UpdateExtentCache(kNullAddr, dn);
-    Vfs()->Segmgr().InvalidateBlocks(blkaddr);
+    Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
     Vfs()->DecValidBlockCount(dn->vnode, 1);
     nr_free++;
   }

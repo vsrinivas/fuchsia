@@ -130,7 +130,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 #endif
   vnode->UnlockNewInode();
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
 
   *out = std::move(vnode_refptr);
   return ZX_OK;
@@ -175,7 +175,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   // d_instantiate(dentry, inode);
 #endif
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
 
   return ZX_OK;
 }
@@ -248,7 +248,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     DeleteEntry(de, page, vnode);
   }
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
   F2fsPutPage(page, 0);
   return ZX_OK;
 }
@@ -278,7 +278,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
 //   //   // d_instantiate(dentry, vnode);
 //   //   UnlockNewInode(vnode);
 
-//   //   Vfs()->Segmgr().BalanceFs();
+//   //   Vfs()->GetSegmentManager().BalanceFs();
 
 //   //   return err;
 //   // out:
@@ -324,7 +324,7 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
 #endif
   vnode->UnlockNewInode();
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
 
   *out = std::move(vnode_refptr);
   return ZX_OK;
@@ -361,7 +361,7 @@ zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
 //   // d_instantiate(dentry, inode);
 //   UnlockNewInode(vnode);
 
-//   Vfs()->Segmgr().BalanceFs();
+//   Vfs()->GetSegmentManager().BalanceFs();
 
 //   return 0;
 // out:
@@ -592,7 +592,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     }
   } while (false);
 
-  Vfs()->Segmgr().BalanceFs();
+  Vfs()->GetSegmentManager().BalanceFs();
   reset_pages();
   return ZX_OK;
 }

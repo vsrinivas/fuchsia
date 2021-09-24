@@ -24,15 +24,12 @@ void F2fs::PutSuper() {
 
   /* destroy f2fs internal modules */
   node_manager_->DestroyNodeManager();
-  seg_mgr_->DestroySegmentManager();
+  segment_manager_->DestroySegmentManager();
 
   delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
 
-#if 0  // porting needed
-  //   brelse(sbi_->raw_super_buf);
-#endif
   node_manager_.reset();
-  seg_mgr_.reset();
+  segment_manager_.reset();
   raw_sb_.reset();
   sbi_.reset();
 }
@@ -272,9 +269,9 @@ void F2fs::Reset() {
     node_manager_->DestroyNodeManager();
     node_manager_.reset();
   }
-  if (seg_mgr_) {
-    seg_mgr_->DestroySegmentManager();
-    seg_mgr_.reset();
+  if (segment_manager_) {
+    segment_manager_->DestroySegmentManager();
+    segment_manager_.reset();
   }
   if (sbi_->ckpt) {
     delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
@@ -293,7 +290,6 @@ zx_status_t F2fs::FillSuper() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  memset(sbi_.get(), 0, sizeof(SbInfo));
   ParseOptions();
 
   // sanity checking of raw super
@@ -329,12 +325,12 @@ zx_status_t F2fs::FillSuper() {
 
   InitOrphanInfo();
 
-  if (seg_mgr_ = std::make_unique<SegMgr>(this); seg_mgr_ == nullptr) {
+  if (segment_manager_ = std::make_unique<SegmentManager>(this); segment_manager_ == nullptr) {
     err = ZX_ERR_NO_MEMORY;
     return err;
   }
 
-  if (err = seg_mgr_->BuildSegmentManager(); err != ZX_OK) {
+  if (err = segment_manager_->BuildSegmentManager(); err != ZX_OK) {
     return err;
   }
 

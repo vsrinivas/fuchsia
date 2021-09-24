@@ -29,7 +29,6 @@ TEST(NodeManagerTest, NatCache) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  SbInfo &sbi = fs->GetSbInfo();
   NodeManager &node_manager = fs->GetNodeManager();
 
   fbl::RefPtr<VnodeF2fs> root;
@@ -91,7 +90,7 @@ TEST(NodeManagerTest, NatCache) {
   MapTester::RemoveAllNatEntries(node_manager);
   ASSERT_EQ(node_manager.GetNatCount(), static_cast<uint32_t>(0));
 
-  CursegInfo *curseg = SegMgr::CURSEG_I(&sbi, CursegType::kCursegHotData);  // NAT Journal
+  CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);  // NAT Journal
   SummaryBlock *sum = curseg->sum_blk;
 
   MapTester::GetNatCacheEntryCount(node_manager, num_tree, num_clean, num_dirty);
