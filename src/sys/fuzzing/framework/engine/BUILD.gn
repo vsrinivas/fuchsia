@@ -14,13 +14,36 @@ source_set("engine") {
     "module-pool.h",
     "module-proxy.cc",
     "module-proxy.h",
+    "process-proxy.cc",
+    "process-proxy.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.mem",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
   ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/inspector",
+  ]
+}
+
+source_set("testing") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "process-proxy-test.cc",
+    "process-proxy-test.h",
+  ]
+  public_deps = [
+    ":engine",
+    "../target:no_hooks",
+    "../testing",
+    "//src/sys/fuzzing/common/testing",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 source_set("unittests") {
@@ -31,11 +54,21 @@ source_set("unittests") {
     "dictionary-unittest.cc",
     "module-pool-unittest.cc",
     "module-proxy-unittest.cc",
+    "process-proxy-unittest.cc",
   ]
   deps = [
-    ":engine",
-    "../target:no_hooks",
-    "../testing",
-    "//third_party/googletest:gtest",
+    ":testing",
+    "../testing:target",
+  ]
+}
+
+# These unit tests emit fatal logs.
+source_set("fatal-unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "process-proxy-fatal-unittest.cc" ]
+  deps = [
+    ":testing",
+    "../testing:target",
   ]
 }

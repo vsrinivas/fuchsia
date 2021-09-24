@@ -10,11 +10,28 @@ source_set("testing") {
     "module.h",
     "process-proxy.cc",
     "process-proxy.h",
+    "target.cc",
+    "target.h",
   ]
-  public_deps = [ "../target:no_hooks" ]
+  public_deps = [
+    "../target:no_hooks",
+    "//zircon/system/ulib/zx",
+  ]
   deps = [
     "../engine",
+    "//sdk/lib/fdio",
     "//src/sys/fuzzing/common/testing",
     "//zircon/system/ulib/sync",
+  ]
+}
+
+executable("target") {
+  output_name = "component_fuzzing_test_target"
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "target-main.cc" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
   ]
 }

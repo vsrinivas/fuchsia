@@ -17,13 +17,15 @@ source_set("common") {
     "shared-memory.h",
     "signal-coordinator.cc",
     "signal-coordinator.h",
+    "status.cc",
+    "status.h",
   ]
   public_deps = [
     "../fidl:fuchsia.fuzzer",
     "//sdk/fidl/fuchsia.mem",
-    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]

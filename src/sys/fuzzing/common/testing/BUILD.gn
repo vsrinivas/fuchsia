@@ -11,10 +11,14 @@ source_set("testing") {
     "signal-coordinator.cc",
     "signal-coordinator.h",
   ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
   public_deps = [
     "..:common",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
   ]
-  deps = [ "//zircon/system/ulib/async-loop:async-loop-default" ]
 }

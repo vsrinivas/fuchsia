@@ -6,7 +6,10 @@ import("//build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":component-fuzzing-tests" ]
+  deps = [
+    ":component-fuzzing-fatal-tests",
+    ":component-fuzzing-tests",
+  ]
 }
 
 fuchsia_component("common-unittests") {
@@ -21,9 +24,25 @@ fuchsia_component("framework-unittests") {
   deps = [ "framework:unittests" ]
 }
 
+fuchsia_component("framework-fatal-unittests") {
+  testonly = true
+  manifest = "meta/framework-fatal-unittests.cml"
+  deps = [ "framework:fatal-unittests" ]
+}
+
 fuchsia_test_package("component-fuzzing-tests") {
   test_components = [
     ":common-unittests",
     ":framework-unittests",
   ]
+}
+
+fuchsia_test_package("component-fuzzing-fatal-tests") {
+  # These tests involve handling intentional crashes.
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
+  test_components = [ ":framework-fatal-unittests" ]
 }

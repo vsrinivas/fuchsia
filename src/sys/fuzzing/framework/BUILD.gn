@@ -14,3 +14,13 @@ test("unittests") {
     "//src/lib/fxl/test:gtest_main",
   ]
 }
+
+test("fatal-unittests") {
+  output_name = "component_fuzzing_framework_fatal_unittests"
+  visibility = [ "../*" ]
+  testonly = true
+  deps = [
+    "engine:fatal-unittests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
