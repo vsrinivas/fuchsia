@@ -9,6 +9,7 @@ import 'dart:math';
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
+import 'package:ffx/ffx.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:flutter_driver/flutter_driver.dart';
@@ -21,6 +22,9 @@ const ermineUrl = 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
+
+/// Path to the ffx executable, relative to the test dart file.
+const ffxRelativePath = 'runtime_deps/ffx';
 
 // USB HID code for ENTER key.
 // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
@@ -40,8 +44,10 @@ class ErmineDriver {
   final Sl4f sl4f;
   final Component _component;
 
+  Ffx? _ffx;
   FlutterDriver? _driver;
   final FlutterDriverConnector _connector;
+  Process? _ffxDaemon;
 
   /// Constructor.
   ErmineDriver(this.sl4f)
@@ -59,11 +65,20 @@ class ErmineDriver {
   /// This restarts the workstation session and connects to the running instance
   /// of Ermine using FlutterDriver.
   Future<void> setUp() async {
+    // Create a ffx client.
+    final ffxAbsolutePath =
+        Platform.script.resolve(ffxRelativePath).toFilePath();
+    final ffxRunner = FfxRunner(ffxAbsolutePath);
+    _ffx = await Ffx.fromEnvironment(runner: ffxRunner);
+
+    // Start the ffx daemon in the current working directory.
+    // This ensures that ffx can read the SSH private key from $FUCHSIA_SSH_KEY
+    // TOOD(fxbug.dev/85089): Remove this workaround
+    _ffxDaemon = await Process.start(ffxAbsolutePath, ['daemon', 'start'],
+        runInShell: true, mode: ProcessStartMode.normal);
+
     // Restart the workstation session.
-    final result = await sl4f.ssh.run('session_control restart');
-    if (result.exitCode != 0) {
-      fail('failed to restart workstation session.');
-    }
+    await _ffx!.run(['session', 'restart']);
 
     // Initialize Ermine's flutter driver and web driver connectors.
     await _connector.initialize();
@@ -85,15 +100,14 @@ class ErmineDriver {
   Future<void> tearDown() async {
     await _driver?.close();
     await _connector.tearDown();
+    _ffxDaemon!.kill();
   }
 
   /// Launch a component given its [componentUrl].
   Future<bool> launch(String componentUrl,
       {Duration timeout = waitForTimeout}) async {
-    final result = await sl4f.ssh.run('session_control add $componentUrl');
-    if (result.exitCode != 0) {
-      fail('failed to launch component: $componentUrl.');
-    }
+    await _ffx!.run(['session', 'add', componentUrl]);
+
     final running = await isRunning(componentUrl, timeout: timeout);
     if (!running) {
       fail('Timed out waiting to launch $componentUrl');

@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
 
 # E2E product test runtime dependencies specific to end to end product tests for
 # products in src/experiences.
@@ -17,16 +18,33 @@ group("end_to_end_deps") {
 _service_account =
     "fuchsia-e2e-auth@fuchsia-cloud-api-for-test.iam.gserviceaccount.com"
 
-host_test_data("scuba_goldens") {
-  sources = [
-    "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_after.png",
-    "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_before.png",
-  ]
-  outputs = [ "$root_out_dir/scuba_goldens/{{source_file_part}}" ]
+if (is_host) {
+  host_test_data("scuba_goldens") {
+    sources = [
+      "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_after.png",
+      "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_before.png",
+    ]
+    outputs = [ "$root_out_dir/scuba_goldens/{{source_file_part}}" ]
+  }
+
+  host_test_data("chromedriver") {
+    sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+  }
+
+  host_test_data("ffx") {
+    sources = [ "$root_out_dir/ffx" ]
+
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+
+    deps = [ "//src/developer/ffx:bin_sdk($host_toolchain)" ]
+  }
 }
 
 dart_test("experiences_ermine_session_shell_e2e_test") {
   null_safe = true
+
   sources = [
     "ermine_intl_test.dart",
     #    "ermine_session_shell_ask_test.dart",
@@ -47,6 +65,9 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/test",
   ]
+
+  # TODO(fxbug.dev/63133): Migrate away from deprecated non_dart_deps
+  non_dart_deps = [ ":ffx($host_toolchain)" ]
 
   environments = [
     {
@@ -85,6 +106,9 @@ dart_test("experiences_ermine_terminal_e2e_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  # TODO(fxbug.dev/63133): Migrate away from deprecated non_dart_deps
+  non_dart_deps = [ ":ffx($host_toolchain)" ]
+
   environments = [
     {
       dimensions = {
@@ -112,7 +136,6 @@ dart_test("experiences_ermine_simple_browser_e2e_test") {
   sources = [ "ermine_session_shell_simple_browser_test.dart" ]
 
   deps = [
-    ":scuba_goldens",
     "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
@@ -126,7 +149,12 @@ dart_test("experiences_ermine_simple_browser_e2e_test") {
     "//third_party/dart-pkg/pub/webdriver",
   ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  # TODO(fxbug.dev/63133): Migrate away from deprecated non_dart_deps
+  non_dart_deps = [
+    ":chromedriver($host_toolchain)",
+    ":ffx($host_toolchain)",
+    ":scuba_goldens($host_toolchain)",
+  ]
 
   environments = [
     {
@@ -169,6 +197,9 @@ dart_test("experiences_ermine_smoke_e2e_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  # TODO(fxbug.dev/63133): Migrate away from deprecated non_dart_deps
+  non_dart_deps = [ ":ffx($host_toolchain)" ]
+
   environments = [
     {
       dimensions = {
@@ -188,29 +219,23 @@ dart_test("experiences_ermine_smoke_e2e_test") {
   ]
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
-
-  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
-
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/chromedriver" ]
-  }
-}
-
 group("test") {
   testonly = true
-  if (is_host && is_linux) {
-    # Chromedriver prebuilt is only available for linux-x64
-    deps = [
-      ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+  deps = []
 
-      # TODO(fxb/84527): Re-enable the test once the blocking issue is fixed
-      # ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
+  if (is_host) {
+    deps += [
+      ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
       ":experiences_ermine_terminal_e2e_test($host_toolchain)",
+    ]
+  }
+
+  # Chromedriver prebuilt is only available for linux-x64
+  if (is_host && is_linux) {
+    deps += [
+      # TODO(fxb/84527): Re-enable the test once the blocking issue is fixed
+      # ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
     ]
   }
 }

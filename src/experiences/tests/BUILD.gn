@@ -3,9 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_library.gni")
-import("//build/dart/test.gni")
 
+# This library depends on the `ffx` binary available at `runtime_deps/ffx`
+# relative to the calling script. Unfortunately, specifying ffx as a dep
+# here places the binary in the wrong place.
 dart_library("ermine_driver") {
+  testonly = true
   null_safe = true
   package_name = "ermine_driver"
 
@@ -17,6 +20,7 @@ dart_library("ermine_driver") {
     "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/testing/ffx",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
