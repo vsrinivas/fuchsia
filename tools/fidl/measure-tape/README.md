@@ -34,8 +34,7 @@ _This template must be imported with
 
  * `target_types` key indicates the list of FIDL target types for which to
    generate a measure tape. Target types must be provided in its fully qualified
-   form, e.g. `fuchsia.ui.scenic/Command` or `fuchsia.mem/Buffer`. Only the
-   `hlcpp` backend supports multiple target types for now.
+   form, e.g. `fuchsia.ui.scenic/Command` or `fuchsia.mem/Buffer`.
 
  * `fidls` key must list all FIDL libraries transitively reachable through the
    target type. For instance, the `fuchsia.ui.scenic/Command` requires

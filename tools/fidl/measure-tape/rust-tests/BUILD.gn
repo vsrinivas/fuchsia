@@ -22,6 +22,9 @@ rustc_test("rust-tests") {
 measure_tape("measure_tape_for_toplevelunion") {
   testonly = true
   target_binding = "rust"
-  target_types = [ "measuretape/TopLevelUnion" ]
+  target_types = [
+    "measuretape/TopLevelUnion",
+    "measuretape/AnotherTopLevelThing",
+  ]
   fidls = [ "//tools/fidl/measure-tape/testdata:measuretape" ]
 }

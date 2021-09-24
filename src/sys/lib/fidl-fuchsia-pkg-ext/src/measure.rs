@@ -12,19 +12,19 @@ pub trait Measurable {
 
 impl Measurable for fidl::BlobId {
     fn measure(&self) -> usize {
-        measure_fuchsia_pkg_blob_id::measure(self).num_bytes
+        measure_fuchsia_pkg::Measurable::measure(self).num_bytes
     }
 }
 
 impl Measurable for fidl::BlobInfo {
     fn measure(&self) -> usize {
-        measure_fuchsia_pkg_blob_info::measure(self).num_bytes
+        measure_fuchsia_pkg::Measurable::measure(self).num_bytes
     }
 }
 
 impl Measurable for fidl::PackageIndexEntry {
     fn measure(&self) -> usize {
-        measure_fuchsia_pkg_index_entry::measure(self).num_bytes
+        measure_fuchsia_pkg::Measurable::measure(self).num_bytes
     }
 }
 

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 group("stash") {
   testonly = true
@@ -27,10 +28,9 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    ":measure_tape_for_stash",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//sdk/fidl/fuchsia.stash:rust_measure_tape_for_key_value",
-    "//sdk/fidl/fuchsia.stash:rust_measure_tape_for_list_item",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -53,6 +53,18 @@ rustc_binary("bin") {
     "src/instance.rs",
     "src/main.rs",
     "src/store.rs",
+  ]
+}
+
+measure_tape("measure_tape_for_stash") {
+  target_binding = "rust"
+  target_types = [
+    "fuchsia.stash/ListItem",
+    "fuchsia.stash/KeyValue",
+  ]
+  fidls = [
+    "//sdk/fidl/fuchsia.stash",
+    "//sdk/fidl/fuchsia.mem",
   ]
 }
 

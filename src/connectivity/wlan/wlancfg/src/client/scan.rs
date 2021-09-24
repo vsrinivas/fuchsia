@@ -21,7 +21,7 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
     log::{debug, error, info, warn},
-    measure_tape_for_scan_result::measure,
+    measure_tape_for_scan_result::Measurable as _,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
     stream::FuturesUnordered,
     wlan_common::{self, channel::Channel},
@@ -539,7 +539,7 @@ async fn send_scan_results_over_fidl(
             batch_size = FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE;
             // Peek if next element exists and will fit in current batch
             while let Some(peeked_result) = remaining_results.peek() {
-                let result_size = measure(peeked_result).num_bytes;
+                let result_size = peeked_result.measure().num_bytes;
                 if result_size + FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE > max_batch_size {
                     return Err(format_err!("Single scan result too large to send via FIDL"));
                 }
@@ -1138,7 +1138,7 @@ mod tests {
             entries: Some(vec![]),
             ..fidl_policy::ScanResult::EMPTY
         };
-        let minimal_result_size: usize = measure(&minimal_scan_result).num_bytes;
+        let minimal_result_size: usize = minimal_scan_result.measure().num_bytes;
 
         // Create result with single entry
         let mut scan_result_with_one_bss = minimal_scan_result.clone();
@@ -1146,7 +1146,7 @@ mod tests {
 
         // Size of each additional BSS entry to FIDL ScanResult
         let empty_bss_entry_size: usize =
-            measure(&scan_result_with_one_bss).num_bytes - minimal_result_size;
+            scan_result_with_one_bss.measure().num_bytes - minimal_result_size;
 
         // Validate size is possible
         if result_sizes.iter().any(|size| size < &minimal_result_size || size % 8 != 0) {
@@ -1169,7 +1169,7 @@ mod tests {
             scan_result.entries = Some(vec![fidl_policy::Bss::EMPTY; num_bss_for_ap]);
 
             // Validate result measures to expected size.
-            assert_eq!(measure(&scan_result).num_bytes, size);
+            assert_eq!(scan_result.measure().num_bytes, size);
 
             fidl_scan_results.push(scan_result);
         }
@@ -2792,7 +2792,7 @@ mod tests {
     fn scan_result_generate_from_size() {
         let scan_results = create_fidl_scan_results_from_size(vec![112; 4]);
         assert_eq!(scan_results.len(), 4);
-        assert!(scan_results.iter().all(|scan_result| measure(scan_result).num_bytes == 112));
+        assert!(scan_results.iter().all(|scan_result| scan_result.measure().num_bytes == 112));
     }
 
     #[fuchsia::test]

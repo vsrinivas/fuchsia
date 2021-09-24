@@ -20,19 +20,19 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/rust"
 )
 
-type paths []string
+type listOfStrings []string
 
-func (filenames *paths) String() string {
-	return strings.Join(*filenames, " ")
+func (l *listOfStrings) String() string {
+	return strings.Join(*l, " ")
 }
 
-func (filenames *paths) Set(filename string) error {
-	*filenames = append(*filenames, filename)
+func (l *listOfStrings) Set(s string) error {
+	*l = append(*l, s)
 	return nil
 }
 
-var jsonFiles paths
-var targetTypes paths
+var jsonFiles listOfStrings
+var targetTypes listOfStrings
 var targetBinding = flag.String("target-binding", "",
 	"Target binding for which to generate the measure tape")
 var outCc = flag.String("out-cc", "",
@@ -66,10 +66,6 @@ func flagsValid() bool {
 		}
 	case "rust":
 		if len(*outRs) == 0 {
-			return false
-		}
-		// Rust backend only support a single target type for now.
-		if len(targetTypes) != 1 {
 			return false
 		}
 	default:
@@ -118,7 +114,7 @@ func main() {
 	case "hlcpp":
 		hlcppGen(m, targetMts, allMethods)
 	case "rust":
-		rustGen(m, targetMts[0], allMethods)
+		rustGen(m, targetMts, allMethods)
 	}
 }
 
@@ -177,10 +173,11 @@ func verifyMeasureTape(expectedH, expectedCc []byte) {
 	writeFile(*onlyCheckToFile, []byte{})
 }
 
-func rustGen(m *measurer.Measurer, targetMt *measurer.MeasuringTape,
+func rustGen(m *measurer.Measurer,
+	targetMts []*measurer.MeasuringTape,
 	allMethods map[measurer.MethodID]*measurer.Method) {
 
 	var bufRs bytes.Buffer
-	rust.WriteRs(&bufRs, m, targetMt, allMethods)
+	rust.WriteRs(&bufRs, m, targetMts, allMethods)
 	writeFile(*outRs, bufRs.Bytes())
 }

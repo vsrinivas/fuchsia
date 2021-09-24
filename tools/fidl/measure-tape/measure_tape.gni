@@ -7,11 +7,11 @@ import("//build/fidl/toolchain.gni")
 
 # Declares a Measure Tape.
 #
-# This target generates an HLCPP measuring tape for one or multiple target types.
+# This target generates a measuring tape for one or multiple target types.
 #
 # Parameters
 #
-#   target_bindings (required)
+#   target_binding (required)
 #     The binding for which to create the measure tape. Both `hlcpp` and `rust`
 #     are supported.
 #

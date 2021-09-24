@@ -6,21 +6,13 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//tools/fidl/measure-tape/measure_tape.gni")
 
-measure_tape("measure_fuchsia_pkg_index_entry") {
+measure_tape("measure_fuchsia_pkg") {
   fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_types = [ "fuchsia.pkg/PackageIndexEntry" ]
-  target_binding = "rust"
-}
-
-measure_tape("measure_fuchsia_pkg_blob_id") {
-  fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_types = [ "fuchsia.pkg/BlobId" ]
-  target_binding = "rust"
-}
-
-measure_tape("measure_fuchsia_pkg_blob_info") {
-  fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_types = [ "fuchsia.pkg/BlobInfo" ]
+  target_types = [
+    "fuchsia.pkg/PackageIndexEntry",
+    "fuchsia.pkg/BlobId",
+    "fuchsia.pkg/BlobInfo",
+  ]
   target_binding = "rust"
 }
 
@@ -30,9 +22,7 @@ rustc_library("fidl-fuchsia-pkg-ext") {
   with_unit_tests = true
 
   deps = [
-    ":measure_fuchsia_pkg_blob_id",
-    ":measure_fuchsia_pkg_blob_info",
-    ":measure_fuchsia_pkg_index_entry",
+    ":measure_fuchsia_pkg",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fidl/rust/fidl",

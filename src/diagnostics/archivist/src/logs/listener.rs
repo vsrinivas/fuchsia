@@ -8,7 +8,7 @@ use fidl_fuchsia_logger::{
 };
 use fuchsia_async::Task;
 use futures::prelude::*;
-use logmessage_measure_tape::measure;
+use logmessage_measure_tape::Measurable as _;
 use std::{sync::Arc, task::Poll};
 use thiserror::Error;
 use tracing::{debug, error, trace};
@@ -108,7 +108,7 @@ impl Listener {
                 // Convert archivist-encoded log message to legacy format expected
                 // by the listener, then use measure_tape to get true size.
                 let legacy_msg = msg.for_listener();
-                let msg_size = measure(&legacy_msg).num_bytes;
+                let msg_size = legacy_msg.measure().num_bytes;
 
                 // If a message by itself is too big to fit into fidl, warn and skip.
                 if msg_size + FIDL_VECTOR_HEADER_BYTES

@@ -14,8 +14,7 @@ use fuchsia_zircon_sys;
 use fuchsia_zircon_sys::ZX_CHANNEL_MAX_MSG_BYTES;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
-use rust_measure_tape_for_key_value::measure as key_value_measure;
-use rust_measure_tape_for_list_item::measure as list_item_measure;
+use measure_tape_for_stash::Measurable as _;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -156,7 +155,7 @@ impl Accessor {
 
                     let mut item_index = 0;
                     for result in iter.clone() {
-                        bytes_used += list_item_measure(&result).num_bytes;
+                        bytes_used += result.measure().num_bytes;
                         if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
                             break;
                         }
@@ -243,7 +242,7 @@ impl Accessor {
                         match iter.peek() {
                             None => break,
                             Some(next_item) => {
-                                bytes_used += key_value_measure(next_item).num_bytes;
+                                bytes_used += next_item.measure().num_bytes;
                                 if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
                                     break;
                                 }

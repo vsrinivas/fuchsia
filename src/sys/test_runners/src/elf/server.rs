@@ -20,7 +20,7 @@ use {
         prelude::*,
     },
     log::{error, warn},
-    rust_measure_tape_for_case::measure,
+    rust_measure_tape_for_case::Measurable as _,
     std::{
         pin::Pin,
         sync::{Arc, Weak},
@@ -115,7 +115,7 @@ pub trait SuiteServer: Sized + Sync + Send {
                                 let mut bytes_used: usize = 32;
                                 let mut case_count = 0;
                                 for case in iter.clone() {
-                                    bytes_used += measure(&case).num_bytes;
+                                    bytes_used += case.measure().num_bytes;
                                     if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
                                         break;
                                     }

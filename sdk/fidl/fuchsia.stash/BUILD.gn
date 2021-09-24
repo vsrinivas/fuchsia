@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//tools/fidl/measure-tape/measure_tape.gni")
 
 fidl("fuchsia.stash") {
   sources = [ "stash.fidl" ]
@@ -27,23 +26,5 @@ fidl("fuchsia.stash") {
     "//src/sys/pkg/bin/omaha-client/*",
     "//src/sys/stash/*",
     "//src/sys/tools/stash_ctl/*",
-  ]
-}
-
-measure_tape("rust_measure_tape_for_list_item") {
-  target_binding = "rust"
-  target_types = [ "fuchsia.stash/ListItem" ]
-  fidls = [
-    "//sdk/fidl/fuchsia.stash",
-    "//sdk/fidl/fuchsia.mem",
-  ]
-}
-
-measure_tape("rust_measure_tape_for_key_value") {
-  target_binding = "rust"
-  target_types = [ "fuchsia.stash/KeyValue" ]
-  fidls = [
-    "//sdk/fidl/fuchsia.stash",
-    "//sdk/fidl/fuchsia.mem",
   ]
 }
