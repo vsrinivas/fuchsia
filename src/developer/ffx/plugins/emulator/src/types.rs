@@ -577,9 +577,7 @@ impl SSHKeys {
         unix::fs::symlink(&vdl_priv_key_src, &vdl_priv_key_dest)?;
         self.private_key = vdl_priv_key_dest.to_path_buf();
 
-        // TODO(b/189952191) Temporarily change the staged filename to id_ed25519.pub.
-        // This file is actually the authorized_key_file.
-        let vdl_authorized_keys_dest = dir.join("id_ed25519.pub");
+        let vdl_authorized_keys_dest = dir.join("fuchsia_authorized_keys");
         let vdl_authorized_keys_src = self.authorized_keys.as_path();
         unix::fs::symlink(&vdl_authorized_keys_src, &vdl_authorized_keys_dest)?;
         self.authorized_keys = vdl_authorized_keys_dest.to_path_buf();
