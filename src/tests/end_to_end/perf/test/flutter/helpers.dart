@@ -143,11 +143,20 @@ class FlutterTestHelper {
 
     // This is expensive if there are events from other flutter apps before
     // the one being measured, but this doesn't happen in the current use case.
+
+// TODO(fxbug.dev/73367): Modify this to only include VsyncProcessCallback
+    final modelEvents = getAllEvents(model);
     final vsyncCallbackEvent = filterEventsTyped<DurationEvent>(
-      getAllEvents(model),
+      modelEvents,
       category: 'flutter',
       name: 'vsync callback',
-    ).firstWhere((event) {
+    )
+        .followedBy(filterEventsTyped<DurationEvent>(
+      modelEvents,
+      category: 'flutter',
+      name: 'VSyncProcessCallback',
+    ))
+        .firstWhere((event) {
       if (event.pid != pid) {
         return false;
       }

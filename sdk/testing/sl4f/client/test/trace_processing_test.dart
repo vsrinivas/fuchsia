@@ -494,25 +494,42 @@ void main(List<String> args) {
     expect(results[2].values, equals([0.0]));
   });
 
-  test('DRM FPS metric', () async {
-    final model = await _modelFromPath('runtime_deps/flutter_app.json');
-    final results =
-        drmFpsMetricsProcessor(model, {'flutterAppName': 'flutter_app'});
-
-    expect(computeMean(results[0].values), _closeTo(57.72797479950718));
-    expect(results[1].values[0], _closeTo(59.954463866487885));
-    expect(results[2].values[0], _closeTo(59.997900074985296));
-    expect(results[3].values[0], _closeTo(60.034055041976686));
+// TODO(fxbug.dev/73367): Modify this test to only include VsyncProcessCallback
+  group('DRM FPS metric for Vsync callback', () {
+    final dataFiles = [
+      'runtime_deps/flutter_app_vsync_process_callback.json',
+      'runtime_deps/flutter_app.json'
+    ];
+    for (final file in dataFiles) {
+      test('$file', () async {
+        final model = await _modelFromPath(file);
+        final results =
+            drmFpsMetricsProcessor(model, {'flutterAppName': 'flutter_app'});
+        expect(computeMean(results[0].values), _closeTo(57.72797479950718));
+        expect(results[1].values[0], _closeTo(59.954463866487885));
+        expect(results[2].values[0], _closeTo(59.997900074985296));
+        expect(results[3].values[0], _closeTo(60.034055041976686));
+      });
+    }
   });
 
-  test('System DRM FPS metric', () async {
-    final model = await _modelFromPath('runtime_deps/flutter_app.json');
-    final results = systemDrmFpsMetricsProcessor(model, {});
+// TODO(fxbug.dev/73367): Modify this test to only include VsyncProcessCallback
+  group('System DRM FPS metric for vsync callback', () {
+    final dataFiles = [
+      'runtime_deps/flutter_app_vsync_process_callback.json',
+      'runtime_deps/flutter_app.json'
+    ];
+    for (final file in dataFiles) {
+      test('$file', () async {
+        final model = await _modelFromPath(file);
+        final results = systemDrmFpsMetricsProcessor(model, {});
 
-    expect(computeMean(results[0].values), _closeTo(53.22293098104574));
-    expect(results[1].values[0], _closeTo(20.00118695220081));
-    expect(results[2].values[0], _closeTo(59.99295082827768));
-    expect(results[3].values[0], _closeTo(60.03226494111525));
+        expect(computeMean(results[0].values), _closeTo(53.22293098104574));
+        expect(results[1].values[0], _closeTo(20.00118695220081));
+        expect(results[2].values[0], _closeTo(59.99295082827768));
+        expect(results[3].values[0], _closeTo(60.03226494111525));
+      });
+    }
   });
 
   test('CPU metric', () async {

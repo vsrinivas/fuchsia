@@ -134,6 +134,9 @@ if (is_host) {
       "test/trace_processing_test_data/flutter_app.json",
       "test/trace_processing_test_data/flutter_app_long_name.json",
       "test/trace_processing_test_data/flutter_app_no_scenic.json",
+
+      #     TODO(fxbug.dev/73367): Clean up this test data file after complete VsyncProcessCallback transition
+      "test/trace_processing_test_data/flutter_app_vsync_process_callback.json",
       "test/trace_processing_test_data/gpu_utilization.json",
       "test/trace_processing_test_data/gpu_utilization_sub_second.json",
       "test/trace_processing_test_data/gpu_utilization_super_second.json",

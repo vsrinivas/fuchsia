@@ -101,7 +101,7 @@ List<_Results> _drmFpsMetrics(Model model, {String flutterAppName}) {
     for (final uiThread in uiThreads) {
       final appName =
           flutterAppName ?? uiThread.name.split(RegExp(r'.ui$')).first;
-      // TODO(fxbug.dev/48263): Only match "vsync callback".
+      // TODO(fxbug.dev/48263): Only match "VsyncProcessCallback".
       final vsyncCallbackEvents = filterEventsTyped<DurationEvent>(
               uiThread.events,
               category: 'flutter',
