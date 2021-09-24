@@ -22,29 +22,56 @@ VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, WriteOption write_op
 
 VmoFile::~VmoFile() = default;
 
+zx::vmo VmoFile::GetVmoForDescribe() {
+  zx::vmo result_vmo;
+  switch (vmo_sharing_) {
+    case Sharing::NONE:
+      break;
+    case Sharing::DUPLICATE:
+      vmo_.duplicate(write_option_ == WriteOption::WRITABLE
+                         ? ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE
+                         : ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
+                     &result_vmo);
+      break;
+    case Sharing::CLONE_COW:
+      vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, offset_, length_, &result_vmo);
+      break;
+  }
+  return result_vmo;
+}
+
 void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
-  zx::vmo temp_vmo;
+  zx::vmo client_vmo = GetVmoForDescribe();
   switch (vmo_sharing_) {
     case Sharing::NONE:
       out_info->set_file(fuchsia::io::FileObject());
       break;
     case Sharing::DUPLICATE:
-      if (vmo_.duplicate(write_option_ == WriteOption::WRITABLE
-                             ? ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE
-                             : ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
-                         &temp_vmo) != ZX_OK) {
-        return;
-      }
-      out_info->vmofile() =
-          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .offset = offset_, .length = length_};
-      break;
     case Sharing::CLONE_COW:
-      if (vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, offset_, length_, &temp_vmo) !=
-          ZX_OK) {
+      if (!client_vmo.is_valid()) {
         return;
       }
       out_info->vmofile() =
-          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .offset = offset_, .length = length_};
+          fuchsia::io::Vmofile{.vmo = std::move(client_vmo), .offset = offset_, .length = length_};
+      break;
+  }
+}
+
+void VmoFile::Describe2(fuchsia::io::ConnectionInfo* out_info) {
+  zx::vmo client_vmo = GetVmoForDescribe();
+  switch (vmo_sharing_) {
+    case Sharing::NONE:
+      out_info->set_representation(fuchsia::io::Representation::WithFile(fuchsia::io::FileInfo()));
+      break;
+    case Sharing::DUPLICATE:
+    case Sharing::CLONE_COW:
+      if (!client_vmo.is_valid()) {
+        return;
+      }
+      fuchsia::io::MemoryInfo mem_info;
+      mem_info.set_buffer(
+          fuchsia::mem::Range{.vmo = std::move(client_vmo), .offset = offset_, .size = length_});
+      out_info->set_representation(fuchsia::io::Representation::WithMemory(std::move(mem_info)));
       break;
   }
 }

@@ -92,6 +92,8 @@ class Connection {
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Close2(Node* vn, fuchsia::io::Node::Close2Callback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
+  void Describe2(Node* vn, fuchsia::io::ConnectionInfoQuery query,
+                 fuchsia::io::Node::Describe2Callback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void Sync2(Node* vn, fuchsia::io::Node::Sync2Callback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);

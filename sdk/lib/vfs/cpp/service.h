@@ -48,7 +48,8 @@ class Service : public vfs::internal::Node {
   // |Node| implementation:
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const final;
 
-  void Describe(fuchsia::io::NodeInfo* out_info) override final;
+  void Describe(fuchsia::io::NodeInfo* out_info) final;
+  void Describe2(fuchsia::io::ConnectionInfo* out_info) final;
 
   const Connector& connector() const { return connector_; }
 

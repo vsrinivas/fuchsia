@@ -16,6 +16,11 @@ void Service::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_service(fuchsia::io::Service());
 }
 
+void Service::Describe2(fuchsia::io::ConnectionInfo* out_info) {
+  out_info->set_representation(
+      fuchsia::io::Representation::WithConnector(fuchsia::io::ConnectorInfo()));
+}
+
 zx_status_t Service::CreateConnection(uint32_t flags,
                                       std::unique_ptr<vfs::internal::Connection>* connection) {
   return ZX_ERR_NOT_SUPPORTED;

@@ -30,6 +30,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void Close(CloseCallback callback) override;
   void Close2(Close2Callback callback) override;
   void Describe(DescribeCallback callback) override;
+  void Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) override;
   void Sync(SyncCallback callback) override;
   void Sync2(Sync2Callback callback) override;
   void GetAttr(GetAttrCallback callback) override;

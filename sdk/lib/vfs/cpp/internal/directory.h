@@ -36,6 +36,7 @@ class Directory : public Node {
 
   // Override that describes this object as a directory.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
+  void Describe2(fuchsia::io::ConnectionInfo* out_info) override;
 
   // Enumerates Directory
   //

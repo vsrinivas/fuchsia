@@ -52,6 +52,7 @@ class Node {
   //
   // Subclass must override this method to describe themselves accurately.
   virtual void Describe(fuchsia::io::NodeInfo* out_info) = 0;
+  virtual void Describe2(fuchsia::io::ConnectionInfo* out_info) = 0;
 
   // Implementation of |fuchsia.io.Node/Sync|.
   virtual zx_status_t Sync();

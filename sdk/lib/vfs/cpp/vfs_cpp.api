@@ -1,19 +1,19 @@
 {
   "pkg/vfs_cpp/include/lib/vfs/cpp/composed_service_dir.h": "32982ffdcc2d4a84711559231a8e6c9e",
   "pkg/vfs_cpp/include/lib/vfs/cpp/flags.h": "7c4e6d2b18644369a75d7c5fd186fee7",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/connection.h": "3fe2428e60e39e26dc5161218b3a921e",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory.h": "7c2ec68e1f40f179413488bdf554f999",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory_connection.h": "5eb95b7492ea8b1d24acc437d6135a87",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/connection.h": "7ac400e8ee8e9b2de30ba0256ebee118",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory.h": "e40bbe7bddf5f2f74508cfb0fff40675",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory_connection.h": "198e51f5c7c9c2d75a1e728cc8bc84bb",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/dirent_filler.h": "ee345a473fcd059824371a39bf82a6c5",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file.h": "ba9b1b8f1186330f66471763151d8287",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h": "a4848ec733b638ad4b96c47f311329e5",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h": "cbb8000ea239ca292bcf18ad1faf4e08",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h": "804586a5afe3c1d580ac89f449551533",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file.h": "63f32abf6e00106fa51e85f371448bcb",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h": "d9d51f95e70f4e898467b5d83359305a",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h": "f22f257bbb80991c8a7da3ae523f3a25",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h": "c0783f77d9cdaacadd8d1d59b890de7f",
   "pkg/vfs_cpp/include/lib/vfs/cpp/lazy_dir.h": "037bc987ec92596fa222a4632d7bd07b",
   "pkg/vfs_cpp/include/lib/vfs/cpp/node_kind.h": "32739efa489bdb02f0610024f6f834d3",
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_dir.h": "15dc2becad72fbcedfb173da23ea04c1",
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_file.h": "cb8057401d26542dd4409ede460afc1c",
   "pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h": "5c71a316496002d251e74b9e9fe68f71",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/service.h": "be476af3e98b1b3463746ed63294f132",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/vmo_file.h": "23a0fa3a2b76b3adef4fca1a7f6b97d6"
+  "pkg/vfs_cpp/include/lib/vfs/cpp/service.h": "e50b396b154b77fac8c4aca0ac212e06",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/vmo_file.h": "59747f0a7ee75073867bd034dd8a1303"
 }

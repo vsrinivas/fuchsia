@@ -75,6 +75,7 @@ class DummyTestNode : public vfs::internal::Node {
   }
 
   void Describe(fuchsia::io::NodeInfo* out_info) override{};
+  void Describe2(fuchsia::io::ConnectionInfo* out_info) override{};
 
   vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
 

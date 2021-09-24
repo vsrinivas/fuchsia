@@ -94,6 +94,7 @@ class VmoFile final : public vfs::internal::File {
 
   // Override that describes this object as a vmofile.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
+  void Describe2(fuchsia::io::ConnectionInfo* out_info) override;
 
   // Returns current file length.
   //
@@ -113,6 +114,8 @@ class VmoFile final : public vfs::internal::File {
   NodeKind::Type GetKind() const override;
 
  private:
+  zx::vmo GetVmoForDescribe();
+
   const size_t offset_;
   const size_t length_;
   const WriteOption write_option_;

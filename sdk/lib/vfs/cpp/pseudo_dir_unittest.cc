@@ -28,6 +28,7 @@ class TestNode : public vfs::internal::Node {
 
  private:
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
+  void Describe2(fuchsia::io::ConnectionInfo* out_info) override {}
 
   zx_status_t CreateConnection(uint32_t flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override {
