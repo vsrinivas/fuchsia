@@ -665,6 +665,7 @@ impl ProjectSampler {
     }
 }
 
+// This is only called for Cobalt 1.0 metrics.
 fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayload {
     match payload {
         MetricEventPayload::Count(count) => {
@@ -674,9 +675,8 @@ fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayl
                 period_duration_micros: 0,
             })
         }
-        MetricEventPayload::IntegerValue(value) => {
-            EventPayload::EventCount(CountEvent { count: value, period_duration_micros: 0 })
-        }
+        // Cobalt 1.0 doesn't have Integer values, MEMORY_USED is the closest approximation.
+        MetricEventPayload::IntegerValue(value) => EventPayload::MemoryBytesUsed(value),
         MetricEventPayload::Histogram(hist) => {
             let legacy_histogram = hist
                 .into_iter()
@@ -1281,8 +1281,8 @@ mod tests {
 
         let transformed_event = transform_metrics_payload_to_cobalt(event);
         match transformed_event {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, params.sample);
+            EventPayload::MemoryBytesUsed(value) => {
+                assert_eq!(value, params.sample);
             }
             _ => panic!("Expecting count events."),
         }
