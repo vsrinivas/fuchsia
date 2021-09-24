@@ -83,6 +83,7 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
   void EventThread();
   void TerminateEventThread();
   void DisconnectDevice();
+  void ResetAsync();
   void Shutdown();
 
   class LowpanSpinelDeviceFidlImpl : public fidl::WireServer<fidl_spinel::Device> {
@@ -114,6 +115,7 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
     void PostNcpFidlInboundTask() override;
     void PostOtLibTaskletProcessTask() override;
     void PostDelayedAlarmTask(zx::duration delay) override;
+    void Reset() override;
 
    private:
     OtStackApp& app_;

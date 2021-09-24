@@ -25,6 +25,7 @@ class OtStackCallBack {
   virtual void PostNcpFidlInboundTask() = 0;
   virtual void PostOtLibTaskletProcessTask() = 0;
   virtual void PostDelayedAlarmTask(zx::duration delay) = 0;
+  virtual void Reset() = 0;
 };
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_LIB_OT_STACK_INCLUDE_LIB_OT_STACK_OT_STACK_CALLBACK_H_

@@ -115,17 +115,10 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
 
   FX_LOGS(INFO) << "FIDL request Open got";
 
-  async::PostTask(app_.loop_.dispatcher(), [this]() {
-    otInstanceFinalize(static_cast<otInstance*>(app_.ot_instance_ptr_.value()));
-    app_.ot_instance_ptr_.reset();
-    otSysDeinit();
-    app_.RadioAllowanceInit();
-    this->app_.InitOpenThreadLibrary(false);
-  });
+  app_.ResetAsync();
 
   app_.ClientAllowanceInit();
-  // Send out the reset frame
-  app_.client_inbound_queue_.push_back(std::vector<uint8_t>{0x80, 0x06, 0x0, 0x70});
+
   completer.ReplySuccess();
 }
 
@@ -176,7 +169,6 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView requ
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
-  FX_LOGS(DEBUG) << "ot-stack: SendFrame() received";
   app_.UpdateClientOutboundAllowance();
   // Invoke ot-lib
   app_.client_outbound_queue_.emplace_back(request->data.cbegin(), request->data.cend());
@@ -250,8 +242,7 @@ void OtStackApp::OtStackCallBackImpl::SendOneFrameToClient(uint8_t* buffer, uint
       (memcmp(buffer, kSpinelResetFrame, sizeof(kSpinelResetFrame)) == 0) &&
       ((buffer[kSpinelResetFrameLen - 1] & 0x70) == 0x70)) {
     // Reset frame
-    FX_LOGS(WARNING) << "ot-stack: Not sending reset frame to host";
-    return;
+    FX_LOGS(INFO) << "ot-stack: sending reset frame to client";
   }
   app_.client_inbound_queue_.emplace_back(buffer, buffer + size);
   app_.SendOneFrameToClient();
@@ -272,6 +263,8 @@ void OtStackApp::OtStackCallBackImpl::PostDelayedAlarmTask(zx::duration delay) {
   async::PostDelayedTask(
       app_.loop_.dispatcher(), [this]() { this->app_.AlarmTask(); }, delay);
 }
+
+void OtStackApp::OtStackCallBackImpl::Reset() { this->app_.ResetAsync(); }
 
 zx_status_t OtStackApp::InitOutgoingAndServe() {
   // Ensure that outgoing_ is not already initialized.
@@ -350,8 +343,10 @@ zx_status_t OtStackApp::SetupFidlService() {
 
 void OtStackApp::SendOneFrameToClient() {
   if (!binding_.has_value()) {
-    FX_LOGS(ERROR) << "ot-stack: Sending frame to client, but client is not connected";
-    assert(0);
+    FX_LOGS(WARNING)
+        << "ot-stack: Sending frame to client which is not connected, clearing up queue";
+    client_inbound_queue_.clear();
+    return;
   }
   if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(client_inbound_queue_.front());
@@ -594,6 +589,16 @@ void OtStackApp::DisconnectDevice() {
   device_client_ptr_.reset();
   device_setup_client_ptr_.reset();
   connected_to_device_ = false;
+}
+
+void OtStackApp::ResetAsync() {
+  async::PostTask(loop_.dispatcher(), [this]() {
+    otInstanceFinalize(static_cast<otInstance*>(ot_instance_ptr_.value()));
+    ot_instance_ptr_.reset();
+    otSysDeinit();
+    RadioAllowanceInit();
+    InitOpenThreadLibrary(false);
+  });
 }
 
 void OtStackApp::Shutdown() {

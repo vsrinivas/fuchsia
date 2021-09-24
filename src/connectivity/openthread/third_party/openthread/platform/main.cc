@@ -30,6 +30,4 @@
 
 #include "openthread-system.h"
 
-extern "C" void otPlatReset(otInstance *a_instance) {}
-
 void runThirdPartyFunc() {}

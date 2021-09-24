@@ -35,6 +35,7 @@
 #include <openthread/tasklet.h>
 
 #include "alarm.h"
+#include "misc.h"
 #include "openthread-system.h"
 
 void platformSimInit(void);
@@ -48,6 +49,7 @@ otInstance *otSysInit(otPlatformConfig *a_platform_config) {
   otInstance *instance = NULL;
   platformAlarmInit(a_platform_config->m_speed_up_factor);
   platformAlarmSetCallbackPtr(a_platform_config->callback_ptr);
+  platformMiscSetCallbackPtr(a_platform_config->callback_ptr);
   platformRadioInit(a_platform_config);
   platformRandomInit();
   ot_stack_callback_ptr = a_platform_config->callback_ptr;

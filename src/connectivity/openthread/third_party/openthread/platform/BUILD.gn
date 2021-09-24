@@ -13,6 +13,7 @@ source_set("platform") {
     "logging.cc",
     "main.cc",
     "misc.cc",
+    "misc.h",
     "ncp_fidl.cc",
     "ncp_fidl.h",
     "radio.cc",
