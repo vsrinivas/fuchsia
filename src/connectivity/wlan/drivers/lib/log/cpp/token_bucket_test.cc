@@ -1,31 +1,18 @@
-// Copyright (c) 2020 The Fuchsia Authors
-//
-// Permission to use, copy, modify, and/or distribute this software for any purpose with or without
-// fee is hereby granted, provided that the above copyright notice and this permission notice
-// appear in all copies.
-//
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-// SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
-// AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
-// NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
-// OF THIS SOFTWARE.
-
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/token_bucket.h"
-
-#include <gtest/gtest.h>
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <zircon/syscalls.h>
 
+#include <gtest/gtest.h>
+#include <wlan/drivers/internal/token_bucket.h>
+
 // Set up our own zx_ticks_get for this test so we can control time
 static zx_ticks_t g_current_ticks = 0;
-__EXPORT zx_ticks_t zx_ticks_get() {
-  return g_current_ticks;
-}
+__EXPORT zx_ticks_t zx_ticks_get() { return g_current_ticks; }
 
-namespace {
+namespace wlan::drivers {
 
-using wlan::brcmfmac::TokenBucket;
+using wlan::drivers::TokenBucket;
 
 TEST(TokenBucket, TicksGetOverride) {
   // Ensure that our zx_ticks_get override works
@@ -45,7 +32,7 @@ TEST(TokenBucket, ConsumeInitialTokens) {
 }
 
 TEST(TokenBucket, ConsumeMultipleTokens) {
-  TokenBucket bucket(1.0, 2); // Initial capacity of 2 tokens
+  TokenBucket bucket(1.0, 2);  // Initial capacity of 2 tokens
 
   // Consume two tokens right away
   ASSERT_TRUE(bucket.consume());
@@ -66,7 +53,7 @@ TEST(TokenBucket, TokenGeneration) {
 }
 
 TEST(TokenBucket, TokenCapacity) {
-  TokenBucket bucket(1.0, 3); // Initial capacity of 3 tokens
+  TokenBucket bucket(1.0, 3);  // Initial capacity of 3 tokens
 
   // Consume one token, we should now be left at 2 tokens left in the bucket
   ASSERT_TRUE(bucket.consume());
@@ -81,7 +68,7 @@ TEST(TokenBucket, TokenCapacity) {
 }
 
 TEST(TokenBucket, TokenGenerationRate) {
-  TokenBucket bucket(5.0, 3); // 5 tokens per second, 3 initial capacity
+  TokenBucket bucket(5.0, 3);  // 5 tokens per second, 3 initial capacity
 
   // Consume initial tokens
   ASSERT_TRUE(bucket.consume());
@@ -97,7 +84,7 @@ TEST(TokenBucket, TokenGenerationRate) {
 }
 
 TEST(TokenBucket, TokenGenerationRateLessThanOne) {
-  TokenBucket bucket(0.5, 1); // Half a token per second, 1 initial capacity
+  TokenBucket bucket(0.5, 1);  // Half a token per second, 1 initial capacity
 
   // Consume initial token
   ASSERT_TRUE(bucket.consume());
@@ -116,7 +103,7 @@ TEST(TokenBucket, ExtendedRunTime) {
   // was selected to almost certainly trigger issues with sporadic wakeups while still not taking
   // too long.
   for (int i = 0; i < 10'000'000; ++i) {
-    TokenBucket bucket(1.0, 3); // Initial capacity of 3 tokens
+    TokenBucket bucket(1.0, 3);  // Initial capacity of 3 tokens
 
     // Consume one token, we should now be left at 2 tokens left in the bucket
     ASSERT_TRUE(bucket.consume());
@@ -131,4 +118,4 @@ TEST(TokenBucket, ExtendedRunTime) {
   }
 }
 
-} // namespace
+}  // namespace wlan::drivers

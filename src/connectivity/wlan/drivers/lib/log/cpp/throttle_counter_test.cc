@@ -1,19 +1,5 @@
-// Copyright (c) 2021 The Fuchsia Authors
-//
-// Permission to use, copy, modify, and/or distribute this software for any purpose with or without
-// fee is hereby granted, provided that the above copyright notice and this permission notice
-// appear in all copies.
-//
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-// SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
-// AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
-// NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
-// OF THIS SOFTWARE.
-
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/throttle_counter.h"
-
-#include <gtest/gtest.h>
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <zircon/syscalls.h>
 
@@ -21,24 +7,23 @@
 #include <mutex>
 #include <thread>
 
+#include <gtest/gtest.h>
+#include <wlan/drivers/internal/throttle_counter.h>
+
 namespace {
 
 // A test class that behaves like the TokenBucket that the throttle counter uses. Use this to
 // be able to control the test environment for the throttle counter.
 class TestTokenBucket {
-public:
-  using ConsumeCall = std::function<bool ()>;
-  explicit TestTokenBucket(ConsumeCall&& consume_call) : consume_(consume_call) { }
+ public:
+  using ConsumeCall = std::function<bool()>;
+  explicit TestTokenBucket(ConsumeCall&& consume_call) : consume_(consume_call) {}
 
-  bool consume() {
-    return consume_();
-  }
+  bool consume() { return consume_(); }
 
-  void SetConsumeCall(ConsumeCall&& consume_call) {
-    consume_ = std::move(consume_call);
-  }
+  void SetConsumeCall(ConsumeCall&& consume_call) { consume_ = std::move(consume_call); }
 
-private:
+ private:
   ConsumeCall consume_;
 };
 
@@ -48,8 +33,8 @@ private:
 // once our toolchain catches up we can replace this with std::latch. This is a very simplified
 // version of the same interface.
 class Latch {
-public:
-  explicit Latch(ptrdiff_t counter) : counter_(counter) { }
+ public:
+  explicit Latch(ptrdiff_t counter) : counter_(counter) {}
 
   void arrive_and_wait() {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -61,13 +46,13 @@ public:
     }
   }
 
-private:
+ private:
   ptrdiff_t counter_;
   std::mutex mutex_;
   std::condition_variable condition_;
 };
 
-using wlan::brcmfmac::ThrottleCounter;
+using wlan::drivers::ThrottleCounter;
 
 TEST(ThrottleCounter, ConsumeSucceeds) {
   auto consume = []() { return true; };
@@ -92,9 +77,7 @@ TEST(ThrottleCounter, ConsumeFails) {
 }
 
 TEST(ThrottleCounter, MultipleThreads) {
-  auto consume_fail = []() {
-    return false;
-  };
+  auto consume_fail = []() { return false; };
   TestTokenBucket bucket(std::move(consume_fail));
   ThrottleCounter counter(bucket);
 
@@ -115,15 +98,11 @@ TEST(ThrottleCounter, MultipleThreads) {
   // Create the 2 threads that will consume
   uint64_t t1_count = 0;
   bool t1_result = false;
-  std::thread t1([&]() {
-    t1_result = counter.consume(&t1_count);
-  });
+  std::thread t1([&]() { t1_result = counter.consume(&t1_count); });
 
   uint64_t t2_count = 0;
   bool t2_result = false;
-  std::thread t2([&]() {
-    t2_result = counter.consume(&t2_count);
-  });
+  std::thread t2([&]() { t2_result = counter.consume(&t2_count); });
 
   t1.join();
   t2.join();
@@ -132,8 +111,7 @@ TEST(ThrottleCounter, MultipleThreads) {
   ASSERT_TRUE(t2_result);
   // Either of the calls should have received the full count of failed consumes from the start of
   // the test.
-  ASSERT_TRUE((t1_count == 0 && t2_count == 2) ||
-              (t1_count == 2 && t2_count == 0));
+  ASSERT_TRUE((t1_count == 0 && t2_count == 2) || (t1_count == 2 && t2_count == 0));
 }
 
-} // namespace
+}  // namespace

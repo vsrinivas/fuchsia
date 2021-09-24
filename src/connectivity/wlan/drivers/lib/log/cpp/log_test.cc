@@ -70,6 +70,11 @@ TEST_F(LogTest, Sanity) {
   Log::SetFilter(0x3);
   ldebug(0x1, kDebugTag, "debug %s", "test");
   ltrace(0x2, kTraceTag, "trace %s", "test");
+  lthrottle_error("error throttle %s", "test");
+  lthrottle_warn("warn throttle %s", "test");
+  lthrottle_info("info throttle %s", "test");
+  lthrottle_debug(0x1, kDebugTag, "debug trottle %s", "test");
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
 }
 
 // The following override is done to validate the right set of flag and tag is getting passed along.
@@ -120,7 +125,49 @@ TEST_F(LogTest, TraceNotFiltered) {
   Validate(DDK_LOG_TRACE, kTraceTag);
 }
 
-// Tests for WLAN_DRIVER_LOG_LEVEL macro
+// Throttle macro tests
+TEST_F(LogTest, ThrottleError) {
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+}
+
+TEST_F(LogTest, ThrottleWarn) {
+  lthrottle_warn("warn throttle %s", "test");
+  Validate(DDK_LOG_WARNING);
+}
+
+TEST_F(LogTest, ThrottleInfo) {
+  lthrottle_info("info throttle %s", "test");
+  Validate(DDK_LOG_INFO);
+}
+
+TEST_F(LogTest, ThrottleDebugFiltered) {
+  Log::SetFilter(0);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+}
+
+TEST_F(LogTest, ThrottleDebugNotFiltered) {
+  Log::SetFilter(0x1);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  ASSERT_TRUE(LogInvoked());
+  Validate(DDK_LOG_DEBUG, kDebugTag);
+}
+
+TEST_F(LogTest, ThrottleTraceFiltered) {
+  Log::SetFilter(0);
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+}
+
+TEST_F(LogTest, ThrottleTraceNotFiltered) {
+  Log::SetFilter(0x2);
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_TRUE(LogInvoked());
+  Validate(DDK_LOG_TRACE, kTraceTag);
+}
+
+// Tests for WLAN_DRIVER_LOG_LEVEL symbol
 #undef WLAN_DRIVER_LOG_LEVEL
 #define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelError
 TEST_F(LogTest, LevelError) {
@@ -196,6 +243,85 @@ TEST_F(LogTest, LevelTrace) {
   ldebug(0x1, kDebugTag, "debug %s", "test");
   Validate(DDK_LOG_DEBUG, kDebugTag);
   ltrace(0x2, kTraceTag, "trace %s", "test");
+  Validate(DDK_LOG_TRACE, kTraceTag);
+}
+
+// Tests for WLAN_DRIVER_LOG_LEVEL for throttle macros
+#undef WLAN_DRIVER_LOG_LEVEL
+#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_ERROR)
+TEST_F(LogTest, ThrottleLevelError) {
+  lthrottle_warn("warn throttle %s", "test");
+  lthrottle_info("info throttle %s", "test");
+  Log::SetFilter(0x3);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+}
+
+#undef WLAN_DRIVER_LOG_LEVEL
+#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_WARNING)
+TEST_F(LogTest, ThrottleLevelWarn) {
+  lthrottle_info("info throttle %s", "test");
+  Log::SetFilter(0x3);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+  lthrottle_warn("warn throttle %s", "test");
+  Validate(DDK_LOG_WARNING);
+}
+
+#undef WLAN_DRIVER_LOG_LEVEL
+#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_INFO)
+TEST_F(LogTest, ThrottleLevelInfo) {
+  Log::SetFilter(0x3);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+  lthrottle_warn("warn throttle %s", "test");
+  Validate(DDK_LOG_WARNING);
+  lthrottle_info("info throttle %s", "test");
+  Validate(DDK_LOG_INFO);
+}
+
+#undef WLAN_DRIVER_LOG_LEVEL
+#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_DEBUG)
+TEST_F(LogTest, ThrottleLevelDebug) {
+  Log::SetFilter(0x3);
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+  lthrottle_warn("warn throttle %s", "test");
+  Validate(DDK_LOG_WARNING);
+  lthrottle_info("info throttle %s", "test");
+  Validate(DDK_LOG_INFO);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  Validate(DDK_LOG_DEBUG, kDebugTag);
+}
+
+#undef WLAN_DRIVER_LOG_LEVEL
+#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_TRACE)
+TEST_F(LogTest, ThrottleLevelTrace) {
+  Log::SetFilter(0x3);
+  lthrottle_error("error throttle %s", "test");
+  Validate(DDK_LOG_ERROR);
+  lthrottle_warn("warn throttle %s", "test");
+  Validate(DDK_LOG_WARNING);
+  lthrottle_info("info throttle %s", "test");
+  Validate(DDK_LOG_INFO);
+  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
+  Validate(DDK_LOG_DEBUG, kDebugTag);
+  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
   Validate(DDK_LOG_TRACE, kTraceTag);
 }
 

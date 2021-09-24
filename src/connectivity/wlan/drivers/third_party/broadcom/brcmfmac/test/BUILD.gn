@@ -237,20 +237,6 @@ executable("timer_test") {
   ]
 }
 
-executable("throttle_counter_test") {
-  output_name = "throttle_counter_test"
-  testonly = true
-  sources = [ "throttle_counter_test.cc" ]
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
-}
-
-executable("token_bucket_test") {
-  output_name = "token_bucket_test"
-  testonly = true
-  sources = [ "token_bucket_test.cc" ]
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
-}
-
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
@@ -277,8 +263,6 @@ _tests = [
   "netbuf_test",
   "task_queue_test",
   "timer_test",
-  "throttle_counter_test",
-  "token_bucket_test",
   "workqueue_test",
 ]
 

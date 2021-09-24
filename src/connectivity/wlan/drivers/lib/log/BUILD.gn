@@ -15,7 +15,11 @@ source_set("cpp") {
 }
 
 test("wlan_drivers_log_test") {
-  sources = [ "cpp/log_test.cc" ]
+  sources = [
+    "cpp/log_test.cc",
+    "cpp/throttle_counter_test.cc",
+    "cpp/token_bucket_test.cc",
+  ]
   deps = [
     "//src/connectivity/wlan/drivers/lib/log:cpp",
     "//src/devices/testing/no_ddk",
