@@ -17,6 +17,7 @@ use {
 };
 
 // A convenience wrapper over a FIDL DirectoryProxy.
+#[derive(Clone)]
 pub struct Directory {
     path: PathBuf,
     pub proxy: fio::DirectoryProxy,

@@ -4,7 +4,10 @@
 
 use {
     anyhow::{format_err, Context, Result},
-    component_hub::{io::Directory, show::find_components},
+    component_hub::{
+        io::Directory,
+        show::{find_components, Component},
+    },
     ffx_component::COMPONENT_SHOW_HELP,
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
@@ -12,9 +15,34 @@ use {
     fuchsia_zircon_status::Status,
 };
 
+/// The number of times the command should be retried before assuming failure.
+const NUM_ATTEMPTS: u64 = 3;
+
 #[ffx_plugin()]
 pub async fn show(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentShowCommand) -> Result<()> {
     show_impl(rcs_proxy, &cmd.filter).await
+}
+
+// Attempt to get matching components `NUM_ATTEMPTS` times. If all attempts fail, return the
+// last error encountered.
+//
+// This fixes an issue (fxbug.dev/84805) where the component topology may be mutating while the
+// hub is being traversed, resulting in failures.
+pub async fn try_get_components(query: String, hub_dir: Directory) -> Result<Vec<Component>> {
+    let mut attempt_number = 1;
+    loop {
+        match find_components(query.clone(), hub_dir.clone()).await {
+            Ok(components) => return Ok(components),
+            Err(e) => {
+                if attempt_number > NUM_ATTEMPTS {
+                    return Err(e);
+                } else {
+                    eprintln!("Retrying. Attempt #{} failed: {}", attempt_number, e);
+                }
+            }
+        }
+        attempt_number += 1;
+    }
 }
 
 async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()> {
@@ -26,7 +54,8 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let components = find_components(filter.to_string(), hub_dir).await?;
+
+    let components = try_get_components(filter.to_string(), hub_dir).await?;
 
     if components.is_empty() {
         return Err(format_err!(
