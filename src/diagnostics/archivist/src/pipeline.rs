@@ -8,16 +8,14 @@ use {
         diagnostics::AccessorStats,
         inspect::container::UnpopulatedInspectDataContainer,
         lifecycle::container::LifecycleDataContainer,
-        logs::{
-            message::MessageWithStats,
-            redact::{RedactedItem, Redactor},
-        },
+        logs::redact::{RedactedItem, Redactor},
         moniker_rewriter::MonikerRewriter,
         repository::DataRepo,
         ImmutableString,
     },
     anyhow::Error,
     diagnostics_hierarchy::InspectHierarchyMatcher,
+    diagnostics_message::Message,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector, StreamMode},
     fuchsia_async as fasync,
@@ -225,7 +223,7 @@ impl Pipeline {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
-    ) -> impl Stream<Item = RedactedItem<MessageWithStats>> {
+    ) -> impl Stream<Item = RedactedItem<Message>> {
         self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode, selectors))
     }
 

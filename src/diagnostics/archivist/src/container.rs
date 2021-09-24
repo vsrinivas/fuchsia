@@ -10,14 +10,15 @@ use {
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
         logs::{
-            budget::BudgetManager, container::LogsArtifactsContainer, message::MessageWithStats,
-            multiplex::PinStream, stats::LogStreamStats,
+            budget::BudgetManager, container::LogsArtifactsContainer, multiplex::PinStream,
+            stats::LogStreamStats,
         },
         repository::MultiplexerBroker,
         ImmutableString,
     },
     diagnostics_data as schema,
     diagnostics_hierarchy::DiagnosticsHierarchy,
+    diagnostics_message::{Message, MonikerWithUrl},
     fidl_fuchsia_diagnostics::StreamMode,
     fidl_fuchsia_logger::LogInterestSelector,
     fidl_fuchsia_sys_internal::SourceIdentity,
@@ -25,9 +26,14 @@ use {
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
+    lazy_static::lazy_static,
     std::{convert::TryFrom, sync::Arc},
     tracing::debug,
 };
+
+lazy_static! {
+    pub static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
+}
 
 pub enum ReadSnapshot {
     Single(Snapshot),
@@ -91,6 +97,18 @@ impl TryFrom<SourceIdentity> for ComponentIdentity {
             instance_id: component.instance_id,
         };
         Ok(Self::from_identifier_and_url(&id, component.component_url))
+    }
+}
+
+impl From<ComponentIdentity> for MonikerWithUrl {
+    fn from(identity: ComponentIdentity) -> Self {
+        Self { moniker: identity.to_string(), url: identity.url }
+    }
+}
+
+impl From<&ComponentIdentity> for MonikerWithUrl {
+    fn from(identity: &ComponentIdentity) -> Self {
+        Self { moniker: identity.to_string(), url: identity.url.clone() }
     }
 }
 
@@ -189,7 +207,7 @@ impl ComponentDiagnostics {
     }
 
     /// Return a cursor over messages from this component with the given `mode`.
-    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<MessageWithStats>>> {
+    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<Message>>> {
         self.logs.as_ref().map(|l| l.cursor(mode))
     }
 

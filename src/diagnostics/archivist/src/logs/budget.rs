@@ -126,18 +126,18 @@ impl BudgetHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::{
-        container::LogsArtifactsContainer,
-        message::{MessageWithStats, TEST_IDENTITY},
-        multiplex::PinStream,
-        stats::LogStreamStats,
-        stored_message::StoredMessage,
+    use crate::{
+        logs::{
+            container::LogsArtifactsContainer, multiplex::PinStream, stats::LogStreamStats,
+            stored_message::StoredMessage,
+        },
+        testing::TEST_IDENTITY,
     };
     use diagnostics_data::Severity;
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use diagnostics_message::MessageId;
+    use diagnostics_message::{Message, MessageId};
     use fidl_fuchsia_diagnostics::StreamMode;
     use futures::{Stream, StreamExt};
     use std::{
@@ -146,10 +146,10 @@ mod tests {
         task::{Context, Poll},
     };
 
-    struct CursorWrapper(PinStream<Arc<MessageWithStats>>);
+    struct CursorWrapper(PinStream<Arc<Message>>);
 
     impl Stream for CursorWrapper {
-        type Item = Arc<MessageWithStats>;
+        type Item = Arc<Message>;
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             self.0.as_mut().poll_next(cx)
         }
@@ -210,8 +210,8 @@ mod tests {
         StoredMessage::structured(encoded, Default::default()).unwrap()
     }
 
-    fn fake_message(timestamp: i64, message_id: u64) -> MessageWithStats {
-        let mut message = MessageWithStats::from(
+    fn fake_message(timestamp: i64, message_id: u64) -> Message {
+        let mut message = Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),

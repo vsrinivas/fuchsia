@@ -19,4 +19,7 @@ pub(crate) mod moniker_rewriter;
 pub mod pipeline;
 pub mod repository;
 
+#[cfg(test)]
+mod testing;
+
 pub type ImmutableString = Box<str>;

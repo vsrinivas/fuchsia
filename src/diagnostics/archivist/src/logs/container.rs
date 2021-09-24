@@ -8,13 +8,14 @@ use crate::{
         budget::BudgetHandle,
         buffer::{ArcList, LazyItem},
         error::StreamError,
-        message::MessageWithStats,
         multiplex::PinStream,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
         stored_message::StoredMessage,
     },
 };
+use diagnostics_data::{BuilderArgs, LogsDataBuilder};
+use diagnostics_message::Message;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::{
@@ -95,7 +96,7 @@ impl LogsArtifactsContainer {
     /// When messages are evicted from our internal buffers before a client can read them, they
     /// are surfaced here as an `LazyItem::ItemsDropped` variant. We report these as synthesized
     /// messages with the timestamp populated as the most recent timestamp from the stream.
-    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<MessageWithStats>> {
+    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<Message>> {
         let identity = self.identity.clone();
         let earliest_timestamp = self.buffer.peek_front().map(|f| f.timestamp()).unwrap_or(0);
         Box::pin(self.buffer.cursor(mode).scan(earliest_timestamp, move |last_timestamp, item| {
@@ -104,18 +105,37 @@ impl LogsArtifactsContainer {
                     *last_timestamp = m.timestamp();
                     match m.parse(&identity) {
                         Ok(m) => Arc::new(m),
-                        Err(e) => Arc::new(MessageWithStats::failed_to_parse(
-                            identity.as_ref().into(),
-                            *last_timestamp,
-                            e,
-                        )),
+                        Err(err) => {
+                            let data = LogsDataBuilder::new(BuilderArgs {
+                                moniker: identity.to_string(),
+                                timestamp_nanos: (*last_timestamp).into(),
+                                component_url: Some(identity.url.clone()),
+                                severity: diagnostics_data::Severity::Warn,
+                                size_bytes: 0,
+                            })
+                            .add_error(diagnostics_data::LogError::FailedToParseRecord(format!(
+                                "{:?}",
+                                err
+                            )))
+                            .build();
+                            Arc::new(data.into())
+                        }
                     }
                 }
-                LazyItem::ItemsDropped(n) => Arc::new(MessageWithStats::for_dropped(
-                    n,
-                    identity.as_ref().into(),
-                    *last_timestamp,
-                )),
+                LazyItem::ItemsDropped(n) => {
+                    let message = format!("Rolled {} logs out of buffer", n);
+                    let data = LogsDataBuilder::new(BuilderArgs {
+                        moniker: identity.to_string(),
+                        timestamp_nanos: (*last_timestamp).into(),
+                        component_url: Some(identity.url.clone()),
+                        severity: diagnostics_data::Severity::Warn,
+                        size_bytes: 0,
+                    })
+                    .add_error(diagnostics_data::LogError::DroppedLogs { count: n })
+                    .set_message(message)
+                    .build();
+                    Arc::new(data.into())
+                }
             }))
         }))
     }

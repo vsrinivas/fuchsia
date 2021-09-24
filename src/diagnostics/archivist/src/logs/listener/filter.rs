@@ -1,10 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use crate::logs::message::MessageWithStats;
-
 use super::ListenerError;
-use diagnostics_message::LegacySeverity;
+use diagnostics_message::{LegacySeverity, Message};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
 use std::{collections::HashSet, convert::TryFrom};
 
@@ -77,7 +75,7 @@ impl MessageFilter {
 
     /// This filter defaults to open, allowing messages through. If multiple portions of the filter
     /// are specified, they are additive, only allowing messages through that pass all criteria.
-    pub fn should_send(&self, log_message: &MessageWithStats) -> bool {
+    pub fn should_send(&self, log_message: &Message) -> bool {
         let reject_pid = self.pid.map(|p| log_message.pid() != Some(p)).unwrap_or(false);
         let reject_tid = self.tid.map(|t| log_message.tid() != Some(t)).unwrap_or(false);
         let reject_severity = self
@@ -103,7 +101,7 @@ mod tests {
     use super::*;
     use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
 
-    fn test_message() -> MessageWithStats {
+    fn test_message() -> Message {
         let identity = ComponentIdentity::from_identifier_and_url(
             &ComponentIdentifier::Legacy {
                 moniker: vec!["bogus", "specious-at-best.cmx"].into(),
@@ -111,16 +109,15 @@ mod tests {
             },
             "fuchsia-pkg://not-a-package",
         );
-        MessageWithStats::from(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: fuchsia_zircon::Time::from_nanos(1).into(),
-                component_url: Some(identity.url.clone()),
-                moniker: identity.to_string(),
-                severity: Severity::Info,
-                size_bytes: 1,
-            })
-            .build(),
-        )
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: fuchsia_zircon::Time::from_nanos(1).into(),
+            component_url: Some(identity.url.clone()),
+            moniker: identity.to_string(),
+            severity: Severity::Info,
+            size_bytes: 1,
+        })
+        .build()
+        .into()
     }
 
     #[test]

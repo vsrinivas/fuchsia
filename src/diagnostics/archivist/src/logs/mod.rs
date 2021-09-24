@@ -8,7 +8,6 @@ pub mod container;
 pub mod debuglog;
 pub mod error;
 pub mod listener;
-pub mod message;
 pub mod multiplex;
 pub mod redact;
 pub mod socket;

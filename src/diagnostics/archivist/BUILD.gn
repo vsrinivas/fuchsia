@@ -127,7 +127,6 @@ rustc_library("lib") {
     "src/logs/error.rs",
     "src/logs/listener.rs",
     "src/logs/listener/filter.rs",
-    "src/logs/message.rs",
     "src/logs/mod.rs",
     "src/logs/multiplex.rs",
     "src/logs/redact.rs",
@@ -139,6 +138,7 @@ rustc_library("lib") {
     "src/moniker_rewriter.rs",
     "src/pipeline.rs",
     "src/repository.rs",
+    "src/testing.rs",
   ]
 }
 
@@ -246,6 +246,7 @@ group("with_default_config") {
 rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
   deps = [
     ":lib",
+    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",

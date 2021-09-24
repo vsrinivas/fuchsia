@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use diagnostics_message::error::MessageError;
+use diagnostics_message::{error::MessageError, Message};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
@@ -16,8 +16,6 @@ use tracing::{debug, error, trace};
 mod filter;
 
 use filter::MessageFilter;
-
-use super::message::MessageWithStats;
 
 // Number of bytes the header of a vector occupies in a fidl message.
 const FIDL_VECTOR_HEADER_BYTES: usize = 16;
@@ -55,7 +53,7 @@ impl Listener {
 
     pub fn spawn(
         self,
-        logs: impl Stream<Item = Arc<MessageWithStats>> + Send + Unpin + 'static,
+        logs: impl Stream<Item = Arc<Message>> + Send + Unpin + 'static,
         call_done: bool,
     ) -> Task<()> {
         Task::spawn(async move { self.run(logs, call_done).await })
@@ -63,11 +61,7 @@ impl Listener {
 
     /// Send messages to the listener. First eagerly collects any backlog and sends it out in
     /// batches before waiting for wakeups.
-    async fn run(
-        mut self,
-        mut logs: impl Stream<Item = Arc<MessageWithStats>> + Unpin,
-        call_done: bool,
-    ) {
+    async fn run(mut self, mut logs: impl Stream<Item = Arc<Message>> + Unpin, call_done: bool) {
         debug!("Backfilling from cursor until pending.");
         let mut backlog = vec![];
         futures::future::poll_fn(|cx| {
@@ -103,7 +97,7 @@ impl Listener {
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    async fn backfill<'a>(&mut self, mut messages: Vec<Arc<MessageWithStats>>) {
+    async fn backfill<'a>(&mut self, mut messages: Vec<Arc<Message>>) {
         messages.sort_by_key(|m| m.metadata.timestamp);
 
         // Initialize batch size to the size of the vector header.
@@ -155,7 +149,7 @@ impl Listener {
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
-    async fn send_log(&mut self, log_message: &MessageWithStats) {
+    async fn send_log(&mut self, log_message: &Message) {
         if self.filter.should_send(log_message) {
             trace!("Sending {:?}.", log_message.id);
             let mut to_send = log_message.for_listener();
@@ -239,7 +233,7 @@ mod tests {
         assert_eq!(run_and_consume_backfill(message_vec).await, 4);
     }
 
-    async fn run_and_consume_backfill(message_vec: Vec<Arc<MessageWithStats>>) -> usize {
+    async fn run_and_consume_backfill(message_vec: Vec<Arc<Message>>) -> usize {
         let (client, server) = zx::Channel::create().unwrap();
         let client_end = ClientEnd::<LogListenerSafeMarker>::new(client);
         let mut listener_server =
@@ -265,16 +259,13 @@ mod tests {
         observed_logs
     }
 
-    fn provide_messages(
-        summed_msg_size_bytes: usize,
-        num_messages: usize,
-    ) -> Vec<Arc<MessageWithStats>> {
+    fn provide_messages(summed_msg_size_bytes: usize, num_messages: usize) -> Vec<Arc<Message>> {
         let per_msg_size = summed_msg_size_bytes / num_messages;
         let mut message_vec = Vec::new();
         for _ in 0..num_messages {
             let byte_encoding = generate_byte_encoded_log(per_msg_size);
-            message_vec.push(Arc::new(MessageWithStats::from_logger(
-                &get_test_identity(),
+            message_vec.push(Arc::new(Message::from_logger(
+                get_test_identity().into(),
                 LoggerMessage::try_from(byte_encoding.as_bytes()).unwrap(),
             )))
         }

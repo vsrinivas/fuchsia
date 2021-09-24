@@ -95,7 +95,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::logs::message::{MessageWithStats, TEST_IDENTITY};
+    use crate::testing::TEST_IDENTITY;
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
@@ -114,20 +114,19 @@ mod tests {
 
         let mut ls = LogMessageSocket::new(sout, Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
-        let expected_p = MessageWithStats::from(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: zx::Time::from_nanos(packet.metadata.time).into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
-                severity: Severity::Info,
-                size_bytes: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
-            })
-            .set_pid(packet.metadata.pid)
-            .set_tid(packet.metadata.tid)
-            .add_tag("AAAAA")
-            .set_message("BBBBB".to_string())
-            .build(),
-        );
+        let expected_p = diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(packet.metadata.time).into(),
+            component_url: Some(TEST_IDENTITY.url.clone()),
+            moniker: TEST_IDENTITY.to_string(),
+            severity: Severity::Info,
+            size_bytes: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
+        })
+        .set_pid(packet.metadata.pid)
+        .set_tid(packet.metadata.tid)
+        .add_tag("AAAAA")
+        .set_message("BBBBB".to_string())
+        .build()
+        .into();
 
         let result_message = ls.next().await.unwrap().parse(&TEST_IDENTITY).unwrap();
         assert_eq!(result_message, expected_p);
@@ -156,21 +155,20 @@ mod tests {
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref()[..buffer.position() as usize];
 
-        let expected_p = MessageWithStats::from(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: timestamp.into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
-                severity: Severity::Fatal,
-                size_bytes: encoded.len(),
-            })
-            .add_tag("tag-a")
-            .add_key(diagnostics_data::LogsProperty::String(
-                LogsField::Other("key".to_string()),
-                "value".to_string(),
-            ))
-            .build(),
-        );
+        let expected_p = diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: timestamp.into(),
+            component_url: Some(TEST_IDENTITY.url.clone()),
+            moniker: TEST_IDENTITY.to_string(),
+            severity: Severity::Fatal,
+            size_bytes: encoded.len(),
+        })
+        .add_tag("tag-a")
+        .add_key(diagnostics_data::LogsProperty::String(
+            LogsField::Other("key".to_string()),
+            "value".to_string(),
+        ))
+        .build()
+        .into();
 
         let mut stream = LogMessageSocket::new_structured(sout, Default::default()).unwrap();
 

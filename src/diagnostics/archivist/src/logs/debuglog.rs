@@ -7,11 +7,11 @@
 use crate::{
     container::ComponentIdentity,
     events::types::ComponentIdentifier,
-    logs::{error::LogsError, message::MessageWithStats, stored_message::StoredMessage},
+    logs::{error::LogsError, stored_message::StoredMessage},
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity};
-use diagnostics_message::METADATA_SIZE;
+use diagnostics_message::{Message, METADATA_SIZE};
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
@@ -120,9 +120,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-pub fn convert_debuglog_to_log_message(
-    record: &zx::sys::zx_log_record_t,
-) -> Option<MessageWithStats> {
+pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Option<Message> {
     let data_len = record.datalen as usize;
 
     let mut contents = match std::str::from_utf8(&record.data[0..data_len]) {
@@ -161,7 +159,7 @@ pub fn convert_debuglog_to_log_message(
     };
 
     let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
-    Some(MessageWithStats::from(
+    Some(
         LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: record.timestamp.into(),
             component_url: Some(KERNEL_IDENTITY.url.to_string()),
@@ -174,8 +172,9 @@ pub fn convert_debuglog_to_log_message(
         .add_tag("klog".to_string())
         .set_dropped(0)
         .set_message(contents)
-        .build(),
-    ))
+        .build()
+        .into(),
+    )
 }
 
 #[cfg(test)]
@@ -192,20 +191,19 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
-            MessageWithStats::from(
-                LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: Some(KERNEL_IDENTITY.url.clone()),
-                    moniker: KERNEL_IDENTITY.to_string(),
-                    severity: Severity::Info,
-                    size_bytes: METADATA_SIZE + 6 + "test log".len(),
-                })
-                .set_pid(klog.record.pid)
-                .set_tid(klog.record.tid)
-                .add_tag("klog")
-                .set_message("test log".to_string())
-                .build()
-            )
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: klog.record.timestamp.into(),
+                component_url: Some(KERNEL_IDENTITY.url.clone()),
+                moniker: KERNEL_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 6 + "test log".len(),
+            })
+            .set_pid(klog.record.pid)
+            .set_tid(klog.record.tid)
+            .add_tag("klog")
+            .set_message("test log".to_string())
+            .build()
+            .into()
         );
         // make sure the `klog` tag still shows up for legacy listeners
         assert_eq!(
@@ -226,22 +224,21 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
-            MessageWithStats::from(
-                LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: Some(KERNEL_IDENTITY.url.clone()),
-                    moniker: KERNEL_IDENTITY.to_string(),
-                    severity: Severity::Info,
-                    size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_DATA_MAX,
-                })
-                .set_pid(klog.record.pid)
-                .set_tid(klog.record.tid)
-                .add_tag("klog")
-                .set_message(
-                    String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap()
-                )
-                .build()
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: klog.record.timestamp.into(),
+                component_url: Some(KERNEL_IDENTITY.url.clone()),
+                moniker: KERNEL_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_DATA_MAX,
+            })
+            .set_pid(klog.record.pid)
+            .set_tid(klog.record.tid)
+            .add_tag("klog")
+            .set_message(
+                String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap()
             )
+            .build()
+            .into()
         );
 
         // empty message
@@ -249,20 +246,19 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
-            MessageWithStats::from(
-                LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: Some(KERNEL_IDENTITY.url.clone()),
-                    moniker: KERNEL_IDENTITY.to_string(),
-                    severity: Severity::Info,
-                    size_bytes: METADATA_SIZE + 6,
-                })
-                .set_pid(klog.record.pid)
-                .set_tid(klog.record.tid)
-                .add_tag("klog")
-                .set_message("".to_string())
-                .build()
-            ),
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: klog.record.timestamp.into(),
+                component_url: Some(KERNEL_IDENTITY.url.clone()),
+                moniker: KERNEL_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 6,
+            })
+            .set_pid(klog.record.pid)
+            .set_tid(klog.record.tid)
+            .add_tag("klog")
+            .set_message("".to_string())
+            .build()
+            .into()
         );
 
         // invalid utf-8
@@ -286,20 +282,19 @@ mod tests {
                 .into_iter()
                 .map(|m| m.parse(&*KERNEL_IDENTITY).unwrap())
                 .collect::<Vec<_>>(),
-            vec![MessageWithStats::from(
-                LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.record.timestamp.into(),
-                    component_url: Some(KERNEL_IDENTITY.url.clone()),
-                    moniker: KERNEL_IDENTITY.to_string(),
-                    severity: Severity::Info,
-                    size_bytes: METADATA_SIZE + 6 + "test log".len(),
-                })
-                .set_pid(klog.record.pid)
-                .set_tid(klog.record.tid)
-                .add_tag("klog")
-                .set_message("test log".to_string())
-                .build()
-            )]
+            vec![LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: klog.record.timestamp.into(),
+                component_url: Some(KERNEL_IDENTITY.url.clone()),
+                moniker: KERNEL_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 6 + "test log".len(),
+            })
+            .set_pid(klog.record.pid)
+            .set_tid(klog.record.tid)
+            .add_tag("klog")
+            .set_message("test log".to_string())
+            .build()
+            .into()]
         );
 
         // Unprocessable logs should be skipped.
