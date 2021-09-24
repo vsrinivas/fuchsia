@@ -858,6 +858,40 @@ TEST_P(VulkanImageExtensionTestX, R8ToL8) {
   EXPECT_EQ(static_cast<uint32_t>(fuchsia::sysmem::PixelFormatType::L8), properties.sysmemFormat);
 }
 
+TEST_P(VulkanImageExtensionTestX, NonPackedImage) {
+  ASSERT_TRUE(Initialize());
+  auto [vulkan_token, sysmem_token] = MakeSharedCollection<2>();
+
+  bool linear = GetParam();
+
+  auto image_create_info = GetDefaultImageCreateInfo(
+      use_protected_memory_, VK_FORMAT_B8G8R8A8_UNORM, kDefaultWidth, kDefaultHeight, linear);
+  vk::ImageFormatConstraintsInfoFUCHSIAX format_constraints;
+
+  UniqueBufferCollection collection = CreateVkBufferCollectionForMultiImage(
+      std::move(vulkan_token), image_create_info, &format_constraints);
+
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+  constraints.image_format_constraints_count = 1;
+  constraints.image_format_constraints[0] = GetDefaultSysmemImageFormatConstraints();
+  constraints.image_format_constraints[0].min_coded_width = 64;
+  constraints.image_format_constraints[0].min_bytes_per_row = 1024;
+  auto sysmem_collection_info = AllocateSysmemCollection(constraints, std::move(sysmem_token));
+
+  InitializeDirectImage(*collection, image_create_info);
+
+  if (linear) {
+    CheckLinearSubresourceLayout(VK_FORMAT_R8_UNORM, kDefaultWidth);
+  }
+
+  InitializeDirectImageMemory(*collection);
+
+  vk::BufferCollectionProperties2FUCHSIAX properties;
+  EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionProperties2FUCHSIAX(
+                                      *collection, &properties, loader_));
+}
+
 TEST_P(VulkanImageExtensionTestX, ImageCpuAccessible) {
   ASSERT_TRUE(Initialize());
   auto [vulkan_token] = MakeSharedCollection<1>();
