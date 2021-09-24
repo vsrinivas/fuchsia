@@ -33,6 +33,9 @@
 
 namespace {
 
+KCOUNTER(vm_vmo_marked_latency_sensitive, "vm.vmo.latency_sensitive.marked")
+KCOUNTER(vm_vmo_latency_sensitive_destroyed, "vm.vmo.latency_sensitive.destroyed")
+
 void ZeroPage(paddr_t pa) {
   void* ptr = paddr_to_physmap(pa);
   DEBUG_ASSERT(ptr);
@@ -261,12 +264,23 @@ VmCowPages::~VmCowPages() {
   page_remover.Flush();
 
   pmm_free(&list);
+
+  // Update counters
+  if (is_latency_sensitive_) {
+    vm_vmo_latency_sensitive_destroyed.Add(1);
+  }
 }
 
 bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   canary_.Assert();
 
   Guard<Mutex> guard{&lock_};
+
+  // TODO(fxb/85056): Formalize this.
+  // Forbid zero page deduping if this is latency sensitive.
+  if (is_latency_sensitive_) {
+    return false;
+  }
 
   if (paged_ref_) {
     AssertHeld(paged_ref_->lock_ref());
@@ -2412,6 +2426,17 @@ void VmCowPages::HintAlwaysNeedLocked(vm_page_t* page) const {
   // Check to see if the page is owned by the root VMO. Hints only apply to the root.
   if (page->object.get_object() == GetRootLocked()) {
     page->object.always_need = 1;
+  }
+}
+
+void VmCowPages::MarkAsLatencySensitiveLocked() {
+  // Mark this and all our parents as latency sensitive if they haven't already been.
+  VmCowPages* cur = this;
+  AssertHeld(cur->lock_);
+  while (cur && !cur->is_latency_sensitive_) {
+    vm_vmo_marked_latency_sensitive.Add(1);
+    cur->is_latency_sensitive_ = true;
+    cur = cur->parent_.get();
   }
 }
 

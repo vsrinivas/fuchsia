@@ -216,6 +216,12 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   void InitializeAslr();
 
+  // Returns whether this aspace is marked as latency sensitive.
+  bool IsLatencySensitive() const;
+
+  // Sets this aspace as being latency sensitive. This cannot be undone.
+  void MarkAsLatencySensitive();
+
   static constexpr uint arch_aspace_flags_from_flags(uint32_t flags) {
     bool is_high_kernel = (flags & TYPE_MASK) == TYPE_KERNEL;
     bool is_guest = (flags & TYPE_MASK) == TYPE_GUEST_PHYS;
@@ -240,6 +246,14 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   bool aslr_enabled_ = false;
   uint8_t aslr_entropy_bits_ = 0;
   uint8_t aslr_compact_entropy_bits_ = 0;
+
+  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // formalized.
+  // Indicates whether or not this aspace is considered a latency sensitive object. For an aspace,
+  // being latency sensitive means it will not perform page table reclamation, and will also pass on
+  // this tag to any VMOs that get mapped into it. This is an atomic so that it can be safely read
+  // outside the lock, however writes should occur inside the lock.
+  ktl::atomic<bool> is_latency_sensitive_ = false;
 
   mutable DECLARE_MUTEX(VmAspace) lock_;
 

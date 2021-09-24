@@ -695,6 +695,14 @@ class VmMapping final : public VmAddressRegionOrMapping,
     return GetMappingGenerationCountLocked();
   }
 
+  // Calls MarkAsLatencySensitive on the object_.
+  // Exposed so that the parent aspace can call this.
+  void MarkObjectAsLatencySensitiveLocked() const TA_REQ(lock()) {
+    if (object_) {
+      object_->MarkAsLatencySensitive();
+    }
+  }
+
  protected:
   ~VmMapping() override;
   friend fbl::RefPtr<VmMapping>;
