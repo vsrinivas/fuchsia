@@ -5,7 +5,7 @@
                 0
             ],
             "metric_id": 21,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "core/system-update-committer:root/verification/ota_verification_duration:success",
             "upload_once": true,
             "use_legacy_cobalt": true
@@ -15,7 +15,7 @@
                 1
             ],
             "metric_id": 21,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "core/system-update-committer:root/verification/ota_verification_duration:failure_blobfs",
             "upload_once": true,
             "use_legacy_cobalt": true

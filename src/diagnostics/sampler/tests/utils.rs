@@ -21,7 +21,12 @@ pub fn verify_event_present_once(events: &Vec<CobaltEvent>, expected_event: Expe
                     observed_count += 1;
                 }
             }
-            _ => panic!("Only should be observing CountEvents."),
+            EventPayload::MemoryBytesUsed(value) => {
+                if event.metric_id == expected_event.metric_id && value == expected_event.value {
+                    observed_count += 1;
+                }
+            }
+            _ => panic!("Only should be observing EventCount or MemoryBytesUsed; got {:?}", event),
         }
     }
     observed_count == 1

@@ -5,7 +5,7 @@
                 1
             ],
             "metric_id": 4,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:free_at_high_water_mark",
             "use_legacy_cobalt": true
         },
@@ -14,7 +14,7 @@
                 1
             ],
             "metric_id": 5,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:used_size",
             "use_legacy_cobalt": true
         },
@@ -23,7 +23,7 @@
                 2
             ],
             "metric_id": 4,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:free_at_high_water_mark",
             "use_legacy_cobalt": true
         },
@@ -32,7 +32,7 @@
                 2
             ],
             "metric_id": 5,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:used_size",
             "use_legacy_cobalt": true
         },
@@ -41,7 +41,7 @@
                 3
             ],
             "metric_id": 4,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:free_at_high_water_mark",
             "use_legacy_cobalt": true
         },
@@ -50,7 +50,7 @@
                 3
             ],
             "metric_id": 5,
-            "metric_type": "Integer",
+            "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sysmem/heaps/tee_secure:used_size",
             "use_legacy_cobalt": true
         }
