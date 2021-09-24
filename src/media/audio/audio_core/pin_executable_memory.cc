@@ -11,7 +11,6 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
-#include <lib/zx/vmar.h>
 #include <zircon/status.h>
 
 #include <iomanip>
@@ -19,7 +18,7 @@
 namespace media::audio {
 
 // Memory is considered "unused" if it has not been touched for more than 30s.
-// However in critical situations (to avoid OOM), memory not touched in 10s might be evicted.
+// However in critical situations (to avoid OOM), memory not touched in __10s__ might be evicted.
 // To keep all executable memory pinned, we must run at least once every 10s.
 // To ensure we never miss a deadline, do this twice every 10s.
 static constexpr auto kTimeBetweenPins = zx::sec(5);
@@ -41,85 +40,78 @@ void PinExecutableMemory::PeriodicPin() {
       loop_.dispatcher(), [this]() { PeriodicPin(); }, next_task_time);
 }
 
-void PinExecutableMemory::Pin() {
+// Disable address sanitizer. While Pin() should never read from unmapped memory
+// (i.e., it should never segfault), it might read an address that is not tracked
+// by the address sanitizer.
+__attribute__((no_sanitize_address)) void PinExecutableMemory::Pin() {
   TRACE_DURATION("audio", "PinExecutableMemory::Pin");
 
-  auto start_time = zx::clock::get_monotonic();
-  size_t marks = 0;
-
-  // We recompute this each Pin() call.
-  auto old_pinned_bytes = pinned_bytes_;
-  pinned_bytes_ = 0;
-
-  for (auto& vmap : ListVMaps()) {
-    // Strategy:
-    //
-    // We have learned that page faults can be a bottleneck during audio mixing. Our goal
-    // is to avoid page faults on the critical path. If we don't allocate memory during the
-    // critical path, we can avoid page faults that allocate new pages. However, the kernel
-    // may evict previously allocated pages at any time -- even if we avoid allocations, we
-    // may still page fault to restore pages that had been previously evicted.
-    //
-    // The goal of this function is to "pin" memory to avoid evictions. Conceptually, we
-    // consider two kinds of evictions:
-    //
-    //   1. Evictions of pages backed by storage on disk. Since we currently do not use swap
-    //      space, this sort of eviction applies only to executable pages, which are backed
-    //      by the executable image in stable storage.
-    //
-    //   2. Kernel optimizations that temporarily remove mappings which can be recreated.
-    //      This includes optimizations to evict page table pages and optimizations to dedup
-    //      pages with the same content (such as dedupping pages that are all zeros).
-    //
-    // To avoid the first kind of eviction, we mark each executable mapping ALWAYS NEED.
-    // See fxrev.dev/583785.
-    //
-    // To avoid the second kind of eviction, it is currently sufficient to mark at least one
-    // page ALWAYS_NEED -- this will disable kernel optimizations for the entire address space.
-    // See fxbug.dev/85056.
-    //
-    // Since we must have at least one executable page, it is sufficient to mark executable
-    // pages ALWAYS_NEED. Once a mapping has been marked ALWAYS_NEED, we don't need to mark it
-    // again, but we need to periodically update our pins because code may be loaded dynamically
-    // with dlopen().
-    if ((vmap.type != ZX_INFO_MAPS_TYPE_MAPPING) ||
-        ((vmap.u.mapping.mmu_flags & ZX_VM_PERM_EXECUTE) == 0)) {
-      continue;
-    }
-
-    pinned_bytes_ += vmap.size;
-
-    // Skip if already marked.
-    auto it = pinned_mappings_.find(vmap.base);
-    if (it != pinned_mappings_.end() && it->second.size == vmap.size &&
-        it->second.vmo_koid == vmap.u.mapping.vmo_koid &&
-        it->second.vmo_offset == vmap.u.mapping.vmo_offset) {
-      continue;
-    }
-
-    // Mark.
-    auto status =
-        zx::vmar::root_self()->op_range(ZX_VMAR_OP_ALWAYS_NEED, vmap.base, vmap.size, nullptr, 0);
-    if (status != ZX_OK) {
-      FX_LOGS_FIRST_N(WARNING, 20)
-          << "zx_vmar_op_range(root, ALWAYS_NEED) failed with vmap.base=" << vmap.base
-          << " vmap.size=" << vmap.size;
-    }
-
-    marks++;
-    pinned_mappings_[vmap.base] = {
-        .size = vmap.size,
-        .vmo_koid = vmap.u.mapping.vmo_koid,
-        .vmo_offset = vmap.u.mapping.vmo_offset,
-    };
+  {
+    // Reset so we only accumulate mappings that are discarded concurrently with
+    // this current Pin().
+    std::lock_guard<std::mutex> lock(mutex_);
+    discarded_mappings_.clear();
   }
 
-  if (marks > 0 || old_pinned_bytes != pinned_bytes_) {
-    TRACE_INSTANT("audio", "Pinned bytes", TRACE_SCOPE_THREAD, pinned_bytes_);
+  auto start_time = zx::clock::get_monotonic();
+  size_t total_bytes = 0;
+  size_t total_executable_bytes = 0;
+
+  const size_t kPageSize = zx_system_get_page_size();
+
+  for (auto& vmap : ListVMaps()) {
+    // All readable, non-writable pages are eligible for pinning.
+    if ((vmap.type != ZX_INFO_MAPS_TYPE_MAPPING) ||
+        (vmap.u.mapping.mmu_flags & ZX_VM_PERM_READ) == 0 ||
+        (vmap.u.mapping.mmu_flags & ZX_VM_PERM_WRITE) != 0) {
+      continue;
+    }
+
+    // We want to pin this RO mapping. We assume that executable mappings are not removed
+    // concurrently. If that were to happen, these accesses could crash. Currently, there is one
+    // case where we remove executable mappings: when the tuning manager loads a new effects
+    // pipeline. This can dlclose() a previously loaded shared object. Since the tuning manager
+    // is not being used at the moment, we don't bother supporting this case.
+    //
+    // Non-executable mappings might be removed concurrently with this method, between the
+    // above ListVMaps() call and here. For example, renderer payload buffers might use read-only
+    // shared VMOs and those mappings can come and go as renderers are created and destroyed.
+    // To handle this race, we use the below lock to make pinning atomic with VMO destruction.
+    // To minimize lock contention, we lock each mapping rather than locking the entire Pin().
+    std::unique_lock<std::mutex> lock(mutex_, std::defer_lock);
+
+    const bool executable = ((vmap.u.mapping.mmu_flags & ZX_VM_PERM_EXECUTE) != 0);
+    if (!executable) {
+      lock.lock();
+    }
+
+    // Read one byte from each page of this executable mapping.
+    // Using volatile ensures the memory access is not discarded: https://godbolt.org/z/YdzEPo
+    //
+    auto base = reinterpret_cast<volatile char*>(vmap.base);
+    for (auto ptr = base; ptr < base + vmap.size; ptr += kPageSize) {
+      if (!executable) {
+        AssertMutexHeld();
+        if (ShouldSkip(reinterpret_cast<size_t>(ptr))) {
+          continue;
+        }
+      }
+      (*ptr);
+    }
+    total_bytes += vmap.size;
+    if (executable) {
+      total_executable_bytes += vmap.size;
+    }
+  }
+
+  TRACE_INSTANT("audio", "Pinned bytes", TRACE_SCOPE_THREAD, total_bytes);
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (total_bytes != last_pinned_bytes_) {
+    last_pinned_bytes_ = total_bytes;
     auto end_time = zx::clock::get_monotonic();
-    FX_LOGS(INFO) << "pinned " << pinned_bytes_ << " total bytes: " << marks
-                  << " new VMO mappings, " << old_pinned_bytes << " bytes pinned previously, "
-                  << (end_time - start_time).to_nsecs() << " ns to update";
+    FX_LOGS(INFO) << "pinned " << total_bytes << " bytes (" << total_executable_bytes
+                  << " executable bytes) in " << (end_time - start_time).to_nsecs() << " ns";
   }
 }
 
@@ -147,6 +139,16 @@ std::vector<zx_info_maps_t> PinExecutableMemory::ListVMaps() {
   }
   out.resize(actual);
   return out;
+}
+
+bool PinExecutableMemory::ShouldSkip(size_t addr) const {
+  // Assuming this is usually empty, or at most has just a few mappings, hence O(n) is ok.
+  for (auto& m : discarded_mappings_) {
+    if (m.start <= addr && addr < m.end) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace media::audio
