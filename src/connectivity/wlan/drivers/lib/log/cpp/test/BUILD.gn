@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("wlan_drivers_log_test") {
+  sources = [
+    "basic_log_test.cc",
+    "throttle_counter_test.cc",
+    "throttle_log_test.cc",
+    "token_bucket_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/lib/log/cpp",
+    "//src/devices/testing/no_ddk",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("wlan-drivers-log-tests") {
+  deps = [ ":wlan_drivers_log_test" ]
+}

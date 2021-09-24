@@ -48,7 +48,7 @@ source_set("debug") {
   sources = [ "debug.cc" ]
   public = [ "debug.h" ]
   public_deps = [
-    "//src/connectivity/wlan/drivers/lib/log:cpp",
+    "//src/connectivity/wlan/drivers/lib/log/cpp",
     "//zircon/system/public",
   ]
 }
