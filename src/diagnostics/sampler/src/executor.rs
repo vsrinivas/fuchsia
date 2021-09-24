@@ -343,7 +343,8 @@ fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventP
 
     // TODO(lukenicholson): With Cobalt 1.1, we can encode ints in a proper int type rather
     // than conflating event counts.
-    Ok(Some(EventPayload::EventCount(CountEvent { count: sampled_int, period_duration_micros: 0 })))
+    // Cobalt 1.0 doesn't have Integer values, MEMORY_USED is the closest approximation.
+    Ok(Some(EventPayload::MemoryBytesUsed(sampled_int)))
 }
 
 fn process_event_count(
@@ -595,7 +596,6 @@ mod tests {
         new_val: Property,
         process_ok: bool,
         sample: i64,
-        timespan: i64,
     }
 
     fn process_int_tester(params: IntTesterParams) {
@@ -613,9 +613,8 @@ mod tests {
         assert!(event_opt.is_some());
 
         match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, params.sample);
-                assert_eq!(count_event.period_duration_micros, params.timespan);
+            EventPayload::MemoryBytesUsed(value) => {
+                assert_eq!(value, params.sample);
             }
             _ => panic!("Expecting event counts."),
         }
@@ -626,35 +625,30 @@ mod tests {
             new_val: Property::Int("count".to_string(), 13),
             process_ok: true,
             sample: 13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), -13),
             process_ok: true,
             sample: -13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), 0),
             process_ok: true,
             sample: 0,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Uint("count".to_string(), 13),
             process_ok: true,
             sample: 13,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::String("count".to_string(), "big_oof".to_string()),
             process_ok: false,
             sample: -1,
-            timespan: -1,
         });
     }
 
@@ -664,14 +658,12 @@ mod tests {
             new_val: Property::Int("count".to_string(), std::i64::MAX),
             process_ok: true,
             sample: std::i64::MAX,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Int("count".to_string(), std::i64::MIN),
             process_ok: true,
             sample: std::i64::MIN,
-            timespan: 0,
         });
 
         let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
@@ -680,14 +672,12 @@ mod tests {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64),
             process_ok: true,
             sample: std::i64::MAX,
-            timespan: 0,
         });
 
         process_int_tester(IntTesterParams {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
             process_ok: false,
             sample: -1,
-            timespan: -1,
         });
     }
 }

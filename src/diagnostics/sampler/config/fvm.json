@@ -5,13 +5,13 @@
     {
       "selector": "bootstrap/driver_manager:root/fvm/partitions/blobfs:total_slices_reserved",
       "metric_id": 3000,
-      "metric_type": "Integer",
+      "metric_type": "EventCount",
       "event_codes": [0]
     },
     {
       "selector": "bootstrap/driver_manager:root/fvm/partitions/minfs:total_slices_reserved",
       "metric_id": 3000,
-      "metric_type": "Integer",
+      "metric_type": "EventCount",
       "event_codes": [1]
     }
   ]
