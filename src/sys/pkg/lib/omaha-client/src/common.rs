@@ -258,6 +258,13 @@ impl AppSet {
         apps[0].id.clone()
     }
 
+    /// Get the current product id.
+    /// Returns empty string if product id set for the current app.
+    pub async fn get_current_product_id(&self) -> String {
+        let apps = self.apps.lock().await;
+        apps[0].extra_fields.get("product_id").cloned().unwrap_or_default()
+    }
+
     /// Get the current channel name from cohort name, returns empty string if no cohort name set
     /// for the app.
     pub async fn get_current_channel(&self) -> String {

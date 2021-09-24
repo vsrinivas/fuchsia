@@ -132,7 +132,7 @@ async fn main_inner() -> Result<(), Error> {
         );
     }
 
-    futures.push(feedback_annotation::publish_app_id_to_feedback(app_set.clone()).boxed_local());
+    futures.push(feedback_annotation::publish_ids_to_feedback(app_set.clone()).boxed_local());
 
     // Serve FIDL API
     let fidl = fidl::FidlServer::new(
