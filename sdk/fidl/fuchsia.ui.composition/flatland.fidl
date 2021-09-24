@@ -232,6 +232,32 @@ type ViewBoundProtocols = resource table {
     4: mouse_source server_end:fuchsia.ui.pointer.MouseSource;
 };
 
+/// A maximum of 64 hit regions is enough for the expected usage of these APIs.
+const MAX_HIT_REGION_COUNT int32 = 64;
+
+/// The kind of hit test interaction expected for a hit region.
+type HitTestInteraction = flexible enum : uint8 {
+    /// The natural default behavior is for a hit region to interact with both regular hit testing
+    /// and accessibility hit testing.
+    DEFAULT = 0;
+
+    /// Some use cases require that a hit region to interact with regular hit testing, but not
+    /// interact with accessibility hit testing. Here, "semantics" refers to accessibility's
+    /// semantic tree data, which describes UI elements in a view.
+    SEMANTICALLY_INVISIBLE = 1;
+};
+
+/// An interactive area of a view, placed in the coordinate space of a specific Transform.
+type HitRegion = struct {
+    /// The position and size of this hit region, in the coordinate space of the Transform that owns
+    /// this hit region.
+    region fuchsia.math.RectF;
+
+    /// The interaction behavior specified for this hit region.
+    /// To specify "no interaction at all", remove this hit region from the owning Transform.
+    hit_test HitTestInteraction;
+};
+
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
 /// (specifically, the directed acyclic graph starting at the root transform) to be presented as
@@ -488,6 +514,44 @@ protocol Flatland {
     SetOpacity(struct {
         transform_id TransformId;
         val float32;
+    });
+
+    /// Sets the interactive areas for a Transform. By default, Content is not interactive; hit
+    /// regions must be placed for a user to interact with the Content in a View. Because hit
+    /// regions are described in the Flatland protocol, a Flatland instance can synchronize Content
+    /// and hit regions.
+    ///
+    /// Each hit region is placed in the coordinate space of the owning Transform, and may or may
+    /// not interact with different types of hit testing, depending on its [`HitTestInteraction`]
+    /// type. When there are multiple hit regions that intersect with a hit test, the precedence
+    /// rules given below dictate which hit region has interacted with the hit test. Only Transforms
+    /// that transitively connect to the root Transform have their hit regions interact with a hit
+    /// test.
+    ///
+    /// Precedence rules
+    ///   Within a Transform, if multiple hit regions overlap, the hit test examines each
+    ///   intersecting hit region for a possible interaction. Thus, for a regular hit test H and an
+    ///   accessibility hit test A, where R and A both intersect two hit regions D ([`DEFAULT`]) and
+    ///   S ([`SEMANTICALLY_INVISIBLE`]) on the same Transform, (1) R interacts with both D and S,
+    ///   and (2) A only interacts with D. Generally, hit regions that overlap in a single Transform
+    ///   can cause confusing behavior.
+    ///
+    ///   Within a view, for a given hit test, the front-most Transform's hit regions take
+    ///   precedence over those behind. This follows the expected reverse "render order" of
+    ///   Transforms (described in [`CreateTransform`]), where a user expects to interact with
+    ///   Content that is visible, or front-most.
+    ///
+    ///   Across Flatland instances, for a given hit test, the front-most instance's front-most
+    ///   Transform's hit regions take precedence over those behind. This follows the expected
+    ///   reverse "render order" of views, where a user expects to interact with the view that is
+    ///   visible, or front-most. For example, if a child view owns Content that is rendered over
+    ///   the parent view, the user expects to interact with the child's Content.
+    ///
+    /// To reset a Transform to "no hit testing": send an empty vector.
+    @transitional
+    SetHitRegions(struct {
+        transform_id TransformId;
+        regions vector<HitRegion>:MAX_HIT_REGION_COUNT;
     });
 
     // ***** Content *****

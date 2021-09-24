@@ -37,6 +37,7 @@ protocol/member fuchsia.ui.composition/Flatland.RemoveChild(fuchsia.ui.compositi
 protocol/member fuchsia.ui.composition/Flatland.SetClipBounds(fuchsia.ui.composition/TransformId transform_id,fuchsia.math/Rect rect)
 protocol/member fuchsia.ui.composition/Flatland.SetContent(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/ContentId content_id)
 protocol/member fuchsia.ui.composition/Flatland.SetDebugName(string:64 name)
+protocol/member fuchsia.ui.composition/Flatland.SetHitRegions(fuchsia.ui.composition/TransformId transform_id,vector<fuchsia.ui.composition/HitRegion>:64 regions)
 protocol/member fuchsia.ui.composition/Flatland.SetImageDestinationSize(fuchsia.ui.composition/ContentId image_id,fuchsia.math/SizeU size)
 protocol/member fuchsia.ui.composition/Flatland.SetImageSampleRegion(fuchsia.ui.composition/ContentId image_id,fuchsia.math/RectF rect)
 protocol/member fuchsia.ui.composition/Flatland.SetOpacity(fuchsia.ui.composition/TransformId transform_id,float32 val)
@@ -51,12 +52,19 @@ enum/member fuchsia.ui.composition/FlatlandError.BAD_HANGING_GET 3
 enum/member fuchsia.ui.composition/FlatlandError.BAD_OPERATION 1
 enum/member fuchsia.ui.composition/FlatlandError.NO_PRESENTS_REMAINING 2
 strict enum fuchsia.ui.composition/FlatlandError uint32
+struct/member fuchsia.ui.composition/HitRegion.hit_test fuchsia.ui.composition/HitTestInteraction
+struct/member fuchsia.ui.composition/HitRegion.region fuchsia.math/RectF
+struct fuchsia.ui.composition/HitRegion
+enum/member fuchsia.ui.composition/HitTestInteraction.DEFAULT 0
+enum/member fuchsia.ui.composition/HitTestInteraction.SEMANTICALLY_INVISIBLE 1
+flexible enum fuchsia.ui.composition/HitTestInteraction uint8
 table/member fuchsia.ui.composition/ImageProperties.size fuchsia.math/SizeU
 table fuchsia.ui.composition/ImageProperties
 table/member fuchsia.ui.composition/LayoutInfo.logical_size fuchsia.math/SizeU
 table/member fuchsia.ui.composition/LayoutInfo.pixel_scale fuchsia.math/SizeU
 table fuchsia.ui.composition/LayoutInfo
 const fuchsia.ui.composition/MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 16
+const fuchsia.ui.composition/MAX_HIT_REGION_COUNT int32 64
 table/member fuchsia.ui.composition/OnNextFrameBeginValues.additional_present_credits uint32
 table/member fuchsia.ui.composition/OnNextFrameBeginValues.future_presentation_infos vector<fuchsia.scenic.scheduling/PresentationInfo>:8
 table fuchsia.ui.composition/OnNextFrameBeginValues
