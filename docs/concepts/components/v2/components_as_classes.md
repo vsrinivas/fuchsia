@@ -365,7 +365,7 @@ purge), which largely does not need to be observed.
 The exception to static component initialization is [dynamic
 component collections][component-collections]. The collection itself is
 statically defined, but components in the collection may be dynamically
-[created][realm-create], [bound][realm-bind] (to cause them to start),
+[created][realm-create], bound to by [opening][realm-open] an exposed capability,
 and [destroyed][realm-destroy]. This would be represented as a collection
 holding objects in OOP, though the Component Framework gives you lazy binding
 for free.
@@ -1710,6 +1710,6 @@ the functionality of those frameworks is implemented.
 [lifecycle]: /docs/concepts/components/v2/lifecycle.md
 [oop]: https://en.wikipedia.org/wiki/Object-oriented_programming
 [plain-data]: https://en.wikipedia.org/wiki/Passive_data_structure
-[realm-bind]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm.BindChild
+[realm-open]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm.OpenExposedDir
 [realm-create]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm.CreateChild
 [realm-destroy]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm.DestroyChild

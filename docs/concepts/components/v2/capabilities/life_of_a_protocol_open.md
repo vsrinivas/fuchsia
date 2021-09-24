@@ -257,16 +257,6 @@ parent offering these capabilities. Currently these are:
 -   [`/svc/fuchsia.sys2.Realm`][realm.fidl]: a protocol which components can use
     to manage their own realm.
 
-### Parent may not `use` capabilities exposed to it
-
-Parent components can access capabilities offered by their children at runtime
-by calling the [`fuchsia.sys2.Realm.BindChild`][realm.fidl] method to start the
-child and receive a directory containing the child's exposed protocols.
-
-To prevent dependency cycles from occurring in component namespaces, a parent
-component cannot declare a static dependency on the protocols of its children
-with `use` declarations; it must use `BindChild()`.
-
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
 [cap-routing]: #the-open-triggers-capability-routing
 [channel]: /docs/reference/kernel_objects/channel.md
