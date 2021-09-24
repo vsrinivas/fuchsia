@@ -238,6 +238,7 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
   size_t total_size = 0;
   if (compressed_) {
     if (out_.IsEmpty() && to_read_ == 0) {
+      fprintf(stderr, "Attempting to read past end of the compressed file.\n");
       // There is no more to read
       return ZX_ERR_OUT_OF_RANGE;
     }

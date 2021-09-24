@@ -21,8 +21,11 @@ PayloadStreamer::~PayloadStreamer() {
     // This is necessary due to implementation of streaming protocol which
     // forces entire file to be transferred.
     char buf[8192];
-    while (read(payload_.get(), &buf, sizeof(buf)) > 0)
-      continue;
+    size_t unread = 0;
+    while (size_t bytes = read(payload_.get(), &buf, sizeof(buf)) > 0) {
+      unread += bytes;
+    }
+    fprintf(stderr, "PayloadStreamer: Dumped %zu bytes that were never read.\n", unread);
   }
 }
 
