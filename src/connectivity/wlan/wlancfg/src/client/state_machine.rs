@@ -17,8 +17,8 @@ use {
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
@@ -293,12 +293,12 @@ fn connect_txn_event_name(event: &fidl_sme::ConnectTransactionEvent) -> &'static
 
 async fn wait_until_connected(
     txn: fidl_sme::ConnectTransactionProxy,
-) -> Result<(fidl_sme::ConnectResultCode, fidl_sme::ConnectTransactionEventStream), anyhow::Error> {
+) -> Result<(fidl_sme::ConnectResult, fidl_sme::ConnectTransactionEventStream), anyhow::Error> {
     let mut stream = txn.take_event_stream();
     if let Some(event) = stream.try_next().await? {
         match event {
-            fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => {
-                return Ok((code, stream))
+            fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {
+                return Ok((result, stream))
             }
             other => {
                 return Err(format_err!(
@@ -318,18 +318,15 @@ struct ConnectingOptions {
     attempt_counter: u8,
 }
 
+struct ConnectResult {
+    sme_result: fidl_sme::ConnectResult,
+    connect_txn_stream: fidl_sme::ConnectTransactionEventStream,
+    bss_description: Box<BssDescription>,
+}
+
 type MultipleBssCandidates = bool;
 enum SmeOperation {
-    ConnectResult(
-        Result<
-            (
-                fidl_sme::ConnectResultCode,
-                fidl_sme::ConnectTransactionEventStream,
-                Box<BssDescription>,
-            ),
-            anyhow::Error,
-        >,
-    ),
+    ConnectResult(Result<ConnectResult, anyhow::Error>),
     ScanResult(Option<(fidl_internal::BssDescription, MultipleBssCandidates)>),
 }
 
@@ -504,16 +501,21 @@ async fn connecting_state<'a>(
                     })?;
                     let pending_connect_request = wait_until_connected(connect_txn.clone())
                         .map(|res| {
-                            let result = res.map(|(res_code, stream)| (res_code, stream, parsed_bss_description));
+                            let result = res.map(|(sme_result, stream)| ConnectResult {
+                                sme_result,
+                                connect_txn_stream: stream,
+                                bss_description: parsed_bss_description,
+                            });
                             SmeOperation::ConnectResult(result)
                         })
                         .boxed();
                     internal_futures.push(pending_connect_request);
                 },
                 SmeOperation::ConnectResult(connect_result) => {
-                    let (code, connect_txn_stream, bss_description) = connect_result.map_err({
+                    let connect_result = connect_result.map_err({
                         |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
                     })?;
+                    let sme_result = connect_result.sme_result;
                     // Notify the saved networks manager. observed_in_passive_scan will be false if
                     // network was seen in active scan, or None if no scan was performed.
                     let scan_type =
@@ -524,13 +526,13 @@ async fn connecting_state<'a>(
                     common_options.saved_networks_manager.record_connect_result(
                         options.connect_request.target.network.clone().into(),
                         &options.connect_request.target.credential,
-                        bss_description.bssid,
-                        code,
+                        connect_result.bss_description.bssid,
+                        sme_result,
                         scan_type
                     ).await;
 
-                    match code {
-                        fidl_sme::ConnectResultCode::Success => {
+                    match (sme_result.code, sme_result.is_credential_rejected) {
+                        (fidl_ieee80211::StatusCode::Success, _) => {
                             info!("Successfully connected to network");
                             send_listener_state_update(
                                 &common_options.update_sender,
@@ -541,20 +543,20 @@ async fn connecting_state<'a>(
                                 },
                             );
                             common_options.telemetry_sender.send(TelemetryEvent::Connected {
-                                latest_ap_state: (*bss_description).clone(),
+                                latest_ap_state: (*connect_result.bss_description).clone(),
                                 iface_id: common_options.iface_id,
                             });
                             let connected_options = ConnectedOptions {
                                 currently_fulfilled_request: options.connect_request,
-                                connect_txn_stream,
-                                latest_ap_state: bss_description,
+                                connect_txn_stream: connect_result.connect_txn_stream,
+                                latest_ap_state: connect_result.bss_description,
                             };
                             return Ok(
                                 connected_state(common_options, connected_options).into_state()
                             );
                         },
-                        fidl_sme::ConnectResultCode::CredentialRejected => {
-                            info!("Failed to connect. Will not retry because of credential error: {:?}", code);
+                        (code, true) => {
+                            info!("Failed to connect: {:?}. Will not retry because of credential error.", code);
                             send_listener_state_update(
                                 &common_options.update_sender,
                                 ClientNetworkState {
@@ -565,8 +567,8 @@ async fn connecting_state<'a>(
                             );
                             return Err(ExitReason(Err(format_err!("bad credentials"))));
                         },
-                        other => {
-                            info!("Failed to connect: {:?}", other);
+                        (code, _) => {
+                            info!("Failed to connect: {:?}", code);
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
@@ -680,8 +682,8 @@ async fn connected_state(
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
                             !fidl_info.is_sme_reconnecting
                         }
-                        fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => match code {
-                            fidl_sme::ConnectResultCode::Success => {
+                        fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => match result.code {
+                            fidl_ieee80211::StatusCode::Success => {
                                 connect_start_time = fasync::Time::now();
                                 common_options.telemetry_sender.send(TelemetryEvent::Connected {
                                     iface_id: common_options.iface_id,
@@ -1018,7 +1020,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Check for a connecting update
@@ -1213,7 +1215,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Check for a connecting update
@@ -1464,8 +1466,12 @@ mod tests {
                 ctrl
             }
         );
+        let mut connect_result = fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+            ..fake_successful_connect_result()
+        };
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Failed, false)
+            .send_on_connect_result(&mut connect_result)
             .expect("failed to send connection completion");
 
         // Check for a connecting update
@@ -1515,8 +1521,9 @@ mod tests {
                 ctrl
             }
         );
+        let mut connect_result = fake_successful_connect_result();
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut connect_result)
             .expect("failed to send connection completion");
 
         // Progress the state machine
@@ -1735,7 +1742,8 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+                ctrl
+                    .send_on_connect_result(&mut fake_successful_connect_result())
                     .expect("failed to send connection completion");
             }
         );
@@ -1857,7 +1865,12 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Failed, false)
+                let mut connect_result = fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    ..fake_successful_connect_result()
+                };
+                ctrl
+                    .send_on_connect_result(&mut connect_result)
                     .expect("failed to send connection completion");
             }
         );
@@ -2004,7 +2017,13 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::CredentialRejected, false)
+                let mut connect_result = fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    is_credential_rejected: true,
+                    ..fake_successful_connect_result()
+                };
+                ctrl
+                    .send_on_connect_result(&mut connect_result)
                     .expect("failed to send connection completion");
             }
         );
@@ -2140,7 +2159,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Progress the state machine
@@ -2313,7 +2332,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Progress the state machine
@@ -2780,8 +2799,10 @@ mod tests {
 
         // SME notifies Policy of reconnection successful
         exec.set_fake_time(fasync::Time::after(1.second()));
+        let mut connect_result =
+            fidl_sme::ConnectResult { is_reconnect: true, ..fake_successful_connect_result() };
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, true)
+            .send_on_connect_result(&mut connect_result)
             .expect("failed to send connect result event");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
@@ -2904,7 +2925,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
         assert_variant!(exec.run_until_stalled(&mut state_fut), Poll::Pending);
         // Process write to saved networks manager and stash.
@@ -3081,7 +3102,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -3337,7 +3358,8 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+                ctrl
+                    .send_on_connect_result(&mut fake_successful_connect_result())
                     .expect("failed to send connection completion");
             }
         );
@@ -3419,8 +3441,10 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy that reconnects succeeds
+        let mut connect_result =
+            fidl_sme::ConnectResult { is_reconnect: true, ..fake_successful_connect_result() };
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, true)
+            .send_on_connect_result(&mut connect_result)
             .expect("failed to send reconnection result");
 
         // Run the state machine
@@ -3512,8 +3536,13 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // SME notifies Policy that reconnects fails
+        let mut connect_result = fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+            is_reconnect: true,
+            ..fake_successful_connect_result()
+        };
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Failed, true)
+            .send_on_connect_result(&mut connect_result)
             .expect("failed to send reconnection result");
 
         // Run the state machine
@@ -3592,7 +3621,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Check for a connecting update
@@ -3880,7 +3909,8 @@ mod tests {
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+                ctrl
+                    .send_on_connect_result(&mut fake_successful_connect_result())
                     .expect("failed to send connection completion");
             }
         );
@@ -4106,7 +4136,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
@@ -4189,5 +4219,13 @@ mod tests {
 
         // Ensure the state machine exits
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+    }
+
+    fn fake_successful_connect_result() -> fidl_sme::ConnectResult {
+        fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::Success,
+            is_credential_rejected: false,
+            is_reconnect: false,
+        }
     }
 }

@@ -8,6 +8,8 @@ use zerocopy::{AsBytes, FromBytes};
 #[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Debug, Default)]
 pub struct StatusCode(pub u16);
 
+// LINT.IfChange
+
 /// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 impl StatusCode {
     pub const SUCCESS: Self = Self(0);
@@ -119,8 +121,17 @@ impl StatusCode {
 
     /// Reserved values we will use for our own purposes.
     /// -----
-    /// Join failure.
+    /// Failure when joining the BSS.
     pub const JOIN_FAILURE: Self = Self(256);
     /// Authenticate or associate fails due to spurious deauth or diassoc.
     pub const SPURIOUS_DEAUTH_OR_DISASSOC: Self = Self(257);
+    /// Connect attempt is canceled
+    pub const CANCELED: Self = Self(258);
+    /// Failure establishing security association
+    pub const ESTABLISH_RSNA_FAILURE: Self = Self(259);
 }
+
+// LINT.ThenChange(
+//     //sdk/banjo/ddk.hw.wlan.ieee80211/ieee80211.fidl,
+//     //sdk/fidl/fuchsia.wlan.ieee80211/status_code.fidl
+// )

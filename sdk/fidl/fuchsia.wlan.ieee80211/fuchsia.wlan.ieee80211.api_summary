@@ -90,6 +90,7 @@ strict enum fuchsia.wlan.ieee80211/ReasonCode uint16
 enum/member fuchsia.wlan.ieee80211/StatusCode.ANTI_CLOGGING_TOKEN_REQUIRED 76
 enum/member fuchsia.wlan.ieee80211/StatusCode.AUTHORIZATION_DEENABLED 107
 enum/member fuchsia.wlan.ieee80211/StatusCode.BAD_INTERVAL_WITH_U_APSD_COEX 75
+enum/member fuchsia.wlan.ieee80211/StatusCode.CANCELED 258
 enum/member fuchsia.wlan.ieee80211/StatusCode.CANNOT_FIND_ALTERNATIVE_TBTT 78
 enum/member fuchsia.wlan.ieee80211/StatusCode.CHALLENGE_FAILURE 15
 enum/member fuchsia.wlan.ieee80211/StatusCode.DENIED_DUE_TO_SPECTRUM_MANAGEMENT 103
@@ -108,6 +109,7 @@ enum/member fuchsia.wlan.ieee80211/StatusCode.DENIED_VHT_NOT_SUPPORTED 104
 enum/member fuchsia.wlan.ieee80211/StatusCode.DENIED_WITH_SUGGESTED_BAND_AND_CHANNEL 99
 enum/member fuchsia.wlan.ieee80211/StatusCode.DLS_NOT_ALLOWED 48
 enum/member fuchsia.wlan.ieee80211/StatusCode.ENABLEMENT_DENIED 105
+enum/member fuchsia.wlan.ieee80211/StatusCode.ESTABLISH_RSNA_FAILURE 259
 enum/member fuchsia.wlan.ieee80211/StatusCode.GAS_ADVERTISEMENT_PROTOCOL_NOT_SUPPORTED 59
 enum/member fuchsia.wlan.ieee80211/StatusCode.GAS_QUERY_RESPONSE_TOO_LARGE 63
 enum/member fuchsia.wlan.ieee80211/StatusCode.GAS_QUERY_TIMEOUT 62

@@ -86,15 +86,14 @@ type ActiveScanRequest = struct {
     channels vector<uint8>:500;
 };
 
-type ConnectResultCode = strict enum {
-    // Connected successfully
-    SUCCESS = 0;
-    // The request was superseded by another connect or disconnect command
-    CANCELED = 1;
-    // Failed to join for some reason
-    FAILED = 2;
-    // Failed to join because the authenticator rejected the credentials.
-    CREDENTIAL_REJECTED = 3;
+type ConnectResult = struct {
+    code ieee80211.StatusCode;
+    /// `is_credential_rejected` is true if connect failure is likely due to wrong credential.
+    /// Policy uses this to determine whether to retry with the same password.
+    is_credential_rejected bool;
+    /// If `is_reconnect` is false, the result comes from the initial connection request.
+    /// If it's true, the result comes from an SME-initiated reconnection.
+    is_reconnect bool;
 };
 
 type DisconnectSource = strict enum {
@@ -115,10 +114,7 @@ type DisconnectInfo = struct {
 protocol ConnectTransaction {
     /// Return the result of the initial connection request or later SME-initiated reconnection.
     -> OnConnectResult(struct {
-        code ConnectResultCode;
-        /// If `is_reconnect` is false, the result comes from the initial connection request.
-        /// If it's true, the result comes from an SME-initiated reconnection.
-        is_reconnect bool;
+        result ConnectResult;
     });
 
     /// Notify that the client has disconnected. If DisconnectInfo indicates that SME is

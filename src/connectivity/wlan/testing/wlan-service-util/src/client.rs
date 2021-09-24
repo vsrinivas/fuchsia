@@ -7,6 +7,7 @@ use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
+use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_syslog::fx_log_err;
@@ -73,7 +74,7 @@ pub async fn connect(
 
     let connection_result_code = handle_connect_transaction(connection_proxy).await?;
 
-    if !matches!(connection_result_code, fidl_sme::ConnectResultCode::Success) {
+    if !matches!(connection_result_code, fidl_ieee80211::StatusCode::Success) {
         fx_log_err!("Failed to connect to network: {:?}", connection_result_code);
         return Ok(false);
     }
@@ -106,10 +107,10 @@ pub async fn connect(
 
 async fn handle_connect_transaction(
     connect_transaction: fidl_sme::ConnectTransactionProxy,
-) -> Result<fidl_sme::ConnectResultCode, Error> {
+) -> Result<fidl_ieee80211::StatusCode, Error> {
     let mut event_stream = connect_transaction.take_event_stream();
 
-    let mut result_code = fidl_sme::ConnectResultCode::Failed;
+    let mut result_code = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
 
     while let Some(evt) = event_stream
         .try_next()
@@ -117,8 +118,8 @@ async fn handle_connect_transaction(
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
-            fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => {
-                result_code = code;
+            fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {
+                result_code = result.code;
                 break;
             }
             other => {
@@ -253,8 +254,7 @@ mod tests {
             DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse,
         },
         fidl_fuchsia_wlan_sme::{
-            ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
-            Protection,
+            ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, Protection,
         },
         fuchsia_async::TestExecutor,
         futures::stream::{StreamExt, StreamFuture},
@@ -759,31 +759,22 @@ mod tests {
 
     #[test]
     fn connect_success_returns_true() {
-        let connect_result = test_connect("TestAp", "", "TestAp", ConnectResultCode::Success);
+        let connect_result =
+            test_connect("TestAp", "", "TestAp", fidl_ieee80211::StatusCode::Success);
         assert!(connect_result);
     }
 
     #[test]
     fn connect_failed_returns_false() {
-        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Failed);
-        assert!(!connect_result);
-    }
-
-    #[test]
-    fn connect_canceled_returns_false() {
-        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Canceled);
-        assert!(!connect_result);
-    }
-
-    #[test]
-    fn connect_with_unaccepted_credentials_returns_false() {
-        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::CredentialRejected);
+        let connect_result =
+            test_connect("TestAp", "", "", fidl_ieee80211::StatusCode::RefusedReasonUnspecified);
         assert!(!connect_result);
     }
 
     #[test]
     fn connect_different_ssid_returns_false() {
-        let connect_result = test_connect("TestAp1", "", "TestAp2", ConnectResultCode::Success);
+        let connect_result =
+            test_connect("TestAp1", "", "TestAp2", fidl_ieee80211::StatusCode::Success);
         assert!(!connect_result);
     }
 
@@ -791,7 +782,7 @@ mod tests {
         target_ssid: &str,
         password: &str,
         connected_to_ssid: &str,
-        result_code: ConnectResultCode,
+        result_code: fidl_ieee80211::StatusCode,
     ) -> bool {
         let target_ssid = Ssid::try_from(target_ssid).unwrap();
         let connected_to_ssid = Ssid::try_from(connected_to_ssid).unwrap();
@@ -818,7 +809,7 @@ mod tests {
         );
 
         // if connection is successful, status is requested to extract ssid
-        if result_code == ConnectResultCode::Success {
+        if result_code == fidl_ieee80211::StatusCode::Success {
             assert!(exec.run_until_stalled(&mut fut).is_pending());
             send_status_response(
                 &mut exec,
@@ -923,7 +914,7 @@ mod tests {
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &Ssid,
         expected_credential: fidl_sme::Credential,
-        connect_result: ConnectResultCode,
+        connect_result: fidl_ieee80211::StatusCode,
     ) {
         let responder = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
@@ -939,7 +930,11 @@ mod tests {
             .expect("failed to create a connect transaction stream")
             .control_handle();
         connect_transaction
-            .send_on_connect_result(connect_result, false)
+            .send_on_connect_result(&mut fidl_sme::ConnectResult {
+                code: connect_result,
+                is_credential_rejected: false,
+                is_reconnect: false,
+            })
             .expect("failed to send OnConnectResult to ConnectTransaction");
     }
 

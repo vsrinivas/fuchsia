@@ -9,11 +9,11 @@ use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker,
     DeviceServiceProxy, QueryIfaceResponse,
 };
+use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_minstrel::Peer;
 use fidl_fuchsia_wlan_sme::{
-    self as fidl_sme, ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent,
-    ScanTransactionEventStream,
+    self as fidl_sme, ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
@@ -693,16 +693,14 @@ async fn handle_connect_transaction(
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
-            ConnectTransactionEvent::OnConnectResult { code, .. } => {
-                match code {
-                    ConnectResultCode::Success => println!("Connected successfully"),
-                    ConnectResultCode::Canceled => {
+            ConnectTransactionEvent::OnConnectResult { result } => {
+                match (result.code, result.is_credential_rejected) {
+                    (fidl_ieee80211::StatusCode::Success, _) => println!("Connected successfully"),
+                    (fidl_ieee80211::StatusCode::Canceled, _) => {
                         eprintln!("Connecting was canceled or superseded by another command")
                     }
-                    ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
-                    ConnectResultCode::CredentialRejected => {
-                        eprintln!("Failed to connect to network: {:?}", code)
-                    }
+                    (code, true) => eprintln!("Credential rejected, status code: {:?}", code),
+                    (code, false) => eprintln!("Failed to connect to network: {:?}", code),
                 }
                 break;
             }

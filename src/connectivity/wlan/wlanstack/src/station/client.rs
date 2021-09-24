@@ -5,7 +5,8 @@
 use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy, ScanResultCode};
+use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, DurationNum};
@@ -22,8 +23,8 @@ use wlan_inspect;
 use wlan_sme::{
     self as sme,
     client::{
-        self as client_sme, ConnectFailure, ConnectResult, ConnectTransactionEvent,
-        ConnectTransactionStream, InfoEvent,
+        self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
+        InfoEvent,
     },
     InfoStream,
 };
@@ -217,8 +218,8 @@ async fn serve_connect_txn_stream(
             match connect_txn_stream.next().fuse().await {
                 Some(event) => filter_out_peer_closed(match event {
                     ConnectTransactionEvent::OnConnectResult { result, is_reconnect } => {
-                        let connect_result = convert_connect_result(&result);
-                        handle.send_on_connect_result(connect_result, is_reconnect)
+                        let mut connect_result = convert_connect_result(&result, is_reconnect);
+                        handle.send_on_connect_result(&mut connect_result)
                     }
                     ConnectTransactionEvent::OnDisconnect { mut info } => {
                         handle.send_on_disconnect(&mut info)
@@ -345,18 +346,15 @@ fn send_scan_results(
     handle.send_on_finished()
 }
 
-fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode {
-    match result {
-        ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
-        ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
-        ConnectResult::Failed(ConnectFailure::ScanFailure(ScanResultCode::ShouldWait)) => {
-            fidl_sme::ConnectResultCode::Canceled
+fn convert_connect_result(result: &ConnectResult, is_reconnect: bool) -> fidl_sme::ConnectResult {
+    let (code, is_credential_rejected) = match result {
+        ConnectResult::Success => (fidl_ieee80211::StatusCode::Success, false),
+        ConnectResult::Canceled => (fidl_ieee80211::StatusCode::Canceled, false),
+        ConnectResult::Failed(failure) => {
+            (failure.status_code(), failure.likely_due_to_credential_rejected())
         }
-        ConnectResult::Failed(failure) if failure.likely_due_to_credential_rejected() => {
-            fidl_sme::ConnectResultCode::CredentialRejected
-        }
-        ConnectResult::Failed(..) => fidl_sme::ConnectResultCode::Failed,
-    }
+    };
+    fidl_sme::ConnectResult { code, is_credential_rejected, is_reconnect }
 }
 
 #[cfg(test)]
@@ -438,18 +436,30 @@ mod tests {
     #[test]
     fn test_convert_connect_result() {
         assert_eq!(
-            convert_connect_result(&ConnectResult::Success),
-            fidl_sme::ConnectResultCode::Success
+            convert_connect_result(&ConnectResult::Success, false),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::Success,
+                is_credential_rejected: false,
+                is_reconnect: false,
+            }
         );
         assert_eq!(
-            convert_connect_result(&ConnectResult::Canceled),
-            fidl_sme::ConnectResultCode::Canceled
+            convert_connect_result(&ConnectResult::Canceled, true),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::Canceled,
+                is_credential_rejected: false,
+                is_reconnect: true,
+            }
         );
+        let connect_result =
+            ConnectResult::Failed(ConnectFailure::ScanFailure(ScanResultCode::ShouldWait));
         assert_eq!(
-            convert_connect_result(&ConnectResult::Failed(ConnectFailure::ScanFailure(
-                ScanResultCode::ShouldWait
-            ))),
-            fidl_sme::ConnectResultCode::Canceled
+            convert_connect_result(&connect_result, false),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::Canceled,
+                is_credential_rejected: false,
+                is_reconnect: false,
+            }
         );
 
         let connect_result =
@@ -458,15 +468,23 @@ mod tests {
                 reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
             }));
         assert_eq!(
-            convert_connect_result(&connect_result),
-            fidl_sme::ConnectResultCode::CredentialRejected
+            convert_connect_result(&connect_result, false),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::EstablishRsnaFailure,
+                is_credential_rejected: true,
+                is_reconnect: false,
+            }
         );
 
+        let connect_result =
+            ConnectResult::Failed(ConnectFailure::ScanFailure(ScanResultCode::InternalError));
         assert_eq!(
-            convert_connect_result(&ConnectResult::Failed(ConnectFailure::ScanFailure(
-                ScanResultCode::InternalError
-            ))),
-            fidl_sme::ConnectResultCode::Failed
+            convert_connect_result(&connect_result, false),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                is_credential_rejected: false,
+                is_reconnect: false,
+            }
         );
     }
 
@@ -525,8 +543,11 @@ mod tests {
         assert_variant!(
             event,
             fidl_sme::ConnectTransactionEvent::OnConnectResult {
-                code: fidl_sme::ConnectResultCode::Success,
-                is_reconnect: true,
+                result: fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::Success,
+                    is_credential_rejected: false,
+                    is_reconnect: true,
+                }
             }
         );
 

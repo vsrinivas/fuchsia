@@ -13,9 +13,8 @@ use {
     anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
-    fidl_fuchsia_wlan_sme::{
-        self as fidl_sme, ClientSmeProxy, ConnectRequest, ConnectResultCode, Credential,
-    },
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest, Credential},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     futures::{channel::oneshot, future, join, stream::TryStreamExt, FutureExt, TryFutureExt},
@@ -41,11 +40,11 @@ async fn connect(
     let mut stream = local.take_event_stream();
     while let Some(event) = stream.try_next().await? {
         match event {
-            fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => {
-                if code == ConnectResultCode::Success {
+            fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {
+                if result.code == fidl_ieee80211::StatusCode::Success {
                     return Ok(());
                 }
-                return Err(format_err!("connect failed with error code: {:?}", code));
+                return Err(format_err!("connect failed with error code: {:?}", result.code));
             }
             other => {
                 return Err(format_err!(

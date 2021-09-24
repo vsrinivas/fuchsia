@@ -129,6 +129,8 @@ type ReasonCode = strict enum : uint16 {
     FW_RX_STALLED = 129;
 };
 
+// LINT.IfChange
+
 /// 802.11 status codes.  These values are common throughout the standard.
 /// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 type StatusCode = strict enum : uint16 {
@@ -239,8 +241,17 @@ type StatusCode = strict enum : uint16 {
 
     /// Reserved values we will use for our own purposes.
     /// -----
-    /// Join failure.
+    /// Failure when joining the BSS.
     JOIN_FAILURE = 256;
     /// Authenticate or associate fails due to spurious deauth or diassoc.
     SPURIOUS_DEAUTH_OR_DISASSOC = 257;
+    /// Connect attempt is canceled
+    CANCELED = 258;
+    /// Failure establishing security association
+    ESTABLISH_RSNA_FAILURE = 259;
 };
+
+// LINT.ThenChange(
+//     //sdk/fidl/fuchsia.wlan.ieee80211/status_code.fidl,
+//     //src/connectivity/wlan/lib/common/rust/src/mac/mgmt/status.rs
+// )

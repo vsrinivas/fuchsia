@@ -319,6 +319,24 @@ impl ConnectFailure {
             _ => false,
         }
     }
+
+    pub fn status_code(&self) -> fidl_ieee80211::StatusCode {
+        match self {
+            ConnectFailure::JoinFailure(code)
+            | ConnectFailure::AuthenticationFailure(code)
+            | ConnectFailure::AssociationFailure(AssociationFailure { code, .. }) => *code,
+            ConnectFailure::EstablishRsnaFailure(..) => {
+                fidl_ieee80211::StatusCode::EstablishRsnaFailure
+            }
+            // SME no longer does join scan, so these two failures should no longer happen
+            ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::ShouldWait) => {
+                fidl_ieee80211::StatusCode::Canceled
+            }
+            ConnectFailure::SelectNetworkFailure(..) | ConnectFailure::ScanFailure(..) => {
+                fidl_ieee80211::StatusCode::RefusedReasonUnspecified
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

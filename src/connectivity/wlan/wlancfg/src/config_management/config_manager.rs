@@ -17,7 +17,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -138,7 +138,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         id: NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connect_result: fidl_sme::ConnectResultCode,
+        connect_result: fidl_sme::ConnectResult,
         discovered_in_scan: Option<ScanType>,
     );
 
@@ -508,7 +508,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         id: NetworkIdentifier,
         credential: &Credential,
         bssid: types::Bssid,
-        connect_result: fidl_sme::ConnectResultCode,
+        connect_result: fidl_sme::ConnectResult,
         discovered_in_scan: Option<ScanType>,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
@@ -521,8 +521,8 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         };
         for network in networks.iter_mut() {
             if &network.credential == credential {
-                match connect_result {
-                    fidl_sme::ConnectResultCode::Success => {
+                match (connect_result.code, connect_result.is_credential_rejected) {
+                    (fidl_ieee80211::StatusCode::Success, _) => {
                         let mut has_change = false;
                         if !network.has_ever_connected {
                             network.has_ever_connected = true;
@@ -544,16 +544,16 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                             }
                         }
                     }
-                    fidl_sme::ConnectResultCode::CredentialRejected => {
+                    (fidl_ieee80211::StatusCode::Canceled, _) => {}
+                    (_, true) => {
                         network
                             .perf_stats
                             .failure_list
                             .add(bssid, FailureReason::CredentialRejected);
                     }
-                    fidl_sme::ConnectResultCode::Failed => {
+                    (_, _) => {
                         network.perf_stats.failure_list.add(bssid, FailureReason::GeneralFailure);
                     }
-                    fidl_sme::ConnectResultCode::Canceled => {}
                 }
                 return;
             }
@@ -1174,7 +1174,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 None,
             )
             .await;
@@ -1196,7 +1196,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 None,
             )
             .await;
@@ -1213,7 +1213,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 Some(ScanType::Active),
             )
             .await;
@@ -1228,7 +1228,7 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 Some(ScanType::Passive),
             )
             .await;
@@ -1280,7 +1280,7 @@ mod tests {
                 net_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 None,
             )
             .await;
@@ -1313,7 +1313,10 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Failed,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -1331,7 +1334,10 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Failed,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -1340,7 +1346,11 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::CredentialRejected,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    is_credential_rejected: true,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -1384,7 +1394,10 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid.clone(),
-                fidl_sme::ConnectResultCode::Canceled,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::Canceled,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -1402,7 +1415,10 @@ mod tests {
                 network_id.clone(),
                 &credential,
                 bssid,
-                fidl_sme::ConnectResultCode::Canceled,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::Canceled,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -2469,5 +2485,13 @@ mod tests {
         assert_lt!(rssi_data.rssi, -50.0);
         assert_gt!(rssi_data.rssi, -51.0);
         assert_lt!(rssi_data.velocity, 0.0);
+    }
+
+    fn fake_successful_connect_result() -> fidl_sme::ConnectResult {
+        fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::Success,
+            is_credential_rejected: false,
+            is_reconnect: false,
+        }
     }
 }

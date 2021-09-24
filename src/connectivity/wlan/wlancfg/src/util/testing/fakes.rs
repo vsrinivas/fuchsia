@@ -147,7 +147,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         _id: NetworkIdentifier,
         _credential: &Credential,
         _bssid: client_types::Bssid,
-        _connect_result: fidl_sme::ConnectResultCode,
+        _connect_result: fidl_sme::ConnectResult,
         _discovered_in_scan: Option<fidl_common::ScanType>,
     ) {
     }

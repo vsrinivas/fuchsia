@@ -662,8 +662,8 @@ mod tests {
         cobalt_client::traits::AsEventCode,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         fuchsia_inspect::{self as inspect, assert_data_tree},
         futures::{
@@ -924,7 +924,7 @@ mod tests {
                 test_id_1.clone().into(),
                 &credential_1.clone(),
                 bssid_1,
-                fidl_sme::ConnectResultCode::Success,
+                fake_successful_connect_result(),
                 None,
             )
             .await;
@@ -936,7 +936,11 @@ mod tests {
                 test_id_1.clone().into(),
                 &credential_1.clone(),
                 bssid_2,
-                fidl_sme::ConnectResultCode::CredentialRejected,
+                fidl_sme::ConnectResult {
+                    code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
+                    is_credential_rejected: true,
+                    ..fake_successful_connect_result()
+                },
                 None,
             )
             .await;
@@ -2113,14 +2117,14 @@ mod tests {
             test_id_1.clone().into(),
             &credential_1.clone(),
             types::Bssid([0, 0, 0, 0, 0, 0]),
-            fidl_sme::ConnectResultCode::Success,
+            fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone().into(),
             &credential_2.clone(),
             types::Bssid([0, 0, 0, 0, 0, 0]),
-            fidl_sme::ConnectResultCode::Success,
+            fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
 
@@ -2329,14 +2333,14 @@ mod tests {
             wpa_network_id.clone().into(),
             &credential,
             types::Bssid([0, 0, 0, 0, 0, 0]),
-            fidl_sme::ConnectResultCode::Success,
+            fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             wpa3_network_id.clone().into(),
             &wpa3_credential,
             types::Bssid([0, 0, 0, 0, 0, 0]),
-            fidl_sme::ConnectResultCode::Success,
+            fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
 
@@ -2712,6 +2716,14 @@ mod tests {
             time: zx::Time::INFINITE, // disconnect never expires
             bssid,
             uptime,
+        }
+    }
+
+    fn fake_successful_connect_result() -> fidl_sme::ConnectResult {
+        fidl_sme::ConnectResult {
+            code: fidl_ieee80211::StatusCode::Success,
+            is_credential_rejected: false,
+            is_reconnect: false,
         }
     }
 }

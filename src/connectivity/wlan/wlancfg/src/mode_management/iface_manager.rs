@@ -2036,7 +2036,7 @@ mod tests {
                 }
             );
             connect_txn_handle
-                .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+                .send_on_connect_result(&mut fake_successful_connect_result())
                 .expect("failed to send connection completion");
 
             // Run the state machine future again so that it acks the oneshot.
@@ -2155,7 +2155,7 @@ mod tests {
                 }
             );
             connect_txn_handle
-                .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+                .send_on_connect_result(&mut fake_successful_connect_result())
                 .expect("failed to send connection completion");
 
             // Run the state machine future again so that it acks the oneshot.
@@ -4823,7 +4823,7 @@ mod tests {
             }
         );
         connect_txn_handle
-            .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+            .send_on_connect_result(&mut fake_successful_connect_result())
             .expect("failed to send connection completion");
 
         // Verify that the state machine future is still alive.
@@ -5481,6 +5481,14 @@ mod tests {
                     assert_eq!(phy_manager.country_code, Some([0, 0]))
                 }
             );
+        }
+    }
+
+    fn fake_successful_connect_result() -> fidl_fuchsia_wlan_sme::ConnectResult {
+        fidl_fuchsia_wlan_sme::ConnectResult {
+            code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
+            is_credential_rejected: false,
+            is_reconnect: false,
         }
     }
 }
