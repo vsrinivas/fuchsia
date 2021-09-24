@@ -192,6 +192,11 @@ TEST_F(AudioDeviceEnumeratorTest, RemoveDeviceUnplugged_Output) {
   RunLoopUntilIdle();
 }
 
+// TODO(fxbug.dev/73947): disabled due to flakes when run in AEMU on CQ
+// These are disabled by #if instead of DISABLED because they mention types that
+// do no exist when the tests are DISABLED.
+#if 0
+
 TEST_F(AudioDeviceEnumeratorTest, PlugUnplugDurability_Input) {
   // In the following expression, C++ insists that we explicitly name the current class,
   // i.e. typeof(this). This name is created by the TEST_F macro.
@@ -219,6 +224,8 @@ TEST_F(AudioDeviceEnumeratorTest, AddRemoveMany_Output) {
   TestAddRemoveMany(
       &AudioDeviceEnumeratorTest_AddRemoveMany_Output_Test::CreateOutput<ASF::SIGNED_16>);
 }
+
+#endif
 
 // The following tests use AddDeviceByChannel to add devices, rather than using
 // CreateInput or CreateOutput.
