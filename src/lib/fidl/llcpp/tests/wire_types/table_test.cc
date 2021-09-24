@@ -120,7 +120,7 @@ TEST(Table, SubTables) {
   table.vt()[0].set_x(allocator, 13);
   EXPECT_TRUE(table.vt()[0].has_x());
   EXPECT_EQ(13, table.vt()[0].x());
-  table.vt()[0].set_x(nullptr);
+  table.vt()[0].clear_x();
   EXPECT_FALSE(table.vt()[0].has_x());
 
   // Test setting a field which is an array of tables.
@@ -134,7 +134,7 @@ TEST(Table, SubTables) {
   table.at()[0].set_x(allocator, 15);
   EXPECT_TRUE(table.at()[0].has_x());
   EXPECT_EQ(15, table.at()[0].x());
-  table.at()[0].set_x(nullptr);
+  table.at()[0].clear_x();
   EXPECT_FALSE(table.at()[0].has_x());
 }
 
@@ -169,7 +169,7 @@ TEST(Table, SettingUnsettingHandles) {
   ASSERT_EQ(1u, event_ref_count(event1_dup));
   ASSERT_EQ(2u, event_ref_count(event2_dup));
 
-  table.set_hs(nullptr);
+  table.clear_hs();
   ASSERT_EQ(1u, event_ref_count(event2_dup));
 }
 

@@ -53,8 +53,7 @@ public:
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
-  {{- end }}
-
+  {{- else }}
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   {{ $.Name }}& set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
@@ -67,6 +66,7 @@ public:
     frame_ptr_->{{ .Name }}_.set_data(nullptr);
     return *this;
   }
+  {{- end }}
 
   {{ $.Name }}& clear_{{ .Name }}() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

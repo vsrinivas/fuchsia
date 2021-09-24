@@ -518,17 +518,6 @@ class ExampleTable final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  ExampleTable& set_member(::fidl::ObjectView<uint32_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->member_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  ExampleTable& set_member(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->member_.set_data(nullptr);
-    return *this;
-  }
 
   ExampleTable& clear_member() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

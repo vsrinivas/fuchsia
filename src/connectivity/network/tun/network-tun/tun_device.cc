@@ -22,7 +22,7 @@ void WithWireState(F fn, InternalState& state) {
   fuchsia_net_tun::wire::InternalState::Frame_ frame;
   fuchsia_net_tun::wire::InternalState wire_state(
       fidl::ObjectView<fuchsia_net_tun::wire::InternalState::Frame_>::FromExternal(&frame));
-  wire_state.set_has_session(fidl::ObjectView<bool>::FromExternal(&state.has_session));
+  wire_state.set_has_session(state.has_session);
 
   fuchsia_net_tun::wire::MacState::Frame_ frame_mac;
   fuchsia_net_tun::wire::MacState wire_mac(
@@ -30,8 +30,7 @@ void WithWireState(F fn, InternalState& state) {
   fidl::VectorView<fuchsia_net::wire::MacAddress> multicast_filters;
   if (state.mac.has_value()) {
     MacState& mac = state.mac.value();
-    wire_mac.set_mode(
-        fidl::ObjectView<fuchsia_hardware_network::wire::MacFilterMode>::FromExternal(&mac.mode));
+    wire_mac.set_mode(mac.mode);
     multicast_filters =
         fidl::VectorView<fuchsia_net::wire::MacAddress>::FromExternal(mac.multicast_filters);
     wire_mac.set_multicast_filters(
@@ -174,9 +173,8 @@ void TunDevice::RunReadFrame() {
           fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
       fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
       frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
-      netdev::wire::FrameType frame_type = buff.frame_type();
-      frame.set_frame_type(fidl::ObjectView<netdev::wire::FrameType>::FromExternal(&frame_type));
-      frame.set_port(fidl::ObjectView<uint8_t>::FromExternal(&port_id));
+      frame.set_frame_type(buff.frame_type());
+      frame.set_port(port_id);
       std::optional meta = buff.TakeMetadata();
       if (meta.has_value()) {
         frame.set_meta(

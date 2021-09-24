@@ -192,14 +192,14 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
       fidl::ObjectView<test::wire::HandleTableStruct> reply(allocator);
       reply->t.Allocate(allocator);
       if ((request->fields & 1) != 0) {
-        fidl::ObjectView<zx::event> e(allocator);
-        zx::event::create(0, e.get());
-        reply->t.set_h1(e);
+        zx::event e;
+        zx::event::create(0, &e);
+        reply->t.set_h1(std::move(e));
       }
       if ((request->fields & 2) != 0) {
-        fidl::ObjectView<test::wire::HandleStruct> s(allocator);
-        zx::event::create(0, &s->h);
-        reply->t.set_h2(s);
+        test::wire::HandleStruct s;
+        zx::event::create(0, &s.h);
+        reply->t.set_h2(std::move(s));
       }
       completer.Reply(reply);
     } else {

@@ -183,17 +183,6 @@ class TableWithHandle final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  TableWithHandle& set_h(::fidl::ObjectView<::zx::vmo> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->h_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  TableWithHandle& set_h(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->h_.set_data(nullptr);
-    return *this;
-  }
 
   TableWithHandle& clear_h() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

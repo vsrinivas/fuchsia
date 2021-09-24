@@ -11,18 +11,10 @@
 namespace {
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
-  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
-  fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
+  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -31,18 +23,10 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
 }
 
 TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
-  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
-  fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
+  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
 
   block_info_t blk;
   blk.block_size = 512;
@@ -51,13 +35,9 @@ TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingHashFunction) {
-  fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -66,13 +46,9 @@ TEST(ConfigCheckTest, RejectsMissingHashFunction) {
 }
 
 TEST(ConfigCheckTest, RejectsMissingBlockSize) {
-  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
+  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
 
   block_info_t blk;
   blk.block_size = 4096;
@@ -81,18 +57,10 @@ TEST(ConfigCheckTest, RejectsMissingBlockSize) {
 }
 
 TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
-  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
-  fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
+  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
 
   block_info_t blk;
   // not a divisor of 4k

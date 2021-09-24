@@ -148,12 +148,8 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
       fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_hash_function(hash_function);
+  config.set_block_size(block_size);
 
   // Request the device be opened for writes
   auto open_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
@@ -244,18 +240,10 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
                                                       const zx::duration& timeout,
                                                       fbl::unique_fd& verified_block_fd_out) {
   // make FIDL call to open in authoring mode
-  fuchsia_hardware_block_verified::wire::HashFunction hash_function =
-      fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
-  fuchsia_hardware_block_verified::wire::BlockSize block_size =
-      fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
   fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
-          &hash_function));
-  config.set_block_size(
-      fidl::ObjectView<fuchsia_hardware_block_verified::wire::BlockSize>::FromExternal(
-          &block_size));
+  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
+  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
 
   // Make a copy of the seal to send.
   fuchsia_hardware_block_verified::wire::Sha256Seal sha256_seal;

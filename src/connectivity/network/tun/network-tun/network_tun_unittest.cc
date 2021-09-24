@@ -1222,13 +1222,12 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
       },
       {
           .name = "no frame type",
-          .update_frame =
-              [](fuchsia_net_tun::wire::Frame& frame) { frame.set_frame_type(nullptr); },
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.clear_frame_type(); },
           .expect = ZX_ERR_INVALID_ARGS,
       },
       {
           .name = "no data",
-          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.set_data(nullptr); },
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.clear_data(); },
           .expect = ZX_ERR_INVALID_ARGS,
       },
       {
@@ -1241,7 +1240,7 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
       },
       {
           .name = "no port ID",
-          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.set_port(nullptr); },
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.clear_port(); },
           .expect = ZX_ERR_INVALID_ARGS,
       },
       {

@@ -213,8 +213,8 @@ void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& com
       supported_tx_.data(), supported_tx_count_);
   auto rx_support = fidl::VectorView<netdev::wire::FrameType>::FromExternal(supported_rx_.data(),
                                                                             supported_rx_count_);
-  port_info.set_id(fidl::ObjectView<uint8_t>::FromExternal(&port_id))
-      .set_class_(fidl::ObjectView<netdev::wire::DeviceClass>::FromExternal(&port_class_))
+  port_info.set_id(port_id)
+      .set_class_(port_class_)
       .set_tx_types(fidl::ObjectView<decltype(tx_support)>::FromExternal(&tx_support))
       .set_rx_types(fidl::ObjectView<decltype(rx_support)>::FromExternal(&rx_support));
 

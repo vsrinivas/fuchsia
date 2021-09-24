@@ -1051,18 +1051,6 @@ class FunctionApplication final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
     return *this;
   }
-  FunctionApplication& set_flags(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::Flags> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
-    return *this;
-  }
-  FunctionApplication& set_flags(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->flags_.set_data(nullptr);
-    return *this;
-  }
 
   FunctionApplication& clear_flags() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);

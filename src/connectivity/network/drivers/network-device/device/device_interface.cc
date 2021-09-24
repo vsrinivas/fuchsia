@@ -340,24 +340,17 @@ void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync
       accel_tx_.data(), device_info_.tx_accel_count);
   auto rx_accel = fidl::VectorView<netdev::wire::RxAcceleration>::FromExternal(
       accel_rx_.data(), device_info_.rx_accel_count);
-  device_info
-      .set_min_descriptor_length(fidl::ObjectView<uint8_t>::FromExternal(&min_descriptor_length))
-      .set_descriptor_version(fidl::ObjectView<uint8_t>::FromExternal(&descriptor_version))
-      .set_rx_depth(fidl::ObjectView<uint16_t>::FromExternal(&rx_depth))
-      .set_tx_depth(fidl::ObjectView<uint16_t>::FromExternal(&tx_depth))
-      .set_buffer_alignment(
-          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.buffer_alignment))
-      .set_max_buffer_length(
-          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.max_buffer_length))
-      .set_max_buffer_parts(fidl::ObjectView<uint8_t>::FromExternal(&device_info_.max_buffer_parts))
-      .set_min_rx_buffer_length(
-          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.min_rx_buffer_length))
-      .set_min_tx_buffer_length(
-          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.min_tx_buffer_length))
-      .set_min_tx_buffer_head(
-          fidl::ObjectView<uint16_t>::FromExternal(&device_info_.tx_head_length))
-      .set_min_tx_buffer_tail(
-          fidl::ObjectView<uint16_t>::FromExternal(&device_info_.tx_tail_length))
+  device_info.set_min_descriptor_length(min_descriptor_length)
+      .set_descriptor_version(descriptor_version)
+      .set_rx_depth(rx_depth)
+      .set_tx_depth(tx_depth)
+      .set_buffer_alignment(device_info_.buffer_alignment)
+      .set_max_buffer_length(device_info_.max_buffer_length)
+      .set_max_buffer_parts(device_info_.max_buffer_parts)
+      .set_min_rx_buffer_length(device_info_.min_rx_buffer_length)
+      .set_min_tx_buffer_length(device_info_.min_tx_buffer_length)
+      .set_min_tx_buffer_head(device_info_.tx_head_length)
+      .set_min_tx_buffer_tail(device_info_.tx_tail_length)
       .set_tx_accel(fidl::ObjectView<decltype(tx_accel)>::FromExternal(&tx_accel))
       .set_rx_accel(fidl::ObjectView<decltype(rx_accel)>::FromExternal(&rx_accel));
 
