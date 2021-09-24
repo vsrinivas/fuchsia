@@ -136,8 +136,11 @@ void main(List<String> args) {
         }
       }
     }
+
+    final String sendOrRecv =
+        (send && recv ? 'send-recv' : (send ? 'send' : 'recv'));
     results.add({
-      'label': '$testRun$protocol/send/${msgSize}bytes/CPU',
+      'label': '$testRun$protocol/$sendOrRecv/${msgSize}bytes/CPU',
       'test_suite': testSuite,
       'unit': 'percent',
       'values': cpuPercentages
