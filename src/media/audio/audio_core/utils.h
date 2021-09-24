@@ -22,7 +22,6 @@
 #include <fbl/ref_counted.h>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/audio_core/pin_executable_memory.h"
 
 namespace media::audio {
 
@@ -78,8 +77,7 @@ bool IsFormatInSupported(
 
 // A simple extension to the libfzl VmoMapper which mixes in ref counting state
 // to allow for shared VmoMapper semantics.
-class RefCountedVmoMapper : public PinExecutableMemory::VmoMapper,
-                            public fbl::RefCounted<PinExecutableMemory::VmoMapper> {};
+class RefCountedVmoMapper : public fzl::VmoMapper, public fbl::RefCounted<fzl::VmoMapper> {};
 
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
 
