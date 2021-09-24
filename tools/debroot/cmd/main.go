@@ -8,7 +8,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -28,12 +27,14 @@ import (
 	"time"
 
 	"github.com/google/subcommands"
+	"github.com/ulikunitz/xz"
 	"golang.org/x/crypto/openpgp"
 	"gopkg.in/yaml.v2"
 )
 
 const (
-	aptRepo = "http://http.us.debian.org/debian"
+	aptRepo      = "http://http.us.debian.org/debian"
+	packagesFile = "Packages.xz"
 )
 
 type stringsValue []string
@@ -179,7 +180,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 		for _, a := range config.Architectures {
 			for _, c := range config.Components {
 				u, err := url.Parse(aptRepo)
-				u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+a, "Packages.gz")
+				u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+a, packagesFile)
 				r, err := http.Get(u.String())
 				if err != nil {
 					return nil, err
@@ -192,7 +193,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 				}
 
 				var checksum string
-				f := path.Join(c, "binary-"+a, "Packages.gz")
+				f := path.Join(c, "binary-"+a, packagesFile)
 				for _, l := range lines {
 					if strings.HasSuffix(l, f) {
 						checksum = strings.Fields(l)[0]
@@ -208,7 +209,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 					return nil, fmt.Errorf("%s: checksum doesn't match", f)
 				}
 
-				g, err := gzip.NewReader(bytes.NewReader(buf))
+				g, err := xz.NewReader(bytes.NewReader(buf))
 				if err != nil {
 					return nil, err
 				}

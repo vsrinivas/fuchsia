@@ -212,6 +212,9 @@
       "prebuilt/third_party/flutter",
       "third_party/boringssl"
     ],
+    "ulikunitz.lic": [
+      "third_party/golibs/vendor/github.com/ulikunitz/xz"
+    ],
     "unicode_ibm.lic": [
       "prebuilt/third_party/flutter"
     ],

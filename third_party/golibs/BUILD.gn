@@ -430,6 +430,52 @@ go_library("github.com/tent/canonical-json-go") {
   sources = [ "encode.go" ]
 }
 
+go_library("github.com/ulikunitz/xz") {
+  name = "github.com/ulikunitz/xz/..."
+  source_dir = "vendor/github.com/ulikunitz/xz"
+  sources = [
+    "bits.go",
+    "crc.go",
+    "format.go",
+    "internal/hash/cyclic_poly.go",
+    "internal/hash/doc.go",
+    "internal/hash/rabin_karp.go",
+    "internal/hash/roller.go",
+    "internal/xlog/xlog.go",
+    "lzma/bintree.go",
+    "lzma/bitops.go",
+    "lzma/breader.go",
+    "lzma/buffer.go",
+    "lzma/bytewriter.go",
+    "lzma/decoder.go",
+    "lzma/decoderdict.go",
+    "lzma/directcodec.go",
+    "lzma/distcodec.go",
+    "lzma/encoder.go",
+    "lzma/encoderdict.go",
+    "lzma/hashtable.go",
+    "lzma/header.go",
+    "lzma/header2.go",
+    "lzma/lengthcodec.go",
+    "lzma/literalcodec.go",
+    "lzma/matchalgorithm.go",
+    "lzma/operation.go",
+    "lzma/prob.go",
+    "lzma/properties.go",
+    "lzma/rangecodec.go",
+    "lzma/reader.go",
+    "lzma/reader2.go",
+    "lzma/state.go",
+    "lzma/treecodecs.go",
+    "lzma/writer.go",
+    "lzma/writer2.go",
+    "lzmafilter.go",
+    "none-check.go",
+    "reader.go",
+    "writer.go",
+  ]
+}
+
 ### go.opencensus.io/*
 # Actually aggregates the dependencies of other go.opencensus.io/*
 # packages as well. Use this as a convenience target for any such package.

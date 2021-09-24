@@ -20,6 +20,7 @@ require (
 	github.com/pkg/sftp v1.13.2
 	github.com/spf13/pflag v1.0.5
 	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
+	github.com/ulikunitz/xz v0.5.10
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97

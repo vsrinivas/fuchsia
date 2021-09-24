@@ -9,6 +9,7 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:github.com/ulikunitz/xz",
     "//third_party/golibs:golang.org/x/crypto",
     "//third_party/golibs:gopkg.in/yaml.v2",
   ]
