@@ -415,8 +415,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
       status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
 
       if (status != ZX_OK) {
-        mounter_->mutable_metrics()->LogMinfsCorruption();
-        mounter_->FlushMetrics();
+        mounter_->ReportMinfsCorruption();
         FX_LOGS(ERROR) << "\n--------------------------------------------------------------\n"
                           "|\n"
                           "|   WARNING: fshost fsck failure!\n"
@@ -589,7 +588,7 @@ zx_status_t BlockDevice::MountData(mount_options_t* options) {
       constexpr uint64_t kMinfsResizeDataSizeLimit = 10223616;  // 9.75 * 1024 * 1024
       MaybeResizeMinfsResult result =
           MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, kMinfsResizeRequiredInodes,
-                           kMinfsResizeDataSizeLimit, excluded_paths, mounter_->inspect_manager());
+                           kMinfsResizeDataSizeLimit, excluded_paths, mounter_->manager());
       switch (result) {
         case MaybeResizeMinfsResult::kMinfsMountable:
           break;

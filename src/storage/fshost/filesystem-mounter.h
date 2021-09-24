@@ -68,8 +68,7 @@ class FilesystemMounter {
   FsHostMetrics* mutable_metrics() { return fshost_.mutable_metrics(); }
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
-
-  void FlushMetrics() { fshost_.FlushMetrics(); }
+  void ReportMinfsCorruption();
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
@@ -78,6 +77,7 @@ class FilesystemMounter {
   bool DurableMounted() const { return durable_mounted_; }
 
   InspectManager& inspect_manager() { return fshost_.inspect_manager(); }
+  FsManager& manager() { return fshost_; }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without

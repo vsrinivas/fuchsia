@@ -38,6 +38,7 @@
 
 #include "admin-server.h"
 #include "block-watcher.h"
+#include "fuchsia/feedback/llcpp/fidl.h"
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
@@ -46,6 +47,19 @@
 #define ZXDEBUG 0
 
 namespace devmgr {
+
+namespace {
+
+std::string ReportReasonStr(const FsManager::ReportReason& reason) {
+  switch (reason) {
+    case FsManager::ReportReason::kMinfsCorrupted:
+      return "fuchsia-minfs-corruption";
+    case FsManager::ReportReason::kMinfsNotUpgradeable:
+      return "fuchsia-minfs-not-upgraded";
+  }
+}
+
+}  // namespace
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
                      std::unique_ptr<FsHostMetrics> metrics)
@@ -271,6 +285,55 @@ zx_status_t FsManager::AddFsDiagnosticsDirectory(const char* diagnostics_dir_nam
   auto fs_diagnostics_dir =
       fbl::MakeRefCounted<fs::RemoteDir>(std::move(fs_diagnostics_dir_client));
   return diagnostics_dir_->AddEntry(diagnostics_dir_name, fs_diagnostics_dir);
+}
+
+void FsManager::FileReport(ReportReason reason) {
+  if (!file_crash_report_) {
+    FX_LOGS(INFO) << "Not filing a crash report for " << ReportReasonStr(reason) << " (disabled)";
+    return;
+  }
+  FX_LOGS(INFO) << "Filing a crash report for " << ReportReasonStr(reason);
+  // This thread accesses no state in the SyntheticCrashReporter, so is thread-safe even if the
+  // reporter is destroyed.
+  std::thread t([reason]() {
+    ::zx::channel client_end, server_end;
+    if (zx_status_t status = ::zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
+                       << zx_status_get_string(status);
+      return;
+    }
+    std::string path = std::string("/svc/") +
+        llcpp::fuchsia::feedback::CrashReporter::Name;
+    if (zx_status_t status = fdio_service_connect(path.c_str(), server_end.release());
+        status != ZX_OK) {
+      FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
+                       << zx_status_get_string(status);
+      return;
+    }
+    auto client = llcpp::fuchsia::feedback::CrashReporter::SyncClient(
+        std::move(client_end));
+
+    fidl::StringView name("minfs");
+    std::string reason_str = ReportReasonStr(reason);
+    fidl::StringView reason_fidl_str = fidl::unowned_str(reason_str);
+    llcpp::fuchsia::feedback::CrashReport report =
+        llcpp::fuchsia::feedback::CrashReport::Builder(
+            std::make_unique<llcpp::fuchsia::feedback::CrashReport::Frame>()
+        ).set_program_name(fidl::unowned_ptr(&name))
+        .set_crash_signature(fidl::unowned_ptr(&reason_fidl_str))
+        .build();
+    auto res = client.File(std::move(report));
+    if (!res.ok()) {
+      FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
+    }
+    if (res->result.is_err()) {
+      FX_LOGS(WARNING) << "Failed to file crash report: "
+                       << zx_status_get_string(res->result.err());
+    } else {
+      FX_LOGS(INFO) << "Crash report successfully filed";
+    }
+  });
+  t.detach();
 }
 
 }  // namespace devmgr
