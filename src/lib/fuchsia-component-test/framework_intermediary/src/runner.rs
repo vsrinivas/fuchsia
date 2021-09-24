@@ -62,7 +62,7 @@ impl Runner {
         let self_ref = self.clone();
         fasync::Task::local(async move {
             if let Err(e) = self_ref.handle_runner_request_stream(stream).await {
-                error!("error encountered while running runner service for mocks: {:?}", e);
+                warn!("error encountered while running runner service for mocks: {:?}", e);
             }
         })
         .detach();
