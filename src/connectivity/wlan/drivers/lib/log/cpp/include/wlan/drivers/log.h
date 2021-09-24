@@ -22,8 +22,21 @@ class Log {
   static constexpr fx_log_severity_t kTRACE = DDK_LOG_TRACE;
 
   static constexpr int kLogThrottleEventsPerSec = 2;
+
+  // Hex dump constants.
+  static constexpr char kNP = '.';                       // Char used to show non-printable chars.
+  static constexpr size_t kHexDumpMaxBytesPerLine = 16;  // Bytes to print per line in hex dump.
+  static constexpr size_t kCharPerByte = 3;              // Since each byte is represened as "xx "
+  static constexpr size_t kSpaceBetHexAndStr = 3;        // Space between hex & str representation.
+  static constexpr size_t kHexDumpMinBufSize =
+      (kHexDumpMaxBytesPerLine * kCharPerByte)  // # of hex chars
+      + kSpaceBetHexAndStr                      // space between hex & str repr
+      + kHexDumpMaxBytesPerLine                 // # of str chars
+      + 1;                                      // null termination.
+
   static void SetFilter(uint32_t filter);
   static bool IsFilterOn(uint32_t filter) { return getInstance().filter_ & filter; }
+  static void HexDump(const void* ptr, size_t len, char* output, size_t output_size);
 
  private:
   static Log& getInstance() {
@@ -91,6 +104,38 @@ class Log {
     }                                                                            \
   } while (0)
 
+#define lhexdump_(level, data, length)                                                 \
+  do {                                                                                 \
+    const void* ptr = (data);                                                          \
+    size_t len = (length);                                                             \
+    log_(level, "dumping %zu (0x%zx) bytes, data:%p\n", len, len, ptr);                \
+    if (!ptr) {                                                                        \
+      return;                                                                          \
+    }                                                                                  \
+    for (size_t i = 0; i < len; i += Log::kHexDumpMaxBytesPerLine) {                   \
+      char buf[Log::kHexDumpMinBufSize];                                               \
+      Log::HexDump(reinterpret_cast<const char*>(ptr) + i,                             \
+                   std::min(len - i, Log::kHexDumpMaxBytesPerLine), buf, sizeof(buf)); \
+      log_(level, "%s\n", buf);                                                        \
+    }                                                                                  \
+  } while (0)
+
+#define lhexdump_tag_(level, filter, tag, data, length)                                  \
+  do {                                                                                   \
+    const void* ptr = (data);                                                            \
+    size_t len = (length);                                                               \
+    log_tag_(level, filter, tag, "dumping %zu (0x%zx) bytes, data:%p\n", len, len, ptr); \
+    if (!ptr) {                                                                          \
+      return;                                                                            \
+    }                                                                                    \
+    for (size_t i = 0; i < len; i += Log::kHexDumpMaxBytesPerLine) {                     \
+      char buf[Log::kHexDumpMinBufSize];                                                 \
+      Log::HexDump(reinterpret_cast<const char*>(ptr) + i,                               \
+                   std::min(len - i, Log::kHexDumpMaxBytesPerLine), buf, sizeof(buf));   \
+      log_tag_(level, filter, tag, "%s\n", buf);                                         \
+    }                                                                                    \
+  } while (0)
+
 //
 // Below is the list of of macros that are available for public use. All macros
 // above this (have _ at the end) are intended for internal use within the log library.
@@ -140,5 +185,11 @@ class Log {
       }                                                            \
     }                                                              \
   } while (0)
+
+#define lhexdump_error(data, length) lhexdump_(ERROR, data, length)
+#define lhexdump_warn(data, length) lhexdump_(WARNING, data, length)
+#define lhexdump_info(data, length) lhexdump_(INFO, data, length)
+#define lhexdump_debug(filter, tag, data, length) lhexdump_tag_(DEBUG, filter, tag, data, length)
+#define lhexdump_trace(filter, tag, data, length) lhexdump_tag_(TRACE, filter, tag, data, length)
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_LOG_H_

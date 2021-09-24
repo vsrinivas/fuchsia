@@ -7,6 +7,7 @@ import("//build/test.gni")
 test("wlan_drivers_log_test") {
   sources = [
     "basic_log_test.cc",
+    "hexdump_log_test.cc",
     "throttle_counter_test.cc",
     "throttle_log_test.cc",
     "token_bucket_test.cc",
