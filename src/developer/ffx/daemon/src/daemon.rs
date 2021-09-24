@@ -316,12 +316,35 @@ impl Daemon {
     }
 
     pub async fn start(&mut self) -> Result<()> {
+        self.log_startup_info().await?;
+
         self.load_manual_targets().await;
         self.start_services().await?;
         self.start_discovery().await?;
         self.start_ascendd().await?;
         self.start_target_expiry(Duration::from_secs(1));
         self.serve().await
+    }
+
+    async fn log_startup_info(&self) -> Result<()> {
+        let pid = std::process::id();
+        let hash: String =
+            ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
+        let version_info = build_info();
+        let commit_hash = version_info.commit_hash.as_deref().unwrap_or("<unknown>");
+        let commit_timestamp =
+            version_info.commit_timestamp.map(|t| t.to_string()).unwrap_or("<unknown>".to_owned());
+        let build_version = version_info.build_version.as_deref().unwrap_or("<unknown>");
+
+        log::info!(
+            "Beginning daemon startup\nBuild Version: {}\nCommit Timestamp: {}\nCommit Hash: {}\nBinary Hash: {}\nPID: {}",
+            build_version,
+            commit_timestamp,
+            commit_hash,
+            hash,
+            pid
+        );
+        Ok(())
     }
 
     async fn start_services(&mut self) -> Result<()> {
@@ -972,6 +995,7 @@ impl Daemon {
         log::info!("Starting daemon overnet server");
         hoist::hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
 
+        log::info!("Starting daemon serve loop");
         while let Some(ServiceProviderRequest::ConnectToService {
             chan,
             info: _,
