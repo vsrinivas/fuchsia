@@ -28,6 +28,10 @@ pub struct RunComponentCommand {
     /// specify a name for the component instance.
     /// if this flag is not set, the instance name is derived from the component URL.
     pub name: Option<String>,
+
+    #[argh(switch, short = 'r')]
+    /// destroy and recreate the component instance if it already exists
+    pub recreate: bool,
 }
 
 #[cfg(test)]
@@ -39,10 +43,14 @@ mod tests {
     fn test_command() {
         let url = "http://test.com";
         let name = "test_instance";
-        let args = &[url, "--name", name];
+        let args = &[url, "--name", name, "--recreate"];
         assert_eq!(
             RunComponentCommand::from_args(CMD_NAME, args),
-            Ok(RunComponentCommand { url: url.to_string(), name: Some(name.to_string()) })
+            Ok(RunComponentCommand {
+                url: url.to_string(),
+                name: Some(name.to_string()),
+                recreate: true
+            })
         )
     }
 }
