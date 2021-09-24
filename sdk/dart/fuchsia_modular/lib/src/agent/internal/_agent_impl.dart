@@ -61,7 +61,7 @@ class AgentImpl extends fidl.Agent implements Agent {
       Future.value(serviceImpl).then((T service) {
         exposeServiceProvider(() => service, service.$serviceData);
       });
-    } else if (serviceImpl is T) {
+    } else {
       exposeServiceProvider(() => serviceImpl, serviceImpl.$serviceData);
     }
   }
