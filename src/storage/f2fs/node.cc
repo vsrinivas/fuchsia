@@ -632,7 +632,7 @@ zx::status<int> NodeManager::GetNodePath(VnodeF2fs &vnode, long block, int (&off
       level = 3;
       break;
     } else {
-      zx::error(ZX_ERR_NOT_FOUND);
+      return zx::error(ZX_ERR_NOT_FOUND);
     }
   } while (false);
   return zx::ok(level);
@@ -1135,7 +1135,7 @@ zx_status_t NodeManager::ReadNodePage(Page &page, nid_t nid, int type) {
 #ifdef F2FS_BU_DEBUG
     FX_LOGS(DEBUG) << "NodeManager::ReadNodePage, Read New address...";
 #endif
-    return ZX_OK;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   return VnodeF2fs::Readpage(fs_, &page, ni.blk_addr, type);

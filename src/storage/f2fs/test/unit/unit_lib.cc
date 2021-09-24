@@ -375,4 +375,17 @@ nid_t MapTester::ScanFreeNidList(NodeManager &manager, nid_t start) {
   return start;
 }
 
+block_t MapTester::GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid) {
+  fs::SharedLock nat_lock(manager.nat_tree_lock_);
+  auto entry = manager.nat_cache_.find(nid);
+  return entry->GetBlockAddress();
+}
+
+void MapTester::SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t address) {
+  std::lock_guard nat_lock(manager.nat_tree_lock_);
+  auto entry = manager.nat_cache_.find(nid);
+  ASSERT_TRUE(entry != manager.nat_cache_.end());
+  entry->SetBlockAddress(address);
+}
+
 }  // namespace f2fs

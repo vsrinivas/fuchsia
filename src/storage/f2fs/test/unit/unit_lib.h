@@ -60,6 +60,10 @@ class MapTester {
   static void RemoveAllNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static nid_t ScanFreeNidList(NodeManager &manager, nid_t start)
       __TA_EXCLUDES(manager.free_nid_list_lock_);
+  static block_t GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid)
+      __TA_EXCLUDES(manager.free_nid_list_lock_);
+  static void SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t address)
+      __TA_EXCLUDES(manager.free_nid_list_lock_);
   static FreeNid *GetNextFreeNidInList(NodeManager &manager)
       __TA_EXCLUDES(manager.free_nid_list_lock_) {
     std::lock_guard nat_lock(manager.free_nid_list_lock_);
@@ -76,6 +80,9 @@ class MapTester {
     num_tree = manager.nat_cache_.size();
     num_clean = manager.clean_nat_list_.size_slow();
     num_dirty = manager.dirty_nat_list_.size_slow();
+  }
+  static void SetNatCount(NodeManager &manager, uint32_t count) {
+    manager.nat_entries_count_ = count;
   }
 };
 
