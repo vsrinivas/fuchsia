@@ -42,6 +42,9 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
 
   void Initialize(sys::ComponentContext* context, inspect::Node* parent_node);
 
+  // Attempts to read and store manifest.json. Returns the library path if available.
+  std::optional<std::string> ReadManifest(int contents_dir_fd, const std::string& manifest_path);
+
   // Validate that the metadata json matches the schema. |component_url| is used
   // only when logging errors.
   static bool ValidateMetadataJson(const std::string& component_url,
@@ -51,6 +54,7 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
   // only when logging errors.
   static bool ValidateManifestJson(const std::string& component_url,
                                    const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc);
+
   zx::status<zx::vmo> CloneVmo() const;
 
   // library_path is essentially an arbitrary string given by `library_path` from the ICD.
@@ -70,7 +74,7 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
     std::lock_guard lock(vmo_lock_);
     if (!vmo_info_)
       return {};
-    return child_instance_name_ + vmo_info_->library_path + ".json";
+    return vmo_info_->library_path + ".json";
   }
 
   void AddManifestToFs();

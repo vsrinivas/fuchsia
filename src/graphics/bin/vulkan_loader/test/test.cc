@@ -14,10 +14,13 @@
 
 #include <gtest/gtest.h>
 
+// This is the first and only ICD loaded, so it should have a "0-" prepended.
+const char* kIcdFilename = "0-libvulkan_fake.so";
+
 zx_status_t ForceWaitForIdle(fuchsia::vulkan::loader::LoaderSyncPtr& loader) {
   zx::vmo vmo;
   // manifest.json remaps this to bin/pkg-server.
-  return loader->Get("libvulkan_fake.so", &vmo);
+  return loader->Get(kIcdFilename, &vmo);
 }
 
 TEST(VulkanLoader, ManifestLoad) {
@@ -27,7 +30,7 @@ TEST(VulkanLoader, ManifestLoad) {
 
   zx::vmo vmo_out;
   // manifest.json remaps this to bin/pkg-server.
-  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get(kIcdFilename, &vmo_out));
   EXPECT_TRUE(vmo_out.is_valid());
   zx_info_handle_basic_t handle_info;
   EXPECT_EQ(ZX_OK, vmo_out.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
@@ -47,7 +50,7 @@ TEST(VulkanLoader, VmosIndependent) {
 
   zx::vmo vmo_out;
   // manifest.json remaps this to bin/pkg-server.
-  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get(kIcdFilename, &vmo_out));
   EXPECT_TRUE(vmo_out.is_valid());
 
   fzl::VmoMapper mapper;
@@ -71,7 +74,7 @@ TEST(VulkanLoader, VmosIndependent) {
 
   // Ensure that the new clone is unaffected.
   zx::vmo vmo2;
-  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo2));
+  EXPECT_EQ(ZX_OK, loader->Get(kIcdFilename, &vmo2));
   EXPECT_TRUE(vmo2.is_valid());
 
   fzl::VmoMapper mapper2;
@@ -87,9 +90,7 @@ TEST(VulkanLoader, DeviceFs) {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   EXPECT_EQ(ZX_OK, loader->ConnectToDeviceFs(dir.NewRequest().TakeChannel()));
 
-  zx::vmo vmo_out;
-  // Waiting for this will ensure that the device exists.
-  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
+  ForceWaitForIdle(loader);
 
   fuchsia::gpu::magma::DeviceSyncPtr device_ptr;
   EXPECT_EQ(ZX_OK, fdio_service_connect_at(dir.channel().get(), "class/gpu/000",
@@ -127,8 +128,7 @@ TEST(VulkanLoader, ManifestFs) {
   int dir_fd;
   EXPECT_EQ(ZX_OK, fdio_fd_create(dir.TakeChannel().release(), &dir_fd));
 
-  // "0" is because this is the first ICD loaded.
-  int manifest_fd = openat(dir_fd, "0libvulkan_fake.so.json", O_RDONLY);
+  int manifest_fd = openat(dir_fd, (std::string(kIcdFilename) + ".json").c_str(), O_RDONLY);
 
   EXPECT_LE(0, manifest_fd);
 
@@ -149,9 +149,7 @@ TEST(VulkanLoader, GoldfishSyncDeviceFs) {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   EXPECT_EQ(ZX_OK, loader->ConnectToDeviceFs(dir.NewRequest().TakeChannel()));
 
-  zx::vmo vmo_out;
-  // Waiting for this will ensure that the device exists.
-  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
+  ForceWaitForIdle(loader);
 
   const char* kDeviceClassList[] = {
       "class/goldfish-sync",
@@ -178,5 +176,5 @@ TEST(VulkanLoader, DebugFilesystems) {
   const std::string debug_path("/parent_hub/children/vulkan_loader/exec/out/debug/");
 
   EXPECT_TRUE(std::filesystem::exists(debug_path + "device-fs/class/gpu/000"));
-  EXPECT_TRUE(std::filesystem::exists(debug_path + "manifest-fs/0libvulkan_fake.so.json"));
+  EXPECT_TRUE(std::filesystem::exists(debug_path + "manifest-fs/" + kIcdFilename + ".json"));
 }

@@ -18,6 +18,7 @@
 #include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/lib/files/file.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "src/lib/json_parser/pretty_print.h"
 
 namespace {
 
@@ -162,6 +163,41 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
       });
 }
 
+std::optional<std::string> IcdComponent::ReadManifest(int contents_dir_fd,
+                                                      const std::string& manifest_path) {
+  std::string manifest_result;
+  if (!files::ReadFileToStringAt(contents_dir_fd, manifest_path, &manifest_result)) {
+    FX_LOGS(ERROR) << component_url_ << " Failed to read manifest path " << manifest_path;
+    return {};
+  }
+  json_parser::JSONParser manifest_parser;
+  auto manifest_doc = manifest_parser.ParseFromString(manifest_result, manifest_path);
+  if (manifest_parser.HasError()) {
+    FX_LOGS(ERROR) << component_url_ << " JSON parser had error " << manifest_parser.error_str();
+    return {};
+  }
+  if (!ValidateManifestJson(component_url_, manifest_doc)) {
+    return {};
+  }
+
+  // Update library_path in manifest with a unique name.
+  auto& library_path_node = manifest_doc["ICD"].GetObject()["library_path"];
+  std::string library_path = library_path_node.GetString();
+  library_path = child_instance_name_ + "-" + library_path;
+  node_.CreateString("library_path", library_path, &value_list_);
+  library_path_node.SetString(library_path.c_str(), manifest_doc.GetAllocator());
+
+  manifest_result = json_parser::JsonValueToPrettyString(manifest_doc);
+
+  node_.CreateString("manifest_contents", manifest_result, &value_list_);
+  manifest_file_ =
+      fbl::MakeRefCounted<fs::BufferedPseudoFile>([manifest_result](fbl::String* out_string) {
+        *out_string = manifest_result.c_str();
+        return ZX_OK;
+      });
+  return library_path;
+}
+
 // static
 bool IcdComponent::ValidateMetadataJson(const std::string& component_url,
                                         const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc) {
@@ -266,31 +302,13 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
   std::string file_path = doc["file_path"].GetString();
   node_.CreateString("file_path", file_path, &value_list_);
   initialization_status_.Set("opening manifest");
-  std::string manifest_result;
   std::string manifest_path = doc["manifest_path"].GetString();
-  if (!files::ReadFileToStringAt(contents_dir_fd.get(), doc["manifest_path"].GetString(),
-                                 &manifest_result)) {
-    FX_LOGS(ERROR) << component_url_ << " Failed to read manifest path " << manifest_path;
+  std::optional<std::string> library_path_option =
+      ReadManifest(contents_dir_fd.get(), manifest_path);
+  if (!library_path_option) {
     return;
   }
-  json_parser::JSONParser manifest_parser;
-  auto manifest_doc =
-      manifest_parser.ParseFromString(manifest_result, doc["manifest_path"].GetString());
-  if (manifest_parser.HasError()) {
-    FX_LOGS(ERROR) << component_url_ << " JSON parser had error " << manifest_parser.error_str();
-    return;
-  }
-  if (!ValidateManifestJson(component_url_, manifest_doc)) {
-    return;
-  }
-  std::string library_path = manifest_doc["ICD"].GetObject()["library_path"].GetString();
-  node_.CreateString("library_path", library_path, &value_list_);
-  node_.CreateString("manifest_contents", manifest_result, &value_list_);
-  manifest_file_ =
-      fbl::MakeRefCounted<fs::BufferedPseudoFile>([manifest_result](fbl::String* out_string) {
-        *out_string = manifest_result.c_str();
-        return ZX_OK;
-      });
+
   // Manifest file will be added to the filesystem in IcdList::UpdateCurrentComponent.
 
   fbl::unique_fd fd;
@@ -314,7 +332,7 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
   // the data.
   auto pending_action_token = app_->GetPendingActionToken();
   VmoInfo info;
-  info.library_path = library_path;
+  info.library_path = *library_path_option;
   info.vmo = std::move(vmo);
   {
     std::lock_guard lock(vmo_lock_);
