@@ -33,6 +33,8 @@ template <typename T, size_t FormatIndex>
 // Internal class wrapping a typed value.
 class Value {
  public:
+  using value_type = T;
+
   // Index into the format enum for this type.
   constexpr static size_t format_index = FormatIndex;
 
@@ -59,6 +61,8 @@ class Value {
 template <typename T, size_t FormatIndex>
 class Array final : public Value<std::vector<T>, FormatIndex> {
  public:
+  using value_type = T;
+
   // Describes a single bucket in a histogram.
   //
   // This contains the count of values falling in interval [floor, upper_limit).
