@@ -82,6 +82,7 @@ void scanner_print_stats() {
   VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
   printf("[SCAN]: Found %lu locked pages in discardable vmos\n", counts.locked);
   printf("[SCAN]: Found %lu unlocked pages in discardable vmos\n", counts.unlocked);
+  pmm_page_queues()->Dump();
 }
 
 zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {

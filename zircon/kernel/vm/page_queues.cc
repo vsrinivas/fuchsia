@@ -65,6 +65,70 @@ void PageQueues::EnableAging() {
   aging_event_.Signal();
 }
 
+void PageQueues::Dump() {
+  // Need to grab a copy of all the counts and generations. As the lock is needed to acquire the
+  // active/inactive counts, also hold the lock over the copying of the counts to avoid needless
+  // races.
+  uint64_t mru_gen;
+  uint64_t lru_gen;
+  size_t counts[kNumPagerBacked] = {};
+  size_t inactive_count;
+  zx_time_t last_age_time;
+  ActiveInactiveCounts activeinactive;
+  {
+    Guard<CriticalMutex> guard{&lock_};
+    mru_gen = mru_gen_.load(ktl::memory_order_relaxed);
+    lru_gen = lru_gen_.load(ktl::memory_order_relaxed);
+    inactive_count =
+        page_queue_counts_[PageQueuePagerBackedInactive].load(ktl::memory_order_relaxed);
+    for (uint32_t i = 0; i < kNumPagerBacked; i++) {
+      counts[i] = page_queue_counts_[PageQueuePagerBackedBase + i].load(ktl::memory_order_relaxed);
+    }
+    activeinactive = GetActiveInactiveCountsLocked();
+    last_age_time = last_age_time_.load(ktl::memory_order_relaxed);
+  }
+  // Small arbitrary number that should be more than large enough to hold the constructed string
+  // without causing stack allocation pressure.
+  constexpr size_t kBufSize = 50;
+  // Start with the buffer null terminated. snprintf will always keep it null terminated.
+  char buf[kBufSize] __UNINITIALIZED = "\0";
+  size_t buf_len = 0;
+  // This formats the counts of all buckets, not just those within the mru->lru range, even though
+  // any buckets not in that range should always have a count of zero. The format this generates is
+  // [active],[active],inactive,inactive,{last inactive},should-be-zero,should-be-zero
+  // Although the inactive and should-be-zero use the same formatting, they are broken up by the
+  // {last inactive}.
+  for (uint64_t i = 0; i < kNumPagerBacked; i++) {
+    PageQueue queue = gen_to_queue(mru_gen - i);
+    ASSERT(buf_len < kBufSize);
+    const size_t remain = kBufSize - buf_len;
+    int write_len;
+    if (i < kNumActiveQueues) {
+      write_len =
+          snprintf(buf + buf_len, remain, "[%zu],", counts[queue - PageQueuePagerBackedBase]);
+    } else if (i == mru_gen - lru_gen) {
+      write_len =
+          snprintf(buf + buf_len, remain, "{%zu},", counts[queue - PageQueuePagerBackedBase]);
+    } else {
+      write_len = snprintf(buf + buf_len, remain, "%zu,", counts[queue - PageQueuePagerBackedBase]);
+    }
+    // Negative values are returned on encoding errors, which we never expect to get.
+    ASSERT(write_len >= 0);
+    if (static_cast<uint>(write_len) >= remain) {
+      // Buffer too small, just use whatever we have constructed so far.
+      break;
+    }
+    buf_len += write_len;
+  }
+  zx_time_t current = current_time();
+  timespec age_time = zx_timespec_from_duration(zx_time_sub_time(current, last_age_time));
+  printf("pq: MRU generation is %" PRIu64 " set %ld.%lds ago, LRU generation is %" PRIu64 "\n",
+         mru_gen, age_time.tv_sec, age_time.tv_nsec, lru_gen);
+  printf("pq: Pager buckets %s evict first: %zu, %s active/inactive totals: %zu/%zu\n", buf,
+         inactive_count, activeinactive.cached ? "cached" : "live", activeinactive.active,
+         activeinactive.inactive);
+}
+
 void PageQueues::MruThread() {
   // Pretend that aging happens during startup to simplify the rest of the loop logic.
   last_age_time_ = current_time();

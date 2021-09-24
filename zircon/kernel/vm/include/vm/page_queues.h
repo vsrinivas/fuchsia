@@ -216,6 +216,8 @@ class PageQueues {
   // calls this when it knows accessed scanning is not happening, guaranteeing a live value.
   ActiveInactiveCounts GetActiveInactiveCounts() const TA_EXCL(lock_);
 
+  void Dump() TA_EXCL(lock_);
+
   // These query functions are marked Debug as it is generally a racy way to determine a pages state
   // and these are exposed for the purpose of writing tests or asserts against the pagequeue.
 

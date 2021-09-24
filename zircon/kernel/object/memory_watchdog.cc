@@ -188,6 +188,7 @@ void MemoryWatchdog::WorkerThread() {
     if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
       printf("memory-pressure: free memory is %zuMB, evicting pages to prevent OOM...\n",
              pmm_count_free_pages() * PAGE_SIZE / MB);
+      pmm_page_queues()->Dump();
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
       // in the out of memory state.
       while (mem_event_idx_ == PressureLevel::kOutOfMemory) {
@@ -200,12 +201,13 @@ void MemoryWatchdog::WorkerThread() {
       }
       printf("memory-pressure: free memory after OOM eviction is %zuMB\n",
              pmm_count_free_pages() * PAGE_SIZE / MB);
+      pmm_page_queues()->Dump();
       PageQueues::PagerCounts pager_counts = pmm_page_queues()->GetPagerQueueCounts();
-      printf("memory-pressure: pager-backed working set immediately after OOM eviction is: "
-             "total: %zu MiB newest: %zu MiB oldest: %zu MiB\n",
-             pager_counts.total * PAGE_SIZE / MB,
-             pager_counts.newest * PAGE_SIZE / MB,
-             pager_counts.oldest * PAGE_SIZE / MB);
+      printf(
+          "memory-pressure: pager-backed working set immediately after OOM eviction is: "
+          "total: %zu MiB newest: %zu MiB oldest: %zu MiB\n",
+          pager_counts.total * PAGE_SIZE / MB, pager_counts.newest * PAGE_SIZE / MB,
+          pager_counts.oldest * PAGE_SIZE / MB);
     }
 
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
@@ -274,6 +276,7 @@ void MemoryWatchdog::WorkerThread() {
 
       // If we're below the out-of-memory watermark, trigger OOM behavior.
       if (idx == PressureLevel::kOutOfMemory) {
+        pmm_page_queues()->Dump();
         OnOom();
       }
 
