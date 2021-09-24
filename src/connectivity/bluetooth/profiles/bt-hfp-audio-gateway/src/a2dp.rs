@@ -9,6 +9,8 @@ use futures::{Future, FutureExt, StreamExt};
 use tracing::warn;
 
 /// A client for fuchsia.bluetooth.internal.a2dp.
+
+#[derive(Clone)]
 pub struct Control {
     proxy: Option<a2dp::ControllerProxy>,
 }

@@ -309,7 +309,6 @@ impl Calls {
 
     /// Send a request to the call manager to transfer the audio of the call from the
     /// headset to the fuchsia device.
-    #[cfg(test)]
     fn request_transfer_audio(&mut self, index: CallIdx) -> Result<(), CallError> {
         let desired_state = CallState::TransferredToAg;
         self.send_call_request(index, desired_state, None)
@@ -348,6 +347,11 @@ impl Calls {
     /// Return true if at least one call is in the Active state.
     pub fn is_call_active(&self) -> bool {
         self.calls().any(|c| c.1.state == CallState::OngoingActive)
+    }
+
+    /// Return true if at least one call is in the TransferredToAg state.
+    pub fn is_call_transferred_to_ag(&self) -> bool {
+        self.calls().any(|c| c.1.state == CallState::TransferredToAg)
     }
 
     /// Remove all references to the call assigned to `index`.
@@ -404,6 +408,20 @@ impl Calls {
         let states = vec![IncomingRinging, IncomingWaiting];
         let idx = self.first_of_oldest_by_states(&states).ok_or(CallError::None(states))?.0;
         self.request_active(idx, true)
+    }
+
+    /// Transfer the current OngoingActive call to the AG.
+    pub fn transfer_to_ag(&mut self) -> Result<(), CallError> {
+        let states = vec![CallState::OngoingActive];
+        let idx = self.first_of_oldest_by_states(&states).ok_or(CallError::None(states))?.0;
+        self.request_transfer_audio(idx)
+    }
+
+    /// Transfer the current TransferredToAg call to the HF.
+    pub fn transfer_to_hf(&mut self) -> Result<(), CallError> {
+        let states = vec![CallState::TransferredToAg];
+        let idx = self.first_of_oldest_by_states(&states).ok_or(CallError::None(states))?.0;
+        self.request_active(idx, /* terminate others */ false)
     }
 
     /// Terminate a call.
@@ -575,23 +593,34 @@ impl Stream for Calls {
             return Poll::Ready(None);
         }
 
+        let call_was_active = self.is_call_active();
+        let call_was_transferred = self.is_call_transferred_to_ag();
+
         // Update the state of all new and ongoing calls.
         self.poll_and_consume_new_calls(cx);
         self.poll_and_consume_call_updates(cx);
 
+        let call_is_active = self.is_call_active();
+        let call_is_transferred = self.is_call_transferred_to_ag();
+
+        let mut report_call_transferred = false;
+
+        let mut call_indicators_updates = Default::default();
         if self.pending.report_now() {
             let previous = self.reported_indicators;
             self.reported_indicators = self.indicators();
-
             // Return a list of all the indicators that have changed as a result of the
             // new call state.
-            let changes = self.reported_indicators.difference(previous);
-
-            if !changes.is_empty() {
-                return Poll::Ready(Some(changes));
-            }
+            call_indicators_updates = self.reported_indicators.difference(previous);
+            report_call_transferred = (call_was_active && call_is_transferred)
+                || (call_was_transferred && call_is_active);
         }
-        Poll::Pending
+
+        if !call_indicators_updates.is_empty() || report_call_transferred {
+            Poll::Ready(Some(call_indicators_updates))
+        } else {
+            Poll::Pending
+        }
     }
 }
 
@@ -978,6 +1007,48 @@ mod tests {
         poll_calls_until_pending(&mut exec, &mut calls);
 
         assert!(!calls.is_call_active());
+    }
+
+    #[fuchsia::test]
+    fn calls_transfers_produce_indicators() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (proxy, mut peer_stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+        let mut calls = Calls::new(Some(proxy));
+
+        // No active call when there are no calls.
+        assert!(!calls.is_call_active());
+
+        poll_calls_until_pending(&mut exec, &mut calls);
+        let mut call_stream = new_call(
+            &mut exec,
+            &mut peer_stream,
+            "1",
+            CallState::IncomingRinging,
+            CallDirection::MobileTerminated,
+        );
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // Answer call
+        update_call(&mut exec, &mut call_stream, CallState::OngoingActive);
+        poll_calls_until_pending(&mut exec, &mut calls);
+        assert!(calls.is_call_active());
+        assert!(!calls.is_call_transferred_to_ag());
+
+        // Call transfer to AG produces an empty indicator update.
+        update_call(&mut exec, &mut call_stream, CallState::TransferredToAg);
+        let transferred_update = assert_calls_indicators(&mut exec, &mut calls);
+        assert!(!calls.is_call_active());
+        assert!(calls.is_call_transferred_to_ag());
+        assert!(transferred_update.is_empty());
+
+        // Call transfer to HF produces an empty indicator update.
+        update_call(&mut exec, &mut call_stream, CallState::OngoingActive);
+        let active_update = assert_calls_indicators(&mut exec, &mut calls);
+        assert!(calls.is_call_active());
+        assert!(!calls.is_call_transferred_to_ag());
+        assert!(active_update.is_empty());
     }
 
     #[fuchsia::test]

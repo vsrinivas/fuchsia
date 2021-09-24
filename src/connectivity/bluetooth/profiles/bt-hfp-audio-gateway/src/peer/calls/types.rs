@@ -73,7 +73,11 @@ impl From<bool> for Call {
 impl Call {
     /// Find the Call state based on all the calls in `iter`.
     pub fn find(mut iter: impl Iterator<Item = CallState>) -> Self {
-        iter.any(|state| [CallState::OngoingActive, CallState::OngoingHeld].contains(&state)).into()
+        iter.any(|state| {
+            [CallState::OngoingActive, CallState::OngoingHeld, CallState::TransferredToAg]
+                .contains(&state)
+        })
+        .into()
     }
 }
 

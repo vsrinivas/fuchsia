@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl::AsHandleRef;
 use fidl_fuchsia_bluetooth_bredr as bredr;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
-use tracing::{info, trace};
+use tracing::info;
 
 use crate::error::ScoConnectError;
 use crate::features::CodecId;
 
 /// The components of an active SCO connection.
 /// Dropping this struct will close the SCO connection.
+#[derive(Debug)]
 pub struct ScoConnection {
     /// The parameters that this connection was set up with.
     pub params: bredr::ScoConnectionParameters,
@@ -27,8 +29,16 @@ impl ScoConnection {
             .extend_lifetime()
             .map(|_| ())
     }
+
+    pub fn is_closed(&self) -> bool {
+        self.socket
+            .as_handle_ref()
+            .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)))
+            .is_ok()
+    }
 }
 
+#[derive(Clone)]
 pub struct ScoConnector {
     proxy: bredr::ProfileProxy,
 }
@@ -76,21 +86,18 @@ impl ScoConnector {
         Self { proxy }
     }
 
-    async fn initiate_sco(
-        proxy: bredr::ProfileProxy,
-        peer_id: PeerId,
-        params: bredr::ScoConnectionParameters,
-    ) -> Result<zx::Socket, ScoConnectError> {
-        let (client, mut requests) =
-            fidl::endpoints::create_request_stream::<bredr::ScoConnectionReceiverMarker>()?;
-
-        info!("Initiating SCO connection for {}: {:?}", peer_id, params);
-        proxy.connect_sco(&mut peer_id.into(), true, &mut vec![params].into_iter(), client)?;
-
+    async fn await_sco_socket(
+        requests: &mut bredr::ScoConnectionReceiverRequestStream,
+    ) -> Result<ScoConnection, ScoConnectError> {
         let socket = match requests.next().await {
-            Some(Ok(bredr::ScoConnectionReceiverRequest::Connected { connection, .. })) => {
-                connection.socket.ok_or(ScoConnectError::MissingSocket)?
-            }
+            Some(Ok(bredr::ScoConnectionReceiverRequest::Connected {
+                connection,
+                params,
+                control_handle: _,
+            })) => connection
+                .socket
+                .map(|socket| ScoConnection { socket, params })
+                .ok_or(ScoConnectError::MissingSocket)?,
             Some(Ok(bredr::ScoConnectionReceiverRequest::Error { error, .. })) => {
                 return Err(error.into())
             }
@@ -100,31 +107,52 @@ impl ScoConnector {
         Ok(socket)
     }
 
-    pub fn connect(
+    pub async fn connect(
         &self,
         peer_id: PeerId,
         codecs: Vec<CodecId>,
-    ) -> impl Future<Output = Result<ScoConnection, ScoConnectError>> {
-        let proxy = self.proxy.clone();
-        async move {
-            for codec in codecs {
-                let params = parameters_for_codec(codec);
-                match Self::initiate_sco(proxy.clone(), peer_id.clone(), params.clone()).await {
-                    Ok(socket) => return Ok(ScoConnection { params, socket }),
-                    Err(e) => {
-                        trace!("Failed to connect SCO with {:?} ({:?}), trying others..", params, e)
-                    }
-                };
-            }
+    ) -> Result<ScoConnection, ScoConnectError> {
+        let mut params = codecs.into_iter().map(parameters_for_codec).collect::<Vec<_>>();
+        params.push(SCO_PARAMS_FALLBACK.clone());
 
-            let params = SCO_PARAMS_FALLBACK.clone();
-            match Self::initiate_sco(proxy, peer_id.clone(), params.clone()).await {
-                Ok(socket) => Ok(ScoConnection { params, socket }),
-                Err(e) => {
-                    trace!("Failed to connect SCO with fallback ({:?}), failing..", e);
-                    Err(ScoConnectError::ScoFailed)
-                }
+        info!("Initiating SCO connection for {}: {:?}.", peer_id, params.clone(),);
+
+        let mut result = Err(ScoConnectError::ScoFailed);
+        for param in params {
+            let (client, mut requests) =
+                fidl::endpoints::create_request_stream::<bredr::ScoConnectionReceiverMarker>()?;
+            self.proxy.connect_sco(
+                &mut peer_id.into(),
+                /* initiate = */ true,
+                &mut vec![param].into_iter(),
+                client,
+            )?;
+            result = Self::await_sco_socket(&mut requests).await;
+            if result.is_ok() {
+                break;
             }
         }
+        result
+    }
+
+    pub async fn accept(
+        &self,
+        peer_id: PeerId,
+        codecs: Vec<CodecId>,
+    ) -> Result<ScoConnection, ScoConnectError> {
+        let mut params = codecs.into_iter().map(parameters_for_codec).collect::<Vec<_>>();
+        params.push(SCO_PARAMS_FALLBACK.clone());
+
+        info!("Accepting SCO connection for {}: {:?}.", peer_id, params.clone(),);
+
+        let (client, mut requests) =
+            fidl::endpoints::create_request_stream::<bredr::ScoConnectionReceiverMarker>()?;
+        self.proxy.connect_sco(
+            &mut peer_id.into(),
+            /* initiate = */ false,
+            &mut params.into_iter(),
+            client,
+        )?;
+        Self::await_sco_socket(&mut requests).await
     }
 }

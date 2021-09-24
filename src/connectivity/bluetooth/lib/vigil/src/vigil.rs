@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt::{self, Debug};
 use std::ops::Deref;
 use std::sync::Mutex;
 
@@ -57,6 +58,12 @@ impl<T: ?Sized> Deref for Vigil<T> {
     }
 }
 
+impl<T: Debug> Debug for Vigil<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Vigil({:?})", self.inner().data)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -101,7 +108,6 @@ mod tests {
     fn drops_stored_data() {
         let shared_count = Rc::new(AtomicUsize::new(0));
         let v = Vigil::new(DropIncrementer(shared_count.clone()));
-
         drop(v);
         assert_eq!(1, shared_count.load(Ordering::Relaxed));
     }

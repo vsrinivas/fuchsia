@@ -16,15 +16,15 @@ use {
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::{self, Either, Future},
+        future::{self, Either, Fuse, Future},
         select,
         stream::{empty, Empty},
         FutureExt, StreamExt,
     },
     parking_lot::Mutex,
     profile_client::ProfileEvent,
-    std::{convert::TryInto, fmt, sync::Arc},
-    tracing::{debug, info, warn},
+    std::{convert::TryInto, fmt, pin::Pin, sync::Arc},
+    tracing::{debug, error, info, warn},
     vigil::{DropWatch, Vigil},
 };
 
@@ -44,10 +44,55 @@ use crate::{
     a2dp,
     audio::AudioControl,
     config::AudioGatewayFeatureSupport,
-    error::Error,
+    error::{Error, ScoConnectError},
     features::CodecId,
     sco_connector::{ScoConnection, ScoConnector},
 };
+
+#[derive(Debug)]
+struct ScoActive {
+    sco_connection: ScoConnection,
+    _pause_token: Option<a2dp::PauseToken>,
+}
+
+type ScoStateFuture<T> = Pin<Box<dyn Future<Output = Result<T, ScoConnectError>>>>;
+enum ScoState {
+    /// No call is in progress.
+    Inactive,
+    /// A call has been made active, and we are negotiating codecs before setting up the SCO connection.
+    /// This state prevents a race where the call has been made active but SCO not yet set up, and the peer
+    /// task, seeing that the connection is not Active, attempts to set up the SCO connection a second time,
+    SettingUp,
+    /// The HF has closed the remote SCO connection so we are waiting for the call to be set transferred to AG.
+    /// This state prevents a race where the SCO connection has been torn down but the call not yet set to inactive
+    /// by the call manager, so the peer task attempts to mark the call as inactive a second time.
+    TearingDown,
+    /// A call is transferred to the AG and we are waiting for the HF to initiate a SCO connection.
+    AwaitingRemote(ScoStateFuture<ScoConnection>),
+    /// A call is active an dso is the SCO connection.
+    Active(Vigil<ScoActive>),
+}
+
+impl ScoState {
+    fn is_active(&self) -> bool {
+        match self {
+            Self::Active(_) => true,
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Debug for ScoState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ScoState::Inactive => write!(f, "Inactive"),
+            ScoState::SettingUp => write!(f, "SettingUp"),
+            ScoState::TearingDown => write!(f, "TearingDown"),
+            ScoState::AwaitingRemote(_) => write!(f, "AwaitingRemote"),
+            ScoState::Active(active) => write!(f, "Active({:?})", active),
+        }
+    }
+}
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -66,7 +111,7 @@ pub(super) struct PeerTask {
     connection: ServiceLevelConnection,
     a2dp_control: a2dp::Control,
     sco_connector: ScoConnector,
-    active_sco: Option<Vigil<(ScoConnection, Option<a2dp::PauseToken>)>>,
+    sco_state: ScoState,
     ringer: Ringer,
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
 }
@@ -96,7 +141,7 @@ impl PeerTask {
             connection: ServiceLevelConnection::new(),
             a2dp_control,
             sco_connector,
-            active_sco: None,
+            sco_state: ScoState::Inactive,
             ringer: Ringer::default(),
             audio_control,
         })
@@ -122,9 +167,9 @@ impl PeerTask {
         channel: fuchsia_bluetooth::types::Channel,
     ) {
         if self.connection.connected() {
-            info!("Overwriting existing connection to {:?}", self.id);
+            info!("Overwriting existing connection to {}", self.id);
         } else {
-            info!("Connection request from {:?}", self.id);
+            info!("Connection request from {}", self.id);
         }
         self.connection.connect(channel);
     }
@@ -132,9 +177,10 @@ impl PeerTask {
     /// Make a connection to the peer only if there is not an existing connection.
     async fn connect(&mut self, mut params: bredr::ConnectParameters) -> Result<(), anyhow::Error> {
         if self.connection.connected() {
+            info!("Already connected to peer: {}.", self.id);
             return Ok(());
         }
-        info!("Initiating connection to peer");
+        info!("Initiating connection to peer: {}", self.id);
         let channel = self
             .profile_proxy
             .connect(&mut self.id.into(), &mut params)
@@ -149,7 +195,7 @@ impl PeerTask {
         protocol: Option<Vec<ProtocolDescriptor>>,
         _attributes: Vec<Attribute>,
     ) {
-        info!("Search results received for {:?}", self.id);
+        info!("Search results received for {}", self.id);
 
         let server_channel = match protocol.as_ref().map(server_channel_from_protocol) {
             Some(Some(sc)) => sc,
@@ -165,7 +211,7 @@ impl PeerTask {
 
         if self.connection_behavior.autoconnect {
             if let Err(e) = self.connect(params).await {
-                info!("Error inititating connecting to peer {:?}: {:?}", self.id, e);
+                info!("Error inititating connecting to peer {}: {:?}", self.id, e);
             }
         }
     }
@@ -237,7 +283,7 @@ impl PeerTask {
 
     /// Processes a `request` for information from an HFP procedure.
     async fn procedure_request(&mut self, request: SlcRequest) {
-        debug!("HF procedure request ({:?}): {:?}", self.id, request);
+        debug!("HF procedure request ({}): {:?}", self.id, request);
         let marker = (&request).into();
         match request {
             SlcRequest::GetAgFeatures { response } => {
@@ -353,17 +399,31 @@ impl PeerTask {
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::SynchronousConnectionSetup { selected, response } => {
-                // TODO(fxbug.dev/72681): Because we must send an OK response to the just before
+                self.connection.set_selected_codec(selected);
+                // TODO(fxbug.dev/72681): Because we must send an OK response to the HF just before
                 // setting up the synchronous connection, we send it here by routing through the
                 // procedure.
-                if selected.is_some() {
+                if self.connection.get_selected_codec().is_some() {
                     self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
                 }
-                let result = self
-                    .setup_audio_connection(selected)
-                    .await
-                    .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
-                self.connection.receive_ag_request(marker, response(result)).await;
+                if let ScoState::SettingUp = self.sco_state {
+                    let codecs = self
+                        .connection
+                        .get_selected_codec()
+                        .map_or(vec![CodecId::CVSD], |c| vec![c]);
+                    let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
+                    let finish_result = match setup_result {
+                        Ok(conn) => self.finish_sco_connection(conn).await,
+                        Err(err) => Err(err.into()),
+                    };
+                    let result = finish_result
+                        .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
+                    self.connection.receive_ag_request(marker, response(result)).await;
+                } else {
+                    // This isn't necessarily an error; if the call was hung up or transferred to the AG during codec negotiation this can happen.
+                    info!("Got Synchronous Connection Setup request when not expecting it for peer {}, state {:?}.", self.id, self.sco_state);
+                    return;
+                }
             }
         };
     }
@@ -371,6 +431,10 @@ impl PeerTask {
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
         loop {
             let mut active_sco_closed_fut = self.on_active_sco_closed().fuse();
+            let mut sco_connection_fut = match &mut self.sco_state {
+                ScoState::AwaitingRemote(ref mut fut) => fut.fuse(),
+                _ => Fuse::terminated(),
+            };
             select! {
                 // New request coming from elsewhere in the component
                 request = task_channel.next() => {
@@ -402,11 +466,35 @@ impl PeerTask {
                     for status in update.to_vec() {
                         self.phone_status_update(status).await;
                     }
-                    // If any call is in the active state, then ensure we have an audio connection
-                    if self.calls.is_call_active() {
-                        self.ensure_audio_connection().await;
-                    } else {
-                        self.audio_connection_release();
+                   // Sync the SCO connection state to the call state.
+                   // The error is already logged and we can't do anything.
+                   let _ = self.update_sco_state().await;
+                }
+                // SCO connection has closed.
+                _ = active_sco_closed_fut => {
+                    info!("SCO Connection closed, transferring call to AG.");
+                    self.sco_state = ScoState::TearingDown;
+                    let call_transfer_res = self.calls.transfer_to_ag();
+                    if let Err(err) = call_transfer_res {
+                        warn!("Transfer to AG failed with {:}", err)
+                    }
+                }
+                // Wait until the HF sets up a SCO connection.
+                conn_res = sco_connection_fut => {
+                    match conn_res {
+                        Ok(sco) if !sco.is_closed() => {
+                            let finish_sco_res = self.finish_sco_connection(sco).await;
+                            if let Err(err) = finish_sco_res {
+                                warn!("Failed to finish SCO connection with: {:}", err)
+                            }
+                            let call_transfer_res = self.calls.transfer_to_hf();
+                            if let Err(err) = call_transfer_res {
+                                warn!("Transfer to HF failed with {:}", err)
+                            }
+                        },
+                        // This can occur if the HF opens and closes a SCO connection immediately.
+                        Ok(_) => warn!("Got already closed SCO connection.", ),
+                        Err(err) => warn!("Got error waiting for SCO connection: {:}", err)
                     }
                 }
                 request = self.connection.next() => {
@@ -422,9 +510,6 @@ impl PeerTask {
                         debug!("Peer task channel closed");
                         break;
                     }
-                }
-                _ = active_sco_closed_fut => {
-                    self.audio_connection_release();
                 }
                 update = self.network_updates.next() => {
                     if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate") {
@@ -465,8 +550,11 @@ impl PeerTask {
         }
     }
 
-    async fn ensure_audio_connection(&mut self) {
-        if self.active_sco.is_some() {
+    /// Start the Codec Connection procedure if no sco connection exists.
+    /// This procedure will negotiate a codec and eventually call
+    /// `sco_connector.connect`.
+    async fn initiate_codec_negotiation(&mut self) {
+        if self.sco_state.is_active() {
             return;
         }
         self.connection
@@ -474,26 +562,82 @@ impl PeerTask {
             .await;
     }
 
-    /// Setup the SCO audio connection and start sending audio to the peer.
-    async fn setup_audio_connection(&mut self, codec_id: Option<CodecId>) -> Result<(), Error> {
-        if self.active_sco.is_some() {
-            return Err(Error::OutOfRange);
+    /// Update the SCO connection state to reflect the call state, creating a
+    /// a future to wait for incoming SCO connections if necessary.
+    async fn update_sco_state(&mut self) -> Result<(), ()> {
+        let call_active = self.calls.is_call_active();
+        let call_transferred = self.calls.is_call_transferred_to_ag();
+        if call_active && call_transferred {
+            error!("Call both active and transferred for peer {}", self.id);
+            return Err(());
         }
 
-        info!("Pausing A2DP Audio to setup Audio Connection: {}", self.id);
-        let pause_token = match self.a2dp_control.pause(Some(self.id)).await {
+        let previous_sco_state = &self.sco_state;
+
+        if call_active {
+            match previous_sco_state {
+                // A call just started, so set up SCO.
+                ScoState::Inactive
+                // A call was just transferred to the HF, so set up SCO.
+                | ScoState::AwaitingRemote(_)
+                => {
+                    self.initiate_codec_negotiation().await;
+                    self.sco_state = ScoState::SettingUp;
+                },
+                // We are negotiating codecs; wait for that to finish before starting the SCO
+                // connection, so do nothing.
+                ScoState::SettingUp
+                // The SCO connection was closed by the peer and we requested the call manager set
+                // that call as transferred to AG,  but we are waiting on the call manager to do
+                // so, so do nothing.
+                | ScoState::TearingDown
+                // A call is active and we have a SCO connection, so do nothing.
+                | ScoState::Active(_) => {},
+            }
+        } else if call_transferred {
+            match previous_sco_state {
+            // A call was just started transferred to the AG, so wait for SCO to be set up by the
+            // HF.
+            ScoState::Inactive
+            // A call was in codec negotiation when transferred to the AG, so wait for SCO to be 
+            // set up by the HF.
+            | ScoState::SettingUp
+            // The HF tore down the SCO connection so a call was transferred to the HF and the call
+            // manager has acknowledged that, so wait for SCO to be set up by the HF.
+            | ScoState::TearingDown
+            // A call was active and has just been transferred to the HF, so wait for the SCO
+            // connection to be set up by the HF.
+            | ScoState::Active(_) => {
+               let codecs = self.connection.get_selected_codec().map_or(vec![CodecId::CVSD], |c| vec![c]);
+               let sco_connector = self.sco_connector.clone();
+               let id = self.id.clone();
+               let fut = async move {
+                sco_connector.accept(id, codecs).await
+               };
+               self.sco_state = ScoState::AwaitingRemote(Box::pin(fut));
+            }
+            // A call is transferred to the HF and we are waiting for SCO to be set up by the HF,
+            // so do nothing.
+            ScoState::AwaitingRemote(_) => {}
+        }
+        } else {
+            /* No call in progress */
+            self.sco_state = ScoState::Inactive
+        };
+
+        Ok(())
+    }
+
+    async fn finish_sco_connection(&mut self, sco_connection: ScoConnection) -> Result<(), Error> {
+        let res = self.a2dp_control.pause(Some(self.id.clone())).await;
+        let pause_token = match res {
             Err(e) => {
                 warn!("Couldn't pause A2DP Audio: {:?}", e);
                 None
             }
             Ok(token) => Some(token),
         };
-        info!("Connecting SCO to {}: {:?}", self.id, codec_id);
-        let try_codecs = codec_id.map_or(vec![CodecId::CVSD], |c| vec![c]);
-        let connection = self.sco_connector.connect(self.id.clone(), try_codecs).await?;
-
-        let params = connection.params.clone();
-
+        let params = sco_connection.params.clone();
         {
             let mut audio = self.audio_control.lock();
             // Start the DAI with the given parameters
@@ -506,8 +650,7 @@ impl PeerTask {
             }
         }
 
-        let vigil = Vigil::new((connection, pause_token));
-
+        let vigil = Vigil::new(ScoActive { sco_connection, _pause_token: pause_token });
         Vigil::watch(&vigil, {
             let control = self.audio_control.clone();
             move |_| match control.lock().stop() {
@@ -515,22 +658,17 @@ impl PeerTask {
                 Ok(()) => info!("Stopped HFP Audio"),
             }
         });
+        debug!("In finish_sco_connection, SCO state is {:?}", vigil);
+        self.sco_state = ScoState::Active(vigil);
 
-        self.active_sco = Some(vigil);
         Ok(())
     }
 
     fn on_active_sco_closed(&self) -> impl Future<Output = ()> + 'static {
-        match self.active_sco.as_ref() {
-            Some(connection) => connection.0.on_closed().left_future(),
-            None => future::pending().right_future(),
+        match &self.sco_state {
+            ScoState::Active(connection) => connection.sco_connection.on_closed().left_future(),
+            _ => future::pending().right_future(),
         }
-    }
-
-    /// Close the SCO audio connection and release the pause token on A2DP streaming.
-    /// If there is no connection present, this is a no-op.
-    fn audio_connection_release(&mut self) {
-        drop(self.active_sco.take());
     }
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator
@@ -617,7 +755,7 @@ mod tests {
         core::task::Poll,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, ScoErrorCode},
         fidl_fuchsia_bluetooth_hfp::{
-            CallDirection, CallRequestStream, CallState, NextCall, PeerHandlerMarker,
+            CallDirection, CallRequest, CallRequestStream, CallState, NextCall, PeerHandlerMarker,
             PeerHandlerRequest, PeerHandlerRequestStream, PeerHandlerWatchNextCallResponder,
             SignalStrength,
         },
@@ -632,6 +770,7 @@ mod tests {
         matches::assert_matches,
         proptest::prelude::*,
         std::convert::TryFrom,
+        zx::AsHandleRef,
     };
 
     use crate::{
@@ -1059,6 +1198,106 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn transfers_change_sco_state() {
+        // Set up the executor, peer, and background call manager task
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        // Setup the peer task.
+        let (connection, _remote) = create_and_initialize_slc(SlcState::default());
+        let (peer, mut sender, receiver, mut profile) = setup_peer_task(Some(connection));
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        // Pass in the client end connected to the call manager
+        let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
+        assert!(result.is_ok());
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        let (mut stream, run_fut) = run_while(&mut exec, run_fut, wait_for_call_stream(stream));
+
+        // Send the incoming call
+        let (responder, run_fut) = run_while(&mut exec, run_fut, stream.next());
+        let (client_end, mut call_stream) = fidl::endpoints::create_request_stream().unwrap();
+        let next_call = NextCall {
+            call: Some(client_end),
+            remote: Some("1234567".to_string()),
+            state: Some(CallState::IncomingRinging),
+            direction: Some(CallDirection::MobileTerminated),
+            ..NextCall::EMPTY
+        };
+        responder.unwrap().send(next_call).expect("Successfully send call information");
+
+        // Answer call.
+        let (request, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let state_responder = match request {
+            Some(Ok(CallRequest::WatchState { responder })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+        state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
+        let (sco, mut run_fut) =
+            run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
+        exec.run_until_stalled(&mut run_fut).expect_pending("Create SCO conn.");
+        while let None = exec.run_one_step(&mut run_fut) {}
+        let sco = sco.expect("SCO Connection.");
+
+        // Call is transferred to AG by AG and SCO is torn down.
+        let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let _ = exec.run_one_step(&mut run_fut);
+        let state_responder = match request {
+            Some(Ok(CallRequest::WatchState { responder })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+        state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg.");
+        exec.run_until_stalled(&mut run_fut).expect_pending("Sending TransferredToAg");
+        while let None = exec.run_one_step(&mut run_fut) {}
+        let sco_is_closed = sco
+            .as_handle_ref()
+            .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)));
+        assert!(sco_is_closed.is_ok());
+
+        // Call is transferred to HF by AG and SCO is set up.
+        let (request, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let state_responder = match request {
+            Some(Ok(CallRequest::WatchState { responder })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+        state_responder.send(CallState::OngoingActive).expect("Sent OngoingActive.");
+        // Don't send a SCO connection until they are trying to connect.
+        let _ = exec.run_one_step(&mut run_fut);
+        let (sco, mut run_fut) =
+            run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
+        let sco = sco.expect("SCO Connection.");
+        // Run until the connection is handled by the task.  This avoids a race where the
+        // the incoming SCO connection is closed before it's received, in which case a call
+        // is never set to active.
+        let _ = exec.run_one_step(&mut run_fut);
+
+        // SCO is torn down by HF and call is transferred to AG
+        drop(sco);
+        let (watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let (req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        assert_matches!(req, Some(Ok(CallRequest::RequestTransferAudio { .. })));
+        let state_responder = match watch_state_req {
+            Some(Ok(CallRequest::WatchState { responder })) => responder,
+            req => panic!("Expected WatchState, got {:?}", req),
+        };
+        state_responder.send(CallState::TransferredToAg).expect("Sent TransferredToAg");
+
+        // SCO is set up by HF and call is transferred to HF
+        let (_sco, run_fut) =
+            run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, false, Ok(())));
+        let (_watch_state_req, run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        let (req, mut run_fut) = run_while(&mut exec, run_fut, &mut call_stream.next());
+        assert_matches!(req, Some(Ok(CallRequest::RequestActive { .. })));
+
+        // Drop the peer task sender to force the PeerTask's run future to complete
+        drop(sender);
+        let _ = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+    }
+
+    #[fuchsia::test]
     fn incoming_hf_indicator_battery_level_is_propagated_to_peer_handler_stream() {
         // Set up the executor, peer, and background call manager task
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -1327,30 +1566,40 @@ mod tests {
 
     async fn expect_sco_connection(
         profile_requests: &mut ProfileRequestStream,
+        expected_initiator: bool,
         result: Result<(), ScoErrorCode>,
     ) -> Option<zx::Socket> {
-        let proxy = match profile_requests.next().await.expect("request").unwrap() {
-            bredr::ProfileRequest::ConnectSco { receiver, params, .. } => {
-                assert_eq!(params.len(), 1);
-                let param_set = params[0].parameter_set.unwrap();
-                // TODO(fxbug.dev/81374): Remove when mSBC is enabled again.
-                assert!(param_set != bredr::HfpParameterSet::MsbcT1);
-                assert!(param_set != bredr::HfpParameterSet::MsbcT2);
-                receiver.into_proxy().unwrap()
-            }
-            x => panic!("Unexpected request to profile stream: {:?}", x),
-        };
-        match result {
-            Ok(()) => {
-                let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-                let connection =
-                    bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
-                proxy.connected(connection, bredr::ScoConnectionParameters::EMPTY).unwrap();
-                Some(remote)
-            }
-            Err(code) => {
-                proxy.error(code).unwrap();
-                None
+        // Sometimes dropping the SCO connection accept future doesn't cancel the
+        // existing request before we want to connect a new one.  In this case, we
+        // may get *two* requests for a SCO connection, and we want the second one,
+        // which has the expected direction.
+        loop {
+            let proxy = match profile_requests.next().await.expect("request").unwrap() {
+                bredr::ProfileRequest::ConnectSco { receiver, params, initiator, .. } => {
+                    if initiator != expected_initiator {
+                        continue;
+                    };
+                    assert!(params.len() >= 1);
+                    let param_set = params[0].parameter_set.unwrap();
+                    // TODO(fxbug.dev/81374): Remove when mSBC is enabled again.
+                    assert!(param_set != bredr::HfpParameterSet::MsbcT1);
+                    assert!(param_set != bredr::HfpParameterSet::MsbcT2);
+                    receiver.into_proxy().unwrap()
+                }
+                x => panic!("Unexpected request to profile stream: {:?}", x),
+            };
+            match result {
+                Ok(()) => {
+                    let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+                    let connection =
+                        bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
+                    proxy.connected(connection, bredr::ScoConnectionParameters::EMPTY).unwrap();
+                    return Some(remote);
+                }
+                Err(code) => {
+                    proxy.error(code).unwrap();
+                    return None;
+                }
             }
         }
     }
@@ -1363,20 +1612,34 @@ mod tests {
         exec: &mut fasync::TestExecutor,
         peer: &mut PeerTask,
         profile_requests: &mut ProfileRequestStream,
-    ) -> Option<fidl::Socket> {
-        let audio_connection_fut = peer.setup_audio_connection(None);
+    ) -> fidl::Socket {
+        let codecs = peer.connection.get_selected_codec().map_or(vec![CodecId::CVSD], |c| vec![c]);
+        let sco_connector = peer.sco_connector.clone();
+        let audio_connection_fut = sco_connector.connect(peer.id.clone(), codecs).fuse();
         pin_mut!(audio_connection_fut);
 
         exec.run_until_stalled(&mut audio_connection_fut).expect_pending("shouldn't be done yet");
 
         // Expect a sco connection, and have it succeed.
-        let (remote_sco, mut audio_connection_fut) =
-            run_while(exec, audio_connection_fut, expect_sco_connection(profile_requests, Ok(())));
+        let sco_complete_fut = expect_sco_connection(profile_requests, true, Ok(()));
+        pin_mut!(sco_complete_fut);
+        let result = exec.run_singlethreaded(&mut futures::future::select(
+            audio_connection_fut,
+            sco_complete_fut,
+        ));
+
+        let (remote_sco, mut audio_connection_fut) = match result {
+            Either::Right(r) => r,
+            Either::Left(_) => panic!("Audio connection future shouldn't have finished"),
+        };
 
         let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
-        res.expect("should have started up okay");
+        let local_sco = res.expect("should have started up okay");
+        let audio_connection_fut2 = peer.finish_sco_connection(local_sco);
+        pin_mut!(audio_connection_fut2);
+        exec.run_singlethreaded(&mut audio_connection_fut2).expect("finished");
 
-        remote_sco
+        remote_sco.unwrap()
     }
 
     #[fuchsia::test]
@@ -1391,31 +1654,7 @@ mod tests {
 
         let audio_control = peer.audio_control.clone();
 
-        let _remote_sco = {
-            let audio_connection_fut = peer.setup_audio_connection(None);
-            pin_mut!(audio_connection_fut);
-
-            exec.run_until_stalled(&mut audio_connection_fut)
-                .expect_pending("shouldn't be done yet");
-
-            // Expect a sco connection, and have it succeed.
-            let sco_complete_fut = expect_sco_connection(&mut profile_requests, Ok(()));
-            pin_mut!(sco_complete_fut);
-            let result = exec.run_singlethreaded(&mut futures::future::select(
-                audio_connection_fut,
-                sco_complete_fut,
-            ));
-
-            let (remote_sco, mut audio_connection_fut) = match result {
-                Either::Right(r) => r,
-                Either::Left(_) => panic!("Audio connection future shouldn't have finished"),
-            };
-
-            let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
-            res.expect("should have started up okay");
-
-            remote_sco
-        };
+        let _remote_sco = setup_audio(&mut exec, &mut peer, &mut profile_requests);
 
         // Should have started up the test audio control. Test by trying to start it again, it
         // should be an error.
@@ -1425,12 +1664,6 @@ mod tests {
                 .start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
                 .expect_err("shouldn't be able to start, already started");
         }
-
-        // Trying to start when a connection exists should be an error.
-        let audio_connection_fut = peer.setup_audio_connection(None);
-        pin_mut!(audio_connection_fut);
-        let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
-        let _ = res.expect_err("can't start when already started");
     }
 
     #[fuchsia::test]
@@ -1485,7 +1718,7 @@ mod tests {
         // Run the PeerTask to handle all audio setup tasks
         let peer = run_peer_until_stalled(&mut exec, peer);
 
-        assert!(peer.active_sco.is_some());
+        assert!(peer.sco_state.is_active());
 
         // Create the Call Manager side of a PeerHandler to send a call state update to the
         // `OngoingHeld` state in order to tear down the active sco connection.
@@ -1539,6 +1772,6 @@ mod tests {
 
         // The SCO connection should be removed after the PeerTask has handled the Terminated call
         // update.
-        assert!(peer.active_sco.is_none());
+        assert!(!peer.sco_state.is_active());
     }
 }

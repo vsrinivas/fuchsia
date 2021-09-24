@@ -66,6 +66,8 @@ pub struct SlcState {
     pub hf_features: HfFeatures,
     /// The codecs supported by the HF. If initialized, None if Codec Negotiation is not supported.
     pub hf_supported_codecs: Option<Vec<CodecId>>,
+    /// The negotiated coded for this connection.
+    pub selected_codec: Option<CodecId>,
     /// The indicators supported by the HF and its current status.
     pub hf_indicators: HfIndicators,
     /// The current AG indicator events reporting state.
@@ -282,6 +284,14 @@ impl ServiceLevelConnection {
     /// been completed for the connected channel.
     pub fn initialized(&self) -> bool {
         self.connected() && self.state.initialized
+    }
+
+    pub fn set_selected_codec(&mut self, codec: Option<CodecId>) {
+        self.state.selected_codec = codec
+    }
+
+    pub fn get_selected_codec(&self) -> Option<CodecId> {
+        self.state.selected_codec
     }
 
     /// Returns `true` if the provided `procedure` is currently active.
