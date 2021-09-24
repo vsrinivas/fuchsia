@@ -18,6 +18,7 @@
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/inspect-manager.h"
 #include "src/storage/fshost/metrics.h"
 
 namespace fshost {
@@ -80,6 +81,8 @@ class FilesystemMounter {
   // Returns a crypt client for a filesystem if configured. If configuration indicates the data
   // filesystem does not require it, zx::ok({}) is returned.
   zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> GetCryptClient();
+
+  InspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
  private:
   // Performs the mechanical action of mounting a filesystem, without

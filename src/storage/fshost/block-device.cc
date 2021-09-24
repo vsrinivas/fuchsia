@@ -828,6 +828,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
     return status;
 
+  mounter_->inspect_manager().LogMinfsUpgradeProgress(
+      InspectManager::MinfsUpgradeState::kReadOldPartition);
   Copier copier;
   {
     auto device_or = GetDeviceEndPoint();
@@ -863,6 +865,9 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   const uint64_t slice_size = query_response->info->slice_size;
 
   // Free all the existing slices.
+  mounter_->inspect_manager().LogMinfsUpgradeProgress(
+      InspectManager::MinfsUpgradeState::kWriteNewPartition);
+
   uint64_t slice = 1;
   // The -1 here is because of zxcrypt; zxcrypt will offset all slices by 1 to account for its
   // header.  zxcrypt isn't present in all cases, but that won't matter since minfs shouldn't be
@@ -993,6 +998,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   }
 
   Unmount(export_root_or->client);
+
+  mounter_->inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
 
   return ZX_OK;
 }

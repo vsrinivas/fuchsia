@@ -112,7 +112,7 @@ TEST_F(InspectManagerTest, ServeStats) {
   auto& hierarchy = result.value();
 
   // Assert root
-  ASSERT_EQ(1, hierarchy.children().size());
+  ASSERT_EQ(2, hierarchy.children().size());
   ASSERT_EQ(0, hierarchy.node().properties().size());
 
   // Assert all size values.
