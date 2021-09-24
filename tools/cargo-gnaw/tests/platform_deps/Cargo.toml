@@ -7,6 +7,9 @@ edition = "2018"
 [target.'cfg(target_os = "fuchsia")'.dependencies]
 anyhow = "1.0.27"
 
+[target.aarch64-apple-darwin.dependencies]
+anyhow = "1.0.27"
+
 # gn config
 [gn.package.anyhow."1.0.27"]
 rustflags = ["--cfg=backtrace"]

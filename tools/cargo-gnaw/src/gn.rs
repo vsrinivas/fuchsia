@@ -4,7 +4,12 @@
 
 use {
     crate::GlobalTargetCfgs,
-    crate::{cfg::cfg_to_gn_conditional, target::GnTarget, types::*, CombinedTargetCfg},
+    crate::{
+        cfg::{cfg_to_gn_conditional, target_to_gn_conditional},
+        target::GnTarget,
+        types::*,
+        CombinedTargetCfg,
+    },
     anyhow::{Context, Error},
     cargo_metadata::Package,
     std::borrow::Cow,
@@ -50,7 +55,7 @@ pub fn write_top_level_rule<'a, W: io::Write>(
         writeln!(
             output,
             "if ({conditional}) {{\n",
-            conditional = cfg_to_gn_conditional(&platform)?
+            conditional = target_to_gn_conditional(&platform)?
         )?;
     }
     writeln!(
@@ -240,7 +245,7 @@ pub fn write_rule<W: io::Write>(
             }
             Some(platform) => {
                 dependencies
-                    .push_str(format!("if ({}) {{\n", cfg_to_gn_conditional(platform)?).as_str());
+                    .push_str(format!("if ({}) {{\n", target_to_gn_conditional(platform)?).as_str());
                 for pkg in deps {
                     dependencies.push_str("  deps += [");
                     if pkg.0.is_proc_macro() {

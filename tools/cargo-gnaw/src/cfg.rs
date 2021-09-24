@@ -4,6 +4,55 @@
 
 use anyhow::{anyhow, Error};
 
+/// Converts a cargo platform-specific dependency target into GN imperative control flow.
+///
+/// `Cargo.toml` files can define [platform-specific dependencies] in two ways:
+/// - Using `#[cfg]` syntax to match classes of targets.
+///   ```text
+///   [target.'cfg(unix)'.dependencies]
+///   foo = "0.1"
+///   ```
+///
+/// - Listing the full target the dependencies would apply to.
+///   ```text
+///   [target.aarch64-apple-darwin.dependencies]
+///   bar = "0.1"
+///   ```
+///
+/// This function is a wrapper around [`cfg_to_gn_conditional`] that converts full targets
+/// into `#[cfg]` syntax.
+///
+/// [platform-specific dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#platform-specific-dependencies
+pub fn target_to_gn_conditional(target: &str) -> Result<String, Error> {
+    if target.starts_with("cfg") {
+        // This is #[cfg] syntax already.
+        cfg_to_gn_conditional(target)
+    } else if target.contains('-') {
+        // Handle this as a target triple. We only need to support targets in crates we
+        // depend on, so we use a simple exact match list that can be updated as needed.
+        let (target_arch, target_os) = match target {
+            "aarch64-apple-darwin" => ("aarch64", "macos"),
+            // Return an error for unknown targets, to notify the dev that they should
+            // update this list.
+            _ => {
+                return Err(anyhow!(
+                    "Unknown target: {}. Please add this to 'tools/cargo-gnaw/src/cfg.rs'.",
+                    target
+                ))
+            }
+        };
+        cfg_to_gn_conditional(&format!(
+            "cfg(all(target_arch = \"{}\", target_os = \"{}\"))",
+            target_arch, target_os
+        ))
+    } else {
+        Err(anyhow!(
+            "Unknown platform-specific dependency target syntax: {}",
+            target
+        ))
+    }
+}
+
 /// Convert a cargo cfg conditional into GN imperative control flow
 // TODO This should consume some information in the Cargo.toml file
 // to establish conventions for the carge -> GN build. This is hardcoded
@@ -144,5 +193,41 @@ fn nested_cfgs() {
     assert_eq!(
         output.to_string(),
         r#"((current_cpu == "x64" || current_cpu == "arm64") && false)"#
+    );
+}
+
+#[test]
+fn target_cfg() {
+    let target_str = r#"cfg(target_os = "fuchsia")"#;
+    let output = target_to_gn_conditional(target_str).unwrap();
+    assert_eq!(output, "current_os == \"fuchsia\"");
+}
+
+#[test]
+fn target_full() {
+    let target_str = r#"aarch64-apple-darwin"#;
+    let output = target_to_gn_conditional(target_str).unwrap();
+    assert_eq!(output, "(current_cpu == \"arm64\" && current_os == \"mac\")");
+}
+
+#[test]
+fn target_unknown_full() {
+    // We use a placeholder target "guaranteed" to never be used anywhere.
+    let target_str = r#"foo-bar-baz"#;
+    let err = target_to_gn_conditional(target_str).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Unknown target: foo-bar-baz. Please add this to 'tools/cargo-gnaw/src/cfg.rs'.",
+    );
+}
+
+#[test]
+fn target_unknown_syntax() {
+    // No leading "cfg", no hyphens.
+    let target_str = r#"fizzbuzz"#;
+    let err = target_to_gn_conditional(target_str).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "Unknown platform-specific dependency target syntax: fizzbuzz",
     );
 }
