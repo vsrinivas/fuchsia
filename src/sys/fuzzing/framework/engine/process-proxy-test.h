@@ -2,13 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/fuzzing/framework/engine/process-proxy.h"
-#include <memory>
-#include <gtest/gtest.h>
+#ifndef SRC_SYS_FUZZING_FRAMEWORK_ENGINE_PROCESS_PROXY_TEST_H_
+#define SRC_SYS_FUZZING_FRAMEWORK_ENGINE_PROCESS_PROXY_TEST_H_
+
 #include <fuchsia/fuzzer/cpp/fidl.h>
+
+#include <memory>
+
+#include <gtest/gtest.h>
+
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/dispatcher.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
+#include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
 
 namespace fuzzing {
@@ -43,4 +49,6 @@ class ProcessProxyTest : public ::testing::Test {
 void IgnoreReceivedSignals();
 void IgnoreErrors(ProcessProxyImpl* ignored);
 
-} // namespace fuzzing
+}  // namespace fuzzing
+
+#endif  // SRC_SYS_FUZZING_FRAMEWORK_ENGINE_PROCESS_PROXY_TEST_H_

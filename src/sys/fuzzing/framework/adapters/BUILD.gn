@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("llvm") {
+  testonly = true
+  sources = [ "llvm-main.cc" ]
+  public_deps = [
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+  ]
+  deps = [
+    ":llvm-no-main",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+# Version of the `target` library that does not include `main`, and can be used for testing.
+source_set("llvm-no-main") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "llvm.cc",
+    "llvm.h",
+  ]
+  public_deps = [
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "llvm-unittest.cc" ]
+  deps = [
+    ":llvm-no-main",
+    "../testing",
+    "//src/sys/fuzzing/common/testing",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/sync",
+  ]
+}

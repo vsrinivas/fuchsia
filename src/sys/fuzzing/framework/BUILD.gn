@@ -9,6 +9,7 @@ test("unittests") {
   visibility = [ "../*" ]
   testonly = true
   deps = [
+    "adapters:unittests",
     "engine:unittests",
     "target:unittests",
     "//src/lib/fxl/test:gtest_main",

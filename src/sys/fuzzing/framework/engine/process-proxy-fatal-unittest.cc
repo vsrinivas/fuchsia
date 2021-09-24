@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/fuzzing/framework/engine/process-proxy.h"
-#include "src/sys/fuzzing/framework/engine/process-proxy-test.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/framework/engine/process-proxy-test.h"
+#include "src/sys/fuzzing/framework/engine/process-proxy.h"
 
 namespace fuzzing {
 namespace {
@@ -26,5 +26,5 @@ TEST_F(ProcessProxyFatalTest, Crash) {
   EXPECT_EQ(impl.Join(), Result::CRASH);
 }
 
-} // namespace
-} // namespace fuzzing
+}  // namespace
+}  // namespace fuzzing
