@@ -116,35 +116,15 @@ impl WlanFacade {
         Ok(scan_results_by_ssid_string)
     }
 
-    // TODO(fxbug.dev/68531): Require a BSS description and remove the optional scan.
     pub async fn connect(
         &self,
         target_ssid: Ssid,
         target_pwd: Vec<u8>,
-        target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
+        target_bss_desc: fidl_internal::BssDescription,
     ) -> Result<bool, Error> {
-        let target_bss_desc = match target_bss_desc {
-            Some(bss_desc) => *bss_desc,
-            None => {
-                let mut matching_scan_result = None;
-                for scan_result in self.passive_scan().await? {
-                    let scan_result = scan_result.context("Failed to convert scan result")?;
-                    if scan_result.bss_description.ssid == target_ssid {
-                        matching_scan_result.replace(scan_result);
-                        break;
-                    }
-                }
-                matching_scan_result
-                    .ok_or_else(|| format_err!("No suitable BSS found"))?
-                    .bss_description
-                    .into()
-            }
-        };
-        // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
-
         wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd, target_bss_desc)
             .await
     }
