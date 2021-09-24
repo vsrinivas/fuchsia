@@ -446,6 +446,18 @@ fn float_to_ten_thousandth(value: f64) -> i64 {
 
 const PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
 
+const DEVICE_LOW_UPTIME_THRESHOLD: f64 = 0.95;
+/// Threshold for high number of disconnects per day connected.
+/// Example: if threshold is 12 and a device has 1 disconnect after being connected for less
+///          than 2 hours, then it has high DPDC ratio.
+const DEVICE_HIGH_DPDC_THRESHOLD: f64 = 12.0;
+/// Note: Threshold is for "percentage of time" the device has high packet drop rate.
+///       That is, if threshold is 0.10, then the device passes that threshold if more
+///       than 10% of the time it has high packet drop rate.
+const DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.10;
+/// TODO(fxbug.dev/83621): Adjust this threshold when we consider unicast frames only
+const DEVICE_FREQUENT_NO_RX_THRESHOLD: f64 = 0.01;
+
 async fn diff_and_log_counters(
     stats_logger: &mut StatsLogger,
     prev: &fidl_fuchsia_wlan_stats::IfaceStats,
@@ -557,6 +569,14 @@ impl StatsLogger {
                 payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(uptime_ratio)),
             });
 
+            if uptime_ratio < DEVICE_LOW_UPTIME_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_LOW_UPTIME_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
+
             let uptime_ratio_dim = {
                 use metrics::ConnectivityWlanMetricDimensionUptimeRatio::*;
                 match uptime_ratio {
@@ -584,6 +604,14 @@ impl StatsLogger {
                 event_codes: vec![],
                 payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(dpdc_ratio)),
             });
+
+            if dpdc_ratio > DEVICE_HIGH_DPDC_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_HIGH_DISCONNECT_RATE_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
 
             let dpdc_ratio_dim = {
                 use metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::*;
@@ -613,6 +641,14 @@ impl StatsLogger {
                     high_rx_drop_time_ratio,
                 )),
             });
+
+            if high_rx_drop_time_ratio > DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_FREQUENT_HIGH_RX_PACKET_DROP_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
         }
 
         let high_tx_drop_time_ratio = c.tx_high_packet_drop_duration.into_seconds() as f64
@@ -625,6 +661,14 @@ impl StatsLogger {
                     high_tx_drop_time_ratio,
                 )),
             });
+
+            if high_tx_drop_time_ratio > DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_FREQUENT_HIGH_TX_PACKET_DROP_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
         }
 
         let no_rx_time_ratio =
@@ -637,6 +681,14 @@ impl StatsLogger {
                     no_rx_time_ratio,
                 )),
             });
+
+            if no_rx_time_ratio > DEVICE_FREQUENT_NO_RX_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_FREQUENT_NO_RX_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
         }
 
         log_cobalt_1dot1_batch!(
@@ -1704,6 +1756,11 @@ mod tests {
         // 12 hours of uptime, 6 hours of adjusted downtime => 66.66% uptime
         assert_eq!(uptime_ratios[0].payload, MetricEventPayload::IntegerValue(6666));
 
+        let device_low_uptime =
+            test_helper.get_logged_metrics(metrics::DEVICE_WITH_LOW_UPTIME_METRIC_ID);
+        assert_eq!(device_low_uptime.len(), 1);
+        assert_eq!(device_low_uptime[0].payload, MetricEventPayload::Count(1));
+
         let uptime_ratio_breakdowns = test_helper
             .get_logged_metrics(metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID);
         assert_eq!(uptime_ratio_breakdowns.len(), 1);
@@ -1736,6 +1793,10 @@ mod tests {
         // 1 disconnect, 0.25 day connected => 4 disconnects per day connected
         // (which equals 40_0000 in TenThousandth unit)
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
+
+        let device_high_disconnect =
+            test_helper.get_logged_metrics(metrics::DEVICE_WITH_HIGH_DISCONNECT_RATE_METRIC_ID);
+        assert_eq!(device_high_disconnect.len(), 0);
 
         let dpdc_ratio_breakdowns = test_helper
             .get_logged_metrics(metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID);
@@ -1796,6 +1857,27 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn test_log_daily_disconnect_per_day_connected_cobalt_metric_device_high_disconnect() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(1.hours(), test_fut.as_mut());
+        let info = fake_disconnect_info();
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(23.hours(), test_fut.as_mut());
+
+        let device_high_disconnect =
+            test_helper.get_logged_metrics(metrics::DEVICE_WITH_HIGH_DISCONNECT_RATE_METRIC_ID);
+        assert_eq!(device_high_disconnect.len(), 1);
+        assert_eq!(device_high_disconnect[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
     fn test_log_daily_rx_tx_ratio_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.set_iface_stats_req_handler(Box::new(|responder| {
@@ -1807,18 +1889,18 @@ mod tests {
                         stats.tx_frame.in_.count = 10 * seed;
                         // TX drop rate stops increasing at 1 hour + TELEMETRY_QUERY_INTERVAL mark.
                         // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
-                        // computing counters, this leads to 1 hour of high TX drop rate.
+                        // computing counters, this leads to 3 hour of high TX drop rate.
                         stats.tx_frame.drop.count = 3 * min(
                             seed,
-                            (1.hour() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                            (3.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
                         );
-                        // RX drop rate stops increasing at 2 hour + TELEMETRY_QUERY_INTERVAL mark.
+                        // RX drop rate stops increasing at 4 hour + TELEMETRY_QUERY_INTERVAL mark.
                         stats.rx_frame.drop.count = 3 * min(
                             seed,
-                            (2.hour() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                            (4.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
                         );
-                        // RX total stops increasing at 20 hour mark
-                        stats.rx_frame.in_.count = 10 * min(seed, 20.hours().into_seconds() as u64);
+                        // RX total stops increasing at 23 hour mark
+                        stats.rx_frame.in_.count = 10 * min(seed, 23.hours().into_seconds() as u64);
                     }
                     _ => panic!("expect ClientMlmeStats"),
                 },
@@ -1836,21 +1918,36 @@ mod tests {
 
         let high_rx_drop_time_ratios =
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
-        // 2 hours of high RX drop rate, 24 hours connected => 8.33% duration
+        // 4 hours of high RX drop rate, 24 hours connected => 16.66% duration
         assert_eq!(high_rx_drop_time_ratios.len(), 1);
-        assert_eq!(high_rx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(833));
+        assert_eq!(high_rx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(1666));
+
+        let device_frequent_high_rx_drop = test_helper
+            .get_logged_metrics(metrics::DEVICE_WITH_FREQUENT_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(device_frequent_high_rx_drop.len(), 1);
+        assert_eq!(device_frequent_high_rx_drop[0].payload, MetricEventPayload::Count(1));
 
         let high_tx_drop_time_ratios =
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
-        // 1 hour of high RX drop rate, 24 hours connected => 4.16% duration
+        // 3 hours of high RX drop rate, 24 hours connected => 12.48% duration
         assert_eq!(high_tx_drop_time_ratios.len(), 1);
-        assert_eq!(high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(416));
+        assert_eq!(high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(1250));
 
-        // 4 hours of no RX, 24 hours connected => 16.66% duration
+        let device_frequent_high_tx_drop = test_helper
+            .get_logged_metrics(metrics::DEVICE_WITH_FREQUENT_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(device_frequent_high_tx_drop.len(), 1);
+        assert_eq!(device_frequent_high_tx_drop[0].payload, MetricEventPayload::Count(1));
+
+        // 1 hour of no RX, 24 hours connected => 4.16% duration
         let no_rx_time_ratios =
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
         assert_eq!(no_rx_time_ratios.len(), 1);
-        assert_eq!(no_rx_time_ratios[0].payload, MetricEventPayload::IntegerValue(1666));
+        assert_eq!(no_rx_time_ratios[0].payload, MetricEventPayload::IntegerValue(416));
+
+        let device_frequent_no_rx =
+            test_helper.get_logged_metrics(metrics::DEVICE_WITH_FREQUENT_NO_RX_METRIC_ID);
+        assert_eq!(device_frequent_no_rx.len(), 1);
+        assert_eq!(device_frequent_no_rx[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
