@@ -732,8 +732,12 @@ void VmAspace::MarkAsLatencySensitive() {
   // TODO(fxb/85056): Need a better mechanism than checking for the process name here.
   char name[ZX_MAX_NAME_LEN];
   auto up = ProcessDispatcher::GetCurrent();
+  if (up->aspace().get() != this) {
+    return;
+  }
   up->get_name(name);
-  if (strncmp(name, "audio_core.cmx", ZX_MAX_NAME_LEN) != 0 || up->aspace().get() != this) {
+  if (strncmp(name, "audio_core.cmx", ZX_MAX_NAME_LEN) != 0 &&
+      strncmp(name, "waves_host.cmx", ZX_MAX_NAME_LEN) != 0) {
     return;
   }
 
