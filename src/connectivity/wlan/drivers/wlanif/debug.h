@@ -9,9 +9,9 @@
 
 // Compile out debug and trace logs for --release builds (i.e. NDEBUG is defined).
 #ifdef NDEBUG
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelInfo
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
 #else
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelTrace
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
 #endif
 
 #define FILTER_CATEGORY(name, value) constexpr uint32_t name = (1 << (value))

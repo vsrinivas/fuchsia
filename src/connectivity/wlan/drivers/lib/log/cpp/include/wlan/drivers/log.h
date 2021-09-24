@@ -15,11 +15,11 @@ namespace wlan::drivers {
 class Log {
  public:
   // Log severity levels.
-  static constexpr fx_log_severity_t kLevelError = DDK_LOG_ERROR;
-  static constexpr fx_log_severity_t kLevelWarn = DDK_LOG_WARNING;
-  static constexpr fx_log_severity_t kLevelInfo = DDK_LOG_INFO;
-  static constexpr fx_log_severity_t kLevelDebug = DDK_LOG_DEBUG;
-  static constexpr fx_log_severity_t kLevelTrace = DDK_LOG_TRACE;
+  static constexpr fx_log_severity_t kERROR = DDK_LOG_ERROR;
+  static constexpr fx_log_severity_t kWARNING = DDK_LOG_WARNING;
+  static constexpr fx_log_severity_t kINFO = DDK_LOG_INFO;
+  static constexpr fx_log_severity_t kDEBUG = DDK_LOG_DEBUG;
+  static constexpr fx_log_severity_t kTRACE = DDK_LOG_TRACE;
 
   static constexpr int kLogThrottleEventsPerSec = 2;
   static void SetFilter(uint32_t filter);
@@ -35,60 +35,20 @@ class Log {
 };
 }  // namespace wlan::drivers
 
-// Note: The users of this library are expected to define a macro named WLAN_DRIVER_LOG_LEVEL
-// with the appropriate level of severity that needs to be compiled in.
-//
-// Here is the list of allowed values for WLAN_DRIVER_LOG_LEVEL:
-//   wlan::drivers::Log::kLevelError
-//   wlan::drivers::Log::kLevelWarn
-//   wlan::drivers::Log::kLevelInfo
-//   wlan::drivers::Log::kLevelDebug
-//   wlan::drivers::Log::kLevelTrace
-//
-// Setting WLAN_DRIVER_LOG_LEVEL to one of the above severity levels compiles in logs for that
-// level, as well as all levels above it. For example, defining it as shown below will compile
-// in severity levels info, warn and error.
-//
-//   #define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelInfo
-
-// TODO (fxbug.dev/81914) - Add support for log level fatal i.e. lfatal().
-#define lerror(fmt, ...)                                            \
-  do {                                                              \
-    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::kLevelError) { \
-      zxlogf(ERROR, "(%s): " fmt, __func__, ##__VA_ARGS__);         \
-    }                                                               \
+#define log_(level, fmt, ...)                                    \
+  do {                                                           \
+    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::k##level) { \
+      zxlogf(level, fmt, ##__VA_ARGS__);                         \
+    }                                                            \
   } while (0)
 
-#define lwarn(fmt, ...)                                            \
-  do {                                                             \
-    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::kLevelWarn) { \
-      zxlogf(WARNING, "(%s): " fmt, __func__, ##__VA_ARGS__);      \
-    }                                                              \
-  } while (0)
-
-#define linfo(fmt, ...)                                            \
-  do {                                                             \
-    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::kLevelInfo) { \
-      zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__);         \
-    }                                                              \
-  } while (0)
-
-#define ldebug(filter, tag, fmt, ...)                                  \
-  do {                                                                 \
-    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::kLevelDebug) {    \
-      if (unlikely(wlan::drivers::Log::IsFilterOn(filter))) {          \
-        zxlogf_tag(DEBUG, tag, "(%s): " fmt, __func__, ##__VA_ARGS__); \
-      }                                                                \
-    }                                                                  \
-  } while (0)
-
-#define ltrace(filter, tag, fmt, ...)                                  \
-  do {                                                                 \
-    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::kLevelTrace) {    \
-      if (unlikely(wlan::drivers::Log::IsFilterOn(filter))) {          \
-        zxlogf_tag(TRACE, tag, "(%s): " fmt, __func__, ##__VA_ARGS__); \
-      }                                                                \
-    }                                                                  \
+#define log_tag_(level, filter, tag, fmt, ...)                   \
+  do {                                                           \
+    if (WLAN_DRIVER_LOG_LEVEL <= wlan::drivers::Log::k##level) { \
+      if (unlikely(wlan::drivers::Log::IsFilterOn(filter))) {    \
+        zxlogf_tag(level, tag, fmt, ##__VA_ARGS__);              \
+      }                                                          \
+    }                                                            \
   } while (0)
 
 // Throttle calls to |event| to only happen at a specific rate per second. If an event is called
@@ -130,6 +90,35 @@ class Log {
       }                                                                          \
     }                                                                            \
   } while (0)
+
+//
+// Below is the list of of macros that are available for public use. All macros
+// above this (have _ at the end) are intended for internal use within the log library.
+//
+// Note: The users of this library are expected to define a macro named WLAN_DRIVER_LOG_LEVEL
+// with the appropriate level of severity for which logs need to be compiled in.
+//
+// Here is the list of allowed values for WLAN_DRIVER_LOG_LEVEL:
+//   wlan::drivers::Log::kERROR
+//   wlan::drivers::Log::kWARNING
+//   wlan::drivers::Log::kINFO
+//   wlan::drivers::Log::kDEBUG
+//   wlan::drivers::Log::kTRACE
+//
+// Setting WLAN_DRIVER_LOG_LEVEL to one of the above severity levels compiles in logs for that
+// level, as well as all levels above it. For example, defining it as shown below will compile
+// in severity levels info, warn and error.
+//
+//   #define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
+
+// TODO (fxbug.dev/81914) - Add support for log level fatal i.e. lfatal().
+#define lerror(fmt, ...) log_(ERROR, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define lwarn(fmt, ...) log_(WARNING, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define linfo(fmt, ...) log_(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define ldebug(filter, tag, fmt, ...) \
+  log_tag_(DEBUG, filter, tag, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define ltrace(filter, tag, fmt, ...) \
+  log_tag_(TRACE, filter, tag, "(%s): " fmt, __func__, ##__VA_ARGS__)
 
 #define lthrottle_error(fmt...) \
   lthrottle_(wlan::drivers::Log::kLogThrottleEventsPerSec, lerror, fmt)

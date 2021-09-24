@@ -30,9 +30,9 @@
 // Compile out debug and trace logs for --release builds (i.e. NDEBUG is defined).
 // ToDo(fxb/82679) - Make BRCMF_DBG use debug level instead of info.
 #ifdef NDEBUG
-#define WLAN_DRIVER_LOG_LEVEL DDK_LOG_INFO
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
 #else
-#define WLAN_DRIVER_LOG_LEVEL DDK_LOG_TRACE
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
 #endif
 
 // Some convenience macros for error and debug printing.

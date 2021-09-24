@@ -13,7 +13,7 @@ namespace wlan::drivers {
 #define kTraceTag "ttag"
 
 // Enable all debug levels (i.e. TRACE and above) to allow for full functional testing.
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelTrace
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
 class LogTest : public ::testing::Test {
  public:
   void SetUp() override {
@@ -169,7 +169,7 @@ TEST_F(LogTest, ThrottleTraceNotFiltered) {
 
 // Tests for WLAN_DRIVER_LOG_LEVEL symbol
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelError
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kERROR
 TEST_F(LogTest, LevelError) {
   lwarn("warn %s", "test");
   linfo("info %s", "test");
@@ -183,7 +183,7 @@ TEST_F(LogTest, LevelError) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelWarn
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kWARNING
 TEST_F(LogTest, LevelWarn) {
   linfo("info %s", "test");
   Log::SetFilter(0x3);
@@ -198,7 +198,7 @@ TEST_F(LogTest, LevelWarn) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelInfo
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
 TEST_F(LogTest, LevelInfo) {
   Log::SetFilter(0x3);
   ldebug(0x1, kDebugTag, "debug %s", "test");
@@ -214,7 +214,7 @@ TEST_F(LogTest, LevelInfo) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelDebug
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kDEBUG
 TEST_F(LogTest, LevelDebug) {
   Log::SetFilter(0x3);
   ltrace(0x2, kTraceTag, "trace %s", "test");
@@ -231,7 +231,7 @@ TEST_F(LogTest, LevelDebug) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kLevelTrace
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
 TEST_F(LogTest, LevelTrace) {
   Log::SetFilter(0x3);
   lerror("error %s", "test");
@@ -248,7 +248,7 @@ TEST_F(LogTest, LevelTrace) {
 
 // Tests for WLAN_DRIVER_LOG_LEVEL for throttle macros
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_ERROR)
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kERROR
 TEST_F(LogTest, ThrottleLevelError) {
   lthrottle_warn("warn throttle %s", "test");
   lthrottle_info("info throttle %s", "test");
@@ -262,7 +262,7 @@ TEST_F(LogTest, ThrottleLevelError) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_WARNING)
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kWARNING
 TEST_F(LogTest, ThrottleLevelWarn) {
   lthrottle_info("info throttle %s", "test");
   Log::SetFilter(0x3);
@@ -277,7 +277,7 @@ TEST_F(LogTest, ThrottleLevelWarn) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_INFO)
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
 TEST_F(LogTest, ThrottleLevelInfo) {
   Log::SetFilter(0x3);
   lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
@@ -293,7 +293,7 @@ TEST_F(LogTest, ThrottleLevelInfo) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_DEBUG)
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kDEBUG
 TEST_F(LogTest, ThrottleLevelDebug) {
   Log::SetFilter(0x3);
   lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
@@ -310,7 +310,7 @@ TEST_F(LogTest, ThrottleLevelDebug) {
 }
 
 #undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL (DDK_LOG_TRACE)
+#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
 TEST_F(LogTest, ThrottleLevelTrace) {
   Log::SetFilter(0x3);
   lthrottle_error("error throttle %s", "test");
