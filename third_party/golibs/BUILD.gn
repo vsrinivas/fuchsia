@@ -10,7 +10,11 @@ import("//build/go/go_library.gni")
 go_library("cloud.google.com/go/compute/metadata") {
   name = "cloud.google.com/go/compute/metadata/..."
   source_dir = "vendor/cloud.google.com/go/compute/metadata"
-  sources = [ "metadata.go" ]
+  sources = [
+    "metadata.go",
+    "retry.go",
+    "retry_linux.go",
+  ]
 }
 go_library("cloud.google.com/go/iam") {
   name = "cloud.google.com/go/iam/..."
@@ -59,18 +63,19 @@ go_library("cloud.google.com/go/storage") {
     ":google.golang.org/api/storage/v1",
     ":google.golang.org/api/transport",
     ":google.golang.org/genproto/googleapis/iam/v1",
+    ":google.golang.org/genproto/googleapis/storage/v2",
   ]
   sources = [
     "acl.go",
     "bucket.go",
     "copy.go",
     "doc.go",
-    "go110.go",
     "go_mod_tidy_hack.go",
     "hmac.go",
     "iam.go",
+    "internal/apiv2/doc.go",
+    "internal/apiv2/storage_client.go",
     "invoke.go",
-    "not_go110.go",
     "notifications.go",
     "post_policy_v4.go",
     "reader.go",
@@ -215,7 +220,6 @@ go_library("github.com/golang/protobuf") {
     ":google.golang.org/protobuf",
   ]
   sources = [
-    "internal/gengogrpc/grpc.go",
     "proto/buffer.go",
     "proto/defaults.go",
     "proto/deprecated.go",
@@ -228,8 +232,6 @@ go_library("github.com/golang/protobuf") {
     "proto/text_encode.go",
     "proto/wire.go",
     "proto/wrappers.go",
-    "protoc-gen-go/descriptor/descriptor.pb.go",
-    "protoc-gen-go/main.go",
     "ptypes/any.go",
     "ptypes/any/any.pb.go",
     "ptypes/doc.go",
@@ -242,8 +244,15 @@ go_library("github.com/golang/protobuf") {
 go_library("github.com/googleapis/gax-go/v2") {
   name = "github.com/googleapis/gax-go/v2/..."
   source_dir = "vendor/github.com/googleapis/gax-go/v2"
-  deps = [ ":google.golang.org/grpc" ]
+  deps = [
+    ":google.golang.org/api/googleapi",
+    ":google.golang.org/genproto/googleapis/rpc/errdetails",
+    ":google.golang.org/grpc",
+    ":google.golang.org/protobuf",
+  ]
   sources = [
+    "apierror/apierror.go",
+    "apierror/internal/proto/error.pb.go",
     "call_option.go",
     "gax.go",
     "header.go",
@@ -319,7 +328,10 @@ go_library("github.com/kr/fs") {
 go_library("github.com/kr/pretty") {
   name = "github.com/kr/pretty/..."
   source_dir = "vendor/github.com/kr/pretty"
-  deps = [ ":github.com/kr/text" ]
+  deps = [
+    ":github.com/kr/text",
+    ":github.com/rogpeppe/go-internal/fmtsort",
+  ]
   sources = [
     "diff.go",
     "formatter.go",
@@ -352,6 +364,24 @@ go_library("github.com/pkg/sftp") {
     "conn.go",
     "debug.go",
     "fuzz.go",
+    "internal/encoding/ssh/filexfer/attrs.go",
+    "internal/encoding/ssh/filexfer/buffer.go",
+    "internal/encoding/ssh/filexfer/extended_packets.go",
+    "internal/encoding/ssh/filexfer/extensions.go",
+    "internal/encoding/ssh/filexfer/filexfer.go",
+    "internal/encoding/ssh/filexfer/fx.go",
+    "internal/encoding/ssh/filexfer/fxp.go",
+    "internal/encoding/ssh/filexfer/handle_packets.go",
+    "internal/encoding/ssh/filexfer/init_packets.go",
+    "internal/encoding/ssh/filexfer/open_packets.go",
+    "internal/encoding/ssh/filexfer/packets.go",
+    "internal/encoding/ssh/filexfer/path_packets.go",
+    "internal/encoding/ssh/filexfer/permissions.go",
+    "internal/encoding/ssh/filexfer/response_packets.go",
+    "ls_formatting.go",
+    "ls_plan9.go",
+    "ls_stub.go",
+    "ls_unix.go",
     "match.go",
     "packet-manager.go",
     "packet-typing.go",
@@ -373,13 +403,20 @@ go_library("github.com/pkg/sftp") {
     "server_statvfs_linux.go",
     "server_statvfs_plan9.go",
     "server_statvfs_stubs.go",
-    "server_stubs.go",
-    "server_unix.go",
     "sftp.go",
     "stat_plan9.go",
     "stat_posix.go",
     "syscall_fixed.go",
     "syscall_good.go",
+  ]
+}
+go_library("github.com/rogpeppe/go-internal/fmtsort") {
+  name = "github.com/rogpeppe/go-internal/fmtsort"
+  source_dir = "vendor/github.com/rogpeppe/go-internal/fmtsort"
+  sources = [
+    "mapelem.go",
+    "mapelem_1.11.go",
+    "sort.go",
   ]
 }
 go_library("github.com/spf13/pflag") {
@@ -501,6 +538,15 @@ go_library("go.opencensus.io") {
     "metric/metricproducer/manager.go",
     "metric/metricproducer/producer.go",
     "opencensus.go",
+    "plugin/ocgrpc/client.go",
+    "plugin/ocgrpc/client_metrics.go",
+    "plugin/ocgrpc/client_stats_handler.go",
+    "plugin/ocgrpc/doc.go",
+    "plugin/ocgrpc/server.go",
+    "plugin/ocgrpc/server_metrics.go",
+    "plugin/ocgrpc/server_stats_handler.go",
+    "plugin/ocgrpc/stats_common.go",
+    "plugin/ocgrpc/trace_common.go",
     "plugin/ochttp/client.go",
     "plugin/ochttp/client_stats.go",
     "plugin/ochttp/doc.go",
@@ -627,6 +673,17 @@ go_library("golang.org/x/crypto") {
     "ed25519/ed25519_go113.go",
     "ed25519/internal/edwards25519/const.go",
     "ed25519/internal/edwards25519/edwards25519.go",
+    "internal/poly1305/bits_compat.go",
+    "internal/poly1305/bits_go1.13.go",
+    "internal/poly1305/mac_noasm.go",
+    "internal/poly1305/poly1305.go",
+    "internal/poly1305/sum_amd64.go",
+    "internal/poly1305/sum_amd64.s",
+    "internal/poly1305/sum_generic.go",
+    "internal/poly1305/sum_ppc64le.go",
+    "internal/poly1305/sum_ppc64le.s",
+    "internal/poly1305/sum_s390x.go",
+    "internal/poly1305/sum_s390x.s",
     "internal/subtle/aliasing.go",
     "internal/subtle/aliasing_purego.go",
     "nacl/secretbox/secretbox.go",
@@ -658,17 +715,6 @@ go_library("golang.org/x/crypto") {
     "openpgp/s2k/s2k.go",
     "openpgp/write.go",
     "pbkdf2/pbkdf2.go",
-    "poly1305/bits_compat.go",
-    "poly1305/bits_go1.13.go",
-    "poly1305/mac_noasm.go",
-    "poly1305/poly1305.go",
-    "poly1305/sum_amd64.go",
-    "poly1305/sum_amd64.s",
-    "poly1305/sum_generic.go",
-    "poly1305/sum_ppc64le.go",
-    "poly1305/sum_ppc64le.s",
-    "poly1305/sum_s390x.go",
-    "poly1305/sum_s390x.s",
     "salsa20/salsa/hsalsa20.go",
     "salsa20/salsa/salsa208.go",
     "salsa20/salsa/salsa20_amd64.go",
@@ -767,6 +813,8 @@ go_library("golang.org/x/net") {
     "internal/socket/cmsghdr_stub.go",
     "internal/socket/cmsghdr_unix.go",
     "internal/socket/cmsghdr_zos_s390x.go",
+    "internal/socket/complete_dontwait.go",
+    "internal/socket/complete_nodontwait.go",
     "internal/socket/empty.s",
     "internal/socket/error_unix.go",
     "internal/socket/error_windows.go",
@@ -1084,7 +1132,6 @@ go_library("golang.org/x/sys") {
     "cpu/hwcap_linux.go",
     "cpu/syscall_aix_gccgo.go",
     "cpu/syscall_aix_ppc64_gc.go",
-    "execabs/execabs.go",
     "internal/unsafeheader/unsafeheader.go",
     "unix/affinity_linux.go",
     "unix/aliases.go",
@@ -1133,6 +1180,7 @@ go_library("golang.org/x/sys") {
     "unix/fstatfs_zos.go",
     "unix/gccgo.go",
     "unix/gccgo_linux_amd64.go",
+    "unix/ifreq_linux.go",
     "unix/ioctl.go",
     "unix/ioctl_linux.go",
     "unix/ioctl_zos.go",
@@ -1559,11 +1607,23 @@ go_library("google.golang.org/genproto/googleapis/iam/v1") {
     "policy.pb.go",
   ]
 }
+go_library("google.golang.org/genproto/googleapis/storage/v2") {
+  name = "google.golang.org/genproto/googleapis/storage/v2/..."
+  source_dir = "vendor/google.golang.org/genproto/googleapis/storage/v2"
+  deps = [ ":google.golang.org/genproto/googleapis/type/date" ]
+  sources = [ "storage.pb.go" ]
+}
 go_library("google.golang.org/genproto/googleapis/rpc/code") {
   name = "google.golang.org/genproto/googleapis/rpc/code/..."
   source_dir = "vendor/google.golang.org/genproto/googleapis/rpc/code"
   deps = [ ":github.com/golang/protobuf" ]
   sources = [ "code.pb.go" ]
+}
+go_library("google.golang.org/genproto/googleapis/rpc/errdetails") {
+  name = "google.golang.org/genproto/googleapis/rpc/errdetails/..."
+  source_dir = "vendor/google.golang.org/genproto/googleapis/rpc/errdetails"
+  deps = [ ":github.com/golang/protobuf" ]
+  sources = [ "error_details.pb.go" ]
 }
 go_library("google.golang.org/genproto/googleapis/rpc/status") {
   name = "google.golang.org/genproto/googleapis/rpc/status/..."
@@ -1576,6 +1636,12 @@ go_library("google.golang.org/genproto/googleapis/type/expr") {
   source_dir = "vendor/google.golang.org/genproto/googleapis/type/expr"
   deps = [ ":github.com/golang/protobuf" ]
   sources = [ "expr.pb.go" ]
+}
+go_library("google.golang.org/genproto/googleapis/type/date") {
+  name = "google.golang.org/genproto/googleapis/type/date/..."
+  source_dir = "vendor/google.golang.org/genproto/googleapis/type/date"
+  deps = [ ":github.com/golang/protobuf" ]
+  sources = [ "date.pb.go" ]
 }
 
 # Actually aggregates the dependencies of other google.golang.org/grpc/*
@@ -1595,6 +1661,13 @@ go_library("google.golang.org/grpc") {
     "balancer/balancer.go",
     "balancer/base/balancer.go",
     "balancer/base/base.go",
+    "balancer/grpclb/grpc_lb_v1/load_balancer.pb.go",
+    "balancer/grpclb/grpc_lb_v1/load_balancer_grpc.pb.go",
+    "balancer/grpclb/grpclb.go",
+    "balancer/grpclb/grpclb_config.go",
+    "balancer/grpclb/grpclb_picker.go",
+    "balancer/grpclb/grpclb_remote_balancer.go",
+    "balancer/grpclb/grpclb_util.go",
     "balancer/grpclb/state/state.go",
     "balancer/roundrobin/roundrobin.go",
     "balancer_conn_wrappers.go",
@@ -1607,8 +1680,28 @@ go_library("google.golang.org/grpc") {
     "codes/code_string.go",
     "codes/codes.go",
     "connectivity/connectivity.go",
+    "credentials/alts/alts.go",
+    "credentials/alts/internal/authinfo/authinfo.go",
+    "credentials/alts/internal/common.go",
+    "credentials/alts/internal/conn/aeadrekey.go",
+    "credentials/alts/internal/conn/aes128gcm.go",
+    "credentials/alts/internal/conn/aes128gcmrekey.go",
+    "credentials/alts/internal/conn/common.go",
+    "credentials/alts/internal/conn/counter.go",
+    "credentials/alts/internal/conn/record.go",
+    "credentials/alts/internal/conn/utils.go",
+    "credentials/alts/internal/handshaker/handshaker.go",
+    "credentials/alts/internal/handshaker/service/service.go",
+    "credentials/alts/internal/proto/grpc_gcp/altscontext.pb.go",
+    "credentials/alts/internal/proto/grpc_gcp/handshaker.pb.go",
+    "credentials/alts/internal/proto/grpc_gcp/handshaker_grpc.pb.go",
+    "credentials/alts/internal/proto/grpc_gcp/transport_security_common.pb.go",
+    "credentials/alts/utils.go",
     "credentials/credentials.go",
     "credentials/go12.go",
+    "credentials/google/google.go",
+    "credentials/google/xds.go",
+    "credentials/oauth/oauth.go",
     "credentials/tls.go",
     "dialoptions.go",
     "doc.go",
@@ -1641,6 +1734,7 @@ go_library("google.golang.org/grpc") {
     "internal/credentials/syscallconn_appengine.go",
     "internal/credentials/util.go",
     "internal/envconfig/envconfig.go",
+    "internal/googlecloud/googlecloud.go",
     "internal/grpclog/grpclog.go",
     "internal/grpclog/prefixLogger.go",
     "internal/grpcrand/grpcrand.go",
@@ -1771,6 +1865,10 @@ go_library("google.golang.org/api/transport") {
   ]
   sources = [
     "cert/default_cert.go",
+    "grpc/dial.go",
+    "grpc/dial_appengine.go",
+    "grpc/dial_socketopt.go",
+    "grpc/pool.go",
     "http/configure_http2_go116.go",
     "http/configure_http2_not_go116.go",
     "http/default_transport_go113.go",
@@ -1932,6 +2030,7 @@ go_library("google.golang.org/protobuf") {
     "types/known/anypb/any.pb.go",
     "types/known/durationpb/duration.pb.go",
     "types/known/emptypb/empty.pb.go",
+    "types/known/fieldmaskpb/field_mask.pb.go",
     "types/known/structpb/struct.pb.go",
     "types/known/timestamppb/timestamp.pb.go",
     "types/pluginpb/plugin.pb.go",

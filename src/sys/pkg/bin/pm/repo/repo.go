@@ -424,7 +424,7 @@ func (r *Repo) commitUpdates() error {
 	// TUF-1.0 section 4.4.2 states that the expiration must be in the
 	// ISO-8601 format in the UTC timezone with no nanoseconds.
 	expires := time.Now().AddDate(0, 0, 30).UTC().Round(time.Second)
-	if err := r.SnapshotWithExpires(tuf.CompressionTypeNone, expires); err != nil {
+	if err := r.SnapshotWithExpires(expires); err != nil {
 		return fmt.Errorf("snapshot: %s", err)
 	}
 	if err := r.TimestampWithExpires(expires); err != nil {

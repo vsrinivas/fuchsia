@@ -74,6 +74,7 @@ import (\n%s\n)' "//$THIS_SCRIPT" "$IMPORTS_STR" | $GOFMT -s >imports.go
 
 $GO get -u gvisor.dev/gvisor@go
 $GO get -u
+
 $GO mod tidy
 $GO mod vendor
 
