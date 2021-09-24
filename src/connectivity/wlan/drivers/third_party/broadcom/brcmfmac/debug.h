@@ -25,15 +25,25 @@
 #include <cstring>
 #include <utility>
 
+#include <wlan/drivers/log.h>
+
 #include "throttle_counter.h"
 #include "token_bucket.h"
 
+// Compile out debug and trace logs for --release builds (i.e. NDEBUG is defined).
+// ToDo(fxb/82679) - Make BRCMF_DBG use debug level instead of info.
+#ifdef NDEBUG
+#define WLAN_DRIVER_LOG_LEVEL DDK_LOG_INFO
+#else
+#define WLAN_DRIVER_LOG_LEVEL DDK_LOG_TRACE
+#endif
+
 // Some convenience macros for error and debug printing.
-#define BRCMF_ERR(fmt, ...) zxlogf(ERROR, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define BRCMF_ERR(fmt...) lerror(fmt)
 
-#define BRCMF_WARN(fmt, ...) zxlogf(WARNING, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define BRCMF_WARN(fmt...) lwarn(fmt)
 
-#define BRCMF_INFO(fmt, ...) zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__)
+#define BRCMF_INFO(fmt...) linfo(fmt)
 
 #define BRCMF_DBG_UNFILTERED BRCMF_INFO
 

@@ -48,7 +48,7 @@ source_set("debug") {
   sources = [ "debug.cc" ]
   public = [ "debug.h" ]
   public_deps = [
-    "//src/lib/ddk",
+    "//src/connectivity/wlan/drivers/lib/log:cpp",
     "//zircon/system/public",
   ]
 }
@@ -178,7 +178,6 @@ source_set("core") {
     "wlan_interface.h",
   ]
   deps = [
-    ":debug",
     ":timer",
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
@@ -191,6 +190,7 @@ source_set("core") {
     "//zircon/system/ulib/async",
   ]
   public_deps = [
+    ":debug",
     ":linuxisms",
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",

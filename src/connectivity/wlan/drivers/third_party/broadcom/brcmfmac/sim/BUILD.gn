@@ -47,7 +47,6 @@ source_set("sim_common") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/devices/lib/broadcom",
     "//src/lib/ddk",
     "//src/lib/ddktl",
@@ -60,6 +59,7 @@ source_set("sim_common") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//zircon/system/ulib/async",
   ]
@@ -74,7 +74,6 @@ source_set("sim") {
   deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//zircon/system/public",
   ]
   public_deps = [ ":sim_common" ]
