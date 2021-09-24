@@ -10,38 +10,46 @@ mod tests {
         fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_intl::{
             self as fintl, CivilTime, CivilToAbsoluteTimeOptions, DayOfWeek, Month,
-            RepeatedTimeConversion, SkippedTimeConversion, TimeZoneId,
+            RepeatedTimeConversion, SkippedTimeConversion, TimeZoneId, TimeZoneInfo,
+            TimeZonesProxy,
         },
         fuchsia_async as fasync,
         fuchsia_component_test::{
             builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-            error::Error as RealmBuilderError,
             RealmInstance,
         },
         fuchsia_zircon as zx,
     };
 
-    static TZ_NYC: &str = "America/New_York";
-    static NANOS_PER_SECOND: i64 = 1_000_000_000;
-    static TIMEZONE_URL: &str =
+    static SVC_URL: &str =
         "fuchsia-pkg://fuchsia.com/time-zone-info-service-test#meta/time-zone-info-service.cmx";
 
-    async fn build_time_zone_realm() -> Result<RealmInstance, RealmBuilderError> {
+    static TZ_NYC: &str = "America/New_York";
+    static NANOS_PER_SECOND: i64 = 1_000_000_000;
+    static SECONDS_PER_HOUR: i64 = 3600;
+
+    async fn connect_to_service() -> Result<(RealmInstance, TimeZonesProxy)> {
+        const MONIKER: &str = "tzinfo";
+
         let mut builder = RealmBuilder::new().await?;
         builder
-            .add_component("timezone", ComponentSource::LegacyUrl(TIMEZONE_URL.to_string()))
+            .add_component(MONIKER, ComponentSource::LegacyUrl(SVC_URL.to_string()))
             .await?
             .add_route(CapabilityRoute {
                 capability: Capability::protocol(fintl::TimeZonesMarker::PROTOCOL_NAME),
-                source: RouteEndpoint::component("timezone"),
+                source: RouteEndpoint::component(MONIKER),
                 targets: vec![RouteEndpoint::AboveRoot],
             })?;
 
-        builder.build().create().await
+        let realm = builder.build().create().await?;
+        let svc = realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
+        Ok((realm, svc))
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_civil_to_absolute_time() -> Result<()> {
+        let (realm, svc) = connect_to_service().await?;
+
         let civil_time = fable! {
           CivilTime {
               year: 2021,
@@ -64,32 +72,24 @@ mod tests {
             }
         };
 
-        let time_zone_realm = build_time_zone_realm().await?;
+        let actual =
+            svc.civil_to_absolute_time(civil_time, options).await?.map(zx::Time::from_nanos);
+        realm.destroy().await?;
 
-        let timezone_svc =
-            time_zone_realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
-
-        let actual = timezone_svc
-            .civil_to_absolute_time(civil_time, options)
-            .await?
-            .map(zx::Time::from_nanos);
         let expected = Ok(zx::Time::from_nanos(1629073062 * NANOS_PER_SECOND + 123_456_789));
-
         assert_eq!(actual, expected);
-        time_zone_realm.destroy().await.unwrap();
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_absolute_to_civil_time() -> Result<()> {
+        let (realm, svc) = connect_to_service().await?;
+
         let absolute_time = 1629073062 * NANOS_PER_SECOND + 123_456_789;
         let mut tz_id = TimeZoneId { id: TZ_NYC.to_string() };
 
-        let time_zone_realm = build_time_zone_realm().await?;
-
-        let timezone_svc =
-            time_zone_realm.root.connect_to_protocol_at_exposed_dir::<fintl::TimeZonesMarker>()?;
-        let actual = timezone_svc.absolute_to_civil_time(&mut tz_id, absolute_time).await?;
+        let actual = svc.absolute_to_civil_time(&mut tz_id, absolute_time).await?;
+        realm.destroy().await?;
 
         let expected = Ok(fable! {
           CivilTime {
@@ -107,10 +107,27 @@ mod tests {
               },
           }
         });
-
         assert_eq!(actual, expected);
-        time_zone_realm.destroy().await.unwrap();
+        Ok(())
+    }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_time_zone_info() -> Result<()> {
+        let (realm, svc) = connect_to_service().await?;
+
+        let absolute_time = 1629073062 * NANOS_PER_SECOND + 123_456_789;
+        let mut tz_id = TimeZoneId { id: TZ_NYC.to_string() };
+
+        let actual = svc.get_time_zone_info(&mut tz_id, absolute_time).await?;
+        realm.destroy().await?;
+
+        let expected = Ok(fable! {
+          TimeZoneInfo {
+              id: tz_id,
+              total_offset_at_time: -4 * SECONDS_PER_HOUR * NANOS_PER_SECOND,
+          }
+        });
+        assert_eq!(actual, expected);
         Ok(())
     }
 }

@@ -66,6 +66,10 @@ class TimeZoneInfoService final : fuchsia::intl::TimeZones {
                            fuchsia::intl::CivilToAbsoluteTimeOptions options,
                            CivilToAbsoluteTimeCallback callback) override;
 
+  // `fuchsia.intl.TimeZones`
+  void GetTimeZoneInfo(fuchsia::intl::TimeZoneId time_zone_id, zx_time_t at_time,
+                       GetTimeZoneInfoCallback callback) override;
+
  private:
   // Logs the given ICU error at the appropriate severity level, and returns a corresponding
   // `TimeZonesError` enum value.

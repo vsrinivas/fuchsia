@@ -28,12 +28,16 @@ using fuchsia::intl::Month;
 using fuchsia::intl::RepeatedTimeConversion;
 using fuchsia::intl::SkippedTimeConversion;
 using fuchsia::intl::TimeZoneId;
+using fuchsia::intl::TimeZoneInfo;
 using fuchsia::intl::TimeZonesError;
 using sys::testing::ComponentContextProvider;
 using AbsoluteToCivilTime_Result = fuchsia::intl::TimeZones_AbsoluteToCivilTime_Result;
 using CivilToAbsoluteTime_Result = fuchsia::intl::TimeZones_CivilToAbsoluteTime_Result;
+using GetTimeZoneInfoResult = fuchsia::intl::TimeZones_GetTimeZoneInfo_Result;
 
 static constexpr uint64_t kNanosecondsPerSecond = 1'000'000'000;
+static constexpr uint64_t kSecondsPerHour = 3600;
+
 static const std::string kNyc = "America/New_York";
 
 class TimeZoneInfoServiceTest : public gtest::RealLoopFixture {
@@ -95,6 +99,31 @@ class TimeZoneInfoServiceTest : public gtest::RealLoopFixture {
                                        << static_cast<double>(expected_time - actual) /
                                               static_cast<double>(kNanosecondsPerSecond)
                                        << " seconds";
+    } else {
+      ASSERT_TRUE(result.value().is_err()) << "Actually got: " << result.value().response();
+      auto actual = result.value().err();
+      TimeZonesError expected_err = std::get<TimeZonesError>(expected);
+      ASSERT_TRUE(fidl::Equals(expected_err, actual)) << "expected:\n"
+                                                      << expected_err << "\nactual:\n"
+                                                      << actual;
+    }
+  }
+
+  void AssertGetTimeZoneInfo(std::string time_zone_id, zx_time_t at_time,
+                             std::variant<TimeZoneInfo, TimeZonesError> expected) {
+    auto client = GetClient();
+    std::optional<GetTimeZoneInfoResult> result;
+    client->GetTimeZoneInfo(TimeZoneId{.id = time_zone_id}, at_time,
+                            [&result](auto r) { result = std::move(r); });
+    RunLoopUntil([&result] { return result.has_value(); });
+
+    if (std::holds_alternative<TimeZoneInfo>(expected)) {
+      ASSERT_TRUE(result.value().is_response());
+      TimeZoneInfo actual_info(std::move(result.value().response().time_zone_info));
+      TimeZoneInfo expected_info(std::move(std::get<TimeZoneInfo>(expected)));
+      ASSERT_TRUE(fidl::Equals(expected_info, actual_info)) << "expected:\n"
+                                                            << expected_info << "\nactual:\n"
+                                                            << actual_info;
     } else {
       ASSERT_TRUE(result.value().is_err()) << "Actually got: " << result.value().response();
       auto actual = result.value().err();
@@ -308,6 +337,35 @@ TEST_F(TimeZoneInfoServiceTest, CivilToAbsoluteTime_WrongYearDay) {
 
   AssertCivilToAbsoluteTime(std::move(civil_time), std::move(options),
                             TimeZonesError::INVALID_DATE);
+}
+
+TEST_F(TimeZoneInfoServiceTest, GetTimeZoneInfo_HappyPath) {
+  // 2021-08-15T20:17:42-04:00
+  zx_time_t at_time = 1629073062 * kNanosecondsPerSecond;
+
+  TimeZoneInfo expected;
+  expected.set_id(TimeZoneId{.id = kNyc});
+  expected.set_total_offset_at_time(-4 * kSecondsPerHour * kNanosecondsPerSecond);
+
+  AssertGetTimeZoneInfo(kNyc, at_time, std::move(expected));
+}
+
+TEST_F(TimeZoneInfoServiceTest, GetTimeZoneInfo_IntentionallyUnknownTimeZone) {
+  // 2021-08-15T20:17:42-04:00
+  zx_time_t at_time = 1629073062 * kNanosecondsPerSecond;
+
+  TimeZoneInfo expected;
+  expected.set_id(TimeZoneId{.id = "Etc/Unknown"});
+  expected.set_total_offset_at_time(0);
+
+  AssertGetTimeZoneInfo("Etc/Unknown", at_time, std::move(expected));
+}
+
+TEST_F(TimeZoneInfoServiceTest, GetTimeZoneInfo_BadID) {
+  // 2021-08-15T20:17:42-04:00
+  zx_time_t at_time = 1629073062 * kNanosecondsPerSecond;
+
+  AssertGetTimeZoneInfo("Non/Existent", at_time, TimeZonesError::UNKNOWN_TIME_ZONE);
 }
 
 }  // namespace testing

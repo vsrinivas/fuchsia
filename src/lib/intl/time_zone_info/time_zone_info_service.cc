@@ -27,6 +27,8 @@ using fuchsia::intl::TimeZones_AbsoluteToCivilTime_Response;
 using fuchsia::intl::TimeZones_AbsoluteToCivilTime_Result;
 using fuchsia::intl::TimeZones_CivilToAbsoluteTime_Response;
 using fuchsia::intl::TimeZones_CivilToAbsoluteTime_Result;
+using fuchsia::intl::TimeZones_GetTimeZoneInfo_Response;
+using fuchsia::intl::TimeZones_GetTimeZoneInfo_Result;
 
 static constexpr uint64_t kMillisecondsPerSecond = 1000;
 static constexpr uint64_t kNanosecondsPerMillisecond = 1'000'000;
@@ -173,6 +175,15 @@ TimeZones_CivilToAbsoluteTime_Result CivilToAbsoluteTimeResult(
   return TimeZones_CivilToAbsoluteTime_Result::WithErr(fuchsia::intl::TimeZonesError(error));
 }
 
+TimeZones_GetTimeZoneInfo_Result GetTimeZoneInfoResult(const fuchsia::intl::TimeZonesError& error) {
+  return TimeZones_GetTimeZoneInfo_Result::WithErr(fuchsia::intl::TimeZonesError(error));
+}
+
+TimeZones_GetTimeZoneInfo_Result GetTimeZoneInfoResult(fuchsia::intl::TimeZoneInfo time_zone_info) {
+  TimeZones_GetTimeZoneInfo_Response response(std::move(time_zone_info));
+  return TimeZones_GetTimeZoneInfo_Result::WithResponse(std::move(response));
+}
+
 // Returns true if the civil time set on the `calendar` is invalid because it should be skipped
 // during a forward DST transition.
 bool IsSkippedTime(const icu::Calendar& calendar, UErrorCode& icu_status) {
@@ -220,6 +231,20 @@ fuchsia::intl::CivilTime ICUCalendarToCivilTime(const icu::Calendar& calendar,
   return civil_time;
 }
 
+// Returns true if the loaded time zone's ID is "Etc/Unknown" and the client did not explicitly
+// request it. This means that the requested time zone was not found.
+bool IsUnexpectedlyUnknownTimeZone(const icu::TimeZone& time_zone,
+                                   const fuchsia::intl::TimeZoneId& requested_time_zone_id) {
+  if (requested_time_zone_id.id != UCAL_UNKNOWN_ZONE_ID) {
+    icu::UnicodeString loaded_id;
+    time_zone.getID(loaded_id);
+    if (loaded_id == UCAL_UNKNOWN_ZONE_ID) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 std::unique_ptr<TimeZoneInfoService> TimeZoneInfoService::Create() {
@@ -242,15 +267,9 @@ std::variant<std::unique_ptr<icu::Calendar>, fuchsia::intl::TimeZonesError>
 TimeZoneInfoService::LoadCalendar(const fuchsia::intl::TimeZoneId& time_zone_id) {
   // `calendar` will take ownership of time_zone. Do not delete it manually.
   std::unique_ptr<icu::TimeZone> time_zone(icu::TimeZone::createTimeZone(time_zone_id.id.c_str()));
-  // If the loaded time zone's ID is "Etc/Unknown" and the client did not explicitly request it,
-  // that means that the requested time zone was not found.
-  if (time_zone_id.id != UCAL_UNKNOWN_ZONE_ID) {
-    icu::UnicodeString loaded_id;
-    time_zone->getID(loaded_id);
-    if (loaded_id == UCAL_UNKNOWN_ZONE_ID) {
-      FX_LOGS(ERROR) << "Unknown time zone ID: " << time_zone_id.id;
-      return fuchsia::intl::TimeZonesError::UNKNOWN_TIME_ZONE;
-    }
+  if (IsUnexpectedlyUnknownTimeZone(*time_zone, time_zone_id)) {
+    FX_LOGS(WARNING) << "Unknown time zone ID: " << time_zone_id.id;
+    return fuchsia::intl::TimeZonesError::UNKNOWN_TIME_ZONE;
   }
 
   UErrorCode icu_status = UErrorCode::U_ZERO_ERROR;
@@ -418,6 +437,52 @@ void TimeZoneInfoService::CivilToAbsoluteTime(fuchsia::intl::CivilTime civil_tim
   }
 
   callback(CivilToAbsoluteTimeResult(absolute_time_nanos));
+}
+
+void TimeZoneInfoService::GetTimeZoneInfo(fuchsia::intl::TimeZoneId time_zone_id, zx_time_t at_time,
+                                          GetTimeZoneInfoCallback callback) {
+  std::unique_ptr<icu::TimeZone> time_zone(icu::TimeZone::createTimeZone(time_zone_id.id.c_str()));
+
+  if (IsUnexpectedlyUnknownTimeZone(*time_zone, time_zone_id)) {
+    FX_LOGS(WARNING) << "Unknown time zone ID: " << time_zone_id.id;
+    callback(GetTimeZoneInfoResult(fuchsia::intl::TimeZonesError::UNKNOWN_TIME_ZONE));
+    return;
+  }
+
+  UDate at_u_date = static_cast<UDate>(at_time / kNanosecondsPerMillisecond);
+  int32_t raw_offset;
+  int32_t dst_offset;
+  icu::ErrorCode icu_status;
+  time_zone->getOffset(at_u_date, false /* not local time */, raw_offset, dst_offset, icu_status);
+
+  if (icu_status.isFailure()) {
+    fuchsia::intl::TimeZonesError tz_error;
+    switch (icu_status.get()) {
+      case UErrorCode::U_ILLEGAL_ARGUMENT_ERROR:
+        FX_LOGS(WARNING) << "Invalid `at_time`:" << at_time;
+        tz_error = fuchsia::intl::TimeZonesError::INVALID_DATE;
+        break;
+      default:
+        FX_LOGS(ERROR) << "ICU error: " << icu_status.errorName();
+        tz_error = fuchsia::intl::TimeZonesError::INTERNAL_ERROR;
+        break;
+    }
+    callback(GetTimeZoneInfoResult(tz_error));
+    return;
+  }
+
+  fuchsia::intl::TimeZoneInfo tz_info;
+
+  icu::UnicodeString unicode_id;
+  time_zone->getID(unicode_id);
+  std::string id;
+  unicode_id.toUTF8String(id);
+  tz_info.set_id(fuchsia::intl::TimeZoneId{.id = id});
+
+  zx_duration_t total_offset = (raw_offset + dst_offset) * kNanosecondsPerMillisecond;
+  tz_info.set_total_offset_at_time(total_offset);
+
+  callback(GetTimeZoneInfoResult(std::move(tz_info)));
 }
 
 }  // namespace intl
