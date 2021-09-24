@@ -118,12 +118,12 @@ void FileTester::VnodeWithoutParent(F2fs *fs, uint32_t mode, fbl::RefPtr<VnodeF2
 
 void FileTester::CheckInlineDir(VnodeF2fs *vn) {
   ASSERT_NE(vn->TestFlag(InodeInfoFlag::kInlineDentry), 0);
-  ASSERT_EQ(vn->GetSize(), kMaxInlineData);
+  ASSERT_EQ(vn->GetSize(), vn->MaxInlineData());
 }
 
 void FileTester::CheckNonInlineDir(VnodeF2fs *vn) {
   ASSERT_EQ(vn->TestFlag(InodeInfoFlag::kInlineDentry), 0);
-  ASSERT_GT(vn->GetSize(), kMaxInlineData);
+  ASSERT_GT(vn->GetSize(), vn->MaxInlineData());
 }
 
 void FileTester::CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) {

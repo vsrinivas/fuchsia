@@ -56,8 +56,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   int RoomForFilename(DentryBlock *dentry_blk, int slots);
   void UpdateParentMetadata(VnodeF2fs *inode, unsigned int current_depth);
   zx_status_t InitInodeMetadata(VnodeF2fs *vnode);
-  zx_status_t MakeEmpty(VnodeF2fs *vnode, VnodeF2fs *parent);
-  zx_status_t MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent);
+  zx_status_t MakeEmpty(VnodeF2fs *vnode);
+  zx_status_t MakeEmptyInlineDir(VnodeF2fs *vnode);
   void InitDentInode(VnodeF2fs *vnode, Page *ipage);
 
   // delete
@@ -78,6 +78,10 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   static uint64_t DirBlockIndex(uint32_t level, uint8_t dir_level, uint32_t idx);
   void SetDeType(DirEntry *de, VnodeF2fs *vnode);
   bool EarlyMatchName(const char *name, int namelen, f2fs_hash_t namehash, DirEntry *de);
+
+  uint32_t MaxInlineDentry() const {
+    return MaxInlineData() * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
+  }
 
 #if 0  // porting needed
 //   int F2fsLink(dentry *old_dentry, dentry *dentry);

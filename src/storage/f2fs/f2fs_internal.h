@@ -79,6 +79,7 @@ struct InodeInfo {
   uint32_t i_flags = 0;          // keep an inode flags for ioctl
   uint8_t i_advise = 0;          // use to give file attribute hints
   uint8_t i_dir_level = 0;       // use for dentry level for large dir
+  uint16_t i_extra_isize = 0;    // size of extra space located in i_addr
   uint64_t i_current_depth = 0;  // use only in directory structure
   umode_t i_acl_mode = 0;        // keep file acl mode temporarily
 
@@ -333,7 +334,13 @@ static inline bool IsInode(Page *page) {
 }
 
 static inline uint32_t *BlkaddrInNode(Node *node) {
-  return RawIsInode(node) ? node->i.i_addr : node->dn.addr;
+  if (RawIsInode(node)) {
+    if (node->i.i_inline & kExtraAttr) {
+      return node->i.i_addr + (node->i.i_extra_isize / sizeof(uint32_t));
+    }
+    return node->i.i_addr;
+  }
+  return node->dn.addr;
 }
 
 static inline block_t DatablockAddr(Page *node_page, uint64_t offset) {

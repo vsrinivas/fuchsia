@@ -43,7 +43,7 @@ static inline uint32_t OffsetInSeg(SbInfo &sbi, SegmentManager &manager, uint64_
   return (uint32_t)(BlkoffFromMain(manager, block_address) % (1 << sbi.log_blocks_per_seg));
 }
 
-static inline uint32_t AddrsPerInode(Inode *i) {
+static inline uint16_t AddrsPerInode(Inode *i) {
 #if 0  // porting needed
 	      if (i->i_inline & kInlineXattr)
 					            return kAddrPerInode - kInlineXattrAddrs;
@@ -283,7 +283,6 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
   NodeType ntype;
   uint32_t i_links = LeToCpu(node_blk->i.i_links);
   uint64_t i_blocks = LeToCpu(node_blk->i.i_blocks);
-  uint16_t idx = 0;
 
   ZX_ASSERT(node_blk->footer.nid == node_blk->footer.ino);
   ZX_ASSERT(LeToCpu(node_blk->footer.nid) == nid);
@@ -350,15 +349,23 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
   }
 #endif
 
+    uint16_t base =
+        (node_blk->i.i_inline & kExtraAttr) ? node_blk->i.i_extra_isize / sizeof(uint32_t) : 0;
+
     if (node_blk->i.i_inline & kInlineDentry) {
-      const auto &entry =
-          reinterpret_cast<const InlineDentry &>(node_blk->i.i_addr[kInlineStartOffset]);
+      uint32_t max_data =
+          sizeof(uint32_t) *
+          ((kAddrsPerInode - base * sizeof(uint32_t)) / sizeof(uint32_t) - kInlineXattrAddrs - 1);
+      uint32_t max_dentry =
+          max_data * kBitsPerByte / ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
+
+      const auto &entry = reinterpret_cast<const InlineDentry &>(node_blk->i.i_addr[base + 1]);
 
       ChkDentries(&child_cnt, &child_files, 1, entry.dentry_bitmap, entry.dentry, entry.filename,
-                  kNrInlineDentry);
+                  max_dentry);
     } else {
       // check data blocks in inode
-      for (idx = 0; idx < AddrsPerInode(&node_blk->i); idx++) {
+      for (uint16_t idx = base; idx < AddrsPerInode(&node_blk->i); idx++) {
         if (LeToCpu(node_blk->i.i_addr[idx]) != 0) {
           *blk_cnt = *blk_cnt + 1;
           zx_status_t ret =
@@ -369,8 +376,8 @@ zx_status_t FsckWorker::ChkInodeBlk(uint32_t nid, FileType ftype, Node *node_blk
       }
     }
 
-    // check node blocks in inode
-    for (idx = 0; idx < 5; idx++) {
+    // check node blocks in inode: direct(2) + indirect(2) + double indirect(1)
+    for (int idx = 0; idx < 5; idx++) {
       if (idx == 0 || idx == 1)
         ntype = NodeType::kTypeDirectNode;
       else if (idx == 2 || idx == 3)

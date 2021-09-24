@@ -303,7 +303,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
       return err;
 
     if (vnode->IsDir()) {
-      if (zx_status_t err = MakeEmpty(vnode, this); err != ZX_OK) {
+      if (zx_status_t err = MakeEmpty(vnode); err != ZX_OK) {
         Vfs()->GetNodeManager().RemoveInodePage(vnode);
         return err;
       }
@@ -567,14 +567,14 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
   }
 }
 
-zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode, VnodeF2fs *parent) {
+zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode) {
   Page *dentry_page = nullptr;
   DentryBlock *dentry_blk;
   DirEntry *de;
   void *kaddr;
 
   if (vnode->TestFlag(InodeInfoFlag::kInlineDentry))
-    return MakeEmptyInlineDir(vnode, parent);
+    return MakeEmptyInlineDir(vnode);
 
   if (zx_status_t err = vnode->GetNewDataPage(0, true, &dentry_page); err != ZX_OK)
     return err;
@@ -596,7 +596,7 @@ zx_status_t Dir::MakeEmpty(VnodeF2fs *vnode, VnodeF2fs *parent) {
   de = &dentry_blk->dentry[1];
   de->hash_code = 0;
   de->name_len = CpuToLe(static_cast<uint16_t>(2));
-  de->ino = CpuToLe(parent->Ino());
+  de->ino = CpuToLe(Ino());
   memcpy(dentry_blk->filename[1], "..", 2);
   SetDeType(de, vnode);
 

@@ -29,10 +29,11 @@ DirEntry *Dir::FindInInlineDir(const std::string_view &name, Page **res_page) {
 
   DirEntry *de = nullptr;
 
-  for (uint32_t bit_pos = 0; bit_pos < kNrInlineDentry;) {
-    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
-    if (bit_pos >= kNrInlineDentry)
+  for (uint32_t bit_pos = 0; bit_pos < MaxInlineDentry();) {
+    bit_pos = FindNextBit(dentry_blk->dentry_bitmap, MaxInlineDentry(), bit_pos);
+    if (bit_pos >= MaxInlineDentry()) {
       break;
+    }
 
     de = &dentry_blk->dentry[bit_pos];
     if (EarlyMatchName(name.data(), static_cast<int>(name.length()), namehash, de)) {
@@ -79,7 +80,7 @@ DirEntry *Dir::ParentInlineDir(Page **p) {
   return de;
 }
 
-zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent) {
+zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
   Page *ipage = nullptr;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
@@ -97,7 +98,7 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent) {
   de = &dentry_blk->dentry[1];
   de->hash_code = 0;
   de->name_len = CpuToLe(static_cast<uint16_t>(2));
-  de->ino = CpuToLe(parent->Ino());
+  de->ino = CpuToLe(Ino());
   memcpy(dentry_blk->filename[1], "..", 2);
   SetDeType(de, vnode);
 
@@ -110,8 +111,8 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode, VnodeF2fs *parent) {
   FlushDirtyNodePage(Vfs(), ipage);
 #endif
 
-  if (vnode->GetSize() < kMaxInlineData) {
-    vnode->SetSize(kMaxInlineData);
+  if (vnode->GetSize() < vnode->MaxInlineData()) {
+    vnode->SetSize(vnode->MaxInlineData());
     vnode->SetFlag(InodeInfoFlag::kUpdateDir);
   }
 
@@ -124,18 +125,19 @@ unsigned int Dir::RoomInInlineDir(InlineDentry *dentry_blk, int slots) {
   int bit_start = 0;
 
   while (true) {
-    int zero_start = FindNextZeroBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_start);
-    if (zero_start >= static_cast<int>(kNrInlineDentry))
-      return kNrInlineDentry;
+    int zero_start = FindNextZeroBit(dentry_blk->dentry_bitmap, MaxInlineDentry(), bit_start);
+    if (zero_start >= static_cast<int>(MaxInlineDentry()))
+      return MaxInlineDentry();
 
-    int zero_end = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, zero_start);
+    int zero_end = FindNextBit(dentry_blk->dentry_bitmap, MaxInlineDentry(), zero_start);
     if (zero_end - zero_start >= slots)
       return zero_start;
 
     bit_start = zero_end + 1;
 
-    if (zero_end + 1 >= static_cast<int>(kNrInlineDentry))
-      return kNrInlineDentry;
+    if (zero_end + 1 >= static_cast<int>(MaxInlineDentry())) {
+      return MaxInlineDentry();
+    }
   }
 }
 
@@ -166,8 +168,8 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
 
   /* copy data from inline dentry block to new dentry block */
   memcpy(dentry_blk->dentry_bitmap, inline_dentry->dentry_bitmap, kInlineDentryBitmapSize);
-  memcpy(dentry_blk->dentry, inline_dentry->dentry, sizeof(DirEntry) * kNrInlineDentry);
-  memcpy(dentry_blk->filename, inline_dentry->filename, kNrInlineDentry * kNameLen);
+  memcpy(dentry_blk->dentry, inline_dentry->dentry, sizeof(DirEntry) * MaxInlineDentry());
+  memcpy(dentry_blk->filename, inline_dentry->filename, MaxInlineDentry() * kNameLen);
 
   // TODO: inode update after data page flush
   // Since there is no pager, inode information in UpdateInode and FlushDirtyDataPage are not
@@ -178,7 +180,7 @@ zx_status_t Dir::ConvertInlineDir(InlineDentry *inline_dentry) {
     return err;
 
   // clear inline dir and flag after data writeback
-  ZeroUserSegment(ipage, kInlineDataOffset, kInlineDataOffset + kMaxInlineData);
+  ZeroUserSegment(ipage, InlineDataOffset(), InlineDataOffset() + MaxInlineData());
   ClearFlag(InodeInfoFlag::kInlineDentry);
 
   if (GetSize() < kPageCacheSize) {
@@ -221,7 +223,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 
   int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
   unsigned int bit_pos = RoomInInlineDir(dentry_blk, slots);
-  if (bit_pos >= kNrInlineDentry) {
+  if (bit_pos >= MaxInlineDentry()) {
     ZX_ASSERT(ConvertInlineDir(dentry_blk) == ZX_OK);
 
     *is_converted = true;
@@ -335,12 +337,13 @@ bool Dir::IsEmptyInlineDir() {
 
   InlineDentry *dentry_blk = GetInlineDentryAddr(ipage);
   unsigned int bit_pos = 2;
-  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, kNrInlineDentry, bit_pos);
+  bit_pos = FindNextBit(dentry_blk->dentry_bitmap, MaxInlineDentry(), bit_pos);
 
   F2fsPutPage(ipage, 1);
 
-  if (bit_pos < kNrInlineDentry)
+  if (bit_pos < MaxInlineDentry()) {
     return false;
+  }
 
   return true;
 }
@@ -350,7 +353,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
   fs::DirentFiller df(dirents, len);
   uint64_t *pos_cookie = reinterpret_cast<uint64_t *>(cookie);
 
-  if (*pos_cookie == kNrInlineDentry) {
+  if (*pos_cookie == MaxInlineDentry()) {
     *out_actual = 0;
     return ZX_OK;
   }
@@ -362,13 +365,14 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
 
   const unsigned char *types = kFiletypeTable;
 
-  unsigned int bit_pos = *pos_cookie % kNrInlineDentry;
+  uint32_t bit_pos = *pos_cookie % MaxInlineDentry();
   InlineDentry *inline_dentry = GetInlineDentryAddr(ipage);
 
-  while (bit_pos < kNrInlineDentry) {
-    bit_pos = FindNextBit(inline_dentry->dentry_bitmap, kNrInlineDentry, bit_pos);
-    if (bit_pos >= kNrInlineDentry)
+  while (bit_pos < MaxInlineDentry()) {
+    bit_pos = FindNextBit(inline_dentry->dentry_bitmap, MaxInlineDentry(), bit_pos);
+    if (bit_pos >= MaxInlineDentry()) {
       break;
+    }
 
     DirEntry *de = &inline_dentry->dentry[bit_pos];
     unsigned char d_type = DT_UNKNOWN;
@@ -391,7 +395,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
     bit_pos += GetDentrySlots(LeToCpu(de->name_len));
   }
 
-  *pos_cookie = kNrInlineDentry;
+  *pos_cookie = MaxInlineDentry();
   F2fsPutPage(ipage, 1);
 
   *out_actual = df.BytesFilled();

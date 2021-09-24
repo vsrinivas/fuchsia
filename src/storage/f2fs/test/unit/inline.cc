@@ -99,17 +99,15 @@ TEST(InlineDirTest, InlineDirConvert) {
   fbl::RefPtr<fs::Vnode> inline_child;
   ASSERT_EQ(root_dir->Create(inline_dir_name, S_IFDIR, &inline_child), ZX_OK);
 
-  fbl::RefPtr<VnodeF2fs> inline_child_dir =
-      fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
+  fbl::RefPtr<Dir> inline_child_dir = fbl::RefPtr<Dir>::Downcast(std::move(inline_child));
 
   unsigned int child_count = 0;
 
   // Fill all slots of inline dentry
   // Since two dentry slots are already allocated for "." and "..", decrease 2 from kNrInlineDentry
-  for (; child_count < kNrInlineDentry - 2; ++child_count) {
+  for (; child_count < inline_child_dir->MaxInlineDentry() - 2; ++child_count) {
     uint32_t mode = child_count % 2 == 0 ? S_IFDIR : S_IFREG;
-    FileTester::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
-                            std::to_string(child_count));
+    FileTester::CreateChild(inline_child_dir.get(), mode, std::to_string(child_count));
   }
 
   // It should be inline
@@ -131,13 +129,12 @@ TEST(InlineDirTest, InlineDirConvert) {
 
   // Check if existing inline dir is still inline regardless of mount option
   FileTester::Lookup(root_dir.get(), inline_dir_name, &inline_child);
-  inline_child_dir = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
+  inline_child_dir = fbl::RefPtr<Dir>::Downcast(std::move(inline_child));
   FileTester::CheckInlineDir(inline_child_dir.get());
 
   // If one more dentry is added, it should be converted to non-inline dir
   uint32_t mode = child_count % 2 == 0 ? S_IFDIR : S_IFREG;
-  FileTester::CreateChild(static_cast<Dir *>(inline_child_dir.get()), mode,
-                          std::to_string(child_count));
+  FileTester::CreateChild(inline_child_dir.get(), mode, std::to_string(child_count));
 
   FileTester::CheckNonInlineDir(inline_child_dir.get());
 
@@ -171,12 +168,11 @@ TEST(InlineDirTest, InlineDentryOps) {
   fbl::RefPtr<fs::Vnode> inline_child;
   ASSERT_EQ(root_dir->Create(inline_dir_name, S_IFDIR, &inline_child), ZX_OK);
 
-  fbl::RefPtr<VnodeF2fs> inline_child_dir =
-      fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
+  fbl::RefPtr<Dir> inline_child_dir = fbl::RefPtr<Dir>::Downcast(std::move(inline_child));
 
   std::unordered_set<std::string> child_set = {"a", "b", "c", "d", "e"};
 
-  Dir *dir_ptr = static_cast<Dir *>(inline_child_dir.get());
+  Dir *dir_ptr = inline_child_dir.get();
 
   for (auto iter : child_set) {
     FileTester::CreateChild(dir_ptr, S_IFDIR, iter);
@@ -205,7 +201,7 @@ TEST(InlineDirTest, InlineDentryOps) {
 
   // fill all inline dentry slots
   auto child_count = child_set.size();
-  for (; child_count < kNrInlineDentry - 2; ++child_count) {
+  for (; child_count < inline_child_dir->MaxInlineDentry() - 2; ++child_count) {
     FileTester::CreateChild(dir_ptr, S_IFDIR, std::to_string(child_count));
     child_set.insert(std::to_string(child_count));
   }
@@ -235,8 +231,8 @@ TEST(InlineDirTest, InlineDentryOps) {
   root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
   FileTester::Lookup(root_dir.get(), inline_dir_name, &inline_child);
-  inline_child_dir = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
-  dir_ptr = static_cast<Dir *>(inline_child_dir.get());
+  inline_child_dir = fbl::RefPtr<Dir>::Downcast(std::move(inline_child));
+  dir_ptr = inline_child_dir.get();
 
   FileTester::CheckNonInlineDir(dir_ptr);
   FileTester::CheckChildrenFromReaddir(dir_ptr, child_set);

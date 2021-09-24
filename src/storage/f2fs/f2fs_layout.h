@@ -190,6 +190,7 @@ constexpr uint8_t kInlineXattrAddrs = 50;  // 200 bytes for inline xattrs
 constexpr uint8_t kInlineXattr = 0x01;     // file inline xattr flag
 constexpr uint8_t kInlineData = 0x02;      // file inline data flag
 constexpr uint8_t kInlineDentry = 0x04;    // file inline dentry flag
+constexpr uint8_t kExtraAttr = 0x20;       // file having extra attribute
 
 struct Inode {
   uint16_t i_mode = 0;           // file mode
@@ -217,7 +218,10 @@ struct Inode {
 
   Extent i_ext;  // caching a largest extent
 
-  uint32_t i_addr[kAddrsPerInode];  // Pointers to data blocks
+  union {
+    uint16_t i_extra_isize;           // extra inode attribute size
+    uint32_t i_addr[kAddrsPerInode];  // Pointers to data blocks
+  };
 
   uint32_t i_nid[kNidsPerInode];  // direct(2), indirect(2), double_indirect(1) node id
 } __attribute__((packed));
@@ -404,8 +408,6 @@ inline uint16_t GetDentrySlots(uint16_t namelen) {
 }
 
 constexpr uint32_t kMaxInlineData = sizeof(int32_t) * (kAddrsPerInode - kInlineXattrAddrs - 1);
-constexpr uint32_t kInlineDataOffset =
-    kPageCacheSize - sizeof(NodeFooter) - sizeof(uint32_t) * (kAddrsPerInode + kNidsPerInode - 1);
 
 // the number of dentry in a block
 constexpr int kNrDentryInBlock = 214;

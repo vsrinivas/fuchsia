@@ -124,10 +124,12 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
 
   vnode->SetName(name);
 
-  if (ri.i_inline & kInlineDentry)
+  if (ri.i_inline & kInlineDentry) {
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
-  else
-    vnode->ClearFlag(InodeInfoFlag::kInlineDentry);
+  }
+  if (ri.i_inline & kExtraAttr) {
+    vnode->SetExtraISize(ri.i_extra_isize / sizeof(uint32_t));
+  }
 
   F2fsPutPage(node_page, 1);
   return ZX_OK;
@@ -320,10 +322,15 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_namelen = CpuToLe(GetNameLen());
   memcpy(ri->i_name, GetName(), GetNameLen());
 
-  if (TestFlag(InodeInfoFlag::kInlineDentry))
+  if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     ri->i_inline |= kInlineDentry;
-  else
+  } else {
     ri->i_inline &= ~kInlineDentry;
+  }
+  if (GetExtraISize()) {
+    ri->i_inline |= kExtraAttr;
+    ri->i_extra_isize = GetExtraISize();
+  }
 
 #if 0  // porting needed
   // set_page_dirty(node_page);

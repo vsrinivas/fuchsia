@@ -567,8 +567,9 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
 
 // The maximum depth is four.
 // Offset[0] will have raw inode offset.
-zx::status<int> NodeManager::GetNodePath(long block, int (&offset)[4], uint32_t (&noffset)[4]) {
-  const long direct_index = kAddrsPerInode;
+zx::status<int> NodeManager::GetNodePath(VnodeF2fs &vnode, long block, int (&offset)[4],
+                                     uint32_t (&noffset)[4]) {
+  const long direct_index = kAddrsPerInode - (vnode.GetExtraISize() / sizeof(uint32_t));
   const long direct_blks = kAddrsPerBlock;
   const long dptrs_per_blk = kNidsPerBlock;
   const long indirect_blks = kAddrsPerBlock * kNidsPerBlock;
@@ -646,7 +647,8 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
   nid_t nids[4];
   int level, i;
   zx_status_t err = 0;
-  auto node_path = GetNodePath(index, offset, noffset);
+  // TODO: Rework struct DnodeOfData and remedy uncomfy dereference below.
+  auto node_path = GetNodePath(*dn.vnode, index, offset, noffset);
   auto release_pages = [&]() {
     F2fsPutPage(parent, 1);
     if (i > 1) {
@@ -925,7 +927,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
   Page *page = nullptr;
   zx_status_t err = 0;
 
-  auto node_path = GetNodePath(from, offset, noffset);
+  auto node_path = GetNodePath(vnode, from, offset, noffset);
   if (node_path.is_error())
     return node_path.error_value();
 
