@@ -28,6 +28,14 @@
 
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static Mutex bootstrap_lock;
+// The bootstrap address space is kept as a global variable in order to maintain ownership of low
+// mem PLM4. If this aspace were released then the physical pages it holds would be returned to the
+// PMM and may be reallocated for other uses. Normally that's fine because we could always ask for
+// more pages from the PMM when we need them, but these pages are special in that are "low mem"
+// pages that exist in the first 4GB of the physical address space. If we were to release them they
+// may get reused for other purposes. Then if we need low mem pages in order to bootstrap a new CPU,
+// the PMM may not have any available and we'd be unable to do so.
+static fbl::RefPtr<VmAspace> bootstrap_aspace = nullptr;
 
 void x86_bootstrap16_init(paddr_t bootstrap_base) {
   DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));
@@ -36,8 +44,7 @@ void x86_bootstrap16_init(paddr_t bootstrap_base) {
   bootstrap_phys_addr = bootstrap_base;
 }
 
-zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* temp_aspace,
-                                    void** bootstrap_aperature,
+zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture,
                                     paddr_t* instr_ptr) TA_NO_THREAD_SAFETY_ANALYSIS {
   // Make sure x86_bootstrap16_init has been called, and bail early if not.
   if (!IS_PAGE_ALIGNED(bootstrap_phys_addr)) {
@@ -51,19 +58,14 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   }
 
   VmAspace* kernel_aspace = VmAspace::kernel_aspace();
-  fbl::RefPtr<VmAspace> bootstrap_aspace =
-      VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "bootstrap16");
-  if (!bootstrap_aspace) {
-    return ZX_ERR_NO_MEMORY;
-  }
   void* bootstrap_virt_addr = nullptr;
 
   // Ensure only one caller is using the bootstrap region
   bootstrap_lock.Acquire();
 
-  // Clean up the address space on the way out.
+  // Clean up the kernel address space on the way out. The bootstrap address space does not need
+  // to be cleaned up since it is kept as a global variable.
   auto cleanup = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    bootstrap_aspace->Destroy();
     if (bootstrap_virt_addr) {
       kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_virt_addr));
     }
@@ -79,28 +81,36 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   uintptr_t gdt_region_len =
       ROUNDUP((uintptr_t)&_temp_gdt_end, PAGE_SIZE) - ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE);
 
-  // Temporary aspace needs 5 regions mapped:
-  struct map_range page_mappings[] = {
-      // 1) The bootstrap code page (identity mapped)
-      // 2) The bootstrap data page (identity mapped)
-      {.start_vaddr = bootstrap_phys_addr,
-       .start_paddr = bootstrap_phys_addr,
-       .size = 2 * PAGE_SIZE},
-      // 3) The page containing the GDT (identity mapped)
-      {.start_vaddr = (vaddr_t)gdt_phys_page, .start_paddr = gdt_phys_page, .size = gdt_region_len},
-      // These next two come implicitly from the shared kernel aspace:
-      // 4) The kernel's version of the bootstrap code page (matched mapping)
-      // 5) The page containing the aps_still_booting counter (matched mapping)
-  };
-  for (unsigned int i = 0; i < ktl::size(page_mappings); ++i) {
-    void* vaddr = (void*)page_mappings[i].start_vaddr;
-    zx_status_t status = bootstrap_aspace->AllocPhysical(
-        "bootstrap_mapping", page_mappings[i].size, &vaddr, PAGE_SIZE_SHIFT,
-        page_mappings[i].start_paddr, VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
-    if (status != ZX_OK) {
-      TRACEF("Failed to create wakeup bootstrap aspace\n");
-      return status;
+  if (!bootstrap_aspace) {
+    bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "bootstrap16");
+    if (!bootstrap_aspace) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    // Bootstrap aspace needs 5 regions mapped:
+    struct map_range page_mappings[] = {
+        // 1) The bootstrap code page (identity mapped)
+        // 2) The bootstrap data page (identity mapped)
+        {.start_vaddr = bootstrap_phys_addr,
+         .start_paddr = bootstrap_phys_addr,
+         .size = 2 * PAGE_SIZE},
+        // 3) The page containing the GDT (identity mapped)
+        {.start_vaddr = (vaddr_t)gdt_phys_page,
+         .start_paddr = gdt_phys_page,
+         .size = gdt_region_len},
+        // These next two come implicitly from the shared kernel aspace:
+        // 4) The kernel's version of the bootstrap code page (matched mapping)
+        // 5) The page containing the aps_still_booting counter (matched mapping)
+    };
+    for (unsigned int i = 0; i < ktl::size(page_mappings); ++i) {
+      void* vaddr = (void*)page_mappings[i].start_vaddr;
+      zx_status_t status = bootstrap_aspace->AllocPhysical(
+          "bootstrap_mapping", page_mappings[i].size, &vaddr, PAGE_SIZE_SHIFT,
+          page_mappings[i].start_paddr, VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
+          ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
+      if (status != ZX_OK) {
+        TRACEF("Failed to create wakeup bootstrap aspace\n");
+        return status;
+      }
     }
   }
 
@@ -150,8 +160,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
   bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 
-  *bootstrap_aperature = (void*)((uintptr_t)bootstrap_virt_addr + 0x1000);
-  *temp_aspace = bootstrap_aspace;
+  *bootstrap_aperture = (void*)((uintptr_t)bootstrap_virt_addr + 0x1000);
   *instr_ptr = bootstrap_phys_addr;
 
   // Cancel the deferred cleanup, since we're returning the new aspace and
@@ -164,11 +173,11 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* te
   return ZX_OK;
 }
 
-void x86_bootstrap16_release(void* bootstrap_aperature) TA_NO_THREAD_SAFETY_ANALYSIS {
-  DEBUG_ASSERT(bootstrap_aperature);
+void x86_bootstrap16_release(void* bootstrap_aperture) TA_NO_THREAD_SAFETY_ANALYSIS {
+  DEBUG_ASSERT(bootstrap_aperture);
   DEBUG_ASSERT(bootstrap_lock.IsHeld());
   VmAspace* kernel_aspace = VmAspace::kernel_aspace();
-  uintptr_t addr = reinterpret_cast<uintptr_t>(bootstrap_aperature) - 0x1000;
+  uintptr_t addr = reinterpret_cast<uintptr_t>(bootstrap_aperture) - 0x1000;
   kernel_aspace->FreeRegion(addr);
 
   bootstrap_lock.Release();

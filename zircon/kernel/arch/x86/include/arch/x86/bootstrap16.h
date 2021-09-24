@@ -43,7 +43,7 @@ extern void _x86_secondary_cpu_long_mode_entry();
 // Note that this does not restore %rdi, and it touches below the saved %rsp.
 extern void _x86_suspend_wakeup();
 
-} // extern "C"
+}  // extern "C"
 
 struct __PACKED x86_bootstrap16_data {
   // Physical address of identity PML4
@@ -98,18 +98,16 @@ struct __PACKED x86_ap_bootstrap_data {
 // less than 1M that are available for the OS to use.
 void x86_bootstrap16_init(paddr_t bootstrap_base);
 
-// Upon success, returns a pointer to the bootstrap aspace, a pointer to the
-// virtual address of the bootstrap data, and the physical address of the
-// first instruction that should be executed in 16-bit mode.  It is the caller's
-// responsibility to free the aspace once it is no longer needed.
+// Upon success, returns a pointer to the virtual address of the bootstrap data, and the physical
+// address of the first instruction that should be executed in 16-bit mode.
 //
 // If this function returns success, x86_bootstrap16_release() must be called
 // later, to allow the bootstrap16 module to be reused.
-zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, fbl::RefPtr<VmAspace>* temp_aspace,
-                                    void** bootstrap_aperature, paddr_t* instr_ptr);
+zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture,
+                                    paddr_t* instr_ptr);
 
 // To be called once the caller is done using the bootstrap16 module
-void x86_bootstrap16_release(void* bootstrap_aperature);
+void x86_bootstrap16_release(void* bootstrap_aperture);
 
 static_assert(sizeof(struct x86_ap_bootstrap_data) <= PAGE_SIZE, "");
 static_assert(sizeof(struct x86_realmode_entry_data) <= PAGE_SIZE, "");

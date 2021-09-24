@@ -68,9 +68,8 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   }
 
   struct x86_ap_bootstrap_data* bootstrap_data = nullptr;
-  fbl::RefPtr<VmAspace> bootstrap_aspace;
   paddr_t bootstrap_instr_ptr;
-  status = x86_bootstrap16_acquire((uintptr_t)_x86_secondary_cpu_long_mode_entry, &bootstrap_aspace,
+  status = x86_bootstrap16_acquire((uintptr_t)_x86_secondary_cpu_long_mode_entry,
                                    (void**)&bootstrap_data, &bootstrap_instr_ptr);
   if (status != ZX_OK) {
     return status;
@@ -180,15 +179,14 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   }
 
   // Now that everything is booted, cleanup temporary structures, but keep the threads and stacks.
-  goto cleanup_aspace;
+  goto cleanup_bootstrap;
 
 cleanup_all:
   for (unsigned int i = 0; i < count; ++i) {
     free_thread(bootstrap_data->per_cpu[i].thread);
     bootstrap_data->per_cpu[i].thread = nullptr;
   }
-cleanup_aspace:
-  bootstrap_aspace->Destroy();
+cleanup_bootstrap:
   x86_bootstrap16_release(bootstrap_data);
 finish:
   return status;

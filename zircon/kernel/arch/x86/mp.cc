@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/bug.h>
+#include <lib/arch/x86/descriptor-regs.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <platform.h>
@@ -38,7 +39,6 @@
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
-#include <lib/arch/x86/descriptor-regs.h>
 
 #define LOCAL_TRACE 0
 
@@ -384,8 +384,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
     for (;;) {
       AutoPreemptDisabler preempt_disabled;
       bool rsb_maybe_empty = false;
-      while (*percpu->monitor &&
-             !Thread::Current::preemption_state().preempts_pending()) {
+      while (*percpu->monitor && !Thread::Current::preemption_state().preempts_pending()) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
         rsb_maybe_empty |= x86_intel_idle_state_may_empty_rsb(next_state);
         LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
@@ -393,8 +392,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         // Check percpu->monitor in case it was cleared between the first check and
         // the monitor being armed. Any writes after arming the monitor will trigger
         // it and cause mwait to return, so there aren't races after this check.
-        if (*percpu->monitor &&
-            !Thread::Current::preemption_state().preempts_pending()) {
+        if (*percpu->monitor && !Thread::Current::preemption_state().preempts_pending()) {
           auto start = current_time();
           x86_mwait(next_state->MwaitHint());
           auto duration = zx_time_sub_time(current_time(), start);
@@ -422,8 +420,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       constexpr int kPauseIterations = 3000;
       uint32_t halt_interlock_spinning = 1;
       percpu->halt_interlock.store(1, ktl::memory_order_relaxed);
-      for (int i = 0; i < kPauseIterations &&
-           !Thread::Current::preemption_state().preempts_pending(); i++) {
+      for (int i = 0;
+           i < kPauseIterations && !Thread::Current::preemption_state().preempts_pending(); i++) {
         arch::Yield();
         if (percpu->halt_interlock.load(ktl::memory_order_relaxed) != 1) {
           break;
@@ -568,7 +566,8 @@ void arch_flush_state_and_halt(Event* flush_done) {
 void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu) {
   x86_percpu* arch_percpu = x86_percpu_for(cpu_num);
   DEBUG_ASSERT(arch_percpu != nullptr);
-  DEBUG_ASSERT(arch_percpu->high_level_percpu == nullptr);
+  DEBUG_ASSERT(arch_percpu->high_level_percpu == nullptr ||
+               arch_percpu->high_level_percpu == percpu);
   arch_percpu->high_level_percpu = percpu;
 }
 
