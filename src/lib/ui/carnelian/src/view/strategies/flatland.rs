@@ -205,7 +205,8 @@ pub(crate) struct FlatlandViewStrategy {
     plumber: Option<Plumber>,
     retiring_plumbers: Vec<Plumber>,
     next_image_id: u64,
-    release_event: Option<Event>,
+    previous_present_release_event: Option<Event>,
+    current_present_release_event: Option<Event>,
     input_handler: ScenicInputHandler,
 }
 
@@ -243,7 +244,8 @@ impl FlatlandViewStrategy {
             retiring_plumbers: Vec::new(),
             next_buffer_collection: 1,
             next_image_id: 1,
-            release_event: None,
+            previous_present_release_event: None,
+            current_present_release_event: None,
             input_handler: ScenicInputHandler::new(),
         };
 
@@ -449,7 +451,7 @@ impl FlatlandViewStrategy {
                     .expect("unbounded_send");
             })
             .detach();
-            self.release_event = Some(release_event);
+            self.current_present_release_event = Some(release_event);
 
             let mut image_id = flatland::ContentId { value: available };
             self.flatland
@@ -538,7 +540,7 @@ impl ViewStrategy for FlatlandViewStrategy {
     fn present(&mut self, _view_details: &ViewDetails) {
         duration!("gfx", "FlatlandViewStrategy::present");
         if !self.missed_frame {
-            let release_event = self.release_event.take();
+            let release_event = self.previous_present_release_event.take();
             let presentation_time = self.next_presentation_time();
             Self::do_present(
                 &self.flatland,
@@ -550,6 +552,7 @@ impl ViewStrategy for FlatlandViewStrategy {
             self.last_presentation_time = presentation_time.presentation_time;
             self.pending_present_count += 1;
             self.num_presents_allowed -= 1;
+            self.previous_present_release_event = self.current_present_release_event.take();
         }
     }
 
