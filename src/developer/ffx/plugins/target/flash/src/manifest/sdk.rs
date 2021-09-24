@@ -38,7 +38,7 @@ impl TryFrom<&SdkEntries> for FlashManifestV3 {
     type Error = anyhow::Error;
     fn try_from(p: &SdkEntries) -> Result<FlashManifestV3> {
         // Eventually we'll need to use the identifier to get an entry.
-        match p.entries.first() {
+        match p.entries.iter().next() {
             Some(Metadata::ProductBundleV1(bundle)) => match &bundle.manifests {
                 Some(m) => match &m.flash {
                     Some(f) => Ok(FlashManifestV3 {

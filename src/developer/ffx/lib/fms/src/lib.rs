@@ -47,8 +47,17 @@ impl Entries {
     /// Returns None if no entries exit.
     /// TODO(fxbug.dev/81756) - Remove when not needed.
     #[doc(hidden)]
+    #[deprecated(note = "Use `entries.iter().next()` instead.")]
     pub fn first(&self) -> Option<&Metadata> {
         self.data.iter().next().map(|(_, value)| value)
+    }
+
+    /// Iterate over all entries.
+    ///
+    /// If the name is known, use `entry()` method instead since searching this
+    /// iterator would be a brute force search.
+    pub fn iter(&self) -> std::collections::hash_map::Values<'_, String, Metadata> {
+        self.data.values()
     }
 }
 
@@ -78,7 +87,7 @@ mod tests {
         // Now it is present.
         assert_ne!(entries.entry("generic-arm64"), None);
         // Test first method.
-        assert_eq!(entries.entry("generic-arm64"), entries.first());
+        assert_eq!(entries.entry("generic-arm64"), entries.iter().next());
         // This isn't just returning non-None for everything.
         assert_eq!(entries.entry("unfound"), None);
     }
